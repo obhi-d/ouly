@@ -4,6 +4,7 @@ project(acl VERSION 0.0.1 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 
 option(ACL_BUILD_TESTS "Build the unit tests when BUILD_TESTING is enabled." ON)
+option(ASAN_ENABLED "Build this target with AddressSanitizer" OFF)
 
 ##
 ## CONFIGURATION
@@ -20,10 +21,18 @@ message("Target name: ${ACL_TARGET_NAME}")
 add_library(${ACL_TARGET_NAME} INTERFACE)
 add_library(${PROJECT_NAME}::${ACL_TARGET_NAME} ALIAS ${ACL_TARGET_NAME})
 
+if(MSVC)
+  target_sources(
+        ${ACL_TARGET_NAME}
+        INTERFACE
+            $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/natvis/acl/podvector.natvis>
+    )
+endif()
+
 target_include_directories(
     ${ACL_TARGET_NAME}
     INTERFACE $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
 ##
@@ -68,5 +77,5 @@ install(FILES
   "${PROJECT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake"
   DESTINATION cmake)
 
-install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME})
+install(DIRECTORY include/acl DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
