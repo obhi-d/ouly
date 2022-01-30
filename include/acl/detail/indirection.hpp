@@ -14,7 +14,7 @@ template <typename Ty, typename Allocator, typename Base = Allocator>
 class base_indirection : public Base
 {
 protected:
-  using size_type        = acl::size_t<Ty>;
+  using size_type        = acl::size_type<Ty>;
   using allocator_traits = std::allocator_traits<Allocator>;
   template <typename RebT>
   using allocator = typename allocator_traits::template rebind_alloc<RebT>;
@@ -86,7 +86,7 @@ template <typename Ty, typename Allocator, typename Base = Allocator>
 class ref_indirection : public Base
 {
 protected:
-  using size_type = acl::size_t<Ty>;
+  using size_type = acl::size_type<Ty>;
 
   static constexpr auto pool_div          = detail::log2(acl::idx_pool_size_v<Ty>);
   static constexpr auto pool_size         = static_cast<size_type>(1) << pool_div;
@@ -154,7 +154,7 @@ protected:
       Base::shrink_to_fit(length);
   }
 
-  inline void clear() noexcept 
+  inline void clear() noexcept
   {
     if constexpr (!base_is_allocator)
       Base::clear();
@@ -167,9 +167,9 @@ template <typename Ty, typename Allocator, typename Base = Allocator>
 class ref_backref : public Base
 {
 protected:
-  using size_type = acl::size_t<Ty>;
-  using link      = acl::link<Ty, size_type>;
-  using backref   = typename backref<Ty>::offset;
+  using size_type                         = acl::size_type<Ty>;
+  using link                              = acl::link<Ty>;
+  using backref                           = typename backref<Ty>::offset;
   static constexpr bool base_is_allocator = std::is_same_v<std::decay_t<Base>, std::decay_t<Allocator>>;
 
 public:
@@ -209,7 +209,7 @@ protected:
     if constexpr (!base_is_allocator)
       Base::shrink_to_fit(length);
   }
-    
+
   inline void clear() noexcept
   {
     if constexpr (!base_is_allocator)

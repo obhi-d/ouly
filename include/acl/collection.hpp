@@ -19,8 +19,8 @@ class collection : public Allocator
 {
 public:
   using value_type       = typename Cont::value_type;
-  using size_type        = acl::size_t<value_type>;
-  using link             = acl::link<value_type, size_type>;
+  using size_type        = acl::size_type<value_type>;
+  using link             = acl::link<value_type>;
   using allocator_type   = Allocator;
   using allocator_traits = std::allocator_traits<Allocator>;
 

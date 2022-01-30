@@ -13,7 +13,7 @@ template <typename Ty>
 constexpr std::uint32_t idx_pool_size_v = 4096;
 
 template <typename Ty>
-using size_t = std::uint32_t;
+using size_type = std::uint32_t;
 
 template <auto M>
 struct offset

@@ -17,8 +17,8 @@ class packed_table : public detail::packed_table_base<Ty, Allocator>
 
 public:
   using value_type       = Ty;
-  using size_type        = acl::size_t<value_type>;
-  using link             = acl::link<value_type, size_type>;
+  using size_type        = acl::size_type<value_type>;
+  using link             = acl::link<value_type>;
   using allocator_type   = Allocator;
   using allocator_traits = std::allocator_traits<Allocator>;
 

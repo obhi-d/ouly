@@ -25,7 +25,7 @@ class podvector : public Allocator
 public:
   using value_type                  = Ty;
   using allocator_type              = Allocator;
-  using size_type                   = size_t<Ty>;
+  using size_type                   = acl::size_type<Ty>;
   using difference_type             = size_type;
   using reference                   = value_type&;
   using const_reference             = const value_type&;
@@ -361,7 +361,7 @@ public:
   {
     assert(position < end());
     std::memmove(const_cast<iterator>(position), position + 1,
-                 static_cast<size_t>((data_ + size_) - (position + 1)) * sizeof(Ty));
+                 static_cast<std::size_t>((data_ + size_) - (position + 1)) * sizeof(Ty));
     size_--;
     return const_cast<iterator>(position);
   }
@@ -369,7 +369,8 @@ public:
   {
     assert(last < end());
     std::uint32_t n = static_cast<std::uint32_t>(std::distance(first, last));
-    std::memmove(const_cast<iterator>(first), last, reinterpret_cast<size_t>((data_ + size_) - (last)) * sizeof(Ty));
+    std::memmove(const_cast<iterator>(first), last,
+                 reinterpret_cast<std::size_t>((data_ + size_) - (last)) * sizeof(Ty));
     size_ -= n;
     return const_cast<iterator>(first);
   }
@@ -461,7 +462,7 @@ private:
   {
     if constexpr (std::is_same<pointer, InputIt>::value)
     {
-      std::memcpy(dest, first, static_cast<size_t>(std::distance(first, last)) * sizeof(Ty));
+      std::memcpy(dest, first, static_cast<std::size_t>(std::distance(first, last)) * sizeof(Ty));
     }
     else
     {

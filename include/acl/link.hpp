@@ -1,41 +1,43 @@
 #pragma once
+#include "table_traits.hpp"
+#include <compare>
+#include <concepts>
 #include <cstdint>
 #include <limits>
 #include <type_traits>
-#include <concepts>
-#include <compare>
 
 namespace acl
 {
 
-template <typename Ty, typename SizeType = std::uint32_t>
+template <typename Ty>
 struct link
 {
-  static constexpr SizeType null = std::numeric_limits<SizeType>::max();
+  using size_type                 = acl::size_type<Ty>;
+  static constexpr size_type null = std::numeric_limits<size_type>::max();
 
   constexpr link()              = default;
   constexpr link(const link& i) = default;
-  constexpr explicit link(SizeType i) : offset(i) {}
+  constexpr explicit link(size_type i) : offset(i) {}
 
   template <typename Uy>
-  constexpr explicit link(const link<Uy, SizeType>& i) requires std::convertible_to<Uy*, Ty*> : offset(i.offset)
+  constexpr explicit link(const link<Uy>& i) requires std::convertible_to<Uy*, Ty*> : offset(i.offset)
   {}
 
   constexpr link& operator=(const link& i) = default;
 
   template <typename Uy>
-  constexpr link& operator=(const link<Uy, SizeType>& i) requires std::convertible_to<Uy*, Ty*>
+  constexpr link& operator=(const link<Uy>& i) requires std::convertible_to<Uy*, Ty*>
   {
     offset = i.offset;
     return *this;
   }
 
-  constexpr inline SizeType value() const
+  constexpr inline size_type value() const
   {
     return offset;
   }
 
-  constexpr inline explicit operator SizeType() const
+  constexpr inline explicit operator size_type() const
   {
     return offset;
   }
@@ -47,17 +49,17 @@ struct link
 
   constexpr inline auto operator<=>(link const& iSecond) const = default;
 
-  constexpr inline friend auto operator<=>(SizeType iFirst, link const& iSecond)
+  constexpr inline friend auto operator<=>(size_type iFirst, link const& iSecond)
   {
     return iFirst <=> iSecond.offset;
   }
 
-  constexpr inline friend auto operator<=>(link const& iSecond, SizeType iFirst)
+  constexpr inline friend auto operator<=>(link const& iSecond, size_type iFirst)
   {
     return iFirst <=> iSecond.offset;
   }
 
-  SizeType offset = null;
+  size_type offset = null;
 };
 
 } // namespace acl

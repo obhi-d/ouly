@@ -13,12 +13,12 @@ namespace acl
 template <typename Ty, typename Allocator = std::allocator<Ty>>
 class sparse_table : public acl::detail::sparse_table_base<Ty, Allocator>
 {
-  static_assert(sizeof(Ty) >= sizeof(acl::size_t<Ty>), "Type must big enough to hold a link");
+  static_assert(sizeof(Ty) >= sizeof(acl::size_type<Ty>), "Type must big enough to hold a link");
 
 public:
   using value_type       = Ty;
-  using size_type        = acl::size_t<value_type>;
-  using link             = acl::link<value_type, size_type>;
+  using size_type        = acl::size_type<value_type>;
+  using link             = acl::link<value_type>;
   using allocator_type   = Allocator;
   using allocator_traits = std::allocator_traits<Allocator>;
 
