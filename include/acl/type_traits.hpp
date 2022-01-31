@@ -6,14 +6,14 @@
 namespace acl
 {
 
-template <typename Ty>
-constexpr std::uint32_t pool_size_v = 4096;
+template <typename Ty = std::void_t<>>
+struct traits
+{
+  using size_type = std::uint32_t;
 
-template <typename Ty>
-constexpr std::uint32_t idx_pool_size_v = 4096;
-
-template <typename Ty>
-using size_type = std::uint32_t;
+  static constexpr std::uint32_t pool_size     = 4096;
+  static constexpr std::uint32_t idx_pool_size = 4096;
+};
 
 template <auto M>
 struct offset
@@ -28,22 +28,20 @@ struct offset
   }
 };
 
-template <typename Ty>
-struct backref;
-
 /// Specialize backref
 /// template <>
-/// struct backref<MyType>
+/// struct traits<MyType>
 /// {
-///   using offset = acl::offset<&MyType::some>;
+///   using offset = acl::offset<&MyType::self>;
 /// };
 
 namespace detail
 {
-template <typename Ty>
+
+template <typename Traits>
 concept has_backref_v = requires
 {
-  typename backref<Ty>::offset;
+  typename Traits::offset;
 };
 
 } // namespace detail

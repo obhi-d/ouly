@@ -5,7 +5,7 @@
 #include "detail/utils.hpp"
 #include "link.hpp"
 #include "podvector.hpp"
-#include "table_traits.hpp"
+#include "type_traits.hpp"
 #include <memory>
 
 namespace acl
@@ -14,18 +14,19 @@ namespace acl
 /// @brief A collection of links, but not stored in vectors, instead managed by bitmap
 /// @tparam Ty
 /// @tparam Allocator
-template <typename Cont, typename Allocator = std::allocator<typename Cont::value_type>>
+template <typename Cont, typename Allocator = std::allocator<typename Cont::value_type>,
+          typename Traits = acl::traits<typename Cont::value_type>>
 class collection : public Allocator
 {
 public:
   using value_type       = typename Cont::value_type;
-  using size_type        = acl::size_type<value_type>;
-  using link             = acl::link<value_type>;
+  using size_type        = typename Traits::size_type;
+  using link             = acl::link<value_type, size_type>;
   using allocator_type   = Allocator;
   using allocator_traits = std::allocator_traits<Allocator>;
 
 private:
-  static constexpr auto pool_div  = detail::log2(acl::pool_size_v<value_type>);
+  static constexpr auto pool_div  = detail::log2(Traits::pool_size);
   static constexpr auto pool_size = static_cast<size_type>(1) << pool_div;
   static constexpr auto pool_mod  = pool_size - 1;
   using this_type                 = collection<Cont, Allocator>;

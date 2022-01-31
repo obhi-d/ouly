@@ -6,7 +6,7 @@
  */
 
 #pragma once
-#include "table_traits.hpp"
+#include "type_traits.hpp"
 #include <cassert>
 #include <cstdint>
 #include <cstring>
@@ -15,7 +15,7 @@
 // https://en.cppreference.com/w/cpp/header/vector
 namespace acl
 {
-template <typename Ty, typename Allocator = std::allocator<Ty>>
+template <typename Ty, typename Allocator = std::allocator<Ty>, typename Traits = acl::traits<Ty>>
 class podvector : public Allocator
 {
   static_assert(std::is_trivially_copyable_v<Ty>, "Requires trivially copyable on Ty");
@@ -25,7 +25,7 @@ class podvector : public Allocator
 public:
   using value_type                  = Ty;
   using allocator_type              = Allocator;
-  using size_type                   = acl::size_type<Ty>;
+  using size_type                   = typename Traits::size_type;
   using difference_type             = size_type;
   using reference                   = value_type&;
   using const_reference             = const value_type&;

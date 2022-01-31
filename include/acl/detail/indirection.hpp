@@ -1,7 +1,7 @@
 #pragma once
 #include "link.hpp"
 #include "podvector.hpp"
-#include "table_traits.hpp"
+#include "type_traits.hpp"
 #include "utils.hpp"
 
 namespace acl
@@ -10,11 +10,11 @@ namespace acl
 namespace detail
 {
 
-template <typename Ty, typename Allocator, typename Base = Allocator>
+template <typename Ty, typename Allocator, typename Traits, typename Base = Allocator>
 class base_indirection : public Base
 {
 protected:
-  using size_type        = acl::size_type<Ty>;
+  using size_type        = typename Traits::size_type;
   using allocator_traits = std::allocator_traits<Allocator>;
   template <typename RebT>
   using allocator = typename allocator_traits::template rebind_alloc<RebT>;
@@ -82,13 +82,13 @@ protected:
   podvector<size_type, allocator<size_type>> links;
 };
 
-template <typename Ty, typename Allocator, typename Base = Allocator>
+template <typename Ty, typename Allocator, typename Traits, typename Base = Allocator>
 class ref_indirection : public Base
 {
 protected:
-  using size_type = acl::size_type<Ty>;
+  using size_type = typename Traits::size_type;
 
-  static constexpr auto pool_div          = detail::log2(acl::idx_pool_size_v<Ty>);
+  static constexpr auto pool_div          = detail::log2(Traits::idx_pool_size);
   static constexpr auto pool_size         = static_cast<size_type>(1) << pool_div;
   static constexpr auto pool_mod          = pool_size - 1;
   static constexpr bool base_is_allocator = std::is_same_v<std::decay_t<Base>, std::decay_t<Allocator>>;
@@ -163,13 +163,13 @@ protected:
   podvector<size_type*, allocator> refs;
 };
 
-template <typename Ty, typename Allocator, typename Base = Allocator>
+template <typename Ty, typename Allocator, typename Traits, typename Base = Allocator>
 class ref_backref : public Base
 {
 protected:
-  using size_type                         = acl::size_type<Ty>;
-  using link                              = acl::link<Ty>;
-  using backref                           = typename backref<Ty>::offset;
+  using size_type                         = typename Traits::size_type;
+  using link                              = acl::link<Ty, size_type>;
+  using backref                           = typename Traits::offset;
   static constexpr bool base_is_allocator = std::is_same_v<std::decay_t<Base>, std::decay_t<Allocator>>;
 
 public:
@@ -217,14 +217,15 @@ protected:
   }
 };
 
-template <typename Ty, typename Allocator>
+template <typename Ty, typename Allocator, typename Traits>
 using packed_table_base =
-  std::conditional_t<has_backref_v<Ty>, detail::ref_backref<Ty, Allocator, detail::base_indirection<Ty, Allocator>>,
-                     detail::ref_indirection<Ty, Allocator, detail::base_indirection<Ty, Allocator>>>;
+  std::conditional_t<has_backref_v<Traits>,
+                     detail::ref_backref<Ty, Allocator, Traits, detail::base_indirection<Ty, Allocator, Traits>>,
+                     detail::ref_indirection<Ty, Allocator, Traits, detail::base_indirection<Ty, Allocator, Traits>>>;
 
-template <typename Ty, typename Allocator>
-using sparse_table_base =
-  std::conditional_t<has_backref_v<Ty>, detail::ref_backref<Ty, Allocator>, detail::ref_indirection<Ty, Allocator>>;
+template <typename Ty, typename Allocator, typename Traits>
+using sparse_table_base = std::conditional_t<has_backref_v<Traits>, detail::ref_backref<Ty, Allocator, Traits>,
+                                             detail::ref_indirection<Ty, Allocator, Traits>>;
 
 } // namespace detail
 

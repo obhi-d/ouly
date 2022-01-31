@@ -3,33 +3,34 @@
 #include "detail/indirection.hpp"
 #include "link.hpp"
 #include "podvector.hpp"
-#include "table_traits.hpp"
+#include "type_traits.hpp"
 #include <memory>
 
 namespace acl
 {
 
-template <typename Ty, typename Allocator = std::allocator<Ty>>
-class packed_table : public detail::packed_table_base<Ty, Allocator>
+template <typename Ty, typename Allocator = std::allocator<Ty>, typename Traits = acl::traits<Ty>>
+class packed_table : public detail::packed_table_base<Ty, Allocator, Traits>
 {
 
   static_assert(std::is_move_assignable_v<Ty>, "Type must be move assignable");
 
 public:
   using value_type       = Ty;
-  using size_type        = acl::size_type<value_type>;
-  using link             = acl::link<value_type>;
+  using size_type        = typename Traits::size_type;
+  using link             = acl::link<value_type, size_type>;
   using allocator_type   = Allocator;
   using allocator_traits = std::allocator_traits<Allocator>;
 
 private:
-  static constexpr auto pool_div  = detail::log2(acl::pool_size_v<value_type>);
-  static constexpr auto pool_size = static_cast<size_type>(1) << pool_div;
-  static constexpr auto pool_mod  = pool_size - 1;
-  using this_type                 = packed_table<value_type, Allocator>;
-  using base_type                 = detail::packed_table_base<value_type, Allocator>;
-  using storage                   = detail::aligned_storage<sizeof(value_type), alignof(value_type)>;
-  using allocator                 = typename allocator_traits::template rebind_alloc<storage*>;
+  static constexpr auto pool_div    = detail::log2(Traits::pool_size);
+  static constexpr auto pool_size   = static_cast<size_type>(1) << pool_div;
+  static constexpr auto pool_mod    = pool_size - 1;
+  static constexpr bool has_backref = detail::has_backref_v<Traits>;
+  using this_type                   = packed_table<value_type, Allocator, Traits>;
+  using base_type                   = detail::packed_table_base<value_type, Allocator, Traits>;
+  using storage                     = detail::aligned_storage<sizeof(value_type), alignof(value_type)>;
+  using allocator                   = typename allocator_traits::template rebind_alloc<storage*>;
 
 public:
   inline packed_table() noexcept {}
@@ -153,7 +154,7 @@ public:
 
   /// @brief Erase a single element by object when backref is available.
   /// @remarks Only available if backref is available
-  void remove(value_type const& obj) noexcept requires(detail::has_backref_v<value_type>)
+  void remove(value_type const& obj) noexcept requires(has_backref)
   {
     erase_at(base_type::get_ref(obj));
   }
@@ -215,32 +216,32 @@ private:
     assert(self == l.value());
   }
 
-  inline auto get_ref_at_idx(size_type idx) const noexcept requires(!detail::has_backref_v<value_type>)
+  inline auto get_ref_at_idx(size_type idx) const noexcept requires(!has_backref)
   {
     return base_type::get_ref(idx);
   }
 
-  inline auto get_ref_at_idx(size_type idx) const noexcept requires(detail::has_backref_v<value_type>)
+  inline auto get_ref_at_idx(size_type idx) const noexcept requires(has_backref)
   {
     return base_type::get_ref(item_at_idx(idx));
   }
 
-  inline auto pop_ref_at_idx(size_type src, size_type dst) noexcept requires(!detail::has_backref_v<value_type>)
+  inline auto pop_ref_at_idx(size_type src, size_type dst) noexcept requires(!has_backref)
   {
     return base_type::pop_ref(src, dst);
   }
 
-  inline auto pop_ref_at_idx(size_type src, size_type dst) noexcept requires(detail::has_backref_v<value_type>)
+  inline auto pop_ref_at_idx(size_type src, size_type dst) noexcept requires(has_backref)
   {
     return base_type::pop_ref(item_at_idx(src), item_at_idx(dst));
   }
 
-  inline auto set_ref_at_idx(size_type idx, size_type lnk) noexcept requires(!detail::has_backref_v<value_type>)
+  inline auto set_ref_at_idx(size_type idx, size_type lnk) noexcept requires(!has_backref)
   {
     return base_type::set_ref(idx, lnk);
   }
 
-  inline auto set_ref_at_idx(size_type idx, size_type lnk) noexcept requires(detail::has_backref_v<value_type>)
+  inline auto set_ref_at_idx(size_type idx, size_type lnk) noexcept requires(has_backref)
   {
     return base_type::set_ref(item_at_idx(idx), lnk);
   }

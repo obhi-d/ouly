@@ -29,9 +29,11 @@ TEST_CASE("sparse_table: Validate sparse_table emplace", "[sparse_table][emplace
 namespace acl
 {
 template <>
-constexpr std::uint32_t pool_size_v<std::string> = 2;
-template <>
-constexpr std::uint32_t idx_pool_size_v<std::string> = 2;
+struct traits<std::string> : traits<>
+{
+  static constexpr std::uint32_t pool_size     = 2;
+  static constexpr std::uint32_t idx_pool_size = 2;
+};
 } // namespace acl
 
 TEST_CASE("sparse_table: Custom block size", "[sparse_table][page_size]")
@@ -133,26 +135,26 @@ TEST_CASE("sparse_table: Random test", "[sparse_table][random]")
   }
 }
 
-struct selfref
+struct selfref_2
 {
   std::uint32_t value = 0;
-  std::uint32_t self  = acl::link<selfref>::null;
+  std::uint32_t self  = acl::link<selfref_2>::null;
 
-  selfref(std::uint32_t v) : value(v) {}
+  selfref_2(std::uint32_t v) : value(v) {}
 };
 
 namespace acl
 {
 template <>
-struct backref<selfref>
+struct traits<selfref_2> : traits<>
 {
-  using offset = acl::offset<&selfref::self>;
+  using offset = acl::offset<&selfref_2::self>;
 };
 } // namespace acl
 
 TEST_CASE("sparse_table: Test selfref", "[sparse_table][backref]")
 {
-  acl::sparse_table<selfref> table;
+  acl::sparse_table<selfref_2> table;
 
   auto e10 = table.emplace(10);
 

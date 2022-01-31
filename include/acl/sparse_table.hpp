@@ -4,32 +4,33 @@
 #include "detail/utils.hpp"
 #include "link.hpp"
 #include "podvector.hpp"
-#include "table_traits.hpp"
+#include "type_traits.hpp"
 #include <memory>
 
 namespace acl
 {
 
-template <typename Ty, typename Allocator = std::allocator<Ty>>
-class sparse_table : public acl::detail::sparse_table_base<Ty, Allocator>
+template <typename Ty, typename Allocator = std::allocator<Ty>, typename Traits = acl::traits<Ty>>
+class sparse_table : public acl::detail::sparse_table_base<Ty, Allocator, Traits>
 {
-  static_assert(sizeof(Ty) >= sizeof(acl::size_type<Ty>), "Type must big enough to hold a link");
+  static_assert(sizeof(Ty) >= sizeof(typename Traits::size_type), "Type must big enough to hold a link");
 
 public:
   using value_type       = Ty;
-  using size_type        = acl::size_type<value_type>;
-  using link             = acl::link<value_type>;
+  using size_type        = typename Traits::size_type;
+  using link             = acl::link<value_type, size_type>;
   using allocator_type   = Allocator;
   using allocator_traits = std::allocator_traits<Allocator>;
 
 private:
-  static constexpr auto pool_div  = detail::log2(acl::pool_size_v<value_type>);
-  static constexpr auto pool_size = static_cast<size_type>(1) << pool_div;
-  static constexpr auto pool_mod  = pool_size - 1;
-  using this_type                 = sparse_table<value_type, Allocator>;
-  using base_type                 = detail::sparse_table_base<value_type, Allocator>;
-  using storage                   = detail::aligned_storage<sizeof(value_type), alignof(value_type)>;
-  using allocator                 = typename allocator_traits::template rebind_alloc<storage*>;
+  static constexpr auto pool_div    = detail::log2(Traits::pool_size);
+  static constexpr auto pool_size   = static_cast<size_type>(1) << pool_div;
+  static constexpr auto pool_mod    = pool_size - 1;
+  static constexpr bool has_backref = detail::has_backref_v<Traits>;
+  using this_type                   = sparse_table<value_type, Allocator, Traits>;
+  using base_type                   = detail::sparse_table_base<value_type, Allocator, Traits>;
+  using storage                     = detail::aligned_storage<sizeof(value_type), alignof(value_type)>;
+  using allocator                   = typename allocator_traits::template rebind_alloc<storage*>;
 
 public:
   inline sparse_table() noexcept {}
@@ -159,7 +160,7 @@ public:
 
   /// @brief Erase a single element by object when backref is available.
   /// @remarks Only available if backref is available
-  void remove(value_type const& obj) noexcept requires(detail::has_backref_v<value_type>)
+  void remove(value_type const& obj) noexcept requires(has_backref)
   {
     erase_at(base_type::get_ref(obj));
   }
@@ -221,22 +222,22 @@ private:
     assert(self == l.value());
   }
 
-  inline auto get_ref_at_idx(size_type idx) const noexcept requires(!detail::has_backref_v<value_type>)
+  inline auto get_ref_at_idx(size_type idx) const noexcept requires(!has_backref)
   {
     return base_type::get_ref(idx);
   }
 
-  inline auto get_ref_at_idx(size_type idx) const noexcept requires(detail::has_backref_v<value_type>)
+  inline auto get_ref_at_idx(size_type idx) const noexcept requires(has_backref)
   {
     return base_type::get_ref(item_at_idx(idx));
   }
 
-  inline auto set_ref_at_idx(size_type idx, size_type lnk) noexcept requires(!detail::has_backref_v<value_type>)
+  inline auto set_ref_at_idx(size_type idx, size_type lnk) noexcept requires(!has_backref)
   {
     return base_type::set_ref(idx, lnk);
   }
 
-  inline auto set_ref_at_idx(size_type idx, size_type lnk) noexcept requires(detail::has_backref_v<value_type>)
+  inline auto set_ref_at_idx(size_type idx, size_type lnk) noexcept requires(has_backref)
   {
     return base_type::set_ref(item_at_idx(idx), lnk);
   }
@@ -269,7 +270,7 @@ private:
 
     auto newlnk = detail::revise_invalidate(l);
 
-    if constexpr (detail::has_backref_v<value_type>)
+    if constexpr (has_backref)
       base_type::set_ref(item, first_free_index);
     else
       set_ref_at_idx(lnk, first_free_index);

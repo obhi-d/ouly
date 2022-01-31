@@ -29,9 +29,12 @@ TEST_CASE("packed_table: Validate packed_table emplace", "[packed_table][emplace
 namespace acl
 {
 template <>
-constexpr std::uint32_t pool_size_v<std::string> = 2;
-template <>
-constexpr std::uint32_t idx_pool_size_v<std::string> = 2;
+struct traits<std::string> : traits<>
+{
+  static constexpr std::uint32_t pool_size     = 2;
+  static constexpr std::uint32_t idx_pool_size = 2;
+};
+
 } // namespace acl
 
 TEST_CASE("packed_table: Custom block size", "[packed_table][page_size]")
@@ -171,7 +174,7 @@ struct selfref
 namespace acl
 {
 template <>
-struct backref<selfref>
+struct traits<selfref> : traits<>
 {
   using offset = acl::offset<&selfref::self>;
 };

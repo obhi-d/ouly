@@ -1,5 +1,5 @@
 #pragma once
-#include "table_traits.hpp"
+#include "type_traits.hpp"
 #include <compare>
 #include <concepts>
 #include <cstdint>
@@ -9,10 +9,10 @@
 namespace acl
 {
 
-template <typename Ty>
+template <typename Ty, typename SizeType = std::uint32_t>
 struct link
 {
-  using size_type                 = acl::size_type<Ty>;
+  using size_type                 = SizeType;
   static constexpr size_type null = std::numeric_limits<size_type>::max();
 
   constexpr link()              = default;
@@ -20,13 +20,13 @@ struct link
   constexpr explicit link(size_type i) : offset(i) {}
 
   template <typename Uy>
-  constexpr explicit link(const link<Uy>& i) requires std::convertible_to<Uy*, Ty*> : offset(i.offset)
+  constexpr explicit link(const link<Uy, SizeType>& i) requires std::convertible_to<Uy*, Ty*> : offset(i.offset)
   {}
 
   constexpr link& operator=(const link& i) = default;
 
   template <typename Uy>
-  constexpr link& operator=(const link<Uy>& i) requires std::convertible_to<Uy*, Ty*>
+  constexpr link& operator=(const link<Uy, SizeType>& i) requires std::convertible_to<Uy*, Ty*>
   {
     offset = i.offset;
     return *this;
