@@ -132,3 +132,38 @@ TEST_CASE("sparse_table: Random test", "[sparse_table][random]")
       });
   }
 }
+
+struct selfref
+{
+  std::uint32_t value = 0;
+  std::uint32_t self  = acl::link<selfref>::null;
+
+  selfref(std::uint32_t v) : value(v) {}
+};
+
+namespace acl
+{
+template <>
+struct backref<selfref>
+{
+  using offset = acl::offset<&selfref::self>;
+};
+} // namespace acl
+
+TEST_CASE("sparse_table: Test selfref", "[sparse_table][backref]")
+{
+  acl::sparse_table<selfref> table;
+
+  auto e10 = table.emplace(10);
+
+  REQUIRE(table.at(e10).value == 10);
+  table.remove(e10);
+
+  auto e20 = table.emplace(20);
+  auto e30 = table.emplace(30);
+
+  REQUIRE(table.at(e20).value == 20);
+  REQUIRE(table.at(e20).self == e20.value());
+  REQUIRE(table.at(e30).value == 30);
+  REQUIRE(table.at(e30).self == e30.value());
+}

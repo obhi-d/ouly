@@ -28,7 +28,7 @@ private:
   static constexpr auto pool_mod  = pool_size - 1;
   using this_type                 = sparse_table<value_type, Allocator>;
   using base_type                 = detail::sparse_table_base<value_type, Allocator>;
-  using storage                   = std::aligned_storage_t<sizeof(value_type), alignof(value_type)>;
+  using storage                   = detail::aligned_storage<sizeof(value_type), alignof(value_type)>;
   using allocator                 = typename allocator_traits::template rebind_alloc<storage*>;
 
 public:
@@ -144,6 +144,7 @@ public:
     auto index = idx & pool_mod;
 
     std::construct_at(reinterpret_cast<value_type*>(items[block] + index), std::forward<Args>(args)...);
+    set_ref_at_idx(idx, lnk);
 
     return link(lnk);
   }
@@ -250,6 +251,11 @@ private:
     return reinterpret_cast<value_type&>(items[item_id >> pool_div][item_id & pool_mod]);
   }
 
+  inline auto const& item_at_idx(size_type item_id) const noexcept
+  {
+    return reinterpret_cast<value_type const&>(items[item_id >> pool_div][item_id & pool_mod]);
+  }
+
   inline void erase_at(size_type l) noexcept
   {
     length--;
@@ -288,8 +294,6 @@ private:
       lnk              = first_free_index;
       first_free_index = get_ref_at_idx(detail::index_val(lnk));
     }
-
-    set_ref_at_idx(detail::index_val(lnk), lnk);
     return lnk;
   }
 

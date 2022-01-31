@@ -20,9 +20,9 @@ struct offset
 {
   static void set(auto& to, auto link)
   {
-    reinterpret_cast<std::remove_cv<decltype(link)>&>(to.*M) = link;
+    reinterpret_cast<std::remove_cvref_t<decltype(link)>&>(to.*M) = link;
   }
-  static auto get(auto const& to)
+  static decltype(auto) get(auto const& to)
   {
     return (to.*M);
   }

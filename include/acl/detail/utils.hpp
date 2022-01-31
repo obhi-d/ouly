@@ -11,6 +11,12 @@ namespace acl
 
 namespace detail
 {
+template <std::size_t Len, std::size_t Align>
+struct aligned_storage
+{
+  alignas(Align) std::uint8_t data[Len];
+};
+
 template <typename size_type>
 constexpr size_type invalidated_mask_v = (static_cast<size_type>(0x80) << ((sizeof(size_type) - 1) * 8));
 
@@ -79,7 +85,6 @@ inline size_type is_valid(size_type val)
 {
   return !(invalidated_mask_v<size_type> & val);
 }
-
 
 } // namespace detail
 
