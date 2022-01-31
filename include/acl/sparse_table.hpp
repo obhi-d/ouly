@@ -132,6 +132,26 @@ public:
     return extend;
   }
 
+  /// @brief packed_table has active pool count depending upon number of elements it contains
+  /// @return active pool count
+  size_type active_pools() const noexcept
+  {
+    return extend >> pool_div;
+  }
+
+  /// @brief Get item pool and number of items give the pool number
+  /// @param i Must be between [0, active_pools())
+  /// @return Item pool raw array and array size
+  auto get_pool(size_type i) const noexcept -> std::tuple<value_type const*, size_type>
+  {
+    return {reinterpret_cast<value_type const*>(items[i]), items[i] == items.back() ? extend & pool_mod : pool_size};
+  }
+
+  auto get_pool(size_type i) noexcept -> std::tuple<value_type*, size_type>
+  {
+    return {reinterpret_cast<value_type*>(items[i]), items[i] == items.back() ? extend & pool_mod : pool_size};
+  }
+
   /// @brief Emplace back an element. Order is not guranteed.
   /// @tparam ...Args Constructor args for value_type
   /// @return Returns link to the element pushed. link can be used to destroy entry.
@@ -150,10 +170,19 @@ public:
     return link(lnk);
   }
 
+  /// @brief Construct an item in a given location, assuming the location was empty
+  void replace(link point, value_type&& args) noexcept
+  {
+    if constexpr (detail::debug)
+      assert(contains(point));
+
+    at(point) = std::move(args);
+  }
+
   /// @brief Erase a single element.
   void remove(link l) noexcept
   {
-    if (detail::debug)
+    if constexpr (detail::debug)
       validate(l);
     erase_at(l.value());
   }
@@ -194,7 +223,7 @@ public:
 
   value_type& at(link l) noexcept
   {
-    if (detail::debug)
+    if constexpr (detail::debug)
       validate(l);
     return item_at(detail::index_val(l.value()));
   }
@@ -212,6 +241,17 @@ public:
   value_type const& operator[](link l) const noexcept
   {
     return at(l);
+  }
+
+  bool contains(link l) const noexcept
+  {
+    auto idx = detail::index_val(l.value());
+    return idx < extend && detail::is_valid(get_ref_at_idx(idx));
+  }
+
+  bool empty() const noexcept
+  {
+    return length == 0;
   }
 
 private:

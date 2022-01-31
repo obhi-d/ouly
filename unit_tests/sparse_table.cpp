@@ -169,3 +169,30 @@ TEST_CASE("sparse_table: Test selfref", "[sparse_table][backref]")
   REQUIRE(table.at(e30).value == 30);
   REQUIRE(table.at(e30).self == e30.value());
 }
+
+TEST_CASE("sparse_table: Validate replace", "[sparse_table][replace]")
+{
+  acl::sparse_table<int> table1;
+
+  auto e10 = table1.emplace(5);
+  auto e20 = table1.emplace(7);
+  auto e30 = table1.emplace(11);
+
+  table1.replace(e10, 13);
+  table1.replace(e20, 17);
+  table1.replace(e30, 19);
+
+  REQUIRE(table1.at(e10) == 13);
+  REQUIRE(table1.at(e20) == 17);
+  REQUIRE(table1.at(e30) == 19);
+
+  REQUIRE(table1.contains(e10) == true);
+  REQUIRE(table1.contains(e20) == true);
+  REQUIRE(table1.contains(e30) == true);
+
+  table1.remove(e10);
+  table1.remove(e20);
+  table1.remove(e30);
+
+  REQUIRE(table1.empty() == true);
+}

@@ -79,6 +79,19 @@ protected:
     return links.size();
   }
 
+  inline bool contains(size_type l) const noexcept
+  {
+    return l < links.size();
+  }
+
+  inline size_type insert(size_type idx, size_type val) noexcept
+  {
+    auto last_size = static_cast<size_type>(links.size());
+    links.resize(idx + 1);
+    links[idx] = val;
+    return last_size;
+  }
+
   podvector<size_type, allocator<size_type>> links;
 };
 

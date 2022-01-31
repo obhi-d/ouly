@@ -5,6 +5,7 @@
 #include "podvector.hpp"
 #include "type_traits.hpp"
 #include <memory>
+#include <tuple>
 
 namespace acl
 {
@@ -127,27 +128,60 @@ public:
     return size;
   }
 
+  /// @brief packed_table has active pool count depending upon number of elements it contains
+  /// @return active pool count
+  size_type active_pools() const noexcept
+  {
+    return length >> pool_div;
+  }
+
+  /// @brief Get item pool and number of items give the pool number
+  /// @param i Must be between [0, active_pools())
+  /// @return Item pool raw array and array size
+  auto get_pool(size_type i) const noexcept -> std::tuple<value_type const*, size_type>
+  {
+    return {reinterpret_cast<value_type const*>(items[i]), items[i] == items.back() ? length & pool_mod : pool_size};
+  }
+
+  auto get_pool(size_type i) noexcept -> std::tuple<value_type*, size_type>
+  {
+    return {reinterpret_cast<value_type*>(items[i]), items[i] == items.back() ? length & pool_mod : pool_size};
+  }
+
   /// @brief Emplace back an element. Order is not guranteed.
   /// @tparam ...Args Constructor args for value_type
   /// @return Returns link to the element pushed. link can be used to destroy entry.
   template <typename... Args>
   link emplace(Args&&... args) noexcept
   {
-    auto block = length >> pool_div;
-    auto index = length & pool_mod;
-
-    if (block >= items.size())
-      items.emplace_back(allocator_traits::allocate(*this, sizeof(storage) * pool_size));
-
-    std::construct_at(reinterpret_cast<value_type*>(items[block] + index), std::forward<Args>(args)...);
-
+    emplace_back(std::forward<Args>(args)...);
     return do_insert(length++);
+  }
+
+  /// @brief Construct an item in a given location, assuming the location was empty
+  template <typename... Args>
+  void emplace_at(link point, Args&&... args) noexcept
+  {
+    if constexpr (detail::debug)
+      assert(!contains(point));
+
+    emplace_back(std::forward<Args>(args)...);
+    do_insert(point.value(), length++);
+  }
+
+  /// @brief Construct an item in a given location, assuming the location was empty
+  void replace(link point, value_type&& args) noexcept
+  {
+    if constexpr (detail::debug)
+      assert(contains(point));
+
+    at(point) = std::move(args);
   }
 
   /// @brief Erase a single element.
   void remove(link l) noexcept
   {
-    if (detail::debug)
+    if constexpr (detail::debug)
       validate(l);
     erase_at(l.value());
   }
@@ -187,7 +221,7 @@ public:
 
   value_type& at(link l) noexcept
   {
-    if (detail::debug)
+    if constexpr (detail::debug)
       validate(l);
     return item_at(base_type::to_index(l.value()));
   }
@@ -207,7 +241,30 @@ public:
     return at(l);
   }
 
+  bool contains(link l) const noexcept
+  {
+    auto idx = base_type::to_index(l.value());
+    return base_type::contains(idx) && detail::is_valid(base_type::link_at(idx));
+  }
+
+  bool empty() const noexcept
+  {
+    return length == 0;
+  }
+
 private:
+  template <typename... Args>
+  inline void emplace_back(Args&&... args) noexcept
+  {
+    auto block = length >> pool_div;
+    auto index = length & pool_mod;
+
+    if (block >= items.size())
+      items.emplace_back(allocator_traits::allocate(*this, sizeof(storage) * pool_size));
+
+    std::construct_at(reinterpret_cast<value_type*>(items[block] + index), std::forward<Args>(args)...);
+  }
+
   inline void validate(link l) const noexcept
   {
     auto lnk  = base_type::to_index(l.value());
@@ -283,7 +340,7 @@ private:
 
     base_type::link_at(base_type::to_index(last_slot)) = item_id;
     item_id                                            = first_free_index;
-    first_free_index                                   = detail::revise(l);
+    first_free_index                                   = detail::revise_invalidate(l);
   }
 
   inline auto& last_released() noexcept
@@ -301,7 +358,7 @@ private:
     }
     else
     {
-      lnk              = first_free_index;
+      lnk              = detail::validate(first_free_index);
       auto  index      = base_type::to_index(lnk);
       auto& id         = base_type::link_at(index);
       first_free_index = id;
@@ -311,6 +368,53 @@ private:
     set_ref_at_idx(loc, lnk);
 
     return link(lnk);
+  }
+
+  inline void do_insert(size_type lnk, size_type loc) noexcept
+  {
+    auto idx = base_type::to_index(lnk);
+    if (base_type::contains(idx))
+    {
+      break_free_chain(idx);
+      base_type::link_at(idx) = loc;
+    }
+    else
+    {
+      make_free_chain(base_type::insert(idx, loc), idx);
+    }
+
+    set_ref_at_idx(loc, lnk);
+  }
+
+  inline void break_free_chain(size_type idx) noexcept
+  {
+    auto it = first_free_index;
+    if (base_type::to_index(it) == idx)
+    {
+      first_free_index = link::null;
+      return;
+    }
+
+    while (it != link::null)
+    {
+      auto next = base_type::link_at(base_type::to_index(it));
+      if (base_type::to_index(next) == idx)
+        break;
+      it = next;
+    }
+    base_type::link_at(base_type::to_index(it)) = base_type::link_at(idx);
+  }
+
+  inline void make_free_chain(size_type first, size_type last) noexcept
+  {
+    for (; first < last; ++first)
+      add_free_slot(first);
+  }
+
+  inline void add_free_slot(size_type slot) noexcept
+  {
+    base_type::link_at(slot) = first_free_index;
+    first_free_index         = detail::revise_invalidate(slot);
   }
 
   /// @brief Lambda called for each element

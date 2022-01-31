@@ -72,6 +72,12 @@ inline size_type invalidate(size_type val)
 }
 
 template <typename size_type>
+inline size_type validate(size_type val)
+{
+  return (~invalidated_mask_v<size_type>)&(val);
+}
+
+template <typename size_type>
 inline size_type revise_invalidate(size_type val)
 {
   if constexpr (detail::debug)

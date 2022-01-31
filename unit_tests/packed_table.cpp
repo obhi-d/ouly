@@ -197,3 +197,56 @@ TEST_CASE("packed_table: Test selfref", "[packed_table][backref]")
   REQUIRE(table.at(e30).value == 30);
   REQUIRE(table.at(e30).self == e30.value());
 }
+
+TEST_CASE("packed_table: Validate emplace_at", "[packed_table][emplace_at]")
+{
+  acl::packed_table<int> table1, table2;
+
+  auto e10 = table1.emplace(5);
+  auto e20 = table1.emplace(7);
+  auto e30 = table1.emplace(11);
+
+  table2.emplace_at(e10, 5);
+  table2.emplace_at(e20, 7);
+  table2.emplace_at(e30, 11);
+
+  REQUIRE(table1.at(e10) == table2.at(e10));
+  REQUIRE(table1.at(e20) == table2.at(e20));
+  REQUIRE(table1.at(e30) == table2.at(e30));
+
+  table2.remove(e10);
+  table2.emplace_at(e10, 13);
+
+  REQUIRE(table1.at(e10) == 5);
+  REQUIRE(table2.at(e10) == 13);
+
+  table2.remove(e10);
+  table2.remove(e20);
+  table2.emplace_at(e20, 17);
+
+  REQUIRE(table2.contains(e10) == false);
+  REQUIRE(table2.contains(e20) == true);
+  REQUIRE(table2.at(e20) == 17);
+
+  table2.remove(e20);
+  table2.remove(e30);
+
+  REQUIRE(table2.empty() == true);
+}
+
+TEST_CASE("packed_table: Validate replace", "[packed_table][replace]")
+{
+  acl::packed_table<int> table1;
+
+  auto e10 = table1.emplace(5);
+  auto e20 = table1.emplace(7);
+  auto e30 = table1.emplace(11);
+
+  table1.replace(e10, 13);
+  table1.replace(e20, 17);
+  table1.replace(e30, 19);
+
+  REQUIRE(table1.at(e10) == 13);
+  REQUIRE(table1.at(e20) == 17);
+  REQUIRE(table1.at(e30) == 19);
+}
