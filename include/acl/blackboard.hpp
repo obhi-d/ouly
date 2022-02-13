@@ -19,7 +19,7 @@ concept BlackboardDataType = std::is_pod_v<T>;
 /// Data is stored as a blob, names are stored seperately if required for lookup
 /// Data can also be retrieved by index.
 /// Data type should all be POD
-/// Use @inventory if non-POD type data is required.
+/// Use @greenboard if non-POD type data is required.
 template <typename StringType = std::string_view>
 class blackboard
 {

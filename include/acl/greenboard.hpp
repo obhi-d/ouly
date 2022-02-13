@@ -23,7 +23,7 @@ concept InventoryDataType = std::is_trivial_v<T> || std::is_move_constructible_v
 /// There is no restriction on the data type that is supported.
 template <typename Allocator = std::allocator<void*>, typename StringType = std::string_view,
           std::size_t const PoolSize = 1024>
-class inventory : public Allocator
+class greenboard : public Allocator
 {
   using dtor = bool (*)(void*);
 
@@ -51,14 +51,14 @@ public:
   template <typename T>
   static constexpr bool is_inlined = (sizeof(T) <= sizeof(atom_t)) && std::is_trivial_v<T>;
 
-  inline inventory() noexcept {}
-  inline inventory(Allocator&& alloc) noexcept : base_type(std::move<Allocator>(alloc)) {}
-  inline inventory(Allocator const& alloc) noexcept : base_type(alloc) {}
-  inline inventory(inventory&& other) noexcept      = default;
-  inline inventory(inventory const& other) noexcept = delete;
-  inventory& operator=(inventory&& other) noexcept = default;
-  inventory& operator=(inventory const& other) noexcept = delete;
-  ~inventory()
+  inline greenboard() noexcept {}
+  inline greenboard(Allocator&& alloc) noexcept : base_type(std::move<Allocator>(alloc)) {}
+  inline greenboard(Allocator const& alloc) noexcept : base_type(alloc) {}
+  inline greenboard(greenboard&& other) noexcept      = default;
+  inline greenboard(greenboard const& other) noexcept = delete;
+  greenboard& operator=(greenboard&& other) noexcept = default;
+  greenboard& operator=(greenboard const& other) noexcept = delete;
+  ~greenboard()
   {
     clear();
   }

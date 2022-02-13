@@ -1,10 +1,10 @@
-#include <acl/inventory.hpp>
+#include <acl/greenboard.hpp>
 #include <catch2/catch.hpp>
 
-TEST_CASE("inventory: push_back", "[inventory][push_back]")
+TEST_CASE("greenboard: push_back", "[greenboard][push_back]")
 {
-  acl::inventory board;
-  auto           index = board.emplace_safe<std::uint32_t>("param1", 50);
+  acl::greenboard board;
+  auto            index = board.emplace_safe<std::uint32_t>("param1", 50);
   REQUIRE(board.at<std::uint32_t>(index) == 50);
   REQUIRE(board.at<std::uint32_t>("param1") == 50);
   REQUIRE(board.contains("param1"));

@@ -14,7 +14,7 @@ FetchContent_MakeAvailable(Catch2)
 
 add_executable(acl-validity
  "main.cpp"
- "packed_table.cpp" "sparse_table.cpp" "collection.cpp" "blackboard.cpp" "inventory.cpp")
+ "packed_table.cpp" "sparse_table.cpp" "collection.cpp" "blackboard.cpp" "greenboard.cpp")
 
 target_link_libraries(acl-validity acl::acl Catch2::Catch2)
 add_test(acl-validity acl-validity)
