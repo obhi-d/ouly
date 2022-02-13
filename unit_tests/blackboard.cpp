@@ -10,5 +10,6 @@ TEST_CASE("blackboard: push_back", "[blackboard][push_back]")
   REQUIRE(board.contains("param1"));
   board.emplace_safe<std::uint32_t>("param1", 150);
   REQUIRE(board.at<std::uint32_t>(index) == 150);
-  board.erase<std::uint32_t>(index);
+  board.erase<std::uint32_t>("param1");
+  REQUIRE(board.contains("param1") == false);
 }
