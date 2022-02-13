@@ -1,2 +1,2 @@
-# altcon
-Boost alternative containers 
+# ACL : Alternate container library
+Optional containers.
