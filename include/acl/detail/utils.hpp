@@ -3,6 +3,7 @@
 #include <cassert>
 #include <cstdint>
 #include <limits>
+#include <tuple>
 
 #pragma once
 
@@ -16,6 +17,11 @@ struct aligned_storage
 {
   alignas(Align) std::uint8_t data[Len];
 };
+
+template <typename... Args>
+using tuple_of = std::tuple<Args...>;
+
+// constexpr auto tuple_expand ... should give me a type with pointers to tuple types
 
 template <typename size_type>
 constexpr size_type invalidated_mask_v = (static_cast<size_type>(0x80) << ((sizeof(size_type) - 1) * 8));
