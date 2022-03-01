@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <limits>
 #include <tuple>
+#include <utility>
 
 #pragma once
 
@@ -22,10 +23,10 @@ template <typename... Args>
 using tuple_of = std::tuple<Args...>;
 
 template <typename... Args>
-constexpr auto tuple_element_pointer(std::tuple<Args...>&&)
-{
-  return std::tuple<Args*, ...>{};
-}
+constexpr auto tuple_element_pointer(std::tuple<Args...>&&) -> std::tuple<std::decay_t<Args>*...>;
+
+template <typename... Args>
+using tuple_of_ptrs = decltype(tuple_element_pointer(std::declval<std::tuple<Args...>>()));
 
 template <typename size_type>
 constexpr size_type invalidated_mask_v = (static_cast<size_type>(0x80) << ((sizeof(size_type) - 1) * 8));

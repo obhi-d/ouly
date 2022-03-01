@@ -11,85 +11,96 @@
 
 namespace acl
 {
-template <typename Tuple, typename Allocator = std::allocator<Tuple>, typename Traits = acl::traits<Types>>
-class soavector
+template <typename Allocator = std::allocator<void*>, typename... Args>
+class soavector : public Allocator
 {
 
 public:
-  using value_type                  = Tuple;
-  using allocator_type              = Allocator;
-  using size_type                   = typename Traits::size_type;
-  using difference_type             = size_type;
-  using reference                   = value_type&;
-  using const_reference             = const value_type&;
-  using pointer                     = Ty*;
-  using const_pointer               = Ty const*;
-  using iterator                    = Ty*;
-  using const_iterator              = Ty const*;
-  using reverse_iterator            = std::reverse_iterator<iterator>;
-  using const_reverse_iterator      = std::reverse_iterator<const_iterator>;
+  using tuple_type = std::tuple<Args...>;
+  template <std::size_t i>
+  using value_type      = std::tuple_element_t<i, std::tuple<Args...>>;
+  using allocator_type  = Allocator;
+  using size_type       = uint32;
+  using difference_type = size_type;
+  template <std::size_t i>
+  using reference = value_type<i>&;
+  template <std::size_t i>
+  using const_reference = const value_type<i>&;
+  template <std::size_t i>
+  using pointer = value_type<i>*;
+  template <std::size_t i>
+  using const_pointer = value_type<i> const*;
+  template <std::size_t i>
+  using iterator = value_type<i>*;
+  template <std::size_t i>
+  using const_iterator = value_type<i> const*;
+  template <std::size_t i>
+  using reverse_iterator = std::reverse_iterator<iterator<i>>;
+  template <std::size_t i>
+  using const_reverse_iterator      = std::reverse_iterator<const_iterator<i>>;
   using allocator_is_always_equal   = typename std::allocator_traits<allocator_type>::is_always_equal;
   using propagate_allocator_on_move = typename std::allocator_traits<Allocator>::propagate_on_container_move_assignment;
   using propagate_allocator_on_copy = typename std::allocator_traits<Allocator>::propagate_on_container_copy_assignment;
   using propagate_allocator_on_swap = typename std::allocator_traits<Allocator>::propagate_on_container_swap;
   using allocator_traits            = std::allocator_traits<Allocator>;
 
-  explicit podvector(const Allocator& alloc = Allocator()) : Allocator(alloc), data_(nullptr), size_(0), capacity_(0){};
+  explicit soavector(const Allocator& alloc = Allocator()) : Allocator(alloc), data_(nullptr), size_(0), capacity_(0){};
 
-  explicit podvector(size_type n) : data_(allocate(n)), size_(n), capacity_(n) {}
+  explicit soavector(size_type n) : data_(allocate(n)), size_(n), capacity_(n) {}
 
-  podvector(size_type n, const Ty& value, const Allocator& alloc = Allocator())
+  soavector(size_type n, const tuple_type& value, const Allocator& alloc = Allocator())
       : Allocator(alloc), data_(allocate(n)), size_(n), capacity_(n)
   {
+
     std::uninitialized_fill_n(data_, n, value);
   }
 
   template <class InputIterator>
-  podvector(InputIterator first, InputIterator last, const Allocator& alloc = Allocator()) : Allocator(alloc)
+  soavector(InputIterator first, InputIterator last, const Allocator& alloc = Allocator()) : Allocator(alloc)
   {
     construct_from_range(first, last, std::is_integral<InputIterator>());
   }
 
-  podvector(const podvector<Ty, Allocator>& x)
+  soavector(const soavector<Ty, Allocator>& x)
 
       : data_(allocate(x.capacity_)), size_(x.size_), capacity_(x.capacity_)
   {
     copy(std::begin(x), std::end(x), data_);
   }
-  podvector(podvector&& x) : size_(x.size_), capacity_(x.capacity_), data_(x.data_)
+  soavector(soavector&& x) : size_(x.size_), capacity_(x.capacity_), data_(x.data_)
   {
     std::memset(&x, 0, sizeof(x));
   };
-  podvector(const podvector& x, const Allocator& alloc)
+  soavector(const soavector& x, const Allocator& alloc)
       : Allocator(alloc), data_(allocate(x.capacity_)), size_(x.size_), capacity_(x.capacity_)
   {
     copy(std::begin(x), std::end(x), data_);
   }
-  podvector(podvector&& x, const Allocator& alloc)
+  soavector(soavector&& x, const Allocator& alloc)
       : Allocator(alloc), data_(x.data_), size_(x.size_), capacity_(x.capacity_)
   {
     std::memset(&x, 0, sizeof(x));
   };
-  podvector(std::initializer_list<Ty> x, const Allocator& alloc = Allocator())
+  soavector(std::initializer_list<Ty> x, const Allocator& alloc = Allocator())
       : Allocator(alloc), size_(static_cast<size_type>(x.size())), capacity_(size_)
   {
     data_ = allocate(static_cast<size_type>(x.size()));
     copy(std::begin(x), std::end(x), data_);
   }
 
-  ~podvector()
+  ~soavector()
   {
     deallocate();
   }
-  podvector<Ty, Allocator>& operator=(const podvector<Ty, Allocator>& x)
+  soavector<Ty, Allocator>& operator=(const soavector<Ty, Allocator>& x)
   {
     return assign_copy(x, propagate_allocator_on_copy());
   }
-  podvector<Ty, Allocator>& operator=(podvector<Ty, Allocator>&& x)
+  soavector<Ty, Allocator>& operator=(soavector<Ty, Allocator>&& x)
   {
     return assign_move(std::move(x), propagate_allocator_on_move());
   }
-  podvector& operator=(std::initializer_list<Ty> x)
+  soavector& operator=(std::initializer_list<Ty> x)
   {
     if (capacity_ < x.size())
     {
@@ -367,7 +378,7 @@ public:
     size_ -= n;
     return const_cast<iterator>(first);
   }
-  void swap(podvector<Ty, Allocator>& x)
+  void swap(soavector<Ty, Allocator>& x)
   {
     swap(x, propagate_allocator_on_swap());
   }
@@ -393,7 +404,7 @@ private:
     size_ = nsz;
     return p;
   }
-  inline podvector& assign_copy(const podvector& x, std::false_type)
+  inline soavector& assign_copy(const soavector& x, std::false_type)
   {
     if (capacity_ < x.size_)
     {
@@ -406,7 +417,7 @@ private:
     return *this;
   }
 
-  inline podvector& assign_copy(const podvector& x, std::true_type)
+  inline soavector& assign_copy(const soavector& x, std::true_type)
   {
     if (allocator_is_always_equal::value || static_cast<const Allocator&>(x) == static_cast<const Allocator&>(*this))
       assign(x, std::false_type());
@@ -422,7 +433,7 @@ private:
     return *this;
   }
 
-  inline podvector& assign_move(podvector&& x, std::false_type)
+  inline soavector& assign_move(soavector&& x, std::false_type)
   {
     if (allocator_is_always_equal::value || static_cast<const Allocator&>(x) == static_cast<const Allocator&>(*this))
     {
@@ -438,7 +449,7 @@ private:
     return *this;
   }
 
-  inline podvector& assign_move(podvector&& x, std::true_type)
+  inline soavector& assign_move(soavector&& x, std::true_type)
   {
     deallocate();
     Allocator::operator=(std::move(static_cast<Allocator&>(x)));
@@ -498,14 +509,14 @@ private:
     capacity_ = n;
   }
 
-  void swap(podvector<Ty, Allocator>& x, std::false_type)
+  void swap(soavector<Ty, Allocator>& x, std::false_type)
   {
     std::swap(capacity_, x.capacity_);
     std::swap(size_, x.size_);
     std::swap(data_, x.data_);
   }
 
-  void swap(podvector<Ty, Allocator>& x, std::true_type)
+  void swap(soavector<Ty, Allocator>& x, std::true_type)
   {
     std::swap(capacity_, x.capacity_);
     std::swap(size_, x.size_);
@@ -513,37 +524,37 @@ private:
     std::swap<Allocator>(this, x);
   }
 
-  friend void swap(podvector<Ty, Allocator>& lhs, podvector<Ty, Allocator>& rhs)
+  friend void swap(soavector<Ty, Allocator>& lhs, soavector<Ty, Allocator>& rhs)
   {
     lhs.swap(rhs);
   }
 
-  friend bool operator==(const podvector<Ty, Allocator>& x, const podvector<Ty, Allocator>& y)
+  friend bool operator==(const soavector<Ty, Allocator>& x, const soavector<Ty, Allocator>& y)
   {
     return x.size_ == y.size_ && std::memcmp(x.data_, y.data_, x.size_) == 0;
   }
 
-  friend bool operator<(const podvector<Ty, Allocator>& x, const podvector<Ty, Allocator>& y)
+  friend bool operator<(const soavector<Ty, Allocator>& x, const soavector<Ty, Allocator>& y)
   {
     return std::lexicographical_compare(x.begin(), x.end(), y.begin(), y.end());
   }
 
-  friend bool operator!=(const podvector<Ty, Allocator>& x, const podvector<Ty, Allocator>& y)
+  friend bool operator!=(const soavector<Ty, Allocator>& x, const soavector<Ty, Allocator>& y)
   {
     return !(x == y);
   }
 
-  friend bool operator>(const podvector<Ty, Allocator>& x, const podvector<Ty, Allocator>& y)
+  friend bool operator>(const soavector<Ty, Allocator>& x, const soavector<Ty, Allocator>& y)
   {
     return std::lexicographical_compare(y.begin(), y.end(), x.begin(), x.end());
   }
 
-  friend bool operator>=(const podvector<Ty, Allocator>& x, const podvector<Ty, Allocator>& y)
+  friend bool operator>=(const soavector<Ty, Allocator>& x, const soavector<Ty, Allocator>& y)
   {
     return !std::lexicographical_compare(x.begin(), x.end(), y.begin(), y.end());
   }
 
-  friend bool operator<=(const podvector<Ty, Allocator>& x, const podvector<Ty, Allocator>& y)
+  friend bool operator<=(const soavector<Ty, Allocator>& x, const soavector<Ty, Allocator>& y)
   {
     return !std::lexicographical_compare(y.begin(), y.end(), x.begin(), x.end());
   }
