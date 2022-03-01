@@ -17,6 +17,8 @@ class soavector : public Allocator
 
 public:
   using tuple_type = std::tuple<Args...>;
+  using array_type = detail::tuple_of_ptrs<Args...>;
+
   template <std::size_t i>
   using value_type      = std::tuple_element_t<i, std::tuple<Args...>>;
   using allocator_type  = Allocator;
@@ -44,25 +46,44 @@ public:
   using propagate_allocator_on_swap = typename std::allocator_traits<Allocator>::propagate_on_container_swap;
   using allocator_traits            = std::allocator_traits<Allocator>;
 
-  explicit soavector(const Allocator& alloc = Allocator()) : Allocator(alloc), data_(nullptr), size_(0), capacity_(0){};
+  static auto constexpr index_seq = std::make_index_sequence<sizeof...Args>{};
+
+private:
+
+  template <std::size_t... I>
+  void uninitialize_fill(tuple_type const& t, std::index_sequence<I...>)
+  {
+    // This implementation is valid since C++20 (via P1065R2)
+    // In C++17, a constexpr counterpart of std::invoke is actually needed here
+    (std::uninitialized_fill_n(std::get<I>(data_), size_, std::get<I>(t))...);
+  }
+
+  template <std::size_t... I>
+  void copy(soavector const& x, std::index_sequence<I...>)
+  {
+    // This implementation is valid since C++20 (via P1065R2)
+    // In C++17, a constexpr counterpart of std::invoke is actually needed here
+    (std::uninitialized_fill_n(std::get<I>(data_), size_, std::get<I>(t))...);
+  }
+
+public:
+  explicit soavector(Allocator const& alloc = Allocator()) : Allocator(alloc), data_(nullptr), size_(0), capacity_(0){};
 
   explicit soavector(size_type n) : data_(allocate(n)), size_(n), capacity_(n) {}
 
-  soavector(size_type n, const tuple_type& value, const Allocator& alloc = Allocator())
+  soavector(size_type n, tuple_type const& value, Allocator const& alloc = Allocator())
       : Allocator(alloc), data_(allocate(n)), size_(n), capacity_(n)
   {
-
-    std::uninitialized_fill_n(data_, n, value);
+    uninitialized_fill(value, index_seq);
   }
 
   template <class InputIterator>
-  soavector(InputIterator first, InputIterator last, const Allocator& alloc = Allocator()) : Allocator(alloc)
+  soavector(InputIterator first, InputIterator last, Allocator const& alloc = Allocator()) : Allocator(alloc)
   {
     construct_from_range(first, last, std::is_integral<InputIterator>());
   }
 
-  soavector(const soavector<Ty, Allocator>& x)
-
+  soavector(soavector const& x)
       : data_(allocate(x.capacity_)), size_(x.size_), capacity_(x.capacity_)
   {
     copy(std::begin(x), std::end(x), data_);
@@ -71,10 +92,10 @@ public:
   {
     std::memset(&x, 0, sizeof(x));
   };
-  soavector(const soavector& x, const Allocator& alloc)
+  soavector(soavector const& x, Allocator const& alloc)
       : Allocator(alloc), data_(allocate(x.capacity_)), size_(x.size_), capacity_(x.capacity_)
   {
-    copy(std::begin(x), std::end(x), data_);
+    copy(x, data_);
   }
   soavector(soavector&& x, const Allocator& alloc)
       : Allocator(alloc), data_(x.data_), size_(x.size_), capacity_(x.capacity_)
