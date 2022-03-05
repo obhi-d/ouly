@@ -47,27 +47,46 @@ public:
   using propagate_allocator_on_swap = typename std::allocator_traits<Allocator>::propagate_on_container_swap;
   using allocator_traits            = std::allocator_traits<Allocator>;
 
-  static auto constexpr index_seq = std::make_index_sequence<sizeof... Args>{};
+  static auto constexpr index_seq = std::make_index_sequence<sizeof... (Args)>();
 
 private:
+
   template <std::size_t... I>
   void uninitialized_fill(size_type start, size_type count, tuple_type const& t, std::index_sequence<I...>) noexcept
   {
     // This implementation is valid since C++20 (via P1065R2)
     // In C++17, a constexpr counterpart of std::invoke is actually needed here
-    (std::uninitialized_fill_n(std::get<I>(data_) + start, count, std::get<I>(t))...);
+    (std::uninitialized_fill_n(std::get<I>(data_) + start, count, std::get<I>(t)),...);
   }
 
   template <std::size_t... I>
   void construct_at(size_type i, std::index_sequence<I...>, Args&&... args) noexcept
   {
-    (std::construct_at(std::get<I>(data_) + i, std::forward<Args>(args))...);
+    (std::construct_at(std::get<I>(data_) + i, std::forward<Args>(args)),...);
   }
 
   template <std::size_t... I>
-  void construct_at_tuple(size_type i, std::index_sequence<I...>, tuple_type const& arg) noexcept
+  void construct_tuple_at(size_type i, std::index_sequence<I...>, tuple_type const& arg) noexcept
   {
-    (std::construct_at(std::get<I>(data_) + i, std::get<I>(arg))...);
+    (std::construct_at(std::get<I>(data_) + i, std::get<I>(arg)),...);
+  }
+
+  template <typename T, typename Arg>
+  void move_at(T* data, Arg&& arg) noexcept
+  {
+    *data = std::forward<Arg>(arg);
+  }
+
+  template <std::size_t... I>
+  void move_at(size_type i, std::index_sequence<I...>, Args&&... args) noexcept
+  {
+    (move_at(std::get<I>(data_) + i, std::forward<Args>(args)),...);
+  }
+
+  template <std::size_t... I>
+  void move_tuple_at(size_type i, std::index_sequence<I...>, tuple_type const& arg) noexcept
+  {
+    (move_at(std::get<I>(data_) + i, std::get<I>(arg)),...);
   }
 
   template <typename T>
@@ -99,7 +118,7 @@ private:
     // This implementation is valid since C++20 (via P1065R2)
     // In C++17, a constexpr counterpart of std::invoke is actually needed here
 
-    (construct_list(std::get<I>(data_), size_, std::get<I>(x.data_))...);
+    (construct_list(std::get<I>(data_), size_, std::get<I>(x.data_)),...);
   }
 
   template <typename InputIterator, std::size_t... I>
@@ -108,7 +127,7 @@ private:
   {
     while (start != end)
     {
-      (std::construct_at(std::get<I>(store) + i, std::get<I>(*(start)))...);
+      (std::construct_at(std::get<I>(store) + i, std::get<I>(*(start))),...);
       start++;
     }
   }
@@ -134,13 +153,13 @@ private:
   template <std::size_t... I>
   void destroy_all(size_type start, size_type count, std::index_sequence<I...>) noexcept
   {
-    (destroy_seq(std::get<I>(data_) + start, count)...);
+    (destroy_seq(std::get<I>(data_) + start, count),...);
   }
 
   template <std::size_t... I>
   void destroy_at(size_type at, std::index_sequence<I...>) noexcept
   {
-    (destroy_single(std::get<I>(data_) + at)...);
+    (destroy_single(std::get<I>(data_) + at),...);
   }
 
   void destroy_and_deallocate() noexcept
@@ -454,7 +473,7 @@ public:
     if (capacity_ < size_ + 1)
       unchecked_reserve(size_ + std::max<size_type>(size_ >> 1, 1));
 
-    construct_at(size_++, index_seq, x);
+    construct_tuple_at(size_++, index_seq, x);
   }
 
   void pop_back() noexcept
@@ -463,47 +482,39 @@ public:
     destroy_at(--size_, index_seq);
   }
 
-  template <std::size_t i, class... Args>
-  iterator emplace(const_iterator position, Args&&... args) noexcept
+  void emplace(size_type position, Args&&... args) noexcept
   {
     size_type p = insert_hole(position);
-    data_[p]    = Ty(std::forward<Args>(args)...);
-    return data_ + p;
+    move_at(p, index_seq, std::forward<Args>(args)...);
   }
 
-  template <std::size_t i>
-  iterator insert(const_iterator position, const Ty& x)
+  void insert(size_type position, tuple_type const& x)
   {
     size_type p = insert_hole(position);
-    data_[p]    = x;
-    return data_ + p;
+    move_tuple_at(p, index_seq, x);
   }
 
-  template <std::size_t i>
-  iterator insert(const_iterator position, Ty&& x)
+  void insert(size_type position, tuple_type&& x)
   {
     size_type p = insert_hole(position);
-    data_[p]    = std::move(x);
-    return data_ + p;
+    move_tuple_at(p, index_seq, std::move(x));
   }
 
-  template <std::size_t i>
-  iterator insert(const_iterator position, size_type n, const Ty& x)
+  void insert(size_type position, size_type n, tuple_type const& x)
   {
-    return insert_range(position, n, x, std::true_type());
+    insert_range(position, n, index_seq, x);
   }
 
-  template <std::size_t i, class InputIterator>
-  iterator insert(const_iterator position, InputIterator first, InputIterator last)
+  template <typename InputIterator>
+  void insert(size_type position, InputIterator first, InputIterator last)
   {
-    return insert_range(position, first, last, std::is_integral<InputIterator>());
+    insert_range(position, first, last, index_seq);
   }
 
-  iterator insert(const_iterator position, std::initializer_list<Ty> x)
+  void insert(size_type position, std::initializer_list<tuple_type> x)
   {
     size_type p = insert_hole(position, static_cast<size_type>(x.size()));
     copy(std::begin(x), std::end(x), data_ + p);
-    return data_ + p;
   }
 
   iterator erase(const_iterator position)
@@ -514,6 +525,7 @@ public:
     size_--;
     return const_cast<iterator>(position);
   }
+
   iterator erase(const_iterator first, const_iterator last)
   {
     assert(last < end());
