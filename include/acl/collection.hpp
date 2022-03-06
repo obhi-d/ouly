@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include "allocator.hpp"
+#include "default_allocator.hpp"
 #include "detail/config.hpp"
 #include "detail/utils.hpp"
 #include "link.hpp"
@@ -13,17 +15,16 @@ namespace acl
 
 /// @brief A collection of links, but not stored in vectors, instead managed by bitmap
 /// @tparam Ty
-/// @tparam Allocator
-template <typename Cont, typename Allocator = std::allocator<typename Cont::value_type>,
+/// @tparam Allocator any allocator type under acl
+template <typename Cont, typename Allocator = default_allocator<>,
           typename Traits = acl::traits<typename Cont::value_type>>
 class collection : public Allocator
 {
 public:
-  using value_type       = typename Cont::value_type;
-  using size_type        = typename Traits::size_type;
-  using link             = acl::link<value_type, size_type>;
-  using allocator_type   = Allocator;
-  using allocator_traits = std::allocator_traits<Allocator>;
+  using value_type     = typename Cont::value_type;
+  using size_type      = typename Traits::size_type;
+  using link           = acl::link<value_type, size_type>;
+  using allocator_type = Allocator;
 
 private:
   static constexpr auto pool_div  = detail::log2(Traits::pool_size);
@@ -32,7 +33,7 @@ private:
   using this_type                 = collection<Cont, Allocator>;
   using base_type                 = Allocator;
   using storage                   = std::uint8_t;
-  using allocator                 = typename allocator_traits::template rebind_alloc<storage*>;
+  using allocator                 = Allocator;
 
 public:
   inline collection() noexcept {}
@@ -43,11 +44,13 @@ public:
   {
     *this = other;
   }
-  inline ~collection()
+
+  inline ~collection() noexcept
   {
     clear();
     shrink_to_fit();
   }
+
   collection& operator=(collection&& other) noexcept = default;
 
   collection& operator=(collection const& other) noexcept
@@ -60,8 +63,8 @@ public:
     {
       for (std::size_t i = 0, end = items.size() / 2; i < end; ++i)
       {
-        items[i * 2 + 0] = allocator_traits::allocate(*this, bit_page_size);
-        items[i * 2 + 1] = allocator_traits::allocate(*this, haz_page_size);
+        items[i * 2 + 0] = acl::allocate<storage>(*this, bit_page_size);
+        items[i * 2 + 1] = acl::allocate<storage>(*this, haz_page_size);
         std::memcpy(items[i * 2 + 0], other.items[i * 2 + 0], bit_page_size);
         std::memcpy(items[i * 2 + 1], other.items[i * 2 + 1], haz_page_size);
       }
@@ -70,7 +73,7 @@ public:
     {
       for (std::size_t i = 0, end = items.size(); i < end; ++i)
       {
-        items[i] = allocator_traits::allocate(*this, bit_page_size);
+        items[i] = acl::allocate<storage>(*this, bit_page_size);
         std::memcpy(items[i], other.items[i], bit_page_size);
       }
     }
@@ -154,18 +157,15 @@ public:
       {
         for (size_type i = 0, end = items.size() / 2; i < end; ++i)
         {
-          allocator_traits::deallocate(static_cast<Allocator&>(*this),
-                                       reinterpret_cast<allocator_traits::pointer>(items[i * 2 + 0]), bit_page_size);
-          allocator_traits::deallocate(static_cast<Allocator&>(*this),
-                                       reinterpret_cast<allocator_traits::pointer>(items[i * 2 + 1]), haz_page_size);
+          acl::deallocate(static_cast<Allocator&>(*this), items[i * 2 + 0], bit_page_size);
+          acl::deallocate(static_cast<Allocator&>(*this), items[i * 2 + 1], haz_page_size);
         }
       }
       else
       {
         for (auto i : items)
         {
-          allocator_traits::deallocate(static_cast<Allocator&>(*this),
-                                       reinterpret_cast<allocator_traits::pointer>(items[i]), bit_page_size);
+          acl::deallocate(static_cast<Allocator&>(*this), items[i], bit_page_size);
         }
       }
     }
@@ -230,11 +230,11 @@ private:
       constexpr auto bit_page_size = sizeof(storage) * (pool_size >> 3);
       constexpr auto haz_page_size = sizeof(storage) * pool_size;
 
-      items.emplace_back(allocator_traits::allocate(*this, bit_page_size));
+      items.emplace_back(acl::allocate<storage>(*this, bit_page_size));
       std::memset(items.back(), 0, bit_page_size);
       if constexpr (detail::debug)
       {
-        items.emplace_back(allocator_traits::allocate(*this, haz_page_size));
+        items.emplace_back(acl::allocate<storage>(*this, haz_page_size));
         std::memset(items.back(), 0, haz_page_size);
       }
     }

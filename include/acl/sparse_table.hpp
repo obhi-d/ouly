@@ -1,5 +1,7 @@
 #pragma once
 
+#include "allocator.hpp"
+#include "default_allocator.hpp"
 #include "detail/indirection.hpp"
 #include "detail/utils.hpp"
 #include "link.hpp"
@@ -10,17 +12,16 @@
 namespace acl
 {
 
-template <typename Ty, typename Allocator = std::allocator<Ty>, typename Traits = acl::traits<Ty>>
+template <typename Ty, typename Allocator = default_allocator<>, typename Traits = acl::traits<Ty>>
 class sparse_table : public acl::detail::sparse_table_base<Ty, Allocator, Traits>
 {
   static_assert(sizeof(Ty) >= sizeof(typename Traits::size_type), "Type must big enough to hold a link");
 
 public:
-  using value_type       = Ty;
-  using size_type        = typename Traits::size_type;
-  using link             = acl::link<value_type, size_type>;
-  using allocator_type   = Allocator;
-  using allocator_traits = std::allocator_traits<Allocator>;
+  using value_type     = Ty;
+  using size_type      = typename Traits::size_type;
+  using link           = acl::link<value_type, size_type>;
+  using allocator_type = Allocator;
 
 private:
   static constexpr auto pool_div    = detail::log2(Traits::pool_size);
@@ -30,7 +31,7 @@ private:
   using this_type                   = sparse_table<value_type, Allocator, Traits>;
   using base_type                   = detail::sparse_table_base<value_type, Allocator, Traits>;
   using storage                     = detail::aligned_storage<sizeof(value_type), alignof(value_type)>;
-  using allocator                   = typename allocator_traits::template rebind_alloc<storage*>;
+  using allocator                   = Allocator;
 
 public:
   inline sparse_table() noexcept {}
@@ -53,7 +54,7 @@ public:
   {
     items.resize(other.items.size());
     for (auto& data : items)
-      data = reinterpret_cast<storage*>(allocator_traits::allocate(*this, sizeof(storage) * pool_size));
+      data = acl::allocate<storage>(*this, sizeof(storage) * pool_size);
 
     for (size_type first = 0; first != other.extend; ++first)
     {
@@ -199,8 +200,7 @@ public:
   {
     auto block = (extend + pool_size - 1) >> pool_div;
     for (auto i = block, end = static_cast<size_type>(items.size()); i < end; ++i)
-      allocator_traits::deallocate(static_cast<Allocator&>(*this),
-                                   reinterpret_cast<allocator_traits::pointer>(items[i]), sizeof(storage) * pool_size);
+      acl::deallocate(*this, items[i], sizeof(storage) * pool_size);
     items.resize(block);
     items.shrink_to_fit();
     base_type::shrink_to_fit(extend);
@@ -326,7 +326,7 @@ private:
     {
       auto block = extend >> pool_div;
       if (block >= items.size())
-        items.emplace_back(allocator_traits::allocate(*this, sizeof(storage) * pool_size));
+        items.emplace_back(acl::allocate<storage>(*this, sizeof(storage) * pool_size));
 
       lnk = extend++;
     }

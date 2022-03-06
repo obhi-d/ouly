@@ -3,6 +3,7 @@
 #include "podvector.hpp"
 #include "type_traits.hpp"
 #include "utils.hpp"
+#include <acl/allocator.hpp>
 
 namespace acl
 {
@@ -14,10 +15,8 @@ template <typename Ty, typename Allocator, typename Traits, typename Base = Allo
 class base_indirection : public Base
 {
 protected:
-  using size_type        = typename Traits::size_type;
-  using allocator_traits = std::allocator_traits<Allocator>;
-  template <typename RebT>
-  using allocator = typename allocator_traits::template rebind_alloc<RebT>;
+  using size_type = typename Traits::size_type;
+  using allocator = Allocator;
 
 public:
   base_indirection()                        = default;
@@ -92,7 +91,7 @@ protected:
     return last_size;
   }
 
-  podvector<size_type, allocator<size_type>> links;
+  podvector<size_type, allocator> links;
 };
 
 template <typename Ty, typename Allocator, typename Traits, typename Base = Allocator>
@@ -105,8 +104,7 @@ protected:
   static constexpr auto pool_size         = static_cast<size_type>(1) << pool_div;
   static constexpr auto pool_mod          = pool_size - 1;
   static constexpr bool base_is_allocator = std::is_same_v<std::decay_t<Base>, std::decay_t<Allocator>>;
-  using allocator_traits                  = std::allocator_traits<Allocator>;
-  using allocator                         = typename allocator_traits::template rebind_alloc<size_type*>;
+  using allocator                         = Allocator;
 
 public:
   ref_indirection() noexcept                  = default;
@@ -119,6 +117,12 @@ public:
   ref_indirection(BaseArgs&&... base) : Base(std::forward<BaseArgs>(base)...)
   {}
 
+  ~ref_indirection()
+  {
+    for (size_type i = 0, end = static_cast<size_type>(refs.size()); i < end; ++i)
+      acl::deallocate(static_cast<Allocator&>(*this), refs[i], sizeof(size_type) * pool_size);
+  }
+
   ref_indirection& operator=(ref_indirection&&) noexcept = default;
 
   ref_indirection& operator=(ref_indirection const& other) noexcept
@@ -126,7 +130,7 @@ public:
     refs.resize(other.refs.size());
     for (size_type i = 0, end = static_cast<size_type>(other.refs.size()); i != end; ++i)
     {
-      refs[i] = reinterpret_cast<size_type*>(allocator_traits::allocate(*this, sizeof(size_type) * pool_size));
+      refs[i] = acl::allocate<size_type>(static_cast<Allocator&>(*this), sizeof(size_type) * pool_size);
       std::memcpy(refs[i], other.refs[i], sizeof(size_type) * pool_size);
     }
     static_cast<Base&>(*this) = static_cast<Base const&>(other);
@@ -151,7 +155,7 @@ protected:
     if (block >= refs.size())
       refs.resize(block + 1, nullptr);
     if (!refs[block])
-      refs[block] = reinterpret_cast<size_type*>(allocator_traits::allocate(*this, sizeof(size_type) * pool_size));
+      refs[block] = acl::allocate<size_type>(static_cast<Allocator&>(*this), sizeof(size_type) * pool_size);
     refs[block][index] = lnk;
   }
 
@@ -159,8 +163,7 @@ protected:
   {
     auto block = (length + pool_size - 1) >> pool_div;
     for (auto i = block, end = static_cast<size_type>(refs.size()); i < end; ++i)
-      allocator_traits::deallocate(*this, reinterpret_cast<allocator_traits::pointer>(refs[i]),
-                                   sizeof(size_type) * pool_size);
+      acl::deallocate(static_cast<Allocator&>(*this), refs[i], sizeof(size_type) * pool_size);
     refs.resize(block);
     refs.shrink_to_fit();
     if constexpr (!base_is_allocator)
@@ -184,6 +187,7 @@ protected:
   using link                              = acl::link<Ty, size_type>;
   using backref                           = typename Traits::offset;
   static constexpr bool base_is_allocator = std::is_same_v<std::decay_t<Base>, std::decay_t<Allocator>>;
+  using allocator                         = Allocator;
 
 public:
   ref_backref() noexcept              = default;
@@ -231,14 +235,15 @@ protected:
 };
 
 template <typename Ty, typename Allocator, typename Traits>
-using packed_table_base =
-  std::conditional_t<has_backref_v<Traits>,
-                     detail::ref_backref<Ty, Allocator, Traits, detail::base_indirection<Ty, Allocator, Traits>>,
-                     detail::ref_indirection<Ty, Allocator, Traits, detail::base_indirection<Ty, Allocator, Traits>>>;
+using packed_table_base = std::conditional_t<
+  has_backref_v<Traits>,
+  detail::ref_backref<Ty, Allocator, Traits, detail::base_indirection<Ty, Allocator, Traits, Allocator>>,
+  detail::ref_indirection<Ty, Allocator, Traits, detail::base_indirection<Ty, Allocator, Traits, Allocator>>>;
 
 template <typename Ty, typename Allocator, typename Traits>
-using sparse_table_base = std::conditional_t<has_backref_v<Traits>, detail::ref_backref<Ty, Allocator, Traits>,
-                                             detail::ref_indirection<Ty, Allocator, Traits>>;
+using sparse_table_base =
+  std::conditional_t<has_backref_v<Traits>, detail::ref_backref<Ty, Allocator, Traits, Allocator>,
+                     detail::ref_indirection<Ty, Allocator, Traits, Allocator>>;
 
 } // namespace detail
 

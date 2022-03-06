@@ -5,10 +5,7 @@
 #define ACL_DEBUG 1
 #endif
 
-namespace acl
-{
-namespace detail
+namespace acl::detail
 {
 static inline constexpr bool debug = ACL_DEBUG;
-}
-} // namespace acl
+} // namespace acl::detail

@@ -1,4 +1,6 @@
 #pragma once
+#include "allocator.hpp"
+#include "default_allocator.hpp"
 #include "podvector.hpp"
 #include <cassert>
 #include <cmath>
@@ -20,7 +22,7 @@ concept BlackboardDataType = std::is_pod_v<T>;
 /// Data can also be retrieved by index.
 /// Data type should all be POD
 /// Use @greenboard if non-POD type data is required.
-template <typename StringType = std::string_view>
+template <typename StringType = std::string_view, typename Allocator = default_allocator<>>
 class blackboard
 {
   static constexpr std::uint32_t mask = 0x80000000;
@@ -145,9 +147,9 @@ private:
     return ((size + sizeof(atom_t) - 1) / sizeof(atom_t));
   }
 
-  using value_list     = podvector<atom_t>;
+  using value_list     = podvector<atom_t, Allocator>;
   using name_index_map = std::unordered_map<StringType, std::uint32_t>;
-  using index_list     = podvector<atom_t>;
+  using index_list     = podvector<atom_t, Allocator>;
 
   value_list     values;
   index_list     offsets;

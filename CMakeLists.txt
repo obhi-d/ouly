@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 20)
 
 option(ACL_BUILD_TESTS "Build the unit tests when BUILD_TESTING is enabled." ON)
 option(ASAN_ENABLED "Build this target with AddressSanitizer" OFF)
+option(ACL_NO_STATS "No stats for allocator" ON)
 
 ##
 ## CONFIGURATION
@@ -34,6 +35,11 @@ target_include_directories(
     INTERFACE $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
+
+if (ACL_NO_STATS)
+    target_compile_definitions(${ACL_TARGET_NAME}
+        INTERFACE -DACL_NO_STATS)
+endif()
 
 ##
 ## TESTS

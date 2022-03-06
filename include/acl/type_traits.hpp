@@ -1,5 +1,6 @@
 #pragma once
 #include "detail/config.hpp"
+#include "detail/type_name.hpp"
 #include <cstdint>
 #include <type_traits>
 
@@ -13,6 +14,11 @@ struct traits
 
   static constexpr std::uint32_t pool_size     = 4096;
   static constexpr std::uint32_t idx_pool_size = 4096;
+
+  using is_always_equal                        = std::false_type;
+  using propagate_on_container_move_assignment = std::true_type;
+  using propagate_on_container_copy_assignment = std::true_type;
+  using propagate_on_container_swap            = std::true_type;
 };
 
 template <auto M>
@@ -27,6 +33,19 @@ struct offset
     return (to.*M);
   }
 };
+
+template <typename T>
+constexpr std::string_view type_name()
+{
+  return std::string_view(detail::type_name<std::remove_cv_t<std::remove_reference_t<T>>>().name(),
+                          detail::type_name<std::remove_cv_t<std::remove_reference_t<T>>>().size());
+}
+
+template <typename T>
+constexpr std::uint32_t type_hash()
+{
+  return detail::type_hash<std::remove_cv_t<std::remove_reference_t<T>>>();
+}
 
 /// Specialize backref
 /// template <>
@@ -43,6 +62,43 @@ concept has_backref_v = requires
 {
   typename Traits::offset;
 };
+
+template <typename underlying_allocator_tag>
+struct is_static
+{
+  constexpr inline static bool value = false;
+};
+
+template <typename underlying_allocator_tag>
+constexpr static bool is_static_v = is_static<underlying_allocator_tag>::value;
+
+template <typename ua_t, class = std::void_t<>>
+struct tag
+{
+  using type = void;
+};
+template <typename ua_t>
+struct tag<ua_t, std::void_t<typename ua_t::tag>>
+{
+  using type = typename ua_t::tag;
+};
+
+template <typename ua_t>
+using tag_t = typename tag<ua_t>::type;
+
+template <typename ua_t, class = std::void_t<>>
+struct size_type
+{
+  using type = std::size_t;
+};
+template <typename ua_t>
+struct size_type<ua_t, std::void_t<typename ua_t::size_type>>
+{
+  using type = typename ua_t::size_type;
+};
+
+template <typename ua_t>
+using size_t = typename size_type<ua_t>::type;
 
 } // namespace detail
 

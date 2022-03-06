@@ -6,6 +6,7 @@
  */
 
 #pragma once
+#include "default_allocator.hpp"
 #include "type_traits.hpp"
 #include <cassert>
 #include <cstdint>
@@ -15,7 +16,7 @@
 // https://en.cppreference.com/w/cpp/header/vector
 namespace acl
 {
-template <typename Ty, typename Allocator = std::allocator<Ty>, typename Traits = acl::traits<Ty>>
+template <typename Ty, typename Allocator = default_allocator<>, typename Traits = acl::traits<Ty>>
 class podvector : public Allocator
 {
   static_assert(std::is_trivially_copyable_v<Ty>, "Requires trivially copyable on Ty");
@@ -35,11 +36,12 @@ public:
   using const_iterator              = Ty const*;
   using reverse_iterator            = std::reverse_iterator<iterator>;
   using const_reverse_iterator      = std::reverse_iterator<const_iterator>;
-  using allocator_is_always_equal   = typename std::allocator_traits<allocator_type>::is_always_equal;
-  using propagate_allocator_on_move = typename std::allocator_traits<Allocator>::propagate_on_container_move_assignment;
-  using propagate_allocator_on_copy = typename std::allocator_traits<Allocator>::propagate_on_container_copy_assignment;
-  using propagate_allocator_on_swap = typename std::allocator_traits<Allocator>::propagate_on_container_swap;
-  using allocator_traits            = std::allocator_traits<Allocator>;
+  using allocator                   = Allocator;
+  using allocator_tag               = typename Allocator::tag;
+  using allocator_is_always_equal   = typename acl::traits<allocator_tag>::is_always_equal;
+  using propagate_allocator_on_move = typename acl::traits<allocator_tag>::propagate_on_container_move_assignment;
+  using propagate_allocator_on_copy = typename acl::traits<allocator_tag>::propagate_on_container_copy_assignment;
+  using propagate_allocator_on_swap = typename acl::traits<allocator_tag>::propagate_on_container_swap;
 
   explicit podvector(const Allocator& alloc = Allocator()) noexcept
       : Allocator(alloc), data_(nullptr), size_(0), capacity_(0){};
@@ -474,12 +476,13 @@ private:
 
   inline pointer allocate(size_type n) noexcept
   {
-    return allocator_traits::allocate(*this, n);
+    return acl::allocate<Ty>(static_cast<Allocator&>(*this),
+                             static_cast<typename allocator::size_type>(n * sizeof(Ty)));
   }
 
   inline void deallocate() noexcept
   {
-    allocator_traits::deallocate(*this, data_, capacity_);
+    acl::deallocate(static_cast<Allocator&>(*this), data_, capacity_ * sizeof(Ty));
   }
 
   inline void unchecked_reserve(size_type n) noexcept

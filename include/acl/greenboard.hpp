@@ -1,4 +1,6 @@
 #pragma once
+#include "allocator.hpp"
+#include "default_allocator.hpp"
 #include "detail/config.hpp"
 #include "detail/utils.hpp"
 #include "podvector.hpp"
@@ -21,7 +23,7 @@ concept InventoryDataType = std::is_trivial_v<T> || std::is_move_constructible_v
 /// Data is stored as a blob, names are stored seperately if required for lookup
 /// Data can also be retrieved by index.
 /// There is no restriction on the data type that is supported.
-template <typename Allocator = std::allocator<void*>, typename StringType = std::string_view,
+template <typename Allocator = default_allocator<>, typename StringType = std::string_view,
           std::size_t const PoolSize = 1024>
 class greenboard : public Allocator
 {
@@ -42,8 +44,7 @@ class greenboard : public Allocator
 
   using storage                             = detail::aligned_storage<sizeof(atom_t), alignof(atom_t)>;
   static constexpr auto total_atoms_in_page = PoolSize;
-  using allocator_traits                    = std::allocator_traits<Allocator>;
-  using allocator                           = typename allocator_traits::template rebind_alloc<storage*>;
+  using allocator                           = Allocator;
   using lookup_entry                        = std::pair<std::uint32_t, state>;
   using base_type                           = Allocator;
 
@@ -77,8 +78,7 @@ public:
     std::for_each(managed_data.begin(), managed_data.end(),
                   [this](auto entry)
                   {
-                    allocator_traits::deallocate(*this, reinterpret_cast<typename allocator_traits::pointer>(entry),
-                                                 total_atoms_in_page * sizeof(atom_t));
+                    acl::deallocate(*this, entry, total_atoms_in_page * sizeof(atom_t));
                   });
 
     lookup.clear();
@@ -229,8 +229,7 @@ private:
       static_assert(total_atoms_in_page >= atoms_req, "T is too big, increaase pool size");
       constexpr auto page_size = std::max(total_atoms_in_page, atoms_req);
       num_total_atoms          = page_size;
-      managed_data.emplace_back(
-        reinterpret_cast<storage*>(allocator_traits::allocate(*this, sizeof(storage) * page_size)));
+      managed_data.emplace_back(acl::allocate<storage>(*this, sizeof(storage) * page_size));
     }
     auto ret = managed_data.back() + (num_total_atoms - availabile_atoms);
     availabile_atoms -= atoms_req;
