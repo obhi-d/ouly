@@ -1,4 +1,7 @@
 #define CATCH_CONFIG_MAIN
+
+#include <acl/std_allocator_wrapper.hpp>
+
 #include <acl/default_allocator.hpp>
 #include <acl/export.hxx>
 #include <acl/packed_table.hpp>
@@ -9,7 +12,9 @@ TEST_CASE("Validate general_allocator", "[general_allocator]")
 {
 
   using namespace acl;
-  using allocator_t = default_allocator<std::uint32_t, 0, true, false>;
+  using allocator_t   = default_allocator<std::uint32_t, 0, true, false>;
+  using std_allocator = std_allocator_wrapper<int, allocator_t>;
+  std_allocator allocator;
 
   allocator_t::address data = allocator_t::allocate(256, 128);
   CHECK((reinterpret_cast<std::uintptr_t>(data) & 127) == 0);

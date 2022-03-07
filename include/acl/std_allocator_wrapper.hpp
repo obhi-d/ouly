@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include "type_traits.hpp"
 #include <memory>
 #include <memory_resource>
 
@@ -180,11 +181,12 @@ public:
 } // namespace detail
 
 template <typename T, typename UA>
-class std_allocator_wrapper : public detail::std_allocator_wrapper<T, UA, traits::is_static_v<traits::tag_t<UA>>>
+class std_allocator_wrapper
+    : public detail::std_allocator_wrapper<T, UA, acl::detail::is_static_v<acl::detail::tag_t<UA>>>
 {
 public:
   //    typedefs
-  using base_type     = detail::std_allocator_wrapper<T, UA, traits::is_static_v<traits::tag_t<UA>>>;
+  using base_type     = detail::std_allocator_wrapper<T, UA, acl::detail::is_static_v<acl::detail::tag_t<UA>>>;
   using pointer       = typename std::allocator_traits<std::allocator<T>>::pointer;
   using const_pointer = typename std::allocator_traits<std::allocator<T>>::const_pointer;
   using size_type     = typename std::allocator_traits<std::allocator<T>>::size_type;
