@@ -29,7 +29,7 @@ TEST_CASE("packed_table: Validate packed_table emplace", "[packed_table][emplace
 namespace acl
 {
 template <>
-struct traits<std::string> : traits<>
+struct pool_traits<std::string> : pool_traits<>
 {
   static constexpr std::uint32_t pool_size     = 2;
   static constexpr std::uint32_t idx_pool_size = 2;
@@ -174,7 +174,7 @@ struct selfref
 namespace acl
 {
 template <>
-struct traits<selfref> : traits<>
+struct pool_traits<selfref> : pool_traits<>
 {
   using offset = acl::offset<&selfref::self>;
 };

@@ -29,7 +29,7 @@ TEST_CASE("sparse_table: Validate sparse_table emplace", "[sparse_table][emplace
 namespace acl
 {
 template <>
-struct traits<std::string> : traits<>
+struct pool_traits<std::string> : pool_traits<>
 {
   static constexpr std::uint32_t pool_size     = 2;
   static constexpr std::uint32_t idx_pool_size = 2;
@@ -146,7 +146,7 @@ struct selfref_2
 namespace acl
 {
 template <>
-struct traits<selfref_2> : traits<>
+struct pool_traits<selfref_2> : pool_traits<>
 {
   using offset = acl::offset<&selfref_2::self>;
 };

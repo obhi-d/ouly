@@ -17,12 +17,12 @@ namespace acl
 /// @tparam Ty
 /// @tparam Allocator any allocator type under acl
 template <typename Cont, typename Allocator = default_allocator<>,
-          typename Traits = acl::traits<typename Cont::value_type>>
+          typename Traits = acl::pool_traits<typename Cont::value_type>>
 class collection : public Allocator
 {
 public:
   using value_type     = typename Cont::value_type;
-  using size_type      = typename Traits::size_type;
+  using size_type      = detail::choose_size_t<Traits, Cont, Allocator>;
   using link           = acl::link<value_type, size_type>;
   using allocator_type = Allocator;
 
@@ -155,7 +155,7 @@ public:
 
       if constexpr (detail::debug)
       {
-        for (size_type i = 0, end = items.size() / 2; i < end; ++i)
+        for (size_type i = 0, end = static_cast<size_type>(items.size()) / 2; i < end; ++i)
         {
           acl::deallocate(static_cast<Allocator&>(*this), items[i * 2 + 0], bit_page_size);
           acl::deallocate(static_cast<Allocator&>(*this), items[i * 2 + 1], haz_page_size);

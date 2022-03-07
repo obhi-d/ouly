@@ -15,7 +15,7 @@
 namespace acl
 {
 
-template <typename Tuple, typename Allocator = default_allocator<>>
+template <typename Tuple, typename Allocator = default_allocator<>, typename SizeType = typename Allocator::size_type>
 class soavector : public Allocator
 {
 
@@ -24,15 +24,17 @@ public:
   using array_type = detail::tuple_of_ptrs<Tuple>;
   using this_type  = soavector<Tuple, Allocator>;
 
-  using allocator_type              = Allocator;
-  using size_type                   = std::uint32_t;
-  using difference_type             = std::make_signed_t<size_type>;
-  using allocator                   = Allocator;
-  using allocator_tag               = typename Allocator::tag;
-  using allocator_is_always_equal   = typename acl::traits<allocator_tag>::is_always_equal;
-  using propagate_allocator_on_move = typename acl::traits<allocator_tag>::propagate_on_container_move_assignment;
-  using propagate_allocator_on_copy = typename acl::traits<allocator_tag>::propagate_on_container_copy_assignment;
-  using propagate_allocator_on_swap = typename acl::traits<allocator_tag>::propagate_on_container_swap;
+  using allocator_type            = Allocator;
+  using size_type                 = SizeType;
+  using difference_type           = std::make_signed_t<size_type>;
+  using allocator                 = Allocator;
+  using allocator_tag             = typename Allocator::tag;
+  using allocator_is_always_equal = typename acl::allocator_traits<allocator_tag>::is_always_equal;
+  using propagate_allocator_on_move =
+    typename acl::allocator_traits<allocator_tag>::propagate_on_container_move_assignment;
+  using propagate_allocator_on_copy =
+    typename acl::allocator_traits<allocator_tag>::propagate_on_container_copy_assignment;
+  using propagate_allocator_on_swap = typename acl::allocator_traits<allocator_tag>::propagate_on_container_swap;
   // using visualizer                  = detail::tuple_array_visualizer<this_type, Tuple>;
 
   template <std::size_t i>

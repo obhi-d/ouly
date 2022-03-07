@@ -16,8 +16,8 @@ IntTy range_rand(IntTy iBeg, IntTy iEnd)
 
 TEST_CASE("collection: Validate packed_table emplace", "[packed_table][emplace]")
 {
-  static_assert(acl::traits<int>::pool_size == 4096, "Default pool size");
-  static_assert(acl::detail::log2(acl::traits<int>::pool_size) == 12, "Default pool size");
+  static_assert(acl::pool_traits<int>::pool_size == 4096, "Default pool size");
+  static_assert(acl::detail::log2(acl::pool_traits<int>::pool_size) == 12, "Default pool size");
   acl::packed_table<int>                  table;
   acl::collection<acl::packed_table<int>> collection;
 

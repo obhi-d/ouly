@@ -11,7 +11,7 @@
 namespace acl
 {
 
-template <typename Ty, typename Allocator = default_allocator<>, typename Traits = acl::traits<Ty>>
+template <typename Ty, typename Allocator = default_allocator<>, typename Traits = acl::pool_traits<Ty>>
 class packed_table : public detail::packed_table_base<Ty, Allocator, Traits>
 {
 
@@ -19,7 +19,7 @@ class packed_table : public detail::packed_table_base<Ty, Allocator, Traits>
 
 public:
   using value_type     = Ty;
-  using size_type      = typename Traits::size_type;
+  using size_type      = detail::choose_size_t<Traits, Allocator>;
   using link           = acl::link<value_type, size_type>;
   using allocator_type = Allocator;
 

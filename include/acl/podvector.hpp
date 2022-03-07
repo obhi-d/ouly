@@ -16,7 +16,7 @@
 // https://en.cppreference.com/w/cpp/header/vector
 namespace acl
 {
-template <typename Ty, typename Allocator = default_allocator<>, typename Traits = acl::traits<Ty>>
+template <typename Ty, typename Allocator = default_allocator<>, typename SizeType = typename Allocator::size_type>
 class podvector : public Allocator
 {
   static_assert(std::is_trivially_copyable_v<Ty>, "Requires trivially copyable on Ty");
@@ -24,24 +24,26 @@ class podvector : public Allocator
                                                 "std::vector<bool,...>");
 
 public:
-  using value_type                  = Ty;
-  using allocator_type              = Allocator;
-  using size_type                   = typename Traits::size_type;
-  using difference_type             = size_type;
-  using reference                   = value_type&;
-  using const_reference             = const value_type&;
-  using pointer                     = Ty*;
-  using const_pointer               = Ty const*;
-  using iterator                    = Ty*;
-  using const_iterator              = Ty const*;
-  using reverse_iterator            = std::reverse_iterator<iterator>;
-  using const_reverse_iterator      = std::reverse_iterator<const_iterator>;
-  using allocator                   = Allocator;
-  using allocator_tag               = typename Allocator::tag;
-  using allocator_is_always_equal   = typename acl::traits<allocator_tag>::is_always_equal;
-  using propagate_allocator_on_move = typename acl::traits<allocator_tag>::propagate_on_container_move_assignment;
-  using propagate_allocator_on_copy = typename acl::traits<allocator_tag>::propagate_on_container_copy_assignment;
-  using propagate_allocator_on_swap = typename acl::traits<allocator_tag>::propagate_on_container_swap;
+  using value_type                = Ty;
+  using allocator_type            = Allocator;
+  using size_type                 = SizeType;
+  using difference_type           = size_type;
+  using reference                 = value_type&;
+  using const_reference           = const value_type&;
+  using pointer                   = Ty*;
+  using const_pointer             = Ty const*;
+  using iterator                  = Ty*;
+  using const_iterator            = Ty const*;
+  using reverse_iterator          = std::reverse_iterator<iterator>;
+  using const_reverse_iterator    = std::reverse_iterator<const_iterator>;
+  using allocator                 = Allocator;
+  using allocator_tag             = typename Allocator::tag;
+  using allocator_is_always_equal = typename acl::allocator_traits<allocator_tag>::is_always_equal;
+  using propagate_allocator_on_move =
+    typename acl::allocator_traits<allocator_tag>::propagate_on_container_move_assignment;
+  using propagate_allocator_on_copy =
+    typename acl::allocator_traits<allocator_tag>::propagate_on_container_copy_assignment;
+  using propagate_allocator_on_swap = typename acl::allocator_traits<allocator_tag>::propagate_on_container_swap;
 
   explicit podvector(const Allocator& alloc = Allocator()) noexcept
       : Allocator(alloc), data_(nullptr), size_(0), capacity_(0){};

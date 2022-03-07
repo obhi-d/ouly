@@ -15,7 +15,7 @@ template <typename Ty, typename Allocator, typename Traits, typename Base = Allo
 class base_indirection : public Base
 {
 protected:
-  using size_type = typename Traits::size_type;
+  using size_type = detail::choose_size_t<Traits, Allocator>;
   using allocator = Allocator;
 
 public:
@@ -98,7 +98,7 @@ template <typename Ty, typename Allocator, typename Traits, typename Base = Allo
 class ref_indirection : public Base
 {
 protected:
-  using size_type = typename Traits::size_type;
+  using size_type = detail::choose_size_t<Traits, Allocator>;
 
   static constexpr auto pool_div          = detail::log2(Traits::idx_pool_size);
   static constexpr auto pool_size         = static_cast<size_type>(1) << pool_div;
@@ -183,7 +183,7 @@ template <typename Ty, typename Allocator, typename Traits, typename Base = Allo
 class ref_backref : public Base
 {
 protected:
-  using size_type                         = typename Traits::size_type;
+  using size_type                         = detail::choose_size_t<Traits, Allocator>;
   using link                              = acl::link<Ty, size_type>;
   using backref                           = typename Traits::offset;
   static constexpr bool base_is_allocator = std::is_same_v<std::decay_t<Base>, std::decay_t<Allocator>>;

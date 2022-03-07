@@ -8,13 +8,18 @@ namespace acl
 {
 
 template <typename Ty = std::void_t<>>
-struct traits
+struct pool_traits
 {
-  using size_type = std::uint32_t;
-
+  using size_type                              = std::uint32_t;
   static constexpr std::uint32_t pool_size     = 4096;
   static constexpr std::uint32_t idx_pool_size = 4096;
+  // using offset
+  // using offset = acl::offset<&selfref::self>;
+};
 
+template <typename Ty = std::void_t<>>
+struct allocator_traits
+{
   using is_always_equal                        = std::false_type;
   using propagate_on_container_move_assignment = std::true_type;
   using propagate_on_container_copy_assignment = std::true_type;
@@ -62,6 +67,27 @@ concept has_backref_v = requires
 {
   typename Traits::offset;
 };
+
+template <typename Traits>
+concept has_size_type_v = requires
+{
+  typename Traits::size_type;
+};
+
+template <typename T1, typename... Args>
+struct choose_size_ty
+{
+  using type = std::conditional_t<has_size_type_v<T1>, typename T1::size_type, typename choose_size_ty<Args...>::type>;
+};
+
+template <typename T1>
+struct choose_size_ty<T1>
+{
+  using type = std::conditional_t<has_size_type_v<T1>, typename T1::size_type, std::size_t>;
+};
+
+template <typename... Args>
+using choose_size_t = typename choose_size_ty<Args...>::type;
 
 template <typename underlying_allocator_tag>
 struct is_static

@@ -12,14 +12,14 @@
 namespace acl
 {
 
-template <typename Ty, typename Allocator = default_allocator<>, typename Traits = acl::traits<Ty>>
+template <typename Ty, typename Allocator = default_allocator<>, typename Traits = acl::pool_traits<Ty>>
 class sparse_table : public acl::detail::sparse_table_base<Ty, Allocator, Traits>
 {
   static_assert(sizeof(Ty) >= sizeof(typename Traits::size_type), "Type must big enough to hold a link");
 
 public:
   using value_type     = Ty;
-  using size_type      = typename Traits::size_type;
+  using size_type      = detail::choose_size_t<Traits, Allocator>;
   using link           = acl::link<value_type, size_type>;
   using allocator_type = Allocator;
 

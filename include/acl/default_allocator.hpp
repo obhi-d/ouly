@@ -10,7 +10,7 @@ struct default_allocator_tag
 {};
 
 template <>
-struct traits<default_allocator_tag>
+struct allocator_traits<default_allocator_tag>
 {
   using is_always_equal                        = std::true_type;
   using propagate_on_container_move_assignment = std::false_type;
