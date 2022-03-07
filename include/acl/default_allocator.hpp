@@ -46,7 +46,7 @@ struct default_alloc_statistics
   }
 };
 
-#ifndef ACL_NO_STATS
+#ifdef ACL_REC_STATS
 
 ACL_EXTERN ACL_API detail::statistics<default_allocator_tag, true> default_allocator_statistics_instance;
 
@@ -76,12 +76,12 @@ struct default_alloc_statistics<true>
 
 inline void print_final_stats()
 {
-#ifndef ACL_NO_STATS
+#ifdef ACL_REC_STATS
   detail::default_allocator_statistics_instance.print();
 #endif
 }
 
-template <typename size_arg = std::uint32_t, std::size_t k_default_alignment = 16, bool k_compute_stats = false,
+template <typename size_arg = std::size_t, std::size_t k_default_alignment = 16, bool k_compute_stats = false,
           bool k_track_memory = false, typename debug_tracer = std::monostate>
 struct ACL_EMPTY_BASES default_allocator : detail::default_alloc_statistics<k_compute_stats>,
                                            detail::memory_tracker<default_allocator_tag, debug_tracer, k_track_memory>

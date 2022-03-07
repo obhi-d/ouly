@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 20)
 
 option(ACL_BUILD_TESTS "Build the unit tests when BUILD_TESTING is enabled." ON)
 option(ASAN_ENABLED "Build this target with AddressSanitizer" OFF)
-option(ACL_NO_STATS "No stats for allocator" ON)
+option(ACL_REC_STATS "No stats for allocator" OFF)
 
 ##
 ## CONFIGURATION
@@ -26,7 +26,7 @@ if(MSVC)
   target_sources(
         ${ACL_TARGET_NAME}
         INTERFACE
-            $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/natvis/acl/podvector.natvis>
+            $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/natvis/acl/containers.natvis>
     )
 endif()
 
@@ -36,9 +36,9 @@ target_include_directories(
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
-if (ACL_NO_STATS)
+if (ACL_REC_STATS)
     target_compile_definitions(${ACL_TARGET_NAME}
-        INTERFACE -DACL_NO_STATS)
+        INTERFACE -DACL_REC_STATS)
 endif()
 
 ##

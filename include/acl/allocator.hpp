@@ -4,7 +4,7 @@
 namespace acl
 {
 
-template <typename size_type = std::uint32_t>
+template <typename size_type = std::size_t>
 constexpr size_type default_alignment = 0;
 
 //! Define Allocator concept

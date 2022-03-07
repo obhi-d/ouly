@@ -11,6 +11,9 @@
 namespace acl
 {
 
+template <typename... Args>
+using pack = std::tuple<Args...>;
+
 namespace detail
 {
 template <std::size_t Len, std::size_t Align>
@@ -20,16 +23,89 @@ struct aligned_storage
 };
 
 template <typename... Args>
-using tuple_of = std::tuple<Args...>;
+constexpr auto tuple_element_ptr(std::tuple<Args...>&&) -> std::tuple<std::decay_t<Args>*...>;
 
 template <typename... Args>
-constexpr auto tuple_element_pointer(std::tuple<Args...>&&) -> std::tuple<std::decay_t<Args>*...>;
+constexpr auto tuple_element_cptr(std::tuple<Args...>&&) -> std::tuple<std::decay_t<Args> const*...>;
 
 template <typename... Args>
-using tuple_of_ptrs = std::tuple<Args*...>;
+constexpr auto tuple_element_refs(std::tuple<Args...>&&) -> std::tuple<std::decay_t<Args>&...>;
+
+template <typename... Args>
+constexpr auto tuple_element_crefs(std::tuple<Args...>&&) -> std::tuple<std::decay_t<Args> const&...>;
+
+template <typename Tuple>
+using tuple_of_ptrs = decltype(tuple_element_ptr(std::declval<Tuple>()));
+
+template <typename Tuple>
+using tuple_of_cptrs = decltype(tuple_element_cptr(std::declval<Tuple>()));
+
+template <typename Tuple>
+using tuple_of_refs = decltype(tuple_element_refs(std::declval<Tuple>()));
+
+template <typename Tuple>
+using tuple_of_crefs = decltype(tuple_element_crefs(std::declval<Tuple>()));
 
 template <typename size_type>
 constexpr size_type invalidated_mask_v = (static_cast<size_type>(0x80) << ((sizeof(size_type) - 1) * 8));
+
+/*
+*
+* TODO Fix natvis
+*
+template <typename T1, typename... Args>
+struct tuple_array_visualizer_base : tuple_array_visualizer_base<Args...>
+{
+  using base = tuple_array_visualizer_base<Args...>;
+  T1 data;
+};
+
+template <typename T1>
+struct tuple_array_visualizer_base<T1>
+{
+  T1 data;
+};
+
+template <typename Traits>
+concept has_base = requires
+{
+  typename Traits::base;
+};
+
+template <typename T, typename D, bool HasBase>
+struct tuple_array_visualizer_base_ref;
+
+template <typename T, typename D>
+struct tuple_array_visualizer_base_ref<T, D, true>
+{
+  using base = tuple_array_visualizer_base_ref<T, typename D::base, has_base<typename D::base>>;
+  using type = D;
+  T data;
+};
+
+template <typename T, typename D>
+struct tuple_array_visualizer_base_ref<T, D, false>
+{
+  using type = D;
+  T data;
+};
+
+template <typename... Args>
+constexpr auto tuple_array_visualizer_ctd(std::tuple<Args...>&&) -> tuple_array_visualizer_base<std::decay_t<Args>*...>;
+
+template <typename Tuple>
+using tuple_array_viz_alias = decltype(tuple_array_visualizer_ctd(std::declval<Tuple>()));
+
+template <typename Type, typename Tuple>
+using tuple_array_visualizer =
+  tuple_array_visualizer_base_ref<Type, tuple_array_viz_alias<Tuple>, has_base<tuple_array_viz_alias<Tuple>>>;
+
+template <typename T>
+static auto do_not_optimize(T&& v)
+{
+  return v;
+}
+*/
 
 template <typename size_type>
 constexpr size_type log2(size_type val)

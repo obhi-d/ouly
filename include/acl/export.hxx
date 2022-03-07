@@ -6,7 +6,7 @@
 namespace acl::detail
 {
 
-#ifndef ACL_NO_STATS
+#ifdef ACL_REC_STATS
 
 detail::statistics<default_allocator_tag, true> default_allocator_statistics_instance;
 

@@ -139,9 +139,9 @@ public:
   {
     if (capacity_ < x.size())
     {
-      capacity_ = static_cast<size_type>(x.size());
       deallocate();
-      data_ = allocate(x.size());
+      capacity_ = static_cast<size_type>(x.size());
+      data_     = allocate(capacity_);
     }
     size_ = static_cast<size_type>(x.size());
     copy(std::begin(x), std::end(x), data_);
@@ -186,11 +186,11 @@ public:
     return const_reverse_iterator(begin());
   }
 
-  const_iterator cbegin() noexcept
+  const_iterator cbegin() const noexcept
   {
     return begin();
   }
-  const_iterator cend() noexcept
+  const_iterator cend() const noexcept
   {
     return end();
   }
@@ -373,8 +373,7 @@ public:
   {
     assert(last < end());
     std::uint32_t n = static_cast<std::uint32_t>(std::distance(first, last));
-    std::memmove(const_cast<iterator>(first), last,
-                 reinterpret_cast<std::size_t>((data_ + size_) - (last)) * sizeof(Ty));
+    std::memmove(const_cast<iterator>(first), last, static_cast<std::size_t>((data_ + size_) - (last)) * sizeof(Ty));
     size_ -= n;
     return const_cast<iterator>(first);
   }

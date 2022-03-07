@@ -1,5 +1,6 @@
 #define CATCH_CONFIG_MAIN
 #include <acl/default_allocator.hpp>
+#include <acl/export.hxx>
 #include <acl/packed_table.hpp>
 #include <acl/sparse_table.hpp>
 #include <catch2/catch.hpp>

@@ -228,7 +228,7 @@ private:
     {
       static_assert(total_atoms_in_page >= atoms_req, "T is too big, increaase pool size");
       constexpr auto page_size = std::max(total_atoms_in_page, atoms_req);
-      num_total_atoms          = page_size;
+      availabile_atoms = num_total_atoms = page_size;
       managed_data.emplace_back(acl::allocate<storage>(*this, sizeof(storage) * page_size));
     }
     auto ret = managed_data.back() + (num_total_atoms - availabile_atoms);

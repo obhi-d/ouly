@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+	<Type Name="acl::podvector&lt;*&gt;">
+		<DisplayString>{{ size={size_} }}</DisplayString>
+		<Expand>
+			<Item Name="[size]" ExcludeView="simple">size_</Item>
+			<Item Name="[capacity]" ExcludeView="simple">capacity_</Item>
+			<ArrayItems>
+				<Size>size_</Size>
+				<ValuePointer>data_</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+	<Type Name="acl::soavector&lt;*&gt;">
+		<DisplayString>{{ size={size_} }}</DisplayString>
+		<Expand>
+			<Item Name="[size]" ExcludeView="simple">size_</Item>
+			<Item Name="[capacity]" ExcludeView="simple">capacity_</Item>
+			<Item Name="[tuples]" ExcludeView="simple">data_</Item>
+		</Expand>
+	</Type>
+	<!--<Type Name="acl::detail::tuple_array_visualizer_base_ref&lt;*,*,true&gt;">
+		<DisplayString>{{ size={data.size_} }}</DisplayString>
+	</Type>
+	<Type Name="acl::detail::tuple_array_visualizer_base_ref&lt;*,*,false&gt;">
+		<DisplayString>{{ size={data.size_} }}</DisplayString>
+	</Type>-->
+</AutoVisualizer>

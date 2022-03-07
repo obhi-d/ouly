@@ -24,9 +24,12 @@ add_executable(acl-validity
  "collection.cpp" 
  "blackboard.cpp" 
  "greenboard.cpp" 
- "vector.cpp")
+ "soavector.cpp" 
+ "podvector.cpp")
 
 target_link_libraries(acl-validity acl::acl Catch2::Catch2)
+target_compile_definitions(acl-validity
+        PUBLIC -DACL_REC_STATS)
 add_test(acl-validity acl-validity)
 target_compile_features(acl-validity PRIVATE cxx_std_20)
 
