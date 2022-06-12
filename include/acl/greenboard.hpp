@@ -18,12 +18,13 @@ namespace acl
 template <typename T>
 concept InventoryDataType = std::is_trivial_v<T> || std::is_move_constructible_v<T>;
 
-/// @brief Store data as name value pairs, value being POD type
+/// @brief Store data as name value pairs, value can be any blob of data
 ///
 /// Data is stored as a blob, names are stored seperately if required for lookup
 /// Data can also be retrieved by index.
-/// There is no restriction on the data type that is supported.
+/// There is no restriction on the data type that is supported (POD or non-POD both are supported).
 template <typename Allocator = default_allocator<>, typename StringType = std::string_view,
+          typename StringHash = std::hash<StringType>,
           std::size_t const PoolSize = 1024>
 class greenboard : public Allocator
 {
@@ -237,7 +238,7 @@ private:
     return atom_t{.data = ret, .dtor_fn = reinterpret_cast<dtor>(&destroy_at<T>)};
   }
 
-  using name_index_map = std::unordered_map<StringType, std::pair<std::uint32_t, state>>;
+  using name_index_map = std::unordered_map<StringType, std::pair<std::uint32_t, state>, StringHash>;
   using index_list     = podvector<atom_t>;
 
   podvector<storage*> managed_data;

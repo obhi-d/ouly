@@ -22,7 +22,8 @@ concept BlackboardDataType = std::is_pod_v<T>;
 /// Data can also be retrieved by index.
 /// Data type should all be POD
 /// Use @greenboard if non-POD type data is required.
-template <typename StringType = std::string_view, typename Allocator = default_allocator<>>
+template <typename Allocator = default_allocator<>, typename StringType = std::string_view,
+          typename StringHash = std::hash<StringType>>
 class blackboard
 {
   static constexpr std::uint32_t mask = 0x80000000;
@@ -148,7 +149,7 @@ private:
   }
 
   using value_list     = podvector<atom_t, Allocator>;
-  using name_index_map = std::unordered_map<StringType, std::uint32_t>;
+  using name_index_map = std::unordered_map<StringType, std::uint32_t, StringHash>;
   using index_list     = podvector<atom_t, Allocator>;
 
   value_list     values;
