@@ -96,6 +96,8 @@ public:
     return left_over;
   }
 
+  inline auto operator<=>(linear_allocator const&) const = default;
+
 private:
   address         buffer;
   size_type       left_over;

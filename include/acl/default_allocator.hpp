@@ -69,6 +69,16 @@ struct default_alloc_statistics<true>
   {
     return std::string();
   }
+
+  inline bool operator==(default_alloc_statistics<true> const&) const
+  {
+    return true;
+  }
+
+  inline bool operator!=(default_alloc_statistics<true> const&) const
+  {
+    return false;
+  }
 };
 
 #endif
@@ -133,6 +143,17 @@ struct ACL_EMPTY_BASES default_allocator : detail::default_alloc_statistics<k_co
   static constexpr void* null()
   {
     return nullptr;
+  }
+
+  
+  inline bool operator==(default_allocator const&) const
+  {
+    return true;
+  }
+
+  inline bool operator!=(default_allocator const&) const
+  {
+    return false;
   }
 };
 
