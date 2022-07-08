@@ -37,7 +37,10 @@ public:
   inline sparse_table() noexcept {}
   inline sparse_table(Allocator&& alloc) noexcept : base_type(std::move<Allocator>(alloc)) {}
   inline sparse_table(Allocator const& alloc) noexcept : base_type(alloc) {}
-  inline sparse_table(sparse_table&& other) noexcept = default;
+  inline sparse_table(sparse_table&& other) noexcept
+  {
+    *this = std::move(other);
+  }
   inline sparse_table(sparse_table const& other) noexcept requires(std::is_copy_constructible_v<value_type>)
   {
     *this = other;
@@ -48,7 +51,18 @@ public:
     shrink_to_fit();
   }
 
-  sparse_table& operator=(sparse_table&& other) noexcept = default;
+  sparse_table& operator=(sparse_table&& other) noexcept
+  {
+    (base_type&)* this     = std::move((base_type&)other);
+    items                  = std::move(other.items);
+    length                 = other.length;
+    extend                 = other.extend;
+    first_free_index       = other.first_free_index;
+    other.length           = 0;
+    other.extend           = 0;
+    other.first_free_index = link::null;
+    return *this;
+  }
 
   sparse_table& operator=(sparse_table const& other) noexcept requires(std::is_copy_constructible_v<value_type>)
   {

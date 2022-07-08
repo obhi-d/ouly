@@ -37,7 +37,10 @@ public:
   inline packed_table() noexcept {}
   inline packed_table(Allocator&& alloc) noexcept : base_type(std::move<Allocator>(alloc)) {}
   inline packed_table(Allocator const& alloc) noexcept : base_type(alloc) {}
-  inline packed_table(packed_table&& other) noexcept = default;
+  inline packed_table(packed_table&& other) noexcept
+  {
+    *this = std::move(other);
+  }
   inline packed_table(packed_table const& other) noexcept requires(std::is_copy_constructible_v<value_type>)
   {
     *this = other;
@@ -48,7 +51,16 @@ public:
     shrink_to_fit();
   }
 
-  packed_table& operator=(packed_table&& other) noexcept = default;
+  packed_table& operator=(packed_table&& other) noexcept
+  {
+    (base_type&)* this     = std::move((base_type&)other);
+    items                  = std::move(other.items);
+    length                 = other.length;
+    first_free_index       = other.first_free_index;
+    other.length           = 0;
+    other.first_free_index = link::null;
+    return *this;
+  }
 
   packed_table& operator=(packed_table const& other) noexcept requires(std::is_copy_constructible_v<value_type>)
   {
