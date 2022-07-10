@@ -25,7 +25,8 @@ add_executable(acl-validity
  "blackboard.cpp" 
  "greenboard.cpp" 
  "soavector.cpp" 
- "podvector.cpp")
+ "podvector.cpp" 
+ "table.cpp")
 
 target_link_libraries(acl-validity acl::acl Catch2::Catch2)
 target_compile_definitions(acl-validity
