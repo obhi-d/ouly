@@ -41,19 +41,31 @@ public:
   template <BlackboardDataType T>
   T const& at(StringType name) const noexcept
   {
+    return const_cast<blackboard&>(*this).at<T>(name);
+  }
+
+  template <BlackboardDataType T>
+  T const& at(std::uint32_t index) const noexcept
+  {
+    return const_cast<blackboard&>(*this).at<T>(index);
+  }
+
+  template <BlackboardDataType T>
+  T& at(StringType name) noexcept
+  {
     auto it = lookup.find(name);
     assert(it != lookup.end());
     return at<T>(static_cast<std::uint32_t>(it->second));
   }
 
   template <BlackboardDataType T>
-  T const& at(std::uint32_t index) const noexcept
+  T& at(std::uint32_t index) noexcept
   {
-    auto const& idx = offsets[index];
+    auto& idx = offsets[index];
     if constexpr (is_inlined<T>)
-      return *reinterpret_cast<T const*>(&idx);
+      return *reinterpret_cast<T*>(&idx);
     else
-      return *reinterpret_cast<T const*>(&values[idx.first]);
+      return *reinterpret_cast<T*>(&values[idx.first]);
   }
 
   template <BlackboardDataType T, typename... Args>

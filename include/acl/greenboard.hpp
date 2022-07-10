@@ -24,8 +24,7 @@ concept InventoryDataType = std::is_trivial_v<T> || std::is_move_constructible_v
 /// Data can also be retrieved by index.
 /// There is no restriction on the data type that is supported (POD or non-POD both are supported).
 template <typename Allocator = default_allocator<>, typename StringType = std::string_view,
-          typename StringHash = std::hash<StringType>,
-          std::size_t const PoolSize = 1024>
+          typename StringHash = std::hash<StringType>, std::size_t const PoolSize = 1024>
 class greenboard : public Allocator
 {
   using dtor = bool (*)(void*);
@@ -91,20 +90,32 @@ public:
   template <InventoryDataType T>
   T const& at(StringType name) const noexcept
   {
+    return const_cast<greenboard&>(*this).at<T>(name);
+  }
+
+  template <InventoryDataType T>
+  T const& at(std::uint32_t index) const noexcept
+  {
+    return const_cast<greenboard&>(*this).at<T>(index);
+  }
+
+  template <InventoryDataType T>
+  T& at(StringType name) noexcept
+  {
     auto it = lookup.find(name);
     assert(it != lookup.end());
     return at<T>(it->second.first);
   }
 
   template <InventoryDataType T>
-  T const& at(std::uint32_t index) const noexcept
+  T& at(std::uint32_t index) noexcept
   {
     if constexpr (is_inlined<T>)
-      return *reinterpret_cast<T const*>(&offsets[index]);
+      return *reinterpret_cast<T*>(&offsets[index]);
     else
     {
-      auto const& idx = offsets[index];
-      return *reinterpret_cast<T const*>(idx.data);
+      auto& idx = offsets[index];
+      return *reinterpret_cast<T*>(idx.data);
     }
   }
 
