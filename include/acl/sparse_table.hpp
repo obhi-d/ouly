@@ -60,7 +60,7 @@ public:
     first_free_index       = other.first_free_index;
     other.length           = 0;
     other.extend           = 0;
-    other.first_free_index = link::null;
+    other.first_free_index = link::null_v;
     return *this;
   }
 
@@ -336,7 +336,7 @@ private:
   {
     length++;
     size_type lnk;
-    if (first_free_index == link::null)
+    if (first_free_index == link::null_v)
     {
       auto block = extend >> pool_div;
       if (block >= items.size())
@@ -374,7 +374,7 @@ private:
   podvector<storage*, allocator> items;
   size_type                      length           = 0;
   size_type                      extend           = 0;
-  size_type                      first_free_index = link::null;
+  size_type                      first_free_index = link::null_v;
 };
 
 } // namespace acl

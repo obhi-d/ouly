@@ -18,12 +18,11 @@ add_executable(acl-validity
  "sparse_table.cpp" 
  "collection.cpp" 
  "blackboard.cpp" 
- "greenboard.cpp" 
+  
  "packed_table.cpp" 
  "sparse_table.cpp" 
  "collection.cpp" 
  "blackboard.cpp" 
- "greenboard.cpp" 
  "soavector.cpp" 
  "podvector.cpp" 
  "table.cpp")

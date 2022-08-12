@@ -1,15 +1,73 @@
 #include <acl/blackboard.hpp>
 #include <catch2/catch.hpp>
+#include <string>
 
 TEST_CASE("blackboard: push_back", "[blackboard][push_back]")
 {
   acl::blackboard board;
-  auto            index = board.emplace_safe<std::uint32_t>("param1", 50);
-  REQUIRE(board.at<std::uint32_t>(index) == 50);
+  auto            int_index0 = board.emplace<std::uint32_t>("param1", 50);
+  auto            str_index0 = board.emplace<std::string>("param2", "number 1");
+  auto            str_index1 = board.emplace<std::string>("param3", "number 2");
+  auto            str_index2 = board.emplace<std::string>("param4", "number 3");
+  auto            int_index1 = board.emplace<std::uint32_t>("param5", 100);
+  auto            str_index3 = board.emplace<std::string>("param6", "number 4");
+  auto            int_index2 = board.emplace<std::uint32_t>("param7", 150);
+
+  REQUIRE(board.at<std::uint32_t>(int_index0) == 50);
+  REQUIRE(board.at<std::uint32_t>(int_index1) == 100);
+  REQUIRE(board.at<std::uint32_t>(int_index2) == 150);
+
+  REQUIRE(board.at<std::string>(str_index0) == "number 1");
+  REQUIRE(board.at<std::string>(str_index1) == "number 2");
+  REQUIRE(board.at<std::string>(str_index2) == "number 3");
+  REQUIRE(board.at<std::string>(str_index3) == "number 4");
+
   REQUIRE(board.at<std::uint32_t>("param1") == 50);
+  REQUIRE(board.at<std::uint32_t>("param5") == 100);
+  REQUIRE(board.at<std::uint32_t>("param7") == 150);
+
+  REQUIRE(board.at<std::string>("param2") == "number 1");
+  REQUIRE(board.at<std::string>("param3") == "number 2");
+  REQUIRE(board.at<std::string>("param4") == "number 3");
+  REQUIRE(board.at<std::string>("param6") == "number 4");
+
   REQUIRE(board.contains("param1"));
-  board.emplace_safe<std::uint32_t>("param1", 150);
-  REQUIRE(board.at<std::uint32_t>(index) == 150);
-  board.erase<std::uint32_t>("param1");
-  REQUIRE(board.contains("param1") == false);
+  REQUIRE(board.contains("param2"));
+  REQUIRE(board.contains("param3"));
+  REQUIRE(board.contains("param4"));
+  REQUIRE(board.contains("param5"));
+  REQUIRE(board.contains("param6"));
+  REQUIRE(board.contains("param7"));
+
+  board.emplace<std::uint32_t>("param1", 300);
+  board.emplace<std::uint32_t>("param5", 1500);
+
+  REQUIRE(board.at<std::uint32_t>("param1") == 300);
+  REQUIRE(board.at<std::uint32_t>("param5") == 1500);
+
+  board.erase("param1");
+  board.erase("param4");
+
+  REQUIRE(board.at<std::uint32_t>("param5") == 1500);
+  REQUIRE(board.at<std::uint32_t>("param7") == 150);
+
+  REQUIRE(board.at<std::string>("param2") == "number 1");
+  REQUIRE(board.at<std::string>("param3") == "number 2");
+  REQUIRE(board.at<std::string>("param6") == "number 4");
+
+  REQUIRE(board.contains("param2"));
+  REQUIRE(board.contains("param3"));
+  REQUIRE(board.contains("param5"));
+  REQUIRE(board.contains("param6"));
+  REQUIRE(board.contains("param7"));
+
+  board.erase("param7");
+
+  REQUIRE(!board.contains("param1"));
+  REQUIRE(board.contains("param2"));
+  REQUIRE(board.contains("param3"));
+  REQUIRE(!board.contains("param4"));
+  REQUIRE(board.contains("param5"));
+  REQUIRE(board.contains("param6"));
+  REQUIRE(!board.contains("param7"));
 }

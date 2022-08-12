@@ -138,7 +138,7 @@ TEST_CASE("sparse_table: Random test", "[sparse_table][random]")
 struct selfref_2
 {
   std::uint32_t value = 0;
-  std::uint32_t self  = acl::link<selfref_2>::null;
+  std::uint32_t self  = acl::link<selfref_2>::null_v;
 
   selfref_2(std::uint32_t v) : value(v) {}
 };

@@ -24,7 +24,7 @@ struct arena
 };
 
 template <typename traits>
-using arena_bank = detail::table<detail::arena<traits>>;
+using arena_bank = detail::table<detail::arena<traits>, true>;
 
 template <typename traits>
 struct arena_accessor

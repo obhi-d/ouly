@@ -166,7 +166,7 @@ TEST_CASE("packed_table: Random test", "[packed_table][random]")
 struct selfref
 {
   std::uint32_t value = 0;
-  std::uint32_t self  = acl::link<selfref>::null;
+  std::uint32_t self  = acl::link<selfref>::null_v;
 
   selfref(std::uint32_t v) : value(v) {}
 };

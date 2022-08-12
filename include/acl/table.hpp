@@ -4,7 +4,7 @@
 namespace acl
 {
 
-template <typename Type, template <typename T> typename VectorType = acl::detail::podvector_wrapper>
-using table = detail::table<Type, VectorType>;
+template <typename Type, bool IsPOD = std::is_trivial_v<Type>>
+using table = detail::table<Type, IsPOD>;
 
 } // namespace acl

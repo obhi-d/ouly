@@ -5,8 +5,7 @@
 #include <string>
 
 TEST_CASE("table: Validate table emplace", "[table][emplace]")
-{
-  using pack = acl::pack<int, bool, std::string>;
+{  
   acl::table<std::string> v1;
 
   auto a1 = v1.emplace("first");

@@ -56,7 +56,7 @@ struct block
 };
 
 template <typename traits>
-using block_bank = detail::table<block<traits>>;
+using block_bank = detail::table<block<traits>, true>;
 
 template <typename traits>
 struct block_accessor

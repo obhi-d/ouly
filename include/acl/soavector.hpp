@@ -74,7 +74,7 @@ public:
     base_iterator() noexcept                     = default;
     base_iterator(pointer init) noexcept : pointers(init) {}
 
-    base_iterator& operator=(base_iterator const&) noexcept = default;
+    base_iterator& operator=(base_iterator const&) noexcept         = default;
     base_iterator& operator=(base_iterator&&) noexcept              = default;
     auto           operator<=>(base_iterator const&) const noexcept = default;
 
@@ -246,10 +246,11 @@ public:
 
   soavector& operator=(std::initializer_list<tuple_type> x) noexcept
   {
+    destroy_all(0, size_, index_seq);
     if (capacity_ < x.size())
     {
       capacity_ = static_cast<size_type>(x.size());
-      destroy_and_deallocate();
+      deallocate();
       data_ = allocate(static_cast<size_type>(x.size()));
     }
     size_ = static_cast<size_type>(x.size());
@@ -260,11 +261,12 @@ public:
   template <class InputIterator>
   void assign(InputIterator first, InputIterator last) noexcept
   {
+    destroy_all(0, size_, index_seq);
     size_type s = static_cast<size_type>(std::distance(first, last));
     if (capacity_ < s)
     {
       capacity_ = static_cast<size_type>(s);
-      destroy_and_deallocate();
+      deallocate();
       data_ = allocate(s);
     }
     size_ = static_cast<size_type>(s);
@@ -273,22 +275,25 @@ public:
 
   void assign(size_type n, const tuple_type& value) noexcept
   {
+    destroy_all(0, size_, index_seq);
     if (capacity_ < n)
     {
       capacity_ = n;
-      destroy_and_deallocate();
+      deallocate();
       data_ = allocate(n);
     }
-    size_ = static_cast<size_type>(n);
+
     uninitialized_fill(0, n, value, index_seq);
+    size_ = static_cast<size_type>(n);
   }
 
   void assign(std::initializer_list<tuple_type> x) noexcept
   {
+    destroy_all(0, size_, index_seq);
     if (capacity_ < x.size())
     {
       capacity_ = static_cast<size_type>(x.size());
-      destroy_and_deallocate();
+      deallocate();
       data_ = allocate(x.size());
     }
     size_ = static_cast<size_type>(x.size());
@@ -677,6 +682,21 @@ private:
     (std::uninitialized_fill_n(std::get<I>(data_) + start, count, std::get<I>(t)), ...);
   }
 
+  template <typename It, typename Arg>
+  void copy_fill_n(It it, It end_it, size_type count, Arg&& arg) noexcept
+  {
+    for (; it != end_it; ++it)
+      *it = std::forward<Arg>(arg);
+  }
+
+  template <std::size_t... I>
+  void copy_fill(size_type start, size_type count, tuple_type const& t, std::index_sequence<I...>) noexcept
+  {
+    // This implementation is valid since C++20 (via P1065R2)
+    // In C++17, a constexpr counterpart of std::invoke is actually needed here
+    (copy_fill_n(std::get<I>(data_) + start, count, std::get<I>(t)), ...);
+  }
+
   template <std::size_t... I, typename... Args>
   void construct_at(size_type i, std::index_sequence<I...>, Args&&... args) noexcept
   {
@@ -714,7 +734,7 @@ private:
   }
 
   template <typename Ty>
-  void move_assign(Ty* to, Ty* from, size_type n) noexcept
+  void move_construct(Ty* to, Ty* from, size_type n) noexcept
   {
     for (size_type i = 0; i < n; ++i)
       std::construct_at(to + i, std::move(from[i]));
@@ -724,7 +744,7 @@ private:
   void move_construct(array_type& dst, size_type dst_offset, array_type& src, size_type src_offset, size_type n,
                       std::index_sequence<I...>) noexcept
   {
-    (move_assign(std::get<I>(dst) + dst_offset, std::get<I>(src) + src_offset, n), ...);
+    (move_construct(std::get<I>(dst) + dst_offset, std::get<I>(src) + src_offset, n), ...);
   }
 
   template <typename Ty>
@@ -826,7 +846,7 @@ private:
       std::memmove(dst, src, (n * sizeof(Ty)));
     else
     {
-      move_assign(dst, src, n);
+      move_construct(dst, src, n);
     }
   }
 
@@ -877,7 +897,7 @@ private:
     {
       destroy_and_deallocate();
       Allocator::operator=(static_cast<const Allocator&>(x));
-      data_              = allocate(x.size_);
+      data_ = allocate(x.size_);
       size_ = capacity_ = x.size_;
       construct_list(x, index_seq);
     }
@@ -904,10 +924,10 @@ private:
   {
     destroy_and_deallocate();
     Allocator::operator=(std::move(static_cast<Allocator&>(x)));
-    data_              = x.data_;
-    size_              = x.size_;
-    capacity_          = x.capacity_;
-    x.data_            = nullptr;
+    data_       = x.data_;
+    size_       = x.size_;
+    capacity_   = x.capacity_;
+    x.data_     = nullptr;
     x.capacity_ = x.size_ = 0;
     return *this;
   }

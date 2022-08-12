@@ -4,42 +4,73 @@
 #include <acl/default_allocator.hpp>
 #include <acl/podvector.hpp>
 #include <type_traits>
+#include <vector>
 
 namespace acl::detail
 {
-template <typename T>
-using podvector_wrapper = acl::podvector<T>;
 
-template <typename T, template <typename> typename VectorType = podvector_wrapper>
+template <DefaultConstructible T, bool IsPOD = std::is_trivial_v<T>>
 class table
 {
+  struct free_idx
+  {
+    std::uint32_t unused = k_null_32;
+    std::uint32_t valids = 0;
+  };
+
+  using vector   = std::conditional_t<IsPOD, podvector<T>, std::vector<T>>;
+  using freepool = std::conditional_t<IsPOD, free_idx, podvector<std::uint32_t>>;
+
 public:
   template <typename... Args>
   std::uint32_t emplace(Args&&... args)
   {
     std::uint32_t index = 0;
-    if (unused != k_null_32)
+    if constexpr (IsPOD)
     {
-      index  = unused;
-      unused = reinterpret_cast<std::uint32_t&>(pool[unused]);
+      if (free_pool.unused != k_null_32)
+      {
+        index            = free_pool.unused;
+        free_pool.unused = reinterpret_cast<std::uint32_t&>(pool[free_pool.unused]);
+      }
+      else
+      {
+        index = static_cast<std::uint32_t>(pool.size());
+        pool.resize(index + 1);
+      }
+      pool[index] = T(std::forward<Args>(args)...);
+      free_pool.valids++;
     }
     else
     {
-      index = static_cast<std::uint32_t>(pool.size());
-      pool.resize(index + 1);
+      if (!free_pool.empty())
+      {
+        index = free_pool.back();
+        free_pool.pop_back();
+        pool[index] = std::move(T(std::forward<Args>(args)...));
+      }
+      else
+      {
+        index = static_cast<std::uint32_t>(pool.size());
+        pool.emplace_back(std::forward<Args>(args)...);
+      }
     }
-    new (&pool[index]) T(std::forward<Args>(args)...);
-    valids++;
     return index;
   }
 
   void erase(std::uint32_t index)
   {
-    auto& t = reinterpret_cast<T&>(pool[index]);
-    t.~T();
-    reinterpret_cast<std::uint32_t&>(pool[index]) = unused;
-    unused                                        = index;
-    valids--;
+    if constexpr (IsPOD)
+    {
+      reinterpret_cast<std::uint32_t&>(pool[index]) = free_pool.unused;
+      free_pool.unused                              = index;
+      free_pool.valids--;
+    }
+    else
+    {
+      pool[index] = T();
+      free_pool.emplace_back(index);
+    }
   }
 
   T& operator[](std::uint32_t i)
@@ -64,14 +95,15 @@ public:
 
   std::uint32_t size() const
   {
-    return valids;
+    if constexpr (IsPOD)
+      return free_pool.valids;
+    else
+      return static_cast<std::uint32_t>(pool.size() - free_pool.size());
   }
 
 private:
-  using storage = detail::aligned_storage<sizeof(T), alignof(T)>;
-  VectorType<storage> pool;
-  std::uint32_t       unused = k_null_32;
-  std::uint32_t       valids = 0;
+  vector   pool;
+  freepool free_pool;
 };
 
 } // namespace acl::detail

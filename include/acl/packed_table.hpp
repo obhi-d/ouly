@@ -58,7 +58,7 @@ public:
     length                 = other.length;
     first_free_index       = other.first_free_index;
     other.length           = 0;
-    other.first_free_index = link::null;
+    other.first_free_index = link::null_v;
     return *this;
   }
 
@@ -363,7 +363,7 @@ private:
   inline link do_insert(size_type loc) noexcept
   {
     size_type lnk;
-    if (first_free_index == link::null)
+    if (first_free_index == link::null_v)
     {
       lnk = base_type::to_link(base_type::push(loc));
     }
@@ -402,11 +402,11 @@ private:
     auto it = first_free_index;
     if (base_type::to_index(it) == idx)
     {
-      first_free_index = link::null;
+      first_free_index = link::null_v;
       return;
     }
 
-    while (it != link::null)
+    while (it != link::null_v)
     {
       auto next = base_type::link_at(base_type::to_index(it));
       if (base_type::to_index(next) == idx)
@@ -447,7 +447,7 @@ private:
 
   podvector<storage*, allocator> items;
   size_type                      length           = 0;
-  size_type                      first_free_index = link::null;
+  size_type                      first_free_index = link::null_v;
 };
 
 } // namespace acl

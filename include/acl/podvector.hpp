@@ -232,13 +232,13 @@ public:
   }
   bool empty() const noexcept
   {
-    return size_ != 0;
+    return size_ == 0;
   }
   void reserve(size_type n) noexcept
   {
     if (capacity_ < n)
     {
-      unchecked_reserve(n);
+      unchecked_reserve(capacity_ + (capacity_ >> 1) + n);
     }
   }
   void shrink_to_fit() noexcept
@@ -426,9 +426,9 @@ private:
     {
       deallocate();
       Allocator::operator=(static_cast<const Allocator&>(x));
-      data_              = allocate(x.size_);
-      capacity_          = x.size_;
-      size_              = x.size_;
+      data_     = allocate(x.size_);
+      capacity_ = x.size_;
+      size_     = x.size_;
       std::memcpy(data_, x.data_, x.size_ * sizeof(Ty));
     }
     return *this;
@@ -454,10 +454,10 @@ private:
   {
     deallocate();
     Allocator::operator=(std::move(static_cast<Allocator&>(x)));
-    data_              = x.data_;
-    size_              = x.size_;
-    capacity_          = x.capacity_;
-    x.data_            = nullptr;
+    data_       = x.data_;
+    size_       = x.size_;
+    capacity_   = x.capacity_;
+    x.data_     = nullptr;
     x.capacity_ = x.size_ = 0;
     return *this;
   }
