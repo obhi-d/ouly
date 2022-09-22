@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "../default_allocator.hpp"
 #include "arena_block.hpp"
 
 namespace acl::detail
@@ -58,7 +59,7 @@ struct arena_accessor
 template <typename traits>
 using arena_list = detail::vlist<arena_accessor<traits>>;
 
-using free_list = std::vector<std::uint32_t>;
+using free_list = acl::vector<std::uint32_t>;
 
 template <alloc_strategy strategy, typename traits>
 class alloc_strategy_impl;

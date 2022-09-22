@@ -5,7 +5,7 @@
 
 struct alloc_mem_manager
 {
-  using arena_data_t = std::vector<char>;
+  using arena_data_t = acl::vector<char>;
   using alloc_info   = acl::alloc_info<std::size_t>;
   struct allocation
   {
@@ -14,11 +14,11 @@ struct alloc_mem_manager
     allocation()     = default;
     allocation(alloc_info const& iinfo, std::size_t isize) : info(iinfo), size(isize) {}
   };
-  std::vector<arena_data_t> arenas;
-  std::vector<arena_data_t> backup_arenas;
-  std::vector<allocation>   allocs;
-  std::vector<allocation>   backup_allocs;
-  std::vector<acl::uhandle> valids;
+  acl::vector<arena_data_t> arenas;
+  acl::vector<arena_data_t> backup_arenas;
+  acl::vector<allocation>   allocs;
+  acl::vector<allocation>   backup_allocs;
+  acl::vector<acl::uhandle> valids;
 
   bool drop_arena([[maybe_unused]] acl::uhandle id)
   {

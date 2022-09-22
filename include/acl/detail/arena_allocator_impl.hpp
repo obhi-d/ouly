@@ -114,7 +114,7 @@ private:
   void               defragment();
   inline size_type   finalize_commit(block& blk, uhandle huser, size_type alignment);
   inline static void copy(block const& src, block& dst);
-  inline void        push_memmove(std::vector<memory_move>& dst, memory_move value);
+  inline void        push_memmove(acl::vector<memory_move>& dst, memory_move value);
 
   bank_data      bank;
   arena_manager& manager;
@@ -333,10 +333,10 @@ inline void arena_allocator_impl<traits>::defragment()
   // refresh all banks
   bank_data refresh;
 
-  std::vector<std::uint32_t> rebinds;
+  acl::vector<std::uint32_t> rebinds;
   rebinds.reserve(bank.blocks.size());
 
-  std::vector<memory_move>   moves;
+  acl::vector<memory_move>   moves;
   decltype(bank.arena_order) deleted_arenas;
   for (auto arena_it = bank.arena_order.front(); arena_it != k_null_32;)
   {
@@ -422,7 +422,7 @@ inline void arena_allocator_impl<traits>::copy(block const& src, block& dst)
 }
 
 template <typename traits>
-inline void arena_allocator_impl<traits>::push_memmove(std::vector<memory_move>& dst, memory_move value)
+inline void arena_allocator_impl<traits>::push_memmove(acl::vector<memory_move>& dst, memory_move value)
 {
   if (!value.is_moved())
     return;

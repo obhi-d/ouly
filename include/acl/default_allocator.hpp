@@ -2,6 +2,7 @@
 #include "allocator.hpp"
 #include "detail/common.hpp"
 #include "detail/memory_tracker.hpp"
+#include "std_allocator_wrapper.hpp"
 #include "type_traits.hpp"
 
 namespace acl
@@ -91,8 +92,8 @@ inline void print_final_stats()
 #endif
 }
 
-template <typename size_arg = std::size_t, std::size_t k_default_alignment = 16, bool k_compute_stats = false,
-          bool k_track_memory = false, typename debug_tracer = std::monostate>
+template <typename size_arg = std::size_t, std::size_t k_default_alignment = alignof(std::max_align_t),
+          bool k_compute_stats = false, bool k_track_memory = false, typename debug_tracer = std::monostate>
 struct ACL_EMPTY_BASES default_allocator : detail::default_alloc_statistics<k_compute_stats>,
                                            detail::memory_tracker<default_allocator_tag, debug_tracer, k_track_memory>
 {
@@ -116,14 +117,7 @@ struct ACL_EMPTY_BASES default_allocator : detail::default_alloc_statistics<k_co
   {
     auto measure = statistics::report_allocate(i_sz);
     i_alignment  = std::max<size_type>(i_alignment, static_cast<size_type>(k_default_alignment));
-    return tracker::when_allocate(i_alignment ?
-#ifdef _MSC_VER
-                                              _aligned_malloc(i_sz, i_alignment)
-#else
-                                              aligned_alloc(i_alignment, i_sz)
-#endif
-                                              : std::malloc(i_sz),
-                                  i_sz);
+    return tracker::when_allocate(i_alignment ? acl::aligned_alloc(i_alignment, i_sz) : std::malloc(i_sz), i_sz);
   }
 
   static void deallocate(address i_addr, size_type i_sz, size_type i_alignment = 0)
@@ -131,13 +125,9 @@ struct ACL_EMPTY_BASES default_allocator : detail::default_alloc_statistics<k_co
     auto  measure = statistics::report_deallocate(i_sz);
     void* fixup   = tracker::when_deallocate(i_addr, i_sz);
     if (i_alignment || k_default_alignment)
-#ifdef _MSC_VER
-      _aligned_free(fixup);
-#else
-      free(fixup);
-#endif
+      acl::aligned_free(fixup);
     else
-      std::free(fixup);
+      acl::free(fixup);
   }
 
   static constexpr void* null()
@@ -145,7 +135,6 @@ struct ACL_EMPTY_BASES default_allocator : detail::default_alloc_statistics<k_co
     return nullptr;
   }
 
-  
   inline bool operator==(default_allocator const&) const
   {
     return true;
@@ -157,4 +146,6 @@ struct ACL_EMPTY_BASES default_allocator : detail::default_alloc_statistics<k_co
   }
 };
 
+template <typename T>
+using vector = std::vector<T, std_allocator_wrapper<T, default_allocator<std::size_t, alignof(T)>>>;
 } // namespace acl

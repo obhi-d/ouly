@@ -196,7 +196,7 @@ private:
     return static_cast<std::uint8_t*>(arenas[id].buffer) + offset;
   }
 
-  std::vector<arena> arenas;
+  acl::vector<arena> arenas;
   size_type          current_arena;
 
   const size_type k_arena_size;

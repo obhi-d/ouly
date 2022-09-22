@@ -25,7 +25,7 @@ struct tree_node
  *     tree_node  node;
  *   };
  *
- *   using container = std::vector<value_type>;
+ *   using container = acl::vector<value_type>;
  *
  *   node_type const& node(container const&, std::uint32_t);
  *   node_type&       node(container&, std::uint32_t);
@@ -152,11 +152,11 @@ private:
 
     tnode_it(Container& cont, std::uint32_t inode = 0) : node(inode), ref(&Accessor::node(cont, inode)) {}
     tnode_it(std::uint32_t inode, node_t* iref) : node(inode), ref(iref) {}
-    tnode_it()                = delete;
-    tnode_it(tnode_it const&) = default;
-    tnode_it(tnode_it&&)      = default;
+    tnode_it()                           = delete;
+    tnode_it(tnode_it const&)            = default;
+    tnode_it(tnode_it&&)                 = default;
     tnode_it& operator=(tnode_it const&) = default;
-    tnode_it& operator=(tnode_it&&) = default;
+    tnode_it& operator=(tnode_it&&)      = default;
 
     bool operator==(tnode_it const& iother) const
     {

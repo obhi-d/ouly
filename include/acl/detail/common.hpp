@@ -24,6 +24,48 @@
 #include <malloc.h>
 #endif
 
+#ifndef ACL_CUSTOM_MALLOC_NS
+#define ACL_NO_CUSTOM_MALLOC_NS
+#define ACL_CUSTOM_MALLOC_NS
+#endif
+
+namespace acl
+{
+inline void* malloc(std::size_t s)
+{
+  return ACL_CUSTOM_MALLOC_NS::malloc(s);
+}
+inline void free(void* f)
+{
+  return ACL_CUSTOM_MALLOC_NS::free(f);
+}
+inline void* aligned_alloc(std::size_t alignment, std::size_t size)
+{
+#ifdef ACL_NO_CUSTOM_MALLOC_NS
+#ifdef _MSC_VER
+  return _aligned_malloc(size, alignment);
+#else
+  return aligned_alloc(i_alignment, i_sz);
+#endif
+
+#else
+  return ACL_CUSTOM_MALLOC_NS::aligned_alloc(alignment, size);
+#endif
+}
+inline void aligned_free(void* ptr)
+{
+#ifdef ACL_NO_CUSTOM_MALLOC_NS
+#ifdef _MSC_VER
+  return _aligned_free(ptr);
+#else
+  return free(ptr);
+#endif
+#else
+  return ACL_CUSTOM_MALLOC_NS::aligned_free(ptr);
+#endif
+}
+} // namespace acl
+
 #if defined(_MSC_VER)
 #include <intrin.h>
 #define ACL_EXPORT              __declspec(dllexport)
@@ -142,7 +184,7 @@ struct timer_t
       other.timer = nullptr;
     }
     scoped& operator=(scoped const&) = delete;
-    scoped& operator                 =(scoped&& other)
+    scoped& operator=(scoped&& other)
     {
       timer       = other.timer;
       start       = other.start;

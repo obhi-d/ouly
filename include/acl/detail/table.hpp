@@ -18,7 +18,7 @@ class table
     std::uint32_t valids = 0;
   };
 
-  using vector   = std::conditional_t<IsPOD, podvector<T>, std::vector<T>>;
+  using vector   = std::conditional_t<IsPOD, podvector<T>, acl::vector<T>>;
   using freepool = std::conditional_t<IsPOD, free_idx, podvector<std::uint32_t>>;
 
 public:

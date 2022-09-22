@@ -15,7 +15,7 @@ TEST_CASE("Validate pool_allocator", "[pool_allocator]")
     std::uint32_t   count;
   };
   constexpr std::uint32_t                      k_atom_count = 1000;
-  std::vector<record>                          records;
+  acl::vector<record>                          records;
   std::minstd_rand                             gen;
   std::bernoulli_distribution                  dice(0.6);
   std::uniform_int_distribution<std::uint32_t> generator(1, k_atom_count / 2);
@@ -64,7 +64,7 @@ TEST_CASE("Validate pool_allocator with alignment", "[pool_allocator]")
     std::uint32_t   count;
   };
   constexpr std::uint32_t                      k_atom_count = 1000;
-  std::vector<record>                          records;
+  acl::vector<record>                          records;
   std::minstd_rand                             gen;
   std::bernoulli_distribution                  dice(0.6);
   std::uniform_int_distribution<std::uint32_t> generator(1, k_atom_count / 2);
@@ -108,8 +108,8 @@ TEST_CASE("Validate std_allocator", "[std_allocator]")
   acl::pool_allocator<> pool_allocator(8, 1000);
   {
     using std_allocator = acl::std_allocator_wrapper<std::uint64_t, acl::pool_allocator<>>;
-    std::vector<std::uint64_t, std_allocator> vlist =
-      std::vector<std::uint64_t, std_allocator>(std_allocator(pool_allocator));
+    acl::vector<std::uint64_t, std_allocator> vlist =
+      acl::vector<std::uint64_t, std_allocator>(std_allocator(pool_allocator));
 
     for (std::uint64_t i = 0; i < 1000; ++i)
       vlist.push_back(i);
