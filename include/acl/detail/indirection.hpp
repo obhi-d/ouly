@@ -11,7 +11,7 @@ namespace acl
 namespace detail
 {
 
-template <typename Ty, typename Allocator, typename Traits, typename Base = Allocator>
+template <typename Allocator, typename Traits, typename Base = Allocator>
 class base_indirection : public Base
 {
 protected:
@@ -26,7 +26,7 @@ public:
   base_indirection(BaseArgs&&... base) : Base(std::forward<BaseArgs>(base)...)
   {}
 
-  base_indirection& operator=(base_indirection&&) = default;
+  base_indirection& operator=(base_indirection&&)      = default;
   base_indirection& operator=(base_indirection const&) = default;
 
 protected:
@@ -94,7 +94,7 @@ protected:
   podvector<size_type, allocator> links;
 };
 
-template <typename Ty, typename Allocator, typename Traits, typename Base = Allocator>
+template <typename Allocator, typename Traits, typename Base = Allocator>
 class ref_indirection : public Base
 {
 protected:
@@ -200,7 +200,7 @@ public:
   ref_backref(BaseArgs&&... base) : Base(std::forward<BaseArgs>(base)...)
   {}
 
-  ref_backref& operator=(ref_backref&&) noexcept = default;
+  ref_backref& operator=(ref_backref&&) noexcept            = default;
   ref_backref& operator=(ref_backref const& other) noexcept = default;
 
 protected:
@@ -237,13 +237,13 @@ protected:
 template <typename Ty, typename Allocator, typename Traits>
 using packed_table_base = std::conditional_t<
   has_backref_v<Traits>,
-  detail::ref_backref<Ty, Allocator, Traits, detail::base_indirection<Ty, Allocator, Traits, Allocator>>,
-  detail::ref_indirection<Ty, Allocator, Traits, detail::base_indirection<Ty, Allocator, Traits, Allocator>>>;
+  detail::ref_backref<Ty, Allocator, Traits, detail::base_indirection<Allocator, Traits, Allocator>>,
+  detail::ref_indirection<Allocator, Traits, detail::base_indirection<Allocator, Traits, Allocator>>>;
 
 template <typename Ty, typename Allocator, typename Traits>
 using sparse_table_base =
   std::conditional_t<has_backref_v<Traits>, detail::ref_backref<Ty, Allocator, Traits, Allocator>,
-                     detail::ref_indirection<Ty, Allocator, Traits, Allocator>>;
+                     detail::ref_indirection<Allocator, Traits, Allocator>>;
 
 } // namespace detail
 

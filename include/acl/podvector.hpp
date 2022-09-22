@@ -19,10 +19,6 @@ namespace acl
 template <typename Ty, typename Allocator = default_allocator<>, typename SizeType = typename Allocator::size_type>
 class podvector : public Allocator
 {
-  static_assert(std::is_trivially_copyable_v<Ty>, "Requires trivially copyable on Ty");
-  static_assert(!std::is_same<bool, Ty>::value, "podvector<bool,...> not allowed -> recommended use is via "
-                                                "std::vector<bool,...>");
-
 public:
   using value_type                = Ty;
   using allocator_type            = Allocator;

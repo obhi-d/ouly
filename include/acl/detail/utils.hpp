@@ -19,6 +19,14 @@ using pack = std::tuple<Args...>;
 
 namespace detail
 {
+template <typename>
+struct is_tuple : std::false_type
+{};
+
+template <typename... T>
+struct is_tuple<std::tuple<T...>> : std::true_type
+{};
+
 template <std::size_t Len, std::size_t Align>
 struct aligned_storage
 {
