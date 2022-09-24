@@ -35,7 +35,7 @@ TEST_CASE("soatable: Validate soatable emplace", "[soatable][emplace]")
 namespace acl
 {
 template <>
-struct pool_traits<std::string> : pool_traits<>
+struct traits<std::string> : traits<>
 {
   static constexpr std::uint32_t pool_size     = 2;
   static constexpr std::uint32_t idx_pool_size = 2;

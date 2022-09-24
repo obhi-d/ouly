@@ -11,7 +11,7 @@
 namespace acl
 {
 
-template <typename Ty, typename Allocator = default_allocator<>, typename Traits = acl::pool_traits<Ty>>
+template <typename Ty, typename Allocator = default_allocator<>, typename Traits = acl::traits<Ty>>
 class packed_table : public detail::packed_table_base<Ty, Allocator, Traits>
 {
 
@@ -53,6 +53,9 @@ public:
 
   packed_table& operator=(packed_table&& other) noexcept
   {
+    clear();
+    shrink_to_fit();
+
     (base_type&)* this     = std::move((base_type&)other);
     items                  = std::move(other.items);
     length                 = other.length;
@@ -64,6 +67,9 @@ public:
 
   packed_table& operator=(packed_table const& other) noexcept requires(std::is_copy_constructible_v<value_type>)
   {
+    clear();
+    shrink_to_fit();
+
     items.resize(other.items.size());
     for (auto& data : items)
       data = reinterpret_cast<storage*>(acl::allocate<storage>(*this, sizeof(storage) * pool_size));

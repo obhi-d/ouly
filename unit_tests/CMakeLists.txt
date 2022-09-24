@@ -18,14 +18,15 @@ add_executable(acl-validity
  "sparse_table.cpp" 
  "collection.cpp" 
  "blackboard.cpp" 
-  
  "packed_table.cpp" 
  "sparse_table.cpp" 
  "collection.cpp" 
  "blackboard.cpp" 
  "soavector.cpp" 
  "podvector.cpp" 
- "table.cpp" "soatable.cpp")
+ "table.cpp" 
+ "soatable.cpp" 
+ "sparse_vector.cpp")
 
 target_link_libraries(acl-validity acl::acl Catch2::Catch2)
 target_compile_definitions(acl-validity

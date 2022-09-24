@@ -17,7 +17,7 @@ namespace acl
 /// @tparam Ty
 /// @tparam Allocator any allocator type under acl
 template <typename Cont, typename Allocator = default_allocator<>,
-          typename Traits = acl::pool_traits<typename Cont::value_type>>
+          typename Traits = acl::traits<typename Cont::value_type>>
 class collection : public Allocator
 {
 public:

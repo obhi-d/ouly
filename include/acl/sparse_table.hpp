@@ -12,7 +12,7 @@
 namespace acl
 {
 
-template <typename Ty, typename Allocator = default_allocator<>, typename Traits = acl::pool_traits<Ty>>
+template <typename Ty, typename Allocator = default_allocator<>, typename Traits = acl::traits<Ty>>
 class sparse_table : public acl::detail::sparse_table_base<Ty, Allocator, Traits>
 {
   static_assert(sizeof(Ty) >= sizeof(typename Traits::size_type), "Type must big enough to hold a link");
@@ -53,6 +53,9 @@ public:
 
   sparse_table& operator=(sparse_table&& other) noexcept
   {
+    clear();
+    shrink_to_fit();
+
     (base_type&)* this     = std::move((base_type&)other);
     items                  = std::move(other.items);
     length                 = other.length;
@@ -66,6 +69,9 @@ public:
 
   sparse_table& operator=(sparse_table const& other) noexcept requires(std::is_copy_constructible_v<value_type>)
   {
+    clear();
+    shrink_to_fit();
+
     items.resize(other.items.size());
     for (auto& data : items)
       data = acl::allocate<storage>(*this, sizeof(storage) * pool_size);

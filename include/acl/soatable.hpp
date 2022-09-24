@@ -12,7 +12,7 @@ namespace acl
 {
 
 // Use this for a packed table of SOA (tuple of arrays)
-template <typename Tuple, typename Allocator = default_allocator<>, typename Traits = acl::pool_traits<Tuple>>
+template <typename Tuple, typename Allocator = default_allocator<>, typename Traits = acl::traits<Tuple>>
 class soatable
     : public detail::ref_indirection<Allocator, Traits, detail::base_indirection<Allocator, Traits, Allocator>>
 {

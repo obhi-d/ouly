@@ -8,11 +8,14 @@ namespace acl
 {
 
 template <typename Ty = std::void_t<>>
-struct pool_traits
+struct traits
 {
   using size_type                              = std::uint32_t;
   static constexpr std::uint32_t pool_size     = 4096;
   static constexpr std::uint32_t idx_pool_size = 4096;
+  static constexpr bool          assume_pod_v  = false;
+  // null
+  // static constexpr T null_v = {};
   // using offset
   // using offset = acl::offset<&selfref::self>;
 };
@@ -51,6 +54,9 @@ constexpr std::uint32_t type_hash()
 {
   return detail::type_hash<std::remove_cv_t<std::remove_reference_t<T>>>();
 }
+
+struct nocheck : std::false_type
+{};
 
 /// Specialize backref
 /// template <>
