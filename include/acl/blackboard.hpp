@@ -22,7 +22,7 @@ concept InventoryDataType = std::is_trivial_v<T> || std::is_move_constructible_v
 template <typename T>
 concept HashMap = requires
 {
-  std::same_as<typename T::mapped_type, acl::vlink>;
+  requires std::same_as<typename T::mapped_type, acl::vlink>;
   typename T::key_type;
 };
 

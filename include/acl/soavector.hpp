@@ -660,7 +660,7 @@ public:
     assert(last < size());
     erase_at(first, last, index_seq);
     size_ -= (last - first);
-    return const_cast<iiterator>(first);
+    return first;
   }
 
   void swap(soavector& x) noexcept

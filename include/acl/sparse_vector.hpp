@@ -119,7 +119,7 @@ public:
   template <typename Lambda>
   void for_each(Lambda&& lambda, nocheck) noexcept
   {
-    for_each(items, std::forward<Lambda>(lambda), nocheck);
+    for_each(items, std::forward<Lambda>(lambda), nocheck{});
   }
 
   /// @brief Lambda called for each element
@@ -127,7 +127,7 @@ public:
   template <typename Lambda>
   void for_each(Lambda&& lambda, nocheck) const noexcept
   {
-    for_each(items, std::forward<Lambda>(lambda), nocheck);
+    for_each(items, std::forward<Lambda>(lambda), nocheck{});
   }
 
   /// @brief Returns size of packed array

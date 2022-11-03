@@ -90,8 +90,7 @@ public:
   template <typename Lambda>
   void for_each(Cont const& cont, Lambda&& lambda) const noexcept
   {
-    const_cast<this_type*>(this)->for_each_l<Cont const, Lambda, value_type const>(cont, 0, range(),
-                                                                                   std::forward<Lambda>(lambda));
+    const_cast<this_type*>(this)->for_each_l(cont, 0, range(), std::forward<Lambda>(lambda));
   }
 
   template <typename Lambda>
@@ -103,8 +102,7 @@ public:
   template <typename Lambda>
   void for_each(Cont const& cont, size_type first, size_type last, Lambda&& lambda) const noexcept
   {
-    const_cast<this_type*>(this)->for_each_l<Cont const, Lambda, value_type const>(cont, first, last,
-                                                                                   std::forward<Lambda>(lambda));
+    const_cast<this_type*>(this)->for_each_l(cont, first, last, std::forward<Lambda>(lambda));
   }
 
   inline void emplace(link l) noexcept

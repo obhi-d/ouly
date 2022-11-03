@@ -45,7 +45,7 @@ inline void* aligned_alloc(std::size_t alignment, std::size_t size)
 #ifdef _MSC_VER
   return _aligned_malloc(size, alignment);
 #else
-  return aligned_alloc(i_alignment, i_sz);
+  return ::aligned_alloc(alignment, size);
 #endif
 
 #else
@@ -58,7 +58,7 @@ inline void aligned_free(void* ptr)
 #ifdef _MSC_VER
   return _aligned_free(ptr);
 #else
-  return free(ptr);
+  return ::free(ptr);
 #endif
 #else
   return ACL_CUSTOM_MALLOC_NS::aligned_free(ptr);
