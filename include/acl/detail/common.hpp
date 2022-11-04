@@ -41,6 +41,9 @@ inline void free(void* f)
 }
 inline void* aligned_alloc(std::size_t alignment, std::size_t size)
 {
+  assert(alignment > 0);
+  assert((alignment & (alignment - 1)) == 0);
+  size = (size + alignment - 1) & ~(alignment - 1);
 #ifdef ACL_NO_CUSTOM_MALLOC_NS
 #ifdef _MSC_VER
   return _aligned_malloc(size, alignment);
