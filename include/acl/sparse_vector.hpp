@@ -387,7 +387,7 @@ private:
     else if constexpr (has_null_construct)
       traits::null_reset(reinterpret_cast<value_type&>(items[block][idx & pool_mod]));
     else
-      items[block][idx & pool_mod] = value_type();
+      reinterpret_cast<value_type&>(items[block][idx & pool_mod]) = value_type();
     if (!--pool_occupation(block))
     {
       delete_block(block);
