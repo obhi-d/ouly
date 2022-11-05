@@ -169,6 +169,31 @@ public:
     return reinterpret_cast<value_type*>(items[i]);
   }
 
+  auto& back()
+  {
+    return at(length - 1);
+  }
+
+  auto& front()
+  {
+    return at(0);
+  }
+    
+  auto const& back() const 
+  {
+    return at(length - 1);
+  }
+
+  auto const& front() const 
+  {
+    return at(0);
+  }
+
+  template <typename... Args>
+  auto& emplace_back(Args&&... args) noexcept
+  {
+    return emplace_at(length, std::forward<Args>(args)...);
+  }
   /// @brief Emplace back an element. Order is not guranteed.
   /// @tparam ...Args Constructor args for value_type
   /// @return Returns link to the element pushed. link can be used to destroy entry.
