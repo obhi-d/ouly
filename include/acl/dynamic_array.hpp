@@ -38,22 +38,31 @@ public:
   {
     clear();
     count_ = other.count_;
-    data_  = (T*)Allocator::allocate(sizeof(T) * count_, alignof(T));
-    std::uninitialized_copy_n(other.begin(), count_, data_);
+    if (count_)
+    {
+      data_ = (T*)Allocator::allocate(sizeof(T) * count_, alignof(T));
+      std::uninitialized_copy_n(other.begin(), count_, data_);
+    }
     return *this;
   }
 
   template <typename It>
   inline dynamic_array(It first, It last) noexcept : count_(static_cast<uint32_t>(std::distance(first, last)))
   {
-    data_ = (T*)Allocator::allocate(sizeof(T) * count_, alignof(T));
-    std::uninitialized_copy_n(first, count_, data_);
+    if (count_)
+    {
+      data_ = (T*)Allocator::allocate(sizeof(T) * count_, alignof(T));
+      std::uninitialized_copy_n(first, count_, data_);
+    }
   }
 
   inline dynamic_array(uint32_t n, T const& fill = T()) noexcept : count_(n)
   {
-    data_ = (T*)Allocator::allocate(sizeof(T) * count_, alignof(T));
-    std::uninitialized_fill_n(data_, count_, fill);
+    if (count_)
+    {
+      data_ = (T*)Allocator::allocate(sizeof(T) * count_, alignof(T));
+      std::uninitialized_fill_n(data_, count_, fill);
+    }
   }
 
   inline ~dynamic_array() noexcept
