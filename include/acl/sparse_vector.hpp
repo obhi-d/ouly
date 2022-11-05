@@ -246,6 +246,14 @@ public:
     erase_at(l);
   }
 
+  void pop_back() 
+  {
+    assert(length > 0);
+    if constexpr (detail::debug)
+      validate(length - 1);
+    erase_at(length - 1);
+  }
+
   /// @brief Drop unused pages
   void shrink_to_fit() noexcept
   {
