@@ -20,6 +20,28 @@ struct traits
   // using offset = acl::offset<&selfref::self>;
 };
 
+template <typename Traits, typename U>
+concept traits_has_null_value = requires(U t)
+{
+  { ((Traits::null_v)) } -> std::convertible_to<U>;
+  { Traits::null_v == t } -> std::same_as<bool>;
+};
+
+template <typename Traits, typename U>
+concept traits_has_null_method = requires(U v)
+{
+  {Traits::is_null(v)} noexcept ->std::same_as<bool>;
+  
+};
+
+template <typename Traits, typename U>
+concept traits_has_null_construct = requires(U v)
+{
+  Traits::null_construct(v);
+  Traits::null_reset(v);
+};
+
+
 template <typename Ty = std::void_t<>>
 struct allocator_traits
 {

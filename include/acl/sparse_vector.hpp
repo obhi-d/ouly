@@ -31,6 +31,25 @@ private:
   using allocator                   = Allocator;
   using traits                      = Traits;
 
+  static constexpr bool has_null_method    = traits_has_null_method<traits, value_type>;
+  static constexpr bool has_null_value     = traits_has_null_value<traits, value_type>;
+  static constexpr bool has_null_construct = traits_has_null_construct<traits, value_type>;
+
+  inline static bool is_null(value_type const& other) noexcept requires(has_null_method)
+  {
+    return traits::is_null(other);
+  }
+
+  inline static bool is_null(value_type const& other) noexcept requires(has_null_value && !has_null_method)
+  {
+    return other == traits::null_v;
+  }
+
+  inline static constexpr bool is_null(value_type const& other) noexcept requires(!has_null_value && !has_null_method)
+  {
+    return false;
+  }
+
 public:
   inline sparse_vector() noexcept {}
   inline sparse_vector(Allocator&& alloc) noexcept : base_type(std::move<Allocator>(alloc)) {}
@@ -83,7 +102,7 @@ public:
               auto const& src = reinterpret_cast<value_type const&>(src_storage[e]);
               auto&       dst = reinterpret_cast<value_type&>(items[i][e]);
 
-              if (src != traits::null_v)
+              if (!is_null(src))
                 std::construct_at(&dst, src);
             }
           }
@@ -178,13 +197,13 @@ public:
   {
     return at(0);
   }
-    
-  auto const& back() const 
+
+  auto const& back() const
   {
     return at(length - 1);
   }
 
-  auto const& front() const 
+  auto const& front() const
   {
     return at(0);
   }
@@ -212,15 +231,33 @@ public:
       items[block] = acl::allocate<storage>(*this, sizeof(storage) * pool_size + sizeof(size_type));
       if (traits::assume_pod_v ||
           (std::is_trivially_copyable_v<value_type> && std::is_trivially_constructible_v<value_type>))
-        std::fill(reinterpret_cast<value_type*>(items[block]), reinterpret_cast<value_type*>(items[block] + pool_size),
-                  traits::null_v);
+      {
+        if constexpr (has_null_value)
+          std::fill(reinterpret_cast<value_type*>(items[block]),
+                    reinterpret_cast<value_type*>(items[block] + pool_size), traits::null_v);
+        else if constexpr (has_null_construct)
+        {
+          std::for_each(reinterpret_cast<value_type*>(items[block]),
+                        reinterpret_cast<value_type*>(items[block] + pool_size), traits::null_construct);
+        }
+        else
+        {
+          std::fill(reinterpret_cast<value_type*>(items[block]),
+                    reinterpret_cast<value_type*>(items[block] + pool_size), value_type());
+        }
+      }
       else
       {
         std::for_each(reinterpret_cast<value_type*>(items[block]),
                       reinterpret_cast<value_type*>(items[block] + pool_size),
                       [](value_type& dst)
                       {
-                        std::construct_at(std::addressof(dst), traits::null_v);
+                        if constexpr (has_null_value)
+                          std::construct_at(std::addressof(dst), traits::null_v);
+                        else if constexpr (has_null_construct)
+                          traits::null_construct(dst);
+                        else
+                          std::construct_at(std::addressof(dst));
                       });
       }
     }
@@ -246,7 +283,7 @@ public:
     erase_at(l);
   }
 
-  void pop_back() 
+  void pop_back()
   {
     assert(length > 0);
     if constexpr (detail::debug)
@@ -309,7 +346,7 @@ public:
   {
     auto block = (idx >> pool_div);
     return block < items.size() && items[block] &&
-           reinterpret_cast<value_type&>(items[block][idx & pool_mod]) != traits::null_v;
+           !is_null(reinterpret_cast<value_type const&>(items[block][idx & pool_mod]));
   }
 
   bool empty() const noexcept
@@ -343,8 +380,14 @@ private:
   inline void erase_at(size_type idx) noexcept
   {
     length--;
-    auto block                                                  = (idx >> pool_div);
-    reinterpret_cast<value_type&>(items[block][idx & pool_mod]) = traits::null_v;
+    auto block = (idx >> pool_div);
+
+    if constexpr (has_null_value)
+      reinterpret_cast<value_type&>(items[block][idx & pool_mod]) = traits::null_v;
+    else if constexpr (has_null_construct)
+      traits::null_reset(reinterpret_cast<value_type&>(items[block][idx & pool_mod]));
+    else
+      items[block][idx & pool_mod] = value_type();
     if (!--pool_occupation(block))
     {
       delete_block(block);
@@ -378,7 +421,7 @@ private:
         {
           if constexpr (Check::value)
           {
-            if (reinterpret_cast<Type>(store[e]) == traits::null_v)
+            if (is_null(reinterpret_cast<Type>(store[e])))
               continue;
           }
           lambda((block << pool_size) | e, reinterpret_cast<Type>(store[e]));
