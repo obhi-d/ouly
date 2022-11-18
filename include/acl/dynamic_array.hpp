@@ -1,3 +1,4 @@
+#pragma once
 
 #include "default_allocator.hpp"
 #include <algorithm>
