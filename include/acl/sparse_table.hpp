@@ -237,7 +237,7 @@ public:
         });
     extend           = 0;
     length           = 0;
-    first_free_index = 0;
+    first_free_index = link::null_v;
     base_type::clear();
   }
 
