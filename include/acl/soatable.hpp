@@ -215,7 +215,7 @@ public:
   }
 
   /// @brief Erase a single element.
-  void remove(link l) noexcept
+  void erase(link l) noexcept
   {
     if constexpr (detail::debug)
       validate(l);

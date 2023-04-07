@@ -1,6 +1,6 @@
 
 #include <acl/dynamic_array.hpp>
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <string>
 
 TEST_CASE("dynamic_array: Validate use of dynamic_array")

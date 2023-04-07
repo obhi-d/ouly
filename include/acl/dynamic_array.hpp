@@ -142,7 +142,7 @@ class dynamic_array : public Allocator
 {
 
 public:
-  static inline constexpr uint32_t count_ = N;
+  inline static constexpr uint32_t count_ = N;
   static_assert(count_ > 0);
 
   dynamic_array() = default;

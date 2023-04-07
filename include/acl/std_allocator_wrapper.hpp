@@ -7,56 +7,64 @@
 
 namespace acl
 {
+
+
 namespace detail
 {
+template <typename T>
+struct allocator_common
+{
+  using value_type      = T;
+  using size_type       = std::size_t;
+  using difference_type = std::ptrdiff_t;
+  using reference       = value_type&;
+  using const_reference = value_type const&;
+  using pointer         = value_type*;
+  using const_pointer   = value_type const*;
 
-template <typename T, typename UA, bool static_ua>
-struct std_allocator_wrapper;
+  using propagate_on_container_copy_assignment = std::true_type;
+  using propagate_on_container_move_assignment = std::true_type;
+  using propagate_on_container_swap            = std::true_type;
+};
+
+}
 
 template <typename T, typename UA>
-class std_allocator_wrapper<T, UA, false> : public std::allocator<T>
+struct allocator_wrapper : public detail::allocator_common<T>, public UA 
 {
-public:
-  //    typedefs
-  using pointer       = typename std::allocator_traits<std::allocator<T>>::pointer;
-  using const_pointer = typename std::allocator_traits<std::allocator<T>>::const_pointer;
-  using size_type     = typename std::allocator_traits<std::allocator<T>>::size_type;
-  using value_type    = typename std::allocator_traits<std::allocator<T>>::value_type;
-
-  using underlying_size_t = typename UA::size_type;
-
-public:
-  //    convert an allocator<T> to allocator<U>
+  using typename detail::allocator_common<T>::value_type;
+  using typename detail::allocator_common<T>::size_type;
+  using typename detail::allocator_common<T>::difference_type;
+  using typename detail::allocator_common<T>::reference;
+  using typename detail::allocator_common<T>::const_reference;
+  using typename detail::allocator_common<T>::pointer;
+  using typename detail::allocator_common<T>::const_pointer;
 
   template <typename U>
   struct rebind
   {
-    typedef std_allocator_wrapper<U, UA, false> other;
+    using other = allocator_wrapper<U, UA>;
   };
 
-public:
-  inline explicit std_allocator_wrapper(UA& impl) : impl_(&impl) {}
-
-  inline ~std_allocator_wrapper() {}
-
-  /*	inline explicit std_allocator_wrapper(std_allocator_wrapper const&) {}*/
+  allocator_wrapper() noexcept = default;
   template <typename U>
-  inline std_allocator_wrapper(std_allocator_wrapper<U, UA, false> const& other) : impl_(other.get_impl())
+  allocator_wrapper(allocator_wrapper<U, UA> const& other) : UA((UA const&)other)
+  {}
+  template <typename U>
+  allocator_wrapper(allocator_wrapper<U, UA>&& other) : UA(std::move((UA&)other))
   {}
 
-  //    memory allocation
 
-  inline pointer allocate(size_type cnt, const_pointer = 0) const
+  inline pointer allocate(size_type cnt) const
   {
     if constexpr (alignof(T) > alignof(void*))
     {
-      pointer ret =
-        reinterpret_cast<pointer>(impl_->allocate(static_cast<underlying_size_t>(sizeof(T) * cnt), alignof(T)));
+      pointer ret = reinterpret_cast<pointer>(UA::allocate(static_cast<size_type>(sizeof(T) * cnt), alignof(T)));
       return ret;
     }
     else
     {
-      pointer ret = reinterpret_cast<pointer>(impl_->allocate(static_cast<underlying_size_t>(sizeof(T) * cnt)));
+      pointer ret = reinterpret_cast<pointer>(UA::allocate(static_cast<size_type>(sizeof(T) * cnt)));
       return ret;
     }
   }
@@ -64,160 +72,99 @@ public:
   inline void deallocate(pointer p, size_type cnt) const
   {
     if constexpr (alignof(T) > alignof(void*))
-      impl_->deallocate(p, static_cast<underlying_size_t>(sizeof(T) * cnt), alignof(T));
+      UA::deallocate(p, static_cast<size_type>(sizeof(T) * cnt), alignof(T));
     else
-      impl_->deallocate(p, static_cast<underlying_size_t>(sizeof(T) * cnt));
+      UA::deallocate(p, static_cast<size_type>(sizeof(T) * cnt));
   }
-  //    construction/destruction
-
-  template <typename... Args>
-  inline void construct(pointer p, Args&&... args) const
-  {
-    new (p) T(std::forward<Args>(args)...);
-  }
-
-  inline void destroy(pointer p) const
-  {
-    reinterpret_cast<T*>(p)->~T();
-  }
-  inline bool operator==(const std_allocator_wrapper& x)
-  {
-    return impl_ == x.impl_;
-  }
-  inline bool operator!=(const std_allocator_wrapper& x)
-  {
-    return impl_ != x.impl_;
-  }
-
-  UA* get_impl() const
-  {
-    return impl_;
-  }
-
-protected:
-  UA* impl_;
 };
 
 template <typename T, typename UA>
-class std_allocator_wrapper<T, UA, true> : public std::allocator<T>, public UA
+class allocator_ref : public detail::allocator_common<T>
 {
-public:
-  //    typedefs
-  using pointer       = typename std::allocator_traits<std::allocator<T>>::pointer;
-  using const_pointer = typename std::allocator_traits<std::allocator<T>>::const_pointer;
-  using size_type     = typename std::allocator_traits<std::allocator<T>>::size_type;
-  using value_type    = typename std::allocator_traits<std::allocator<T>>::value_type;
+  using typename detail::allocator_common<T>::value_type;
+  using typename detail::allocator_common<T>::size_type;
+  using typename detail::allocator_common<T>::difference_type;
+  using typename detail::allocator_common<T>::reference;
+  using typename detail::allocator_common<T>::const_reference;
+  using typename detail::allocator_common<T>::pointer;
+  using typename detail::allocator_common<T>::const_pointer;
 
-  using underlying_size_t = typename UA::size_type;
-
-public:
-  //    convert an allocator<T> to allocator<U>
-
+  
   template <typename U>
   struct rebind
   {
-    typedef std_allocator_wrapper<U, UA, true> other;
+    using other = allocator_ref<U, UA>;
   };
 
-public:
-  inline std_allocator_wrapper() {}
-
-  inline explicit std_allocator_wrapper(UA const& impl) : UA(impl) {}
-  inline std_allocator_wrapper(std_allocator_wrapper<T, UA, true> const& impl) : UA((UA const&)impl) {}
-
-  inline ~std_allocator_wrapper() {}
-
-  /*	inline explicit std_allocator_wrapper(std_allocator_wrapper const&) {}*/
+  allocator_ref() noexcept = default;
+  allocator_ref(UA& ref) noexcept : ref_(&ref) {}
   template <typename U>
-  inline std_allocator_wrapper(std_allocator_wrapper<U, UA, true> const& other) : UA((UA&)other)
-  {}
-
-  //    memory allocation
-
-  inline pointer allocate(size_type cnt, const_pointer = 0) const
+  allocator_ref(allocator_ref<U, UA>&& ref) noexcept : ref_(ref.ref_)
   {
+    ref.ref_ = nullptr;
+  }
+  template <typename U>
+  allocator_ref& operator=(allocator_ref<U, UA> && ref) noexcept
+  {
+    ref_ = ref.ref_;
+    ref.ref_ = nullptr;
+    return *this;
+  }
+  template <typename U>
+  allocator_ref(allocator_ref<U, UA> const& ref) noexcept : ref_(ref.ref_)
+  {
+  }
+  template <typename U>
+  allocator_ref& operator=(allocator_ref<U, UA> const& ref) noexcept
+  {
+    ref_     = ref.ref_;
+    return *this;
+  }
+
+  inline pointer allocate(size_type cnt) const
+  {
+    assert(ref_);
     if constexpr (alignof(T) > alignof(void*))
     {
       pointer ret =
-        reinterpret_cast<pointer>(UA::allocate(static_cast<underlying_size_t>(sizeof(T) * cnt), alignof(T)));
+        reinterpret_cast<pointer>(ref_->allocate(static_cast<size_type>(sizeof(T) * cnt), alignof(T)));
       return ret;
     }
     else
     {
-      pointer ret = reinterpret_cast<pointer>(UA::allocate(static_cast<underlying_size_t>(sizeof(T) * cnt)));
+      pointer ret = reinterpret_cast<pointer>(ref_->allocate(static_cast<size_type>(sizeof(T) * cnt)));
       return ret;
     }
   }
 
   inline void deallocate(pointer p, size_type cnt) const
   {
+    assert(ref_);
     if constexpr (alignof(T) > alignof(void*))
-      UA::deallocate(p, static_cast<underlying_size_t>(sizeof(T) * cnt), alignof(T));
+      ref_->deallocate(p, static_cast<size_type>(sizeof(T) * cnt), alignof(T));
     else
-      UA::deallocate(p, static_cast<underlying_size_t>(sizeof(T) * cnt));
-  }
-  //    construction/destruction
-
-  template <typename... Args>
-  inline void construct(pointer p, Args&&... args) const
-  {
-    new (p) T(std::forward<Args>(args)...);
+      ref_->deallocate(p, static_cast<size_type>(sizeof(T) * cnt));
   }
 
-  inline void destroy(pointer p) const
-  {
-    reinterpret_cast<T*>(p)->~T();
-  }
-  inline bool operator==(const std_allocator_wrapper& x)
-  {
-    return true;
-  }
-  inline bool operator!=(const std_allocator_wrapper& x)
-  {
-    return false;
-  }
+private:
+  UA* ref_ = nullptr;
 };
-
-} // namespace detail
-
-template <typename T, typename UA>
-class std_allocator_wrapper
-    : public detail::std_allocator_wrapper<T, UA, acl::detail::is_static_v<acl::detail::tag_t<UA>>>
-{
-public:
-  //    typedefs
-  using base_type     = detail::std_allocator_wrapper<T, UA, acl::detail::is_static_v<acl::detail::tag_t<UA>>>;
-  using pointer       = typename std::allocator_traits<std::allocator<T>>::pointer;
-  using const_pointer = typename std::allocator_traits<std::allocator<T>>::const_pointer;
-  using size_type     = typename std::allocator_traits<std::allocator<T>>::size_type;
-  using value_type    = typename std::allocator_traits<std::allocator<T>>::value_type;
-
-  using underlying_size_t = typename UA::size_type;
-
-  std_allocator_wrapper() = default;
-
-  template <typename... Args>
-  inline std_allocator_wrapper(Args&&... args) : base_type(std::forward<Args>(args)...)
-  {}
-};
-
-template <typename T, typename UA>
-auto make_std_allocator(UA& impl)
-{
-  return std_allocator_wrapper<T, UA>(impl);
-}
-
-template <typename T, typename UA>
-auto make_std_allocator()
-{
-  return std_allocator_wrapper<T, UA>();
-}
 
 template <typename UA>
-class std_memory_resource : public std::pmr::memory_resource
+class memory_resource_ref : public std::pmr::memory_resource
 {
 public:
-  std_memory_resource(UA* impl) : impl_(impl) {}
+  memory_resource_ref(UA* impl) : impl_(impl) {}
+  memory_resource_ref(memory_resource_ref&& other) noexcept : impl_(other.impl_)
+  {
+    other.impl_ = nullptr;
+  }
+  memory_resource_ref& operator=(memory_resource_ref&& other) noexcept 
+  {
+    impl_       = other.impl_;
+    other.impl_ = nullptr;
+    return *this;
+  }
 
   /// \thread_safe
   inline void* do_allocate(std::size_t bytes, std::size_t alignment) override
@@ -233,7 +180,7 @@ public:
   inline bool do_is_equal(const memory_resource& other) const noexcept override
   {
     // TODO
-    auto pother = dynamic_cast<std_memory_resource<UA> const*>(&other);
+    auto pother = dynamic_cast<memory_resource_ref<UA> const*>(&other);
     if (!pother || pother->impl_ != impl_)
       return false;
     return true;
@@ -243,4 +190,42 @@ private:
   UA* impl_;
 };
 
+
+template <typename UA>
+class memory_resource : public std::pmr::memory_resource
+{
+public:
+  template <typename... Args>
+  memory_resource(Args&&... args) : impl_(std::forward<Args>(args)...)
+  {}
+
+  memory_resource(memory_resource&& r) noexcept : impl_(std::move(r.impl_)) {}
+  memory_resource& operator=(memory_resource&& r) noexcept 
+  {
+    impl_ = std::move(r.impl_);
+    return *this;
+  }
+  /// \thread_safe
+  inline void* do_allocate(std::size_t bytes, std::size_t alignment) override
+  {
+    return impl_.allocate(bytes, alignment);
+  }
+  /// \thread_safe
+  inline void do_deallocate(void* ptr, std::size_t bytes, std::size_t alignment) override
+  {
+    return impl_.deallocate(ptr, bytes, alignment);
+  }
+  /// \thread_safe
+  inline bool do_is_equal(const memory_resource& other) const noexcept override
+  {
+    // TODO
+    auto pother = dynamic_cast<memory_resource<UA> const*>(&other);
+    if (!pother || &(pother->impl_) != &impl_)
+      return false;
+    return true;
+  }
+
+private:
+  UA impl_;
+};
 } // namespace acl

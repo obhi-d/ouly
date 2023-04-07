@@ -1,5 +1,13 @@
 ﻿#pragma once
 #include "detail/arena_allocator_impl.hpp"
+#include "strat_best_fit_tree.hpp"
+#include "strat_best_fit_v0.hpp"
+#include "strat_best_fit_v1.hpp"
+#include "strat_slotted_v0.hpp"
+#include "strat_slotted_v1.hpp"
+#include "strat_slotted_v2.hpp"
+#include "strat_greedy_v0.hpp"
+#include "strat_greedy_v1.hpp"
 
 namespace acl
 {
@@ -11,23 +19,21 @@ namespace acl
 //  ██║--██║██║--██║███████╗██║-╚████║██║--██║███████╗██║--██║███████╗███████╗╚██████╔╝╚██████╗██║--██║---██║---╚██████╔╝██║--██║
 //  ╚═╝--╚═╝╚═╝--╚═╝╚══════╝╚═╝--╚═══╝╚═╝--╚═╝╚══════╝╚═╝--╚═╝╚══════╝╚══════╝-╚═════╝--╚═════╝╚═╝--╚═╝---╚═╝----╚═════╝-╚═╝--╚═╝
 //  -----------------------------------------------------------------------------------------------------------------------------
-template <typename manager_t, typename usize_t = std::size_t, alloc_strategy strategy_v = alloc_strategy::best_fit_tree,
-          bool k_compute_stats_v = false>
-class arena_allocator : public detail::arena_allocator_impl<
-                          detail::arena_allocator_traits<manager_t, usize_t, strategy_v, k_compute_stats_v>>
+template <typename strategy, typename manager, typename usize_t = std::size_t, bool k_compute_stats_v = false>
+class arena_allocator : public detail::arena_allocator_impl<strategy, manager, usize_t, k_compute_stats_v>
 {
-  using traits    = detail::arena_allocator_traits<manager_t, usize_t, strategy_v, k_compute_stats_v>;
-  using size_type = typename traits::size_type;
-  using base      = detail::arena_allocator_impl<traits>;
+protected:
+  using super = detail::arena_allocator_impl<strategy, manager, usize_t, k_compute_stats_v>;
 
 public:
-  using tag        = typename base::tag;
-  using alloc_info = acl::alloc_info<size_type>;
-  using alloc_desc = acl::alloc_desc<size_type>;
+  static constexpr usize_t min_granularity = strategy::min_granularity;
 
+  using size_type  = usize_t;
+  using alloc_info = acl::alloc_info<size_type>;
+  
   template <typename... Args>
-  arena_allocator(size_type i_arena_size, typename traits::manager& i_manager, Args&&... args)
-      : base(i_arena_size, i_manager, std::forward<Args>(args)...)
+  arena_allocator(size_type i_arena_size, manager& i_manager, Args&&... args)
+      : super(i_arena_size, i_manager, std::forward<Args>(args)...)
   {}
 };
 

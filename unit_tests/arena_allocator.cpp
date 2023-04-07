@@ -1,12 +1,12 @@
 #include <acl/arena_allocator.hpp>
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <iostream>
 #include <unordered_set>
 
 struct alloc_mem_manager
 {
   using arena_data_t = acl::vector<char>;
-  using alloc_info   = acl::alloc_info<std::size_t>;
+  using alloc_info   = acl::alloc_info<uint32_t>;
   struct allocation
   {
     alloc_info  info;
@@ -72,7 +72,7 @@ struct alloc_mem_manager
     backup_arenas.shrink_to_fit();
     backup_allocs.clear();
     backup_allocs.shrink_to_fit();
-#ifdef CPPALLOC_VALIDITY_CHECKS
+#ifdef ACL_VALIDITY_CHECKS
     allocator.validate_integrity();
 #endif
   }
@@ -91,81 +91,56 @@ struct alloc_mem_manager
   }
 };
 
-TEST_CASE("Validate arena_allocator.best_fit_tree", "[arena_allocator.best_fit_tree]")
+TEMPLATE_TEST_CASE("Validate arena_allocator", "[arena_allocator.strat]",
+                   // clang-format off
+  (acl::strat::slotted_v0<uint32_t>),
+  (acl::strat::slotted_v1<uint32_t>),
+  (acl::strat::slotted_v2<uint32_t>),
+  (acl::strat::slotted_v0<uint32_t, 256, 255, acl::strat::best_fit_tree<uint32_t>>),
+  (acl::strat::slotted_v1<uint32_t, 256, 255, acl::strat::best_fit_tree<uint32_t>>),
+  (acl::strat::slotted_v2<uint32_t, 256, 255, 8, acl::strat::best_fit_tree<uint32_t>>),
+  (acl::strat::greedy_v0<uint32_t>),
+  (acl::strat::greedy_v1<uint32_t>),
+  (acl::strat::best_fit_tree<uint32_t>),
+  (acl::strat::best_fit_v0<uint32_t>),
+  (acl::strat::best_fit_v1<uint32_t>)
+                   // clang-format on
+)
 {
-  using allocator_t = acl::arena_allocator<alloc_mem_manager, std::size_t, acl::alloc_strategy::best_fit_tree, true>;
-  std::minstd_rand                           gen;
-  std::bernoulli_distribution                dice(0.7);
-  std::uniform_int_distribution<std::size_t> generator(1, 1000);
-  std::uniform_int_distribution<std::size_t> generator2(1, 4);
-  enum action
-  {
-    e_allocate,
-    e_deallocate
-  };
-  alloc_mem_manager mgr;
-  allocator_t       allocator(920, mgr);
-  for (std::uint32_t allocs = 0; allocs < 10000; ++allocs)
-  {
-    if (dice(gen) || mgr.valids.size() == 0)
-    {
-      acl::alloc_desc<std::size_t> desc(generator(gen), 1u << generator2(gen),
-                                        static_cast<acl::uhandle>(mgr.allocs.size()), acl::alloc_option_bits::f_defrag);
-      auto                         info = allocator.allocate(desc);
-      mgr.allocs.emplace_back(info, desc.size());
-      mgr.fill(mgr.allocs.back());
-      mgr.valids.push_back(desc.huser());
-    }
-    else
-    {
-      std::uniform_int_distribution<std::size_t> choose(0, mgr.valids.size() - 1);
-      std::size_t                                chosen = choose(gen);
-      auto                                       handle = mgr.valids[chosen];
-      allocator.deallocate(mgr.allocs[handle].info.halloc);
-      mgr.allocs[handle].size = 0;
-      mgr.valids.erase(mgr.valids.begin() + chosen);
-    }
-#ifdef CPPALLOC_VALIDITY_CHECKS
-    allocator.validate_integrity();
-#endif
-  }
-}
+  using allocator_t = acl::arena_allocator<TestType, alloc_mem_manager, uint32_t, true>;
 
-TEST_CASE("Validate arena_allocator.best_fit", "[arena_allocator.best_fit]")
-{
-  using allocator_t = acl::arena_allocator<alloc_mem_manager, std::size_t, acl::alloc_strategy::best_fit, true>;
-  std::minstd_rand                           gen;
-  std::bernoulli_distribution                dice(0.7);
-  std::uniform_int_distribution<std::size_t> generator(1, 1000);
-  std::uniform_int_distribution<std::size_t> generator2(1, 4);
+  std::minstd_rand                        gen;
+  std::bernoulli_distribution             dice(0.7);
+  std::uniform_int_distribution<uint32_t> generator(1, 10);
   enum action
   {
     e_allocate,
     e_deallocate
   };
   alloc_mem_manager mgr;
-  allocator_t       allocator(920, mgr);
+  allocator_t       allocator(256 * 256, mgr);
   for (std::uint32_t allocs = 0; allocs < 10000; ++allocs)
   {
     if (dice(gen) || mgr.valids.size() == 0)
     {
-      acl::alloc_desc<std::size_t> desc(generator(gen), 1u << generator2(gen),
-                                        static_cast<acl::uhandle>(mgr.allocs.size()), acl::alloc_option_bits::f_defrag);
-      auto                         info = allocator.allocate(desc);
+      acl::fixed_alloc_desc<std::uint32_t, TestType::min_granularity> desc(generator(gen) * TestType::min_granularity, 
+                                          static_cast<acl::uhandle>(mgr.allocs.size()),
+                                          acl::alloc_option_bits::f_defrag);
+      auto                           info = allocator.allocate(desc);
       mgr.allocs.emplace_back(info, desc.size());
       mgr.fill(mgr.allocs.back());
       mgr.valids.push_back(desc.huser());
     }
     else
     {
-      std::uniform_int_distribution<std::size_t> choose(0, mgr.valids.size() - 1);
-      std::size_t                                chosen = choose(gen);
-      auto                                       handle = mgr.valids[chosen];
+      std::uniform_int_distribution<std::uint32_t> choose(0, mgr.valids.size() - 1);
+      std::size_t                                  chosen = choose(gen);
+      auto                                         handle = mgr.valids[chosen];
       allocator.deallocate(mgr.allocs[handle].info.halloc);
       mgr.allocs[handle].size = 0;
       mgr.valids.erase(mgr.valids.begin() + chosen);
     }
-#ifdef CPPALLOC_VALIDITY_CHECKS
+#ifdef ACL_VALIDITY_CHECKS
     allocator.validate_integrity();
 #endif
   }

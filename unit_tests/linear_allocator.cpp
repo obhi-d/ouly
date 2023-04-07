@@ -1,7 +1,7 @@
 #include <acl/linear_allocator.hpp>
 #include <acl/linear_arena_allocator.hpp>
 #include <acl/linear_stack_allocator.hpp>
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 
 TEST_CASE("Validate linear_allocator", "[linear_allocator]")
 {

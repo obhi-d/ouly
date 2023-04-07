@@ -1,6 +1,6 @@
 
 #include <acl/soatable.hpp>
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <string>
 
 template <typename IntTy>
@@ -19,7 +19,7 @@ TEST_CASE("soatable: Validate soatable emplace", "[soatable][emplace]")
   auto link2 = table.emplace(20, false);
   auto link3 = table.emplace(30, false);
   auto link4 = table.emplace(40, true);
-  table.remove(link3);
+  table.erase(link3);
   CHECK(std::get<0>(table[link2]) == 20);
   CHECK(std::get<1>(table[link2]) == false);
   CHECK(std::get<0>(table[link4]) == 40);
@@ -51,7 +51,7 @@ TEST_CASE("soatable: Validate soatable for_each", "[soatable][for_each]")
   auto                       e3 = table.emplace("the");
   auto                       e4 = table.emplace("way");
 
-  table.remove(e2);
+  table.erase(e2);
 
   std::string value;
   table.for_each(
@@ -76,8 +76,8 @@ TEST_CASE("soatable: Erase pages when done", "[soatable][shrink_to_fit]")
   auto e3 = table.emplace("the");
   auto e4 = table.emplace("way");
 
-  table.remove(e3);
-  table.remove(e4);
+  table.erase(e3);
+  table.erase(e4);
 
   REQUIRE(table.capacity() == 4);
   REQUIRE(table.size() == 2);
@@ -129,7 +129,7 @@ TEST_CASE("soatable: Random test", "[soatable][random]")
     // emplace
     last_offset += count;
 
-    std::unordered_set<std::string>   remove;
+    std::unordered_set<std::string>   erase;
     std::unordered_set<std::uint32_t> choose;
     cont.for_each(
       [&](auto link, auto const& el)
@@ -140,16 +140,16 @@ TEST_CASE("soatable: Random test", "[soatable][random]")
     for (auto& e : choose)
     {
       auto l = acl::soatable<std::string>::link(e);
-      remove.emplace(cont.get<0>(l));
-      cont.remove(l);
+      erase.emplace(cont.get<0>(l));
+      cont.erase(l);
     }
     cont.shrink_to_fit();
-    REQUIRE(cont.size() == (count + prev) - static_cast<std::uint32_t>(remove.size()));
+    REQUIRE(cont.size() == (count + prev) - static_cast<std::uint32_t>(erase.size()));
 
     cont.for_each(
       [&](auto link, auto const& el)
       {
-        REQUIRE(remove.find(cont.get<0>(link)) == remove.end());
+        REQUIRE(erase.find(cont.get<0>(link)) == erase.end());
       });
   }
 }
@@ -169,7 +169,7 @@ TEST_CASE("soatable: Test selfref", "[soatable][backref]")
   auto e10 = table.emplace(10);
 
   REQUIRE(table.get<0>(e10).value == 10);
-  table.remove(e10);
+  table.erase(e10);
 
   auto e20 = table.emplace(20);
   auto e30 = table.emplace(30);
@@ -194,22 +194,22 @@ TEST_CASE("soatable: Validate emplace_at", "[soatable][emplace_at]")
   REQUIRE(table1.get<0>(e20) == table2.get<0>(e20));
   REQUIRE(table1.get<0>(e30) == table2.get<0>(e30));
 
-  table2.remove(e10);
+  table2.erase(e10);
   table2.emplace_at(e10, 13);
 
   REQUIRE(table1.get<0>(e10) == 5);
   REQUIRE(table2.get<0>(e10) == 13);
 
-  table2.remove(e10);
-  table2.remove(e20);
+  table2.erase(e10);
+  table2.erase(e20);
   table2.emplace_at(e20, 17);
 
   REQUIRE(table2.contains(e10) == false);
   REQUIRE(table2.contains(e20) == true);
   REQUIRE(table2.get<0>(e20) == 17);
 
-  table2.remove(e20);
-  table2.remove(e30);
+  table2.erase(e20);
+  table2.erase(e30);
 
   REQUIRE(table2.empty() == true);
 }

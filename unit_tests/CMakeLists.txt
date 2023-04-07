@@ -7,18 +7,26 @@ include(FetchContent)
 FetchContent_Declare(
   Catch2
   GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-  GIT_TAG 216713a4066b79d9803d374f261ccb30c0fb451f
+  GIT_TAG 3f0283d
+)
+
+
+FetchContent_Declare(
+  nanobench
+  GIT_REPOSITORY https://github.com/martinus/nanobench.git
+  GIT_TAG a5a50c2
 )
 
 FetchContent_MakeAvailable(Catch2)
+FetchContent_MakeAvailable(nanobench)
+
 
 add_executable(acl-validity
- "main.cpp"
+ "validity_main.cpp"
  "packed_table.cpp" 
  "sparse_table.cpp" 
  "collection.cpp" 
  "blackboard.cpp" 
- "packed_table.cpp" 
  "sparse_table.cpp" 
  "collection.cpp" 
  "blackboard.cpp" 
@@ -26,7 +34,9 @@ add_executable(acl-validity
  "podvector.cpp" 
  "table.cpp" 
  "soatable.cpp" 
- "sparse_vector.cpp" "dynamic_array.cpp")
+ "sparse_vector.cpp" 
+ "dynamic_array.cpp"
+ "arena_allocator.cpp")
 
 target_link_libraries(acl-validity acl::acl Catch2::Catch2)
 target_compile_definitions(acl-validity
@@ -42,3 +52,11 @@ if(ASAN_ENABLED)
     target_link_options(acl-validity PUBLIC -fsanitize=address)
   endif()
 endif()
+
+add_executable(acl-bench
+ "bench_arena_allocator.cpp"
+ "bench_main.cpp" 
+ )
+
+target_link_libraries(acl-bench acl::acl nanobench::nanobench)
+target_compile_features(acl-bench PRIVATE cxx_std_20)

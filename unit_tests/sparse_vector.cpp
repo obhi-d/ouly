@@ -1,6 +1,6 @@
 
 #include <acl/sparse_vector.hpp>
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <string>
 
 template <typename IntTy>

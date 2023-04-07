@@ -10,12 +10,6 @@
 namespace acl
 {
 
-enum class alloc_strategy
-{
-  best_fit,
-  best_fit_tree
-};
-
 enum alloc_option_bits : std::uint32_t
 {
   f_defrag          = 1u << 0u,
@@ -49,24 +43,122 @@ struct memory_manager_adapter
   {}
 };
 
-//  -█████╗-██╗-----██╗------██████╗--██████╗--------██████╗-███████╗███████╗-██████╗
-//  ██╔══██╗██║-----██║-----██╔═══██╗██╔════╝--------██╔══██╗██╔════╝██╔════╝██╔════╝
-//  ███████║██║-----██║-----██║---██║██║-------------██║--██║█████╗--███████╗██║-----
-//  ██╔══██║██║-----██║-----██║---██║██║-------------██║--██║██╔══╝--╚════██║██║-----
-//  ██║--██║███████╗███████╗╚██████╔╝╚██████╗███████╗██████╔╝███████╗███████║╚██████╗
-//  ╚═╝--╚═╝╚══════╝╚══════╝-╚═════╝--╚═════╝╚══════╝╚═════╝-╚══════╝╚══════╝-╚═════╝
-//  ---------------------------------------------------------------------------------
 template <typename size_type>
-class alloc_desc
+class basic_alloc_desc
 {
 public:
-  alloc_desc(size_type isize) : size_(isize) {}
-  alloc_desc(size_type isize, size_type ialignment) : size_(isize), alignment_mask_(ialignment - 1) {}
-  alloc_desc(size_type isize, size_type ialignment, uhandle ihuser)
-      : size_(isize), alignment_mask_(ialignment - 1), huser_(ihuser)
+  basic_alloc_desc(size_type isize) : size_(isize) {}
+  basic_alloc_desc(size_type isize, uhandle huser) : size_(isize), huser_(huser) {}
+
+  constexpr size_type alignment_mask() const
+  {
+    return ~(size_type)0;
+  }
+
+  constexpr size_type alignment() const
+  {
+    return 0;
+  }
+
+  constexpr size_type alignment_bits() const
+  {
+    return ~(size_type)0;
+  }
+
+  constexpr alloc_options flags() const
+  {
+    return {};
+  }
+
+  size_type size() const
+  {
+    return size_;
+  }
+
+  uhandle huser() const
+  {
+    return huser_;
+  }
+
+  size_type adjusted_size() const
+  {
+    // 1 extra byte for better merges
+    return size();
+  }
+
+  
+
+  size_type size_{};
+  uhandle   huser_{};
+};
+
+template <typename size_type, uint32_t alignment_>
+class fixed_alloc_desc
+{
+public:
+  constexpr fixed_alloc_desc(size_type isize) : size_(isize) {}
+  constexpr fixed_alloc_desc(size_type isize, uhandle huser) : size_(isize), huser_(huser) {}
+  constexpr fixed_alloc_desc(size_type isize, uhandle ihuser, alloc_options iflags)
+      : size_(isize), huser_(ihuser), flags_(iflags)
   {}
-  alloc_desc(size_type isize, size_type ialignment, uhandle ihuser, alloc_options iflags)
-      : size_(isize), alignment_mask_(ialignment - 1), huser_(ihuser), flags_(iflags)
+  
+  constexpr size_type alignment() const
+  {
+    return alignment_;
+  }
+
+  constexpr size_type alignment_mask() const
+  {
+    if constexpr (alignment_ == 1)
+      return ~(size_type)0;
+    return (size_type)alignment_ - (size_type)1;
+  }
+
+  constexpr size_type alignment_bits() const
+  {
+    if constexpr (alignment_ == 1)
+      return 0;
+    return detail::log2(alignment_);
+  }
+
+  size_type size() const
+  {
+    return size_;
+  }
+
+  uhandle huser() const
+  {
+    return huser_;
+  }
+
+  alloc_options flags() const
+  {
+    return flags_;
+  }
+
+  size_type adjusted_size() const
+  {
+    // 1 extra byte for better merges
+    if constexpr (alignment_ == 1)
+      return size();
+    else
+      return size() + alignment_;
+  }
+
+  size_type size_{};
+  uhandle   huser_{};
+  alloc_options flags_ = 0;
+};
+
+template <typename size_type>
+class dynamic_alloc_desc
+{
+  dynamic_alloc_desc(size_type isize) : size_(isize) {}
+  dynamic_alloc_desc(size_type isize, uhandle ihuser)
+      : size_(isize), huser_(ihuser)
+  {}
+  dynamic_alloc_desc(size_type isize, size_type ialignment, uhandle ihuser, alloc_options iflags)
+      : size_(isize), alignment_(ialignment), huser_(ihuser), flags_(iflags)
   {}
 
   size_type size() const
@@ -74,9 +166,19 @@ public:
     return size_;
   }
 
+  uint8_t alignment_bits() const
+  {
+    return static_cast<std::uint8_t>(ACL_POPCOUNT(static_cast<std::uint32_t>(alignment_)));
+  }
+
   size_type alignment_mask() const
   {
-    return alignment_mask_;
+    return alignment_ - 1;
+  }
+
+  size_type alignment() const
+  {
+    return alignment_;
   }
 
   uhandle huser() const
@@ -97,7 +199,7 @@ public:
 
 private:
   size_type     size_           = 0;
-  size_type     alignment_mask_ = 0;
+  size_type     alignment_ = 0;
   uhandle       huser_          = 0;
   alloc_options flags_          = 0;
 };
@@ -110,13 +212,22 @@ private:
 // ╚═╝--╚═╝╚══════╝╚══════╝-╚═════╝--╚═════╝╚══════╝╚═╝╚═╝--╚═══╝╚═╝------╚═════╝-
 // -------------------------------------------------------------------------------
 template <typename size_type>
-struct alloc_info
+struct alloc_offset
 {
   uhandle   harena = detail::k_null_sz<uhandle>;
   size_type offset = detail::k_null_sz<size_type>;
+  alloc_offset()   = default;
+  alloc_offset(uhandle iharena, size_type ioffset) : harena(iharena), offset(ioffset) {}
+};
+
+template <typename size_type>
+struct alloc_info : alloc_offset<size_type>
+{
   ihandle   halloc = detail::k_null_32;
   alloc_info()     = default;
-  alloc_info(uhandle iharena, size_type ioffset, ihandle ihalloc) : harena(iharena), offset(ioffset), halloc(ihalloc) {}
+  alloc_info(uhandle iharena, size_type ioffset, ihandle ihalloc)
+      : alloc_offset<size_type>(iharena, ioffset), halloc(ihalloc)
+  {}
 };
 
 } // namespace acl

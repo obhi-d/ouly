@@ -147,5 +147,5 @@ struct ACL_EMPTY_BASES default_allocator : detail::default_alloc_statistics<k_co
 };
 
 template <typename T>
-using vector = std::vector<T, std_allocator_wrapper<T, default_allocator<std::size_t, alignof(T)>>>;
+using vector = std::vector<T, acl::allocator_wrapper<T, default_allocator<std::size_t, alignof(T)>>>;
 } // namespace acl

@@ -103,7 +103,7 @@ public:
     return get_ptr();
   }
 
-  operator bool(void) const
+  explicit operator bool(void) const
   {
     return get_ptr() != 0;
   }

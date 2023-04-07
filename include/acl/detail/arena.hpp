@@ -12,28 +12,35 @@ namespace acl::detail
 //  ██║--██║██║--██║███████╗██║-╚████║██║--██║
 //  ╚═╝--╚═╝╚═╝--╚═╝╚══════╝╚═╝--╚═══╝╚═╝--╚═╝
 //  ------------------------------------------
-template <typename traits>
+template <typename usize_type, typename uextension>
 struct arena
 {
-  using size_type = typename traits::size_type;
+  using size_type = usize_type;
+  using list      = block_list<usize_type, uextension>;
 
-  block_list<traits> block_order;
-  detail::list_node  order;
-  size_type          size = 0;
-  size_type          free = 0;
-  uhandle            data = detail::k_null_sz<uhandle>;
+  list              block_order;
+  detail::list_node order;
+  size_type         size = 0;
+  size_type         free = 0;
+  uhandle           data = detail::k_null_sz<uhandle>;
 };
 
-template <typename traits>
-using arena_bank = detail::table<detail::arena<traits>, true>;
+template <typename usize_type, typename uextension>
+using arena_bank = detail::table<detail::arena<usize_type, uextension>, true>;
 
-template <typename traits>
+template <typename usize_type, typename uextension>
 struct arena_accessor
 {
-  using value_type = arena<traits>;
-  using bank_type  = arena_bank<traits>;
-  using size_type  = typename traits::size_type;
+  using value_type = arena<usize_type, uextension>;
+  using bank_type  = arena_bank<usize_type, uextension>;
+  using size_type  = usize_type;
   using container  = bank_type;
+
+  inline static void erase(bank_type& bank,
+    std::uint32_t node)
+  {
+    bank.erase(node);
+  }
 
   inline static detail::list_node& node(bank_type& bank, std::uint32_t node)
   {
@@ -56,23 +63,10 @@ struct arena_accessor
   }
 };
 
-template <typename traits>
-using arena_list = detail::vlist<arena_accessor<traits>>;
+template <typename usize_type, typename uextension>
+using arena_list = detail::vlist<arena_accessor<usize_type, uextension>>;
 
 using free_list = acl::vector<std::uint32_t>;
-
-template <alloc_strategy strategy, typename traits>
-class alloc_strategy_impl;
-
-template <alloc_strategy strategy>
-struct block_ext
-{
-  struct type
-  {};
-};
-
-template <typename traits>
-using alloc_strategy_type = alloc_strategy_impl<traits::strategy, traits>;
 
 // ██████╗--█████╗-███╗---██╗██╗--██╗--------██████╗--█████╗-████████╗-█████╗-
 // ██╔══██╗██╔══██╗████╗--██║██║-██╔╝--------██╔══██╗██╔══██╗╚══██╔══╝██╔══██╗
@@ -81,19 +75,20 @@ using alloc_strategy_type = alloc_strategy_impl<traits::strategy, traits>;
 // ██████╔╝██║--██║██║-╚████║██║--██╗███████╗██████╔╝██║--██║---██║---██║--██║
 // ╚═════╝-╚═╝--╚═╝╚═╝--╚═══╝╚═╝--╚═╝╚══════╝╚═════╝-╚═╝--╚═╝---╚═╝---╚═╝--╚═╝
 // ---------------------------------------------------------------------------
-template <typename traits>
+template <typename usize_type, typename extension>
 struct bank_data
 {
-  block_bank<traits>                  blocks;
-  arena_bank<traits>                  arenas;
-  arena_list<traits>                  arena_order;
-  detail::alloc_strategy_type<traits> strat;
-  typename traits::size_type          free_size = 0;
+  block_bank<usize_type, extension> blocks;
+  arena_bank<usize_type, extension> arenas;
+  arena_list<usize_type, extension> arena_order;
+  usize_type                        free_size = 0;
 
   bank_data()
   {
     // blocks 0 is sentinel
     blocks.emplace();
+    // arena 0 is sentinel
+    arenas.emplace();
   }
 };
 } // namespace acl::detail

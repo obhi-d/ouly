@@ -1,4 +1,3 @@
-#define CATCH_CONFIG_MAIN
 
 #include <acl/std_allocator_wrapper.hpp>
 
@@ -7,14 +6,25 @@
 #include <acl/packed_table.hpp>
 #include <acl/sparse_table.hpp>
 #include <acl/tagged_ptr.hpp>
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
+
+int main(int argc, char* argv[])
+{
+  // your setup ...
+
+  int result = Catch::Session().run(argc, argv);
+
+  // your clean-up...
+
+  return result;
+}
 
 TEST_CASE("Validate general_allocator", "[general_allocator]")
 {
 
   using namespace acl;
   using allocator_t   = default_allocator<std::uint32_t, 0, true, false>;
-  using std_allocator = std_allocator_wrapper<int, allocator_t>;
+  using std_allocator = allocator_wrapper<int, allocator_t>;
   std_allocator allocator;
 
   allocator_t::address data = allocator_t::allocate(256, 128);

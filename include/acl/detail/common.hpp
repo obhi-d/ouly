@@ -5,6 +5,7 @@
 #include <atomic>
 #include <cassert>
 #include <chrono>
+#include <compare>
 #include <cstdint>
 #include <cstring>
 #include <iostream>
@@ -120,10 +121,64 @@ namespace detail
 
 template <typename size_type>
 constexpr size_type     k_null_sz  = std::numeric_limits<size_type>::max();
+constexpr std::uint32_t k_null_0   = 0;
 constexpr std::uint32_t k_null_32  = std::numeric_limits<std::uint32_t>::max();
 constexpr std::int32_t  k_null_i32 = std::numeric_limits<std::int32_t>::min();
 constexpr std::uint64_t k_null_64  = std::numeric_limits<std::uint64_t>::max();
 constexpr uhandle       k_null_uh  = std::numeric_limits<uhandle>::max();
+
+template <auto nullv>
+struct voptional
+{
+  using vtype           = std::decay_t<decltype(nullv)>;
+  constexpr voptional() = default;
+  constexpr voptional(vtype iv) noexcept : value(iv) {}
+
+  inline constexpr operator bool() const noexcept
+  {
+    return value != nullv;
+  }
+
+  inline constexpr vtype operator*() const noexcept
+  {
+    return value;
+  }
+
+  inline constexpr explicit operator vtype() const noexcept
+  {
+    return value;
+  }
+
+  inline constexpr auto operator<=>(const voptional& other) const noexcept = default;
+
+  vtype value = nullv;
+};
+
+template <typename var>
+struct variant_result
+{
+  variant_result() = default;
+  template <typename... Args>
+  variant_result(Args&&... args) : res(std::forward<Args>(args)...)
+  {}
+
+  var const& operator*() const
+  {
+    return res;
+  }
+
+  var& operator*()
+  {
+    return res;
+  }
+
+  inline explicit operator bool() const
+  {
+    return res.index() != 0;
+  }
+
+  var res;
+};
 
 enum ordering_by : std::uint32_t
 {

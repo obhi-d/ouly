@@ -40,7 +40,7 @@ protected:
     return links[i];
   }
 
-  static inline size_type to_index(auto l) noexcept
+  inline static size_type to_index(auto l) noexcept
   {
     if constexpr (detail::debug)
     {
@@ -51,7 +51,7 @@ protected:
       return l;
   }
 
-  static inline size_type to_link(size_type index) noexcept
+  inline static size_type to_link(size_type index) noexcept
   {
     return index;
   }
@@ -209,14 +209,14 @@ protected:
     return backref::get(obj);
   }
 
-  static inline size_type pop_ref(Ty const& src, Ty& dst)
+  inline static size_type pop_ref(Ty const& src, Ty& dst)
   {
     auto l = backref::get(src);
     backref::set(dst, l);
     return l;
   }
 
-  static inline void set_ref(Ty& dst, size_type lnk) noexcept
+  inline static void set_ref(Ty& dst, size_type lnk) noexcept
   {
     backref::set(dst, lnk);
   }

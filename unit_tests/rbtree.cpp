@@ -1,6 +1,6 @@
 // Implementing Red-Black Tree in C++
 #include <acl/detail/rbtree.hpp>
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <iostream>
 #include <unordered_set>
 using namespace std;
@@ -536,39 +536,39 @@ class RBTreeAcessor
   using node_type  = RBTreeNode;
   using container  = vector<RBTreeNode>;
 
-  static inline node_type const& node(container const& icont, std::uint32_t id)
+  inline static node_type const& node(container const& icont, std::uint32_t id)
   {
     return icont[id];
   }
-  static inline node_type& node(container& icont, std::uint32_t id)
+  inline static node_type& node(container& icont, std::uint32_t id)
   {
     return icont[id];
   }
-  static inline acl::detail::tree_node const& links(node_type const& inode)
+  inline static acl::detail::tree_node const& links(node_type const& inode)
   {
     return inode.node;
   }
-  static inline acl::detail::tree_node& links(node_type& inode)
+  inline static acl::detail::tree_node& links(node_type& inode)
   {
     return inode.node;
   }
-  static inline int const& value(node_type const& inode)
+  inline static int const& value(node_type const& inode)
   {
     return inode.value;
   }
-  static inline bool is_set(node_type const& inode)
+  inline static bool is_set(node_type const& inode)
   {
     return inode.flag;
   }
-  static inline void set_flag(node_type& inode)
+  inline static void set_flag(node_type& inode)
   {
     inode.flag = true;
   }
-  static inline void set_flag(node_type& inode, bool v)
+  inline static void set_flag(node_type& inode, bool v)
   {
     inode.flag = v;
   }
-  static inline void unset_flag(node_type& inode)
+  inline static void unset_flag(node_type& inode)
   {
     inode.flag = false;
   }

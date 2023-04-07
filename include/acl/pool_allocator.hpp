@@ -8,7 +8,8 @@ namespace acl
 
 struct pool_allocator_tag
 {};
-template <typename underlying_allocator = acl::default_allocator<>, bool k_compute_stats = false>
+template <typename underlying_allocator = acl::default_allocator<>, bool k_compute_stats = false,
+          size_t default_atom_size = 32, size_t default_atom_count = 16>
 class pool_allocator : detail::statistics<pool_allocator_tag, k_compute_stats, underlying_allocator>
 {
 public:
@@ -17,13 +18,36 @@ public:
   using size_type  = typename underlying_allocator::size_type;
   using address    = typename underlying_allocator::address;
 
+  pool_allocator() noexcept
+      : k_atom_size(static_cast<size_type>(default_atom_size)), k_atom_count(static_cast<size_type>(default_atom_count))
+  {}
+
   template <typename... Args>
   pool_allocator(size_type i_atom_size, size_type i_atom_count, Args&&... i_args)
       : k_atom_size(i_atom_size), k_atom_count(i_atom_count), statistics(std::forward<Args>(i_args)...)
   {}
 
-  pool_allocator(pool_allocator const& i_other) = delete;
-  pool_allocator(pool_allocator&& i_other)      = default;
+  pool_allocator(pool_allocator const& i_other)     = delete;
+  inline pool_allocator(pool_allocator&& i_other) noexcept 
+ //  array_arena arrays;
+ //  solo_arena      solo;
+ //  const size_type k_atom_count;
+ //  const size_type k_atom_size;
+ //  arena_linker    linked_arenas;
+      : arrays(std::move(i_other.arrays)), solo(std::move(i_other.solo)), k_atom_count(i_other.k_atom_count),
+        k_atom_size(i_other.k_atom_size), linked_arenas(std::move(i_other.linked_arenas))
+  {}
+
+  pool_allocator& operator=(pool_allocator const& i_other) = delete;
+  inline pool_allocator& operator=(pool_allocator&& i_other) noexcept 
+  {
+    arrays = (std::move(i_other.arrays));
+    solo = std::move(i_other.solo);
+    assert(k_atom_count == i_other.k_atom_count);
+    assert(k_atom_size = i_other.k_atom_size);
+    linked_arenas = std::move(i_other.linked_arenas);
+    return *this;
+  }
 
   inline constexpr static address null()
   {
@@ -109,18 +133,18 @@ private:
 
     array_arena() : ppvalue(nullptr) {}
     array_arena(array_arena const& other) : ppvalue(other.ppvalue) {}
-    array_arena(array_arena&& other) : ppvalue(other.ppvalue)
+    array_arena(array_arena&& other) noexcept : ppvalue(other.ppvalue)
     {
       other.ppvalue = nullptr;
     }
     array_arena(void* i_pdata) : pvalue(i_pdata) {}
-    array_arena& operator=(array_arena&& other)
+    array_arena& operator=(array_arena&& other) noexcept
     {
       ppvalue       = other.ppvalue;
       other.ppvalue = nullptr;
       return *this;
     }
-    array_arena& operator=(array_arena const& other)
+    array_arena& operator=(array_arena const& other) noexcept
     {
       pvalue = other.pvalue;
       return *this;
@@ -164,7 +188,7 @@ private:
       return get_value() + i_count;
     }
 
-    operator bool() const
+    explicit operator bool() const
     {
       return ppvalue != nullptr;
     }
@@ -183,13 +207,13 @@ private:
     solo_arena() : ppvalue(nullptr) {}
     solo_arena(solo_arena const&& other) : ppvalue(other.ppvalue) {}
     solo_arena(void* i_pdata) : pvalue(i_pdata) {}
-    solo_arena(solo_arena&& other) : ppvalue(other.ppvalue)
+    solo_arena(solo_arena&& other) noexcept : ppvalue(other.ppvalue)
     {
       other.ppvalue = nullptr;
     }
     solo_arena(solo_arena const& other) : pvalue(other.pvalue) {}
     solo_arena(array_arena const& other) : pvalue(other.get_value()) {}
-    solo_arena& operator=(solo_arena&& other)
+    solo_arena& operator=(solo_arena&& other) noexcept
     {
       ppvalue       = other.ppvalue;
       other.ppvalue = nullptr;
@@ -220,7 +244,7 @@ private:
       *(ppvalue) = next.value;
     }
 
-    operator bool() const
+    explicit operator bool() const
     {
       return ppvalue != nullptr;
     }
@@ -268,7 +292,7 @@ private:
       }
     }
 
-    operator bool() const
+    explicit operator bool() const
     {
       return first != nullptr;
     }

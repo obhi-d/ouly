@@ -1,5 +1,5 @@
 #include <acl/sparse_table.hpp>
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <iomanip>
 #include <iostream>
 #include <string>
@@ -59,8 +59,8 @@ TEST_CASE("sparse_table: Erase pages when done", "[sparse_table][shrink_to_fit]"
   auto e3 = table.emplace("the");
   auto e4 = table.emplace("way");
 
-  table.remove(e3);
-  table.remove(e4);
+  table.erase(e3);
+  table.erase(e4);
 
   REQUIRE(table.size() == 2);
   table.shrink_to_fit();
@@ -110,7 +110,7 @@ TEST_CASE("sparse_table: Random test", "[sparse_table][random]")
     // emplace
     last_offset += count;
 
-    std::unordered_set<std::string>   remove;
+    std::unordered_set<std::string>   erase;
     std::unordered_set<std::uint32_t> choose;
     cont.for_each(
       [&](auto link, auto& el)
@@ -121,16 +121,16 @@ TEST_CASE("sparse_table: Random test", "[sparse_table][random]")
     for (auto& e : choose)
     {
       auto l = acl::sparse_table<std::string>::link(e);
-      remove.emplace(cont[l]);
-      cont.remove(l);
+      erase.emplace(cont[l]);
+      cont.erase(l);
     }
     cont.shrink_to_fit();
-    REQUIRE(cont.size() == (count + prev) - static_cast<std::uint32_t>(remove.size()));
+    REQUIRE(cont.size() == (count + prev) - static_cast<std::uint32_t>(erase.size()));
 
     cont.for_each(
       [&](auto link, auto& el)
       {
-        REQUIRE(remove.find(cont.at(link)) == remove.end());
+        REQUIRE(erase.find(cont.at(link)) == erase.end());
       });
   }
 }
@@ -159,7 +159,7 @@ TEST_CASE("sparse_table: Test selfref", "[sparse_table][backref]")
   auto e10 = table.emplace(10);
 
   REQUIRE(table.at(e10).value == 10);
-  table.remove(e10);
+  table.erase(e10);
 
   auto e20 = table.emplace(20);
   auto e30 = table.emplace(30);
@@ -190,9 +190,9 @@ TEST_CASE("sparse_table: Validate replace", "[sparse_table][replace]")
   REQUIRE(table1.contains(e20) == true);
   REQUIRE(table1.contains(e30) == true);
 
-  table1.remove(e10);
-  table1.remove(e20);
-  table1.remove(e30);
+  table1.erase(e10);
+  table1.erase(e20);
+  table1.erase(e30);
 
   REQUIRE(table1.empty() == true);
 }

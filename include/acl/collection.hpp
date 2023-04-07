@@ -115,7 +115,7 @@ public:
     length++;
   }
 
-  inline void remove(link l) noexcept
+  inline void erase(link l) noexcept
   {
     auto idx = detail::index_val(l.value());
     if constexpr (detail::debug)

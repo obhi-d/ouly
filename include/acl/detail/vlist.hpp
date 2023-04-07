@@ -8,8 +8,8 @@ concept is_not_const = !std::is_const_v<T>;
 
 struct list_node
 {
-  std::uint32_t next = k_null_32;
-  std::uint32_t prev = k_null_32;
+  std::uint32_t next = 0;
+  std::uint32_t prev = 0;
 };
 
 template <typename Accessor>
@@ -18,8 +18,8 @@ class vlist
 public:
   using container = typename Accessor::container;
 
-  std::uint32_t first = k_null_32;
-  std::uint32_t last  = k_null_32;
+  std::uint32_t first = 0;
+  std::uint32_t last  = 0;
 
   template <typename ContainerTy>
   struct iterator_t
@@ -33,16 +33,16 @@ public:
     iterator_t(const iterator_t& i_other) : owner(i_other.owner), index(i_other.index) {}
     iterator_t(iterator_t&& i_other) noexcept : owner(i_other.owner), index(i_other.index)
     {
-      i_other.index = k_null_32;
+      i_other.index = 0;
     }
 
-    explicit iterator_t(ContainerTy& i_owner) : owner(i_owner), index(k_null_32) {}
+    explicit iterator_t(ContainerTy& i_owner) : owner(i_owner), index(0) {}
     iterator_t(ContainerTy& i_owner, std::uint32_t start) : owner(i_owner), index(start) {}
 
     inline iterator_t& operator=(iterator_t&& i_other) noexcept
     {
       index         = i_other.index;
-      i_other.index = k_null_32;
+      i_other.index = 0;
       return *this;
     }
 
@@ -125,13 +125,13 @@ public:
       return index;
     }
 
-    inline operator bool() const
+    inline explicit operator bool() const
     {
-      return index != k_null_32;
+      return index != 0;
     }
 
     ContainerTy&  owner;
-    std::uint32_t index = k_null_32;
+    std::uint32_t index = 0;
   };
 
   using iterator       = iterator_t<container>;
@@ -144,17 +144,17 @@ public:
 
   inline constexpr std::uint32_t end() const
   {
-    return k_null_32;
+    return 0;
   }
 
   inline const_iterator begin(container const& cont) const
   {
-    return const_iterator(*this, first);
+    return const_iterator(cont, first);
   }
 
   inline const_iterator end(container const& cont) const
   {
-    return const_iterator(*this);
+    return const_iterator(cont);
   }
 
   inline iterator begin(container& cont)
@@ -184,9 +184,9 @@ public:
 
   inline void push_back(container& cont, std::uint32_t node)
   {
-    if (last != k_null_32)
+    if (last != 0)
       Accessor::node(cont, last).next = node;
-    if (first == k_null_32)
+    if (first == 0)
       first = node;
     Accessor::node(cont, node).prev = last;
     last                            = node;
@@ -194,11 +194,11 @@ public:
 
   inline void insert_after(container& cont, std::uint32_t loc, std::uint32_t node)
   {
-    assert(loc != k_null_32);
+    assert(loc != 0);
     auto& l_node = Accessor::node(cont, node);
     auto& l_loc  = Accessor::node(cont, loc);
 
-    if (l_loc.next != k_null_32)
+    if (l_loc.next != 0)
     {
       Accessor::node(cont, l_loc.next).prev = node;
       l_node.next                           = l_loc.next;
@@ -206,7 +206,7 @@ public:
     else
     {
       last = node;
-      assert(l_node.next == k_null_32);
+      assert(l_node.next == 0);
     }
     l_node.prev = loc;
     l_loc.next  = node;
@@ -215,7 +215,7 @@ public:
   inline void insert(container& cont, std::uint32_t loc, std::uint32_t node)
   {
     // end?
-    if (loc == k_null_32)
+    if (loc == 0)
     {
       push_back(cont, node);
     }
@@ -224,7 +224,7 @@ public:
       auto& l_node = Accessor::node(cont, node);
       auto& l_loc  = Accessor::node(cont, loc);
 
-      if (l_loc.prev != k_null_32)
+      if (l_loc.prev != 0)
       {
         Accessor::node(cont, l_loc.prev).next = node;
         l_node.prev                           = l_loc.prev;
@@ -232,7 +232,7 @@ public:
       else
       {
         first = node;
-        assert(l_node.prev == k_null_32);
+        assert(l_node.prev == 0);
       }
 
       l_loc.prev  = node;
@@ -246,18 +246,18 @@ public:
     auto&         l_node = Accessor::node(cont, node);
     std::uint32_t next   = l_node.next;
 
-    if (l_node.prev != k_null_32)
+    if (l_node.prev != 0)
       Accessor::node(cont, l_node.prev).next = l_node.next;
     else
       first = l_node.next;
 
-    if (next != k_null_32)
+    if (next != 0)
       Accessor::node(cont, next).prev = l_node.prev;
     else
       last = l_node.prev;
 
-    l_node.prev = k_null_32;
-    l_node.next = k_null_32;
+    l_node.prev = 0;
+    l_node.next = 0;
     return next;
   }
 
@@ -269,34 +269,34 @@ public:
     auto&         l_next = Accessor::node(cont, l_node.next);
     std::uint32_t next   = l_next.next;
 
-    if (l_node.prev != k_null_32)
+    if (l_node.prev != 0)
       Accessor::node(cont, l_node.prev).next = l_next.next;
     else
       first = l_next.next;
 
-    if (l_next.next != k_null_32)
+    if (l_next.next != 0)
       Accessor::node(cont, l_next.next).prev = l_node.prev;
     else
       last = l_node.prev;
 
-    l_next.next = k_null_32;
-    l_next.prev = k_null_32;
-    l_node.prev = k_null_32;
-    l_node.next = k_null_32;
+    l_next.next = 0;
+    l_next.prev = 0;
+    l_node.prev = 0;
+    l_node.next = 0;
     return next;
   }
 
   inline iterator erase(iterator node)
   {
     auto r = unlink(node.owner, node.index);
-    node.owner.erase(node);
+    Accessor::erase(node.owner, node.index);
     return iterator(node.owner, r);
   }
 
   inline std::uint32_t erase(container& cont, std::uint32_t node)
   {
     auto r = unlink(cont, node);
-    cont.erase(node);
+    Accessor::erase(cont, node);
     return r;
   }
 
@@ -304,21 +304,21 @@ public:
   {
     auto next = Accessor::node(cont, node).next;
     auto r    = unlink2(cont, node);
-    cont.erase(node);
-    cont.erase(next);
+    Accessor::erase(cont, node);
+    Accessor::erase(cont, next);
     return r;
   }
 
   inline void clear(container& cont)
   {
     std::uint32_t node = first;
-    while (node != k_null_32)
+    while (node != 0)
     {
       auto l_next = Accessor::node(cont, node).next;
-      cont.erase(node);
+      Accessor::erase(cont, node);
       node = l_next;
     }
-    first = last = k_null_32;
+    first = last = 0;
   }
 };
 

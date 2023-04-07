@@ -1,6 +1,6 @@
 
 #include <acl/podvector.hpp>
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 
 struct pod
 {

@@ -10,11 +10,9 @@ namespace acl::detail
 // ██║-╚═╝-██║███████╗██║-╚═╝-██║╚██████╔╝██║--██║---██║███████╗██║-╚═╝-██║╚██████╔╝-╚████╔╝-███████╗
 // ╚═╝-----╚═╝╚══════╝╚═╝-----╚═╝-╚═════╝-╚═╝--╚═╝---╚═╝╚══════╝╚═╝-----╚═╝-╚═════╝---╚═══╝--╚══════╝
 // --------------------------------------------------------------------------------------------------
-template <typename traits>
+template <typename size_type>
 struct memory_move
-{
-  using size_type = typename traits::size_type;
-
+{  
   size_type     from;
   size_type     to;
   size_type     size;

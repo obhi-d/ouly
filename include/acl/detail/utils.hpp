@@ -190,39 +190,5 @@ inline size_type is_valid(size_type val)
   return !(invalidated_mask_v<size_type> & val);
 }
 
-template <typename T = void>
-struct tagged_ptr
-{
-  static constexpr std::uintptr_t nbbits = log2(alignof(T));
-  static constexpr std::uintptr_t mask_v = alignof(T) - 1;
-
-  inline tagged_ptr(T* p) noexcept : data(static_cast<std::uintptr_t>(p)) {}
-  template <typename E>
-  inline tagged_ptr(T* p, E b) noexcept
-      : data(static_cast<std::uintptr_t>(p) | (static_cast<std::uintptr_t>(b) & mask_v))
-  {}
-  inline tagged_ptr(tagged_ptr const& p) noexcept     = default;
-  inline tagged_ptr(tagged_ptr&& p) noexcept          = default;
-  tagged_ptr& operator=(tagged_ptr const& p) noexcept = default;
-  tagged_ptr& operator=(tagged_ptr&& p) noexcept      = default;
-
-  template <typename E>
-  E mask() const
-  {
-    return static_cast<E>(data & mask_v);
-  }
-
-  template <typename U>
-  inline U* get() const
-  {
-    return std::launder(reinterpret_cast<U*>(data & ~mask_v));
-  }
-
-  inline auto operator<=>(tagged_ptr const&) const noexcept = default;
-
-  std::uintptr_t data;
-};
-
 } // namespace detail
-
 } // namespace acl

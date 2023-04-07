@@ -1,5 +1,5 @@
 #include <acl/blackboard.hpp>
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <string>
 
 TEST_CASE("blackboard: push_back", "[blackboard][push_back]")

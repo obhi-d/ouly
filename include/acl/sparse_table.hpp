@@ -201,7 +201,7 @@ public:
   }
 
   /// @brief Erase a single element.
-  void remove(link l) noexcept
+  void erase(link l) noexcept
   {
     if constexpr (detail::debug)
       validate(l);
@@ -210,7 +210,7 @@ public:
 
   /// @brief Erase a single element by object when backref is available.
   /// @remarks Only available if backref is available
-  void remove(value_type const& obj) noexcept requires(has_backref)
+  void erase(value_type const& obj) noexcept requires(has_backref)
   {
     erase_at(base_type::get_ref(obj));
   }

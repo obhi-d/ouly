@@ -1,7 +1,7 @@
 
 #include <acl/soavector.hpp>
 #include <acl/table.hpp>
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <string>
 
 TEST_CASE("table: Validate table emplace", "[table][emplace]")

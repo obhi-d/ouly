@@ -370,7 +370,7 @@ private:
   }
 
   template <typename Store>
-  static inline auto& item_at(size_type idx, Store& store_items) noexcept
+  inline static auto& item_at(size_type idx, Store& store_items) noexcept
   {
     auto block = (idx >> pool_div);
     return reinterpret_cast<std::conditional_t<std::is_const_v<Store>, value_type const&, value_type&>>(

@@ -1,6 +1,6 @@
 #include <acl/collection.hpp>
 #include <acl/packed_table.hpp>
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <iomanip>
 #include <iostream>
 #include <string>
@@ -45,7 +45,7 @@ TEST_CASE("collection: Validate packed_table emplace", "[packed_table][emplace]"
   REQUIRE(collection.contains(e20) == true);
   REQUIRE(collection.contains(e30) == true);
 
-  collection.remove(e20);
+  collection.erase(e20);
   collection.for_each(table,
                       [&](auto link, auto const& v)
                       {

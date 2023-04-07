@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "../sparse_table.hpp"
 #include "memory_move.hpp"
 
 namespace acl::detail
@@ -11,21 +12,37 @@ namespace acl::detail
 //  ██████╔╝███████╗╚██████╔╝╚██████╗██║--██╗
 //  ╚═════╝-╚══════╝-╚═════╝--╚═════╝╚═╝--╚═╝
 //  -----------------------------------------
-template <typename traits>
+template <typename usize_type, typename extension>
 struct block
 {
-  using size_type = typename traits::size_type;
-  using extension = typename traits::extension;
 
-  size_type         offset      = detail::k_null_sz<size_type>;
-  size_type         size        = 0;
-  uhandle           data        = detail::k_null_sz<uhandle>;
-  std::uint32_t     arena       = detail::k_null_32;
+  using size_type                        = usize_type;
+  size_type                       offset = detail::k_null_sz<size_type>;
+  size_type                       size   = 0;
+  std::uint32_t                   arena  = 0;
+  std::uint32_t                   self   = {};
+  union
+  {
+    uhandle                       data;
+    uint32_t                      reserved32_;
+    std::pair<uint32_t, uint32_t> rtup_;
+    uint64_t                      reserved64_;
+    extension                     ext = {};
+  };
+
   detail::list_node arena_order = detail::list_node();
+  bool              is_slotted  = false;
+  bool              is_flagged  = false;
   bool              is_free     = false;
   std::uint8_t      alignment   = 0;
-  bool              is_flagged  = false;
-  extension         ext;
+
+  struct table_traits
+  {
+    using size_type                              = std::uint32_t;
+    static constexpr std::uint32_t pool_size     = 4096;
+    static constexpr std::uint32_t idx_pool_size = 4096;
+    using offset                                 = acl::offset<&block<size_type, extension>::self>;
+  };
 
   block() {}
   block(size_type ioffset, size_type isize, std::uint32_t iarena) : offset(ioffset), size(isize), arena(iarena) {}
@@ -35,59 +52,73 @@ struct block
   block(size_type ioffset, size_type isize, std::uint32_t iarena, uhandle idata, bool ifree)
       : offset(ioffset), size(isize), arena(iarena), data(idata), is_free(ifree)
   {}
+  block(size_type ioffset, size_type isize, std::uint32_t iarena, extension idata, bool ifree)
+      : offset(ioffset), size(isize), arena(iarena), ext(idata), is_free(ifree)
+  {}
+  block(size_type ioffset, size_type isize, std::uint32_t iarena, uhandle idata, bool ifree, bool islotted)
+      : offset(ioffset), size(isize), arena(iarena), data(idata), is_free(ifree), is_slotted(islotted)
+  {}
+  ~block() {}
 
   inline std::pair<size_type, size_type> adjusted_block() const
   {
-    size_type alignment_mask = (1u << alignment) - 1u;
+    size_type alignment_mask = ((size_type)1u << (size_type)alignment) - (size_type)1u;
     return std::make_pair<size_type>((offset + alignment_mask) & ~alignment_mask, size - alignment_mask);
   }
 
   inline size_type adjusted_size() const
   {
-    size_type alignment_mask = (1u << alignment) - 1u;
+    size_type alignment_mask = ((size_type)1u << (size_type)alignment) - (size_type)1u;
     return size - alignment_mask;
   }
 
   inline size_type adjusted_offset() const
   {
-    size_type alignment_mask = (1u << alignment) - 1u;
+    size_type alignment_mask = ((size_type)1u << (size_type)alignment) - (size_type)1u;
     return (offset + alignment_mask) & ~alignment_mask;
   }
 };
 
-template <typename traits>
-using block_bank = detail::table<block<traits>, true>;
+template <typename size_type, typename extension>
+using block_bank = acl::sparse_table<block<size_type, extension>, default_allocator<>,
+                                     typename block<size_type, extension>::table_traits>;
 
-template <typename traits>
+template <typename usize_type, typename uextension>
 struct block_accessor
 {
-  using value_type = block<traits>;
-  using bank_type  = block_bank<traits>;
-  using size_type  = typename traits::size_type;
+  using value_type = block<usize_type, uextension>;
+  using bank_type  = block_bank<usize_type, uextension>;
+  using size_type  = usize_type;
   using container  = bank_type;
+  using block_link = typename bank_type::link;
+
+  inline static void erase(bank_type& bank, std::uint32_t node)
+  {
+    bank.erase(block_link(node));
+  }
 
   inline static detail::list_node& node(bank_type& bank, std::uint32_t node)
   {
-    return bank[node].arena_order;
+    return bank[block_link(node)].arena_order;
   }
 
   inline static detail::list_node const& node(bank_type const& bank, std::uint32_t node)
   {
-    return bank[node].arena_order;
+    return bank[block_link(node)].arena_order;
   }
 
   inline static value_type const& get(bank_type const& bank, std::uint32_t node)
   {
-    return bank[node];
+    return bank[block_link(node)];
   }
 
   inline static value_type& get(bank_type& bank, std::uint32_t node)
   {
-    return bank[node];
+    return bank[block_link(node)];
   }
 };
 
-template <typename traits>
-using block_list = detail::vlist<block_accessor<traits>>;
+template <typename size_type, typename extension>
+using block_list = detail::vlist<block_accessor<size_type, extension>>;
 
 } // namespace acl::detail

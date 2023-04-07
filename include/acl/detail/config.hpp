@@ -7,5 +7,5 @@
 
 namespace acl::detail
 {
-static inline constexpr bool debug = ACL_DEBUG;
+inline static constexpr bool debug = ACL_DEBUG;
 } // namespace acl::detail

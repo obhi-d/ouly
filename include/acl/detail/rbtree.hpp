@@ -49,23 +49,23 @@ private:
   using node_type  = typename Accessor::node_type;
   using container  = typename Accessor::container;
 
-  static inline bool is_set(node_type const& node)
+  inline static bool is_set(node_type const& node)
   {
     return Accessor::is_set(node);
   }
 
-  static inline void set_parent(container& cont, std::uint32_t node, std::uint32_t parent)
+  inline static void set_parent(container& cont, std::uint32_t node, std::uint32_t parent)
   {
     tree_node& lnk_ref = Accessor::links(Accessor::node(cont, node));
     lnk_ref.parent     = parent;
   }
 
-  static inline void unset_flag(node_type& node_ref)
+  inline static void unset_flag(node_type& node_ref)
   {
     Accessor::unset_flag(node_ref);
   }
 
-  static inline void set_flag(node_type& node_ref)
+  inline static void set_flag(node_type& node_ref)
   {
     Accessor::set_flag(node_ref);
   }
@@ -176,7 +176,7 @@ private:
       return node != iother;
     }
 
-    inline operator bool() const
+    inline explicit operator bool() const
     {
       return node != 0;
     }
