@@ -37,7 +37,7 @@ struct alloc_mem_manager
   acl::uhandle add_arena([[maybe_unused]] acl::ihandle id, [[maybe_unused]] std::size_t size)
   {
     arena_data_t arena;
-    arena.resize(size, 0xa);
+    arena.resize(size, 0x17);
     arenas.emplace_back(std::move(arena));
     return static_cast<acl::uhandle>(arenas.size() - 1);
   }
@@ -64,8 +64,9 @@ struct alloc_mem_manager
       auto& src = backup_allocs[i];
       auto& dst = allocs[i];
 
-      assert(!std::memcmp(backup_arenas[src.info.harena].data() + src.info.offset,
-                          arenas[dst.info.harena].data() + dst.info.offset, src.size));
+      auto source_data = backup_arenas[src.info.harena].data() + src.info.offset;
+      auto dest_data   = arenas[dst.info.harena].data() + dst.info.offset;
+      assert(!std::memcmp(source_data, dest_data, src.size));
     }
 
     backup_arenas.clear();
@@ -92,19 +93,19 @@ struct alloc_mem_manager
 };
 
 TEMPLATE_TEST_CASE("Validate arena_allocator", "[arena_allocator.strat]",
-                   // clang-format off
+  // clang-format off
+  
+  (acl::strat::greedy_v1<uint32_t>),
+  (acl::strat::greedy_v0<uint32_t>),
+  (acl::strat::best_fit_tree<uint32_t>),
+  (acl::strat::best_fit_v0<uint32_t>),
   (acl::strat::slotted_v0<uint32_t>),
   (acl::strat::slotted_v1<uint32_t>),
   (acl::strat::slotted_v2<uint32_t>),
-  (acl::strat::slotted_v0<uint32_t, 256, 255, acl::strat::best_fit_tree<uint32_t>>),
-  (acl::strat::slotted_v1<uint32_t, 256, 255, acl::strat::best_fit_tree<uint32_t>>),
-  (acl::strat::slotted_v2<uint32_t, 256, 255, 8, acl::strat::best_fit_tree<uint32_t>>),
-  (acl::strat::greedy_v0<uint32_t>),
-  (acl::strat::greedy_v1<uint32_t>),
-  (acl::strat::best_fit_tree<uint32_t>),
-  (acl::strat::best_fit_v0<uint32_t>),
-  (acl::strat::best_fit_v1<uint32_t>)
-                   // clang-format on
+  (acl::strat::slotted_v0<uint32_t, 256, 255, 4, acl::strat::best_fit_tree<uint32_t>>),
+  (acl::strat::slotted_v1<uint32_t, 256, 255, 4, acl::strat::best_fit_tree<uint32_t>>),
+  (acl::strat::slotted_v2<uint32_t, 256, 255, 8, 4, acl::strat::best_fit_tree<uint32_t>>)
+  // clang-format on
 )
 {
   using allocator_t = acl::arena_allocator<TestType, alloc_mem_manager, uint32_t, true>;

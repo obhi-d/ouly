@@ -17,7 +17,7 @@ namespace acl::strat
 ///   on a multiple of this unit size.
 ///   The certain number of bucket slots are made avialable based on max_bucket
 template <typename usize_t = std::size_t, std::size_t granularity = 256, std::size_t max_bucket = 255,
-          typename fallback = strat::best_fit_v0<usize_t>>
+          usize_t search_window = 4, typename fallback = strat::best_fit_v0<usize_t>>
 class slotted_v1
 {
 public:
@@ -35,6 +35,7 @@ public:
   using bank_data  = detail::bank_data<size_type, extension>;
   using block_link = typename block_bank::link;
 
+  static constexpr size_type max_bucket_   = max_bucket + 1;
   static constexpr size_type max_size_     = static_cast<size_type>(granularity * max_bucket);
   static constexpr size_type sz_div        = static_cast<size_type>(detail::log2(granularity));
   static constexpr size_type sz_mask       = static_cast<size_type>(granularity) - 1;
@@ -54,9 +55,8 @@ public:
     if (size < max_size_)
     {
       size_type id = (size >> sz_div);
-      size_type ac = id;
-      size_type nb = static_cast<size_type>(buckets.size());
-      for (; id < nb; ++id)
+      size_type ac = std::min<size_type>(search_window + id, max_bucket_);
+      for (; id < ac; ++id)
       {
         if ((uint32_t)buckets[id].block)
         {
@@ -68,64 +68,6 @@ public:
     if (auto fta = fallback.try_allocate(bank, size))
       return allocate_result(*fta);
     return allocate_result();
-  }
-
-  // first = prev
-  // second = current
-
-  inline void remove_free_top(block_bank& bank, uint32_t udx)
-  {
-    auto& bucket_node = buckets[udx];
-    assert(bucket_node.block);
-    if (bucket_node.next)
-    {
-      auto  next   = bucket_node.next;
-      auto& nblk   = buckets[next];
-      nblk.block   = {};
-      nblk.next    = free_entries;
-      free_entries = next;
-      // copy
-      bucket_node      = buckets[next];
-      auto& blk        = bank[bucket_node.block];
-      blk.rtup_.first  = 0;
-      blk.rtup_.second = udx;
-      if (bucket_node.next)
-        bank[buckets[bucket_node.next].block].rtup_.first = udx;
-    }
-    else
-    {
-      bucket_node.block = {};
-      bucket_node.next  = 0;
-    }
-  }
-
-  inline void append_free_top(block_bank& bank, uint32_t idx, block_link block)
-  {
-    auto& bucket_node = buckets[idx];
-    if (bucket_node.block)
-    {
-      auto new_slot = free_entries;
-      if (free_entries)
-      {
-        free_entries      = buckets[free_entries].next;
-        buckets[new_slot] = bucket_node;
-      }
-      else
-      {
-        new_slot = static_cast<uint32_t>(buckets.size());
-        buckets.emplace_back(bucket_node);
-      }
-
-      auto& blk        = bank[bucket_node.block];
-      blk.rtup_.first  = idx;
-      blk.rtup_.second = new_slot;
-      bucket_node.next = new_slot;
-    }
-
-    bucket_node.block = block;
-    auto& blk         = bank[block];
-    blk.rtup_.first   = 0;
-    blk.rtup_.second  = idx;
   }
 
   inline std::uint32_t commit(bank_data& bank, size_type size, allocate_result_v const& vdx)
@@ -146,13 +88,13 @@ public:
 
     remove_free_top(bank.blocks, udx);
 
-    auto s = ((granularity << udx) - size);
+    auto s = ((granularity * udx) - size);
 
     size_type     offset    = blk.offset;
     std::uint32_t arena_num = blk.arena;
 
     blk.is_free    = false;
-    blk.is_flagged = false;
+    blk.is_slotted = false;
 
     auto remaining = blk.size - size;
     blk.size       = size;
@@ -180,20 +122,26 @@ public:
     auto& b = blocks[block_link(block)];
     if (b.size < max_size_)
     {
-      b.is_flagged = true;
+      b.is_slotted = true;
       append_free_top(blocks, (uint32_t)(b.size >> sz_div), block_link(block));
     }
     else
     {
-      assert(b.is_flagged == false);
+      assert(b.is_slotted == false);
       fallback.add_free(blocks, block);
     }
   }
 
-  inline void replace(block_bank& blocks, std::uint32_t block, std::uint32_t new_block, size_type new_size)
+  inline void grow_free_node(block_bank& blocks, std::uint32_t block, size_type newsize)
   {
     erase(blocks, block);
-    erase(blocks, new_block);
+    blocks[block_link(block)].size = newsize;
+    add_free(blocks, block);
+  }
+
+  inline void replace_and_grow(block_bank& blocks, std::uint32_t block, std::uint32_t new_block, size_type new_size)
+  {
+    erase(blocks, block);
     blocks[block_link(new_block)].size = new_size;
     add_free(blocks, new_block);
   }
@@ -201,22 +149,24 @@ public:
   inline void erase(block_bank& blocks, std::uint32_t block)
   {
     auto& b = blocks[block_link(block)];
-    if (b.is_flagged)
+    if (b.is_slotted)
     {
-      b.is_flagged = false;
+      b.is_slotted = false;
       // are we removing top?
-      if (b.rtup_.second < max_bucket)
-        remove_free_top(blocks, block);
+      if (b.rtup_.second < max_bucket_)
+        remove_free_top(blocks, b.rtup_.second);
       else
       {
         // Remember, granularity >> log2(granularity) = 1,
         // so first slot is still empty
         auto& buck = buckets[b.rtup_.second];
         if (b.rtup_.first)
+        {
           buckets[b.rtup_.first].next = buck.next;
+        }
         if (buck.next)
           blocks[buckets[buck.next].block].rtup_.first = b.rtup_.first;
-        buck.block   = {};
+        buck.block   = block_link(0);
         buck.next    = free_entries;
         free_entries = b.rtup_.second;
       }
@@ -230,10 +180,14 @@ public:
   inline std::uint32_t total_free_nodes(block_bank const& blocks) const
   {
     std::uint32_t count = 0;
-    for (auto const& b : buckets)
+    for (size_t i = 0; i < buckets.size(); ++i)
     {
+      auto const& b = buckets[i];
       if ((uint32_t)b.block)
+      {
+        assert(blocks[b.block].is_free);
         count++;
+      }
     }
     return count + fallback.total_free_nodes(blocks);
   }
@@ -252,16 +206,18 @@ public:
 
   void validate_integrity(block_bank const& blocks) const
   {
-    uint32_t f         = free_entries;
-    size_t   nbvisited = 0;
+    uint32_t f              = free_entries;
+    size_t   nb_free_slots  = 0;
+    size_t   nb_free_nodes  = 0;
+    size_t   nb_empty_slots = 0;
     while (f)
     {
       assert(buckets[f].block == block_link(0));
       f = buckets[f].next;
-      nbvisited++;
+      nb_free_slots++;
     }
 
-    for (uint32_t i = 0; i < max_bucket; ++i)
+    for (uint32_t i = 0; i < max_bucket_; ++i)
     {
       auto const& b = buckets[i];
       if ((uint32_t)b.block)
@@ -270,16 +226,22 @@ public:
         uint32_t curr = i;
         while (curr)
         {
-          auto const& ib = buckets[curr];
-          assert(blocks[ib.block].rtup_.first == prev);
-          assert(blocks[ib.block].rtup_.second == curr);
+          auto const& ib  = buckets[curr];
+          auto const& blk = blocks[ib.block];
+          assert(blk.rtup_.first == prev);
+          assert(blk.rtup_.second == curr);
           prev = curr;
           curr = ib.next;
-          nbvisited++;
+          nb_free_nodes++;
         }
       }
+      else if (!b.next)
+      {
+        nb_empty_slots++;
+      }
     }
-    assert(buckets.size() == nbvisited);
+
+    assert(buckets.size() - (nb_free_slots + nb_empty_slots) == nb_free_nodes);
     fallback.validate_integrity(blocks);
   }
 
@@ -297,13 +259,74 @@ public:
   }
 
 private:
+  // first = prev
+  // second = current
+
+  inline void remove_free_top(block_bank& bank, uint32_t udx)
+  {
+    auto& bucket_node = buckets[udx];
+    assert(bucket_node.block);
+    if (bucket_node.next)
+    {
+      auto  next   = bucket_node.next;
+      auto& nblk   = buckets[next];
+      bucket_node  = nblk;
+      nblk.block   = block_link(0);
+      nblk.next    = free_entries;
+      free_entries = next;
+      // copy
+      auto& blk        = bank[bucket_node.block];
+      blk.rtup_.first  = 0;
+      blk.rtup_.second = udx;
+      if (bucket_node.next)
+        bank[buckets[bucket_node.next].block].rtup_.first = udx;
+    }
+    else
+    {
+      bucket_node.block = block_link(0);
+      bucket_node.next  = 0;
+    }
+  }
+
+  inline void append_free_top(block_bank& bank, uint32_t idx, block_link block)
+  {
+    auto bucket_node = buckets[idx];
+    if ((uint32_t)bucket_node.block)
+    {
+      auto new_slot = free_entries;
+      if (free_entries)
+      {
+        free_entries      = buckets[free_entries].next;
+        buckets[new_slot] = bucket_node;
+      }
+      else
+      {
+        new_slot = static_cast<uint32_t>(buckets.size());
+        // the push back causes a resize
+        // and thus changes the container pointer
+        buckets.push_back(bucket_node);
+      }
+
+      if (bucket_node.next)
+        bank[buckets[bucket_node.next].block].rtup_.first = new_slot;
+      auto& blk         = bank[bucket_node.block];
+      blk.rtup_.first   = idx;
+      blk.rtup_.second  = new_slot;
+      buckets[idx].next = new_slot;
+    }
+
+    buckets[idx].block = block;
+    auto& blk          = bank[block];
+    blk.rtup_.first    = 0;
+    blk.rtup_.second   = idx;
+  }
   struct chase
   {
-    block_link block{};
+    block_link block{0};
     uint32_t   next = 0;
   };
 
-  std::vector<chase> buckets{max_bucket, chase()};
+  std::vector<chase> buckets{max_bucket_, chase()};
   fallback_allocator fallback;
   uint32_t           free_entries = 0;
 };

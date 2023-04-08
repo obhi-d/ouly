@@ -11,9 +11,11 @@ namespace acl::strat
 template <typename usize_type>
 class best_fit_v0
 {
-  using optional_addr = detail::voptional<detail::k_null_32>;
+  using optional_addr = std::optional<detail::free_list::iterator>;
 
 public:
+
+
   static constexpr usize_type min_granularity = 4;
 
   using extension       = uint64_t;
@@ -23,20 +25,19 @@ public:
   using block           = detail::block<size_type, extension>;
   using bank_data       = detail::bank_data<size_type, extension>;
   using block_link      = typename block_bank::link;
-  using allocate_result = uint32_t;
+  using allocate_result = detail::free_list::iterator;
 
   inline optional_addr try_allocate(bank_data& bank, size_type size)
   {
     if (free_ordering.size() == 0 || bank.blocks[block_link(free_ordering.back())].size < size)
       return optional_addr();
-    return optional_addr(find_free(bank.blocks, 0, static_cast<uint32_t>(free_ordering.size()), size));
+    return find_free(bank.blocks, free_ordering.begin(), free_ordering.end(), size);
   }
 
-  inline std::uint32_t commit(bank_data& bank, size_type size, uint32_t found)
+  inline std::uint32_t commit(bank_data& bank, size_type size, auto found)
   {
-    assert(found < static_cast<uint32_t>(free_ordering.size()));
-
-    std::uint32_t free_node = free_ordering[found];
+    
+    std::uint32_t free_node = *found;
     auto&         blk       = bank.blocks[block_link(free_node)];
     // Marker
     size_type     offset    = blk.offset;
@@ -58,7 +59,7 @@ public:
     else
     {
       // delete the existing found index from free list
-      free_ordering.erase(free_ordering.begin() + found);
+      free_ordering.erase(found);
     }
 
     return free_node;
@@ -71,38 +72,70 @@ public:
 
   inline void add_free(block_bank& blocks, std::uint32_t block)
   {
-    add_free_after(blocks, 0, block);
+    add_free_after_begin(blocks, block);
   }
 
-  inline void replace(block_bank& blocks, std::uint32_t block, std::uint32_t new_block, size_type new_size)
+  inline void grow_free_node(block_bank& blocks, std::uint32_t block, size_type newsize)
+  {
+    auto&     blk = blocks[block_link(block)];
+
+    auto end = free_ordering.end();
+    auto it  = find_free_it(blocks, free_ordering.begin(), end, blk.size);
+    if constexpr (detail::debug)
+    {
+      while (it != end && *it != block)
+        it++;
+      assert(it < end);
+    }
+    else
+    {
+      while (*it != block)
+        it++;
+    }
+    blk.size = newsize;
+    reinsert_right(blocks, it, block);
+  }
+
+  inline void replace_and_grow(block_bank& blocks, std::uint32_t block, std::uint32_t new_block, size_type new_size)
   {
     size_type size = blocks[block_link(block)].size;
-    if (size == new_size && block == new_block)
-      return;
-
-    auto nbfree = static_cast<uint32_t>(free_ordering.size());
-    auto it     = find_free(blocks, 0, nbfree, size);
-    while (it != nbfree && free_ordering[it] != block)
-      it++;
-    assert(it != nbfree);
-
-    blocks[block_link(new_block)].size = new_size;
-    if (size < new_size)
-      reinsert_right(blocks, it, new_block);
-    else if (size > new_size)
-      reinsert_left(blocks, it, new_block);
+    
+    auto end = free_ordering.end();
+    auto it  = find_free_it(blocks, free_ordering.begin(), end, size);
+    if constexpr (detail::debug)
+    {
+      while (it != end && *it != block)
+        it++;
+      assert(it < end);
+    }
     else
-      free_ordering[it] = new_block;
+    {
+      while (*it != block)
+        it++;
+        
+    }
+    
+    blocks[block_link(new_block)].size = new_size;
+    reinsert_right(blocks, it, new_block);
   }
 
-  inline void erase(block_bank& blocks, std::uint32_t node)
+  inline void erase(block_bank& blocks, std::uint32_t block)
   {
-    auto count = static_cast<uint32_t>(free_ordering.size());
-    auto it    = find_free(blocks, 0, count, blocks[block_link(node)].size);
-    while (it != count && free_ordering[it] != node)
-      it++;
-    assert(it != count);
-    free_ordering.erase(free_ordering.begin() + it);
+    auto end = free_ordering.end();
+    auto it  = find_free_it(blocks, free_ordering.begin(), end, blocks[block_link(block)].size);
+    if constexpr (detail::debug)
+    {
+      while (it != end && *it != block)
+        it++;
+      assert(it < end);
+
+    }
+    else
+    {
+      while (*it != block)
+        it++;
+    }
+    free_ordering.erase(it);
   }
 
   inline std::uint32_t total_free_nodes(block_bank const& blocks) const
@@ -134,11 +167,11 @@ public:
 
 protected:
   // Private
-  inline void add_free_after(block_bank& blocks, uint32_t loc, std::uint32_t block)
+  inline void add_free_after_begin(block_bank& blocks, std::uint32_t block)
   {
     auto blkid            = block_link(block);
     blocks[blkid].is_free = true;
-    auto it = find_free_it(blocks, free_ordering.begin() + loc, free_ordering.end(),
+    auto it = find_free_it(blocks, free_ordering.begin(), free_ordering.end(),
                            blocks[blkid].size);
     free_ordering.emplace(it, block);
   }
@@ -154,25 +187,23 @@ protected:
                             });
   }
 
-  inline uint32_t find_free(block_bank& blocks, uint32_t b, uint32_t e, size_type i_size) const
+  inline auto find_free(block_bank& blocks, auto b, auto e, size_type i_size) const
   {
-    auto end = free_ordering.begin() + e;
-    auto it  = find_free_it(blocks, free_ordering.begin() + b, end, i_size);
-    return (it != end) ? (uint32_t)std::distance(free_ordering.begin(), it) : detail::k_null_32;
+    auto it  = find_free_it(blocks, b, e, i_size);
+    return (it != e) ? optional_addr(it) : optional_addr();
   }
 
-  inline void reinsert_left(block_bank& blocks, uint32_t iof, std::uint32_t node)
+  inline void reinsert_left(block_bank& blocks, auto of, std::uint32_t node)
   {
-    if (!iof)
+    auto begin_it = free_ordering.begin();
+    if (begin_it == of)
     {
-      free_ordering[iof] = node;
-      return;
+      *of = node;
     }
-    auto of = free_ordering.begin() + iof;
-    auto it = find_free_it(blocks, free_ordering.begin(), of, blocks[block_link(node)].size);
+    auto it = find_free_it(blocks, begin_it, of, blocks[block_link(node)].size);
     if (it != of)
     {
-      std::uint32_t* src   = &(*it);
+      std::uint32_t* src   = &*it;
       std::uint32_t* dest  = src + 1;
       size_t         count = std::distance(it, of);
       std::memmove(dest, src, count * sizeof(std::uint32_t));
@@ -180,19 +211,18 @@ protected:
     }
     else
     {
-      *it = node;
+      *of = node;
     }
   }
 
-  inline void reinsert_right(block_bank& blocks, uint32_t iof, std::uint32_t node)
+  inline void reinsert_right(block_bank& blocks, auto of, std::uint32_t node)
   {
-    auto of     = free_ordering.begin() + iof;
+
     auto end_it = free_ordering.end();
     auto next   = std::next(of);
     if (next == end_it)
     {
       *of = node;
-      return;
     }
     auto it = find_free_it(blocks, next, end_it, blocks[block_link(node)].size);
     if (it != next)
@@ -208,7 +238,6 @@ protected:
     {
       *of = node;
     }
-
   }
 
   detail::free_list free_ordering;

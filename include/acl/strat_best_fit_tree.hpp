@@ -120,7 +120,7 @@ public:
     tree.insert(blocks, block);
   }
 
-  inline void grow_free_node(block_bank& blocks, std::uint32_t block, size_type newsize)
+  inline void grow_free_node(block_bank& blocks, std::uint32_t block, size_type new_size)
   {
     tree.erase(blocks, block);
     blocks[block_link(block)].size = new_size;
@@ -131,7 +131,8 @@ public:
                                size_type new_size)
   {
     tree.erase(blocks, block);
-    grow_free_node(blocks, new_block, new_size);
+    blocks[block_link(new_block)].size = new_size;
+    tree.insert(blocks, new_block);
   }
 
   inline void erase(block_bank& blocks, std::uint32_t node)

@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "../sparse_table.hpp"
+#include "vlist.hpp"
 #include "memory_move.hpp"
 
 namespace acl::detail
@@ -21,11 +22,13 @@ struct block
   size_type                       size   = 0;
   std::uint32_t                   arena  = 0;
   std::uint32_t                   self   = {};
+  using uint32_pair = std::pair<uint32_t, uint32_t>;
   union
   {
     uhandle                       data;
     uint32_t                      reserved32_;
-    std::pair<uint32_t, uint32_t> rtup_;
+    list_node                     list_;
+    uint32_pair                   rtup_;
     uint64_t                      reserved64_;
     extension                     ext = {};
   };
@@ -51,6 +54,12 @@ struct block
   {}
   block(size_type ioffset, size_type isize, std::uint32_t iarena, uhandle idata, bool ifree)
       : offset(ioffset), size(isize), arena(iarena), data(idata), is_free(ifree)
+  {}
+  block(size_type ioffset, size_type isize, std::uint32_t iarena, uint32_pair idata, bool ifree)
+      : offset(ioffset), size(isize), arena(iarena), rtup_(idata), is_free(ifree)
+  {}
+  block(size_type ioffset, size_type isize, std::uint32_t iarena, list_node idata, bool ifree)
+      : offset(ioffset), size(isize), arena(iarena), list_(idata), is_free(ifree)
   {}
   block(size_type ioffset, size_type isize, std::uint32_t iarena, extension idata, bool ifree)
       : offset(ioffset), size(isize), arena(iarena), ext(idata), is_free(ifree)

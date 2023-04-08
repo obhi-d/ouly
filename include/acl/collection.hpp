@@ -163,7 +163,7 @@ public:
       {
         for (auto i : items)
         {
-          acl::deallocate(static_cast<Allocator&>(*this), items[i], bit_page_size);
+          acl::deallocate(static_cast<Allocator&>(*this), i, bit_page_size);
         }
       }
     }

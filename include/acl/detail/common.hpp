@@ -127,6 +127,32 @@ constexpr std::int32_t  k_null_i32 = std::numeric_limits<std::int32_t>::min();
 constexpr std::uint64_t k_null_64  = std::numeric_limits<std::uint64_t>::max();
 constexpr uhandle       k_null_uh  = std::numeric_limits<uhandle>::max();
 
+template <class T>
+struct optional_ptr
+{
+  constexpr optional_ptr() = default;
+  constexpr optional_ptr(T* iv) noexcept : value(iv) {}
+
+  inline constexpr operator bool() const noexcept
+  {
+    return value != nullptr;
+  }
+
+  inline constexpr T* operator*() const noexcept
+  {
+    return value;
+  }
+
+  inline constexpr explicit operator T*() const noexcept
+  {
+    return value;
+  }
+
+  inline constexpr auto operator<=>(const optional_ptr& other) const noexcept = default;
+
+  T* value = nullptr;
+};
+
 template <auto nullv>
 struct voptional
 {
@@ -242,7 +268,7 @@ struct timer_t
       other.timer = nullptr;
     }
     scoped& operator=(scoped const&) = delete;
-    scoped& operator=(scoped&& other)
+    scoped& operator=(scoped&& other) noexcept
     {
       timer       = other.timer;
       start       = other.start;

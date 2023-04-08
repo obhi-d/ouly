@@ -2,7 +2,6 @@
 #include "detail/arena_allocator_impl.hpp"
 #include "strat_best_fit_tree.hpp"
 #include "strat_best_fit_v0.hpp"
-#include "strat_best_fit_v1.hpp"
 #include "strat_slotted_v0.hpp"
 #include "strat_slotted_v1.hpp"
 #include "strat_slotted_v2.hpp"

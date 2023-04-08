@@ -11,7 +11,7 @@ namespace acl::strat
 template <typename usize_type>
 class greedy_v0
 {
-  using optional_addr = detail::voptional<detail::k_null_0>;
+  using optional_addr = detail::voptional<detail::k_null_32>;
 
 public:
   static constexpr usize_type min_granularity = 4;
@@ -40,8 +40,9 @@ public:
   {
     assert(found < static_cast<uint32_t>(free_list.size()));
 
-    auto free_node = free_list[found];
-    auto& blk       = bank.blocks[free_node.second];
+    auto& free_node = free_list[found];
+    auto  block     = free_node.second;
+    auto& blk       = bank.blocks[block];
     // Marker
     size_type     offset    = blk.offset;
     std::uint32_t arena_num = blk.arena;
@@ -68,7 +69,7 @@ public:
       free_slot        = found;
     }
 
-    return found;
+    return (uint32_t)block;
   }
 
   inline void add_free_arena([[maybe_unused]] block_bank& blocks, std::uint32_t block)
@@ -86,11 +87,16 @@ public:
     free_list[slot].second = hblock;
   }
 
-  inline void replace(block_bank& blocks, std::uint32_t block, std::uint32_t new_block, size_type new_size)
+  inline void grow_free_node(block_bank& blocks, std::uint32_t block, size_type newsize)
   {
     erase(blocks, block);
-    if (block != new_block)
-      erase(blocks, new_block);
+    blocks[block_link(block)].size = newsize;
+    add_free(blocks, block);
+  }
+
+  inline void replace_and_grow(block_bank& blocks, std::uint32_t block, std::uint32_t new_block, size_type new_size)
+  {
+    erase(blocks, block);
     blocks[block_link(new_block)].size = new_size;
     add_free(blocks, new_block);
   }
@@ -134,8 +140,9 @@ public:
       auto fn = free_list[i];
       if (fn.first)
       {
-        assert(blocks[fn.second].size == fn.first);
-        assert(blocks[fn.second].reserved32_ == (uint32_t)fn.second);
+        auto& blk = blocks[fn.second];
+        assert(blk.size == fn.first);
+        assert(blk.reserved32_ == i);
       }
     }
   }

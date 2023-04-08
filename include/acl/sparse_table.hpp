@@ -352,7 +352,7 @@ private:
     }
     else
     {
-      lnk              = first_free_index;
+      lnk              = detail::validate(first_free_index);
       first_free_index = get_ref_at_idx(detail::index_val(lnk));
     }
     return lnk;

@@ -421,7 +421,7 @@ private:
     blk.alignment = desc.alignment_bits();
     ibank.bank.arenas[blk.arena].free -= blk.size;
     ibank.bank.free_size -= blk.size;
-    size_type alignment = desc.alignment();
+    size_type alignment = desc.alignment_mask();
     return ((blk.offset + alignment) & ~alignment);
   }
 

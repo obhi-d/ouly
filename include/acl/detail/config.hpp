@@ -7,5 +7,9 @@
 
 namespace acl::detail
 {
-inline static constexpr bool debug = ACL_DEBUG;
+#ifdef ACL_DEBUG
+inline static constexpr bool debug = true;
+#else
+inline static constexpr bool debug = false;
+#endif
 } // namespace acl::detail

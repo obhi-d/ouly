@@ -15,7 +15,7 @@ namespace acl::strat
 ///   on a multiple of this unit size.
 ///   The certain number of bucket slots are made avialable based on max_bucket
 template <typename usize_t = std::size_t, std::size_t granularity = 256, std::size_t max_bucket = 255,
-          typename fallback = strat::best_fit_v0<usize_t>>
+          usize_t search_window = 4, typename fallback = strat::best_fit_v0<usize_t>>
 class slotted_v0
 {
 public:
@@ -54,7 +54,7 @@ public:
     {
       size_type id = (size >> sz_div);
       size_type ac = id;
-      size_type nb = static_cast<size_type>(buckets.size());
+      size_type nb = std::min<size_type>(search_window + id, static_cast<size_type>(buckets.size()));
       if (id < nb)
       {
         for (; id < nb; ++id)
@@ -84,9 +84,9 @@ public:
       return fallback.commit(bank, size, std::get<fallback_allocate_result>(vdx));
     }
 
-    auto      udx   = std::get<bucket_idx>(vdx).value;
-    auto      block = buckets[udx].back();
-    auto&     blk   = bank.blocks[block_link(block)];
+    auto  udx   = std::get<bucket_idx>(vdx).value;
+    auto  block = buckets[udx].back();
+    auto& blk   = bank.blocks[block_link(block)];
     buckets[udx].pop_back();
 
     auto s = ((granularity << udx) - size);
@@ -94,7 +94,7 @@ public:
     size_type     offset    = blk.offset;
     std::uint32_t arena_num = blk.arena;
 
-    blk.is_free = false;
+    blk.is_free    = false;
     blk.is_slotted = false;
 
     auto remaining = blk.size - size;
@@ -105,8 +105,8 @@ public:
       auto  arena = blk.arena;
       // Create a new free block, since its smaller than the original block, insert it in the bucket
       auto& new_bucket_head = buckets[remaining >> sz_div];
-      auto newblk =
-        bank.blocks.emplace(blk.offset + size, remaining, arena, static_cast<uint32_t>(new_bucket_head.size()), true, true);
+      auto  newblk          = bank.blocks.emplace(blk.offset + size, remaining, arena,
+                                                  static_cast<uint32_t>(new_bucket_head.size()), true, true);
       list.insert_after(bank.blocks, block, (uint32_t)newblk);
       new_bucket_head.emplace_back((uint32_t)newblk);
     }
@@ -138,11 +138,16 @@ public:
     }
   }
 
-  inline void replace(block_bank& blocks, std::uint32_t block, std::uint32_t new_block, size_type new_size)
+  inline void grow_free_node(block_bank& blocks, std::uint32_t block, size_type newsize)
   {
     erase(blocks, block);
-    if (block != new_block)
-      erase(blocks, new_block);
+    blocks[block_link(block)].size = newsize;
+    add_free(blocks, block);
+  }
+
+  inline void replace_and_grow(block_bank& blocks, std::uint32_t block, std::uint32_t new_block, size_type new_size)
+  {
+    erase(blocks, block);
     blocks[block_link(new_block)].size = new_size;
     add_free(blocks, new_block);
   }
@@ -154,7 +159,7 @@ public:
     {
       b.is_slotted = false;
       auto& vec    = buckets[(b.size >> sz_div)];
-      assert(b.reserved32_ < (uint32_t)vec.size() - 1);
+      assert(b.reserved32_ < (uint32_t)vec.size());
       {
         auto back                            = vec.back();
         vec[b.reserved32_]                   = back;
@@ -191,9 +196,9 @@ public:
       assert(buckets[0].empty());
       for (uint32_t i = 1; i < static_cast<uint32_t>(buckets.size()); ++i)
       {
-        for (auto v : buckets[i])
+        for (uint32_t v = 0; v < (uint32_t)buckets[i].size(); ++v)
         {
-          auto const& b = blocks[block_link(v)];
+          auto const& b = blocks[block_link(buckets[i][v])];
           assert(b.is_slotted);
           assert(b.reserved32_ == v);
           assert(b.size == static_cast<size_type>(granularity * i));
@@ -217,7 +222,7 @@ public:
 
 private:
   std::vector<std::vector<uint32_t>> buckets;
-  fallback_allocator    fallback;
+  fallback_allocator                 fallback;
 };
 
 } // namespace acl::strat

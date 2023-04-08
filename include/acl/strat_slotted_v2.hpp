@@ -15,7 +15,8 @@ namespace acl::strat
 ///   on a multiple of this unit size.
 ///   The certain number of bucket slots are made avialable based on max_bucket
 template <typename usize_t = std::size_t, std::size_t granularity = 256, std::size_t max_bucket = 255,
-          std::size_t fixed_max_per_slot = 8, typename fallback = strat::best_fit_v0<usize_t>>
+          std::size_t fixed_max_per_slot = 8, usize_t search_window = 4,
+          typename fallback = strat::best_fit_v0<usize_t>>
 class slotted_v2
 {
 public:
@@ -52,8 +53,7 @@ public:
     if (size <= max_size_)
     {
       size_type id = (size >> sz_div);
-      size_type ac = id;
-      size_type nb = static_cast<size_type>(buckets.size());
+      size_type nb = std::min<size_type>(search_window + id, static_cast<size_type>(buckets.size()));
       if (id < nb)
       {
         for (; id < nb; ++id)
@@ -107,7 +107,9 @@ public:
 
       if (!buckets[remaining >> sz_div].try_emplace(newblk))
       {
-        bank.blocks[newblk].is_slotted = false;
+        auto& blk      = bank.blocks[newblk];
+        blk.is_slotted = false;
+        blk.ext        = extension();
         fallback.add_free(bank.blocks, (uint32_t)newblk);
       }
     }
@@ -140,10 +142,16 @@ public:
     }
   }
 
-  inline void replace(block_bank& blocks, std::uint32_t block, std::uint32_t new_block, size_type new_size)
+  inline void grow_free_node(block_bank& blocks, std::uint32_t block, size_type newsize)
   {
     erase(blocks, block);
-    erase(blocks, new_block);
+    blocks[block_link(block)].size = newsize;
+    add_free(blocks, block);
+  }
+
+  inline void replace_and_grow(block_bank& blocks, std::uint32_t block, std::uint32_t new_block, size_type new_size)
+  {
+    erase(blocks, block);
     blocks[block_link(new_block)].size = new_size;
     add_free(blocks, new_block);
   }
@@ -188,7 +196,7 @@ public:
       {
         for (uint32_t v = 0; v < buckets[i].size; ++v)
         {
-          auto const& b = blocks[block_link(v)];
+          auto const& b = blocks[block_link(buckets[i].slots[v])];
           assert(b.is_slotted);
           assert(b.size == static_cast<size_type>(granularity * i));
         }

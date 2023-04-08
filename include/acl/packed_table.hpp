@@ -405,7 +405,7 @@ private:
 
   inline void break_free_chain(size_type idx) noexcept
   {
-    auto it = first_free_index;
+    auto it = detail::validate(first_free_index);
     if (base_type::to_index(it) == idx)
     {
       first_free_index = link::null_v;
