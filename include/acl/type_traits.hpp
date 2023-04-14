@@ -12,7 +12,7 @@ struct traits
 {
   using size_type                              = std::uint32_t;
   static constexpr std::uint32_t pool_size     = 4096;
-  static constexpr std::uint32_t idx_pool_size = 4096;
+  static constexpr std::uint32_t index_pool_size = 4096;
   static constexpr bool          assume_pod_v  = false;
   // null
   // static constexpr T null_v = {};
@@ -21,26 +21,34 @@ struct traits
 };
 
 template <typename Traits, typename U>
-concept traits_has_null_value = requires(U t)
-{
-  { ((Traits::null_v)) } -> std::convertible_to<U>;
-  { Traits::null_v == t } -> std::same_as<bool>;
-};
+concept traits_has_null_value = requires(U t) {
+                                  {
+                                    ((Traits::null_v))
+                                    } -> std::convertible_to<U>;
+                                  {
+                                    Traits::null_v == t
+                                    } -> std::same_as<bool>;
+                                };
 
 template <typename Traits, typename U>
-concept traits_has_null_method = requires(U v)
-{
-  {Traits::is_null(v)} noexcept ->std::same_as<bool>;
-  
-};
+concept traits_has_null_method = requires(U v) {
+                                   {
+                                     Traits::is_null(v)
+                                     } noexcept -> std::same_as<bool>;
+                                 };
 
 template <typename Traits, typename U>
-concept traits_has_null_construct = requires(U v)
-{
-  Traits::null_construct(v);
-  Traits::null_reset(v);
-};
+concept traits_has_null_construct = requires(U v) {
+                                      Traits::null_construct(v);
+                                      Traits::null_reset(v);
+                                    };
 
+template <typename Traits>
+concept traits_has_index_pool_size = requires {
+                                       {
+                                         ((Traits::index_pool_size))
+                                         } -> std::convertible_to<uint32_t>;
+                                     };
 
 template <typename Ty = std::void_t<>>
 struct allocator_traits
@@ -91,16 +99,10 @@ namespace detail
 {
 
 template <typename Traits>
-concept has_backref_v = requires
-{
-  typename Traits::offset;
-};
+concept has_backref_v = requires { typename Traits::offset; };
 
 template <typename Traits>
-concept has_size_type_v = requires
-{
-  typename Traits::size_type;
-};
+concept has_size_type_v = requires { typename Traits::size_type; };
 
 template <typename T1, typename... Args>
 struct choose_size_ty

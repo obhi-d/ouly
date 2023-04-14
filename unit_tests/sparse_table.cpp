@@ -32,7 +32,7 @@ template <>
 struct traits<std::string> : traits<>
 {
   static constexpr std::uint32_t pool_size     = 2;
-  static constexpr std::uint32_t idx_pool_size = 2;
+  static constexpr std::uint32_t index_pool_size = 2;
 };
 } // namespace acl
 

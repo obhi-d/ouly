@@ -11,7 +11,18 @@
 
 namespace acl
 {
-
+/// @brief Represents a sparse vector with only pages/chunks/pools allocated for non-empty indexes
+/// @tparam Ty Vector type
+/// @tparam Allocator Underlying allocator
+/// @tparam Traits At minimum the traits must define:
+///          - pool_size Power of 2, count of elements in a single chunk/page/pool
+/// [either] - null_v : constexpr/static type Ty object that indicates a null value for the object
+/// [or]     - is_null(Ty t) : method that returns true to identify null object
+///          - null_construct(Ty& t) : construct a slot as null value, for non-trivial types, constructor must be called
+///          by this function
+///          - null_reset(Ty& t) : reset a slot as null value, you can choose to call destructor here for non-trivial
+///          types, but it expects an assignment
+///                                to a value representing null value.
 template <typename Ty, typename Allocator = default_allocator<>, typename Traits = acl::traits<Ty>>
 class sparse_vector : public Allocator
 {
@@ -35,17 +46,20 @@ private:
   static constexpr bool has_null_value     = traits_has_null_value<traits, value_type>;
   static constexpr bool has_null_construct = traits_has_null_construct<traits, value_type>;
 
-  inline static bool is_null(value_type const& other) noexcept requires(has_null_method)
+  inline static bool is_null(value_type const& other) noexcept
+    requires(has_null_method)
   {
     return traits::is_null(other);
   }
 
-  inline static bool is_null(value_type const& other) noexcept requires(has_null_value && !has_null_method)
+  inline static bool is_null(value_type const& other) noexcept
+    requires(has_null_value && !has_null_method)
   {
     return other == traits::null_v;
   }
 
-  inline static constexpr bool is_null(value_type const& other) noexcept requires(!has_null_value && !has_null_method)
+  inline static constexpr bool is_null(value_type const& other) noexcept
+    requires(!has_null_value && !has_null_method)
   {
     return false;
   }
@@ -58,7 +72,8 @@ public:
   {
     *this = std::move(other);
   }
-  inline sparse_vector(sparse_vector const& other) noexcept requires(std::is_copy_constructible_v<value_type>)
+  inline sparse_vector(sparse_vector const& other) noexcept
+    requires(std::is_copy_constructible_v<value_type>)
   {
     *this = other;
   }
@@ -77,7 +92,8 @@ public:
     return *this;
   }
 
-  sparse_vector& operator=(sparse_vector const& other) noexcept requires(std::is_copy_constructible_v<value_type>)
+  sparse_vector& operator=(sparse_vector const& other) noexcept
+    requires(std::is_copy_constructible_v<value_type>)
   {
     clear();
     items.resize(other.items.size());
@@ -86,7 +102,7 @@ public:
       auto const src_storage = other.items[i];
       if (src_storage)
       {
-        items[i] = acl::allocate<storage>(*this, sizeof(storage) * pool_size + sizeof(size_type));
+        items[i] = acl::allocate<storage>(*this, sizeof(storage) * pool_size + sizeof(size_type), alignof(Ty));
 
         if (src_storage)
         {
@@ -222,51 +238,27 @@ public:
     auto block = idx >> pool_div;
     auto index = idx & pool_mod;
 
-    if (block >= items.size())
-    {
-      items.resize(block + 1, nullptr);
-    }
-    if (!items[block])
-    {
-      items[block] = acl::allocate<storage>(*this, sizeof(storage) * pool_size + sizeof(size_type));
-      if (traits::assume_pod_v ||
-          (std::is_trivially_copyable_v<value_type> && std::is_trivially_constructible_v<value_type>))
-      {
-        if constexpr (has_null_value)
-          std::fill(reinterpret_cast<value_type*>(items[block]),
-                    reinterpret_cast<value_type*>(items[block] + pool_size), traits::null_v);
-        else if constexpr (has_null_construct)
-        {
-          std::for_each(reinterpret_cast<value_type*>(items[block]),
-                        reinterpret_cast<value_type*>(items[block] + pool_size), traits::null_construct);
-        }
-        else
-        {
-          std::fill(reinterpret_cast<value_type*>(items[block]),
-                    reinterpret_cast<value_type*>(items[block] + pool_size), value_type());
-        }
-      }
-      else
-      {
-        std::for_each(reinterpret_cast<value_type*>(items[block]),
-                      reinterpret_cast<value_type*>(items[block] + pool_size),
-                      [](value_type& dst)
-                      {
-                        if constexpr (has_null_value)
-                          std::construct_at(std::addressof(dst), traits::null_v);
-                        else if constexpr (has_null_construct)
-                          traits::null_construct(dst);
-                        else
-                          std::construct_at(std::addressof(dst));
-                      });
-      }
-    }
+    ensure_block(block);
 
     auto& dst = *reinterpret_cast<value_type*>(items[block] + index);
     dst       = value_type(std::forward<Args>(args)...);
     pool_occupation(block)++;
     length++;
     return dst;
+  }
+
+  /// @brief Emplace back an element. Order is not guranteed.
+  /// @tparam ...Args Constructor args for value_type
+  /// @return Returns link to the element pushed. link can be used to destroy entry.
+  template <typename... Args>
+  auto& ensure(size_type idx) noexcept
+  {
+    auto block = idx >> pool_div;
+    auto index = idx & pool_mod;
+
+    ensure_block(block);
+
+    return *reinterpret_cast<value_type*>(items[block] + index);
   }
 
   /// @brief Construct an item in a given location, assuming the location was empty
@@ -311,8 +303,8 @@ public:
     for (size_type block = 0; block < items.size(); ++block)
     {
       if (items[block])
-        acl::deallocate(static_cast<Allocator&>(*this), items[block],
-                        sizeof(size_type) * pool_size + sizeof(size_type));
+        acl::deallocate(static_cast<Allocator&>(*this), items[block], sizeof(size_type) * pool_size + sizeof(size_type),
+                        alignof(Ty));
     }
     items.clear();
     length = 0;
@@ -349,12 +341,70 @@ public:
            !is_null(reinterpret_cast<value_type const&>(items[block][idx & pool_mod]));
   }
 
+  Ty get_value(size_type idx) const noexcept
+    requires(has_null_value)
+  {
+    auto block = (idx >> pool_div);
+    return block < items.size() && items[block] ? reinterpret_cast<value_type const&>(items[block][idx & pool_mod])
+                                                : traits::null_v;
+  }
+
+  Ty& get_unsafe(size_type idx) const noexcept
+  {
+    return reinterpret_cast<value_type const&>(items[(idx >> pool_div)][idx & pool_mod]);
+  }
+
   bool empty() const noexcept
   {
     return length == 0;
   }
 
 private:
+
+  inline void ensure_block(size_type block)
+  {
+    if (block >= items.size())
+    {
+      items.resize(block + 1, nullptr);
+    }
+    
+    if (!items[block])
+    {
+      items[block] = acl::allocate<storage>(*this, sizeof(storage) * pool_size + sizeof(size_type), alignof(Ty));
+      if (traits::assume_pod_v ||
+          (std::is_trivially_copyable_v<value_type> && std::is_trivially_constructible_v<value_type>))
+      {
+        if constexpr (has_null_value)
+          std::fill(reinterpret_cast<value_type*>(items[block]),
+                    reinterpret_cast<value_type*>(items[block] + pool_size), traits::null_v);
+        else if constexpr (has_null_construct)
+        {
+          std::for_each(reinterpret_cast<value_type*>(items[block]),
+                        reinterpret_cast<value_type*>(items[block] + pool_size), traits::null_construct);
+        }
+        else
+        {
+          std::fill(reinterpret_cast<value_type*>(items[block]),
+                    reinterpret_cast<value_type*>(items[block] + pool_size), value_type());
+        }
+      }
+      else
+      {
+        std::for_each(reinterpret_cast<value_type*>(items[block]),
+                      reinterpret_cast<value_type*>(items[block] + pool_size),
+                      [](value_type& dst)
+                      {
+                        if constexpr (has_null_value)
+                          std::construct_at(std::addressof(dst), traits::null_v);
+                        else if constexpr (has_null_construct)
+                          traits::null_construct(dst);
+                        else
+                          std::construct_at(std::addressof(dst));
+                      });
+      }
+    }
+  }
+
   inline size_type& pool_occupation(size_type p) noexcept
   {
     return *reinterpret_cast<size_type*>(reinterpret_cast<std::uint8_t*>(items[p]) + sizeof(storage) * pool_size);
@@ -402,7 +452,8 @@ private:
         std::destroy_at(std::addressof(reinterpret_cast<value_type&>(items[block][i])));
     }
 
-    acl::deallocate(static_cast<Allocator&>(*this), items[block], sizeof(size_type) * pool_size + sizeof(size_type));
+    acl::deallocate(static_cast<Allocator&>(*this), items[block], sizeof(size_type) * pool_size + sizeof(size_type),
+                    alignof(Ty));
     items[block] = nullptr;
   }
 

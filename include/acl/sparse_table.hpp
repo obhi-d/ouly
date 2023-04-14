@@ -113,8 +113,8 @@ public:
 
   /// @brief Lambda called for each element in range
   /// @tparam Lambda Lambda Lambda should accept A link and value_type& parameter
-  /// @param first first index in range. This should be between 0 and size()
-  /// @param last last index in range. This should be between 0 and size()
+  /// @param first first index in range. This should be between 1 and size()
+  /// @param last last index in range. This should be between 1 and size()
   template <typename Lambda>
   void for_each(size_type first, size_type last, Lambda&& lambda) noexcept
   {
@@ -363,7 +363,7 @@ private:
   template <typename Lambda, typename Cast>
   void for_each_l(Lambda&& lambda) noexcept
   {
-    for_each_l<Lambda, Cast>(0, extend, std::forward<Lambda>(lambda));
+    for_each_l<Lambda, Cast>(1, extend, std::forward<Lambda>(lambda));
   }
 
   template <typename Lambda, typename Cast>
@@ -379,7 +379,7 @@ private:
 
   podvector<storage*, allocator> items;
   size_type                      length           = 0;
-  size_type                      extend           = 0;
+  size_type                      extend           = 1;
   size_type                      first_free_index = link::null_v;
 };
 

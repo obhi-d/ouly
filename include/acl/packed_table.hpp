@@ -5,6 +5,7 @@
 #include "link.hpp"
 #include "podvector.hpp"
 #include "type_traits.hpp"
+
 #include <memory>
 #include <tuple>
 
@@ -106,8 +107,8 @@ public:
 
   /// @brief Lambda called for each element in range
   /// @tparam Lambda Lambda Lambda should accept A link and value_type& parameter
-  /// @param first first index in range. This should be between 0 and size()
-  /// @param last last index in range. This should be between 0 and size()
+  /// @param first first index in range. This should be between 1 and size()
+  /// @param last last index in range. This should be between 1 and size()
   template <typename Lambda>
   void for_each(size_type first, size_type last, Lambda&& lambda) noexcept
   {
@@ -124,7 +125,7 @@ public:
   /// @brief Returns size of packed array
   size_type size() const noexcept
   {
-    return length;
+    return length - 1;
   }
 
   /// @brief Returns capacity of packed array
@@ -143,7 +144,7 @@ public:
   /// @brief Valid range that can be iterated over
   size_type range() const noexcept
   {
-    return size;
+    return size();
   }
 
   /// @brief packed_table has active pool count depending upon number of elements it contains
@@ -266,7 +267,7 @@ public:
 
   bool empty() const noexcept
   {
-    return length == 0;
+    return length == 1;
   }
 
 private:
@@ -439,7 +440,7 @@ private:
   template <typename Lambda, typename Cast>
   void for_each_l(Lambda&& lambda) noexcept
   {
-    for_each_l<Lambda, Cast>(0, length, std::forward<Lambda>(lambda));
+    for_each_l<Lambda, Cast>(1, length, std::forward<Lambda>(lambda));
   }
 
   template <typename Lambda, typename Cast>
@@ -452,7 +453,7 @@ private:
   }
 
   podvector<storage*, allocator> items;
-  size_type                      length           = 0;
+  size_type                      length           = 1;
   size_type                      first_free_index = link::null_v;
 };
 

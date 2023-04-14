@@ -13,8 +13,8 @@ template <typename Ty, typename SizeType = std::uint32_t, std::uint32_t N = 1>
 struct link
 {
   using size_type                   = SizeType;
-  static constexpr size_type null_v = std::numeric_limits<size_type>::max();
-  static constexpr size_type mask_v = null_v >> N;
+  static constexpr size_type null_v = 0;
+  static constexpr size_type mask_v = std::numeric_limits<size_type>::max() >> N;
 
   constexpr link()              = default;
   constexpr link(const link& i) = default;

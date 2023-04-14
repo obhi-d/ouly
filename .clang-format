@@ -15,6 +15,7 @@ AllowShortFunctionsOnASingleLine: Empty
 AllowShortLambdasOnASingleLine: Empty
 IncludeBlocks: Preserve
 BreakBeforeBraces: Custom
+BreakBeforeConceptDeclarations: Always
 ContinuationIndentWidth: 2
 BraceWrapping:
   AfterCaseLabel: true

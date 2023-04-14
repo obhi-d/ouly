@@ -1,4 +1,4 @@
-#include <acl/packed_table.hpp>
+#include <acl/indexed_table.hpp>
 #include <catch2/catch_all.hpp>
 #include <iomanip>
 #include <iostream>
@@ -13,9 +13,9 @@ IntTy range_rand(IntTy iBeg, IntTy iEnd)
   return static_cast<IntTy>(iBeg + (((double)rand() / (double)RAND_MAX) * (iEnd - iBeg)));
 }
 
-TEST_CASE("packed_table: Validate packed_table emplace", "[packed_table][emplace]")
+TEST_CASE("indexed_table: Validate indexed_table emplace", "[indexed_table][emplace]")
 {
-  acl::packed_table<int> table;
+  acl::indexed_table<int> table;
 
   auto e10 = table.emplace(10);
   auto e20 = table.emplace(20);
@@ -37,9 +37,9 @@ struct traits<std::string> : traits<>
 
 } // namespace acl
 
-TEST_CASE("packed_table: Custom block size", "[packed_table][page_size]")
+TEST_CASE("indexed_table: Custom block size", "[indexed_table][page_size]")
 {
-  acl::packed_table<std::string> table;
+  acl::indexed_table<std::string> table;
 
   auto e1 = table.emplace("something");
   auto e2 = table.emplace("in");
@@ -51,9 +51,9 @@ TEST_CASE("packed_table: Custom block size", "[packed_table][page_size]")
   REQUIRE(table[e3] == "the");
 }
 
-TEST_CASE("packed_table: Erase on custom pages", "[packed_table][erase]")
+TEST_CASE("indexed_table: Erase on custom pages", "[indexed_table][erase]")
 {
-  acl::packed_table<std::string> table;
+  acl::indexed_table<std::string> table;
 
   auto e1 = table.emplace("something");
   auto e2 = table.emplace("in");
@@ -76,9 +76,9 @@ TEST_CASE("packed_table: Erase on custom pages", "[packed_table][erase]")
   REQUIRE(table.size() == 0);
 }
 
-TEST_CASE("packed_table: Erase pages when done", "[packed_table][shrink_to_fit]")
+TEST_CASE("indexed_table: Erase pages when done", "[indexed_table][shrink_to_fit]")
 {
-  acl::packed_table<std::string> table;
+  acl::indexed_table<std::string> table;
 
   auto e1 = table.emplace("something");
   auto e2 = table.emplace("in");
@@ -94,9 +94,9 @@ TEST_CASE("packed_table: Erase pages when done", "[packed_table][shrink_to_fit]"
   REQUIRE(table.capacity() == 2);
 }
 
-TEST_CASE("packed_table: Copy when copyable", "[packed_table][assignment]")
+TEST_CASE("indexed_table: Copy when copyable", "[indexed_table][assignment]")
 {
-  acl::packed_table<std::string> table, table2;
+  acl::indexed_table<std::string> table, table2;
 
   auto e1 = table.emplace("something");
   auto e2 = table.emplace("in");
@@ -122,9 +122,9 @@ static void insert(Cont& cont, std::uint32_t offset, std::uint32_t count)
 }
 }; // namespace helper
 
-TEST_CASE("packed_table: Random test", "[packed_table][random]")
+TEST_CASE("indexed_table: Random test", "[indexed_table][random]")
 {
-  acl::packed_table<std::string> cont;
+  acl::indexed_table<std::string> cont;
 
   std::uint32_t last_offset = 0;
   for (int times = 0; times < 4; times++)
@@ -148,7 +148,7 @@ TEST_CASE("packed_table: Random test", "[packed_table][random]")
       });
     for (auto& e : choose)
     {
-      auto l = acl::packed_table<std::string>::link(e);
+      auto l = acl::indexed_table<std::string>::link(e);
       erase.emplace(cont[l]);
       cont.erase(l);
     }
@@ -180,9 +180,9 @@ struct traits<selfref> : traits<>
 };
 } // namespace acl
 
-TEST_CASE("packed_table: Test selfref", "[packed_table][backref]")
+TEST_CASE("indexed_table: Test selfref", "[indexed_table][backref]")
 {
-  acl::packed_table<selfref> table;
+  acl::indexed_table<selfref> table;
 
   auto e10 = table.emplace(10);
 
@@ -198,9 +198,9 @@ TEST_CASE("packed_table: Test selfref", "[packed_table][backref]")
   REQUIRE(table.at(e30).self == e30.value());
 }
 
-TEST_CASE("packed_table: Validate emplace_at", "[packed_table][emplace_at]")
+TEST_CASE("indexed_table: Validate emplace_at", "[indexed_table][emplace_at]")
 {
-  acl::packed_table<int> table1, table2;
+  acl::indexed_table<int> table1, table2;
 
   auto e10 = table1.emplace(5);
   auto e20 = table1.emplace(7);
@@ -234,9 +234,9 @@ TEST_CASE("packed_table: Validate emplace_at", "[packed_table][emplace_at]")
   REQUIRE(table2.empty() == true);
 }
 
-TEST_CASE("packed_table: Validate replace", "[packed_table][replace]")
+TEST_CASE("indexed_table: Validate replace", "[indexed_table][replace]")
 {
-  acl::packed_table<int> table1;
+  acl::indexed_table<int> table1;
 
   auto e10 = table1.emplace(5);
   auto e20 = table1.emplace(7);

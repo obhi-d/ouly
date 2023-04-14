@@ -143,6 +143,11 @@ struct optional_ptr
     return value;
   }
 
+  inline constexpr T* operator->() const noexcept
+  {
+    return value;
+  }
+
   inline constexpr explicit operator T*() const noexcept
   {
     return value;
