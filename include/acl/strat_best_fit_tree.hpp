@@ -18,20 +18,21 @@ public:
 
   static constexpr usize_type min_granularity = 4;
 
-  using extension  = acl::detail::tree_node;
+  using extension  = acl::detail::tree_node<1>;
   using size_type  = usize_type;
-  using arena_bank = detail::arena_bank<size_type, acl::detail::tree_node>;
-  using block_bank = detail::block_bank<size_type, acl::detail::tree_node>;
-  using block      = detail::block<size_type, acl::detail::tree_node>;
-  using bank_data  = detail::bank_data<size_type, acl::detail::tree_node>;
+  using arena_bank = detail::arena_bank<size_type, extension>;
+  using block_bank = detail::block_bank<size_type, extension>;
+  using block      = detail::block<size_type, extension>;
+  using bank_data  = detail::bank_data<size_type, extension>;
   using block_link = typename block_bank::link;
+  
 
   struct blk_tree_node_accessor
   {
     using value_type = size_type;
     using node_type  = block;
     using container  = block_bank;
-    using tree_node  = detail::tree_node;
+    using tree_node  = detail::tree_node<1>;
     using block_link = typename block_bank::link;
 
     inline static void erase(container& icont, std::uint32_t node)
@@ -77,7 +78,7 @@ public:
     }
   };
 
-  using tree_type = detail::rbtree<blk_tree_node_accessor>;
+  using tree_type = detail::rbtree<blk_tree_node_accessor, 1>;
   using allocate_result = uint32_t;
 
   inline auto try_allocate(bank_data& bank, size_type size)
@@ -159,6 +160,11 @@ public:
   void validate_integrity(block_bank const& blocks) const
   {
     tree.validate_integrity(blocks);
+  }
+
+  template <typename Owner>
+  inline void init(Owner const& owner)
+  {
   }
 
 private:

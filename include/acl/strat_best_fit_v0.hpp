@@ -165,6 +165,10 @@ public:
     }
   }
 
+  template <typename Owner>
+  inline void init(Owner const& owner)
+  {}
+
 protected:
   // Private
   inline void add_free_after_begin(block_bank& blocks, std::uint32_t block)
@@ -240,6 +244,7 @@ protected:
     }
   }
 
+  
   detail::free_list free_ordering;
 };
 

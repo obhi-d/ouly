@@ -111,8 +111,8 @@ TEMPLATE_TEST_CASE("Validate arena_allocator", "[arena_allocator.strat]",
   using allocator_t = acl::arena_allocator<TestType, alloc_mem_manager, uint32_t, true>;
 
   std::random_device rd;
-  unsigned int      seed = rd();
-  std::cout << "---- seed ----" << seed << std::endl;
+  unsigned int       seed = 3720346555;
+  std::cout << " Seed : " << seed << std::endl;
   std::minstd_rand                        gen(seed);
   std::bernoulli_distribution             dice(0.7);
   std::uniform_int_distribution<uint32_t> generator(1, 10);

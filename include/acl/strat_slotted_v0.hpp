@@ -208,6 +208,10 @@ public:
 
     fallback.validate_integrity(blocks);
   }
+  
+  template <typename Owner>
+  inline void init(Owner const& owner)
+  {}
 
   slotted_v0() noexcept                                   = default;
   slotted_v0(slotted_v0 const& other) noexcept            = delete;

@@ -91,7 +91,14 @@ public:
   template <typename... Args>
   inline arena_allocator_uimpl(size_type i_arena_size, arena_manager& i_manager, Args&&... iargs)
       : statistics(std::forward<Args>(iargs)...), mgr(i_manager), arena_size(i_arena_size)
-  {}
+  {
+    ibank.strat.init(*this);
+  }
+
+  inline auto get_root_block() const
+  {
+    return ibank.bank.root_blk;
+  }
 
   //! get allocation info
   inline alloc_offset get_alloc_offset(ihandle i_address) const
@@ -341,6 +348,7 @@ private:
     std::uint32_t arena_id = ibank.bank.arena_order.first;
     // refresh all banks
     remap_data refresh;
+    refresh.strat.init(*this);
 
     acl::vector<std::uint32_t> rebinds;
     rebinds.reserve(ibank.bank.blocks.size());

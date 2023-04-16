@@ -147,6 +147,10 @@ public:
     }
   }
 
+  template <typename Owner>
+  inline void init(Owner const& owner)
+  {}
+
 protected:
   // Private
 

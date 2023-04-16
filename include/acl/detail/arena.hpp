@@ -78,15 +78,17 @@ using free_list = acl::vector<std::uint32_t>;
 template <typename usize_type, typename extension>
 struct bank_data
 {
+  using link = typename block_bank<usize_type, extension>::link;
   block_bank<usize_type, extension> blocks;
   arena_bank<usize_type, extension> arenas;
   arena_list<usize_type, extension> arena_order;
   usize_type                        free_size = 0;
+  link                              root_blk;
 
   bank_data()
   {
     // blocks 0 is sentinel
-    blocks.emplace();
+    root_blk = blocks.emplace();
     // arena 0 is sentinel
     arenas.emplace();
   }

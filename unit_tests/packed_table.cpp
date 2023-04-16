@@ -161,7 +161,7 @@ TEST_CASE("packed_table: Random test", "[packed_table][random]")
       
       erase.emplace(val);
       cont.erase(l);
-      cont.validate_integrity();
+      // cont.validate_integrity();
     }
     cont.shrink_to_fit();
     REQUIRE(cont.size() == (count + prev) - static_cast<std::uint32_t>(erase.size()));

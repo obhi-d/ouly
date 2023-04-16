@@ -90,7 +90,7 @@ public:
     extend_            = other.extend_;
     free_slot_         = other.free_slot_;
     other.length_      = 0;
-    other.extend_      = 0;
+    other.extend_      = 1;
     other.free_slot_   = link::null_v;
     return *this;
   }
@@ -106,13 +106,13 @@ public:
     for (auto& data : items_)
       data = acl::allocate<storage>(*this, sizeof(storage) * pool_size);
 
-    for (size_type first = 0; first != other.extend_; ++first)
+    for (size_type first = 1; first != other.extend_; ++first)
     {
-      auto const& src = reinterpret_cast<value_type const&>(other.items_[first >> pool_div][first & pool_mod]);
-      auto&       dst = reinterpret_cast<value_type&>(items_[first >> pool_div][first & pool_mod]);
+      auto const& src = reinterpret_cast<value_type const&>(other.item_at_idx(first));
+      auto&       dst = reinterpret_cast<value_type&>(item_at_idx(first));
 
       auto ref = other.get_ref_at_idx(first);
-      if (detail::is_valid(ref))
+      if (is_valid_ref(ref))
         std::construct_at(&dst, src);
       if constexpr (has_backref)
         set_ref_at_idx(first, ref);
@@ -266,7 +266,7 @@ public:
         {
           std::destroy_at(std::addressof(v));
         });
-    extend_    = 0;
+    extend_    = 1;
     length_    = 0;
     free_slot_ = link::null_v;
     self_.clear();
@@ -297,7 +297,7 @@ public:
   bool contains(link l) const noexcept
   {
     auto idx = detail::index_val(l.value());
-    return idx < extend_ && detail::is_valid(get_ref_at_idx(idx));
+    return idx < extend_ && is_valid_ref(get_ref_at_idx(idx));
   }
 
   bool empty() const noexcept
@@ -406,10 +406,10 @@ private:
   {
     constexpr auto arity = detail::function_traits<Lambda>::arity;
 
-    for (; first != last; ++first)
+    for (; first < last; ++first)
     {
       auto ref = get_ref_at_idx(first);
-      if (detail::is_valid(ref))
+      if (is_valid_ref(ref))
       {
         if constexpr (arity == 2)
           lambda(link(get_ref_at_idx(first)), reinterpret_cast<Cast&>(items_[first >> pool_div][first & pool_mod]));
@@ -417,6 +417,11 @@ private:
           lambda(reinterpret_cast<Cast&>(items_[first >> pool_div][first & pool_mod]));
       }
     }
+  }
+
+  static inline bool is_valid_ref(size_type r) 
+  {
+    return (r && detail::is_valid(r));
   }
 
   podvector<storage*, allocator> items_;

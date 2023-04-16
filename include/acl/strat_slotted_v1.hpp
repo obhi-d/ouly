@@ -244,6 +244,10 @@ public:
     assert(buckets.size() - (nb_free_slots + nb_empty_slots) == nb_free_nodes);
     fallback.validate_integrity(blocks);
   }
+  
+  template <typename Owner>
+  inline void init(Owner const& owner)
+  {}
 
   slotted_v1() noexcept                                   = default;
   slotted_v1(slotted_v1 const& other) noexcept            = delete;

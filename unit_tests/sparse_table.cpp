@@ -77,6 +77,9 @@ TEST_CASE("sparse_table: Copy when copyable", "[sparse_table][assignment]")
 
   table2 = table;
 
+  
+  auto& el1 = table2.at(e1);
+  auto& el2 = table2.at(e2);
   REQUIRE(table2.at(e1) == "something");
   REQUIRE(table2.at(e2) == "in");
   REQUIRE(table2[e3] == "the");
