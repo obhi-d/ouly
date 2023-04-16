@@ -47,14 +47,14 @@ private:
     static constexpr bool     zero_memory      = true;
   };
 
-  template <typename Ty>
+  template <typename TrTy>
   struct self_index_traits : self_index_traits_base
   {};
 
-  template <detail::has_backref_v Ty>
-  struct self_index_traits<Ty> : self_index_traits_base
+  template <detail::has_backref_v TrTy>
+  struct self_index_traits<TrTy> : self_index_traits_base
   {
-    using offset = typename Ty::offset;
+    using offset = typename TrTy::offset;
   };
 
   using self_index = detail::backref_type<Allocator, self_index_traits<Traits>>;

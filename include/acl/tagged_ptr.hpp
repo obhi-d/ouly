@@ -13,7 +13,7 @@ public:
 private:
   union pack
   {
-    uintptr_t value;
+    uintptr_t value = 0;
     int8_t    parts[8];
   };
 
@@ -110,6 +110,6 @@ public:
   /* @} */
 
 protected:
-  pack value = 0;
+  pack value;
 };
 } // namespace acl
