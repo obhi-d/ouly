@@ -3,7 +3,7 @@
 #include "default_allocator.hpp"
 #include "detail/indirection.hpp"
 #include "link.hpp"
-#include "podvector.hpp"
+#include "sparse_vector.hpp"
 #include "type_traits.hpp"
 
 #include <memory>
@@ -11,38 +11,103 @@
 
 namespace acl
 {
-
+/// @brief Contenst are packed in vector or sparse vector
+/// @tparam Ty Type of object
+/// @tparam Allocator Underlying allocator
+/// @tparam Traits Controls the parameters for class instantiation
+///   At a minimum expected traits must include:
+///         - use_sparse : bool - true to use sparse vector
+///         - pool_size : integer - Pool size of the sparse vector when sparse vector is used to store data
+///         - offset : typename - acl::offset<&type::offset> self backref member
+///         - self_index_pool_size : integer - when offset is missing, indicates the pool size of self references if
+///         they use sparse vector
+///         - keys_index_pool_size : integer - indicates the pool size of keys if they use sparse vector
+///         - self_use_sparse_index : bool - use sparse vector for self reference
+///         - keys_use_sparse_index : bool - use sparse vector for key index
+///         - size_type : typename - uint32_t to reduce footprint
 template <typename Ty, typename Allocator = default_allocator<>, typename Traits = acl::traits<Ty>>
-class packed_table : public detail::packed_table_base<Ty, Allocator, Traits>
+class packed_table : public Allocator
 {
 
   static_assert(std::is_move_assignable_v<Ty>, "Type must be move assignable");
+  static_assert(std::is_default_constructible_v<Ty>, "Type must be default constructibe");
 
 public:
   using value_type     = Ty;
-  using size_type      = detail::choose_size_t<Traits, Allocator>;
+  using size_type      = detail::choose_size_t<uint32_t, Traits>;
   using link           = acl::link<value_type, size_type>;
   using allocator_type = Allocator;
 
 private:
-  static constexpr auto pool_div    = detail::log2(Traits::pool_size);
-  static constexpr auto pool_size   = static_cast<size_type>(1) << pool_div;
-  static constexpr auto pool_mod    = pool_size - 1;
   static constexpr bool has_backref = detail::has_backref_v<Traits>;
-  using this_type                   = packed_table<value_type, Allocator, Traits>;
-  using base_type                   = detail::packed_table_base<value_type, Allocator, Traits>;
-  using storage                     = detail::aligned_storage<sizeof(value_type), alignof(value_type)>;
-  using allocator                   = Allocator;
+  static constexpr bool has_sparse  = detail::has_use_sparse_attrib<Traits>;
+
+  using this_type    = packed_table<value_type, Allocator, Traits>;
+  using vector_type  = std::conditional_t<has_sparse, sparse_vector<Ty, Allocator, Traits>, vector<Ty, Allocator>>;
+  using storage      = detail::aligned_storage<sizeof(value_type), alignof(value_type)>;
+  using allocator    = Allocator;
+  using optional_ptr = acl::detail::optional_ptr<Ty>;
+
+  struct default_index_pool_size
+  {
+    static constexpr uint32_t self_index_pool_size  = 4096;
+    static constexpr bool     self_use_sparse_index = false;
+    static constexpr uint32_t keys_index_pool_size  = 4096;
+    static constexpr bool     keys_use_sparse_index = false;
+  };
+
+  struct self_index_traits_base
+  {
+    using size_type                     = uint32_t;
+    static constexpr uint32_t pool_size = std::conditional_t<detail::has_self_index_pool_size<Traits>, Traits,
+                                                             default_index_pool_size>::self_index_pool_size;
+    static constexpr bool     use_sparse_index =
+      std::conditional_t<detail::has_self_use_sparse_index_attrib<Traits>, Traits,
+                         default_index_pool_size>::self_use_sparse_index;
+    static constexpr uint32_t null_v      = 0;
+    static constexpr bool     zero_memory = true;
+  };
+
+  template <typename Ty>
+  struct self_index_traits : self_index_traits_base
+  {};
+
+  template <detail::has_backref_v Ty>
+  struct self_index_traits<Ty> : self_index_traits_base
+  {
+    using offset = typename Ty::offset;
+  };
+
+  struct key_index_traits
+  {
+    using size_type                            = uint32_t;
+    static constexpr uint32_t pool_size        = std::conditional_t<detail::has_keys_index_pool_size<Traits>, Traits,
+                                                             default_index_pool_size>::keys_index_pool_size;
+    static constexpr bool     use_sparse_index = std::conditional_t<detail::has_keys_use_sparse_index_attrib<Traits>, Traits,
+                         default_index_pool_size>::keys_use_sparse_index;
+    static constexpr uint32_t null_v           = 0;
+    static constexpr bool     zero_memory      = true;
+  };
+
+  using self_index = detail::backref_type<Allocator, self_index_traits<Traits>>;
+  using key_index  = detail::indirection_type<Allocator, key_index_traits>;
 
 public:
-  inline packed_table() noexcept {}
-  inline packed_table(Allocator&& alloc) noexcept : base_type(std::move<Allocator>(alloc)) {}
-  inline packed_table(Allocator const& alloc) noexcept : base_type(alloc) {}
+  inline packed_table() noexcept
+  {
+  }
+  inline packed_table(Allocator&& alloc) noexcept : Allocator(std::move<Allocator>(alloc))
+  {
+  }
+  inline packed_table(Allocator const& alloc) noexcept : Allocator(alloc)
+  {
+  }
   inline packed_table(packed_table&& other) noexcept
   {
     *this = std::move(other);
   }
-  inline packed_table(packed_table const& other) noexcept requires(std::is_copy_constructible_v<value_type>)
+  inline packed_table(packed_table const& other) noexcept
+    requires(std::is_copy_constructible_v<value_type>)
   {
     *this = other;
   }
@@ -57,35 +122,24 @@ public:
     clear();
     shrink_to_fit();
 
-    (base_type&)* this     = std::move((base_type&)other);
-    items                  = std::move(other.items);
-    length                 = other.length;
-    first_free_index       = other.first_free_index;
-    other.length           = 0;
-    other.first_free_index = link::null_v;
+    values_              = std::move(other.values_);
+    keys_                = std::move(other.keys_);
+    free_key_slot_       = other.free_key_slot_;
+    self_                = std::move(other.self_);
+    other.free_key_slot_ = 0;
     return *this;
   }
 
-  packed_table& operator=(packed_table const& other) noexcept requires(std::is_copy_constructible_v<value_type>)
+  packed_table& operator=(packed_table const& other) noexcept
+    requires(std::is_copy_constructible_v<value_type>)
   {
     clear();
     shrink_to_fit();
 
-    items.resize(other.items.size());
-    for (auto& data : items)
-      data = reinterpret_cast<storage*>(acl::allocate<storage>(*this, sizeof(storage) * pool_size));
-
-    for (size_type first = 0; first != other.length; ++first)
-    {
-      auto const& src = reinterpret_cast<value_type const&>(other.items[first >> pool_div][first & pool_mod]);
-      auto&       dst = reinterpret_cast<value_type&>(items[first >> pool_div][first & pool_mod]);
-
-      std::construct_at(&dst, src);
-    }
-
-    static_cast<base_type&>(*this) = static_cast<base_type const&>(other);
-    length                         = other.length;
-    first_free_index               = other.first_free_index;
+    values_        = other.values_;
+    keys_          = other.keys_;
+    free_key_slot_ = other.free_key_slot_;
+    self_          = other.self_;
     return *this;
   }
 
@@ -125,46 +179,23 @@ public:
   /// @brief Returns size of packed array
   size_type size() const noexcept
   {
-    return length - 1;
-  }
-
-  /// @brief Returns capacity of packed array
-  size_type capacity() const noexcept
-  {
-    return static_cast<size_type>(items.size()) * pool_size;
-  }
-
-  /// @brief Returns the maximum entry slot currently already reserved for the table.
-  /// @remarks This value is more than item capacity, and is the current max link value.
-  size_type max_size() const noexcept
-  {
-    return base_type::max_size();
+    return (size_type)values_.size();
   }
 
   /// @brief Valid range that can be iterated over
   size_type range() const noexcept
   {
-    return size();
+    return (size_type)values_.size();
   }
 
-  /// @brief packed_table has active pool count depending upon number of elements it contains
-  /// @return active pool count
-  size_type active_pools() const noexcept
+  vector_type& data()
   {
-    return length >> pool_div;
+    return values_;
   }
 
-  /// @brief Get item pool and number of items give the pool number
-  /// @param i Must be between [0, active_pools())
-  /// @return Item pool raw array and array size
-  auto get_pool(size_type i) const noexcept -> std::tuple<value_type const*, size_type>
+  vector_type const& data() const
   {
-    return {reinterpret_cast<value_type const*>(items[i]), items[i] == items.back() ? length & pool_mod : pool_size};
-  }
-
-  auto get_pool(size_type i) noexcept -> std::tuple<value_type*, size_type>
-  {
-    return {reinterpret_cast<value_type*>(items[i]), items[i] == items.back() ? length & pool_mod : pool_size};
+    return values_;
   }
 
   /// @brief Emplace back an element. Order is not guranteed.
@@ -173,19 +204,60 @@ public:
   template <typename... Args>
   link emplace(Args&&... args) noexcept
   {
-    emplace_back(std::forward<Args>(args)...);
-    return do_insert(length++);
+    if (values_.empty()) [[unlikely]] 	
+    {
+      keys_.push_back(0);
+      values_.emplace_back();
+    }
+
+    auto key = (uint32_t)values_.size();
+    values_.emplace_back(std::forward<Args>(args)...);
+    size_type l;
+
+    if (free_key_slot_)
+    {
+      l              = detail::revise(detail::validate(free_key_slot_));
+      auto& k        = keys_.get(detail::index_val(free_key_slot_));
+      free_key_slot_ = k;
+      k              = key;
+    }
+    else
+    {
+      l = keys_.size();
+      keys_.push_back(key);
+    }
+
+    if constexpr (has_backref)
+    {
+      self_.get(values_.back()) = l;
+    }
+    else
+      self_.ensure_at(key) = l;
+    return link(l);
   }
 
   /// @brief Construct an item in a given location, assuming the location was empty
   template <typename... Args>
   void emplace_at(link point, Args&&... args) noexcept
   {
-    if constexpr (detail::debug)
-      assert(!contains(point));
+    if (values_.empty()) [[unlikely]] 	
+    {
+      keys_.push_back(0);
+      values_.emplace_back();
+    }
 
-    emplace_back(std::forward<Args>(args)...);
-    do_insert(point.value(), length++);
+    auto key = (uint32_t)values_.size();
+    values_.emplace_back(std::forward<Args>(args)...);
+    auto& k = keys_.ensure_at(point.as_index());
+    if (k)
+      disconnect_free(k);
+    k = key;
+    if constexpr (has_backref)
+    {
+      self_.get(values_.back()) = point.value();
+    }
+    else
+      self_.ensure_at(key) = point.value();
   }
 
   /// @brief Construct an item in a given location, assuming the location was empty
@@ -194,7 +266,15 @@ public:
     if constexpr (detail::debug)
       assert(contains(point));
 
-    at(point) = std::move(args);
+    auto  k   = keys_.get(point.as_index());
+    auto& val = values_[k];
+    val       = std::move(args);
+    if constexpr (has_backref)
+    {
+      self_.get(val) = point.value();
+    }
+    else
+      self_.get(k) = point.value();
   }
 
   /// @brief Erase a single element.
@@ -202,46 +282,51 @@ public:
   {
     if constexpr (detail::debug)
       validate(l);
-    erase_at(l.value());
+    erase_at(l);
   }
 
   /// @brief Erase a single element by object when backref is available.
   /// @remarks Only available if backref is available
-  void erase(value_type const& obj) noexcept requires(has_backref)
+  void erase(value_type const& obj) noexcept
+    requires(has_backref)
   {
-    erase_at(base_type::get_ref(obj));
+    erase_at(link(self_.get(obj)));
+  }
+
+  /// @brief Find an object associated with a link
+  /// @return optional value of the object
+  optional_ptr find(link lnk) noexcept
+  {
+    if (keys_.contains(lnk))
+    {
+      auto idx = keys_.get(lnk.as_index());
+      return values_[idx];
+    }
+    return {};
   }
 
   /// @brief Drop unused pages
-  void shrink_to_fit() noexcept
+  inline void shrink_to_fit() noexcept
   {
-    auto block = (length + pool_size - 1) >> pool_div;
-    for (auto i = block, end = static_cast<size_type>(items.size()); i < end; ++i)
-      acl::deallocate(static_cast<Allocator&>(*this), items[i], sizeof(storage) * pool_size);
-    items.resize(block);
-    items.shrink_to_fit();
-    base_type::shrink_to_fit(length);
+    keys_.shrink_to_fit();
+    values_.shrink_to_fit();
+    self_.shrink_to_fit();
   }
 
   /// @brief Set size to 0, memory is not released, objects are destroyed
-  void clear() noexcept
+  inline void clear() noexcept
   {
-    if constexpr (!std::is_trivially_destructible_v<value_type>)
-      for_each(
-        [](auto, auto& v)
-        {
-          std::destroy_at(std::addressof(v));
-        });
-    length           = 0;
-    first_free_index = 0;
-    base_type::clear();
+    keys_.clear();
+    values_.clear();
+    self_.clear();
+    free_key_slot_ = 0;
   }
 
   value_type& at(link l) noexcept
   {
     if constexpr (detail::debug)
       validate(l);
-    return item_at(base_type::to_index(l.value()));
+    return item_at(l.as_index());
   }
 
   value_type const& at(link l) const noexcept
@@ -259,202 +344,140 @@ public:
     return at(l);
   }
 
-  bool contains(link l) const noexcept
+  inline bool contains(link l) const noexcept
   {
-    auto idx = base_type::to_index(l.value());
-    return base_type::contains(idx) && detail::is_valid(base_type::link_at(idx));
+    return keys_.contains_valid(l.as_index());
   }
 
-  bool empty() const noexcept
+  inline bool empty() const noexcept
   {
-    return length == 1;
+    return values_.size() <= 1;
+  }
+
+  inline void validate_integrity() const 
+  {
+    for (uint32_t first = 1, last = size(); first != last; ++first)
+    {
+      assert(keys_.get(detail::index_val(get_ref_at_idx(first))) == first);
+    }
+
+    std::vector<uint32_t> frees;
+    auto fi = free_key_slot_;
+    while (fi)
+    {
+      auto idx = detail::index_val(fi);
+      assert(keys_.get(idx) != idx);
+      assert(std::ranges::find(frees, idx) == frees.end());
+      fi = keys_.get(idx);
+      frees.emplace_back(idx);
+    }
   }
 
 private:
-  template <typename... Args>
-  inline void emplace_back(Args&&... args) noexcept
+  inline void disconnect_free(uint32_t inode)
   {
-    auto block = length >> pool_div;
-    auto index = length & pool_mod;
-
-    if (block >= items.size())
-      items.emplace_back(acl::allocate<storage>(*this, sizeof(storage) * pool_size));
-
-    std::construct_at(reinterpret_cast<value_type*>(items[block] + index), std::forward<Args>(args)...);
+    auto     node = detail::index_val(detail::validate(inode));
+    auto     fi   = detail::index_val(detail::validate(free_key_slot_));
+    uint32_t prev = 0;
+    while (fi != node)
+    {
+      prev = fi;
+      fi   = detail::index_val(detail::validate(keys_.get(fi)));
+    }
+    if (!prev)
+      free_key_slot_ = keys_.get(fi);
+    else
+      keys_.get(prev) = keys_.get(fi);
   }
 
   inline void validate(link l) const noexcept
   {
-    auto lnk  = base_type::to_index(l.value());
-    auto idx  = base_type::link_at(lnk);
+    auto lnk  = l.as_index();
+    auto idx  = keys_.get(lnk);
     auto self = get_ref_at_idx(idx);
     assert(self == l.value());
   }
 
-  inline auto get_ref_at_idx(size_type idx) const noexcept requires(!has_backref)
+  inline auto get_ref_at_idx(size_type idx) const noexcept
+    requires(!has_backref)
   {
-    return base_type::get_ref(idx);
+    return self_.get(idx);
   }
 
-  inline auto get_ref_at_idx(size_type idx) const noexcept requires(has_backref)
+  inline auto get_ref_at_idx(size_type idx) const noexcept
+    requires(has_backref)
   {
-    return base_type::get_ref(item_at_idx(idx));
-  }
-
-  inline auto pop_ref_at_idx(size_type src, size_type dst) noexcept requires(!has_backref)
-  {
-    return base_type::pop_ref(src, dst);
-  }
-
-  inline auto pop_ref_at_idx(size_type src, size_type dst) noexcept requires(has_backref)
-  {
-    return base_type::pop_ref(item_at_idx(src), item_at_idx(dst));
-  }
-
-  inline auto set_ref_at_idx(size_type idx, size_type lnk) noexcept requires(!has_backref)
-  {
-    return base_type::set_ref(idx, lnk);
-  }
-
-  inline auto set_ref_at_idx(size_type idx, size_type lnk) noexcept requires(has_backref)
-  {
-    return base_type::set_ref(item_at_idx(idx), lnk);
+    return self_.get(item_at_idx(idx));
   }
 
   inline auto& item_at(size_type l) noexcept
   {
-    return item_at_idx(base_type::link_at(l));
+    return item_at_idx(detail::index_val(keys_.get(l)));
   }
 
   inline auto& item_at_idx(size_type item_id) noexcept
   {
-    return reinterpret_cast<value_type&>(items[item_id >> pool_div][item_id & pool_mod]);
+    return values_[item_id];
   }
 
   inline auto const& item_at_idx(size_type item_id) const noexcept
   {
-    return reinterpret_cast<value_type const&>(items[item_id >> pool_div][item_id & pool_mod]);
+    return values_[item_id];
   }
 
-  inline void move_item(size_type src, size_type dst) noexcept
+  inline void erase_at(link l) noexcept
   {
-    auto& item = reinterpret_cast<value_type&>(items[dst >> pool_div][dst & pool_mod]);
-    auto& last = reinterpret_cast<value_type&>(items[src >> pool_div][src & pool_mod]);
-    item       = std::move(last);
-    if (!std::is_trivially_destructible_v<value_type>)
-      std::destroy_at(&last);
-  }
-
-  inline void erase_at(size_type l) noexcept
-  {
-    length--;
-
-    auto  lnk     = base_type::to_index(l);
-    auto& item_id = base_type::link_at(lnk);
-
-    auto last_slot = pop_ref_at_idx(length, item_id);
-
-    move_item(length, item_id);
-
-    base_type::link_at(base_type::to_index(last_slot)) = item_id;
-    item_id                                            = first_free_index;
-    first_free_index                                   = detail::revise_invalidate(l);
-  }
-
-  inline auto& last_released() noexcept
-  {
-    // assumes length was popped (decreased by 1)
-    return reinterpret_cast<value_type&>(items[length >> pool_div][length & pool_mod]);
-  }
-
-  inline link do_insert(size_type loc) noexcept
-  {
-    size_type lnk;
-    if (first_free_index == link::null_v)
+    auto lnk       = l.as_index();
+    auto item_id   = keys_.get(lnk);
+    keys_.get(lnk) = free_key_slot_;
+    free_key_slot_ = detail::invalidate(l.value());
+    auto& lb       = values_[item_id];
+    auto& back     = values_.back();
+    if (&back != &lb)
     {
-      lnk = base_type::to_link(base_type::push(loc));
+
+      if constexpr (has_backref)
+        keys_.get(detail::index_val(self_.get(back))) = item_id;
+      else
+        keys_.get(detail::index_val(self_.best_erase(item_id))) = item_id;
+
+      lb = std::move(back);
     }
     else
     {
-      lnk              = detail::validate(first_free_index);
-      auto  index      = base_type::to_index(lnk);
-      auto& id         = base_type::link_at(index);
-      first_free_index = id;
-      id               = loc;
+      if constexpr (!has_backref)
+        self_.pop_back();
     }
 
-    set_ref_at_idx(loc, lnk);
+    values_.pop_back();
 
-    return link(lnk);
-  }
-
-  inline void do_insert(size_type lnk, size_type loc) noexcept
-  {
-    auto idx = base_type::to_index(lnk);
-    if (base_type::contains(idx))
-    {
-      break_free_chain(idx);
-      base_type::link_at(idx) = loc;
-    }
-    else
-    {
-      make_free_chain(base_type::insert(idx, loc), idx);
-    }
-
-    set_ref_at_idx(loc, lnk);
-  }
-
-  inline void break_free_chain(size_type idx) noexcept
-  {
-    auto it = detail::validate(first_free_index);
-    if (base_type::to_index(it) == idx)
-    {
-      first_free_index = link::null_v;
-      return;
-    }
-
-    while (it != link::null_v)
-    {
-      auto next = base_type::link_at(base_type::to_index(it));
-      if (base_type::to_index(next) == idx)
-        break;
-      it = next;
-    }
-    base_type::link_at(base_type::to_index(it)) = base_type::link_at(idx);
-  }
-
-  inline void make_free_chain(size_type first, size_type last) noexcept
-  {
-    for (; first < last; ++first)
-      add_free_slot(first);
-  }
-
-  inline void add_free_slot(size_type slot) noexcept
-  {
-    base_type::link_at(slot) = first_free_index;
-    first_free_index         = detail::revise_invalidate(slot);
   }
 
   /// @brief Lambda called for each element
   /// @tparam Lambda Lambda should accept value_type& parameter
   template <typename Lambda, typename Cast>
-  void for_each_l(Lambda&& lambda) noexcept
+  inline void for_each_l(Lambda&& lambda) noexcept
   {
-    for_each_l<Lambda, Cast>(1, length, std::forward<Lambda>(lambda));
+    for_each_l<Lambda, Cast>(1, static_cast<size_type>(values_.size()), std::forward<Lambda>(lambda));
   }
 
   template <typename Lambda, typename Cast>
-  void for_each_l(size_type first, size_type last, Lambda&& lambda) noexcept
+  inline void for_each_l(size_type first, size_type last, Lambda&& lambda) noexcept
   {
+    constexpr auto arity = detail::function_traits<Lambda>::arity;
     for (; first != last; ++first)
     {
-      lambda(link(get_ref_at_idx(first)), reinterpret_cast<Cast&>(items[first >> pool_div][first & pool_mod]));
+      if constexpr (arity == 2)
+        lambda(link(get_ref_at_idx(first)), static_cast<Cast&>(values_[first]));
+      else
+        lambda(static_cast<Cast&>(values_[first]));
     }
   }
 
-  podvector<storage*, allocator> items;
-  size_type                      length           = 1;
-  size_type                      first_free_index = link::null_v;
+  vector_type values_;
+  key_index   keys_;
+  uint32_t    free_key_slot_ = 0;
+  self_index  self_;
 };
 
 } // namespace acl

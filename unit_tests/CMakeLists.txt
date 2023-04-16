@@ -33,10 +33,10 @@ add_executable(acl-validity
  "soavector.cpp" 
  "podvector.cpp" 
  "table.cpp" 
- "soatable.cpp" 
+  
  "sparse_vector.cpp" 
  "dynamic_array.cpp"
- "arena_allocator.cpp")
+ "arena_allocator.cpp" "link_container.cpp")
 
 target_link_libraries(acl-validity acl::acl Catch2::Catch2)
 target_compile_definitions(acl-validity

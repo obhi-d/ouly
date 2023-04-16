@@ -142,6 +142,13 @@ public:
       return ret_value;
   }
 
+  address zero_allocate(size_type i_size, size_type i_alignment = 0)
+  {
+    auto z = allocate(i_size, i_alignment);
+    std::memset(z, 0, i_size);
+    return z;
+  }
+
   void deallocate(address i_data, size_type i_size, size_type i_alignment = 0)
   {
     // does not support deallocate, only rewinds are supported

@@ -33,11 +33,11 @@ namespace detail
 template <bool k_compute = false>
 struct default_alloc_statistics
 {
-  static int report_allocate(std::size_t)
+  inline static int report_allocate(std::size_t)
   {
     return 0;
   }
-  static int report_deallocate(std::size_t)
+  inline static int report_deallocate(std::size_t)
   {
     return 0;
   }
@@ -117,7 +117,15 @@ struct ACL_EMPTY_BASES default_allocator : detail::default_alloc_statistics<k_co
   {
     auto measure = statistics::report_allocate(i_sz);
     i_alignment  = std::max<size_type>(i_alignment, static_cast<size_type>(k_default_alignment));
-    return tracker::when_allocate(i_alignment ? acl::aligned_alloc(i_alignment, i_sz) : std::malloc(i_sz), i_sz);
+    return tracker::when_allocate(i_alignment ? acl::aligned_alloc(i_alignment, i_sz) : acl::malloc(i_sz), i_sz);
+  }
+
+  
+  inline static address zero_allocate(size_type i_sz, size_type i_alignment = 0)
+  {
+    auto measure = statistics::report_allocate(i_sz);
+    i_alignment  = std::max<size_type>(i_alignment, static_cast<size_type>(k_default_alignment));
+    return tracker::when_allocate(i_alignment ? acl::aligned_zalloc(i_alignment, i_sz) : acl::zmalloc(i_sz), i_sz);
   }
 
   static void deallocate(address i_addr, size_type i_sz, size_type i_alignment = 0)

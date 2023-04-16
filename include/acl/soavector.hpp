@@ -1,6 +1,3 @@
-
-#pragma once
-
 #pragma once
 #include "allocator.hpp"
 #include "default_allocator.hpp"

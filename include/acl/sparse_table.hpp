@@ -13,13 +13,13 @@ namespace acl
 {
 
 template <typename Ty, typename Allocator = default_allocator<>, typename Traits = acl::traits<Ty>>
-class sparse_table : public acl::detail::sparse_table_base<Ty, Allocator, Traits>
+class sparse_table : public Allocator
 {
   static_assert(sizeof(Ty) >= sizeof(typename Traits::size_type), "Type must big enough to hold a link");
 
 public:
   using value_type     = Ty;
-  using size_type      = detail::choose_size_t<Traits, Allocator>;
+  using size_type      = detail::choose_size_t<uint32_t, Traits>;
   using link           = acl::link<value_type, size_type>;
   using allocator_type = Allocator;
 
@@ -28,20 +28,47 @@ private:
   static constexpr auto pool_size   = static_cast<size_type>(1) << pool_div;
   static constexpr auto pool_mod    = pool_size - 1;
   static constexpr bool has_backref = detail::has_backref_v<Traits>;
-  using this_type                   = sparse_table<value_type, Allocator, Traits>;
-  using base_type                   = detail::sparse_table_base<value_type, Allocator, Traits>;
+  using this_type                   = sparse_table<Ty, Allocator, Traits>;
   using storage                     = detail::aligned_storage<sizeof(value_type), alignof(value_type)>;
   using allocator                   = Allocator;
 
+  struct default_index_pool_size
+  {
+    static constexpr uint32_t self_index_pool_size = 128;
+  };
+
+  struct self_index_traits_base
+  {
+    using size_type                            = uint32_t;
+    static constexpr uint32_t pool_size        = std::conditional_t<detail::has_self_index_pool_size<Traits>, Traits,
+                                                             default_index_pool_size>::self_index_pool_size;
+    static constexpr bool     use_sparse_index = true;
+    static constexpr uint32_t null_v           = 0;
+    static constexpr bool     zero_memory      = true;
+  };
+
+  template <typename Ty>
+  struct self_index_traits : self_index_traits_base
+  {};
+
+  template <detail::has_backref_v Ty>
+  struct self_index_traits<Ty> : self_index_traits_base
+  {
+    using offset = typename Ty::offset;
+  };
+
+  using self_index = detail::backref_type<Allocator, self_index_traits<Traits>>;
+
 public:
   inline sparse_table() noexcept {}
-  inline sparse_table(Allocator&& alloc) noexcept : base_type(std::move<Allocator>(alloc)) {}
-  inline sparse_table(Allocator const& alloc) noexcept : base_type(alloc) {}
+  inline sparse_table(Allocator&& alloc) noexcept : Allocator(std::move<Allocator>(alloc)) {}
+  inline sparse_table(Allocator const& alloc) noexcept : Allocator(alloc) {}
   inline sparse_table(sparse_table&& other) noexcept
   {
     *this = std::move(other);
   }
-  inline sparse_table(sparse_table const& other) noexcept requires(std::is_copy_constructible_v<value_type>)
+  inline sparse_table(sparse_table const& other) noexcept
+    requires(std::is_copy_constructible_v<value_type>)
   {
     *this = other;
   }
@@ -56,42 +83,44 @@ public:
     clear();
     shrink_to_fit();
 
-    (base_type&)* this     = std::move((base_type&)other);
-    items                  = std::move(other.items);
-    length                 = other.length;
-    extend                 = other.extend;
-    first_free_index       = other.first_free_index;
-    other.length           = 0;
-    other.extend           = 0;
-    other.first_free_index = link::null_v;
+    (Allocator&)* this = std::move((Allocator&)other);
+    items_             = std::move(other.items_);
+    self_              = std::move(other.self_);
+    length_            = other.length_;
+    extend_            = other.extend_;
+    free_slot_         = other.free_slot_;
+    other.length_      = 0;
+    other.extend_      = 0;
+    other.free_slot_   = link::null_v;
     return *this;
   }
 
-  sparse_table& operator=(sparse_table const& other) noexcept requires(std::is_copy_constructible_v<value_type>)
+  sparse_table& operator=(sparse_table const& other) noexcept
+    requires(std::is_copy_constructible_v<value_type>)
   {
     clear();
     shrink_to_fit();
 
-    items.resize(other.items.size());
-    for (auto& data : items)
+    static_cast<Allocator&>(*this) = static_cast<Allocator const&>(other);
+    items_.resize(other.items_.size());
+    for (auto& data : items_)
       data = acl::allocate<storage>(*this, sizeof(storage) * pool_size);
 
-    for (size_type first = 0; first != other.extend; ++first)
+    for (size_type first = 0; first != other.extend_; ++first)
     {
-      auto const& src = reinterpret_cast<value_type const&>(other.items[first >> pool_div][first & pool_mod]);
-      auto&       dst = reinterpret_cast<value_type&>(items[first >> pool_div][first & pool_mod]);
+      auto const& src = reinterpret_cast<value_type const&>(other.items_[first >> pool_div][first & pool_mod]);
+      auto&       dst = reinterpret_cast<value_type&>(items_[first >> pool_div][first & pool_mod]);
 
       auto ref = other.get_ref_at_idx(first);
       if (detail::is_valid(ref))
         std::construct_at(&dst, src);
-
-      set_ref_at_idx(first, ref);
+      if constexpr (has_backref)
+        set_ref_at_idx(first, ref);
     }
-
-    static_cast<base_type&>(*this) = static_cast<base_type const&>(other);
-    extend                         = other.extend;
-    length                         = other.length;
-    first_free_index               = other.first_free_index;
+    self_      = other.self_;
+    extend_    = other.extend_;
+    length_    = other.length_;
+    free_slot_ = other.free_slot_;
     return *this;
   }
 
@@ -131,13 +160,13 @@ public:
   /// @brief Returns size of packed array
   size_type size() const noexcept
   {
-    return length;
+    return length_;
   }
 
   /// @brief Returns capacity of packed array
   size_type capacity() const noexcept
   {
-    return static_cast<size_type>(items.size()) * pool_size;
+    return static_cast<size_type>(items_.size()) * pool_size;
   }
 
   /// @brief Returns the maximum entry slot currently already reserved for the table.
@@ -150,27 +179,28 @@ public:
   /// @brief Valid range that can be iterated over
   size_type range() const noexcept
   {
-    return extend;
+    return extend_;
   }
 
   /// @brief packed_table has active pool count depending upon number of elements it contains
   /// @return active pool count
   size_type active_pools() const noexcept
   {
-    return extend >> pool_div;
+    return extend_ >> pool_div;
   }
 
-  /// @brief Get item pool and number of items give the pool number
+  /// @brief Get item pool and number of items_ give the pool number
   /// @param i Must be between [0, active_pools())
   /// @return Item pool raw array and array size
   auto get_pool(size_type i) const noexcept -> std::tuple<value_type const*, size_type>
   {
-    return {reinterpret_cast<value_type const*>(items[i]), items[i] == items.back() ? extend & pool_mod : pool_size};
+    return {reinterpret_cast<value_type const*>(items_[i]),
+            items_[i] == items_.back() ? extend_ & pool_mod : pool_size};
   }
 
   auto get_pool(size_type i) noexcept -> std::tuple<value_type*, size_type>
   {
-    return {reinterpret_cast<value_type*>(items[i]), items[i] == items.back() ? extend & pool_mod : pool_size};
+    return {reinterpret_cast<value_type*>(items_[i]), items_[i] == items_.back() ? extend_ & pool_mod : pool_size};
   }
 
   /// @brief Emplace back an element. Order is not guranteed.
@@ -185,7 +215,7 @@ public:
     auto block = idx >> pool_div;
     auto index = idx & pool_mod;
 
-    std::construct_at(reinterpret_cast<value_type*>(items[block] + index), std::forward<Args>(args)...);
+    std::construct_at(reinterpret_cast<value_type*>(items_[block] + index), std::forward<Args>(args)...);
     set_ref_at_idx(idx, lnk);
 
     return link(lnk);
@@ -210,20 +240,21 @@ public:
 
   /// @brief Erase a single element by object when backref is available.
   /// @remarks Only available if backref is available
-  void erase(value_type const& obj) noexcept requires(has_backref)
+  void erase(value_type const& obj) noexcept
+    requires(has_backref)
   {
-    erase_at(base_type::get_ref(obj));
+    erase_at(self_.get(obj));
   }
 
   /// @brief Drop unused pages
   void shrink_to_fit() noexcept
   {
-    auto block = (extend + pool_size - 1) >> pool_div;
-    for (auto i = block, end = static_cast<size_type>(items.size()); i < end; ++i)
-      acl::deallocate(*this, items[i], sizeof(storage) * pool_size);
-    items.resize(block);
-    items.shrink_to_fit();
-    base_type::shrink_to_fit(extend);
+    auto block = (extend_ + pool_size - 1) >> pool_div;
+    for (auto i = block, end = static_cast<size_type>(items_.size()); i < end; ++i)
+      acl::deallocate(*this, items_[i], sizeof(storage) * pool_size);
+    items_.resize(block);
+    items_.shrink_to_fit();
+    self_.shrink_to_fit();
   }
 
   /// @brief Set size to 0, memory is not released, objects are destroyed
@@ -231,14 +262,14 @@ public:
   {
     if constexpr (!std::is_trivially_destructible_v<value_type>)
       for_each(
-        [](auto, auto& v)
+        [](Ty& v)
         {
           std::destroy_at(std::addressof(v));
         });
-    extend           = 0;
-    length           = 0;
-    first_free_index = link::null_v;
-    base_type::clear();
+    extend_    = 0;
+    length_    = 0;
+    free_slot_ = link::null_v;
+    self_.clear();
   }
 
   value_type& at(link l) noexcept
@@ -266,12 +297,12 @@ public:
   bool contains(link l) const noexcept
   {
     auto idx = detail::index_val(l.value());
-    return idx < extend && detail::is_valid(get_ref_at_idx(idx));
+    return idx < extend_ && detail::is_valid(get_ref_at_idx(idx));
   }
 
   bool empty() const noexcept
   {
-    return length == 0;
+    return length_ == 0;
   }
 
 private:
@@ -282,24 +313,28 @@ private:
     assert(self == l.value());
   }
 
-  inline auto get_ref_at_idx(size_type idx) const noexcept requires(!has_backref)
+  inline auto get_ref_at_idx(size_type idx) const noexcept
+    requires(!has_backref)
   {
-    return base_type::get_ref(idx);
+    return self_.get(idx);
   }
 
-  inline auto get_ref_at_idx(size_type idx) const noexcept requires(has_backref)
+  inline auto get_ref_at_idx(size_type idx) const noexcept
+    requires(has_backref)
   {
-    return base_type::get_ref(item_at_idx(idx));
+    return self_.get(item_at_idx(idx));
   }
 
-  inline auto set_ref_at_idx(size_type idx, size_type lnk) noexcept requires(!has_backref)
+  inline auto set_ref_at_idx(size_type idx, size_type lnk) noexcept
+    requires(!has_backref)
   {
-    return base_type::set_ref(idx, lnk);
+    return self_.ensure_at(idx) = lnk;
   }
 
-  inline auto set_ref_at_idx(size_type idx, size_type lnk) noexcept requires(has_backref)
+  inline auto set_ref_at_idx(size_type idx, size_type lnk) noexcept
+    requires(has_backref)
   {
-    return base_type::set_ref(item_at_idx(idx), lnk);
+    return self_.get(item_at_idx(idx)) = lnk;
   }
 
   inline auto& item_at(size_type l) noexcept
@@ -309,21 +344,21 @@ private:
 
   inline auto& item_at_idx(size_type item_id) noexcept
   {
-    return reinterpret_cast<value_type&>(items[item_id >> pool_div][item_id & pool_mod]);
+    return reinterpret_cast<value_type&>(items_[item_id >> pool_div][item_id & pool_mod]);
   }
 
   inline auto const& item_at_idx(size_type item_id) const noexcept
   {
-    return reinterpret_cast<value_type const&>(items[item_id >> pool_div][item_id & pool_mod]);
+    return reinterpret_cast<value_type const&>(items_[item_id >> pool_div][item_id & pool_mod]);
   }
 
   inline void erase_at(size_type l) noexcept
   {
-    length--;
+    length_--;
 
     auto lnk = detail::index_val(l);
 
-    auto& item = reinterpret_cast<value_type&>(items[lnk >> pool_div][lnk & pool_mod]);
+    auto& item = reinterpret_cast<value_type&>(items_[lnk >> pool_div][lnk & pool_mod]);
 
     if constexpr (!std::is_trivially_destructible_v<value_type>)
       std::destroy_at(&item);
@@ -331,29 +366,29 @@ private:
     auto newlnk = detail::revise_invalidate(l);
 
     if constexpr (has_backref)
-      base_type::set_ref(item, first_free_index);
+      self_.get(item) = free_slot_;
     else
-      set_ref_at_idx(lnk, first_free_index);
+      set_ref_at_idx(lnk, free_slot_);
 
-    first_free_index = newlnk;
+    free_slot_ = newlnk;
   }
 
   inline auto ensure_slot() noexcept
   {
-    length++;
+    length_++;
     size_type lnk;
-    if (first_free_index == link::null_v)
+    if (free_slot_ == link::null_v)
     {
-      auto block = extend >> pool_div;
-      if (block >= items.size())
-        items.emplace_back(acl::allocate<storage>(*this, sizeof(storage) * pool_size));
+      auto block = extend_ >> pool_div;
+      if (block >= items_.size())
+        items_.emplace_back(acl::allocate<storage>(*this, sizeof(storage) * pool_size));
 
-      lnk = extend++;
+      lnk = extend_++;
     }
     else
     {
-      lnk              = detail::validate(first_free_index);
-      first_free_index = get_ref_at_idx(detail::index_val(lnk));
+      lnk        = detail::validate(free_slot_);
+      free_slot_ = get_ref_at_idx(detail::index_val(lnk));
     }
     return lnk;
   }
@@ -363,24 +398,32 @@ private:
   template <typename Lambda, typename Cast>
   void for_each_l(Lambda&& lambda) noexcept
   {
-    for_each_l<Lambda, Cast>(1, extend, std::forward<Lambda>(lambda));
+    for_each_l<Lambda, Cast>(1, extend_, std::forward<Lambda>(lambda));
   }
 
   template <typename Lambda, typename Cast>
   void for_each_l(size_type first, size_type last, Lambda&& lambda) noexcept
   {
+    constexpr auto arity = detail::function_traits<Lambda>::arity;
+
     for (; first != last; ++first)
     {
       auto ref = get_ref_at_idx(first);
       if (detail::is_valid(ref))
-        lambda(link(get_ref_at_idx(first)), reinterpret_cast<Cast&>(items[first >> pool_div][first & pool_mod]));
+      {
+        if constexpr (arity == 2)
+          lambda(link(get_ref_at_idx(first)), reinterpret_cast<Cast&>(items_[first >> pool_div][first & pool_mod]));
+        else
+          lambda(reinterpret_cast<Cast&>(items_[first >> pool_div][first & pool_mod]));
+      }
     }
   }
 
-  podvector<storage*, allocator> items;
-  size_type                      length           = 0;
-  size_type                      extend           = 1;
-  size_type                      first_free_index = link::null_v;
+  podvector<storage*, allocator> items_;
+  self_index                     self_;
+  size_type                      length_    = 0;
+  size_type                      extend_    = 1;
+  size_type                      free_slot_ = link::null_v;
 };
 
 } // namespace acl

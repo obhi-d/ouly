@@ -2,7 +2,6 @@
 
 #include "allocator.hpp"
 #include "default_allocator.hpp"
-#include "detail/indirection.hpp"
 #include "detail/utils.hpp"
 #include "link.hpp"
 #include "podvector.hpp"
@@ -28,7 +27,7 @@ class sparse_vector : public Allocator
 {
 public:
   using value_type     = Ty;
-  using size_type      = detail::choose_size_t<Traits, Allocator>;
+  using size_type      = detail::choose_size_t<uint32_t, Traits>;
   using allocator_type = Allocator;
 
 private:
@@ -42,9 +41,12 @@ private:
   using allocator                   = Allocator;
   using traits                      = Traits;
 
-  static constexpr bool has_null_method    = traits_has_null_method<traits, value_type>;
-  static constexpr bool has_null_value     = traits_has_null_value<traits, value_type>;
-  static constexpr bool has_null_construct = traits_has_null_construct<traits, value_type>;
+  static constexpr bool has_null_method    = detail::has_null_method<traits, value_type>;
+  static constexpr bool has_null_value     = detail::has_null_value<traits, value_type>;
+  static constexpr bool has_null_construct = detail::has_null_construct<traits, value_type>;
+  static constexpr bool has_zero_memory    = detail::has_zero_memory_attrib<traits>;
+  static constexpr bool has_no_fill        = detail::has_no_fill_attrib<traits>;
+  static constexpr bool has_pod            = detail::has_has_pod_attrib<traits>;
 
   inline static bool is_null(value_type const& other) noexcept
     requires(has_null_method)
@@ -106,7 +108,7 @@ public:
 
         if (src_storage)
         {
-          if constexpr (std::is_trivially_copyable_v<Ty> || traits::assume_pod_v)
+          if constexpr (std::is_trivially_copyable_v<Ty> || has_pod)
           {
             std::memcpy(items[i], src_storage, sizeof(storage) * pool_size + sizeof(size_type));
           }
@@ -227,6 +229,7 @@ public:
   template <typename... Args>
   auto& emplace_back(Args&&... args) noexcept
   {
+    // length is increased by emplace_at
     return emplace_at(length, std::forward<Args>(args)...);
   }
   /// @brief Emplace back an element. Order is not guranteed.
@@ -283,6 +286,46 @@ public:
     erase_at(length - 1);
   }
 
+  void resize(size_type idx) noexcept
+  {
+    if (length > idx)
+    {
+      shrink(idx);
+    }
+    else if (length < idx)
+    {
+      grow(idx);
+    }
+  }
+
+  void shrink(size_type idx) noexcept
+  {
+    assert(length > idx);
+    if constexpr (!std::is_trivially_destructible_v<value_type> && !has_pod)
+    {
+      for (size_type i = idx; i < length; ++i)
+        std::destroy_at(std::addressof(item_at(i, items)));
+    }
+    length = idx;
+  }
+
+  void grow(size_type idx) noexcept
+  {
+    assert(length < idx);
+    auto block = idx >> pool_div;
+    auto index = idx & pool_mod;
+
+    ensure_block(block);
+
+    if constexpr (!has_zero_memory && !has_no_fill)
+    {
+      for (size_type i = length; i < idx; ++i)
+        std::construct_at(std::addressof(item_at(i, items)));
+    }
+    
+    length = idx;
+  }
+
   /// @brief Drop unused pages
   void shrink_to_fit() noexcept
   {
@@ -292,10 +335,10 @@ public:
   /// @brief Set size to 0, memory is not released, objects are destroyed
   void clear() noexcept
   {
-    if constexpr (!std::is_trivially_destructible_v<value_type> && !traits::assume_pod_v)
+    if constexpr (!std::is_trivially_destructible_v<value_type> && !has_pod)
     {
       for_each(
-        [](auto, auto& v)
+        [](Ty& v)
         {
           std::destroy_at(std::addressof(v));
         });
@@ -370,37 +413,45 @@ private:
     
     if (!items[block])
     {
-      items[block] = acl::allocate<storage>(*this, sizeof(storage) * pool_size + sizeof(size_type), alignof(Ty));
-      if (traits::assume_pod_v ||
-          (std::is_trivially_copyable_v<value_type> && std::is_trivially_constructible_v<value_type>))
-      {
-        if constexpr (has_null_value)
-          std::fill(reinterpret_cast<value_type*>(items[block]),
-                    reinterpret_cast<value_type*>(items[block] + pool_size), traits::null_v);
-        else if constexpr (has_null_construct)
-        {
-          std::for_each(reinterpret_cast<value_type*>(items[block]),
-                        reinterpret_cast<value_type*>(items[block] + pool_size), traits::null_construct);
-        }
-        else
-        {
-          std::fill(reinterpret_cast<value_type*>(items[block]),
-                    reinterpret_cast<value_type*>(items[block] + pool_size), value_type());
-        }
-      }
+      if constexpr (has_zero_memory)
+        items[block] = acl::zallocate<storage>(*this, sizeof(storage) * pool_size + sizeof(size_type), alignof(Ty));
       else
       {
-        std::for_each(reinterpret_cast<value_type*>(items[block]),
-                      reinterpret_cast<value_type*>(items[block] + pool_size),
-                      [](value_type& dst)
-                      {
-                        if constexpr (has_null_value)
-                          std::construct_at(std::addressof(dst), traits::null_v);
-                        else if constexpr (has_null_construct)
-                          traits::null_construct(dst);
-                        else
-                          std::construct_at(std::addressof(dst));
-                      });
+        items[block] = acl::allocate<storage>(*this, sizeof(storage) * pool_size + sizeof(size_type), alignof(Ty));
+        if constexpr (!has_no_fill)
+        {
+          if constexpr (has_pod ||
+                        (std::is_trivially_copyable_v<value_type> && std::is_trivially_constructible_v<value_type>))
+          {
+            if constexpr (has_null_value)
+              std::fill(reinterpret_cast<value_type*>(items[block]),
+                        reinterpret_cast<value_type*>(items[block] + pool_size), traits::null_v);
+            else if constexpr (has_null_construct)
+            {
+              std::for_each(reinterpret_cast<value_type*>(items[block]),
+                            reinterpret_cast<value_type*>(items[block] + pool_size), traits::null_construct);
+            }
+            else
+            {
+              std::fill(reinterpret_cast<value_type*>(items[block]),
+                        reinterpret_cast<value_type*>(items[block] + pool_size), value_type());
+            }
+          }
+          else
+          {
+            std::for_each(reinterpret_cast<value_type*>(items[block]),
+                          reinterpret_cast<value_type*>(items[block] + pool_size),
+                          [](value_type& dst)
+                          {
+                            if constexpr (has_null_value)
+                              std::construct_at(std::addressof(dst), traits::null_v);
+                            else if constexpr (has_null_construct)
+                              traits::null_construct(dst);
+                            else
+                              std::construct_at(std::addressof(dst));
+                          });
+          }
+        }
       }
     }
   }
@@ -409,11 +460,13 @@ private:
   {
     return *reinterpret_cast<size_type*>(reinterpret_cast<std::uint8_t*>(items[p]) + sizeof(storage) * pool_size);
   }
+
   inline size_type pool_occupation(size_type p) const noexcept
   {
     return *reinterpret_cast<size_type const*>(reinterpret_cast<std::uint8_t const*>(items[p]) +
                                                sizeof(storage) * pool_size);
   }
+
   inline void validate(size_type idx) const noexcept
   {
     assert(contains(idx));
@@ -446,7 +499,7 @@ private:
 
   inline void delete_block(size_type block)
   {
-    if constexpr (!std::is_trivially_destructible_v<value_type> && !traits::assume_pod_v)
+    if constexpr (!std::is_trivially_destructible_v<value_type> && !has_pod)
     {
       for (size_type i = 0; i < pool_size; ++i)
         std::destroy_at(std::addressof(reinterpret_cast<value_type&>(items[block][i])));
@@ -460,11 +513,13 @@ private:
   /// @brief Lambda called for each element
   /// @tparam Lambda Lambda should accept value_type& parameter
   template <typename Lambda, typename Store, typename Check>
-  static void for_each(Store& items, Lambda&& lambda, Check) noexcept
+  inline static void for_each(Store& items, Lambda&& lambda, Check) noexcept
   {
     using Type = std::conditional_t<std::is_const_v<Store>, value_type const&, value_type&>;
     for (size_type block = 0; block < items.size(); ++block)
     {
+      constexpr auto arity = detail::function_traits<Lambda>::arity;
+
       auto store = items[block];
       if (store)
       {
@@ -475,7 +530,10 @@ private:
             if (is_null(reinterpret_cast<Type>(store[e])))
               continue;
           }
-          lambda((block << pool_size) | e, reinterpret_cast<Type>(store[e]));
+          if constexpr (arity == 2)
+            lambda((block << pool_div) | e, reinterpret_cast<Type>(store[e]));
+          else
+            lambda(reinterpret_cast<Type>(store[e]));
         }
       }
     }

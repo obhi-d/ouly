@@ -22,7 +22,7 @@ class collection : public Allocator
 {
 public:
   using value_type     = typename Cont::value_type;
-  using size_type      = detail::choose_size_t<Traits, Cont, Allocator>;
+  using size_type      = detail::choose_size_t<uint32_t, Traits>;
   using link           = acl::link<value_type, size_type>;
   using allocator_type = Allocator;
 

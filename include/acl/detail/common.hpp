@@ -21,20 +21,22 @@
 
 #include <acl/type_traits.hpp>
 
-#ifdef _MSC_VER
-#include <malloc.h>
-#endif
 
 #ifndef ACL_CUSTOM_MALLOC_NS
-#define ACL_NO_CUSTOM_MALLOC_NS
-#define ACL_CUSTOM_MALLOC_NS
+#include "acl/malloc_ns.hpp"
+#define ACL_CUSTOM_MALLOC_NS acl::detail
 #endif
 
 namespace acl
 {
+
 inline void* malloc(std::size_t s)
 {
   return ACL_CUSTOM_MALLOC_NS::malloc(s);
+}
+inline void* zmalloc(std::size_t s)
+{
+  return ACL_CUSTOM_MALLOC_NS::zmalloc(s);
 }
 inline void free(void* f)
 {
@@ -44,30 +46,19 @@ inline void* aligned_alloc(std::size_t alignment, std::size_t size)
 {
   assert(alignment > 0);
   assert((alignment & (alignment - 1)) == 0);
-  size = (size + alignment - 1) & ~(alignment - 1);
-#ifdef ACL_NO_CUSTOM_MALLOC_NS
-#ifdef _MSC_VER
-  return _aligned_malloc(size, alignment);
-#else
-  return ::aligned_alloc(alignment, size);
-#endif
-
-#else
   return ACL_CUSTOM_MALLOC_NS::aligned_alloc(alignment, size);
-#endif
+}
+inline void* aligned_zalloc(std::size_t alignment, std::size_t size)
+{
+  assert(alignment > 0);
+  assert((alignment & (alignment - 1)) == 0);
+  return ACL_CUSTOM_MALLOC_NS::aligned_zalloc(alignment, size);
 }
 inline void aligned_free(void* ptr)
 {
-#ifdef ACL_NO_CUSTOM_MALLOC_NS
-#ifdef _MSC_VER
-  return _aligned_free(ptr);
-#else
-  return ::free(ptr);
-#endif
-#else
   return ACL_CUSTOM_MALLOC_NS::aligned_free(ptr);
-#endif
 }
+
 } // namespace acl
 
 #if defined(_MSC_VER)

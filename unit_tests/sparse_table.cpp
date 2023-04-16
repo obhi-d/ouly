@@ -113,7 +113,7 @@ TEST_CASE("sparse_table: Random test", "[sparse_table][random]")
     std::unordered_set<std::string>   erase;
     std::unordered_set<std::uint32_t> choose;
     cont.for_each(
-      [&](auto link, auto& el)
+      [&](acl::sparse_table<std::string>::link link, std::string& el)
       {
         if (range_rand<std::uint32_t>(0, 100) > 50)
           choose.emplace(link.value());
@@ -128,7 +128,7 @@ TEST_CASE("sparse_table: Random test", "[sparse_table][random]")
     REQUIRE(cont.size() == (count + prev) - static_cast<std::uint32_t>(erase.size()));
 
     cont.for_each(
-      [&](auto link, auto& el)
+      [&](acl::sparse_table<std::string>::link link, std::string& el)
       {
         REQUIRE(erase.find(cont.at(link)) == erase.end());
       });

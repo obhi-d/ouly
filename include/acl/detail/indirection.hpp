@@ -1,311 +1,231 @@
 #pragma once
+#include "acl/allocator.hpp"
 #include "acl/link.hpp"
 #include "acl/podvector.hpp"
+#include "acl/sparse_vector.hpp"
 #include "acl/type_traits.hpp"
 #include "utils.hpp"
-#include <acl/allocator.hpp>
+#include <tuple>
 
 namespace acl
 {
 
 namespace detail
 {
-
 //============================================================
-template <typename Allocator, typename Traits, typename Base = Allocator>
-class base_indirection : public Base
+template <typename Allocator, typename Traits>
+class vector_indirection
 {
 protected:
-  using size_type = detail::choose_size_t<Traits, Allocator>;
+  using size_type = detail::choose_size_t<uint32_t, Traits>;
   using allocator = Allocator;
 
 public:
-  base_indirection()                        = default;
-  base_indirection(base_indirection&&)      = default;
-  base_indirection(base_indirection const&) = default;
-  template <typename... BaseArgs>
-  base_indirection(BaseArgs&&... base) : Base(std::forward<BaseArgs>(base)...)
-  {}
-
-  base_indirection& operator=(base_indirection&&)      = default;
-  base_indirection& operator=(base_indirection const&) = default;
-
-protected:
-  inline size_type& link_at(size_type i) noexcept
+  inline size_type& get(size_type i) noexcept
   {
-    return links[i];
+    return links_[i];
   }
 
-  inline size_type link_at(size_type i) const noexcept
+  inline size_type get(size_type i) const noexcept
   {
-    return links[i];
+    return links_[i];
   }
 
-  inline static size_type to_index(auto l) noexcept
+  inline size_type size() const
   {
-    if constexpr (detail::debug)
-    {
-      auto id = detail::index_val(l);
-      return id;
-    }
-    else
-      return l;
+    return static_cast<size_type>(links_.size());
   }
 
-  inline static size_type to_link(size_type index) noexcept
+  inline void push_back(size_type s) noexcept
   {
-    return index;
+    links_.push_back(s);
   }
 
-  inline size_type push(size_type loc) noexcept
+  inline void pop_back() noexcept
   {
-    auto idx = static_cast<size_type>(links.size());
-    links.emplace_back(loc);
-    return idx;
+    links_.pop_back();
   }
 
-  inline void shrink_to_fit(size_type) noexcept
+  inline auto best_erase(size_type s)
   {
-    links.shrink_to_fit();
+    auto& v = links_[s];
+    auto  r = links_.back();
+    v       = r;
+    links_.pop_back();
+    return r;
   }
 
-  inline void clear() noexcept
+  inline size_type& ensure_at(size_type i) noexcept
   {
-    links.clear();
+    if (i >= links_.size())
+      links_.resize(i + 1);
+    return links_[i];
   }
 
-  inline size_type max_size() const noexcept
+  inline void clear()
   {
-    return links.size();
+    links_.clear();
   }
 
-  inline bool contains(size_type l) const noexcept
+  inline void shrink_to_fit()
   {
-    return l < links.size();
+    links_.shrink_to_fit();
   }
 
-  inline size_type insert(size_type idx, size_type val) noexcept
+  inline bool contains(size_type i) const
   {
-    auto last_size = static_cast<size_type>(links.size());
-    links.resize(idx + 1);
-    links[idx] = val;
-    return last_size;
+    return (i < links_.size() && links_[i] != Traits::null_v);
+  }
+    
+  inline bool contains_valid(size_type i) const
+  {
+    return i < links_.size() && detail::is_valid(links_[i]);
   }
 
 private:
-
-  podvector<size_type, allocator> links;
+  vector<size_type, Allocator> links_;
 };
 
 //============================================================
-template <typename Allocator, typename Traits, typename Base = Allocator>
-class ref_sparse_indirection : public Base
+template <typename Allocator, typename Traits>
+class sparse_indirection
 {
 protected:
-  using size_type = detail::choose_size_t<Traits, Allocator>;
+  using size_type = detail::choose_size_t<uint32_t, Traits>;
+  using allocator = Allocator;
 
-  static constexpr auto pool_div          = detail::log2(Traits::index_pool_size);
-  static constexpr auto pool_size         = static_cast<size_type>(1) << pool_div;
-  static constexpr auto pool_mod          = pool_size - 1;
-  static constexpr bool base_is_allocator = std::is_same_v<std::decay_t<Base>, std::decay_t<Allocator>>;
-  using allocator                         = Allocator;
+  struct default_index_pool_size
+  {
+    static constexpr uint32_t index_pool_size = 4096;
+  };
+
+  struct index_traits
+  {
+    using size_type = uint32_t;
+    static constexpr uint32_t pool_size =
+      std::conditional_t<detail::has_index_pool_size<Traits>, Traits, default_index_pool_size>::index_pool_size;
+    static constexpr uint32_t null_v      = Traits::null_v;
+    static constexpr bool     no_fill = true;
+    static constexpr bool     zero_memory = true;
+  };
 
 public:
-  ref_sparse_indirection() noexcept                  = default;
-  ref_sparse_indirection(ref_sparse_indirection&&) noexcept = default;
-  ref_sparse_indirection(ref_sparse_indirection const& other) noexcept
+  inline size_type& get(size_type i) noexcept
   {
-    *this = other;
-  }
-  template <typename... BaseArgs>
-  ref_sparse_indirection(BaseArgs&&... base) : Base(std::forward<BaseArgs>(base)...)
-  {}
-
-  ~ref_sparse_indirection()
-  {
-    for (size_type i = 0, end = static_cast<size_type>(refs.size()); i < end; ++i)
-      acl::deallocate(static_cast<Allocator&>(*this), refs[i], sizeof(size_type) * pool_size);
+    return links_[i];
   }
 
-  ref_sparse_indirection& operator=(ref_sparse_indirection&&) noexcept = default;
-
-  ref_sparse_indirection& operator=(ref_sparse_indirection const& other) noexcept
+  inline size_type get(size_type i) const noexcept
   {
-    refs.resize(other.refs.size());
-    for (size_type i = 0, end = static_cast<size_type>(other.refs.size()); i != end; ++i)
-    {
-      refs[i] = acl::allocate<size_type>(static_cast<Allocator&>(*this), sizeof(size_type) * pool_size);
-      std::memcpy(refs[i], other.refs[i], sizeof(size_type) * pool_size);
-    }
-    static_cast<Base&>(*this) = static_cast<Base const&>(other);
-    return *this;
+    return links_[i];
+  }
+  
+  inline size_type size() const
+  {
+    return static_cast<size_type>(links_.size());
   }
 
+  inline void push_back(size_type i) noexcept
+  {
+    links_.emplace_back(i);
+  }
+
+  inline void pop_back() noexcept
+  {
+    links_.pop_back();
+  }
+
+  inline size_type& ensure_at(size_type i) noexcept
+  {
+    if (i >= links_.size())
+      links_.grow(i + 1);
+    return links_[i];
+  }
+
+  inline size_type best_erase(size_type s)
+  {
+    auto& v = links_[s];
+    auto  r = links_.back();
+    v       = r;
+    links_.pop_back();
+    return r;
+  }
+
+  inline bool contains(size_type i) const
+  {
+    return links_.contains(i);
+  }
+
+  inline bool contains_valid(size_type i) const
+  {
+    return i < links_.size() && detail::is_valid(links_[i]);
+  }
+
+  inline void clear()
+  {
+    links_.clear();
+  }
+
+  inline void shrink_to_fit()
+  {
+    links_.shrink_to_fit();
+  }
+
+private:
+  sparse_vector<size_type, Allocator, index_traits> links_;
+};
+
+//============================================================
+template <typename Allocator, typename Traits>
+class back_indirection
+{
 protected:
-  size_type get_ref(size_type link) const noexcept
+  using size_type = detail::choose_size_t<uint32_t, Traits>;
+  using allocator = Allocator;
+  using backref   = typename Traits::offset;
+
+public:
+  template <typename T>
+  inline size_type& get(T& i) noexcept
   {
-    return refs[link >> pool_div][link & pool_mod];
+    return backref::get(i);
   }
 
-  inline size_type pop_ref(size_type src, size_type dst)
+  template <typename T>
+  inline size_type get(T& i) const noexcept
   {
-    return (refs[dst >> pool_div][dst & pool_mod] = refs[src >> pool_div][src & pool_mod]);
+    return backref::get(i);
   }
 
-  inline void set_ref(size_type loc, size_type lnk) noexcept
+  template <typename T>
+  inline size_type& ensure_at(T& i) noexcept
   {
-    auto block = loc >> pool_div;
-    auto index = loc & pool_mod;
-    if (block >= refs.size())
-      refs.resize(block + 1, nullptr);
-    if (!refs[block])
-      refs[block] = acl::allocate<size_type>(static_cast<Allocator&>(*this), sizeof(size_type) * pool_size);
-    refs[block][index] = lnk;
+    return backref::get(i);
   }
 
-  inline void shrink_to_fit(size_type length) noexcept
+  template <typename T>
+  constexpr inline bool contains(T&) const noexcept
   {
-    auto block = (length + pool_size - 1) >> pool_div;
-    for (auto i = block, end = static_cast<size_type>(refs.size()); i < end; ++i)
-      acl::deallocate(static_cast<Allocator&>(*this), refs[i], sizeof(size_type) * pool_size);
-    refs.resize(block);
-    refs.shrink_to_fit();
-    if constexpr (!base_is_allocator)
-      Base::shrink_to_fit(length);
+    return true;
   }
 
   inline void clear() noexcept
   {
-    if constexpr (!base_is_allocator)
-      Base::clear();
   }
 
-  podvector<size_type*, allocator> refs;
-};
-
-//============================================================
-template <typename Allocator, typename Traits, typename Base = Allocator>
-class ref_indirection : public Base
-{
-protected:
-  using size_type = detail::choose_size_t<Traits, Allocator>;
-
-  static constexpr bool base_is_allocator = std::is_same_v<std::decay_t<Base>, std::decay_t<Allocator>>;
-  using allocator                         = Allocator;
-
-public:
-  ref_indirection() noexcept                         = default;
-  ref_indirection(ref_indirection&&) noexcept = default;
-  ref_indirection(ref_indirection const& other) noexcept = default;
-  template <typename... BaseArgs>
-  ref_indirection(BaseArgs&&... base) : Base(std::forward<BaseArgs>(base)...)
-  {}
-  ref_indirection& operator=(ref_indirection&&) noexcept = default;
-  ref_indirection& operator=(ref_indirection const& other) noexcept = default;
-
-protected:
-  size_type get_ref(size_type link) const noexcept
+  inline void shrink_to_fit() noexcept
   {
-    return refs[link];
-  }
-
-  inline size_type pop_ref(size_type src, size_type dst)
-  {
-    return (refs[dst] = refs[src]);
-  }
-
-  inline void set_ref(size_type loc, size_type lnk) noexcept
-  {
-    if (loc >= refs.size())
-      refs.resize(loc + 1, 0);
-    refs[loc] = lnk;
-  }
-
-  inline void shrink_to_fit(size_type length) noexcept
-  {
-    refs.shrink_to_fit();
-  }
-
-  inline void clear() noexcept
-  {
-    if constexpr (!base_is_allocator)
-      Base::clear();
-    refs.clear();
-  }
-
-  podvector<size_type, allocator> refs;
-};
-//============================================================
-template <typename Ty, typename Allocator, typename Traits, typename Base = Allocator>
-class ref_backref : public Base
-{
-protected:
-  using size_type                         = detail::choose_size_t<Traits, Allocator>;
-  using link                              = acl::link<Ty, size_type>;
-  using backref                           = typename Traits::offset;
-  static constexpr bool base_is_allocator = std::is_same_v<std::decay_t<Base>, std::decay_t<Allocator>>;
-  using allocator                         = Allocator;
-
-public:
-  ref_backref() noexcept              = default;
-  ref_backref(ref_backref&&) noexcept = default;
-  ref_backref(ref_backref const& other) noexcept
-  {
-    *this = other;
-  }
-  template <typename... BaseArgs>
-  ref_backref(BaseArgs&&... base) : Base(std::forward<BaseArgs>(base)...)
-  {}
-
-  ref_backref& operator=(ref_backref&&) noexcept            = default;
-  ref_backref& operator=(ref_backref const& other) noexcept = default;
-
-protected:
-  static size_type get_ref(Ty const& obj) noexcept
-  {
-    return backref::get(obj);
-  }
-
-  inline static size_type pop_ref(Ty const& src, Ty& dst)
-  {
-    auto l = backref::get(src);
-    backref::set(dst, l);
-    return l;
-  }
-
-  inline static void set_ref(Ty& dst, size_type lnk) noexcept
-  {
-    backref::set(dst, lnk);
-  }
-
-  inline void shrink_to_fit(size_type length) noexcept
-  {
-    if constexpr (!base_is_allocator)
-      Base::shrink_to_fit(length);
-  }
-
-  inline void clear() noexcept
-  {
-    if constexpr (!base_is_allocator)
-      Base::clear();
   }
 };
 
-template <typename Ty, typename Allocator, typename Traits>
-using packed_table_base = std::conditional_t<
-  has_backref_v<Traits>,
-  detail::ref_backref<Ty, Allocator, Traits, detail::base_indirection<Allocator, Traits, Allocator>>,
-  detail::ref_sparse_indirection<Allocator, Traits, detail::base_indirection<Allocator, Traits, Allocator>>>;
+template <typename Allocator, typename Traits>
+using indirection_type =
+  std::conditional_t<has_use_sparse_index_attrib<Traits>, detail::sparse_indirection<Allocator, Traits>,
+                     detail::vector_indirection<Allocator, Traits>>;
 
-template <typename Ty, typename Allocator, typename Traits>
-using sparse_table_base =
-  std::conditional_t<has_backref_v<Traits>, detail::ref_backref<Ty, Allocator, Traits, Allocator>,
-                     detail::ref_sparse_indirection<Allocator, Traits, Allocator>>;
-
-template <typename Ty, typename Allocator, typename Traits>
-using index_table_base =
-  std::conditional_t<has_backref_v<Traits>, detail::ref_backref<Ty, Allocator, Traits, Allocator>,
-                     detail::ref_indirection<Allocator, Traits, Allocator>>;
+template <typename Allocator, typename Traits>
+using backref_type = std::conditional_t<has_backref_v<Traits>, detail::back_indirection<Allocator, Traits>,
+                                        indirection_type<Allocator, Traits>>;
 
 } // namespace detail
 

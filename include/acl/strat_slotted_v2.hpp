@@ -244,7 +244,7 @@ private:
     {
       for (uint32_t i = 0; i < size; ++i)
       {
-        if (slots[i] == l)
+        if (slots[i].value() == l.value())
         {
           if (size)
             slots[i] = slots[size - 1];

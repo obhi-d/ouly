@@ -93,7 +93,7 @@ struct alloc_mem_manager
 };
 
 TEMPLATE_TEST_CASE("Validate arena_allocator", "[arena_allocator.strat]",
-  // clang-format off
+                   // clang-format off
   
   (acl::strat::greedy_v1<uint32_t>),
   (acl::strat::greedy_v0<uint32_t>),
@@ -105,12 +105,15 @@ TEMPLATE_TEST_CASE("Validate arena_allocator", "[arena_allocator.strat]",
   (acl::strat::slotted_v0<uint32_t, 256, 255, 4, acl::strat::best_fit_tree<uint32_t>>),
   (acl::strat::slotted_v1<uint32_t, 256, 255, 4, acl::strat::best_fit_tree<uint32_t>>),
   (acl::strat::slotted_v2<uint32_t, 256, 255, 8, 4, acl::strat::best_fit_tree<uint32_t>>)
-  // clang-format on
+                   // clang-format on
 )
 {
   using allocator_t = acl::arena_allocator<TestType, alloc_mem_manager, uint32_t, true>;
 
-  std::minstd_rand                        gen;
+  std::random_device rd;
+  unsigned int      seed = rd();
+  std::cout << "---- seed ----" << seed << std::endl;
+  std::minstd_rand                        gen(seed);
   std::bernoulli_distribution             dice(0.7);
   std::uniform_int_distribution<uint32_t> generator(1, 10);
   enum action
@@ -124,10 +127,10 @@ TEMPLATE_TEST_CASE("Validate arena_allocator", "[arena_allocator.strat]",
   {
     if (dice(gen) || mgr.valids.size() == 0)
     {
-      acl::fixed_alloc_desc<std::uint32_t, TestType::min_granularity> desc(generator(gen) * TestType::min_granularity, 
-                                          static_cast<acl::uhandle>(mgr.allocs.size()),
-                                          acl::alloc_option_bits::f_defrag);
-      auto                           info = allocator.allocate(desc);
+      acl::fixed_alloc_desc<std::uint32_t, TestType::min_granularity> desc(generator(gen) * TestType::min_granularity,
+                                                                           static_cast<acl::uhandle>(mgr.allocs.size()),
+                                                                           acl::alloc_option_bits::f_defrag);
+      auto                                                            info = allocator.allocate(desc);
       mgr.allocs.emplace_back(info, desc.size());
       mgr.fill(mgr.allocs.back());
       mgr.valids.push_back(desc.huser());
