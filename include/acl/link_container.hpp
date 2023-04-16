@@ -44,15 +44,17 @@ public:
   void sync(registry const& imax)
   {
     items_.resize(imax.max_size());
-    if constexpr (acl::detail::debug)
+#ifdef ACL_DEBUG
       revisions_.resize(imax.max_size(), 0);
+#endif
   }
 
   void resize(size_type imax)
   {
     items_.resize(imax);
-    if constexpr (acl::detail::debug)
-      revisions_.resize(imax, 0);
+#ifdef ACL_DEBUG
+    revisions_.resize(imax, 0);
+#endif
   }
 
   template <typename... Args>
@@ -67,8 +69,9 @@ public:
   {
     if constexpr (!std::is_trivially_destructible_v<Ty>)
       std::destroy_at((Ty*)&items_[l.as_index()]);
-    if constexpr (acl::detail::debug)
-      revisions_[l.as_index()]++;
+#ifdef ACL_DEBUG
+    revisions_[l.as_index()]++;
+#endif
   }
 
   Ty& at(link l)
