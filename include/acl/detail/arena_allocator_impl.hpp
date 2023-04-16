@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "acl/alloc_desc.hpp"
 #include "arena.hpp"
 #include <bit>
 
@@ -74,7 +75,7 @@ protected:
   using block_link     = typename block_bank::link;
 
   using memory_move   = detail::memory_move<size_type>;
-  using arena_manager = typename manager;
+  using arena_manager = manager;
   using bank_data     = detail::bank_data<size_type, extension>;
 
   struct remap_data

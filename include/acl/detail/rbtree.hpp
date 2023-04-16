@@ -49,6 +49,7 @@ private:
   using value_type = typename Accessor::value_type;
   using node_type  = typename Accessor::node_type;
   using container  = typename Accessor::container;
+  using tree_node  = acl::detail::tree_node<Tombstone>;
 
   inline static bool is_set(node_type const& node)
   {

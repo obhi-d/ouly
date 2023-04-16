@@ -1,7 +1,5 @@
 #pragma once
 
-#include "detail/utils.hpp"
-#include "type_traits.hpp"
 #include "default_allocator.hpp"
 #include "link.hpp"
 #include <algorithm>
@@ -19,7 +17,7 @@ class basic_link_registry
 {
 public:
   using size_type = SizeType;
-  using link = link<Ty, size_type>;
+  using link = acl::link<Ty, size_type>;
 
   inline link emplace()
   {

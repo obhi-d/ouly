@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "detail/arena.hpp"
+#include <optional>
 
 namespace acl::strat
 {

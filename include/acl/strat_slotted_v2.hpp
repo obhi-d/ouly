@@ -16,11 +16,11 @@ namespace acl::strat
 ///   The certain number of bucket slots are made avialable based on max_bucket
 template <typename usize_t = std::size_t, std::size_t granularity = 256, std::size_t max_bucket = 255,
           std::size_t fixed_max_per_slot = 8, usize_t search_window = 4,
-          typename fallback = strat::best_fit_v0<usize_t>>
+          typename fallback_strat = strat::best_fit_v0<usize_t>>
 class slotted_v2
 {
 public:
-  using fallback_allocator = fallback;
+  using fallback_allocator = fallback_strat;
 
   using extension                = fallback_allocator::extension;
   using fallback_allocate_result = typename fallback_allocator::allocate_result;
