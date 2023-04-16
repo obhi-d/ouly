@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.1)
 project(acl VERSION 0.0.1 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 
-option(ACL_BUILD_TESTS "Build the unit tests when BUILD_TESTING is enabled." ON)
+option(ACL_BUILD_TESTS "Build the unit tests when BUILD_TESTING is enabled." OFF)
 option(ASAN_ENABLED "Build this target with AddressSanitizer" OFF)
 option(ACL_REC_STATS "No stats for allocator" OFF)
 
@@ -48,7 +48,7 @@ include(CTest) #adds option BUILD_TESTING (default ON)
 
 if(BUILD_TESTING AND ACL_BUILD_TESTS)
     enable_testing()
-    add_subdirectory(unit_tests EXCLUDE_FROM_ALL)
+    add_subdirectory(unit_tests)
 endif()
 
 ##
