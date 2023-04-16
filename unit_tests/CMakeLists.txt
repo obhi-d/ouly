@@ -23,6 +23,7 @@ FetchContent_MakeAvailable(nanobench)
 
 add_executable(acl-validity
  "validity_main.cpp"
+ "link_container.cpp"
  "packed_table.cpp" 
  "sparse_table.cpp" 
  "collection.cpp" 
@@ -33,10 +34,9 @@ add_executable(acl-validity
  "soavector.cpp" 
  "podvector.cpp" 
  "table.cpp" 
-  
  "sparse_vector.cpp" 
  "dynamic_array.cpp"
- "arena_allocator.cpp" "link_container.cpp")
+ "arena_allocator.cpp")
 
 target_link_libraries(acl-validity acl::acl Catch2::Catch2)
 target_compile_definitions(acl-validity

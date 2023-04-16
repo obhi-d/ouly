@@ -159,11 +159,8 @@ inline auto index_val(size_type val)
 template <typename size_type>
 inline size_type revise(size_type val)
 {
-  constexpr size_type one  = 1;
-  constexpr size_type mask = (one << (((sizeof(size_type) - one) * 8) + 1));
-  
   if constexpr (detail::debug)
-    return val + mask;
+    return hazard_idx(index_val(val), (hazard_val(val) + 1));
   else
     return val;
 }

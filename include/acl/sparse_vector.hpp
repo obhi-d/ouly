@@ -297,7 +297,7 @@ public:
     if constexpr (!std::is_trivially_destructible_v<value_type> && !has_pod)
     {
       for (size_type i = idx; i < length_; ++i)
-        std::destroy_at(std::addressof(item_at(i, items_)));
+        std::destroy_at(std::addressof(item_at(i)));
     }
     length_ = idx;
   }
@@ -313,7 +313,9 @@ public:
     if constexpr (!has_zero_memory && !has_no_fill)
     {
       for (size_type i = length_; i < idx; ++i)
-        std::construct_at(std::addressof(item_at(i, items_)));
+      {
+        std::construct_at(std::addressof(item_at(i)));
+      }
     }
 
     length_ = idx;
@@ -349,13 +351,13 @@ public:
   value_type& at(size_type l) noexcept
   {
     assert(l < length_);
-    return item_at(l, items_);
+    return item_at(l);
   }
 
   value_type const& at(size_type l) const noexcept
   {
     assert(l < length_);
-    return item_at(l, items_);
+    return item_at(l);
   }
 
   value_type& operator[](size_type l) noexcept
@@ -462,12 +464,17 @@ private:
     assert(contains(idx));
   }
 
-  template <typename Store>
-  inline static auto& item_at(size_type idx, Store& store_items) noexcept
+  inline auto& item_at(size_type idx) noexcept
   {
     auto block = (idx >> pool_div);
-    return reinterpret_cast<std::conditional_t<std::is_const_v<Store>, value_type const&, value_type&>>(
-      store_items[block][idx & pool_mod]);
+    ensure_block(block);
+    return reinterpret_cast<value_type&>(items_[block][idx & pool_mod]);
+  }
+
+  inline auto& item_at(size_type idx) const noexcept
+  {
+    auto block = (idx >> pool_div);
+    return reinterpret_cast<value_type const&>(items_[block][idx & pool_mod]);
   }
 
   inline void erase_at(size_type idx) noexcept

@@ -199,16 +199,23 @@ concept has_zero_memory_attrib = requires {
                                      } -> std::same_as<std::true_type>;
                                  };
 
+
 template <typename S, typename T1, typename... Args>
 struct choose_size_ty
 {
-  using type = std::conditional_t<has_size_type_v<T1>, typename T1::size_type, typename choose_size_ty<Args...>::type>;
+  using type = std::conditional_t<has_size_type_v<T1>, typename choose_size_ty<S, T1>::type, typename choose_size_ty<Args...>::type>;
 };
 
 template <typename S, typename T1>
 struct choose_size_ty<S, T1>
 {
-  using type = std::conditional_t<has_size_type_v<T1>, typename T1::size_type, S>;
+  using type = S;
+};
+
+template <typename S, has_size_type_v T1>
+struct choose_size_ty<S, T1>
+{
+  using type = typename T1::size_type;
 };
 
 template <typename S, typename... Args>

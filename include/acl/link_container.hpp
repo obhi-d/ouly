@@ -18,15 +18,14 @@ struct default_link_container_traits
 /// @brief Container for link_registry items. Item type must be standard layout, pod like objects.
 /// @tparam Ty
 /// @tparam Traits
-template <typename Ty, typename Traits = default_link_container_traits<Ty>>
+template <typename Ty, typename Traits>
 class basic_link_container
 {
-  static_assert(std::is_standard_layout_v<Ty>, "Requires standard layout for type");
   using storage_type = acl::detail::aligned_storage<sizeof(Ty), alignof(Ty)>;
   using vector_type =
     std::conditional_t<detail::has_use_sparse_attrib<Traits>, sparse_vector<storage_type, default_allocator<>, Traits>,
                        vector<storage_type>>;
-  using size_type = std::conditional_t<detail::has_size_type_v<Traits>, typename Traits::size_type, uint32_t>;
+  using size_type = detail::choose_size_t<uint32_t, Traits>;
 
 public:
   using registry = basic_link_registry<Ty, size_type>;
@@ -42,9 +41,18 @@ public:
     return items_;
   }
 
+  void sync(registry const& imax)
+  {
+    items_.resize(imax.max_size());
+    if constexpr (acl::detail::debug)
+      revisions_.resize(imax.max_size(), 0);
+  }
+
   void resize(size_type imax)
   {
     items_.resize(imax);
+    if constexpr (acl::detail::debug)
+      revisions_.resize(imax, 0);
   }
 
   template <typename... Args>
@@ -57,7 +65,8 @@ public:
 
   void erase(link l)
   {
-    std::destroy_at(*(Ty*)&items_[l.as_index()]);
+    if constexpr (!std::is_trivially_destructible_v<Ty>)
+      std::destroy_at((Ty*)&items_[l.as_index()]);
     if constexpr (acl::detail::debug)
       revisions_[l.as_index()]++;
   }
@@ -83,7 +92,7 @@ private:
 #endif
 };
 
-template <typename Ty>
-using link_container = basic_link_container<Ty>;
+template <typename Ty, typename Traits = default_link_container_traits<Ty>>
+using link_container = basic_link_container<Ty, Traits>;
 
 } // namespace acl
