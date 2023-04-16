@@ -17,6 +17,17 @@
       }
     },
     {
+      "name": "linux-release",
+      "displayName": "Linux Release",
+      "description": "Target the Windows Subsystem for Linux (WSL) or a remote Linux system.",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}"
+      }
+    },
+    {
       "name": "macos-default",
       "displayName": "macOS Debug",
       "description": "Target a remote macOS system with Ninja",
@@ -76,8 +87,12 @@
       "configurePreset": "windows-release"
     },
     {
-      "name": "Linux Debug",
+      "name": "linux-default",
       "configurePreset": "linux-default"
+    },
+    {
+      "name": "linux-release",
+      "configurePreset": "linux-release"
     }
   ]
 }

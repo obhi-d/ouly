@@ -44,7 +44,9 @@ TEMPLATE_TEST_CASE("link_container: Validate", "[link_container][trivial]", trai
 
   auto e10 = registry.emplace();
   REQUIRE(e1.as_index() == e10.as_index());
+#ifndef NDEBUG
   REQUIRE(e1.revision() != e10.revision());
+#endif
 
   table.sync(registry);
   table.emplace(e10, 1300);
@@ -80,7 +82,9 @@ TEMPLATE_TEST_CASE("link_container: Validate", "[link_container][nontrivial]", t
 
   auto e10 = registry.emplace();
   REQUIRE(e1.as_index() == e10.as_index());
+#ifndef NDEBUG
   REQUIRE(e1.revision() != e10.revision());
+#endif
 
   table.sync(registry);
   table.emplace(e10, "1300");

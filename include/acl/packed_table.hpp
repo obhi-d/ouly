@@ -216,8 +216,9 @@ public:
 
     if (free_key_slot_)
     {
-      l              = detail::revise(detail::validate(free_key_slot_));
-      auto& k        = keys_.get(detail::index_val(free_key_slot_));
+      auto idx       = detail::validate(free_key_slot_);
+      l              = detail::revise(idx);
+      auto& k        = keys_.get(detail::index_val(idx));
       free_key_slot_ = k;
       k              = key;
     }
@@ -365,7 +366,7 @@ public:
     auto fi = free_key_slot_;
     while (fi)
     {
-      auto idx = detail::index_val(fi);
+      auto idx = detail::index_val(detail::validate(fi));
       assert(keys_.get(idx) != idx);
       assert(std::ranges::find(frees, idx) == frees.end());
       fi = keys_.get(idx);
