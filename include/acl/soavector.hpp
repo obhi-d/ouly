@@ -457,7 +457,7 @@ public:
     if (sz > size_)
     {
       reserve(sz);
-      uninitialized_fill(size_, sz - size, c, index_seq);
+      uninitialized_fill(size_, sz - size_, c, index_seq);
     }
     else
       destroy_all(sz, size_ - sz, index_seq);
