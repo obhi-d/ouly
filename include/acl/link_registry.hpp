@@ -12,7 +12,7 @@ namespace acl
 ///        on a seperate container based on the links.
 /// @tparam Ty 
 /// @tparam SizeType 
-template <typename Ty = std::void_t<>, typename SizeType = uint32_t>
+template <typename Ty = void, typename SizeType = uint32_t>
 class basic_link_registry
 {
 public:
@@ -72,6 +72,7 @@ private:
   uint32_t max_size_ = 1;
 };
 
-template <typename Ty = std::void_t<>>
+template <typename Ty = void>
 using link_registry = basic_link_registry<Ty>;
+
 }

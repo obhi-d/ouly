@@ -15,6 +15,16 @@ struct traits_2
   static constexpr bool     use_sparse = true;
 };
 
+TEST_CASE("link_container: Validate", "[link_container][void]")
+{
+
+  acl::link_registry<> registry;
+  auto                 e1 = registry.emplace();
+  acl::link_container<int> table;
+  table.emplace(e1, 100);
+  REQUIRE(table.at(e1) == 100);
+}
+
 TEMPLATE_TEST_CASE("link_container: Validate", "[link_container][trivial]", traits_1, traits_2)
 {
   typename acl::link_container<int, TestType>::registry registry;

@@ -41,11 +41,13 @@ public:
     return items_;
   }
 
-  void sync(registry const& imax)
+  template <typename ITy>
+    requires std::same_as<ITy, Ty> || std::same_as<ITy, void>
+  void sync(basic_link_registry<ITy, size_type> const& imax)
   {
     items_.resize(imax.max_size());
 #ifdef ACL_DEBUG
-      revisions_.resize(imax.max_size(), 0);
+    revisions_.resize(imax.max_size(), 0);
 #endif
   }
 
@@ -57,15 +59,18 @@ public:
 #endif
   }
 
-  template <typename... Args>
-  auto& emplace(link l, Args&&... args)
+  template <typename ITy, typename... Args>
+    requires std::same_as<ITy, Ty> || std::same_as<ITy, void>
+  auto& emplace(acl::link<ITy, size_type> l, Args&&... args)
   {
     Ty* obj = (Ty*)&items_[l.as_index()];
     std::construct_at<Ty>(obj, std::forward<Args>(args)...);
     return *obj;
   }
 
-  void erase(link l)
+  template <typename ITy>
+    requires std::same_as<ITy, Ty> || std::same_as<ITy, void>
+  void erase(acl::link<ITy, size_type> l)
   {
     if constexpr (!std::is_trivially_destructible_v<Ty>)
       std::destroy_at((Ty*)&items_[l.as_index()]);
@@ -74,14 +79,18 @@ public:
 #endif
   }
 
-  Ty& at(link l)
+  template <typename ITy>
+    requires std::same_as<ITy, Ty> || std::same_as<ITy, void>
+  Ty& at(acl::link<ITy, size_type> l)
   {
     if constexpr (acl::detail::debug)
       assert(revisions_[l.as_index()] == l.revision());
     return *(Ty*)&items_[l.as_index()];
   }
 
-  Ty const& at(link l) const
+  template <typename ITy>
+    requires std::same_as<ITy, Ty> || std::same_as<ITy, void>
+  Ty const& at(acl::link<ITy, size_type> l) const
   {
     if constexpr (acl::detail::debug)
       assert(revisions_[l.as_index()] == l.revision());
