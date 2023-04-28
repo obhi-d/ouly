@@ -160,6 +160,13 @@ concept has_no_fill_attrib = requires {
                              };
 
 template <typename Traits>
+concept has_trivially_destroyed_on_move_attrib = requires {
+                               Traits::no_fill;
+                               {
+                                 std::bool_constant<Traits::trivially_destroyed_on_move>()
+                                 } -> std::same_as<std::true_type>;
+                             };
+template <typename Traits>
 concept has_use_sparse_attrib = requires {
                                   Traits::use_sparse;
                                   {

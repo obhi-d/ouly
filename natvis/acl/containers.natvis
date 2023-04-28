@@ -11,6 +11,19 @@
 			</ArrayItems>
 		</Expand>
 	</Type>
+  <Type Name="acl::small_vector&lt;*&gt;">
+    <DisplayString>{{ size={size_} }}</DisplayString>
+    <Expand>
+      <Item Name="[size]" ExcludeView="simple">size_</Item>
+      <Item Name="[capacity]" ExcludeView="simple" Condition="(size_ &lt;= inline_capacity)">inline_capacity</Item>
+      <Item Name="[capacity]" ExcludeView="simple" Condition="(size_ &gt; inline_capacity)">data_store_.hdata_.capacity_</Item>
+      <ArrayItems>
+        <Size>size_</Size>
+        <ValuePointer Condition="(size_ &lt;= inline_capacity)">($T1*)&amp;data_store_.ldata_</ValuePointer>
+        <ValuePointer Condition="(size_ &gt; inline_capacity)">($T1*)data_store_.hdata_.pdata_</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
 	<Type Name="acl::soavector&lt;*&gt;">
 		<DisplayString>{{ size={size_} }}</DisplayString>
 		<Expand>

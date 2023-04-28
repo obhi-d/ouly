@@ -23,6 +23,8 @@ FetchContent_MakeAvailable(nanobench)
 
 add_executable(acl-validity
  "validity_main.cpp"
+ "small_vector.cpp"
+ "basic_queue.cpp"
  "link_container.cpp"
  "packed_table.cpp" 
  "sparse_table.cpp" 

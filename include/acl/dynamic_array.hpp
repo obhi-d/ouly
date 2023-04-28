@@ -9,6 +9,7 @@
 
 namespace acl
 {
+/// @remarks Defines a dynamic non-growable vector like container
 template <typename T, typename Allocator = default_allocator<>, uint32_t N = 0>
 class dynamic_array;
 

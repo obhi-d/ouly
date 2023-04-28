@@ -21,6 +21,7 @@ TEST_CASE("link_container: Validate", "[link_container][void]")
   acl::link_registry<> registry;
   auto                 e1 = registry.emplace();
   acl::link_container<int> table;
+  table.sync(registry);
   table.emplace(e1, 100);
   REQUIRE(table.at(e1) == 100);
 }

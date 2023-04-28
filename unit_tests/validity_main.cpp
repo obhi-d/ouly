@@ -7,6 +7,7 @@
 #include <acl/sparse_table.hpp>
 #include <acl/tagged_ptr.hpp>
 #include <catch2/catch_all.hpp>
+#include <acl/intrusive_ptr.hpp>
 
 int main(int argc, char* argv[])
 {
@@ -17,6 +18,39 @@ int main(int argc, char* argv[])
   // your clean-up...
 
   return result;
+}
+
+struct myClass
+{
+  int value = 0;
+};
+
+int intrusive_count_add(myClass* m)
+{
+  return m->value++;
+}
+int intrusive_count_sub(myClass* m)
+{
+  return m->value--;
+}
+int intrusive_count_get(myClass* m)
+{
+  return m->value;
+}
+
+TEST_CASE("Validate general_allocator", "[intrusive_ptr]")
+{
+  acl::intrusive_ptr<myClass> ptr;
+  CHECK(ptr == nullptr);
+  myClass instance;
+  ptr = &instance;
+  CHECK(ptr != nullptr);
+  CHECK(ptr.use_count() == 1);
+  CHECK(ptr->value == 1);
+  ptr.reset();
+  CHECK(instance.value == 0);
+  ptr = &instance;
+  CHECK(ptr.use_count() == 1);
 }
 
 TEST_CASE("Validate general_allocator", "[general_allocator]")
