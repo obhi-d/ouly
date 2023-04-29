@@ -25,23 +25,23 @@ add_executable( acl-validity
 
  "validity_main.cpp"
  "intrusive_list.cpp"
- #"program_args.cpp"
- #"small_vector.cpp"
- #"basic_queue.cpp"
- #"link_container.cpp"
- #"packed_table.cpp" 
- #"sparse_table.cpp" 
- #"collection.cpp" 
- #"blackboard.cpp" 
- #"sparse_table.cpp" 
- #"collection.cpp" 
- #"blackboard.cpp" 
- #"soavector.cpp" 
- #"podvector.cpp" 
- #"table.cpp" 
- #"sparse_vector.cpp" 
- #"dynamic_array.cpp"
- #"arena_allocator.cpp" 
+ "program_args.cpp"
+ "small_vector.cpp"
+ "basic_queue.cpp"
+ "link_container.cpp"
+ "packed_table.cpp" 
+ "sparse_table.cpp" 
+ "collection.cpp" 
+ "blackboard.cpp" 
+ "sparse_table.cpp" 
+ "collection.cpp" 
+ "blackboard.cpp" 
+ "soavector.cpp" 
+ "podvector.cpp" 
+ "table.cpp" 
+ "sparse_vector.cpp" 
+ "dynamic_array.cpp"
+ "arena_allocator.cpp" 
  
 )
 
@@ -50,6 +50,11 @@ target_compile_definitions(acl-validity
         PUBLIC -DACL_REC_STATS)
 add_test(acl-validity acl-validity)
 target_compile_features(acl-validity PRIVATE cxx_std_20)
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  target_compile_options(acl-validity PRIVATE --coverage)
+  target_link_options(acl-validity PRIVATE --coverage)
+endif()
 
 if(ASAN_ENABLED)
   if(MSVC)
