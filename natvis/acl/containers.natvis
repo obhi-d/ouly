@@ -24,6 +24,16 @@
       </ArrayItems>
     </Expand>
   </Type>
+  <Type Name="acl::detail::list_data&lt;*&gt;">
+    <DisplayString>{{ head={head_} }}</DisplayString>
+    <Expand>
+      <LinkedListItems>
+        <HeadPointer>head_</HeadPointer>
+        <NextPointer>($T1*)( *(acl::slist_hook*)( ((char*)this) + ($T2) ) ).next</NextPointer>
+        <ValueNode>($T1*)this</ValueNode>
+      </LinkedListItems>
+    </Expand>
+  </Type>
 	<Type Name="acl::soavector&lt;*&gt;">
 		<DisplayString>{{ size={size_} }}</DisplayString>
 		<Expand>

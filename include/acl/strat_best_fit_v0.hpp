@@ -9,6 +9,7 @@ namespace acl::strat
 ///   sorted list of free available slots.
 ///   Binary search is used to find the best slot that fits
 ///   the requested memory
+///   TODO : optimize, branchless binary
 template <typename usize_type>
 class best_fit_v0
 {

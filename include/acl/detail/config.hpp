@@ -13,3 +13,9 @@ inline static constexpr bool debug = true;
 inline static constexpr bool debug = false;
 #endif
 } // namespace acl::detail
+
+#ifdef _MSC_VER
+#define ACL_POTENTIAL_EMPTY_MEMBER [[msvc::no_unique_address]]
+#else
+#define ACL_POTENTIAL_EMPTY_MEMBER [[no_unique_address]]
+#endif
