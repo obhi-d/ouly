@@ -26,9 +26,30 @@ public:
     buffer = underlying_allocator::allocate(k_arena_size, 0);
   }
 
+  linear_allocator(linear_allocator const&) = delete;
+
+  linear_allocator(linear_allocator&& other) noexcept
+      : buffer(other.buffer), left_over(other.left_over), k_arena_size(other.k_arena_size)
+  {
+    other.buffer    = nullptr;
+    other.left_over = 0;
+  }
+
   ~linear_allocator()
   {
     underlying_allocator::deallocate(buffer, k_arena_size);
+  }
+
+  linear_allocator& operator=(linear_allocator const&) = delete;
+
+  linear_allocator& operator=(linear_allocator&& other) noexcept
+  {
+    assert(k_arena_size == other.k_arena_size);
+    buffer          = other.buffer;
+    left_over       = other.left_over;
+    other.buffer    = nullptr;
+    other.left_over = 0;
+    return *this;
   }
 
   inline constexpr static address null()

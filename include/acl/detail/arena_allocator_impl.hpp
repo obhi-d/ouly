@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "acl/alloc_desc.hpp"
 #include "arena.hpp"
+#include <functional>
 #include <bit>
 
 namespace acl::detail
@@ -95,6 +96,12 @@ public:
   {
     ibank.strat.init(*this);
   }
+   
+  arena_allocator_uimpl(arena_allocator_uimpl const&)    = default;
+  arena_allocator_uimpl(arena_allocator_uimpl&&) noexcept = default;
+
+  arena_allocator_uimpl& operator=(arena_allocator_uimpl const&)    = default;
+  arena_allocator_uimpl& operator=(arena_allocator_uimpl&&) noexcept = default;
 
   inline auto get_root_block() const
   {
@@ -194,7 +201,7 @@ public:
       merges |= f_right;
     }
 
-    if (arena.free == arena.size && mgr.drop_arena(arena.data))
+    if (arena.free == arena.size && mgr.get().drop_arena(arena.data))
     {
       // drop arena?
       if (left)
@@ -310,7 +317,7 @@ private:
   {
     this->statistics::report_new_arena();
     auto ret                       = add_arena(ibank, ihandle, iarena_size, empty);
-    ibank.bank.arenas[ret.first].data = mgr.add_arena(ret.first, iarena_size);
+    ibank.bank.arenas[ret.first].data = mgr.get().add_arena(ret.first, iarena_size);
     return ret;
   }
 
@@ -345,7 +352,7 @@ private:
 
   void defragment()
   {
-    mgr.begin_defragment(*this);
+    mgr.get().begin_defragment(*this);
     std::uint32_t arena_id = ibank.bank.arena_order.first;
     // refresh all banks
     remap_data refresh;
@@ -402,25 +409,25 @@ private:
 
     for (auto& m : moves)
       // follow the copy sequence to ensure there is no overwrite
-      mgr.move_memory(ibank.bank.arenas[m.arena_src].data, refresh.bank.arenas[m.arena_dst].data, m.from, m.to, m.size);
+      mgr.get().move_memory(ibank.bank.arenas[m.arena_src].data, refresh.bank.arenas[m.arena_dst].data, m.from, m.to, m.size);
 
     for (auto rb : rebinds)
     {
       auto& dst_blk = refresh.bank.blocks[block_link(rb)];
-      mgr.rebind_alloc(dst_blk.data,
+      mgr.get().rebind_alloc(dst_blk.data,
                        alloc_info(refresh.bank.arenas[dst_blk.arena].data, dst_blk.adjusted_offset(), rb));
     }
 
     for (auto arena_it = deleted_arenas.begin(ibank.bank.arenas); arena_it; arena_it = deleted_arenas.erase(arena_it))
     {
       auto& arena = *arena_it;
-      mgr.remove_arena(arena.data);
+      mgr.get().remove_arena(arena.data);
       statistics::report_defrag_arenas_removed();
     }
 
     ibank.bank  = std::move(refresh.bank);
     ibank.strat = std::move(refresh.strat);
-    mgr.end_defragment(*this);
+    mgr.get().end_defragment(*this);
   }
 
   template <typename alloc_desc_t>
@@ -459,7 +466,7 @@ private:
   }
 
   remap_data     ibank;
-  arena_manager& mgr;
+  std::reference_wrapper<arena_manager> mgr;
   size_type      arena_size;
 };
 
@@ -475,6 +482,12 @@ public:
   inline arena_allocator_impl(usize_type i_arena_size, umanager& i_manager, Args&&... args)
       : super(i_arena_size, i_manager, std::forward<Args>(args)...)
   {}
+
+    arena_allocator_impl(arena_allocator_impl const&) = default;
+  arena_allocator_impl(arena_allocator_impl&&) noexcept = default;
+
+  arena_allocator_impl& operator=(arena_allocator_impl const&) = default;
+  arena_allocator_impl& operator=(arena_allocator_impl&&) noexcept = default;
 };
 
 } // namespace acl::detail

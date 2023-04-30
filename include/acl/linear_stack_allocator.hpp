@@ -60,12 +60,32 @@ public:
     // Initializing the cursor is important for the
     // allocate loop to work.
   }
+
+  linear_stack_allocator(linear_stack_allocator const&) = delete;
+
+  linear_stack_allocator(linear_stack_allocator&& other) noexcept
+      : arenas(std::move(other.arenas)), current_arena(other.current_arena), k_arena_size(other.k_arena_size)
+  {
+    other.current_arena = 0;
+  }
+
   ~linear_stack_allocator()
   {
     for (auto& arena : arenas)
     {
       underlying_allocator::deallocate(arena.buffer, arena.arena_size);
     }
+  }
+
+  linear_stack_allocator& operator=(linear_stack_allocator const&) = delete;
+
+  linear_stack_allocator& operator=(linear_stack_allocator&& other) noexcept
+  {
+    assert(k_arena_size == other.k_arena_size);
+    arenas              = std::move(other.arenas);
+    current_arena       = other.current_arena;
+    other.current_arena = 0;
+    return *this;
   }
 
   inline constexpr static address null()

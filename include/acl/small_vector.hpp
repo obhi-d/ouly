@@ -51,7 +51,7 @@ private:
   static constexpr bool has_zero_memory                 = detail::has_zero_memory_attrib<traits>;
   static constexpr bool has_no_fill                     = detail::has_no_fill_attrib<traits>;
   static constexpr bool has_pod                         = detail::has_has_pod_attrib<traits>;
-  static constexpr bool has_trivial_dtor                = has_pod || std::is_trivially_destructible_v<traits>;
+  static constexpr bool has_trivial_dtor                = has_pod || std::is_trivially_destructible_v<Ty>;
   static constexpr bool has_trivially_destroyed_on_move = detail::has_trivially_destroyed_on_move_attrib<traits>;
 
   using storage = detail::aligned_storage<sizeof(value_type), alignof(value_type)>;
@@ -80,7 +80,8 @@ private:
   };
 
 public:
-  explicit small_vector(const Allocator& alloc = Allocator()) noexcept : Allocator(alloc){};
+  
+  explicit small_vector(const Allocator& alloc = Allocator()) noexcept : Allocator(alloc) {} 
 
   explicit small_vector(size_type n) noexcept
   {
@@ -89,8 +90,6 @@ public:
 
   small_vector(size_type n, const Ty& value, const Allocator& alloc = Allocator()) : Allocator(alloc)
   {
-    if (n > inline_capacity)
-      unchecked_reserve_in_heap(n);
     resize(n, value);
   }
 
@@ -109,7 +108,7 @@ public:
     copy_construct(std::begin(x), std::end(x), get_data());
   }
 
-  small_vector(small_vector&& x) noexcept
+  small_vector(small_vector&& x) noexcept : Allocator(std::move((Allocator&)x))
   {
     *this = std::move(x);
   }
@@ -260,7 +259,7 @@ public:
 
   void resize(size_type sz) noexcept
   {
-    resize_fill(sz, std::false_type{});
+    resize_fill(sz, value_type());
   }
 
   void resize(size_type sz, const Ty& c) noexcept
@@ -365,8 +364,8 @@ public:
     if (capacity() <= sz)
       unchecked_reserve_in_heap(sz + std::max<size_type>(sz >> 1, 1));
 
-    std::construct_at(get_data() + sz, std::forward<Args>(args)...);
     size_ = sz + 1;
+    std::construct_at(get_data() + sz, std::forward<Args>(args)...);
   }
 
   void push_back(const Ty& x) noexcept
@@ -437,10 +436,10 @@ public:
   iterator erase(const_iterator position) noexcept
   {
     assert(position < end());
+    auto data = get_data();
     auto last = size_--;
     if constexpr (std::is_trivially_copyable_v<Ty> || has_pod)
     {
-      auto data = get_data();
       std::memmove(const_cast<iterator>(position), position + 1,
                    static_cast<std::size_t>((data + size_) - (position)) * sizeof(Ty));
       if constexpr (!has_trivial_dtor && !has_trivially_destroyed_on_move)
@@ -449,7 +448,7 @@ public:
     else
     {
       auto it  = const_cast<iterator>(position);
-      auto end = get_data() + size_;
+      auto end = data + size_;
       for (; it != end; ++it)
         *it = std::move(*(it + 1));
       if constexpr (!has_trivial_dtor && !has_trivially_destroyed_on_move)
@@ -480,8 +479,8 @@ public:
       auto dst = const_cast<iterator>(first);
       auto src = const_cast<iterator>(last);
       auto end = get_data() + size_;
-      for (; src != end; ++src)
-        *dst = std::move(*(src + 1));
+      for (; src != end; ++src, ++dst)
+        *dst = std::move(*src);
     }
     auto data = get_data();
     auto old_size = size_;
@@ -517,14 +516,19 @@ public:
     return inline_capacity;
   }
 
+  inline bool is_inlined() const
+  {
+    return (size_ <= inline_capacity);
+  }
 
 private:
-  inline void resize_no_fill(size_type sz) noexcept
+  inline Ty* resize_no_fill(size_type sz) noexcept
   {
     if (sz <= inline_capacity)
     {
       if (size_ > inline_capacity)
         transfer_to_ib(sz, tail_type{.tail = size_});
+      return (Ty*)data_store_.ldata_.data();
     }
     else
     {
@@ -532,25 +536,19 @@ private:
       {
         unchecked_reserve_in_heap(sz);
       }
+      return (Ty*)data_store_.hdata_.pdata_;
     }
   }
 
   template <typename tail = std::false_type>
   void resize_fill(size_type sz, tail const& t) noexcept
   {
-    resize_no_fill(sz);
+    auto data_ptr = resize_no_fill(sz);
     if (sz > size_)
-    {
+    {      
       if constexpr (!std::is_trivially_constructible_v<Ty> && std::is_same_v<tail, Ty>)
-        std::uninitialized_fill_n(data() + size_, sz - size_, t);
-    }
-    else
-    {
-      if constexpr (!has_trivial_dtor)
-      {
-        std::destroy_n(data(), size_ - sz);
-      }
-    }
+        std::uninitialized_fill_n(data_ptr + size_, sz - size_, t);
+    }    
     size_ = sz;
   }
 
@@ -559,18 +557,13 @@ private:
     return is_inlined() ? (Ty*)data_store_.ldata_.data() : (Ty*)data_store_.hdata_.pdata_;
   }
 
-  inline bool is_inlined() const
-  {
-    return (size_ <= inline_capacity);
-  }
-
   inline void unchecked_reserve_in_heap(size_type n)
   {
     heap_storage copy;
     copy.capacity_ = n;
     copy.pdata_    = acl::allocate<storage>(*this, n * sizeof(storage), alignarg<storage>);
     auto ldata     = data();
-    auto d         = copy.pdata_;
+    auto d         = (Ty*)copy.pdata_;
     if constexpr (has_pod || std::is_trivially_copyable_v<Ty>)
     {
       std::memcpy(d, ldata, size_ * sizeof(Ty));
@@ -579,7 +572,7 @@ private:
     {
       std::uninitialized_move(ldata, ldata + size_, d);
       if constexpr (!has_trivial_dtor && !has_trivially_destroyed_on_move)
-        std::destroy_at(ldata, size_);
+        std::destroy_n(ldata, size_);
     }
     if (!is_inlined())
       acl::deallocate(*this, data_store_.hdata_.pdata_, data_store_.hdata_.capacity_ * sizeof(storage),
@@ -604,7 +597,7 @@ private:
       std::uninitialized_move(ldata, ldata + at, d);
       std::uninitialized_move(ldata + at, ldata + size_, d + at + holes);
       if constexpr (!has_trivial_dtor && !has_trivially_destroyed_on_move)
-        std::destroy_at(ldata, size_);
+        std::destroy_n(ldata, size_);
     }
     if (!is_inlined())
       acl::deallocate(*this, data_store_.hdata_.pdata_, data_store_.hdata_.capacity_ * sizeof(storage),
@@ -672,9 +665,16 @@ private:
     data_store_.hdata_ = copy;
   }
 
+  inline void static uninitialized_move_backward(Ty* src, Ty* dst, size_type n)
+  {
+    for (size_type i = 0; i < n; ++i)
+      new (--dst) Ty(std::move(*(--src)));
+  }
+
   inline size_type insert_hole(const_iterator it, size_type n = 1) noexcept
   {
-    size_type p   = static_cast<size_type>(std::distance<const Ty*>(get_data(), it));
+    auto      ldata = get_data();
+    size_type p     = static_cast<size_type>(std::distance<const Ty*>(ldata, it));
     size_type nsz = size_ + n;
 
     if (capacity() < nsz)
@@ -688,9 +688,21 @@ private:
         std::memmove(src + n, src, (size_ - p) * sizeof(Ty));
       else
       {
-        std::move(src, src + (size_ - p), src + n);
+        auto min_ctor = std::min(size_ - p, n);
+        auto src_it   = ldata + size_;
+        auto dst_it   = src_it + n;
+        for (size_type i = 0; i < min_ctor; ++i)
+          new (--dst_it) Ty(std::move(*(--src_it)));
+        for (; src_it != src; )
+          *(--dst_it) = std::move(*(--src_it));
+        assert(src_it == src);
+        
         if constexpr (!has_trivial_dtor && !has_trivially_destroyed_on_move)
-          std::destroy_n(src, n);
+        {
+          assert(src_it <= dst_it);
+          for (;src_it != dst_it; ++src_it)
+            std::destroy_at(src_it);
+        }          
       }
     }
     size_ = nsz;
@@ -746,6 +758,7 @@ private:
       }
       else
       {
+        size_                = x.size_;
         data_store_.hdata_   = x.data_store_.hdata_;
         x.data_store_.hdata_ = {};
       }

@@ -40,4 +40,69 @@ static void insert(Cont& cont, std::uint32_t offset, std::uint32_t count)
     cont.emplace(std::to_string(i + offset) + ".o");
   }
 }
+
 } // namespace helper
+
+
+struct tracker
+{
+  int tracking = 0;
+  char name     = 0;
+
+  tracker() noexcept = default;
+  tracker(char c) : name(c){}
+};
+
+struct destroy_tracker
+{
+  tracker* ref = nullptr;
+
+  destroy_tracker() noexcept = default;
+  destroy_tracker(tracker& r) : ref(&r)
+  {
+    r.tracking++;
+  }
+
+  destroy_tracker(destroy_tracker&& other) noexcept : ref(other.ref)
+  {
+    other.ref = nullptr;
+  }
+  destroy_tracker(destroy_tracker const& other) noexcept : ref(other.ref)
+  {
+    if (ref)
+      ref->tracking++;
+  }
+  ~destroy_tracker()
+  {
+    if (ref)
+    {
+      ref->tracking--;
+      ref = nullptr;
+    }
+  }
+  destroy_tracker& operator=(destroy_tracker&& other) noexcept 
+  {
+    if (ref)
+      ref->tracking--;
+    ref       = other.ref;
+    other.ref = nullptr;
+    return *this;
+  }
+  destroy_tracker& operator=(destroy_tracker const& other) noexcept 
+  {
+    if (ref)
+      ref->tracking--;
+    ref = other.ref;
+    if (ref)
+      ref->tracking++;
+    return *this;
+  }
+
+  constexpr auto operator<=>(destroy_tracker const&) const noexcept = default;
+};
+
+template <typename I>
+std::string to_lstring(I i)
+{
+  return "a_very_long_string_to_avoid_soo" + std::to_string(i);
+}

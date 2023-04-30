@@ -1,4 +1,4 @@
-name: Test
+name: Build
 
 on:
   push:
@@ -11,7 +11,7 @@ env:
   BUILD_TYPE: Release
   
 jobs:
-  test:
+  build:
     # The CMake configure and build commands are platform agnostic and should work equally well on Windows or Mac.
     # You can convert this to a matrix build if you need cross-platform coverage.
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
@@ -36,9 +36,11 @@ jobs:
       working-directory: ${{github.workspace}}/build/unit_tests
       # Execute tests defined by the CMake configuration.
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-      run: |
-        ctest -C ${{env.BUILD_TYPE}}
-        lcov -c -d . --no-external --directory ${{github.workspace}}/include  -o lcov.info
+      run: ctest -C ${{env.BUILD_TYPE}}
+
+    - name: Run lcov
+      working-directory: ${{github.workspace}}/build/unit_tests
+      run: lcov -c --directory ${{github.workspace}}/include -d . --no-external -o lcov.info
 
     - name: Coverage
       uses: coverallsapp/github-action@v2

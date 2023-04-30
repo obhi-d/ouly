@@ -29,6 +29,14 @@ public:
   using block_link      = typename block_bank::link;
   using allocate_result = detail::free_list::iterator;
 
+  best_fit_v0() noexcept                = default;
+  best_fit_v0(best_fit_v0 const&)     = default;
+  best_fit_v0(best_fit_v0&&) noexcept = default;
+
+  best_fit_v0& operator=(best_fit_v0 const&)     = default;
+  best_fit_v0& operator=(best_fit_v0&&) noexcept = default;
+
+
   inline optional_addr try_allocate(bank_data& bank, size_type size)
   {
     if (free_ordering.size() == 0 || bank.blocks[block_link(free_ordering.back())].size < size)

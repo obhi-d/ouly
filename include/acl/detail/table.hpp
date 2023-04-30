@@ -22,6 +22,13 @@ class table
   using freepool = std::conditional_t<IsPOD, free_idx, podvector<std::uint32_t>>;
 
 public:
+  table() noexcept = default;
+  table(table const&) = default;
+  table(table &&) noexcept = default;
+
+  table& operator=(table const&)     = default;
+  table& operator=(table&&) noexcept = default;
+
   template <typename... Args>
   std::uint32_t emplace(Args&&... args)
   {

@@ -16,6 +16,13 @@ class best_fit_tree
 
 public:
 
+  best_fit_tree() noexcept = default;
+  best_fit_tree(best_fit_tree const&) = default;
+  best_fit_tree(best_fit_tree &&) noexcept = default;
+
+  best_fit_tree& operator=(best_fit_tree const&) = default;
+  best_fit_tree& operator=(best_fit_tree&&) noexcept = default;
+
   static constexpr usize_type min_granularity = 4;
 
   using extension  = acl::detail::tree_node<1>;

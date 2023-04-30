@@ -25,6 +25,13 @@ public:
   using block_link      = typename block_bank::link;
   using allocate_result = uint32_t;
 
+  greedy_v1() noexcept            = default;
+  greedy_v1(greedy_v1 const&)     = default;
+  greedy_v1(greedy_v1&&) noexcept = default;
+
+  greedy_v1&           operator=(greedy_v1 const&)     = default;
+  greedy_v1&           operator=(greedy_v1&&) noexcept = default;
+
   inline optional_addr try_allocate(bank_data& bank, size_type size)
   {
     uint32_t i = head;

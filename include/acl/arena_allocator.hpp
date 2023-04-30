@@ -2,11 +2,11 @@
 #include "detail/arena_allocator_impl.hpp"
 #include "strat_best_fit_tree.hpp"
 #include "strat_best_fit_v0.hpp"
+#include "strat_greedy_v0.hpp"
+#include "strat_greedy_v1.hpp"
 #include "strat_slotted_v0.hpp"
 #include "strat_slotted_v1.hpp"
 #include "strat_slotted_v2.hpp"
-#include "strat_greedy_v0.hpp"
-#include "strat_greedy_v1.hpp"
 
 namespace acl
 {
@@ -29,11 +29,17 @@ public:
 
   using size_type  = usize_t;
   using alloc_info = acl::alloc_info<size_type>;
-  
+
   template <typename... Args>
   arena_allocator(size_type i_arena_size, manager& i_manager, Args&&... args)
       : super(i_arena_size, i_manager, std::forward<Args>(args)...)
   {}
+
+  arena_allocator(arena_allocator const&)     = default;
+  arena_allocator(arena_allocator&&) noexcept = default;
+
+  arena_allocator& operator=(arena_allocator const&)     = default;
+  arena_allocator& operator=(arena_allocator&&) noexcept = default;
 };
 
 } // namespace acl

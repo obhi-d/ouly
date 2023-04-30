@@ -21,50 +21,50 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(Catch2)
 FetchContent_MakeAvailable(nanobench)
 
+function(add_unit_test)
 
-add_executable( acl-validity
-
- "validity_main.cpp"
- "intrusive_list.cpp"
- "program_args.cpp"
- "small_vector.cpp"
- "basic_queue.cpp"
- "link_container.cpp"
- "packed_table.cpp" 
- "sparse_table.cpp" 
- "collection.cpp" 
- "blackboard.cpp" 
- "sparse_table.cpp" 
- "collection.cpp" 
- "blackboard.cpp" 
- "soavector.cpp" 
- "podvector.cpp" 
- "table.cpp" 
- "sparse_vector.cpp" 
- "dynamic_array.cpp"
- "arena_allocator.cpp" 
- 
-)
-
-target_link_libraries(acl-validity acl::acl Catch2::Catch2)
-target_compile_definitions(acl-validity
-        PUBLIC -DACL_REC_STATS)
-add_test(acl-validity acl-validity)
-target_compile_features(acl-validity PRIVATE cxx_std_20)
-
-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-  target_compile_options(acl-validity PRIVATE --coverage)
-  target_link_options(acl-validity PRIVATE --coverage)
-endif()
-
-if(ASAN_ENABLED)
-  if(MSVC)
-  else()
-    message("-- Address santizer is active for acl unit_tests")
-    target_compile_options(acl-validity PUBLIC -fsanitize=address)
-    target_link_options(acl-validity PUBLIC -fsanitize=address)
+  set(options SKIP_TEST SANITIZE)
+  set(one_value_arg NAME)
+  set(multi_value_arg FILES)
+  cmake_parse_arguments(unit_test "${options}" "${one_value_arg}" "${multi_value_arg}" ${ARGN})
+  set(target_name "test_${unit_test_NAME}")
+  add_executable(${target_name} ${unit_test_FILES} "validity_main.cpp")
+  target_link_libraries(${target_name} acl::acl Catch2::Catch2)
+  target_compile_definitions(${target_name} PUBLIC -DACL_REC_STATS)
+  ## Skip test?
+  if (NOT unit_test_SKIP_TEST)
+    add_test(${target_name} ${target_name})
   endif()
-endif()
+
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_compile_options(${target_name} PRIVATE --coverage)
+    target_link_options(${target_name} PRIVATE --coverage)
+    if (unit_test_SANITIZE)
+      target_compile_options(${target_name} PUBLIC -fsanitize=address)
+      target_link_options(${target_name} PUBLIC -fsanitize=address)
+    endif()
+  endif()
+
+
+endfunction(add_unit_test)
+
+add_unit_test(NAME basic_tests FILES "basic_tests.cpp")
+add_unit_test(NAME intrusive_list FILES "intrusive_list.cpp")
+add_unit_test(NAME program_args FILES "program_args.cpp")
+add_unit_test(NAME small_vector FILES "small_vector.cpp")
+add_unit_test(NAME basic_queue FILES "basic_queue.cpp")
+add_unit_test(NAME link_container FILES "link_container.cpp")
+add_unit_test(NAME packed_table FILES "packed_table.cpp")
+add_unit_test(NAME sparse_table FILES "sparse_table.cpp")
+add_unit_test(NAME collection FILES "collection.cpp")
+add_unit_test(NAME blackboard FILES "blackboard.cpp")
+add_unit_test(NAME soavector FILES "soavector.cpp")
+add_unit_test(NAME podvector FILES "podvector.cpp")
+add_unit_test(NAME table FILES "table.cpp")
+add_unit_test(NAME sparse_vector FILES "sparse_vector.cpp")
+add_unit_test(NAME dynamic_array FILES "dynamic_array.cpp")
+add_unit_test(NAME arena_allocator FILES "arena_allocator.cpp")
+
 
 add_executable(acl-bench
  "bench_arena_allocator.cpp"
@@ -73,3 +73,4 @@ add_executable(acl-bench
 
 target_link_libraries(acl-bench acl::acl nanobench::nanobench)
 target_compile_features(acl-bench PRIVATE cxx_std_20)
+
