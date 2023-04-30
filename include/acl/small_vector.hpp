@@ -6,6 +6,7 @@
  */
 
 #pragma once
+#include "allocator.hpp"
 #include "default_allocator.hpp"
 #include "detail/utils.hpp"
 #include "type_traits.hpp"
@@ -567,7 +568,7 @@ private:
   {
     heap_storage copy;
     copy.capacity_ = n;
-    copy.pdata_    = acl::allocate<storage>(*this, n * sizeof(storage), alignof(storage));
+    copy.pdata_    = acl::allocate<storage>(*this, n * sizeof(storage), alignarg<storage>);
     auto ldata     = data();
     auto d         = copy.pdata_;
     if constexpr (has_pod || std::is_trivially_copyable_v<Ty>)
@@ -582,7 +583,7 @@ private:
     }
     if (!is_inlined())
       acl::deallocate(*this, data_store_.hdata_.pdata_, data_store_.hdata_.capacity_ * sizeof(storage),
-                      alignof(storage));
+                      alignarg<storage>);
     data_store_.hdata_ = copy;
   }
 
@@ -590,7 +591,7 @@ private:
   {
     heap_storage copy;
     copy.capacity_ = n;
-    copy.pdata_    = acl::allocate<storage>(*this, n * sizeof(storage), alignof(storage));
+    copy.pdata_    = acl::allocate<storage>(*this, n * sizeof(storage), alignarg<storage>);
     auto ldata     = data();
     auto d         = (Ty*)copy.pdata_;
     if constexpr (has_pod || std::is_trivially_copyable_v<Ty>)
@@ -607,7 +608,7 @@ private:
     }
     if (!is_inlined())
       acl::deallocate(*this, data_store_.hdata_.pdata_, data_store_.hdata_.capacity_ * sizeof(storage),
-                      alignof(storage));
+                      alignarg<storage>);
     data_store_.hdata_ = copy;
   }
 
@@ -620,7 +621,7 @@ private:
       std::destroy_n(d, size_);
     if (!is_inlined())
       acl::deallocate(*this, data_store_.hdata_.pdata_, data_store_.hdata_.capacity_ * sizeof(storage),
-                      alignof(storage));
+                      alignarg<storage>);
     size_ = 0;
   }
 
@@ -647,14 +648,14 @@ private:
       else if constexpr (!has_trivially_destroyed_on_move)
         std::destroy_n(d + nb, last_size.tail - nb);
     }
-    acl::deallocate(*this, copy.pdata_, copy.capacity_ * sizeof(storage), alignof(storage));
+    acl::deallocate(*this, copy.pdata_, copy.capacity_ * sizeof(storage), alignarg<storage>);
   }
 
   inline void transfer_to_heap(size_type nb, size_type cap)
   {
     heap_storage copy;
     copy.capacity_ = cap;
-    copy.pdata_    = acl::allocate<storage>(*this, cap * sizeof(storage), alignof(storage));
+    copy.pdata_    = acl::allocate<storage>(*this, cap * sizeof(storage), alignarg<storage>);
     auto d         = (Ty*)copy.pdata_;
     auto ldata     = (Ty*)data_store_.ldata_.data();
 

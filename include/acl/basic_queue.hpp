@@ -1,4 +1,5 @@
 
+#include "allocator.hpp"
 #include "default_allocator.hpp"
 #include "detail/utils.hpp"
 #include <optional>
@@ -107,7 +108,7 @@ private:
       free_ = free_->next;
     else
     {
-      db       = acl::allocate<deque_block>(static_cast<Allocator&>(*this), sizeof(deque_block), alignof(Ty));
+      db       = acl::allocate<deque_block>(static_cast<Allocator&>(*this), sizeof(deque_block), alignarg<Ty>);
       db->next = nullptr;
     }
 
@@ -131,7 +132,7 @@ private:
     while (start)
     {
       auto next = start->next;
-      acl::deallocate(static_cast<Allocator&>(*this), start, sizeof(deque_block), alignof(Ty));
+      acl::deallocate(static_cast<Allocator&>(*this), start, sizeof(deque_block), alignarg<Ty>);
       start = next;
     }
   }

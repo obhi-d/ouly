@@ -57,7 +57,7 @@ TEST_CASE("Validate general_allocator", "[general_allocator]")
 {
 
   using namespace acl;
-  using allocator_t   = default_allocator<std::uint32_t, 0, true, false>;
+  using allocator_t   = default_allocator<std::uint32_t, true, false>;
   using std_allocator = allocator_wrapper<int, allocator_t>;
   std_allocator allocator;
 

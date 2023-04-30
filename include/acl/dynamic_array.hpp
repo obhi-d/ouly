@@ -44,7 +44,7 @@ public:
     count_ = other.count_;
     if (count_)
     {
-      data_ = (T*)Allocator::allocate(sizeof(T) * count_, alignof(T));
+      data_ = (T*)Allocator::allocate(sizeof(T) * count_, alignarg<T>);
       std::uninitialized_copy_n(other.begin(), count_, data_);
     }
     return *this;
@@ -55,7 +55,7 @@ public:
   {
     if (count_)
     {
-      data_ = (T*)Allocator::allocate(sizeof(T) * count_, alignof(T));
+      data_ = (T*)Allocator::allocate(sizeof(T) * count_, alignarg<T>);
       std::uninitialized_copy_n(first, count_, data_);
     }
   }
@@ -64,7 +64,7 @@ public:
   {
     if (count_)
     {
-      data_ = (T*)Allocator::allocate(sizeof(T) * count_, alignof(T));
+      data_ = (T*)Allocator::allocate(sizeof(T) * count_, alignarg<T>);
       std::uninitialized_fill_n(data_, count_, fill);
     }
   }
@@ -80,7 +80,7 @@ public:
     {
       if constexpr (!std::is_trivially_destructible_v<T>)
         std::destroy_n(data_, count_);
-      Allocator::deallocate(data_, sizeof(T) * count_, alignof(T));
+      Allocator::deallocate(data_, sizeof(T) * count_, alignarg<T>);
       data_  = nullptr;
       count_ = 0;
     }
@@ -166,7 +166,7 @@ public:
   inline dynamic_array& operator=(dynamic_array const& other) noexcept
   {
     clear();
-    data_ = (T*)Allocator::allocate(sizeof(T) * count_, alignof(T));
+    data_ = (T*)Allocator::allocate(sizeof(T) * count_, alignarg<T>);
     std::uninitialized_copy_n(other.begin(), count_, data_);
     return *this;
   }
@@ -175,7 +175,7 @@ public:
   inline dynamic_array(It first, It last) noexcept
   {
     auto count = (static_cast<uint32_t>(std::distance(first, last)));
-    data_      = (T*)Allocator::allocate(sizeof(T) * count_, alignof(T));
+    data_      = (T*)Allocator::allocate(sizeof(T) * count_, alignarg<T>);
     std::uninitialized_copy_n(first, std::min(count, count_), data_);
     if (count < count_)
       std::uninitialized_fill_n(data_ + count, count_ - count, T());
@@ -183,7 +183,7 @@ public:
 
   inline dynamic_array(uint32_t count, T const& fill = T()) noexcept
   {
-    data_ = (T*)Allocator::allocate(sizeof(T) * count_, alignof(T));
+    data_ = (T*)Allocator::allocate(sizeof(T) * count_, alignarg<T>);
     std::uninitialized_fill_n(data_, std::min(count, count_), fill);
     if (count < count_)
       std::uninitialized_fill_n(data_ + count, count_ - count, T());
@@ -200,7 +200,7 @@ public:
     {
       if constexpr (!std::is_trivially_destructible_v<T>)
         std::destroy_n(data_, count_);
-      Allocator::deallocate(data_, sizeof(T) * count_, alignof(T));
+      Allocator::deallocate(data_, sizeof(T) * count_, alignarg<T>);
       data_ = nullptr;
     }
   }

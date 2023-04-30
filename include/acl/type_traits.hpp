@@ -1,11 +1,12 @@
 #pragma once
-#include "detail/config.hpp"
 #include "detail/type_name.hpp"
 #include <cstdint>
 #include <type_traits>
 
 namespace acl
 {
+template <typename T, typename SizeType = size_t>
+constexpr SizeType alignarg = alignof(T) > alignof(std::max_align_t) ? alignof(T) : 0;
 
 template <typename Ty = std::void_t<>>
 struct traits

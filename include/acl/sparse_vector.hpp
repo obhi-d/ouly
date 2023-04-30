@@ -104,7 +104,7 @@ public:
       auto const src_storage = other.items_[i];
       if (src_storage)
       {
-        items_[i] = acl::allocate<storage>(*this, sizeof(storage) * pool_size + sizeof(size_type), alignof(Ty));
+        items_[i] = acl::allocate<storage>(*this, sizeof(storage) * pool_size + sizeof(size_type), alignarg<Ty>);
 
         if (src_storage)
         {
@@ -342,7 +342,7 @@ public:
     {
       if (items_[block])
         acl::deallocate(static_cast<Allocator&>(*this), items_[block],
-                        sizeof(size_type) * pool_size + sizeof(size_type), alignof(Ty));
+                        sizeof(size_type) * pool_size + sizeof(size_type), alignarg<Ty>);
     }
     items_.clear();
     length_ = 0;
@@ -406,10 +406,10 @@ private:
     if (!items_[block])
     {
       if constexpr (has_zero_memory)
-        items_[block] = acl::zallocate<storage>(*this, sizeof(storage) * pool_size + sizeof(size_type), alignof(Ty));
+        items_[block] = acl::zallocate<storage>(*this, sizeof(storage) * pool_size + sizeof(size_type), alignarg<Ty>);
       else
       {
-        items_[block] = acl::allocate<storage>(*this, sizeof(storage) * pool_size + sizeof(size_type), alignof(Ty));
+        items_[block] = acl::allocate<storage>(*this, sizeof(storage) * pool_size + sizeof(size_type), alignarg<Ty>);
         if constexpr (!has_no_fill)
         {
           if constexpr (has_pod ||
@@ -502,7 +502,7 @@ private:
     }
 
     acl::deallocate(static_cast<Allocator&>(*this), items_[block], sizeof(size_type) * pool_size + sizeof(size_type),
-                    alignof(Ty));
+                    alignarg<Ty>);
     items_[block] = nullptr;
   }
 

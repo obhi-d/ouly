@@ -388,7 +388,8 @@ TEMPLATE_TEST_CASE("Validate packed_table", "[packed_table.all]", traits_1, trai
   std::vector<std::pair<data, link>> reference_data;
 
   std::random_device rd;
-  unsigned int       seed = rd();
+  unsigned int       seed = 1390652623;//rd();
+  // 1390652623
   std::cout << " Seed : " << seed << std::endl;
   std::minstd_rand                        gen(seed);
   std::bernoulli_distribution             dice(0.7);

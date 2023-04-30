@@ -357,7 +357,7 @@ public:
 
   inline void validate_integrity() const 
   {
-    for (uint32_t first = 1, last = size(); first != last; ++first)
+    for (uint32_t first = 1, last = size(); first < last; ++first)
     {
       assert(keys_.get(detail::index_val(get_ref_at_idx(first))) == first);
     }

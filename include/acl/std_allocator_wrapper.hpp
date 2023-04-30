@@ -57,24 +57,13 @@ struct allocator_wrapper : public detail::allocator_common<T>, public UA
 
   inline pointer allocate(size_type cnt) const
   {
-    if constexpr (alignof(T) > alignof(void*))
-    {
-      pointer ret = reinterpret_cast<pointer>(UA::allocate(static_cast<size_type>(sizeof(T) * cnt), alignof(T)));
-      return ret;
-    }
-    else
-    {
-      pointer ret = reinterpret_cast<pointer>(UA::allocate(static_cast<size_type>(sizeof(T) * cnt)));
-      return ret;
-    }
+    pointer ret = reinterpret_cast<pointer>(UA::allocate(static_cast<size_type>(sizeof(T) * cnt), alignarg<T>));
+    return ret;
   }
 
   inline void deallocate(pointer p, size_type cnt) const
   {
-    if constexpr (alignof(T) > alignof(void*))
-      UA::deallocate(p, static_cast<size_type>(sizeof(T) * cnt), alignof(T));
-    else
-      UA::deallocate(p, static_cast<size_type>(sizeof(T) * cnt));
+    UA::deallocate(p, static_cast<size_type>(sizeof(T) * cnt), alignarg<T>);
   }
 };
 
@@ -124,26 +113,15 @@ class allocator_ref : public detail::allocator_common<T>
   inline pointer allocate(size_type cnt) const
   {
     assert(ref_);
-    if constexpr (alignof(T) > alignof(void*))
-    {
-      pointer ret =
-        reinterpret_cast<pointer>(ref_->allocate(static_cast<size_type>(sizeof(T) * cnt), alignof(T)));
-      return ret;
-    }
-    else
-    {
-      pointer ret = reinterpret_cast<pointer>(ref_->allocate(static_cast<size_type>(sizeof(T) * cnt)));
-      return ret;
-    }
+    pointer ret =
+        reinterpret_cast<pointer>(ref_->allocate(static_cast<size_type>(sizeof(T) * cnt), alignarg<T>));
+    return ret;
   }
 
   inline void deallocate(pointer p, size_type cnt) const
   {
     assert(ref_);
-    if constexpr (alignof(T) > alignof(void*))
-      ref_->deallocate(p, static_cast<size_type>(sizeof(T) * cnt), alignof(T));
-    else
-      ref_->deallocate(p, static_cast<size_type>(sizeof(T) * cnt));
+    ref_->deallocate(p, static_cast<size_type>(sizeof(T) * cnt), alignarg<T>);
   }
 
 private:
