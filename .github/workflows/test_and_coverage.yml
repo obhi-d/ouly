@@ -38,7 +38,7 @@ jobs:
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: |
         ctest -C ${{env.BUILD_TYPE}}
-        lcov -c -d . --no-external --directory ${{github.workspace}}/acl/include  -o lcov.info
+        lcov -c -d . --no-external --directory ${{github.workspace}}/include  -o lcov.info
 
     - name: Coverage
       uses: coverallsapp/github-action@v2
