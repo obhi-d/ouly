@@ -107,12 +107,12 @@ public:
     return *self_;
   }
 
-  constexpr inline bool operator==(nullptr_t) const noexcept
+  constexpr inline bool operator==(std::nullptr_t) const noexcept
   {
     return self_ == nullptr;
   }
 
-  constexpr inline bool operator!=(nullptr_t) const noexcept
+  constexpr inline bool operator!=(std::nullptr_t) const noexcept
   {
     return self_ != nullptr;
   }

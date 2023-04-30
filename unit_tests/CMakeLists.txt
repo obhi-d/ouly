@@ -7,14 +7,14 @@ include(FetchContent)
 FetchContent_Declare(
   Catch2
   GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-  GIT_TAG 3f0283d
+  GIT_TAG v3.3.2
 )
 
 
 FetchContent_Declare(
   nanobench
   GIT_REPOSITORY https://github.com/martinus/nanobench.git
-  GIT_TAG a5a50c2
+  GIT_TAG v4.3.11
 )
 
 FetchContent_MakeAvailable(Catch2)
