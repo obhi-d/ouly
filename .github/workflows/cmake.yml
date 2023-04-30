@@ -34,7 +34,10 @@ jobs:
       # Execute tests defined by the CMake configuration.
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: ctest -C ${{env.BUILD_TYPE}}
+      run: lcov -c --directory ${{github.workspace}}/acl/include -d . --no-external -o lcov.info
 
     - name: Coverage
       uses: coverallsapp/github-action@v2
+      with:
+        path-to-lcov: ${{github.workspace}}/build/unit_tests/lcov.info
       
