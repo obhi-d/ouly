@@ -1,3 +1,4 @@
+#include "test_common.hpp"
 #include <acl/packed_table.hpp>
 #include <catch2/catch_all.hpp>
 #include <iomanip>
@@ -9,11 +10,6 @@
 #include <unordered_set>
 #include <compare>
 
-template <typename IntTy>
-IntTy range_rand(IntTy iBeg, IntTy iEnd)
-{
-  return static_cast<IntTy>(iBeg + (((double)rand() / (double)RAND_MAX) * (iEnd - iBeg)));
-}
 
 TEST_CASE("packed_table: Validate packed_table emplace", "[packed_table][emplace]")
 {
@@ -27,17 +23,6 @@ TEST_CASE("packed_table: Validate packed_table emplace", "[packed_table][emplace
   REQUIRE(table.at(e20) == 20);
   REQUIRE(table.at(e30) == 30);
 }
-
-namespace acl
-{
-template <>
-struct traits<std::string> : traits<>
-{
-  static constexpr std::uint32_t pool_size       = 2;
-  static constexpr std::uint32_t index_pool_size = 2;
-};
-
-} // namespace acl
 
 TEST_CASE("packed_table: Custom block size", "[packed_table][page_size]")
 {
@@ -112,18 +97,6 @@ TEST_CASE("packed_table: Copy when copyable", "[packed_table][assignment]")
   REQUIRE(table2.at(e2) == "in");
   REQUIRE(table2[e3] == "the");
 }
-
-namespace helper
-{
-template <typename Cont>
-static void insert(Cont& cont, std::uint32_t offset, std::uint32_t count)
-{
-  for (std::uint32_t i = 0; i < count; ++i)
-  {
-    cont.emplace(std::to_string(i + offset) + ".o");
-  }
-}
-}; // namespace helper
 
 TEST_CASE("packed_table: Random test", "[packed_table][random]")
 {
@@ -388,7 +361,7 @@ TEMPLATE_TEST_CASE("Validate packed_table", "[packed_table.all]", traits_1, trai
   std::vector<std::pair<data, link>> reference_data;
 
   std::random_device rd;
-  unsigned int       seed = 1390652623;//rd();
+  unsigned int       seed = rd();
   // 1390652623
   std::cout << " Seed : " << seed << std::endl;
   std::minstd_rand                        gen(seed);

@@ -1,15 +1,9 @@
 
+#include "test_common.hpp"
 #include <acl/small_vector.hpp>
 #include <catch2/catch_all.hpp>
 #include <compare>
 
-struct pod
-{
-  int a;
-  int b;
-
-  inline auto operator<=>(const pod& other) const noexcept = default;
-};
 
 TEST_CASE("small_vector: Validate small_vector emplace", "[small_vector][emplace]")
 {

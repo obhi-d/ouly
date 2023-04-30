@@ -1,3 +1,4 @@
+#include "test_common.hpp"
 #include <acl/sparse_table.hpp>
 #include <catch2/catch_all.hpp>
 #include <iomanip>
@@ -7,11 +8,6 @@
 #include <unordered_map>
 #include <unordered_set>
 
-template <typename IntTy>
-IntTy range_rand(IntTy iBeg, IntTy iEnd)
-{
-  return static_cast<IntTy>(iBeg + (((double)rand() / (double)RAND_MAX) * (iEnd - iBeg)));
-}
 
 TEST_CASE("sparse_table: Validate sparse_table emplace", "[sparse_table][emplace]")
 {
@@ -25,16 +21,6 @@ TEST_CASE("sparse_table: Validate sparse_table emplace", "[sparse_table][emplace
   REQUIRE(table.at(e20) == 20);
   REQUIRE(table.at(e30) == 30);
 }
-
-namespace acl
-{
-template <>
-struct traits<std::string> : traits<>
-{
-  static constexpr std::uint32_t pool_size     = 2;
-  static constexpr std::uint32_t index_pool_size = 2;
-};
-} // namespace acl
 
 TEST_CASE("sparse_table: Custom block size", "[sparse_table][page_size]")
 {
@@ -84,18 +70,6 @@ TEST_CASE("sparse_table: Copy when copyable", "[sparse_table][assignment]")
   REQUIRE(table2.at(e2) == "in");
   REQUIRE(table2[e3] == "the");
 }
-
-namespace helper
-{
-template <typename Cont>
-static void insert(Cont& cont, std::uint32_t offset, std::uint32_t count)
-{
-  for (std::uint32_t i = 0; i < count; ++i)
-  {
-    cont.emplace(std::to_string(i + offset) + ".o");
-  }
-}
-}; // namespace helper
 
 TEST_CASE("sparse_table: Random test", "[sparse_table][random]")
 {

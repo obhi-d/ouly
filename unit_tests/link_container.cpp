@@ -3,13 +3,13 @@
 #include <iostream>
 #include <string>
 
-struct traits_1
+struct link_traits_1
 {
   static constexpr uint32_t pool_size  = 2;
   static constexpr bool     use_sparse = false;
 };
 
-struct traits_2
+struct link_traits_2
 {
   static constexpr uint32_t pool_size  = 2;
   static constexpr bool     use_sparse = true;
@@ -26,7 +26,7 @@ TEST_CASE("link_container: Validate", "[link_container][void]")
   REQUIRE(table.at(e1) == 100);
 }
 
-TEMPLATE_TEST_CASE("link_container: Validate", "[link_container][trivial]", traits_1, traits_2)
+TEMPLATE_TEST_CASE("link_container: Validate", "[link_container][trivial]", link_traits_1, link_traits_2)
 {
   typename acl::link_container<int, TestType>::registry registry;
   typename acl::link_container<int, TestType>           table;
@@ -64,7 +64,7 @@ TEMPLATE_TEST_CASE("link_container: Validate", "[link_container][trivial]", trai
   REQUIRE(table.at(e10) == 1300);
 }
 
-TEMPLATE_TEST_CASE("link_container: Validate", "[link_container][nontrivial]", traits_1, traits_2)
+TEMPLATE_TEST_CASE("link_container: Validate", "[link_container][nontrivial]", link_traits_1, link_traits_2)
 {
   typename acl::link_container<std::string, TestType>::registry registry;
   typename acl::link_container<std::string, TestType>           table;

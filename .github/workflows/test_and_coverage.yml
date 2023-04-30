@@ -1,4 +1,4 @@
-name: CMake
+name: Test
 
 on:
   push:
@@ -35,7 +35,7 @@ jobs:
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: |
         ctest -C ${{env.BUILD_TYPE}}
-        lcov -c --directory ${{github.workspace}}/acl/include -d . --no-external -o lcov.info
+        /usr/bin/lcov -c --directory ${{github.workspace}}/acl/include -d . --no-external -o lcov.info
 
     - name: Coverage
       uses: coverallsapp/github-action@v2

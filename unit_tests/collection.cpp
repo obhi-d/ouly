@@ -1,3 +1,4 @@
+#include "test_common.hpp"
 #include <acl/collection.hpp>
 #include <acl/packed_table.hpp>
 #include <catch2/catch_all.hpp>
@@ -7,12 +8,6 @@
 #include <string_view>
 #include <unordered_map>
 #include <unordered_set>
-
-template <typename IntTy>
-IntTy range_rand(IntTy iBeg, IntTy iEnd)
-{
-  return static_cast<IntTy>(iBeg + (((double)rand() / (double)RAND_MAX) * (iEnd - iBeg)));
-}
 
 TEST_CASE("collection: Validate packed_table emplace", "[packed_table][emplace]")
 {

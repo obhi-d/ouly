@@ -1,12 +1,8 @@
 
+#include "test_common.hpp"
 #include <acl/podvector.hpp>
 #include <catch2/catch_all.hpp>
 
-struct pod
-{
-  int a;
-  int b;
-};
 
 TEST_CASE("podvector: Validate podvector emplace", "[podvector][emplace]")
 {

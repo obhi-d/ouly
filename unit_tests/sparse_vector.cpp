@@ -1,21 +1,8 @@
 
+#include "test_common.hpp"
 #include <acl/sparse_vector.hpp>
 #include <catch2/catch_all.hpp>
 #include <string>
-
-template <typename IntTy>
-IntTy range_rand(IntTy iBeg, IntTy iEnd)
-{
-  return static_cast<IntTy>(iBeg + (((double)rand() / (double)RAND_MAX) * (iEnd - iBeg)));
-}
-
-struct pod
-{
-  int a = 0;
-  int b = 0;
-
-  constexpr auto operator<=>(pod const&) const noexcept = default;
-};
 
 template <>
 struct acl::traits<pod> : acl::traits<>

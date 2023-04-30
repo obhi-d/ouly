@@ -1,13 +1,8 @@
-
+#include "test_common.hpp"
 #include <acl/soavector.hpp>
 #include <catch2/catch_all.hpp>
 #include <string>
 
-struct pod
-{
-  int a;
-  int b;
-};
 
 TEST_CASE("soavector: Validate soavector emplace", "[soavector][emplace]")
 {

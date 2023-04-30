@@ -86,7 +86,7 @@ public:
     std::for_each(managed_data.begin(), managed_data.end(),
                   [this](auto entry)
                   {
-                    acl::deallocate(*this, entry, total_atoms_in_page * sizeof(atom_t));
+                    acl::deallocate(*this, entry, total_atoms_in_page * sizeof(atom_t), 16);
                   });
 
     lookup.clear();
