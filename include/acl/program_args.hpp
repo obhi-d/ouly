@@ -9,8 +9,8 @@
 #include <ranges>
 #include <sstream>
 #include <string_view>
-#include <unordered_map>
 #include <variant>
+#include <vector>
 
 namespace acl
 {
@@ -27,14 +27,11 @@ template <typename V>
 concept ProgramArgScalarType = std::is_same_v<uint32_t, V> || std::is_same_v<int32_t, V> || std::is_same_v<float, V>;
 template <typename V>
 concept ProgramArgBoolType = std::is_same_v<bool, V>;
-template <typename V>
-concept ProgramArgArrayType = requires(V a, V b, size_t n) {
+template <typename V, typename S>
+concept ProgramArgArrayType = !std::same_as<V, S> && requires(V a) {
                                 typename V::value_type;
-                                a = b;
-                                std::begin(a);
-                                std::end(a);
-                                a.emplace_back(V::value_type());
-                              };
+                                a.push_back(typename V::value_type());
+};
 
 template <typename string_type = std::string_view>
 class program_args
@@ -210,6 +207,33 @@ public:
   }
 
 private:
+
+  template <ProgramArgArrayType<string_type> V>
+  static std::optional<V> convert_to(string_type const& sv)
+  {
+    V vector;
+    using value_type = typename V::value_type;
+    auto start       = sv.find_first_of('[');
+    auto end         = sv.find_first_of(']');
+    if (start != sv.npos && end != sv.npos)
+    {
+      while (start < end)
+      {
+        start         = sv.find_first_not_of(' ', ++start);
+        auto word_end = sv.find_first_of(", ]", start);
+        if (start == word_end)
+          break;
+        auto val = convert_to<value_type>(sv.substr(start, word_end - start));
+        if (!val)
+          return {};
+        vector.push_back(*val);
+        start = word_end;
+      }
+      return vector;
+    }
+    return {};
+  }
+
   template <typename V>
   static std::optional<V> convert_to(string_type const& sv)
     requires(std::same_as<V, string_type>)
@@ -233,33 +257,6 @@ private:
   static std::optional<V> convert_to(string_type const& sv)
   {
     return (bool)(!sv.empty() && (sv[0] == 'Y' || sv[0] == 'y' || sv[0] == 't' || sv[0] == '1'));
-  }
-
-  template <ProgramArgArrayType V>
-  static std::optional<V> convert_to(string_type const& sv)
-    requires(!std::same_as<V, string_type>)
-  {
-    V vector;
-    using value_type = typename V::value_type;
-    auto start       = sv.find_first_of('[');
-    auto end         = sv.find_first_of(']');
-    if (start != sv.npos && end != sv.npos)
-    {
-      while (start < end)
-      {
-        start         = sv.find_first_not_of(' ', ++start);
-        auto word_end = sv.find_first_of(", ]", start);
-        if (start == word_end)
-          break;
-        auto val = convert_to<value_type>(sv.substr(start, word_end - start));
-        if (!val)
-          return {};
-        vector.emplace_back(*val);
-        start = word_end;
-      }
-      return vector;
-    }
-    return {};
   }
 
   std::optional<arg> find(string_type name) const
