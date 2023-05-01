@@ -44,6 +44,7 @@ TEST_CASE("Validate program args switches", "[program_args][switches]")
   REQUIRE(one.value() == "foo");
   REQUIRE(two.value() == "bar");
   REQUIRE(pgargs.get_max_arg_length() != 4);
+  REQUIRE(pgargs.must_print_help());
 }
 
 TEST_CASE("Validate program args sink", "[program_args][sink]")

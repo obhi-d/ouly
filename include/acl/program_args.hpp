@@ -136,19 +136,21 @@ public:
   }
 
   /// @brief Parse a single arg
-  inline void parse_arg(char const* arg) noexcept
+  inline void parse_arg(string_type asv) noexcept
   {
-    string_type asv = arg;
+    if (asv == "--help" || asv == "-h")
+      print_help_ = true;
 
     if (asv.starts_with("--"))
       asv = asv.substr(2);
     else if (asv.starts_with("-"))
       asv = asv.substr(1);
-    auto has_val = asv.find_first_of('=');
+    auto has_val  = asv.find_first_of('=');
+    auto arg_name = asv.substr(0, has_val);
     if (has_val != asv.npos)
-      add(asv.substr(0, has_val)).value_ = asv.substr(has_val + 1);
+      add(arg_name).value_ = asv.substr(has_val + 1);
     else
-      add(asv.substr(0, has_val)).value_ = true;
+      add(arg_name).value_ = true;
   }
 
   inline void brief(string_type h) noexcept
@@ -182,7 +184,7 @@ public:
           decl_arg.value_ = *value;
       }
     }
-    max_arg_length_ = std::max(name.size(), max_arg_length_);
+    max_arg_length_ = std::max(static_cast<uint32_t>(name.size()), max_arg_length_);
     return arg_decl<V>(decl_arg);
   }
 
@@ -208,6 +210,11 @@ public:
   inline size_t get_max_arg_length() const noexcept
   {
     return max_arg_length_;
+  }
+
+  inline bool must_print_help() const noexcept
+  {
+    return print_help_;
   }
 
 private:
@@ -283,7 +290,8 @@ private:
   std::vector<arg>         arguments_;
   string_type              brief_;
   std::vector<string_type> docs_;
-  size_t                   max_arg_length_ = 0;
+  uint32_t                 max_arg_length_ = 0;
+  bool                     print_help_     = false;
 };
 
 } // namespace acl
