@@ -22,16 +22,17 @@ enum class program_document_type
 };
 
 template <typename T>
-concept ProgramDocFormatter = requires(T a, program_document_type f) { a(f, ""); };
+concept ProgramDocFormatter = requires(T a, program_document_type f) { a(f, "", ""); };
 template <typename V>
 concept ProgramArgScalarType = std::is_same_v<uint32_t, V> || std::is_same_v<int32_t, V> || std::is_same_v<float, V>;
 template <typename V>
 concept ProgramArgBoolType = std::is_same_v<bool, V>;
 template <typename V, typename S>
-concept ProgramArgArrayType = !std::same_as<V, S> && requires(V a) {
-                                typename V::value_type;
-                                a.push_back(typename V::value_type());
-};
+concept ProgramArgArrayType = !
+std::same_as<V, S>&& requires(V a) {
+                       typename V::value_type;
+                       a.push_back(typename V::value_type());
+                     };
 
 template <typename string_type = std::string_view>
 class program_args
@@ -49,7 +50,6 @@ class program_args
   };
 
 public:
-
   template <typename V>
   class arg_decl
   {
@@ -91,7 +91,6 @@ public:
     }
 
   private:
-
     inline bool sink_copy(V& store) const noexcept
     {
       if (arg_.value_.has_value())
@@ -186,9 +185,9 @@ public:
     max_arg_length_ = std::max(name.size(), max_arg_length_);
     return arg_decl<V>(decl_arg);
   }
-  
+
   template <typename T>
-  inline bool sink(T& value, string_type name, string_type flag = string_type(), string_type docu = string_type())    
+  inline bool sink(T& value, string_type name, string_type flag = string_type(), string_type docu = string_type())
   {
     // Resolve arg
     return decl<T>(name, flag).doc(docu).sink(value);
@@ -198,16 +197,15 @@ public:
   inline auto& doc(formatter& f) const noexcept
   {
     if (!brief_.empty())
-      f(program_document_type::brief_doc, brief_);
+      f(program_document_type::brief_doc, "Usage", brief_);
     for (auto d : docs_)
-      f(program_document_type::full_doc, d);
+      f(program_document_type::full_doc, "Description", d);
     for (auto const& a : arguments_)
-      f(program_document_type::arg_doc, a.doc_);
+      f(program_document_type::arg_doc, a.name_, a.doc_);
     return f;
   }
 
 private:
-
   template <ProgramArgArrayType<string_type> V>
   static std::optional<V> convert_to(string_type const& sv)
   {

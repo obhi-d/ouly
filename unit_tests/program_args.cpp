@@ -4,7 +4,7 @@
 struct arg_formatter
 {
   std::string text;
-  inline void operator()(acl::program_document_type type, std::string_view txt) noexcept
+  inline void operator()(acl::program_document_type type, std::string_view, std::string_view txt) noexcept
   {
     text += txt;
   }
@@ -54,7 +54,7 @@ TEST_CASE("Validate program args sink", "[program_args][sink]")
   struct sink
   {
     std::string_view one;
-    int              two = 0;
+    int              two  = 0;
     bool             flag = false;
   };
 
@@ -74,16 +74,14 @@ TEST_CASE("Validate program args vector", "[program_args][vector]")
 
   acl::program_args pgargs;
   pgargs.parse_args(5, arg_set);
-  
-  
-  bool                          help = false;
-  bool                          flag = false;
+
+  bool                          help   = false;
+  bool                          flag   = false;
   bool                          flag_2 = false;
   std::vector<std::string_view> one;
-  std::vector<int> two;
-  std::vector<float> three;
-  
-    
+  std::vector<int>              two;
+  std::vector<float>            three;
+
   pgargs.sink(help, "help");
   pgargs.sink(flag, "flag");
   pgargs.sink(flag_2, "flag_2");
@@ -119,5 +117,4 @@ TEST_CASE("Validate program args parse failure", "[program_args][failure]")
   REQUIRE(pgargs.sink(one, "one", "a") == false);
   REQUIRE(pgargs.sink(two, "two", "2") == false);
   REQUIRE(pgargs.sink(three, "three", "c") == false);
-
 }
