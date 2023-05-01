@@ -46,7 +46,7 @@ class program_args
     string_type name_;
 
     constexpr arg() noexcept = default;
-    constexpr inline arg(string_type name) : name_(name) {}
+    constexpr inline arg(string_type name) noexcept : name_(name) {}
   };
 
 public:
@@ -54,7 +54,7 @@ public:
   class arg_decl
   {
   public:
-    inline auto& doc(string_type h)
+    inline auto& doc(string_type h) noexcept
     {
       arg_.doc_ = h;
       return *this;
@@ -70,7 +70,7 @@ public:
       return false;
     }
 
-    std::optional<V> value() const
+    std::optional<V> value() const noexcept
     {
       if (arg_.value_.has_value())
       {
@@ -129,14 +129,14 @@ public:
   program_args() noexcept = default;
 
   /// @brief Parse C main command line args
-  inline void parse_args(int argc, char const* const* argv)
+  inline void parse_args(int argc, char const* const* argv) noexcept
   {
     for (int i = 0; i < argc; ++i)
       parse_arg(argv[i]);
   }
 
   /// @brief Parse a single arg
-  inline void parse_arg(char const* arg)
+  inline void parse_arg(char const* arg) noexcept
   {
     string_type asv = arg;
 
@@ -151,18 +151,18 @@ public:
       add(asv.substr(0, has_val)).value_ = true;
   }
 
-  inline void brief(string_type h)
+  inline void brief(string_type h) noexcept
   {
     brief_ = h;
   }
 
-  inline void doc(string_type h)
+  inline void doc(string_type h) noexcept
   {
     docs_.push_back(h);
   }
 
   template <typename V = string_type>
-  inline arg_decl<V> decl(string_type name, string_type flag = string_type())
+  inline arg_decl<V> decl(string_type name, string_type flag = string_type()) noexcept
   {
     // Resolve arg
     auto& decl_arg = add(name);
@@ -194,7 +194,7 @@ public:
   }
 
   template <ProgramDocFormatter formatter>
-  inline auto& doc(formatter& f) const noexcept
+  inline auto& doc(formatter&& f) const noexcept
   {
     if (!brief_.empty())
       f(program_document_type::brief_doc, "Usage", brief_);
@@ -205,9 +205,14 @@ public:
     return f;
   }
 
+  inline size_t get_max_arg_length() const noexcept
+  {
+    return max_arg_length_;
+  }
+
 private:
   template <ProgramArgArrayType<string_type> V>
-  static std::optional<V> convert_to(string_type const& sv)
+  static std::optional<V> convert_to(string_type const& sv) noexcept
   {
     V vector;
     using value_type = typename V::value_type;
@@ -233,14 +238,14 @@ private:
   }
 
   template <typename V>
-  static std::optional<V> convert_to(string_type const& sv)
+  static std::optional<V> convert_to(string_type const& sv) noexcept
     requires(std::same_as<V, string_type>)
   {
     return sv;
   }
 
   template <ProgramArgScalarType V>
-  static std::optional<V> convert_to(string_type const& sv)
+  static std::optional<V> convert_to(string_type const& sv) noexcept
   {
     V numeric;
     auto [ptr, ec] = std::from_chars(sv.data(), sv.data() + sv.size(), numeric);
@@ -252,7 +257,7 @@ private:
   }
 
   template <ProgramArgBoolType V>
-  static std::optional<V> convert_to(string_type const& sv)
+  static std::optional<V> convert_to(string_type const& sv) noexcept
   {
     return (bool)(!sv.empty() && (sv[0] == 'Y' || sv[0] == 'y' || sv[0] == 't' || sv[0] == '1'));
   }
@@ -263,7 +268,7 @@ private:
     return it != arguments_.end() ? std::optional<arg>((*it)) : std::optional<arg>();
   }
 
-  arg& add(string_type name)
+  arg& add(string_type name) noexcept
   {
     auto it = std::ranges::find(arguments_, name, &arg::name_);
     if (it == arguments_.end())
