@@ -103,7 +103,7 @@ protected:
   {
     using size_type = uint32_t;
     static constexpr uint32_t pool_size =
-      std::conditional_t<detail::has_index_pool_size<Traits>, Traits, default_index_pool_size>::index_pool_size;
+      std::conditional_t<detail::HasIndexPoolSize<Traits>, Traits, default_index_pool_size>::index_pool_size;
     static constexpr uint32_t null_v      = Traits::null_v;
     static constexpr bool     no_fill = true;
     static constexpr bool     zero_memory = true;
@@ -220,11 +220,11 @@ public:
 
 template <typename Allocator, typename Traits>
 using indirection_type =
-  std::conditional_t<has_use_sparse_index_attrib<Traits>, detail::sparse_indirection<Allocator, Traits>,
+  std::conditional_t<HasUseSparseIndexAttrib<Traits>, detail::sparse_indirection<Allocator, Traits>,
                      detail::vector_indirection<Allocator, Traits>>;
 
 template <typename Allocator, typename Traits>
-using backref_type = std::conditional_t<has_backref_v<Traits>, detail::back_indirection<Allocator, Traits>,
+using backref_type = std::conditional_t<HasBackrefValue<Traits>, detail::back_indirection<Allocator, Traits>,
                                         indirection_type<Allocator, Traits>>;
 
 } // namespace detail

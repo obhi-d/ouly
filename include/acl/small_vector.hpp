@@ -45,14 +45,14 @@ public:
 
 private:
   using traits                                          = Traits;
-  static constexpr bool has_null_method                 = detail::has_null_method<traits, value_type>;
-  static constexpr bool has_null_value                  = detail::has_null_value<traits, value_type>;
-  static constexpr bool has_null_construct              = detail::has_null_construct<traits, value_type>;
-  static constexpr bool has_zero_memory                 = detail::has_zero_memory_attrib<traits>;
-  static constexpr bool has_no_fill                     = detail::has_no_fill_attrib<traits>;
-  static constexpr bool has_pod                         = detail::has_has_pod_attrib<traits>;
+  static constexpr bool HasNullMethod                   = detail::HasNullMethod<traits, value_type>;
+  static constexpr bool HasNullValue                    = detail::HasNullValue<traits, value_type>;
+  static constexpr bool HasNullConstruct                = detail::HasNullConstruct<traits, value_type>;
+  static constexpr bool has_zero_memory                 = detail::HasZeroMemoryAttrib<traits>;
+  static constexpr bool has_no_fill                     = detail::HasNoFillAttrib<traits>;
+  static constexpr bool has_pod                         = detail::HasTrivialAttrib<traits>;
   static constexpr bool has_trivial_dtor                = has_pod || std::is_trivially_destructible_v<Ty>;
-  static constexpr bool has_trivially_destroyed_on_move = detail::has_trivially_destroyed_on_move_attrib<traits>;
+  static constexpr bool has_trivially_destroyed_on_move = detail::HasTriviallyDestroyedOnMoveAttrib<traits>;
 
   using storage = detail::aligned_storage<sizeof(value_type), alignof(value_type)>;
   struct heap_storage
@@ -65,7 +65,7 @@ private:
                                                  ? N
                                                  : (sizeof(heap_storage) + sizeof(Ty) - 1) / sizeof(Ty);
 
-  using inline_storage                       = std::array<storage, inline_capacity>;
+  using inline_storage = std::array<storage, inline_capacity>;
   union data_store
   {
     inline_storage ldata_ = {};
@@ -80,8 +80,7 @@ private:
   };
 
 public:
-  
-  explicit small_vector(const Allocator& alloc = Allocator()) noexcept : Allocator(alloc) {} 
+  explicit small_vector(const Allocator& alloc = Allocator()) noexcept : Allocator(alloc) {}
 
   explicit small_vector(size_type n) noexcept
   {
@@ -386,7 +385,7 @@ public:
     auto last = size_--;
     if (size_ <= inline_capacity && last > inline_capacity)
     {
-      transfer_to_ib(size_, tail_type{.tail=last});
+      transfer_to_ib(size_, tail_type{.tail = last});
     }
     else
     {
@@ -482,7 +481,7 @@ public:
       for (; src != end; ++src, ++dst)
         *dst = std::move(*src);
     }
-    auto data = get_data();
+    auto data     = get_data();
     auto old_size = size_;
     size_ -= n;
     if constexpr (!has_trivial_dtor && !has_trivially_destroyed_on_move)
@@ -545,10 +544,10 @@ private:
   {
     auto data_ptr = resize_no_fill(sz);
     if (sz > size_)
-    {      
+    {
       if constexpr (!std::is_trivially_constructible_v<Ty> && std::is_same_v<tail, Ty>)
         std::uninitialized_fill_n(data_ptr + size_, sz - size_, t);
-    }    
+    }
     size_ = sz;
   }
 
@@ -675,7 +674,7 @@ private:
   {
     auto      ldata = get_data();
     size_type p     = static_cast<size_type>(std::distance<const Ty*>(ldata, it));
-    size_type nsz = size_ + n;
+    size_type nsz   = size_ + n;
 
     if (capacity() < nsz)
     {
@@ -693,16 +692,16 @@ private:
         auto dst_it   = src_it + n;
         for (size_type i = 0; i < min_ctor; ++i)
           new (--dst_it) Ty(std::move(*(--src_it)));
-        for (; src_it != src; )
+        for (; src_it != src;)
           *(--dst_it) = std::move(*(--src_it));
         assert(src_it == src);
-        
+
         if constexpr (!has_trivial_dtor && !has_trivially_destroyed_on_move)
         {
           assert(src_it <= dst_it);
-          for (;src_it != dst_it; ++src_it)
+          for (; src_it != dst_it; ++src_it)
             std::destroy_at(src_it);
-        }          
+        }
       }
     }
     size_ = nsz;

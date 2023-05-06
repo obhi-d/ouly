@@ -20,7 +20,7 @@ private:
   static constexpr auto pool_size = static_cast<size_type>(1) << pool_div;
   static constexpr auto pool_mod  = pool_size - 1;
   using storage                   = detail::aligned_storage<sizeof(value_type), alignof(value_type)>;
-  static constexpr bool has_pod   = detail::has_has_pod_attrib<Traits>;
+  static constexpr bool has_pod   = detail::HasTrivialAttrib<Traits>;
 
   struct deque_block
   {

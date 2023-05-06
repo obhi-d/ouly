@@ -34,34 +34,34 @@ private:
   static constexpr auto pool_div    = detail::log2(Traits::pool_size);
   static constexpr auto pool_size   = static_cast<size_type>(1) << pool_div;
   static constexpr auto pool_mod    = pool_size - 1;
-  static constexpr bool has_backref = detail::has_backref_v<Traits>;
+  static constexpr bool has_backref = detail::HasBackrefValue<Traits>;
   using this_type                   = sparse_vector<value_type, Allocator, Traits>;
   using base_type                   = Allocator;
   using storage                     = detail::aligned_storage<sizeof(value_type), alignof(value_type)>;
   using allocator                   = Allocator;
   using traits                      = Traits;
 
-  static constexpr bool has_null_method    = detail::has_null_method<traits, value_type>;
-  static constexpr bool has_null_value     = detail::has_null_value<traits, value_type>;
-  static constexpr bool has_null_construct = detail::has_null_construct<traits, value_type>;
-  static constexpr bool has_zero_memory    = detail::has_zero_memory_attrib<traits>;
-  static constexpr bool has_no_fill        = detail::has_no_fill_attrib<traits>;
-  static constexpr bool has_pod            = detail::has_has_pod_attrib<traits>;
+  static constexpr bool HasNullMethod    = detail::HasNullMethod<traits, value_type>;
+  static constexpr bool HasNullValue     = detail::HasNullValue<traits, value_type>;
+  static constexpr bool HasNullConstruct = detail::HasNullConstruct<traits, value_type>;
+  static constexpr bool has_zero_memory  = detail::HasZeroMemoryAttrib<traits>;
+  static constexpr bool has_no_fill      = detail::HasNoFillAttrib<traits>;
+  static constexpr bool has_pod          = detail::HasTrivialAttrib<traits>;
 
   inline static bool is_null(value_type const& other) noexcept
-    requires(has_null_method)
+  requires(HasNullMethod)
   {
     return traits::is_null(other);
   }
 
   inline static bool is_null(value_type const& other) noexcept
-    requires(has_null_value && !has_null_method)
+  requires(HasNullValue && !HasNullMethod)
   {
     return other == traits::null_v;
   }
 
   inline static constexpr bool is_null(value_type const& other) noexcept
-    requires(!has_null_value && !has_null_method)
+  requires(!HasNullValue && !HasNullMethod)
   {
     return false;
   }
@@ -75,7 +75,7 @@ public:
     *this = std::move(other);
   }
   inline sparse_vector(sparse_vector const& other) noexcept
-    requires(std::is_copy_constructible_v<value_type>)
+  requires(std::is_copy_constructible_v<value_type>)
   {
     *this = other;
   }
@@ -95,7 +95,7 @@ public:
   }
 
   sparse_vector& operator=(sparse_vector const& other) noexcept
-    requires(std::is_copy_constructible_v<value_type>)
+  requires(std::is_copy_constructible_v<value_type>)
   {
     clear();
     items_.resize(other.items_.size());
@@ -378,7 +378,7 @@ public:
   }
 
   Ty get_value(size_type idx) const noexcept
-    requires(has_null_value)
+  requires(HasNullValue)
   {
     auto block = (idx >> pool_div);
     return block < items_.size() && items_[block] ? reinterpret_cast<value_type const&>(items_[block][idx & pool_mod])
@@ -415,10 +415,10 @@ private:
           if constexpr (has_pod ||
                         (std::is_trivially_copyable_v<value_type> && std::is_trivially_constructible_v<value_type>))
           {
-            if constexpr (has_null_value)
+            if constexpr (HasNullValue)
               std::fill(reinterpret_cast<value_type*>(items_[block]),
                         reinterpret_cast<value_type*>(items_[block] + pool_size), traits::null_v);
-            else if constexpr (has_null_construct)
+            else if constexpr (HasNullConstruct)
             {
               std::for_each(reinterpret_cast<value_type*>(items_[block]),
                             reinterpret_cast<value_type*>(items_[block] + pool_size), traits::null_construct);
@@ -435,9 +435,9 @@ private:
                           reinterpret_cast<value_type*>(items_[block] + pool_size),
                           [](value_type& dst)
                           {
-                            if constexpr (has_null_value)
+                            if constexpr (HasNullValue)
                               std::construct_at(std::addressof(dst), traits::null_v);
-                            else if constexpr (has_null_construct)
+                            else if constexpr (HasNullConstruct)
                               traits::null_construct(dst);
                             else
                               std::construct_at(std::addressof(dst));
@@ -481,9 +481,9 @@ private:
   {
     auto block = (idx >> pool_div);
 
-    if constexpr (has_null_value)
+    if constexpr (HasNullValue)
       reinterpret_cast<value_type&>(items_[block][idx & pool_mod]) = traits::null_v;
-    else if constexpr (has_null_construct)
+    else if constexpr (HasNullConstruct)
       traits::null_reset(reinterpret_cast<value_type&>(items_[block][idx & pool_mod]));
     else
       reinterpret_cast<value_type&>(items_[block][idx & pool_mod]) = value_type();
@@ -514,7 +514,7 @@ private:
     using Type = std::conditional_t<std::is_const_v<Store>, value_type const&, value_type&>;
     for (size_type block = 0; block < items_.size(); ++block)
     {
-      constexpr auto arity = detail::function_traits<Lambda>::arity;
+      constexpr auto arity = function_traits<Lambda>::arity;
 
       auto store = items_[block];
       if (store)

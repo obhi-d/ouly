@@ -3,8 +3,6 @@
 
 namespace acl::detail
 {
-template <class T>
-concept is_not_const = !std::is_const_v<T>;
 
 struct list_node
 {
@@ -98,12 +96,14 @@ public:
       return &Accessor::get(owner, index);
     }
 
-    inline value_type& operator*() requires is_not_const<ContainerTy>
+    inline value_type& operator*()
+      requires(!std::is_const_v<ContainerTy>)
     {
       return Accessor::get(owner, index);
     }
 
-    inline value_type* operator->() requires is_not_const<ContainerTy>
+    inline value_type* operator->()
+      requires(!std::is_const_v<ContainerTy>)
     {
       return &Accessor::get(owner, index);
     }

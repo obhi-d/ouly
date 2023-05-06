@@ -27,7 +27,7 @@ private:
   static constexpr auto pool_div    = detail::log2(Traits::pool_size);
   static constexpr auto pool_size   = static_cast<size_type>(1) << pool_div;
   static constexpr auto pool_mod    = pool_size - 1;
-  static constexpr bool has_backref = detail::has_backref_v<Traits>;
+  static constexpr bool has_backref = detail::HasBackrefValue<Traits>;
   using this_type                   = sparse_table<Ty, Allocator, Traits>;
   using storage                     = detail::aligned_storage<sizeof(value_type), alignof(value_type)>;
   using allocator                   = Allocator;
@@ -39,9 +39,9 @@ private:
 
   struct self_index_traits_base
   {
-    using size_type                            = uint32_t;
-    static constexpr uint32_t pool_size        = std::conditional_t<detail::has_self_index_pool_size<Traits>, Traits,
-                                                             default_index_pool_size>::self_index_pool_size;
+    using size_type = uint32_t;
+    static constexpr uint32_t pool_size =
+      std::conditional_t<detail::HasSelfIndexPoolSize<Traits>, Traits, default_index_pool_size>::self_index_pool_size;
     static constexpr bool     use_sparse_index = true;
     static constexpr uint32_t null_v           = 0;
     static constexpr bool     zero_memory      = true;
@@ -51,7 +51,7 @@ private:
   struct self_index_traits : self_index_traits_base
   {};
 
-  template <detail::has_backref_v TrTy>
+  template <detail::HasBackrefValue TrTy>
   struct self_index_traits<TrTy> : self_index_traits_base
   {
     using offset = typename TrTy::offset;
@@ -68,7 +68,7 @@ public:
     *this = std::move(other);
   }
   inline sparse_table(sparse_table const& other) noexcept
-    requires(std::is_copy_constructible_v<value_type>)
+  requires(std::is_copy_constructible_v<value_type>)
   {
     *this = other;
   }
@@ -96,7 +96,7 @@ public:
   }
 
   sparse_table& operator=(sparse_table const& other) noexcept
-    requires(std::is_copy_constructible_v<value_type>)
+  requires(std::is_copy_constructible_v<value_type>)
   {
     clear();
     shrink_to_fit();
@@ -241,7 +241,7 @@ public:
   /// @brief Erase a single element by object when backref is available.
   /// @remarks Only available if backref is available
   void erase(value_type const& obj) noexcept
-    requires(has_backref)
+  requires(has_backref)
   {
     erase_at(self_.get(obj));
   }
@@ -314,25 +314,25 @@ private:
   }
 
   inline auto get_ref_at_idx(size_type idx) const noexcept
-    requires(!has_backref)
+  requires(!has_backref)
   {
     return self_.get(idx);
   }
 
   inline auto get_ref_at_idx(size_type idx) const noexcept
-    requires(has_backref)
+  requires(has_backref)
   {
     return self_.get(item_at_idx(idx));
   }
 
   inline auto set_ref_at_idx(size_type idx, size_type lnk) noexcept
-    requires(!has_backref)
+  requires(!has_backref)
   {
     return self_.ensure_at(idx) = lnk;
   }
 
   inline auto set_ref_at_idx(size_type idx, size_type lnk) noexcept
-    requires(has_backref)
+  requires(has_backref)
   {
     return self_.get(item_at_idx(idx)) = lnk;
   }
@@ -404,7 +404,7 @@ private:
   template <typename Lambda, typename Cast>
   void for_each_l(size_type first, size_type last, Lambda&& lambda) noexcept
   {
-    constexpr auto arity = detail::function_traits<Lambda>::arity;
+    constexpr auto arity = function_traits<Lambda>::arity;
 
     for (; first < last; ++first)
     {
@@ -419,7 +419,7 @@ private:
     }
   }
 
-  static inline bool is_valid_ref(size_type r) 
+  static inline bool is_valid_ref(size_type r)
   {
     return (r && detail::is_valid(r));
   }

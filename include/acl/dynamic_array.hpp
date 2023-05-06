@@ -133,6 +133,20 @@ public:
     return count_;
   }
 
+  inline void resize(uint32_t n, T const& fill = T()) noexcept
+  {
+    if (n != count_)
+    {
+      auto data = (T*)Allocator::allocate(sizeof(T) * n, alignarg<T>);
+      std::uninitialized_move_n(begin(), count_, data);
+      if (n > count_)
+        std::uninitialized_fill_n(data + count_, n - count_, fill);
+      clear();
+      data_  = data;
+      count_ = n;
+    }
+  }
+
 private:
   T*       data_  = nullptr;
   uint32_t count_ = 0;

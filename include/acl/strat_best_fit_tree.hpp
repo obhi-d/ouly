@@ -12,7 +12,7 @@ namespace acl::strat
 template <typename usize_type>
 class best_fit_tree
 {
-  using optional_addr = detail::voptional<acl::detail::k_null_0>;
+  using optional_addr = detail::optional_val<acl::detail::k_null_0>;
 
 public:
 

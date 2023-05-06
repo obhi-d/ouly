@@ -78,7 +78,7 @@ struct tuple_array_visualizer_base<T1>
 };
 
 template <typename Traits>
-concept has_base = requires
+concept HasBase = requires
 {
   typename Traits::base;
 };

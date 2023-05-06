@@ -17,6 +17,9 @@ IncludeBlocks: Preserve
 BreakBeforeBraces: Custom
 BreakBeforeConceptDeclarations: Always
 ContinuationIndentWidth: 2
+RequiresClausePosition: WithFollowing
+IndentRequiresClause: False
+#RequiresExpressionIndentation: OuterScope
 BraceWrapping:
   AfterCaseLabel: true
   AfterClass: true

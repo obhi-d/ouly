@@ -23,7 +23,7 @@ class basic_link_container
 {
   using storage_type = acl::detail::aligned_storage<sizeof(Ty), alignof(Ty)>;
   using vector_type =
-    std::conditional_t<detail::has_use_sparse_attrib<Traits>, sparse_vector<storage_type, default_allocator<>, Traits>,
+    std::conditional_t<detail::HasUseSparseAttrib<Traits>, sparse_vector<storage_type, default_allocator<>, Traits>,
                        vector<storage_type>>;
   using size_type = detail::choose_size_t<uint32_t, Traits>;
 

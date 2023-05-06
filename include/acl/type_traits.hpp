@@ -66,9 +66,6 @@ struct nocheck : std::false_type
 ///   using offset = acl::offset<&MyType::self>;
 /// };
 
-namespace detail
-{
-
 template <typename T>
 struct function_traits;
 
@@ -76,142 +73,175 @@ template <typename R, typename... Args>
 struct function_traits<R (*)(Args...)>
 {
   static constexpr size_t arity = sizeof...(Args);
+  using result_type             = R;
+  template <std::size_t Index>
+  using arg_type                           = typename std::tuple_element_t<Index, std::tuple<Args...>>;
+  constexpr static bool is_free_function   = true;
+  constexpr static bool is_member_function = false;
+  constexpr static bool is_const_function  = false;
+  constexpr static bool is_functor         = false;
 };
 
 template <typename R, typename C, typename... Args>
 struct function_traits<R (C::*)(Args...)>
 {
   static constexpr size_t arity = sizeof...(Args);
+  using result_type             = R;
+  template <std::size_t Index>
+  using arg_type                           = typename std::tuple_element_t<Index, std::tuple<Args...>>;
+  constexpr static bool is_free_function   = false;
+  constexpr static bool is_member_function = true;
+  constexpr static bool is_const_function  = false;
+  constexpr static bool is_functor         = false;
 };
 
 template <typename R, typename C, typename... Args>
 struct function_traits<R (C::*)(Args...) const>
 {
   static constexpr size_t arity = sizeof...(Args);
+  using result_type             = R;
+  template <std::size_t Index>
+  using arg_type                           = typename std::tuple_element_t<Index, std::tuple<Args...>>;
+  constexpr static bool is_free_function   = false;
+  constexpr static bool is_member_function = true;
+  constexpr static bool is_const_function  = true;
+  constexpr static bool is_functor         = false;
 };
 
 template <typename T>
 struct function_traits : public function_traits<decltype(&T::operator())>
 {};
 
+namespace detail
+{
 
 template <typename Traits, typename U>
-concept has_null_value = requires(U t) {
-                           {
-                             ((Traits::null_v))
-                             } -> std::convertible_to<U>;
-                           {
-                             Traits::null_v == t
-                             } -> std::same_as<bool>;
-                         };
+concept HasNullValue = requires(U t) {
+                         {
+                           ((Traits::null_v))
+                           } -> std::convertible_to<U>;
+                         {
+                           Traits::null_v == t
+                           } -> std::same_as<bool>;
+                       };
 
 template <typename Traits, typename U>
-concept has_null_method = requires(U v) {
+concept HasNullMethod = requires(U v) {
+                          {
+                            Traits::is_null(v)
+                            } noexcept -> std::same_as<bool>;
+                        };
+
+template <typename Traits, typename U>
+concept HasNullConstruct = requires(U v) {
+                             Traits::null_construct(v);
+                             Traits::null_reset(v);
+                           };
+
+template <typename Traits>
+concept HasIndexPoolSize = requires {
+                             {
+                               ((Traits::index_pool_size))
+                               } -> std::convertible_to<uint32_t>;
+                           };
+
+template <typename Traits>
+concept HasSelfIndexPoolSize = requires {
+                                 {
+                                   ((Traits::self_index_pool_size))
+                                   } -> std::convertible_to<uint32_t>;
+                               };
+
+template <typename Traits>
+concept HasKeysIndexPoolSize = requires {
+                                 {
+                                   ((Traits::keys_index_pool_size))
+                                   } -> std::convertible_to<uint32_t>;
+                               };
+template <typename Traits>
+concept HasBackrefValue = requires { typename Traits::offset; };
+
+template <typename Traits>
+concept HasSizeType = requires { typename Traits::size_type; };
+
+template <typename Traits>
+concept HasTrivialAttrib = requires {
+                             Traits::assume_pod;
+                             {
+                               std::bool_constant<Traits::assume_pod>()
+                               } -> std::same_as<std::true_type>;
+                           };
+
+template <typename Traits>
+concept HasNoFillAttrib = requires {
+                            Traits::no_fill;
                             {
-                              Traits::is_null(v)
-                              } noexcept -> std::same_as<bool>;
+                              std::bool_constant<Traits::no_fill>()
+                              } -> std::same_as<std::true_type>;
                           };
 
-template <typename Traits, typename U>
-concept has_null_construct = requires(U v) {
-                               Traits::null_construct(v);
-                               Traits::null_reset(v);
-                             };
-
 template <typename Traits>
-concept has_index_pool_size = requires {
-                                {
-                                  ((Traits::index_pool_size))
-                                  } -> std::convertible_to<uint32_t>;
-                              };
-
+concept HasTriviallyDestroyedOnMoveAttrib = requires {
+                                              Traits::no_fill;
+                                              {
+                                                std::bool_constant<Traits::trivially_destroyed_on_move>()
+                                                } -> std::same_as<std::true_type>;
+                                            };
 template <typename Traits>
-concept has_self_index_pool_size = requires {
-                                     {
-                                       ((Traits::self_index_pool_size))
-                                       } -> std::convertible_to<uint32_t>;
-                                   };
-
-template <typename Traits>
-concept has_keys_index_pool_size = requires {
-                                     {
-                                       ((Traits::keys_index_pool_size))
-                                       } -> std::convertible_to<uint32_t>;
-                                   };
-template <typename Traits>
-concept has_backref_v = requires { typename Traits::offset; };
-
-template <typename Traits>
-concept has_size_type_v = requires { typename Traits::size_type; };
-
-template <typename Traits>
-concept has_has_pod_attrib = requires {
-                               Traits::assume_pod;
+concept HasUseSparseAttrib = requires {
+                               Traits::use_sparse;
                                {
-                                 std::bool_constant<Traits::assume_pod>()
+                                 std::bool_constant<Traits::use_sparse>()
                                  } -> std::same_as<std::true_type>;
                              };
 
 template <typename Traits>
-concept has_no_fill_attrib = requires {
-                               Traits::no_fill;
-                               {
-                                 std::bool_constant<Traits::no_fill>()
-                                 } -> std::same_as<std::true_type>;
-                             };
+concept HasUseSparseIndexAttrib = requires {
+                                    Traits::use_sparse_index;
+                                    {
+                                      std::bool_constant<Traits::use_sparse_index>()
+                                      } -> std::same_as<std::true_type>;
+                                  };
 
 template <typename Traits>
-concept has_trivially_destroyed_on_move_attrib = requires {
-                               Traits::no_fill;
-                               {
-                                 std::bool_constant<Traits::trivially_destroyed_on_move>()
-                                 } -> std::same_as<std::true_type>;
-                             };
-template <typename Traits>
-concept has_use_sparse_attrib = requires {
-                                  Traits::use_sparse;
-                                  {
-                                    std::bool_constant<Traits::use_sparse>()
-                                    } -> std::same_as<std::true_type>;
-                                };
-
-template <typename Traits>
-concept has_use_sparse_index_attrib = requires {
-                                        Traits::use_sparse_index;
+concept HasSelfUseSparseIndexAttrib = requires {
+                                        Traits::self_use_sparse_index;
                                         {
-                                          std::bool_constant<Traits::use_sparse_index>()
+                                          std::bool_constant<Traits::use_self_sparse_index>()
                                           } -> std::same_as<std::true_type>;
                                       };
 
 template <typename Traits>
-concept has_self_use_sparse_index_attrib = requires {
-                                             Traits::self_use_sparse_index;
-                                             {
-                                               std::bool_constant<Traits::use_self_sparse_index>()
-                                               } -> std::same_as<std::true_type>;
-                                           };
+concept HasKeysUseSparseIndexAttrib = requires {
+                                        Traits::keys_use_sparse_index;
+                                        {
+                                          std::bool_constant<Traits::use_keys_sparse_index>()
+                                          } -> std::same_as<std::true_type>;
+                                      };
 
 template <typename Traits>
-concept has_keys_use_sparse_index_attrib = requires {
-                                             Traits::keys_use_sparse_index;
-                                             {
-                                               std::bool_constant<Traits::use_keys_sparse_index>()
-                                               } -> std::same_as<std::true_type>;
-                                           };
+concept HasZeroMemoryAttrib = requires {
+                                Traits::zero_memory;
+                                {
+                                  std::bool_constant<Traits::zero_memory>()
+                                  } -> std::same_as<std::true_type>;
+                              };
 
-template <typename Traits>
-concept has_zero_memory_attrib = requires {
-                                   Traits::zero_memory;
-                                   {
-                                     std::bool_constant<Traits::zero_memory>()
-                                     } -> std::same_as<std::true_type>;
-                                 };
-
+template <typename V, typename R>
+concept OptionalLike = requires(V v) {
+                         {
+                           *v
+                           } -> std::convertible_to<R>;
+                         {
+                           (bool)v
+                           } -> std::convertible_to<bool>;
+                       };
 
 template <typename S, typename T1, typename... Args>
 struct choose_size_ty
 {
-  using type = std::conditional_t<has_size_type_v<T1>, typename choose_size_ty<S, T1>::type, typename choose_size_ty<Args...>::type>;
+  using type =
+    std::conditional_t<HasSizeType<T1>, typename choose_size_ty<S, T1>::type, typename choose_size_ty<Args...>::type>;
 };
 
 template <typename S, typename T1>
@@ -220,7 +250,7 @@ struct choose_size_ty<S, T1>
   using type = S;
 };
 
-template <typename S, has_size_type_v T1>
+template <typename S, HasSizeType T1>
 struct choose_size_ty<S, T1>
 {
   using type = typename T1::size_type;
@@ -265,7 +295,6 @@ struct size_type<ua_t, std::void_t<typename ua_t::size_type>>
 
 template <typename ua_t>
 using size_t = typename size_type<ua_t>::type;
-
 
 } // namespace detail
 

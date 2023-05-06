@@ -21,7 +21,6 @@
 
 #include <acl/type_traits.hpp>
 
-
 #ifndef ACL_CUSTOM_MALLOC_NS
 #include "acl/malloc_ns.hpp"
 #define ACL_CUSTOM_MALLOC_NS acl::detail
@@ -144,17 +143,34 @@ struct optional_ptr
     return value;
   }
 
+  inline constexpr bool has_value() const noexcept
+  {
+    return value != nullptr;
+  }
+
+  inline constexpr void reset() const noexcept
+  {
+    value = nullptr;
+  }
+
+  inline constexpr T* release() const noexcept
+  {
+    auto r = value;
+    value  = nullptr;
+    return r;
+  }
+
   inline constexpr auto operator<=>(const optional_ptr& other) const noexcept = default;
 
   T* value = nullptr;
 };
 
 template <auto nullv>
-struct voptional
+struct optional_val
 {
-  using vtype           = std::decay_t<decltype(nullv)>;
-  constexpr voptional() = default;
-  constexpr voptional(vtype iv) noexcept : value(iv) {}
+  using vtype              = std::decay_t<decltype(nullv)>;
+  constexpr optional_val() = default;
+  constexpr optional_val(vtype iv) noexcept : value(iv) {}
 
   inline constexpr operator bool() const noexcept
   {
@@ -171,7 +187,24 @@ struct voptional
     return value;
   }
 
-  inline constexpr auto operator<=>(const voptional& other) const noexcept = default;
+  inline constexpr bool has_value() const noexcept
+  {
+    return value != nullv;
+  }
+
+  inline constexpr void reset() const noexcept
+  {
+    value = nullv;
+  }
+
+  inline constexpr vtype release() const noexcept
+  {
+    auto r = value;
+    value  = nullv;
+    return r;
+  }
+
+  inline constexpr auto operator<=>(const optional_val& other) const noexcept = default;
 
   vtype value = nullv;
 };

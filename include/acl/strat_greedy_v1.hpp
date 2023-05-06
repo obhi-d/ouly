@@ -11,7 +11,7 @@ namespace acl::strat
 template <typename usize_type>
 class greedy_v1
 {
-  using optional_addr = detail::voptional<detail::k_null_0>;
+  using optional_addr = detail::optional_val<detail::k_null_0>;
 
 public:
   static constexpr usize_type min_granularity = 4;

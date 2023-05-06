@@ -39,8 +39,8 @@ public:
   using allocator_type = Allocator;
 
 private:
-  static constexpr bool has_backref = detail::has_backref_v<Traits>;
-  static constexpr bool has_sparse  = detail::has_use_sparse_attrib<Traits>;
+  static constexpr bool has_backref = detail::HasBackrefValue<Traits>;
+  static constexpr bool has_sparse  = detail::HasUseSparseAttrib<Traits>;
 
   using this_type    = packed_table<value_type, Allocator, Traits>;
   using vector_type  = std::conditional_t<has_sparse, sparse_vector<Ty, Allocator, Traits>, vector<Ty, Allocator>>;
@@ -58,21 +58,20 @@ private:
 
   struct self_index_traits_base
   {
-    using size_type                     = uint32_t;
-    static constexpr uint32_t pool_size = std::conditional_t<detail::has_self_index_pool_size<Traits>, Traits,
-                                                             default_index_pool_size>::self_index_pool_size;
-    static constexpr bool     use_sparse_index =
-      std::conditional_t<detail::has_self_use_sparse_index_attrib<Traits>, Traits,
-                         default_index_pool_size>::self_use_sparse_index;
-    static constexpr uint32_t null_v      = 0;
-    static constexpr bool     zero_memory = true;
+    using size_type = uint32_t;
+    static constexpr uint32_t pool_size =
+      std::conditional_t<detail::HasSelfIndexPoolSize<Traits>, Traits, default_index_pool_size>::self_index_pool_size;
+    static constexpr bool     use_sparse_index = std::conditional_t<detail::HasSelfUseSparseIndexAttrib<Traits>, Traits,
+                                                                default_index_pool_size>::self_use_sparse_index;
+    static constexpr uint32_t null_v           = 0;
+    static constexpr bool     zero_memory      = true;
   };
 
   template <typename TrTy>
   struct self_index_traits : self_index_traits_base
   {};
 
-  template <detail::has_backref_v TrTy>
+  template <detail::HasBackrefValue TrTy>
   struct self_index_traits<TrTy> : self_index_traits_base
   {
     using offset = typename TrTy::offset;
@@ -80,11 +79,11 @@ private:
 
   struct key_index_traits
   {
-    using size_type                            = uint32_t;
-    static constexpr uint32_t pool_size        = std::conditional_t<detail::has_keys_index_pool_size<Traits>, Traits,
-                                                             default_index_pool_size>::keys_index_pool_size;
-    static constexpr bool     use_sparse_index = std::conditional_t<detail::has_keys_use_sparse_index_attrib<Traits>, Traits,
-                         default_index_pool_size>::keys_use_sparse_index;
+    using size_type = uint32_t;
+    static constexpr uint32_t pool_size =
+      std::conditional_t<detail::HasKeysIndexPoolSize<Traits>, Traits, default_index_pool_size>::keys_index_pool_size;
+    static constexpr bool     use_sparse_index = std::conditional_t<detail::HasKeysUseSparseIndexAttrib<Traits>, Traits,
+                                                                default_index_pool_size>::keys_use_sparse_index;
     static constexpr uint32_t null_v           = 0;
     static constexpr bool     zero_memory      = true;
   };
@@ -93,21 +92,15 @@ private:
   using key_index  = detail::indirection_type<Allocator, key_index_traits>;
 
 public:
-  inline packed_table() noexcept
-  {
-  }
-  inline packed_table(Allocator&& alloc) noexcept : Allocator(std::move<Allocator>(alloc))
-  {
-  }
-  inline packed_table(Allocator const& alloc) noexcept : Allocator(alloc)
-  {
-  }
+  inline packed_table() noexcept {}
+  inline packed_table(Allocator&& alloc) noexcept : Allocator(std::move<Allocator>(alloc)) {}
+  inline packed_table(Allocator const& alloc) noexcept : Allocator(alloc) {}
   inline packed_table(packed_table&& other) noexcept
   {
     *this = std::move(other);
   }
   inline packed_table(packed_table const& other) noexcept
-    requires(std::is_copy_constructible_v<value_type>)
+  requires(std::is_copy_constructible_v<value_type>)
   {
     *this = other;
   }
@@ -131,7 +124,7 @@ public:
   }
 
   packed_table& operator=(packed_table const& other) noexcept
-    requires(std::is_copy_constructible_v<value_type>)
+  requires(std::is_copy_constructible_v<value_type>)
   {
     clear();
     shrink_to_fit();
@@ -204,7 +197,7 @@ public:
   template <typename... Args>
   link emplace(Args&&... args) noexcept
   {
-    if (values_.empty()) [[unlikely]] 	
+    if (values_.empty()) [[unlikely]]
     {
       keys_.push_back(0);
       values_.emplace_back();
@@ -241,7 +234,7 @@ public:
   template <typename... Args>
   void emplace_at(link point, Args&&... args) noexcept
   {
-    if (values_.empty()) [[unlikely]] 	
+    if (values_.empty()) [[unlikely]]
     {
       keys_.push_back(0);
       values_.emplace_back();
@@ -289,7 +282,7 @@ public:
   /// @brief Erase a single element by object when backref is available.
   /// @remarks Only available if backref is available
   void erase(value_type const& obj) noexcept
-    requires(has_backref)
+  requires(has_backref)
   {
     erase_at(link(self_.get(obj)));
   }
@@ -355,7 +348,7 @@ public:
     return values_.size() <= 1;
   }
 
-  inline void validate_integrity() const 
+  inline void validate_integrity() const
   {
     for (uint32_t first = 1, last = size(); first < last; ++first)
     {
@@ -363,7 +356,7 @@ public:
     }
 
     std::vector<uint32_t> frees;
-    auto fi = free_key_slot_;
+    auto                  fi = free_key_slot_;
     while (fi)
     {
       auto idx = detail::index_val(detail::validate(fi));
@@ -400,13 +393,13 @@ private:
   }
 
   inline auto get_ref_at_idx(size_type idx) const noexcept
-    requires(!has_backref)
+  requires(!has_backref)
   {
     return self_.get(idx);
   }
 
   inline auto get_ref_at_idx(size_type idx) const noexcept
-    requires(has_backref)
+  requires(has_backref)
   {
     return self_.get(item_at_idx(idx));
   }
@@ -451,7 +444,6 @@ private:
     }
 
     values_.pop_back();
-
   }
 
   /// @brief Lambda called for each element
@@ -465,7 +457,7 @@ private:
   template <typename Lambda, typename Cast>
   inline void for_each_l(size_type first, size_type last, Lambda&& lambda) noexcept
   {
-    constexpr auto arity = detail::function_traits<Lambda>::arity;
+    constexpr auto arity = function_traits<Lambda>::arity;
     for (; first != last; ++first)
     {
       if constexpr (arity == 2)

@@ -18,18 +18,25 @@ FetchContent_Declare(
   GIT_TAG v4.3.11
 )
 
+FetchContent_Declare(
+  nlohmann_json
+  GIT_REPOSITORY https://github.com/nlohmann/json.git
+  GIT_TAG v3.11.2
+)
+
 FetchContent_MakeAvailable(Catch2)
 FetchContent_MakeAvailable(nanobench)
+FetchContent_MakeAvailable(nlohmann_json)
 
 function(add_unit_test)
 
   set(options SKIP_TEST SANITIZE)
   set(one_value_arg NAME)
-  set(multi_value_arg FILES)
+  set(multi_value_arg FILES LINK_LIBS)
   cmake_parse_arguments(unit_test "${options}" "${one_value_arg}" "${multi_value_arg}" ${ARGN})
   set(target_name "test_${unit_test_NAME}")
   add_executable(${target_name} ${unit_test_FILES} "validity_main.cpp")
-  target_link_libraries(${target_name} acl::acl Catch2::Catch2)
+  target_link_libraries(${target_name} acl::acl Catch2::Catch2 ${unit_test_LINK_LIBS})
   target_compile_definitions(${target_name} PUBLIC -DACL_REC_STATS)
   ## Skip test?
   if (NOT unit_test_SKIP_TEST)
@@ -64,7 +71,7 @@ add_unit_test(NAME table FILES "table.cpp")
 add_unit_test(NAME sparse_vector FILES "sparse_vector.cpp")
 add_unit_test(NAME dynamic_array FILES "dynamic_array.cpp")
 add_unit_test(NAME arena_allocator FILES "arena_allocator.cpp")
-
+add_unit_test(NAME input_serializer FILES "input_serializer.cpp" LINK_LIBS "nlohmann_json::nlohmann_json" )
 
 add_executable(acl-bench
  "bench_arena_allocator.cpp"
