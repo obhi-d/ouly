@@ -7,6 +7,7 @@
 #include "reflection.hpp"
 #include "type_traits.hpp"
 #include <cassert>
+#include <memory>
 #include <optional>
 
 namespace acl
@@ -44,25 +45,25 @@ concept InputSerializer = requires(V v)
   { v.for_each([](V) -> bool {}) } -> std::same_as<bool>; 
     
   // function object: Must return object_type
-  { v.at(::std::string_view()) } -> detail::OptionalLike<V>;
+  { v.at(::std::string_view()) } -> detail::OptionalValueLike<V>;
     
   // function object: Must return object_type given an array index
-  { v.at(uint32_t(0)) } -> detail::OptionalLike<V>;
+  { v.at(uint32_t(0)) } -> detail::OptionalValueLike<V>;
 
   // Must convert value_type to double
-  { v.as_double() } -> detail::OptionalLike<double const&>;
+  { v.as_double() } -> detail::OptionalValueLike<double const&>;
   
   // Must convert value_type to float
-  { v.as_uint64() } -> detail::OptionalLike<uint64_t const&>;
+  { v.as_uint64() } -> detail::OptionalValueLike<uint64_t const&>;
 
   // Must convert value_type to float
-  { v.as_int64() } -> detail::OptionalLike<int64_t const&>;
+  { v.as_int64() } -> detail::OptionalValueLike<int64_t const&>;
 
   // Must convert value_type to float
-  { v.as_bool() } -> detail::OptionalLike<bool const&>;
+  { v.as_bool() } -> detail::OptionalValueLike<bool const&>;
 
   // Must convert value_type to float
-  { v.as_string() } -> detail::OptionalLike<std::string_view>;
+  { v.as_string() } -> detail::OptionalValueLike<std::string_view>;
 
   // error handler: context, error
   v.error(std::string_view(), input_error_code()); 
@@ -88,7 +89,7 @@ public:
     return detail::set_all<Class>(*this, obj);
   }
 
-  template <detail::IsTuple Class>
+  template <detail::TupleLike Class>
   bool operator()(Class& obj) noexcept
   {
     // Invalid type is unexpected
@@ -104,7 +105,38 @@ public:
     (std::make_index_sequence<std::tuple_size_v<Class>>());
   }
 
-  template <detail::IsArray Class>
+  template <detail::StringMapLike Class>
+  bool operator()(Class& obj) noexcept
+  {
+    // Invalid is not unexpected
+    // Invalid type is unexpected
+    if (!get().is_object())
+    {
+      get().error(type_name<Class>(), input_error_code::invalid_type);
+      return false;
+    }
+
+    using key_type    = detail::remove_cref<typename Class::key_type>;
+    using mapped_type = detail::remove_cref<typename Class::mapped_type>;
+
+    detail::reserve(obj, get().size());
+
+    return get().for_each(
+      [this, &obj](std::string_view key, Serializer value) -> bool
+      {
+        mapped_type stream_val;
+
+        if (input_serializer(value)(stream_val))
+        {
+          detail::emplace(obj, key_type{key}, std::move(stream_val));
+          return true;
+        }
+        value.error(type_name<mapped_type>(), input_error_code::failed_streaming_map);
+        return false;
+      });
+  }
+
+  template <detail::ArrayLike Class>
   bool operator()(Class& obj) noexcept
   {
     // Invalid type is unexpected
@@ -138,7 +170,7 @@ public:
       std::uint32_t index = 0;
       return get().for_each(
 
-        [&obj, &index](auto& value)
+        [&obj, &index](Serializer value)
         {
           detail::array_value_type<Class> stream_val;
           bool                            result = input_serializer(value)(stream_val);
@@ -153,7 +185,7 @@ public:
     }
   }
 
-  template <detail::IsVariant Class>
+  template <detail::VariantLike Class>
   bool operator()(Class& obj) noexcept
   {
     // Invalid type is unexpected
@@ -176,16 +208,16 @@ public:
     }
 
     auto value_opt = get().at("value");
-    if (!value_opt.is_valid())
+    if (!value_opt)
       return true;
 
     auto value = *value_opt;
     return find_alt<std::variant_size_v<Class> - 1, Class>(static_cast<uint32_t>(*index),
-                                                           [&obj, &value](auto I) -> Class
+                                                           [&obj, &value](auto I) -> bool
                                                            {
                                                              using type = std::variant_alternative_t<I, Class>;
                                                              type load;
-                                                             if (value(load))
+                                                             if (input_serializer(value)(load))
                                                              {
                                                                obj = std::move(load);
                                                                return true;
@@ -228,7 +260,7 @@ public:
     }
   }
 
-  template <detail::IsBool Class>
+  template <detail::BoolLike Class>
   bool operator()(Class& obj) noexcept
   {
     auto value = get().as_bool();
@@ -244,7 +276,7 @@ public:
     }
   }
 
-  template <detail::IsSigned Class>
+  template <detail::SignedIntLike Class>
   bool operator()(Class& obj) noexcept
   {
     auto value = get().as_int64();
@@ -260,7 +292,7 @@ public:
     }
   }
 
-  template <detail::IsUnsigned Class>
+  template <detail::UnsignedIntLike Class>
   bool operator()(Class& obj) noexcept
   {
     auto value = get().as_uint64();
@@ -276,10 +308,10 @@ public:
     }
   }
 
-  template <detail::IsFloat Class>
+  template <detail::FloatLike Class>
   bool operator()(Class& obj) noexcept
   {
-    auto value = get().as_uint64();
+    auto value = get().as_double();
     if (value)
     {
       obj = static_cast<Class>(*value);
@@ -292,14 +324,19 @@ public:
     }
   }
 
-  template <detail::IsPointer Class>
+  template <detail::PointerLike Class>
   bool operator()(Class& obj) noexcept
   {
-    auto value = Class(new detail::pointer_class_type<Class>());
-    return (*this)(*value);
+    using class_type  = detail::remove_cref<Class>;
+    using pvalue_type = detail::pointer_class_type<Class>;
+    if constexpr (std::same_as<class_type, std::shared_ptr<pvalue_type>>)
+      obj = std::make_shared<pvalue_type>();
+    else
+      obj = Class(new detail::pointer_class_type<Class>());
+    return (*this)(*obj);
   }
 
-  template <detail::IsOptional Class>
+  template <detail::OptionalLike Class>
   bool operator()(Class& obj) noexcept
   {
     obj.emplace();
@@ -340,7 +377,8 @@ private:
     auto ser = get().at(N);
     if (ser)
     {
-      return input_serializer(*ser)(std::get<N>(obj));
+      using type = detail::remove_cref<std::tuple_element_t<N, Class>>;
+      return input_serializer(*ser)(const_cast<type&>(std::get<N>(obj)));
     }
     return true;
   }

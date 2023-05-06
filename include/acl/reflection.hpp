@@ -161,10 +161,15 @@ concept IsFreeGetterByValSetter = requires {
                                     typename free_setter_type<Setter>::class_t;
                                   };
 
+template <typename T>
+using remove_cref = std::remove_const_t<std::remove_reference_t<T>>;
+
 // Strings
 template <typename T>
-concept IsBasicString = std::is_same_v<std::string, T> || std::is_same_v<std::string_view, T> ||
-                        std::is_same_v<std::string, T> || std::is_same_v<char*, T> || std::is_same_v<char const*, T>;
+concept NativeStringLike =
+  std::is_same_v<std::string, remove_cref<T>> || std::is_same_v<std::string_view, remove_cref<T>> ||
+  std::is_same_v<std::string, remove_cref<T>> || std::is_same_v<char*, T> ||
+  std::is_same_v<char const*, remove_cref<T>>;
 
 template <typename T>
 concept CastableToStringView = requires(T t) { std::string_view(t); };
@@ -177,6 +182,32 @@ concept ConstructedFromString = requires { T(std::string()); };
 
 template <typename T>
 concept ConvertibleToString = requires(T t) { std::to_string(t); };
+
+// String type check
+
+template <typename T>
+concept SignedIntLike = std::is_signed_v<remove_cref<T>> &&
+                        (std::is_integral_v<remove_cref<T>> || std::is_enum_v<remove_cref<T>>) &&
+                        (!std::is_same_v<remove_cref<T>, bool>);
+
+template <typename T>
+concept UnsignedIntLike = std::is_unsigned_v<remove_cref<T>> &&
+                          (std::is_integral_v<remove_cref<T>> || std::is_enum_v<remove_cref<T>>) &&
+                          (!std::is_same_v<remove_cref<T>, bool>);
+
+// Float
+template <typename T>
+concept FloatLike = std::is_floating_point_v<remove_cref<T>>;
+
+// Bool
+template <typename T>
+concept BoolLike = std::is_same_v<remove_cref<T>, bool>;
+
+template <typename T>
+concept StringLike = NativeStringLike<T>;
+
+template <typename T>
+concept NativeLike = BoolLike<T> || SignedIntLike<T> || UnsignedIntLike<T> || FloatLike<T> || StringLike<T>;
 
 template <typename T>
 concept TransformFromString = requires(T ref) {
@@ -202,30 +233,6 @@ concept TransformToStringView = requires(T ref) {
                                     } -> std::same_as<std::string_view>;
                                 };
 
-// String type check
-
-template <typename T>
-concept IsSigned = std::is_signed_v<T> && (std::is_integral_v<T> || std::is_enum_v<T>) && (!std::is_same_v<T, bool>);
-
-template <typename T>
-concept IsUnsigned = std::is_unsigned_v<T> && (std::is_integral_v<T> || std::is_enum_v<T>) &&
-                     (!std::is_same_v<T, bool>);
-
-// Float
-template <typename T>
-concept IsFloat = std::is_floating_point_v<T>;
-
-// Bool
-template <typename T>
-concept IsBool = std::is_same_v<T, bool>;
-
-template <typename T>
-concept IsString = IsBasicString<T> || CastableToStringView<T> || ConvertibleToString<T> || TransformToString<T> ||
-                   TransformToStringView<T>;
-
-template <typename T>
-concept IsSimpleValue = IsBool<T> || IsSigned<T> || IsUnsigned<T> || IsFloat<T> || IsString<T>;
-
 // Array
 template <typename Class>
 concept Itereable = requires(Class obj) {
@@ -237,52 +244,37 @@ template <typename Class>
 using array_value_type = std::decay_t<decltype(*std::begin(Class()))>;
 
 template <typename Class>
-concept ArrayOfObjects = Itereable<Class> && BoundClass<array_value_type<Class>>;
-
-template <typename Class>
-concept ArrayOfValues = Itereable<Class> && (!IsString<Class>) && (IsSimpleValue<array_value_type<Class>>;
-
-template <typename Class>
-concept IsArray = ArrayOfObjects<Class> || ArrayOfValues<Class>;
-
-template <typename Class>
-concept HasValueType = requires(Class obj) {
-  typename Class::value_type; };
+concept HasValueType = requires(Class obj) { typename Class::value_type; };
 
 // Map
 template <typename Class>
 concept ValuePairList = requires(Class obj) {
-  (*std::begin(obj)).first;
-  (*std::begin(obj)).second;
-  (*std::end(obj)).first;
-  (*std::end(obj)).second;
+                          (*std::begin(obj)).first;
+                          (*std::begin(obj)).second;
+                          (*std::end(obj)).first;
+                          (*std::end(obj)).second;
                         };
 
 template <typename Class>
-concept HasReserve = requires(Class obj) {
-  obj.reserve(std::size_t()); };
+concept HasReserve = requires(Class obj) { obj.reserve(std::size_t()); };
 template <typename Class>
-concept HasResize = requires(Class obj) {
-  obj.resize(std::size_t()); };
+concept HasResize = requires(Class obj) { obj.resize(std::size_t()); };
 
 template <typename Class>
 concept HasSize = requires(Class obj) {
-  {
-    obj.size()
-    } -> std::convertible_to<std::size_t>;
+                    {
+                      obj.size()
+                      } -> std::convertible_to<std::size_t>;
                   };
 
 template <typename Class, typename ValueType>
-concept HasEmplace = requires(Class obj, ValueType value) {
-  obj.emplace(value); };
+concept HasEmplace = requires(Class obj, ValueType value) { obj.emplace(value); };
 
 template <typename Class, typename ValueType>
-concept HasPushBack = requires(Class obj, ValueType value) {
-  obj.push_back(value); };
+concept HasPushBack = requires(Class obj, ValueType value) { obj.push_back(value); };
 
 template <typename Class, typename ValueType>
-concept HasEmplaceBack = requires(Class obj, ValueType value) {
-  obj.emplace_back(value); };
+concept HasEmplaceBack = requires(Class obj, ValueType value) { obj.emplace_back(value); };
 
 template <typename Class, typename ValueType>
 concept HasEmplaceFn =
@@ -290,9 +282,9 @@ concept HasEmplaceFn =
 
 template <typename Class>
 concept HasCapacity = requires(Class const& c) {
-  {
-    c.capacity()
-    } -> std::convertible_to<std::size_t>;
+                        {
+                          c.capacity()
+                          } -> std::convertible_to<std::size_t>;
                       };
 
 template <typename Class>
@@ -300,44 +292,53 @@ concept CanConstructFromString = detail::TransformFromString<Class> || detail::C
                                  detail::ConstructedFromString<Class>;
 
 template <typename Class>
-concept NameValuePairList =
-  ValuePairList<Class> && CanConstructFromString<std::decay_t<decltype((*std::begin(std::declval<Class>())).first)>>;
+concept MapLike = requires(Class t) {
+                    typename Class::key_type;
+                    typename Class::mapped_type;
+                    typename Class::value_type;
+                    {
+                      t.begin()
+                      } -> std::same_as<typename Class::iterator>;
+                    {
+                      t.end()
+                      } -> std::same_as<typename Class::iterator>;
+                    {
+                      t.find(typename Class::key_type{})
+                      } -> std::same_as<typename Class::iterator>;
+                  };
+
+template <typename Class>
+concept StringMapLike = MapLike<Class> && StringLike<typename Class::key_type>;
 
 template <HasValueType Class>
-using container_value_t = typename Class::value_type;
-
-template <NameValuePairList Class>
-using nvp_name_type = std::decay_t<decltype((*std::begin(Class())).first)>;
-
-template <NameValuePairList Class>
-using nvp_value_type = std::decay_t<decltype((*std::begin(Class())).second)>;
+using container_value_type = typename Class::value_type;
 
 // Pointers
 template <typename Class>
 concept IsSmartPointer = requires(Class o) {
-  typename Class::element_type;
-  (bool)o;
-  {
-    (*o)
-    } -> std::same_as<std::add_lvalue_reference_t<typename Class::element_type>>;
-  {
-    o.operator->()
-    } -> std::same_as<typename Class::element_type*>;
+                           typename Class::element_type;
+                           (bool)o;
+                           {
+                             (*o)
+                             } -> std::same_as<std::add_lvalue_reference_t<typename Class::element_type>>;
+                           {
+                             o.operator->()
+                             } -> std::same_as<typename Class::element_type*>;
                          };
 
 template <typename Class>
-concept IsBasicPointer = std::is_pointer_v<Class> && (!IsBasicString<Class>);
+concept IsBasicPointer = std::is_pointer_v<Class> && (!NativeStringLike<Class>);
 
 template <typename Class>
-concept IsPointer = IsBasicPointer<Class> || IsSmartPointer<Class>;
+concept PointerLike = IsBasicPointer<Class> || IsSmartPointer<Class>;
 
 template <typename T>
 constexpr auto get_pointer_class_type()
 {
   if constexpr (IsBasicPointer<T>)
-    return std::decay_t<std::remove_pointer_t<std::remove_cv_t<T>>>();
+    return std::decay_t<std::remove_pointer_t<remove_cref<T>>>();
   else if constexpr (IsSmartPointer<T>)
-    return std::decay_t<std::remove_cv_t<typename T::element_type>>();
+    return std::decay_t<remove_cref<typename T::element_type>>();
 }
 
 template <typename T>
@@ -345,57 +346,56 @@ using pointer_class_type = decltype(get_pointer_class_type<T>());
 
 // Optional
 template <typename Class>
-concept IsOptional = requires(Class o) {
-  typename Class::value_type;
-  o.emplace(std::declval<typename Class::value_type>());
-  o.has_value();
-  (bool)o;
-  {
-    o.has_value()
-    } -> std::same_as<bool>;
-  o.reset();
-  {
-    (*o)
-    } -> std::same_as<std::add_lvalue_reference_t<typename Class::value_type>>;
-  {
-    o.operator->()
-    } -> std::same_as<typename Class::value_type*>;
-                     };
+concept OptionalLike = requires(Class o) {
+                         typename Class::value_type;
+                         o.emplace(std::declval<typename Class::value_type>());
+                         o.has_value();
+                         (bool)o;
+                         {
+                           o.has_value()
+                           } -> std::same_as<bool>;
+                         o.reset();
+                         {
+                           (*o)
+                           } -> std::same_as<std::add_lvalue_reference_t<typename Class::value_type>>;
+                         {
+                           o.operator->()
+                           } -> std::same_as<typename Class::value_type*>;
+                       };
 
-// Pair
+// Variant
 template <typename Class>
-concept IsPair = requires(Class o) {
-  typename Class::first_type;
-  typename Class::second_type;
-  o.first  = typename Class::first_type{};
-  o.second = typename Class::second_type{};
-                 };
+concept VariantLike = requires(Class o) {
+                        {
+                          o.index()
+                          } -> std::same_as<std::size_t>;
+                      } && std::variant_size_v<Class> > 0;
+
+template <typename Class>
+concept HasArrayValueAssignable =
+  Itereable<Class> && requires(Class a, std::size_t i) { a[i++] = std::declval<array_value_type<Class>>(); };
+
+template <typename Class>
+concept ArrayLike = (HasEmplaceFn<Class, array_value_type<Class>> || HasArrayValueAssignable<Class>) &&
+                    (Itereable<Class> && !StringMapLike<Class> && !StringLike<Class>);
 
 // Tuple
 template <class T, std::size_t N>
 concept HasTupleElement = requires(T t) {
-  typename std::tuple_element_t<N, std::remove_const_t<T>>;
-  {
-    get<N>(t)
-    } -> std::convertible_to<std::tuple_element_t<N, T> const&>;
+                            typename std::tuple_element_t<N, std::remove_const_t<T>>;
+                            {
+                              get<N>(t)
+                              } -> std::convertible_to<std::tuple_element_t<N, T> const&>;
                           };
 template <typename Class>
-concept IsTuple = requires(Class t) {
-  typename std::tuple_size<Class>::type;
-  []<std::size_t... N>(std::index_sequence<N...>)
-  {
-    return (HasTupleElement<Class, N> && ...);
-  }
-  (std::make_index_sequence<std::tuple_size_v<Class>>());
-                  };
-
-// Variant
-template <typename Class>
-concept IsVariant = requires(Class o) {
-  {
-    o.index()
-    } -> std::same_as<std::size_t>;
-                    } && std::variant_size_v<Class> > 0;
+concept TupleLike = (!ArrayLike<Class>) && requires(Class t) {
+                                             typename std::tuple_size<Class>::type;
+                                             []<std::size_t... N>(std::index_sequence<N...>)
+                                             {
+                                               return (HasTupleElement<Class, N> && ...);
+                                             }
+                                             (std::make_index_sequence<std::tuple_size_v<Class>>());
+                                           };
 
 // @remarks
 // Highly borrowed from
@@ -420,12 +420,12 @@ public:
   using super = decl_base<Name, Class, MPtr>;
   using M     = typename super::MemTy;
 
-  inline static void value(Class & obj, M const& value) noexcept
+  inline static void value(Class& obj, M const& value) noexcept
   {
     obj.*Ptr = value;
   }
 
-  inline static void value(Class & obj, M && value) noexcept
+  inline static void value(Class& obj, M&& value) noexcept
   {
     obj.*Ptr = std::move(value);
   }
@@ -443,7 +443,7 @@ public:
   using super = decl_base<Name, Class, RetTy>;
   using M     = typename super::MemTy;
 
-  inline static void value(Class & obj, M && value) noexcept
+  inline static void value(Class& obj, M&& value) noexcept
   {
     (obj.*Setter)(std::move(value));
   }
@@ -461,7 +461,7 @@ public:
   using super = decl_base<Name, Class, RetTy>;
   using M     = typename super::MemTy;
 
-  inline static void value(Class & obj, M const& value) noexcept
+  inline static void value(Class& obj, M const& value) noexcept
   {
     (*Setter)(obj, value);
   }
@@ -484,11 +484,11 @@ public:
 
 template <typename T>
 concept DeclBase = requires {
-  typename T::ClassTy;
-  typename T::MemTy;
-  {
-    T::key()
-    } -> std::same_as<std::string_view>;
+                     typename T::ClassTy;
+                     typename T::MemTy;
+                     {
+                       T::key()
+                       } -> std::same_as<std::string_view>;
                    };
 
 template <typename Class>

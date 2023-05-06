@@ -228,14 +228,14 @@ concept HasZeroMemoryAttrib = requires {
                               };
 
 template <typename V, typename R>
-concept OptionalLike = requires(V v) {
-                         {
-                           *v
-                           } -> std::convertible_to<R>;
-                         {
-                           (bool)v
-                           } -> std::convertible_to<bool>;
-                       };
+concept OptionalValueLike = requires(V v) {
+                              {
+                                *v
+                                } -> std::convertible_to<R>;
+                              {
+                                (bool)v
+                                } -> std::convertible_to<bool>;
+                            };
 
 template <typename S, typename T1, typename... Args>
 struct choose_size_ty
