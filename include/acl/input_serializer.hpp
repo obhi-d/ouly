@@ -56,16 +56,16 @@ concept InputSerializer = requires(V v)
   { v.at(uint32_t(0)) } -> detail::OptionalValueLike<V>;
 
   // Must convert value_type to double
-  { v.as_double() } -> detail::OptionalValueLike<double const&>;
+  { v.as_double() } -> detail::OptionalValueLike<double>;
   
   // Must convert value_type to float
-  { v.as_uint64() } -> detail::OptionalValueLike<uint64_t const&>;
+  { v.as_uint64() } -> detail::OptionalValueLike<uint64_t>;
 
   // Must convert value_type to float
-  { v.as_int64() } -> detail::OptionalValueLike<int64_t const&>;
+  { v.as_int64() } -> detail::OptionalValueLike<int64_t>;
 
   // Must convert value_type to float
-  { v.as_bool() } -> detail::OptionalValueLike<bool const&>;
+  { v.as_bool() } -> detail::OptionalValueLike<bool>;
 
   // Must convert value_type to float
   { v.as_string() } -> detail::OptionalValueLike<std::string_view>;
