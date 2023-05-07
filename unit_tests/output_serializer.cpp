@@ -369,3 +369,39 @@ TEST_CASE("output_serializer: VariantLike Monostate")
   REQUIRE(j.at(0) == 0);
   REQUIRE(j.at(1) == json());
 }
+
+class CustomClass
+{
+public:
+  CustomClass() noexcept = default;
+  CustomClass(int a) : value(a) {}
+
+  friend Serializer& operator<<(Serializer& ser, CustomClass const& cc)
+  {
+    ser.as_int64(cc.value);
+    return ser;
+  }
+
+  inline int get() const
+  {
+    return value;
+  }
+
+private:
+  int value;
+};
+
+TEST_CASE("output_serializer: OutputSerializableClass")
+{
+  std::vector<CustomClass>           integers = {CustomClass(31), CustomClass(5454), CustomClass(323)};
+  Serializer                         instance;
+  acl::output_serializer<Serializer> ser(instance);
+  ser(integers);
+
+  json j = json::parse(instance.get());
+  REQUIRE(j.is_array());
+  REQUIRE(j.size() == 3);
+  REQUIRE(j[0] == 31);
+  REQUIRE(j[1] == 5454);
+  REQUIRE(j[2] == 323);
+}

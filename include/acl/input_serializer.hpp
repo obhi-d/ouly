@@ -35,8 +35,11 @@ concept InputSerializer = requires(V v)
   // function object: Must return object_type
   { v.is_array() } -> ::std::same_as<bool>;
 
-    // function object: Must return object_type
+  // function object: Must return object_type
   { v.is_null() } -> ::std::same_as<bool>;
+
+  // function object: Must return true if fail bit is set
+  { v.failed() } -> ::std::same_as<bool>;
 
   // size
   { v.size() } -> ::std::convertible_to<size_t>;
@@ -92,6 +95,13 @@ public:
   bool operator()(Class& obj) noexcept
   {
     return detail::set_all<Class>(*this, obj);
+  }
+
+  template <detail::InputSerializableClass<Serializer> Class>
+  bool operator()(Class& obj) noexcept
+  {
+    get() >> obj;
+    return !get().failed();
   }
 
   template <detail::TupleLike Class>

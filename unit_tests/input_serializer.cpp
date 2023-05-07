@@ -2,9 +2,9 @@
 #include "acl/input_serializer.hpp"
 #include "acl/dynamic_array.hpp"
 #include <catch2/catch_all.hpp>
+#include <charconv>
 #include <nlohmann/json.hpp>
 #include <unordered_map>
-#include <charconv>
 
 using json = nlohmann::json;
 
@@ -20,6 +20,11 @@ public:
   Serializer() noexcept = default;
   Serializer(InputData& r) : owner(r), value(std::cref(r.root)) {}
   Serializer(InputData& r, json const& source) : owner(r), value(std::cref(source)) {}
+
+  bool failed() const noexcept
+  {
+    return false;
+  }
 
   bool is_object() const noexcept
   {
@@ -899,4 +904,40 @@ TEST_CASE("input_serializer: OptionalLike")
   REQUIRE(pvalue.a);
   REQUIRE(!pvalue.b);
   REQUIRE(*pvalue.a == "A_value");
+}
+
+class CustomClass
+{
+public:
+  friend Serializer& operator>>(Serializer& ser, CustomClass& cc)
+  {
+    cc.value = (int)(*ser.as_int64());
+    return ser;
+  }
+
+  inline int get() const
+  {
+    return value;
+  }
+
+private:
+  int value;
+};
+
+TEST_CASE("input_serializer: InputSerializableClass")
+{
+  std::vector<CustomClass> integers;
+  json                     j = R"([ 34, 542, 234 ])"_json;
+
+  InputData input;
+  input.root      = j;
+  auto serializer = Serializer(input);
+  auto ser        = acl::input_serializer<Serializer>(serializer);
+
+  ser(integers);
+
+  REQUIRE(integers.size() == 3);
+  REQUIRE(integers[0].get() == 34);
+  REQUIRE(integers[1].get() == 542);
+  REQUIRE(integers[2].get() == 234);
 }

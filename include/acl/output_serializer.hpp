@@ -73,6 +73,12 @@ public:
     get().end_object();
   }
 
+  template <detail::OutputSerializableClass<Serializer> Class>
+  void operator()(Class& obj) noexcept
+  {
+    get() << obj;
+  }
+
   template <detail::TupleLike Class>
   void operator()(Class const& obj) noexcept
   {

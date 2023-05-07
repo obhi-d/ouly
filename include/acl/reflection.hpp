@@ -131,6 +131,12 @@ inline constexpr std::size_t tuple_size = std::tuple_size_v<bind_type<std::decay
 template <typename Class>
 concept BoundClass = (tuple_size<Class>) > 0;
 
+template <typename Class, typename Serializer>
+concept InputSerializableClass = requires(Class& o, Serializer s) { s >> o; };
+
+template <typename Class, typename Serializer>
+concept OutputSerializableClass = requires(Class const& o, Serializer s) { s << o; };
+
 template <auto MPtr>
 concept IsMemberPtr = requires {
                         typename member_ptr_type<MPtr>::class_t;
@@ -257,21 +263,21 @@ concept ValuePairList = requires(Class obj) {
 // Optional
 template <typename Class>
 concept OptionalLike = requires(Class o) {
-  typename Class::value_type;
-  o.emplace(std::declval<typename Class::value_type>());
-  o.has_value();
-  (bool)o;
-  {
-    o.has_value()
-  } -> std::same_as<bool>;
-  o.reset();
-  {
-    (*o)
-  } -> std::same_as<std::add_lvalue_reference_t<typename Class::value_type>>;
-  {
-    o.operator->()
-  } -> std::same_as<typename Class::value_type*>;
-};
+                         typename Class::value_type;
+                         o.emplace(std::declval<typename Class::value_type>());
+                         o.has_value();
+                         (bool)o;
+                         {
+                           o.has_value()
+                           } -> std::same_as<bool>;
+                         o.reset();
+                         {
+                           (*o)
+                           } -> std::same_as<std::add_lvalue_reference_t<typename Class::value_type>>;
+                         {
+                           o.operator->()
+                           } -> std::same_as<typename Class::value_type*>;
+                       };
 
 template <typename T>
 concept ConstructedFromStringView = requires { T(std::string_view()); } && (!OptionalLike<T>);
