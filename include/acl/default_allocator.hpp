@@ -117,7 +117,7 @@ struct ACL_EMPTY_BASES default_allocator : detail::default_alloc_statistics<k_co
   inline static address zero_allocate(size_type i_sz, size_type i_alignment = 0)
   {
     auto measure = statistics::report_allocate(i_sz);
-    return tracker::when_allocate(i_alignment > alignof(std::max_align_t) ? acl::aligned_zalloc(i_alignment, i_sz) : acl::zmalloc(i_sz), i_sz);
+    return tracker::when_allocate(i_alignment > alignof(std::max_align_t) ? acl::aligned_zmalloc(i_alignment, i_sz) : acl::zmalloc(i_sz), i_sz);
   }
 
   inline static void deallocate(address i_addr, size_type i_sz, size_type i_alignment = 0)
