@@ -2,6 +2,7 @@
 #include "detail/type_name.hpp"
 #include <cstdint>
 #include <type_traits>
+#include <tuple>
 
 namespace acl
 {

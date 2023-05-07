@@ -43,11 +43,11 @@ concept InputSerializer = requires(V v)
                                  
   // function for_each: Should accept a lambda that accepts a key and value_type
   // This function should consume a field that is a map of key, values
-  { v.for_each([](::std::string_view key, V) -> bool {}) } -> std::same_as<bool>; 
+  { v.for_each([](::std::string_view key, V) -> bool { return false; }) } -> std::same_as<bool>;
     
   // function for_each: Should accept a lambda that accepts a value_type
   // This function should consume a field that is an array of values
-  { v.for_each([](V) -> bool {}) } -> std::same_as<bool>; 
+  { v.for_each([](V) -> bool { return false; }) } -> std::same_as<bool>;
     
   // function object: Must return object_type
   { v.at(::std::string_view()) } -> detail::OptionalValueLike<V>;
@@ -103,7 +103,7 @@ public:
       get().error(type_name<Class>(), input_error_code::invalid_type);
       return false;
     }
-    return [ this, &obj ]<uint32_t... N>(std::index_sequence<N...>)
+    return [ this, &obj ]<size_t... N>(std::index_sequence<N...>)
     {
       return (at<N>(obj) && ...);
     }
@@ -406,7 +406,7 @@ private:
     return ser_.get();
   }
 
-  template <uint32_t N, typename Class>
+  template <size_t N, typename Class>
   bool at(Class& obj) noexcept
   {
     auto ser = get().at(N);
@@ -418,8 +418,8 @@ private:
     return true;
   }
 
-  template <uint32_t const I, typename Class, typename L>
-  static constexpr auto find_alt(uint32_t i, L&& lambda) noexcept -> bool
+  template <size_t const I, typename Class, typename L>
+  static constexpr auto find_alt(size_t i, L&& lambda) noexcept -> bool
   {
     if (I == i)
       return std::forward<L>(lambda)(std::integral_constant<uint32_t, I>{});

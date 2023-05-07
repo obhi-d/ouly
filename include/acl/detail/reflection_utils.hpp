@@ -57,7 +57,7 @@ static constexpr inline auto capacity(C const& c)
 }
 
 template <typename C>
-static constexpr inline void capacity(C const& c)
+static constexpr inline uint32_t capacity(C const& c)
 {
   return 0;
 }

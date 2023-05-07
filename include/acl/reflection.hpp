@@ -35,19 +35,19 @@ struct tag
 {};
 
 template <ClassWithReflect Class>
-auto reflect()
+auto reflect() noexcept
 {
   return Class::reflect();
 }
 
 template <typename Class = void>
-auto reflect()
+auto reflect() noexcept
 {
   return std::tuple<>();
 }
 
 template <typename Class = void>
-auto reflect(tag<Class>)
+auto reflect(tag<Class>) noexcept
 {
   return reflect<Class>();
 }
@@ -254,6 +254,25 @@ concept ValuePairList = requires(Class obj) {
                           (*std::end(obj)).second;
                         };
 
+// Optional
+template <typename Class>
+concept OptionalLike = requires(Class o) {
+  typename Class::value_type;
+  o.emplace(std::declval<typename Class::value_type>());
+  o.has_value();
+  (bool)o;
+  {
+    o.has_value()
+  } -> std::same_as<bool>;
+  o.reset();
+  {
+    (*o)
+  } -> std::same_as<std::add_lvalue_reference_t<typename Class::value_type>>;
+  {
+    o.operator->()
+  } -> std::same_as<typename Class::value_type*>;
+};
+
 template <typename T>
 concept ConstructedFromStringView = requires { T(std::string_view()); } && (!OptionalLike<T>);
 
@@ -349,25 +368,6 @@ constexpr auto get_pointer_class_type()
 template <typename T>
 using pointer_class_type = decltype(get_pointer_class_type<T>());
 
-// Optional
-template <typename Class>
-concept OptionalLike = requires(Class o) {
-                         typename Class::value_type;
-                         o.emplace(std::declval<typename Class::value_type>());
-                         o.has_value();
-                         (bool)o;
-                         {
-                           o.has_value()
-                           } -> std::same_as<bool>;
-                         o.reset();
-                         {
-                           (*o)
-                           } -> std::same_as<std::add_lvalue_reference_t<typename Class::value_type>>;
-                         {
-                           o.operator->()
-                           } -> std::same_as<typename Class::value_type*>;
-                       };
-
 // Variant
 template <typename Class>
 concept VariantLike = requires(Class o) {
@@ -408,7 +408,7 @@ concept MonostateLike = std::same_as<Class, std::monostate>;
 // @remarks
 // Highly borrowed from
 // https://github.com/eliasdaler/MetaStuff
-template <string_literal Name, typename Class, typename M>
+template <fixed_string Name, typename Class, typename M>
 class decl_base
 {
 public:
@@ -421,7 +421,7 @@ public:
   }
 };
 
-template <string_literal Name, typename Class, typename MPtr, auto Ptr>
+template <fixed_string Name, typename Class, typename MPtr, auto Ptr>
 class decl_member_ptr : public decl_base<Name, Class, MPtr>
 {
 public:
@@ -444,7 +444,7 @@ public:
   }
 };
 
-template <string_literal Name, typename Class, typename RetTy, auto Getter, auto Setter>
+template <fixed_string Name, typename Class, typename RetTy, auto Getter, auto Setter>
 class decl_get_set : public decl_base<Name, Class, RetTy>
 {
 public:
@@ -462,7 +462,7 @@ public:
   }
 };
 
-template <string_literal Name, typename Class, typename RetTy, auto Getter, auto Setter>
+template <fixed_string Name, typename Class, typename RetTy, auto Getter, auto Setter>
 class decl_free_get_set : public decl_base<Name, Class, RetTy>
 {
 public:
@@ -534,7 +534,7 @@ void get_all(Fn&& fn, Class const& obj) noexcept
 /// @remarks Desired syntax would be
 /// bind< bind<"MyField", &T::my_field>,
 
-template <string_literal Name, auto MPtr>
+template <fixed_string Name, auto MPtr>
 constexpr auto bind() noexcept
 requires(detail::IsMemberPtr<MPtr>)
 {
@@ -542,7 +542,7 @@ requires(detail::IsMemberPtr<MPtr>)
                                  typename detail::member_ptr_type<MPtr>::member_t, MPtr>();
 }
 
-template <string_literal Name, auto Getter, auto Setter>
+template <fixed_string Name, auto Getter, auto Setter>
 constexpr auto bind() noexcept
 requires(detail::IsMemberGetterSetter<Getter, Setter>)
 {
@@ -550,7 +550,7 @@ requires(detail::IsMemberGetterSetter<Getter, Setter>)
                               typename detail::member_getter_type<Getter>::return_t, Getter, Setter>();
 }
 
-template <string_literal Name, auto Getter, auto Setter>
+template <fixed_string Name, auto Getter, auto Setter>
 constexpr auto bind() noexcept
 requires(detail::IsFreeGetterSetter<Getter, Setter>)
 {
@@ -558,7 +558,7 @@ requires(detail::IsFreeGetterSetter<Getter, Setter>)
                                    typename detail::free_getter_type<Getter>::return_t, Getter, Setter>();
 }
 
-template <string_literal Name, auto Getter, auto Setter>
+template <fixed_string Name, auto Getter, auto Setter>
 constexpr auto bind() noexcept
 requires(detail::IsFreeGetterByValSetter<Getter, Setter>)
 {

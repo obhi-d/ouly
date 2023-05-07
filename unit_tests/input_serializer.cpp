@@ -4,6 +4,7 @@
 #include <catch2/catch_all.hpp>
 #include <nlohmann/json.hpp>
 #include <unordered_map>
+#include <charconv>
 
 using json = nlohmann::json;
 

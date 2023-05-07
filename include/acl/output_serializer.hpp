@@ -78,7 +78,7 @@ public:
   {
     // Invalid type is unexpected
     get().begin_array();
-    [ this, &obj ]<uint32_t... N>(std::index_sequence<N...>)
+    [ this, &obj ]<size_t... N>(std::index_sequence<N...>)
     {
       return (at<N>(obj), ...);
     }
@@ -237,7 +237,7 @@ private:
     return ser_.get();
   }
 
-  template <uint32_t N, typename Class>
+  template <size_t N, typename Class>
   void at(Class const& obj) noexcept
   {
     if constexpr (N != 0)

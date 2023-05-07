@@ -2,6 +2,7 @@
 #pragma once
 
 #include <string_view>
+#include <algorithm>
 
 namespace acl
 {
@@ -47,6 +48,21 @@ struct string_literal
 
   char const*       p;
   std::size_t const sz;
+};
+
+template <std::size_t N>
+struct fixed_string
+{
+  constexpr fixed_string(const char (&str)[N]) {
+    std::copy_n(str, N, value);
+  }
+
+  inline constexpr explicit operator std::string_view() const
+  {
+    return std::string_view(value, N-1);
+  }
+
+  char value[N];
 };
 
 } // namespace acl
