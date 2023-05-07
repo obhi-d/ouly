@@ -108,16 +108,16 @@ private:
   std::reference_wrapper<json const> value;
 };
 
-struct MyStruct
+struct ReflTestFriend
 {
   int a = 0;
   int b = 0;
 };
 
 template <>
-auto acl::reflect<MyStruct>() noexcept
+auto acl::reflect<ReflTestFriend>() noexcept
 {
-  return acl::bind(acl::bind<"a", &MyStruct::a>(), acl::bind<"b", &MyStruct::b>());
+  return acl::bind(acl::bind<"a", &ReflTestFriend::a>(), acl::bind<"b", &ReflTestFriend::b>());
 }
 
 TEST_CASE("input_serializer: Test valid stream in with reflect outside")
@@ -129,7 +129,7 @@ TEST_CASE("input_serializer: Test valid stream in with reflect outside")
   auto serializer = Serializer(input);
   auto ser        = acl::input_serializer<Serializer>(serializer);
 
-  MyStruct myStruct;
+  ReflTestFriend myStruct;
 
   ser(myStruct);
 
@@ -137,7 +137,7 @@ TEST_CASE("input_serializer: Test valid stream in with reflect outside")
   REQUIRE(myStruct.b == 200);
 }
 
-class MyClass
+class ReflTestClass
 {
   int a = 0;
   int b = 1;
@@ -153,7 +153,7 @@ public:
   }
   static auto reflect() noexcept
   {
-    return acl::bind(acl::bind<"a", &MyClass::a>(), acl::bind<"b", &MyClass::b>());
+    return acl::bind(acl::bind<"a", &ReflTestClass::a>(), acl::bind<"b", &ReflTestClass::b>());
   }
 };
 
@@ -166,7 +166,7 @@ TEST_CASE("input_serializer: Test valid stream in with reflect member")
   auto serializer = Serializer(input);
   auto ser        = acl::input_serializer<Serializer>(serializer);
 
-  MyClass myStruct;
+  ReflTestClass myStruct;
 
   ser(myStruct);
 
@@ -174,14 +174,14 @@ TEST_CASE("input_serializer: Test valid stream in with reflect member")
   REQUIRE(myStruct.get_b() == 200);
 }
 
-struct MyScopeClass
+struct ReflTestMember
 {
-  MyClass first;
-  MyClass second;
+  ReflTestClass first;
+  ReflTestClass second;
 
   static auto reflect() noexcept
   {
-    return acl::bind(acl::bind<"first", &MyScopeClass::first>(), acl::bind<"second", &MyScopeClass::second>());
+    return acl::bind(acl::bind<"first", &ReflTestMember::first>(), acl::bind<"second", &ReflTestMember::second>());
   }
 };
 
@@ -194,7 +194,7 @@ TEST_CASE("input_serializer: Test 1 level scoped class")
   auto serializer = Serializer(input);
   auto ser        = acl::input_serializer<Serializer>(serializer);
 
-  MyScopeClass myStruct;
+  ReflTestMember myStruct;
 
   ser(myStruct);
 
@@ -204,14 +204,14 @@ TEST_CASE("input_serializer: Test 1 level scoped class")
   REQUIRE(myStruct.second.get_b() == 400);
 }
 
-struct MyScopeClass2
+struct ReflTestClass2
 {
-  MyScopeClass first;
-  std::string  second;
+  ReflTestMember first;
+  std::string    second;
 
   static auto reflect() noexcept
   {
-    return acl::bind(acl::bind<"first", &MyScopeClass2::first>(), acl::bind<"second", &MyScopeClass2::second>());
+    return acl::bind(acl::bind<"first", &ReflTestClass2::first>(), acl::bind<"second", &ReflTestClass2::second>());
   }
 };
 
@@ -224,7 +224,7 @@ TEST_CASE("input_serializer: Test 2 level scoped class")
   auto serializer = Serializer(input);
   auto ser        = acl::input_serializer<Serializer>(serializer);
 
-  MyScopeClass2 myStruct;
+  ReflTestClass2 myStruct;
 
   ser(myStruct);
 
@@ -244,7 +244,7 @@ TEST_CASE("input_serializer: Test pair")
   auto serializer = Serializer(input);
   auto ser        = acl::input_serializer<Serializer>(serializer);
 
-  std::pair<MyScopeClass, std::string> myStruct;
+  std::pair<ReflTestMember, std::string> myStruct;
 
   ser(myStruct);
 
@@ -264,7 +264,7 @@ TEST_CASE("input_serializer: Test tuple")
   auto serializer = Serializer(input);
   auto ser        = acl::input_serializer<Serializer>(serializer);
 
-  std::tuple<MyScopeClass, std::string, int, bool> myStruct = {};
+  std::tuple<ReflTestMember, std::string, int, bool> myStruct = {};
 
   ser(myStruct);
 

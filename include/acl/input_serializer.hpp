@@ -343,8 +343,14 @@ public:
     return (*this)(*obj);
   }
 
-  template <typename Class, typename Decl>
-  inline bool operator()(Class& obj, Decl const& decl) noexcept
+  template <detail::MonostateLike Class>
+  bool operator()(Class& obj) noexcept
+  {
+    return true;
+  }
+
+  template <typename Class, typename Decl, std::size_t I>
+  inline bool operator()(Class& obj, Decl const& decl, std::integral_constant<size_t, I>) noexcept
   {
     auto key_val = get().at(decl.key());
     if (!key_val)

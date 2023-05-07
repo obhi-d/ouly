@@ -171,18 +171,6 @@ concept NativeStringLike =
   std::is_same_v<std::string, remove_cref<T>> || std::is_same_v<char*, T> ||
   std::is_same_v<char const*, remove_cref<T>>;
 
-template <typename T>
-concept CastableToStringView = requires(T t) { std::string_view(t); };
-
-template <typename T>
-concept ConstructedFromStringView = requires { T(std::string_view()); };
-
-template <typename T>
-concept ConstructedFromString = requires { T(std::string()); };
-
-template <typename T>
-concept ConvertibleToString = requires(T t) { std::to_string(t); };
-
 // String type check
 
 template <typename T>
@@ -210,6 +198,23 @@ template <typename T>
 concept NativeLike = BoolLike<T> || SignedIntLike<T> || UnsignedIntLike<T> || FloatLike<T> || StringLike<T>;
 
 template <typename T>
+concept CastableToStringView = requires(T t) { std::string_view(t); } && (!StringLike<T>);
+
+template <typename T>
+concept CastableToString = requires(T t) { std::string(t); } && (!CastableToStringView<T>) && (!StringLike<T>);
+
+template <typename T>
+concept ConstructedFromStringView = requires { T(std::string_view()); };
+
+template <typename T>
+concept ConstructedFromString = requires { T(std::string()); };
+
+template <typename T>
+concept ConvertibleToString = requires(T t) { std::to_string(t); } &&
+                              (!FloatLike<T> && !BoolLike<T> && !SignedIntLike<T> && !UnsignedIntLike<T> &&
+                               !CastableToString<T> && !StringLike<T>);
+
+template <typename T>
 concept TransformFromString = requires(T ref) {
                                 {
                                   acl::from_string(ref, std::string_view())
@@ -224,14 +229,14 @@ concept TransformToString = requires(T ref) {
                               {
                                 acl::to_string(ref)
                                 } -> std::same_as<std::string>;
-                            };
+                            } && (!ConvertibleToString<T>) && (!StringLike<T>);
 
 template <typename T>
 concept TransformToStringView = requires(T ref) {
                                   {
                                     acl::to_string_view(ref)
                                     } -> std::same_as<std::string_view>;
-                                };
+                                } && (!TransformToString<T>) && (!StringLike<T>);
 
 // Array
 template <typename Class>
@@ -397,6 +402,9 @@ concept TupleLike = (!ArrayLike<Class>) && requires(Class t) {
                                              (std::make_index_sequence<std::tuple_size_v<Class>>());
                                            };
 
+template <typename Class>
+concept MonostateLike = std::same_as<Class, std::monostate>;
+
 // @remarks
 // Highly borrowed from
 // https://github.com/eliasdaler/MetaStuff
@@ -500,13 +508,13 @@ auto const reflect_() noexcept
 template <typename TupleTy, typename Class, typename Fn, size_t... I>
 bool apply_set(Fn&& fn, Class& obj, TupleTy&& tup, std::index_sequence<I...>) noexcept
 {
-  return (fn(obj, std::get<I>(tup)) && ...);
+  return (fn(obj, std::get<I>(tup), std::integral_constant<size_t, I>()) && ...);
 }
 
 template <typename TupleTy, typename Class, typename Fn, size_t... I>
-bool apply_get(Fn&& fn, Class const& obj, TupleTy&& tup, std::index_sequence<I...>) noexcept
+void apply_get(Fn&& fn, Class const& obj, TupleTy&& tup, std::index_sequence<I...>) noexcept
 {
-  return (fn(obj, std::get<I>(tup)) && ...);
+  return (fn(obj, std::get<I>(tup), std::integral_constant<size_t, I>()), ...);
 }
 
 template <typename Class, typename Fn>
@@ -516,10 +524,10 @@ bool set_all(Fn&& fn, Class& obj) noexcept
 }
 
 template <typename Class, typename Fn>
-bool get_all(Fn&& fn, Class const& obj) noexcept
+void get_all(Fn&& fn, Class const& obj) noexcept
 {
   static_assert(tuple_size<Class> > 0, "Invalid tuple size");
-  return apply_get(std::forward<Fn>(fn), obj, reflect_<Class>(), std::make_index_sequence<tuple_size<Class>>());
+  apply_get(std::forward<Fn>(fn), obj, reflect_<Class>(), std::make_index_sequence<tuple_size<Class>>());
 }
 } // namespace detail
 

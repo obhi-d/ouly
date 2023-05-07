@@ -72,6 +72,7 @@ add_unit_test(NAME sparse_vector FILES "sparse_vector.cpp")
 add_unit_test(NAME dynamic_array FILES "dynamic_array.cpp")
 add_unit_test(NAME arena_allocator FILES "arena_allocator.cpp")
 add_unit_test(NAME input_serializer FILES "input_serializer.cpp" LINK_LIBS "nlohmann_json::nlohmann_json" )
+add_unit_test(NAME output_serializer FILES "output_serializer.cpp" LINK_LIBS "nlohmann_json::nlohmann_json" )
 
 add_executable(acl-bench
  "bench_arena_allocator.cpp"
