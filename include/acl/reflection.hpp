@@ -204,12 +204,6 @@ template <typename T>
 concept CastableToString = requires(T t) { std::string(t); } && (!CastableToStringView<T>) && (!StringLike<T>);
 
 template <typename T>
-concept ConstructedFromStringView = requires { T(std::string_view()); };
-
-template <typename T>
-concept ConstructedFromString = requires { T(std::string()); };
-
-template <typename T>
 concept ConvertibleToString = requires(T t) { std::to_string(t); } &&
                               (!FloatLike<T> && !BoolLike<T> && !SignedIntLike<T> && !UnsignedIntLike<T> &&
                                !CastableToString<T> && !StringLike<T>);
@@ -259,6 +253,12 @@ concept ValuePairList = requires(Class obj) {
                           (*std::end(obj)).first;
                           (*std::end(obj)).second;
                         };
+
+template <typename T>
+concept ConstructedFromStringView = requires { T(std::string_view()); } && (!OptionalLike<T>);
+
+template <typename T>
+concept ConstructedFromString = requires { T(std::string()); } && (!OptionalLike<T>);
 
 template <typename Class>
 concept HasReserve = requires(Class obj) { obj.reserve(std::size_t()); };

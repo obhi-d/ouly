@@ -137,14 +137,19 @@ public:
   {
     if (n != count_)
     {
-      auto data = (T*)Allocator::allocate(sizeof(T) * n, alignarg<T>);
-      std::uninitialized_move_n(begin(), count_, data);
+      auto data = n > 0 ? (T*)Allocator::allocate(sizeof(T) * n, alignarg<T>) : nullptr;
+      std::uninitialized_move_n(begin(), std::min(count_, n), data);
       if (n > count_)
         std::uninitialized_fill_n(data + count_, n - count_, fill);
       clear();
       data_  = data;
       count_ = n;
     }
+  }
+
+  inline bool empty() const noexcept
+  {
+    return count_ == 0;
   }
 
 private:

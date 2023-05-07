@@ -127,18 +127,16 @@ public:
   void operator()(Class const& obj) noexcept
   {
     // Invalid type is unexpected
-    get().begin_object();
-    get().key("index");
+    get().begin_array();
     (*this)(obj.index());
     get().next();
-    get().key("value");
     std::visit(
       [this](auto const& arg)
       {
         (*this)(arg);
       },
       obj);
-    get().end_object();
+    get().end_array();
   }
 
   template <detail::CastableToStringView Class>

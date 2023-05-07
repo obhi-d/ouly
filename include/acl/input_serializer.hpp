@@ -15,12 +15,14 @@ namespace acl
 
 enum class input_error_code
 {
+  none,
   invalid_type,
   failed_streaming_map,
   failed_streaming_array,
   failed_streaming_variant,
   failed_to_parse_value,
-  variant_index_is_not_int,
+  variant_invalid_format,
+  variant_index_is_not_int
 };
 
 // clang-format off
@@ -32,6 +34,9 @@ concept InputSerializer = requires(V v)
 
   // function object: Must return object_type
   { v.is_array() } -> ::std::same_as<bool>;
+
+    // function object: Must return object_type
+  { v.is_null() } -> ::std::same_as<bool>;
 
   // size
   { v.size() } -> ::std::convertible_to<size_t>;
@@ -168,37 +173,50 @@ public:
     {
       detail::resize(obj, get().size());
       std::uint32_t index = 0;
-      return get().for_each(
+      if (!get().for_each(
 
-        [&obj, &index](Serializer value)
-        {
-          detail::array_value_type<Class> stream_val;
-          bool                            result = input_serializer(value)(stream_val);
-          if (result)
-          {
-            obj[index++] = std::move(stream_val);
-            return true;
-          }
-          value.error(type_name<Class>(), input_error_code::failed_streaming_array);
-          return false;
-        });
+            [&obj, &index](Serializer value)
+            {
+              detail::array_value_type<Class> stream_val;
+              bool                            result = input_serializer(value)(stream_val);
+              if (result)
+              {
+                obj[index++] = std::move(stream_val);
+                return true;
+              }
+              value.error(type_name<Class>(), input_error_code::failed_streaming_array);
+              return false;
+            }))
+      {
+        detail::resize(obj, index);
+        return false;
+      }
+      return true;
     }
   }
 
   template <detail::VariantLike Class>
   bool operator()(Class& obj) noexcept
   {
+    if (get().is_null())
+      return true;
+
     // Invalid type is unexpected
-    if (!get().is_object())
+    if (!get().is_array())
     {
       get().error(type_name<Class>(), input_error_code::invalid_type);
       return false;
     }
 
-    auto index_opt = get().at("index");
+    if (get().size() != 2)
+    {
+      get().error(type_name<Class>(), input_error_code::variant_invalid_format);
+      return false;
+    }
+
+    auto index_opt = get().at(0);
     // Missing value is not an error
-    if (!index_opt)
-      return true;
+    assert(index_opt);
 
     auto index = (*index_opt).as_uint64();
     if (!index)
@@ -207,9 +225,9 @@ public:
       return false;
     }
 
-    auto value_opt = get().at("value");
-    if (!value_opt)
-      return true;
+    auto value_opt = get().at(1);
+
+    assert(value_opt);
 
     auto value = *value_opt;
     return find_alt<std::variant_size_v<Class> - 1, Class>(static_cast<uint32_t>(*index),
@@ -327,20 +345,31 @@ public:
   template <detail::PointerLike Class>
   bool operator()(Class& obj) noexcept
   {
-    using class_type  = detail::remove_cref<Class>;
-    using pvalue_type = detail::pointer_class_type<Class>;
-    if constexpr (std::same_as<class_type, std::shared_ptr<pvalue_type>>)
-      obj = std::make_shared<pvalue_type>();
-    else
-      obj = Class(new detail::pointer_class_type<Class>());
-    return (*this)(*obj);
+    if (!get().is_null())
+    {
+      using class_type  = detail::remove_cref<Class>;
+      using pvalue_type = detail::pointer_class_type<Class>;
+      if constexpr (std::same_as<class_type, std::shared_ptr<pvalue_type>>)
+        obj = std::make_shared<pvalue_type>();
+      else
+        obj = Class(new detail::pointer_class_type<Class>());
+      return (*this)(*obj);
+    }
+    obj = nullptr;
+    return true;
   }
 
   template <detail::OptionalLike Class>
   bool operator()(Class& obj) noexcept
   {
-    obj.emplace();
-    return (*this)(*obj);
+    if (!get().is_null())
+    {
+      obj.emplace();
+      return (*this)(*obj);
+    }
+    else
+      obj.reset();
+    return true;
   }
 
   template <detail::MonostateLike Class>
