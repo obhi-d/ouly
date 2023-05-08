@@ -94,7 +94,25 @@ public:
   template <detail::BoundClass Class>
   bool operator()(Class& obj) noexcept
   {
-    return detail::set_all<Class>(*this, obj);
+    bool status = true;
+    for_each_field(
+      [this, &status]<typename Decl>(Class& obj, Decl const& decl, auto) noexcept
+      {
+        auto key_val = get().at(decl.key());
+        if (!key_val)
+          return;
+
+        using value_t = typename Decl::MemTy;
+        value_t load;
+        if (input_serializer(*key_val)(load))
+        {
+          decl.value(obj, std::move(load));
+          return;
+        }
+        status = false;
+      },
+      obj);
+    return status;
   }
 
   template <detail::InputSerializableClass<Serializer> Class>
@@ -386,23 +404,6 @@ public:
   bool operator()(Class& obj) noexcept
   {
     return true;
-  }
-
-  template <typename Class, typename Decl, std::size_t I>
-  inline bool operator()(Class& obj, Decl const& decl, std::integral_constant<size_t, I>) noexcept
-  {
-    auto key_val = get().at(decl.key());
-    if (!key_val)
-      return true;
-
-    using value_t = typename Decl::MemTy;
-    value_t load;
-    if (input_serializer(*key_val)(load))
-    {
-      decl.value(obj, std::move(load));
-      return true;
-    }
-    return false;
   }
 
 private:

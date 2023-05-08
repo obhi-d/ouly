@@ -69,7 +69,7 @@ public:
   void operator()(Class const& obj) noexcept
   {
     get().begin_object();
-    detail::get_all<Class>(*this, obj);
+    for_each_field(*this, obj);
     get().end_object();
   }
 

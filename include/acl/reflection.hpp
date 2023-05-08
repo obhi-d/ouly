@@ -508,35 +508,26 @@ concept DeclBase = requires {
 template <typename Class>
 auto const reflect_() noexcept
 {
-  return reflect(tag<Class>{});
+  return acl::reflect(tag<Class>{});
 }
 
-template <typename TupleTy, typename Class, typename Fn, size_t... I>
-bool apply_set(Fn&& fn, Class& obj, TupleTy&& tup, std::index_sequence<I...>) noexcept
-{
-  return (fn(obj, std::get<I>(tup), std::integral_constant<size_t, I>()) && ...);
-}
-
-template <typename TupleTy, typename Class, typename Fn, size_t... I>
-void apply_get(Fn&& fn, Class const& obj, TupleTy&& tup, std::index_sequence<I...>) noexcept
-{
-  return (fn(obj, std::get<I>(tup), std::integral_constant<size_t, I>()), ...);
-}
-
-template <typename Class, typename Fn>
-bool set_all(Fn&& fn, Class& obj) noexcept
-{
-  return apply_set(std::forward<Fn>(fn), obj, reflect_<Class>(), std::make_index_sequence<tuple_size<Class>>());
-}
-
-template <typename Class, typename Fn>
-void get_all(Fn&& fn, Class const& obj) noexcept
-{
-  static_assert(tuple_size<Class> > 0, "Invalid tuple size");
-  apply_get(std::forward<Fn>(fn), obj, reflect_<Class>(), std::make_index_sequence<tuple_size<Class>>());
-}
 } // namespace detail
 
+/// @brief This function iterates over members registered by bind
+/// @param fn A lambda accepting the instance of the object, a type info and the member index
+///           The typ info has a value method to access the internal member given the instance of the object
+/// @param obj  The instance of the class which has a reflection interface.
+template <typename Class, typename Fn>
+void for_each_field(Fn&& fn, Class& obj) noexcept
+{
+  using ClassType = std::remove_const_t<Class>;
+  static_assert(detail::tuple_size<ClassType> > 0, "Invalid tuple size");
+  return [&]<size_t... I>(std::index_sequence<I...>, auto tup)
+  {
+    (fn(obj, std::get<I>(tup), std::integral_constant<size_t, I>()), ...);
+  }
+  (std::make_index_sequence<detail::tuple_size<ClassType>>(), detail::reflect_<ClassType>());
+}
 /// @remarks Desired syntax would be
 /// bind< bind<"MyField", &T::my_field>,
 
