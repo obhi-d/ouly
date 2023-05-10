@@ -30,10 +30,6 @@ std::string to_string(T const& ref) = delete;
 template <typename T>
 std::string_view to_string_view(T const& ref) = delete;
 
-template <typename T>
-struct tag
-{};
-
 template <ClassWithReflect Class>
 auto reflect() noexcept
 {
@@ -44,12 +40,6 @@ template <typename Class = void>
 auto reflect() noexcept
 {
   return std::tuple<>();
-}
-
-template <typename Class = void>
-auto reflect(tag<Class>) noexcept
-{
-  return reflect<Class>();
 }
 
 namespace detail
@@ -122,7 +112,7 @@ struct free_setter_type<F>
 // Concepts
 // Decl
 template <typename Class>
-using bind_type = decltype(reflect(tag<Class>{}));
+using bind_type = decltype(reflect<Class>());
 
 // Utils
 template <typename Class>
@@ -508,7 +498,7 @@ concept DeclBase = requires {
 template <typename Class>
 auto const reflect_() noexcept
 {
-  return acl::reflect(tag<Class>{});
+  return acl::reflect<Class>();
 }
 
 } // namespace detail
