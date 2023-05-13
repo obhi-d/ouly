@@ -1,76 +1,81 @@
 
 #pragma once
 
-#include <compare>
 #include <cassert>
+#include <compare>
+#include <concepts>
 
 namespace acl
 {
 
+// clang-format off
 template <typename T>
 concept ReferenceCounted = requires(T* a) {
-                             intrusive_count_add(a);
-                             intrusive_count_sub(a);
-                             intrusive_count_get(a);
+                             // Should return the updated value
+                             {intrusive_count_add(a)}->std::integral;
+                             // Should return the updated value
+                             {intrusive_count_sub(a)}->std::integral;
+                             // Should return the current value
+                             {intrusive_count_get(a)}->std::integral;
                            };
+// clang-format on
 
 template <ReferenceCounted T>
 class intrusive_ptr
 {
 public:
+  using element_type = T;
+
   inline constexpr intrusive_ptr() noexcept = default;
   inline constexpr intrusive_ptr(std::nullptr_t) noexcept {}
-  inline constexpr intrusive_ptr(T* self) noexcept : self_(self)
+  inline explicit constexpr intrusive_ptr(T* self) noexcept : self_(self)
   {
-    if (self_ != nullptr)
-      intrusive_count_sub(self_);
-  }
-  inline constexpr intrusive_ptr(intrusive_ptr const& rhs) noexcept : intrusive_ptr(rhs.self_) {}
-  inline constexpr intrusive_ptr(intrusive_ptr&& rhs) noexcept : self_(rhs.self_) {}
-  inline constexpr intrusive_ptr& operator=(intrusive_ptr const& rhs) noexcept 
-  {
-    if (self_ != nullptr)
-      intrusive_count_sub(self_);
-    self_ = rhs.self_;
     if (self_ != nullptr)
       intrusive_count_add(self_);
+  }
+  inline constexpr intrusive_ptr(intrusive_ptr const& rhs) noexcept : intrusive_ptr(rhs.self_) {}
+  inline constexpr intrusive_ptr(intrusive_ptr&& rhs) noexcept : self_(rhs.self_)
+  {
+    rhs.self_ = nullptr;
+  }
+
+  inline constexpr intrusive_ptr& operator=(intrusive_ptr const& rhs) noexcept
+  {
+    reset(rhs.self_);
     return *this;
   }
   inline constexpr intrusive_ptr& operator=(T* rhs) noexcept
   {
-    if (self_ != nullptr)
-      intrusive_count_sub(self_);
-    self_ = rhs;
-    if (self_ != nullptr)
-      intrusive_count_add(self_);
+    reset(rhs);
     return *this;
   }
-  inline constexpr intrusive_ptr& operator=(intrusive_ptr&& rhs) noexcept 
+  inline constexpr intrusive_ptr& operator=(intrusive_ptr&& rhs) noexcept
   {
-    if (self_ != nullptr)
-      intrusive_count_sub(self_);
-    self_ = rhs.self_;
+    reset();
+    self_     = rhs.self_;
     rhs.self_ = nullptr;
+    return *this;
   }
 
-  inline constexpr ~intrusive_ptr() noexcept 
+  inline constexpr ~intrusive_ptr() noexcept
   {
-    if (self_ != nullptr)
-      intrusive_count_sub(self_);
+    reset();
   }
 
-  inline constexpr void reset() noexcept
+  inline constexpr void reset(T* other = nullptr) noexcept
   {
-    if (self_ != nullptr)
+    if (self_ != nullptr && !intrusive_count_sub(self_))
     {
-      intrusive_count_sub(self_);
-      self_ = nullptr;
+      delete self_;
     }
+    self_ = other;
+    if (self_)
+      intrusive_count_add(self_);
   }
 
   inline constexpr T* release() noexcept
   {
-    T* r =  self_;
+    T* r  = self_;
     self_ = nullptr;
     return r;
   }
@@ -90,17 +95,17 @@ public:
     return self_;
   }
 
-  inline operator T* () const noexcept 
+  inline operator T*() const noexcept
   {
     return self_;
   }
 
-  inline T*  operator ->() const noexcept
+  inline T* operator->() const noexcept
   {
     assert(self_);
     return self_;
   }
-    
+
   inline operator T&() const noexcept
   {
     assert(self_);
@@ -117,10 +122,17 @@ public:
     return self_ != nullptr;
   }
 
-  inline auto operator <=>(intrusive_ptr const&) const noexcept = default;
+  inline auto operator<=>(intrusive_ptr const&) const noexcept = default;
 
 private:
-
   T* self_ = nullptr;
 };
+
+template <typename T, typename U>
+intrusive_ptr<T> static_pointer_cast(const intrusive_ptr<U>& r) noexcept
+{
+  auto p = static_cast<typename intrusive_ptr<T>::element_type*>(r.get());
+  return intrusive_ptr<T>(p);
+}
+
 } // namespace acl

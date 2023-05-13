@@ -43,6 +43,24 @@
       }
     },
     {
+      "name": "windows-test",
+      "displayName": "Windows x64 Test",
+      "description": "Target Windows with the Visual Studio development environment.",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+        "ASAN_ENABLED": "ON",
+        "ACL_BUILD_TESTS": "ON"
+      },
+      "vendor": { "microsoft.com/VisualStudioSettings/CMake/1.0": { "hostOS": [ "Windows" ] } }
+    },
+    {
       "name": "windows-default",
       "displayName": "Windows x64 Debug",
       "description": "Target Windows with the Visual Studio development environment.",
@@ -81,6 +99,10 @@
     {
       "name": "windows-default",
       "configurePreset": "windows-default"
+    },
+    {
+      "name": "windows-test",
+      "configurePreset": "windows-test"
     },
     {
       "name": "windows-release",

@@ -8,24 +8,6 @@
 #include <acl/tagged_ptr.hpp>
 #include <catch2/catch_all.hpp>
 
-struct myClass
-{
-  int value = 0;
-};
-
-int intrusive_count_add(myClass* m)
-{
-  return m->value++;
-}
-int intrusive_count_sub(myClass* m)
-{
-  return m->value--;
-}
-int intrusive_count_get(myClass* m)
-{
-  return m->value;
-}
-
 TEST_CASE("Validate malloc")
 {
   char* data = (char*)acl::detail::malloc(100);
@@ -48,19 +30,59 @@ TEST_CASE("Validate malloc")
   acl::detail::aligned_free(data);
 }
 
+struct myBase
+{
+  int& c;
+  myBase(int& a) : c(a) {}
+  virtual ~myBase() = default;
+};
+
+struct myClass : myBase
+{
+  myClass(int& a) : myBase(a) {}
+  ~myClass()
+  {
+    c = -1;
+  }
+};
+
+int intrusive_count_add(myBase* m)
+{
+  return ++m->c;
+}
+int intrusive_count_sub(myBase* m)
+{
+  return --m->c;
+}
+int intrusive_count_get(myBase* m)
+{
+  return m->c;
+}
+
 TEST_CASE("Validate general_allocator", "[intrusive_ptr]")
 {
+  int check = 0;
+
   acl::intrusive_ptr<myClass> ptr;
   CHECK(ptr == nullptr);
-  myClass instance;
-  ptr = &instance;
+  ptr = acl::intrusive_ptr<myClass>(new myClass(check));
   CHECK(ptr != nullptr);
   CHECK(ptr.use_count() == 1);
-  CHECK(ptr->value == 1);
+  auto copy = ptr;
+  CHECK(ptr.use_count() == 2);
+  CHECK(ptr->c == 2);
   ptr.reset();
-  CHECK(instance.value == 0);
-  ptr = &instance;
+  CHECK(check == 1);
+  ptr = std::move(copy);
   CHECK(ptr.use_count() == 1);
+  // Static cast
+  acl::intrusive_ptr<myBase> base = acl::static_pointer_cast<myBase>(ptr);
+  CHECK(ptr.use_count() == 2);
+
+  base.reset();
+  ptr.reset();
+
+  CHECK(check == -1);
 }
 
 TEST_CASE("Validate general_allocator", "[general_allocator]")
