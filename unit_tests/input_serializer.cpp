@@ -11,7 +11,7 @@ using json = nlohmann::json;
 struct InputData
 {
   json                  root;
-  acl::input_error_code ec = acl::input_error_code::none;
+  acl::serializer_error ec = acl::serializer_error::none;
 };
 
 class Serializer
@@ -109,9 +109,9 @@ public:
     return value.get().get_ptr<json::string_t const*>();
   }
 
-  void error(std::string_view type, acl::input_error_code iec)
+  void error(std::string_view type, std::error_code iec)
   {
-    owner.get().ec = iec;
+    owner.get().ec = (acl::serializer_error)iec.value();
   }
 
 private:
@@ -178,7 +178,7 @@ TEST_CASE("input_serializer: Test fail stream in with reflect outside")
 
   ser(myStruct);
 
-  REQUIRE(input.ec == acl::input_error_code::failed_to_parse_value);
+  REQUIRE(input.ec == acl::serializer_error::failed_to_parse_value);
   REQUIRE(myStruct.a == 0);
   REQUIRE(myStruct.b == 0);
 }
@@ -355,7 +355,7 @@ TEST_CASE("input_serializer: Invalid TupleLike ")
 
   ser(myStruct);
 
-  REQUIRE(input.ec == acl::input_error_code::invalid_type);
+  REQUIRE(input.ec == acl::serializer_error::invalid_type);
 }
 
 TEST_CASE("input_serializer: StringMapLike ")
@@ -393,7 +393,7 @@ TEST_CASE("input_serializer: StringMapLike Invalid ")
 
   ser(myMap);
 
-  REQUIRE(input.ec == acl::input_error_code::failed_streaming_map);
+  REQUIRE(input.ec == acl::serializer_error::failed_streaming_map);
   REQUIRE(myMap.empty());
 }
 
@@ -412,7 +412,7 @@ TEST_CASE("input_serializer: StringMapLike Invalid  Subelement")
 
   ser(myMap);
 
-  REQUIRE(input.ec == acl::input_error_code::invalid_type);
+  REQUIRE(input.ec == acl::serializer_error::invalid_type);
   REQUIRE(myMap.empty());
 }
 
@@ -468,7 +468,7 @@ TEST_CASE("input_serializer: ArrayLike Invalid ")
   ser(myArray);
 
   REQUIRE(myArray.empty());
-  REQUIRE(input.ec == acl::input_error_code::invalid_type);
+  REQUIRE(input.ec == acl::serializer_error::invalid_type);
 }
 
 TEST_CASE("input_serializer: ArrayLike (no emplace) Invalid Subelement ")
@@ -484,7 +484,7 @@ TEST_CASE("input_serializer: ArrayLike (no emplace) Invalid Subelement ")
   ser(myArray);
 
   REQUIRE(myArray.empty());
-  REQUIRE(input.ec == acl::input_error_code::failed_streaming_array);
+  REQUIRE(input.ec == acl::serializer_error::failed_streaming_array);
 }
 
 TEST_CASE("input_serializer: ArrayLike Invalid Subelement ")
@@ -503,7 +503,7 @@ TEST_CASE("input_serializer: ArrayLike Invalid Subelement ")
   ser(myMap);
 
   REQUIRE(myMap.empty());
-  REQUIRE(input.ec == acl::input_error_code::failed_streaming_array);
+  REQUIRE(input.ec == acl::serializer_error::failed_streaming_array);
 }
 
 TEST_CASE("input_serializer: VariantLike ")
@@ -544,7 +544,7 @@ TEST_CASE("input_serializer: VariantLike Invalid")
   ser(variant);
 
   REQUIRE(variant.index() == 0);
-  REQUIRE(input.ec == acl::input_error_code::variant_index_is_not_int);
+  REQUIRE(input.ec == acl::serializer_error::variant_index_is_not_int);
 }
 
 TEST_CASE("input_serializer: VariantLike Invalid Type")
@@ -561,7 +561,7 @@ TEST_CASE("input_serializer: VariantLike Invalid Type")
   ser(variant);
 
   REQUIRE(variant.index() == 0);
-  REQUIRE(input.ec == acl::input_error_code::invalid_type);
+  REQUIRE(input.ec == acl::serializer_error::invalid_type);
 }
 
 TEST_CASE("input_serializer: VariantLike Invalid Size")
@@ -578,7 +578,7 @@ TEST_CASE("input_serializer: VariantLike Invalid Size")
   ser(variant);
 
   REQUIRE(variant.index() == 0);
-  REQUIRE(input.ec == acl::input_error_code::variant_invalid_format);
+  REQUIRE(input.ec == acl::serializer_error::variant_invalid_format);
 }
 
 struct ConstructedSV
@@ -623,7 +623,7 @@ TEST_CASE("input_serializer: ConstructedFromStringView Invalid")
   ser(myArray);
 
   REQUIRE(myArray.empty());
-  REQUIRE(input.ec == acl::input_error_code::failed_streaming_array);
+  REQUIRE(input.ec == acl::serializer_error::failed_streaming_array);
 }
 
 struct TransformSV
@@ -679,7 +679,7 @@ TEST_CASE("input_serializer: TransformFromString Invalid")
   ser(myArray);
 
   REQUIRE(myArray.size() == 0);
-  REQUIRE(input.ec == acl::input_error_code::failed_streaming_array);
+  REQUIRE(input.ec == acl::serializer_error::failed_streaming_array);
 }
 
 TEST_CASE("input_serializer: BoolLike")
@@ -713,7 +713,7 @@ TEST_CASE("input_serializer: BoolLike Invaild")
 
   ser(myArray);
 
-  REQUIRE(input.ec == acl::input_error_code::failed_streaming_array);
+  REQUIRE(input.ec == acl::serializer_error::failed_streaming_array);
 }
 
 TEST_CASE("input_serializer: SignedIntLike")
@@ -746,7 +746,7 @@ TEST_CASE("input_serializer: SignedIntLike Invalid")
 
   ser(myArray);
 
-  REQUIRE(input.ec == acl::input_error_code::failed_streaming_array);
+  REQUIRE(input.ec == acl::serializer_error::failed_streaming_array);
 }
 
 TEST_CASE("input_serializer: UnsignedIntLike")
@@ -779,7 +779,7 @@ TEST_CASE("input_serializer: UnsignedIntLike Invalid")
 
   ser(myArray);
 
-  REQUIRE(input.ec == acl::input_error_code::failed_streaming_array);
+  REQUIRE(input.ec == acl::serializer_error::failed_streaming_array);
 }
 
 TEST_CASE("input_serializer: FloatLike")
@@ -812,7 +812,7 @@ TEST_CASE("input_serializer: FloatLike Invalid")
 
   ser(myArray);
 
-  REQUIRE(input.ec == acl::input_error_code::failed_streaming_array);
+  REQUIRE(input.ec == acl::serializer_error::failed_streaming_array);
 }
 
 TEST_CASE("input_serializer: PointerLike")

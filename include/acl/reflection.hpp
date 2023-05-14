@@ -4,6 +4,7 @@
 #pragma once
 
 #include "string_literal.hpp"
+#include <bit>
 #include <concepts>
 #include <cstdint>
 #include <string>
@@ -178,6 +179,9 @@ template <typename T>
 concept UnsignedIntLike = std::is_unsigned_v<remove_cref<T>> &&
                           (std::is_integral_v<remove_cref<T>> || std::is_enum_v<remove_cref<T>>) &&
                           (!std::is_same_v<remove_cref<T>, bool>);
+
+template <typename T>
+concept IntegerLike = SignedIntLike<T> || UnsignedIntLike<T>;
 
 // Float
 template <typename T>
@@ -377,8 +381,11 @@ concept HasArrayValueAssignable =
   Itereable<Class> && requires(Class a, std::size_t i) { a[i++] = std::declval<array_value_type<Class>>(); };
 
 template <typename Class>
-concept ArrayLike = (HasEmplaceFn<Class, array_value_type<Class>> || HasArrayValueAssignable<Class>) &&
-                    (Itereable<Class> && !StringMapLike<Class> && !StringLike<Class>);
+concept ContainerLike = (HasEmplaceFn<Class, array_value_type<Class>> || HasArrayValueAssignable<Class>) &&
+                        (Itereable<Class> && !StringLike<Class>);
+
+template <typename Class>
+concept ArrayLike = ContainerLike<Class> && (!StringMapLike<Class>);
 
 // Tuple
 template <class T, std::size_t N>
@@ -401,6 +408,22 @@ concept TupleLike = (!ArrayLike<Class>) && requires(Class t) {
 template <typename Class>
 concept MonostateLike = std::same_as<Class, std::monostate>;
 
+// clang-format off
+template <typename Class, typename Serializer>
+concept LinearArrayLike =  requires(Class c) 
+                           {
+                               typename Class::value_type;
+                               c.data();
+                               { c.size() } -> std::convertible_to<std::size_t>;
+                           } && 
+                           std::is_standard_layout_v<typename Class::value_type> &&  
+                           std::is_trivially_copyable_v<typename Class::value_type> &&
+                           std::has_unique_object_representations_v<typename Class::value_type> && 
+                           !BoundClass<typename Class::value_type> &&
+                           !OutputSerializableClass<Serializer> &&
+                           !InputSerializableClass<Serializer>;
+// clang-format on
+
 // @remarks
 // Highly borrowed from
 // https://github.com/eliasdaler/MetaStuff
@@ -411,7 +434,12 @@ public:
   using ClassTy = std::decay_t<Class>;
   using MemTy   = std::decay_t<M>;
 
-  static constexpr std::string_view key() noexcept
+  inline static constexpr std::uint32_t key_hash() noexcept
+  {
+    return Name.hash();
+  }
+
+  inline static constexpr std::string_view key() noexcept
   {
     return (std::string_view)Name;
   }
@@ -499,6 +527,15 @@ template <typename Class>
 auto const reflect_() noexcept
 {
   return acl::reflect<Class>();
+}
+
+template <std::integral T>
+constexpr T byteswap(T value) noexcept
+{
+  static_assert(std::has_unique_object_representations_v<T>, "T may not have padding bits");
+  auto value_representation = std::bit_cast<std::array<std::byte, sizeof(T)>>(value);
+  std::ranges::reverse(value_representation);
+  return std::bit_cast<T>(value_representation);
 }
 
 } // namespace detail

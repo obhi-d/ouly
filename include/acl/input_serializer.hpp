@@ -3,6 +3,7 @@
 //
 #pragma once
 
+#include "detail/error_codes.hpp"
 #include "detail/reflection_utils.hpp"
 #include "reflection.hpp"
 #include "type_traits.hpp"
@@ -13,32 +14,20 @@
 namespace acl
 {
 
-enum class input_error_code
-{
-  none,
-  invalid_type,
-  failed_streaming_map,
-  failed_streaming_array,
-  failed_streaming_variant,
-  failed_to_parse_value,
-  variant_invalid_format,
-  variant_index_is_not_int
-};
-
 // clang-format off
 template <typename V>
 concept InputSerializer = requires(V v) 
 {  
-  // function object: Must return object_type
+  // function: Must return object_type
   { v.is_object() } -> ::std::same_as<bool>;
 
-  // function object: Must return object_type
+  // function: Must return object_type
   { v.is_array() } -> ::std::same_as<bool>;
 
-  // function object: Must return object_type
+  // function: Must return object_type
   { v.is_null() } -> ::std::same_as<bool>;
 
-  // function object: Must return true if fail bit is set
+  // function: Must return true if fail bit is set
   { v.failed() } -> ::std::same_as<bool>;
 
   // size
@@ -74,7 +63,7 @@ concept InputSerializer = requires(V v)
   { v.as_string() } -> detail::OptionalValueLike<std::string_view>;
 
   // error handler: context, error
-  v.error(std::string_view(), input_error_code()); 
+  v.error(std::string_view(), std::error_code()); 
 };
 // clang-format on
 
@@ -128,7 +117,7 @@ public:
     // Invalid type is unexpected
     if (!get().is_array())
     {
-      get().error(type_name<Class>(), input_error_code::invalid_type);
+      get().error(type_name<Class>(), make_error_code(serializer_error::invalid_type));
       return false;
     }
     return [ this, &obj ]<size_t... N>(std::index_sequence<N...>)
@@ -145,7 +134,7 @@ public:
     // Invalid type is unexpected
     if (!get().is_object())
     {
-      get().error(type_name<Class>(), input_error_code::invalid_type);
+      get().error(type_name<Class>(), make_error_code(serializer_error::invalid_type));
       return false;
     }
 
@@ -164,7 +153,7 @@ public:
           detail::emplace(obj, key_type{key}, std::move(stream_val));
           return true;
         }
-        value.error(type_name<mapped_type>(), input_error_code::failed_streaming_map);
+        value.error(type_name<mapped_type>(), make_error_code(serializer_error::failed_streaming_map));
         return false;
       });
   }
@@ -175,7 +164,7 @@ public:
     // Invalid type is unexpected
     if (!get().is_array())
     {
-      get().error(type_name<Class>(), input_error_code::invalid_type);
+      get().error(type_name<Class>(), make_error_code(serializer_error::invalid_type));
       return false;
     }
 
@@ -193,7 +182,7 @@ public:
             detail::emplace(obj, std::move(stream_val));
             return true;
           }
-          value.error(type_name<Class>(), input_error_code::failed_streaming_array);
+          value.error(type_name<Class>(), make_error_code(serializer_error::failed_streaming_array));
           return false;
         });
     }
@@ -212,7 +201,7 @@ public:
                 obj[index++] = std::move(stream_val);
                 return true;
               }
-              value.error(type_name<Class>(), input_error_code::failed_streaming_array);
+              value.error(type_name<Class>(), make_error_code(serializer_error::failed_streaming_array));
               return false;
             }))
       {
@@ -232,13 +221,13 @@ public:
     // Invalid type is unexpected
     if (!get().is_array())
     {
-      get().error(type_name<Class>(), input_error_code::invalid_type);
+      get().error(type_name<Class>(), make_error_code(serializer_error::invalid_type));
       return false;
     }
 
     if (get().size() != 2)
     {
-      get().error(type_name<Class>(), input_error_code::variant_invalid_format);
+      get().error(type_name<Class>(), make_error_code(serializer_error::variant_invalid_format));
       return false;
     }
 
@@ -249,7 +238,7 @@ public:
     auto index = (*index_opt).as_uint64();
     if (!index)
     {
-      get().error(type_name<Class>(), input_error_code::variant_index_is_not_int);
+      get().error(type_name<Class>(), make_error_code(serializer_error::variant_index_is_not_int));
       return false;
     }
 
@@ -258,20 +247,20 @@ public:
     assert(value_opt);
 
     auto value = *value_opt;
-    return find_alt<std::variant_size_v<Class> - 1, Class>(static_cast<uint32_t>(*index),
-                                                           [&obj, &value](auto I) -> bool
-                                                           {
-                                                             using type = std::variant_alternative_t<I, Class>;
-                                                             type load;
-                                                             if (input_serializer(value)(load))
-                                                             {
-                                                               obj = std::move(load);
-                                                               return true;
-                                                             }
-                                                             value.error(type_name<type>(),
-                                                                         input_error_code::failed_streaming_variant);
-                                                             return false;
-                                                           });
+    return find_alt<std::variant_size_v<Class> - 1, Class>(
+      static_cast<uint32_t>(*index),
+      [&obj, &value](auto I) -> bool
+      {
+        using type = std::variant_alternative_t<I, Class>;
+        type load;
+        if (input_serializer(value)(load))
+        {
+          obj = std::move(load);
+          return true;
+        }
+        value.error(type_name<type>(), make_error_code(serializer_error::failed_streaming_variant));
+        return false;
+      });
   }
 
   template <detail::ConstructedFromStringView Class>
@@ -285,7 +274,7 @@ public:
     }
     else
     {
-      get().error("string", input_error_code::failed_to_parse_value);
+      get().error("string", make_error_code(serializer_error::failed_to_parse_value));
       return false;
     }
   }
@@ -301,7 +290,7 @@ public:
     }
     else
     {
-      get().error("string", input_error_code::failed_to_parse_value);
+      get().error("string", make_error_code(serializer_error::failed_to_parse_value));
       return false;
     }
   }
@@ -317,7 +306,7 @@ public:
     }
     else
     {
-      get().error("bool", input_error_code::failed_to_parse_value);
+      get().error("bool", make_error_code(serializer_error::failed_to_parse_value));
       return false;
     }
   }
@@ -333,7 +322,7 @@ public:
     }
     else
     {
-      get().error("int64", input_error_code::failed_to_parse_value);
+      get().error("int64", make_error_code(serializer_error::failed_to_parse_value));
       return false;
     }
   }
@@ -349,7 +338,7 @@ public:
     }
     else
     {
-      get().error("uint64", input_error_code::failed_to_parse_value);
+      get().error("uint64", make_error_code(serializer_error::failed_to_parse_value));
       return false;
     }
   }
@@ -365,7 +354,7 @@ public:
     }
     else
     {
-      get().error("float", input_error_code::failed_to_parse_value);
+      get().error("float", make_error_code(serializer_error::failed_to_parse_value));
       return false;
     }
   }

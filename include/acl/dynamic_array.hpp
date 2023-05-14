@@ -18,6 +18,8 @@ class dynamic_array<T, Allocator, 0> : public Allocator
 {
 
 public:
+  using value_type = T;
+
   dynamic_array() = default;
 
   inline dynamic_array(dynamic_array&& other) noexcept : data_(other.data_), count_(other.count_)
@@ -59,6 +61,10 @@ public:
       std::uninitialized_copy_n(first, count_, data_);
     }
   }
+
+  template <typename OT>
+  inline dynamic_array(std::initializer_list<OT> data) noexcept : dynamic_array(data.begin(), data.end())
+  {}
 
   inline dynamic_array(uint32_t n, T const& fill = T()) noexcept : count_(n)
   {
@@ -152,6 +158,16 @@ public:
     return count_ == 0;
   }
 
+  inline bool operator==(dynamic_array const& other) const noexcept
+  {
+    return count_ == other.size() && std::ranges::equal(*this, other);
+  }
+
+  inline bool operator!=(dynamic_array const& other) const noexcept
+  {
+    return !(*this == other);
+  }
+
 private:
   T*       data_  = nullptr;
   uint32_t count_ = 0;
@@ -162,6 +178,8 @@ class dynamic_array : public Allocator
 {
 
 public:
+  using value_type = T;
+
   inline static constexpr uint32_t count_ = N;
   static_assert(count_ > 0);
 
@@ -199,6 +217,10 @@ public:
     if (count < count_)
       std::uninitialized_fill_n(data_ + count, count_ - count, T());
   }
+
+  template <typename OT>
+  inline dynamic_array(std::initializer_list<OT> data) noexcept : dynamic_array(data.begin(), data.end())
+  {}
 
   inline dynamic_array(uint32_t count, T const& fill = T()) noexcept
   {
@@ -269,6 +291,16 @@ public:
   uint32_t size() const noexcept
   {
     return count_;
+  }
+
+  inline bool operator==(dynamic_array const& other) const noexcept
+  {
+    return count_ == other.size() && std::ranges::equal(*this, other);
+  }
+
+  inline bool operator!=(dynamic_array const& other) const noexcept
+  {
+    return !(*this == other);
   }
 
 private:
