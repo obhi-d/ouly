@@ -420,8 +420,8 @@ concept LinearArrayLike =  requires(Class c)
                            std::is_trivially_copyable_v<typename Class::value_type> &&
                            std::has_unique_object_representations_v<typename Class::value_type> && 
                            !BoundClass<typename Class::value_type> &&
-                           !OutputSerializableClass<Serializer> &&
-                           !InputSerializableClass<Serializer>;
+                           !OutputSerializableClass<typename Class::value_type, Serializer> &&
+                           !InputSerializableClass<typename Class::value_type, Serializer>;
 // clang-format on
 
 // @remarks

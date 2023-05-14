@@ -33,7 +33,7 @@ struct error_category : std::error_category
 {
   inline const char* name() const noexcept final
   {
-    return type_name<E>().data();
+      return detail::type_name<E>().name();
   }
 
   inline std::string message(int ev) const final

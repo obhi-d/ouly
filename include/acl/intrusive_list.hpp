@@ -2,6 +2,7 @@
 #pragma once
 
 #include "detail/config.hpp"
+#include <cstdint>
 #include <cassert>
 #include <compare>
 #include <iterator>
