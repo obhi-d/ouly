@@ -3,6 +3,7 @@
 #include <cassert>
 #include <cstdint>
 #include <limits>
+#include <string_view>
 #include <tuple>
 #include <utility>
 
@@ -190,6 +191,19 @@ template <typename size_type>
 inline size_type is_valid(size_type val)
 {
   return !(invalidated_mask_v<size_type> & val);
+}
+
+constexpr uint32_t fnv1a_32(std::string_view view)
+{
+  constexpr uint32_t prime        = 16777619u;
+  constexpr uint32_t offset_basis = 2166136261u;
+  uint32_t           hash         = offset_basis;
+  for (auto v : view)
+  {
+    hash ^= static_cast<uint32_t>(v);
+    hash *= prime;
+  }
+  return hash;
 }
 
 } // namespace detail

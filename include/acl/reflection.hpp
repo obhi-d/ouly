@@ -168,6 +168,12 @@ concept NativeStringLike =
   std::is_same_v<std::string, remove_cref<T>> || std::is_same_v<char*, T> ||
   std::is_same_v<char const*, remove_cref<T>>;
 
+template <typename T>
+concept NativeWStringLike =
+  std::is_same_v<std::wstring, remove_cref<T>> || std::is_same_v<std::wstring_view, remove_cref<T>> ||
+  std::is_same_v<std::wstring, remove_cref<T>> || std::is_same_v<wchar_t*, T> ||
+  std::is_same_v<wchar_t const*, remove_cref<T>>;
+
 // String type check
 
 template <typename T>
@@ -193,6 +199,9 @@ concept BoolLike = std::is_same_v<remove_cref<T>, bool>;
 
 template <typename T>
 concept StringLike = NativeStringLike<T>;
+
+template <typename T>
+concept WStringLike = NativeWStringLike<T>;
 
 template <typename T>
 concept NativeLike = BoolLike<T> || SignedIntLike<T> || UnsignedIntLike<T> || FloatLike<T> || StringLike<T>;
@@ -351,7 +360,9 @@ concept IsSmartPointer = requires(Class o) {
                          };
 
 template <typename Class>
-concept IsBasicPointer = std::is_pointer_v<Class> && (!NativeStringLike<Class>);
+concept IsBasicPointer = std::is_pointer_v<Class> &&
+                         (!std::is_same_v<char*, Class> && !std::is_same_v<char const*, Class>) &&
+                         (!std::is_same_v<wchar_t*, Class> && !std::is_same_v<wchar_t const*, Class>);
 
 template <typename Class>
 concept PointerLike = IsBasicPointer<Class> || IsSmartPointer<Class>;
@@ -427,7 +438,7 @@ concept LinearArrayLike =  requires(Class c)
 // @remarks
 // Highly borrowed from
 // https://github.com/eliasdaler/MetaStuff
-template <fixed_string Name, typename Class, typename M>
+template <string_literal Name, typename Class, typename M>
 class decl_base
 {
 public:
@@ -445,7 +456,7 @@ public:
   }
 };
 
-template <fixed_string Name, typename Class, typename MPtr, auto Ptr>
+template <string_literal Name, typename Class, typename MPtr, auto Ptr>
 class decl_member_ptr : public decl_base<Name, Class, MPtr>
 {
 public:
@@ -468,7 +479,7 @@ public:
   }
 };
 
-template <fixed_string Name, typename Class, typename RetTy, auto Getter, auto Setter>
+template <string_literal Name, typename Class, typename RetTy, auto Getter, auto Setter>
 class decl_get_set : public decl_base<Name, Class, RetTy>
 {
 public:
@@ -486,7 +497,7 @@ public:
   }
 };
 
-template <fixed_string Name, typename Class, typename RetTy, auto Getter, auto Setter>
+template <string_literal Name, typename Class, typename RetTy, auto Getter, auto Setter>
 class decl_free_get_set : public decl_base<Name, Class, RetTy>
 {
 public:
@@ -558,7 +569,7 @@ void for_each_field(Fn&& fn, Class& obj) noexcept
 /// @remarks Desired syntax would be
 /// bind< bind<"MyField", &T::my_field>,
 
-template <fixed_string Name, auto MPtr>
+template <string_literal Name, auto MPtr>
 constexpr auto bind() noexcept
 requires(detail::IsMemberPtr<MPtr>)
 {
@@ -566,7 +577,7 @@ requires(detail::IsMemberPtr<MPtr>)
                                  typename detail::member_ptr_type<MPtr>::member_t, MPtr>();
 }
 
-template <fixed_string Name, auto Getter, auto Setter>
+template <string_literal Name, auto Getter, auto Setter>
 constexpr auto bind() noexcept
 requires(detail::IsMemberGetterSetter<Getter, Setter>)
 {
@@ -574,7 +585,7 @@ requires(detail::IsMemberGetterSetter<Getter, Setter>)
                               typename detail::member_getter_type<Getter>::return_t, Getter, Setter>();
 }
 
-template <fixed_string Name, auto Getter, auto Setter>
+template <string_literal Name, auto Getter, auto Setter>
 constexpr auto bind() noexcept
 requires(detail::IsFreeGetterSetter<Getter, Setter>)
 {
@@ -582,7 +593,7 @@ requires(detail::IsFreeGetterSetter<Getter, Setter>)
                                    typename detail::free_getter_type<Getter>::return_t, Getter, Setter>();
 }
 
-template <fixed_string Name, auto Getter, auto Setter>
+template <string_literal Name, auto Getter, auto Setter>
 constexpr auto bind() noexcept
 requires(detail::IsFreeGetterByValSetter<Getter, Setter>)
 {

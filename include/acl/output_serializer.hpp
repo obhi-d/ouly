@@ -65,8 +65,55 @@ public:
   output_serializer(output_serializer&& i_other) noexcept : ser_(i_other.ser_) {}
   inline output_serializer(Serializer& ser) noexcept : ser_(ser) {}
 
+  template <typename Class>
+  inline void operator()(Class const& obj) noexcept
+  {
+    // Ensure ordering with multiple matches
+    if constexpr (detail::BoundClass<Class>)
+      write_bound_class(obj);
+    else if constexpr (detail::OutputSerializableClass<Class, Serializer>)
+      write_serializable(obj);
+    else if constexpr (detail::TupleLike<Class>)
+      write_tuple(obj);
+    else if constexpr (detail::ContainerLike<Class>)
+      write_container(obj);
+    else if constexpr (detail::VariantLike<Class>)
+      write_variant(obj);
+    else if constexpr (detail::CastableToStringView<Class>)
+      write_string_view_castable(obj);
+    else if constexpr (detail::CastableToString<Class>)
+      write_string_castable(obj);
+    else if constexpr (detail::TransformToStringView<Class>)
+      write_string_view_transformable(obj);
+    else if constexpr (detail::TransformToString<Class>)
+      write_string_transformable(obj);
+    else if constexpr (detail::StringLike<Class>)
+      write_string(obj);
+    else if constexpr (detail::BoolLike<Class>)
+      write_bool(obj);
+    else if constexpr (detail::IntegerLike<Class>)
+      write_integer(obj);
+    else if constexpr (detail::FloatLike<Class>)
+      write_float(obj);
+    else if constexpr (detail::PointerLike<Class>)
+      write_pointer(obj);
+    else if constexpr (detail::OptionalLike<Class>)
+      write_optional(obj);
+    else if constexpr (detail::MonostateLike<Class>)
+      write_monostate(obj);
+    else
+    {
+      []<bool flag = false>()
+      {
+        static_assert(flag, "This type is not serializable");
+      }
+      ();
+    }
+  }
+
+private:
   template <detail::BoundClass Class>
-  void operator()(Class const& obj) noexcept
+  void write_bound_class(Class const& obj) noexcept
   {
     get().begin_object();
     for_each_field(*this, obj);
@@ -74,13 +121,13 @@ public:
   }
 
   template <detail::OutputSerializableClass<Serializer> Class>
-  void operator()(Class& obj) noexcept
+  void write_serializable(Class& obj) noexcept
   {
     get() << obj;
   }
 
   template <detail::TupleLike Class>
-  void operator()(Class const& obj) noexcept
+  void write_tuple(Class const& obj) noexcept
   {
     // Invalid type is unexpected
     get().begin_array();
@@ -93,7 +140,7 @@ public:
   }
 
   template <detail::StringMapLike Class>
-  void operator()(Class const& obj) noexcept
+  void write_container(Class const& obj) noexcept
   {
 
     using key_type    = detail::remove_cref<typename Class::key_type>;
@@ -114,7 +161,7 @@ public:
   }
 
   template <detail::ArrayLike Class>
-  void operator()(Class const& obj) noexcept
+  void write_container(Class const& obj) noexcept
   {
     // Invalid type is unexpected
     get().begin_array();
@@ -130,7 +177,7 @@ public:
   }
 
   template <detail::VariantLike Class>
-  void operator()(Class const& obj) noexcept
+  void write_variant(Class const& obj) noexcept
   {
     // Invalid type is unexpected
     get().begin_array();
@@ -146,61 +193,67 @@ public:
   }
 
   template <detail::CastableToStringView Class>
-  void operator()(Class const& obj) noexcept
+  void write_string_view_castable(Class const& obj) noexcept
   {
     get().as_string(std::string_view(obj));
   }
 
   template <detail::CastableToString Class>
-  void operator()(Class const& obj) noexcept
+  void write_string_castable(Class const& obj) noexcept
   {
     get().as_string(std::string(obj));
   }
 
   template <detail::TransformToString Class>
-  void operator()(Class const& obj) noexcept
+  void write_string_transformable(Class const& obj) noexcept
   {
     get().as_string(acl::to_string(obj));
   }
 
   template <detail::TransformToStringView Class>
-  void operator()(Class const& obj) noexcept
+  void write_string_view_transformable(Class const& obj) noexcept
   {
     get().as_string(acl::to_string_view(obj));
   }
 
+  template <detail::StringLike Class>
+  void write_string(Class const& obj) noexcept
+  {
+    get().as_string(obj);
+  }
+
   template <detail::BoolLike Class>
-  void operator()(Class const& obj) noexcept
+  void write_bool(Class const& obj) noexcept
   {
     get().as_bool(obj);
   }
 
   template <detail::SignedIntLike Class>
-  void operator()(Class const& obj) noexcept
+  void write_integer(Class const& obj) noexcept
   {
     get().as_int64(obj);
   }
 
   template <detail::UnsignedIntLike Class>
-  void operator()(Class const& obj) noexcept
+  void write_integer(Class const& obj) noexcept
   {
     get().as_uint64(obj);
   }
 
   template <detail::FloatLike Class>
-  void operator()(Class const& obj) noexcept
+  void write_float(Class const& obj) noexcept
   {
     get().as_double(obj);
   }
 
   template <detail::StringLike Class>
-  void operator()(Class const& obj) noexcept
+  void write_float(Class const& obj) noexcept
   {
     get().as_string(obj);
   }
 
   template <detail::PointerLike Class>
-  void operator()(Class const& obj) noexcept
+  void write_pointer(Class const& obj) noexcept
   {
     if (obj)
       (*this)(*obj);
@@ -209,7 +262,7 @@ public:
   }
 
   template <detail::OptionalLike Class>
-  void operator()(Class const& obj) noexcept
+  void write_optional(Class const& obj) noexcept
   {
     if (obj)
       (*this)(*obj);
@@ -218,11 +271,12 @@ public:
   }
 
   template <detail::MonostateLike Class>
-  void operator()(Class const& obj) noexcept
+  void write_monostate(Class const& obj) noexcept
   {
     get().as_null();
   }
 
+public:
   template <typename Class, typename Decl, std::size_t I>
   inline void operator()(Class const& obj, Decl const& decl, std::integral_constant<size_t, I>) noexcept
   {

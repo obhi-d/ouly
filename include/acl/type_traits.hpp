@@ -1,8 +1,8 @@
 #pragma once
 #include "detail/type_name.hpp"
 #include <cstdint>
-#include <type_traits>
 #include <tuple>
+#include <type_traits>
 
 namespace acl
 {
@@ -47,8 +47,7 @@ struct offset
 template <typename T>
 constexpr std::string_view type_name()
 {
-  return std::string_view(detail::type_name<std::remove_cv_t<std::remove_reference_t<T>>>().name(),
-                          detail::type_name<std::remove_cv_t<std::remove_reference_t<T>>>().size());
+  return detail::type_name<std::remove_cv_t<std::remove_reference_t<T>>>();
 }
 
 template <typename T>

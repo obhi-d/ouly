@@ -80,8 +80,52 @@ public:
   input_serializer(input_serializer&& i_other) noexcept : ser_(i_other.ser_) {}
   inline input_serializer(Serializer& ser) noexcept : ser_(ser) {}
 
+  template <typename Class>
+  inline bool operator()(Class& obj) noexcept
+  {
+    // Ensure ordering with multiple matches
+    if constexpr (detail::BoundClass<Class>)
+      return read_bound_class(obj);
+    else if constexpr (detail::InputSerializableClass<Class, Serializer>)
+      return read_serializable(obj);
+    else if constexpr (detail::TupleLike<Class>)
+      return read_tuple(obj);
+    else if constexpr (detail::ContainerLike<Class>)
+      return read_container(obj);
+    else if constexpr (detail::VariantLike<Class>)
+      return read_variant(obj);
+    else if constexpr (detail::ConstructedFromStringView<Class>)
+      return read_string_constructed(obj);
+    else if constexpr (detail::TransformFromString<Class>)
+      return read_string_transformed(obj);
+    else if constexpr (detail::StringLike<Class>)
+      return read_string(obj);
+    else if constexpr (detail::BoolLike<Class>)
+      return read_bool(obj);
+    else if constexpr (detail::IntegerLike<Class>)
+      return read_integer(obj);
+    else if constexpr (detail::FloatLike<Class>)
+      return read_float(obj);
+    else if constexpr (detail::PointerLike<Class>)
+      return read_pointer(obj);
+    else if constexpr (detail::OptionalLike<Class>)
+      return read_optional(obj);
+    else if constexpr (detail::MonostateLike<Class>)
+      return read_monostate(obj);
+    else
+    {
+      []<bool flag = false>()
+      {
+        static_assert(flag, "This type is not serializable");
+      }
+      ();
+      return false;
+    }
+  }
+
+private:
   template <detail::BoundClass Class>
-  bool operator()(Class& obj) noexcept
+  bool read_bound_class(Class& obj) noexcept
   {
     bool status = true;
     for_each_field(
@@ -105,14 +149,14 @@ public:
   }
 
   template <detail::InputSerializableClass<Serializer> Class>
-  bool operator()(Class& obj) noexcept
+  bool read_serializable(Class& obj) noexcept
   {
     get() >> obj;
     return !get().failed();
   }
 
   template <detail::TupleLike Class>
-  bool operator()(Class& obj) noexcept
+  bool read_tuple(Class& obj) noexcept
   {
     // Invalid type is unexpected
     if (!get().is_array())
@@ -128,7 +172,7 @@ public:
   }
 
   template <detail::StringMapLike Class>
-  bool operator()(Class& obj) noexcept
+  bool read_container(Class& obj) noexcept
   {
     // Invalid is not unexpected
     // Invalid type is unexpected
@@ -159,7 +203,7 @@ public:
   }
 
   template <detail::ArrayLike Class>
-  bool operator()(Class& obj) noexcept
+  bool read_container(Class& obj) noexcept
   {
     // Invalid type is unexpected
     if (!get().is_array())
@@ -213,7 +257,7 @@ public:
   }
 
   template <detail::VariantLike Class>
-  bool operator()(Class& obj) noexcept
+  bool read_variant(Class& obj) noexcept
   {
     if (get().is_null())
       return true;
@@ -264,7 +308,7 @@ public:
   }
 
   template <detail::ConstructedFromStringView Class>
-  bool operator()(Class& obj) noexcept
+  bool read_string_constructed(Class& obj) noexcept
   {
     auto value = get().as_string();
     if (value)
@@ -280,7 +324,7 @@ public:
   }
 
   template <detail::TransformFromString Class>
-  bool operator()(Class& obj) noexcept
+  bool read_string_transformed(Class& obj) noexcept
   {
     auto value = get().as_string();
     if (value)
@@ -295,8 +339,24 @@ public:
     }
   }
 
+  template <detail::StringLike Class>
+  bool read_string(Class& obj) noexcept
+  {
+    auto value = get().as_string();
+    if (value)
+    {
+      obj = Class(*value);
+      return true;
+    }
+    else
+    {
+      get().error("string", make_error_code(serializer_error::failed_to_parse_value));
+      return false;
+    }
+  }
+
   template <detail::BoolLike Class>
-  bool operator()(Class& obj) noexcept
+  bool read_bool(Class& obj) noexcept
   {
     auto value = get().as_bool();
     if (value)
@@ -312,7 +372,7 @@ public:
   }
 
   template <detail::SignedIntLike Class>
-  bool operator()(Class& obj) noexcept
+  bool read_integer(Class& obj) noexcept
   {
     auto value = get().as_int64();
     if (value)
@@ -328,7 +388,7 @@ public:
   }
 
   template <detail::UnsignedIntLike Class>
-  bool operator()(Class& obj) noexcept
+  bool read_integer(Class& obj) noexcept
   {
     auto value = get().as_uint64();
     if (value)
@@ -344,7 +404,7 @@ public:
   }
 
   template <detail::FloatLike Class>
-  bool operator()(Class& obj) noexcept
+  bool read_float(Class& obj) noexcept
   {
     auto value = get().as_double();
     if (value)
@@ -360,7 +420,7 @@ public:
   }
 
   template <detail::PointerLike Class>
-  bool operator()(Class& obj) noexcept
+  bool read_pointer(Class& obj) noexcept
   {
     if (!get().is_null())
     {
@@ -377,7 +437,7 @@ public:
   }
 
   template <detail::OptionalLike Class>
-  bool operator()(Class& obj) noexcept
+  bool read_optional(Class& obj) noexcept
   {
     if (!get().is_null())
     {
@@ -390,7 +450,7 @@ public:
   }
 
   template <detail::MonostateLike Class>
-  bool operator()(Class& obj) noexcept
+  bool read_monostate(Class& obj) noexcept
   {
     return true;
   }
