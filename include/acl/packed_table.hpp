@@ -316,26 +316,41 @@ public:
     free_key_slot_ = 0;
   }
 
-  value_type& at(link l) noexcept
+  inline value_type& at(link l) noexcept
   {
     if constexpr (detail::debug)
       validate(l);
     return item_at(l.as_index());
   }
 
-  value_type const& at(link l) const noexcept
+  inline value_type const& at(link l) const noexcept
   {
     return const_cast<this_type*>(this)->at(l);
   }
 
-  value_type& operator[](link l) noexcept
+  inline value_type& operator[](link l) noexcept
   {
     return at(l);
   }
 
-  value_type const& operator[](link l) const noexcept
+  inline value_type const& operator[](link l) const noexcept
   {
     return at(l);
+  }
+
+  inline value_type* get_if(link l) noexcept
+  {
+    if (keys_.contains_valid(l.as_index()))
+    {
+      return &item_at(l.as_index());
+    }
+
+    return nullptr;
+  }
+
+  inline value_type const* get_if(link l) const noexcept
+  {
+    return const_cast<this_type*>(this)->at(l);
   }
 
   inline bool contains(link l) const noexcept

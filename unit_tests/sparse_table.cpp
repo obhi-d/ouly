@@ -8,7 +8,6 @@
 #include <unordered_map>
 #include <unordered_set>
 
-
 TEST_CASE("sparse_table: Validate sparse_table emplace", "[sparse_table][emplace]")
 {
   acl::sparse_table<int> table;
@@ -63,7 +62,6 @@ TEST_CASE("sparse_table: Copy when copyable", "[sparse_table][assignment]")
 
   table2 = table;
 
-  
   auto& el1 = table2.at(e1);
   auto& el2 = table2.at(e2);
   REQUIRE(table2.at(e1) == "something");
@@ -166,8 +164,13 @@ TEST_CASE("sparse_table: Validate replace", "[sparse_table][replace]")
   REQUIRE(table1.contains(e10) == true);
   REQUIRE(table1.contains(e20) == true);
   REQUIRE(table1.contains(e30) == true);
+  REQUIRE(table1.get_if(e10) != nullptr);
+  REQUIRE(table1.get_if(e20) != nullptr);
 
   table1.erase(e10);
+
+  REQUIRE(table1.get_if(e10) == nullptr);
+
   table1.erase(e20);
   table1.erase(e30);
 

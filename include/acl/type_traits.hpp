@@ -34,13 +34,14 @@ struct allocator_traits
 template <auto M>
 struct offset
 {
-  static auto& get(auto& to)
+  inline static auto& get(auto& to) noexcept
   {
-    return (to.*M);
+    return to.*M;
   }
-  static decltype(auto) get(auto const& to)
+
+  inline static auto const& get(auto const& to) noexcept
   {
-    return (to.*M);
+    return to.*M;
   }
 };
 

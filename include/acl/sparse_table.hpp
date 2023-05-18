@@ -11,7 +11,13 @@
 
 namespace acl
 {
-
+/// @brief Represents a sparse table of elements. Free slots are reused.
+/// @tparam Ty Vector type
+/// @tparam Allocator Underlying allocator
+/// @tparam Traits At minimum the traits must define:
+///          - pool_size Power of 2, count of elements in a single chunk/page/pool
+///          - [optional] using offset = acl::offset<Member>; Indicates the member to self pointer
+///          - [optional] self_index_pool_size Pool size for self indices if offset is missing
 template <typename Ty, typename Allocator = default_allocator<>, typename Traits = acl::traits<Ty>>
 class sparse_table : public Allocator
 {
@@ -272,32 +278,59 @@ public:
     self_.clear();
   }
 
-  value_type& at(link l) noexcept
+  inline value_type& at(link l) noexcept
   {
     if constexpr (detail::debug)
       validate(l);
     return item_at(detail::index_val(l.value()));
   }
 
-  value_type const& at(link l) const noexcept
+  inline value_type const& at(link l) const noexcept
   {
     return const_cast<this_type*>(this)->at(l);
   }
 
-  value_type& operator[](link l) noexcept
+  inline value_type const* get_if(link l) const noexcept
+  {
+    return const_cast<this_type*>(this)->at(l);
+  }
+
+  inline value_type& operator[](link l) noexcept
   {
     return at(l);
   }
 
-  value_type const& operator[](link l) const noexcept
+  inline value_type const& operator[](link l) const noexcept
   {
     return at(l);
+  }
+
+  inline value_type* get_if(link l) noexcept
+  {
+    auto idx = detail::index_val(l.value());
+    if (idx < extend_)
+    {
+      if constexpr (has_backref)
+      {
+        value_type& val = item_at_idx(idx);
+        if (self_.get(val) == l)
+          return &val;
+      }
+      else
+      {
+        if (get_ref_at_idx(idx) == l.value())
+          return &(item_at_idx(idx));
+      }
+    }
+
+    return nullptr;
   }
 
   bool contains(link l) const noexcept
   {
+    assert(is_valid_ref(l.value()));
     auto idx = detail::index_val(l.value());
-    return idx < extend_ && is_valid_ref(get_ref_at_idx(idx));
+    return idx < extend_ && (l.value() == get_ref_at_idx(idx));
   }
 
   bool empty() const noexcept

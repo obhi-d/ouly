@@ -1,6 +1,7 @@
 #include "test_common.hpp"
 #include <acl/packed_table.hpp>
 #include <catch2/catch_all.hpp>
+#include <compare>
 #include <iomanip>
 #include <iostream>
 #include <random>
@@ -8,8 +9,6 @@
 #include <string_view>
 #include <unordered_map>
 #include <unordered_set>
-#include <compare>
-
 
 TEST_CASE("packed_table: Validate packed_table emplace", "[packed_table][emplace]")
 {
@@ -41,7 +40,7 @@ TEST_CASE("packed_table: Custom block size", "[packed_table][page_size]")
 TEST_CASE("packed_table: Erase on custom pages", "[packed_table][erase]")
 {
   acl::packed_table<std::string> table;
-  
+
   REQUIRE(table.size() == 0);
 
   auto e1 = table.emplace("something");
@@ -129,9 +128,9 @@ TEST_CASE("packed_table: Random test", "[packed_table][random]")
       });
     for (auto& e : choose)
     {
-      auto l = acl::packed_table<std::string>::link(e);
+      auto        l   = acl::packed_table<std::string>::link(e);
       auto const& val = cont[l];
-      
+
       erase.emplace(val);
       cont.erase(l);
       // cont.validate_integrity();
@@ -214,6 +213,8 @@ TEST_CASE("packed_table: Validate emplace_at", "[packed_table][emplace_at]")
 
   REQUIRE(table2.contains(e10) == false);
   REQUIRE(table2.contains(e20) == true);
+  REQUIRE(table2.get_if(e10) == nullptr);
+  REQUIRE(table2.get_if(e20) != nullptr);
   REQUIRE(table2.at(e20) == 17);
 
   table2.erase(e20);
@@ -247,7 +248,6 @@ struct data
   uint32_t value = 0xff0011ff;
   uint32_t self  = 0;
 
-  
   inline bool operator==(data const& other) const noexcept
   {
     return value == other.value;
@@ -381,8 +381,8 @@ TEMPLATE_TEST_CASE("Validate packed_table", "[packed_table.all]", traits_1, trai
       }
       else if (!reference_data.empty())
       {
-        uint32_t idx = generator(gen) % (uint32_t)reference_data.size();
-        bool result = table.at(reference_data[idx].second) == reference_data[idx].first;
+        uint32_t idx    = generator(gen) % (uint32_t)reference_data.size();
+        bool     result = table.at(reference_data[idx].second) == reference_data[idx].first;
         REQUIRE(result == true);
         table.erase(reference_data[idx].second);
         reference_data.erase(reference_data.begin() + idx);
