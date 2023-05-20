@@ -1,5 +1,6 @@
 
 #include <acl/default_allocator.hpp>
+#include <acl/error_codes.hpp>
 #include <acl/export.hxx>
 #include <acl/intrusive_ptr.hpp>
 #include <acl/packed_table.hpp>
@@ -123,4 +124,13 @@ TEST_CASE("Validate tagged_ptr", "[tagged_ptr]")
 
   tagged_string.set(&my_string, tagged_string.get_next_tag());
   CHECK(tagged_string != second);
+}
+
+TEST_CASE("Validate error_codes", "[error_code]")
+{
+  auto ec = acl::make_error_code(acl::serializer_error::corrupt_array_item);
+
+  CHECK(&ec.category() == &acl::error_category<acl::serializer_error>::instance());
+  CHECK(!ec.message().empty());
+  CHECK(ec.category().name() != nullptr);
 }
