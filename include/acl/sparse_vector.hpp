@@ -38,7 +38,6 @@ private:
   using base_type = allocator_type;
   using storage   = value_type; // std::conditional_t<std::is_fundamental_v<value_type>, value_type,
                                 // detail::aligned_storage < sizeof(value_type), alignof(value_type)>> ;
-  using options = Options;
 
   static constexpr bool has_null_method    = detail::HasNullMethod<options, value_type>;
   static constexpr bool has_null_value     = detail::HasNullValue<options, value_type>;
