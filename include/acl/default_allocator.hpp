@@ -18,9 +18,9 @@ struct allocator_traits<default_allocator_tag>
   using propagate_on_container_swap            = std::false_type;
 };
 
-
 namespace detail
 {
+
 template <>
 struct is_static<default_allocator_tag>
 {
@@ -92,8 +92,8 @@ inline void print_final_stats()
 #endif
 }
 
-template <typename size_arg = std::size_t,
-          bool k_compute_stats = false, bool k_track_memory = false, typename debug_tracer = std::monostate>
+template <typename size_arg = std::size_t, bool k_compute_stats = false, bool k_track_memory = false,
+          typename debug_tracer = std::monostate>
 struct ACL_EMPTY_BASES default_allocator : detail::default_alloc_statistics<k_compute_stats>,
                                            detail::memory_tracker<default_allocator_tag, debug_tracer, k_track_memory>
 {
@@ -104,20 +104,24 @@ struct ACL_EMPTY_BASES default_allocator : detail::default_alloc_statistics<k_co
   using tracker    = detail::memory_tracker<default_allocator_tag, debug_tracer, k_track_memory>;
 
   default_allocator() {}
-  default_allocator(default_allocator const&)  {}
-  default_allocator& operator=(default_allocator const&)  {    return *this;  }
+  default_allocator(default_allocator const&) {}
+  default_allocator& operator=(default_allocator const&)
+  {
+    return *this;
+  }
 
   inline static address allocate(size_type i_sz, size_type i_alignment = 0)
   {
     auto measure = statistics::report_allocate(i_sz);
-    return tracker::when_allocate(i_alignment > alignof(std::max_align_t) ? acl::aligned_alloc(i_alignment, i_sz) : acl::malloc(i_sz), i_sz);
+    return tracker::when_allocate(
+      i_alignment > alignof(std::max_align_t) ? acl::aligned_alloc(i_alignment, i_sz) : acl::malloc(i_sz), i_sz);
   }
 
-  
   inline static address zero_allocate(size_type i_sz, size_type i_alignment = 0)
   {
     auto measure = statistics::report_allocate(i_sz);
-    return tracker::when_allocate(i_alignment > alignof(std::max_align_t) ? acl::aligned_zmalloc(i_alignment, i_sz) : acl::zmalloc(i_sz), i_sz);
+    return tracker::when_allocate(
+      i_alignment > alignof(std::max_align_t) ? acl::aligned_zmalloc(i_alignment, i_sz) : acl::zmalloc(i_sz), i_sz);
   }
 
   inline static void deallocate(address i_addr, size_type i_sz, size_type i_alignment = 0)
@@ -135,16 +139,33 @@ struct ACL_EMPTY_BASES default_allocator : detail::default_alloc_statistics<k_co
     return nullptr;
   }
 
-  inline bool operator==(default_allocator const&) const
+  inline constexpr bool operator==(default_allocator const&) const
   {
     return true;
   }
 
-  inline bool operator!=(default_allocator const&) const
+  inline constexpr bool operator!=(default_allocator const&) const
   {
     return false;
   }
 };
+
+namespace detail
+{
+template <typename T>
+struct custom_allocator_type
+{
+  using type = default_allocator<>;
+};
+template <detail::HasAllocatorAttribs T>
+struct custom_allocator_type<T>
+{
+  using type = typename T::allocator_type;
+};
+
+template <typename Traits>
+using allocator_type = typename custom_allocator_type<Traits>::type;
+} // namespace detail
 
 template <typename T, typename UA = default_allocator<std::size_t>>
 using vector = std::vector<T, acl::allocator_wrapper<T, UA>>;

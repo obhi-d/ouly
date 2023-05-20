@@ -13,12 +13,11 @@ namespace acl
 namespace detail
 {
 //============================================================
-template <typename Allocator, typename Traits>
+template <typename Traits>
 class vector_indirection
 {
 protected:
   using size_type = detail::choose_size_t<uint32_t, Traits>;
-  using allocator = Allocator;
 
 public:
   inline size_type& get(size_type i) noexcept
@@ -76,23 +75,22 @@ public:
   {
     return (i < links_.size() && links_[i] != Traits::null_v);
   }
-    
+
   inline bool contains_valid(size_type i) const
   {
     return i < links_.size() && detail::is_valid(links_[i]);
   }
 
 private:
-  vector<size_type, Allocator> links_;
+  vector<size_type, allocator_type<Traits>> links_;
 };
 
 //============================================================
-template <typename Allocator, typename Traits>
+template <typename Traits>
 class sparse_indirection
 {
 protected:
   using size_type = detail::choose_size_t<uint32_t, Traits>;
-  using allocator = Allocator;
 
   struct default_index_pool_size
   {
@@ -105,7 +103,7 @@ protected:
     static constexpr uint32_t pool_size =
       std::conditional_t<detail::HasIndexPoolSize<Traits>, Traits, default_index_pool_size>::index_pool_size;
     static constexpr uint32_t null_v      = Traits::null_v;
-    static constexpr bool     no_fill = true;
+    static constexpr bool     no_fill     = true;
     static constexpr bool     zero_memory = true;
   };
 
@@ -119,7 +117,7 @@ public:
   {
     return links_[i];
   }
-  
+
   inline size_type size() const
   {
     return static_cast<size_type>(links_.size());
@@ -172,16 +170,15 @@ public:
   }
 
 private:
-  sparse_vector<size_type, Allocator, index_traits> links_;
+  sparse_vector<size_type, index_traits> links_;
 };
 
 //============================================================
-template <typename Allocator, typename Traits>
+template <typename Traits>
 class back_indirection
 {
 protected:
   using size_type = detail::choose_size_t<uint32_t, Traits>;
-  using allocator = Allocator;
   using backref   = typename Traits::offset;
 
 public:
@@ -209,23 +206,18 @@ public:
     return true;
   }
 
-  inline void clear() noexcept
-  {
-  }
+  inline void clear() noexcept {}
 
-  inline void shrink_to_fit() noexcept
-  {
-  }
+  inline void shrink_to_fit() noexcept {}
 };
 
-template <typename Allocator, typename Traits>
-using indirection_type =
-  std::conditional_t<HasUseSparseIndexAttrib<Traits>, detail::sparse_indirection<Allocator, Traits>,
-                     detail::vector_indirection<Allocator, Traits>>;
+template <typename Traits>
+using indirection_type = std::conditional_t<HasUseSparseIndexAttrib<Traits>, detail::sparse_indirection<Traits>,
+                                            detail::vector_indirection<Traits>>;
 
-template <typename Allocator, typename Traits>
-using backref_type = std::conditional_t<HasBackrefValue<Traits>, detail::back_indirection<Allocator, Traits>,
-                                        indirection_type<Allocator, Traits>>;
+template <typename Traits>
+using backref_type =
+  std::conditional_t<HasBackrefValue<Traits>, detail::back_indirection<Traits>, indirection_type<Traits>>;
 
 } // namespace detail
 

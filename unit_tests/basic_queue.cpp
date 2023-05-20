@@ -1,8 +1,6 @@
-#include <catch2/catch_all.hpp>
 #include "acl/basic_queue.hpp"
+#include <catch2/catch_all.hpp>
 #include <string>
-
-
 
 struct string_traits
 {
@@ -11,11 +9,11 @@ struct string_traits
 
 TEST_CASE("Validate basic_queue", "[basic_queue]")
 {
-  acl::basic_queue<std::string, acl::default_allocator<>, string_traits> queue;
+  acl::basic_queue<std::string, string_traits> queue;
 
   for (uint32_t i = 0; i < 100; ++i)
     queue.emplace_back(std::to_string(i));
-  
+
   for (uint32_t i = 0; i < 100; ++i)
   {
     CHECK(queue.empty() == false);
@@ -26,5 +24,4 @@ TEST_CASE("Validate basic_queue", "[basic_queue]")
 
   queue.emplace_back(std::to_string(0));
   CHECK(queue.pop_front() == std::to_string(0));
-  
 }

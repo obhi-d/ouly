@@ -20,20 +20,33 @@ template <typename T>
 concept InventoryDataType = std::is_trivial_v<T> || std::is_move_constructible_v<T>;
 
 template <typename T>
-concept HashMap = requires
+concept HashMap = requires {
+                    typename T::name_map_type;
+                    requires std::same_as<typename T::name_map_type::mapped_type, acl::vlink>;
+                    typename T::name_map_type::key_type;
+                  };
+namespace detail
 {
-  requires std::same_as<typename T::mapped_type, acl::vlink>;
-  typename T::key_type;
+template <typename H>
+struct name_index_map
+{
+  using type = std::unordered_map<std::string, vlink>;
 };
+
+template <HashMap H>
+struct name_index_map<H>
+{
+  using type = typename H::name_map_type;
+};
+} // namespace detail
 
 /// @brief Store data as name value pairs, value can be any blob of data
 ///
-/// Data is stored as a blob, names are stored seperately if required for lookup
-/// Data can also be retrieved by index.
-/// There is no restriction on the data type that is supported (POD or non-POD both are supported).
-template <HashMap NameLookupMap = std::unordered_map<std::string, vlink>, typename Allocator = default_allocator<>,
-          std::size_t const PoolSize = 1024>
-class blackboard : public Allocator
+/// @remark Data is stored as a blob, names are stored seperately if required for lookup
+///         Data can also be retrieved by index.
+///         There is no restriction on the data type that is supported (POD or non-POD both are supported).
+template <typename Options = acl::options<>>
+class blackboard : public detail::allocator_type<Options>
 {
   using dtor = bool (*)(void*);
 
@@ -43,10 +56,11 @@ class blackboard : public Allocator
     dtor  dtor_fn;
   };
 
-  static constexpr auto total_atoms_in_page = PoolSize;
-  using allocator                           = Allocator;
-  using base_type                           = Allocator;
-  using name_index_map                      = NameLookupMap;
+  using options                               = Options;
+  static constexpr size_t total_atoms_in_page = detail::pool_size_v<options>;
+  using allocator                             = detail::allocator_type<options>;
+  using base_type                             = allocator;
+  using name_index_map                        = typename detail::name_index_map<options>::type;
 
   static constexpr std::uint64_t inlined_mask_v = 0x8000000000000000;
   static constexpr std::uint64_t deleted_mask_v = 0x4000000000000000;
@@ -61,8 +75,8 @@ public:
   static constexpr bool is_inlined = (sizeof(T) <= sizeof(atom_t)) && std::is_trivial_v<T>;
 
   inline blackboard() noexcept {}
-  inline blackboard(Allocator&& alloc) noexcept : base_type(std::move<Allocator>(alloc)) {}
-  inline blackboard(Allocator const& alloc) noexcept : base_type(alloc) {}
+  inline blackboard(allocator&& alloc) noexcept : base_type(std::move<allocator>(alloc)) {}
+  inline blackboard(allocator const& alloc) noexcept : base_type(alloc) {}
   inline blackboard(blackboard&& other) noexcept          = default;
   inline blackboard(blackboard const& other) noexcept     = delete;
   blackboard& operator=(blackboard&& other) noexcept      = default;
@@ -238,7 +252,7 @@ private:
                   .dtor_fn = reinterpret_cast<dtor>(&destroy_at<T>)};
   }
 
-  using index_list = podvector<atom_t>;
+  using index_list = podvector<atom_t, acl::options<basic_size_type<size_t>>>;
 
   podvector<atom_t*> managed_data;
   index_list         offsets;

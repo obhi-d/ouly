@@ -118,14 +118,11 @@ struct selfref_2
   selfref_2(std::uint32_t v) : value(v) {}
 };
 
-namespace acl
-{
 template <>
-struct traits<selfref_2> : traits<>
+struct acl::default_options<selfref_2>
 {
-  using offset = acl::offset<&selfref_2::self>;
+  using offset = acl::member<&selfref_2::self>;
 };
-} // namespace acl
 
 TEST_CASE("sparse_table: Test selfref", "[sparse_table][backref]")
 {

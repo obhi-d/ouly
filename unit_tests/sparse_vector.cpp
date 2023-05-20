@@ -5,9 +5,9 @@
 #include <string>
 
 template <>
-struct acl::traits<pod> : acl::traits<>
+struct acl::default_options<pod>
 {
-  static constexpr std::uint32_t pool_size    = 10;
+  static constexpr std::uint32_t pool_size_v  = 10;
   static constexpr pod           null_v       = pod{};
   static constexpr bool          assume_pod_v = true;
 };
@@ -146,4 +146,118 @@ TEST_CASE("sparse_vector: Move sparse_vector to another", "[sparse_vector][move]
     if (idx[i])
       REQUIRE(v1.at(i) == ref[i]);
   }
+}
+
+struct untracked_pod
+{
+  static constexpr std::uint32_t pool_size_v            = 4;
+  static constexpr pod           null_v                 = pod{};
+  static constexpr bool          disble_pool_tracking_v = true;
+};
+
+TEST_CASE("sparse_vector: for_each", "[sparse_vector][for_each]")
+{
+  acl::sparse_vector<std::string, untracked_pod> v1;
+  std::uint32_t                                  stop = range_rand<std::uint32_t>(100, 1000);
+
+  for (std::uint32_t i = 0; i < stop; ++i)
+  {
+    v1.emplace_back(std::to_string(i));
+  }
+
+  for (int i = 0; i < 20; ++i)
+  {
+    uint32_t start = stop / range_rand<std::uint32_t>(2, 200);
+    uint32_t end   = stop / range_rand<std::uint32_t>(1, 2);
+    v1.for_each(
+      [&start, end](std::string const& v)
+      {
+        REQUIRE(v == std::to_string(start++));
+      },
+      start, end);
+  }
+}
+
+TEST_CASE("sparse_vector: unordered_merge", "[sparse_vector][unordered_merge]")
+{
+  for (int n = 0; n < 20; ++n)
+  {
+    acl::sparse_vector<std::string, untracked_pod> v1;
+    acl::sparse_vector<std::string, untracked_pod> v2;
+    std::unordered_set<std::string>                check;
+    std::uint32_t                                  stop = range_rand<std::uint32_t>(10, 200);
+
+    for (std::uint32_t i = 0; i < stop; ++i)
+    {
+      auto val = std::to_string(i);
+      check.emplace(val);
+      v1.emplace_back(val);
+    }
+
+    for (std::uint32_t i = 0; i < stop; ++i)
+    {
+      auto val = std::to_string(i + stop);
+      check.emplace(val);
+      v2.emplace_back(val);
+    }
+
+    v1.unordered_merge(std::move(v2));
+
+    uint32_t start = 0;
+    v1.for_each(
+      [&](std::string const& v)
+      {
+        REQUIRE(check.count(v) == 1);
+      });
+
+    for (int i = 0; i < 20; ++i)
+    {
+      uint32_t start = range_rand<std::uint32_t>(0, stop);
+      uint32_t end   = range_rand<std::uint32_t>(0, stop);
+      if (start > end)
+        std::swap(start, end);
+      v1.for_each(
+        [&](std::string const& v)
+        {
+          REQUIRE(check.count(v) == 1);
+        },
+        start, end);
+    }
+
+    v1.for_each(
+      [&](std::string const& v)
+      {
+        REQUIRE(check.erase(v) == 1);
+      });
+
+    REQUIRE(check.empty() == true);
+  }
+}
+
+TEST_CASE("sparse_vector: unordered_merge iterator", "[sparse_vector][unordered_merge]")
+{
+  acl::sparse_vector<std::string, untracked_pod>              merged;
+  std::vector<acl::sparse_vector<std::string, untracked_pod>> v1;
+  std::unordered_set<std::string>                             check;
+  for (int n = 0; n < 20; ++n)
+  {
+    std::uint32_t stop = range_rand<std::uint32_t>(10, 200);
+    v1.emplace_back();
+    auto& v = v1.back();
+    for (std::uint32_t i = 0; i < stop; ++i)
+    {
+      auto val = std::to_string(i + n * 200);
+      check.emplace(val);
+      v.emplace_back(val);
+    }
+  }
+
+  merged.unordered_merge(v1.begin(), v1.end());
+  merged.for_each(
+    [&](std::string const& v)
+    {
+      REQUIRE(check.erase(v) == 1);
+    });
+
+  REQUIRE(check.empty() == true);
 }

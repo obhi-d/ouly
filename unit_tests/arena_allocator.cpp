@@ -102,9 +102,9 @@ TEMPLATE_TEST_CASE("Validate arena_allocator", "[arena_allocator.strat]",
   (acl::strat::slotted_v0<uint32_t>),
   (acl::strat::slotted_v1<uint32_t>),
   (acl::strat::slotted_v2<uint32_t>),
-  (acl::strat::slotted_v0<uint32_t, 256, 255, 4, acl::strat::best_fit_tree<uint32_t>>),
-  (acl::strat::slotted_v1<uint32_t, 256, 255, 4, acl::strat::best_fit_tree<uint32_t>>),
-  (acl::strat::slotted_v2<uint32_t, 256, 255, 8, 4, acl::strat::best_fit_tree<uint32_t>>)
+  (acl::strat::slotted_v0<uint32_t, 256u, 255u, 4u, acl::strat::best_fit_tree<uint32_t>>),
+  (acl::strat::slotted_v1<uint32_t, 256u, 255u, 4u, acl::strat::best_fit_tree<uint32_t>>),
+  (acl::strat::slotted_v2<uint32_t, 256u, 255u, 8u, 4u, acl::strat::best_fit_tree<uint32_t>>)
                    // clang-format on
 )
 {
@@ -137,7 +137,7 @@ TEMPLATE_TEST_CASE("Validate arena_allocator", "[arena_allocator.strat]",
     }
     else
     {
-      std::uniform_int_distribution<std::uint32_t> choose(0, mgr.valids.size() - 1);
+      std::uniform_int_distribution<std::uint32_t> choose(0, (uint32_t)mgr.valids.size() - 1);
       std::size_t                                  chosen = choose(gen);
       auto                                         handle = mgr.valids[chosen];
       allocator.deallocate(mgr.allocs[handle].info.halloc);

@@ -1,8 +1,8 @@
 
 #pragma once
+#include <acl/type_traits.hpp>
 #include <compare>
 #include <string>
-#include <acl/type_traits.hpp>
 
 template <typename IntTy>
 inline IntTy range_rand(IntTy iBeg, IntTy iEnd)
@@ -12,23 +12,17 @@ inline IntTy range_rand(IntTy iBeg, IntTy iEnd)
 
 struct pod
 {
-  int a;
-  int b;
+  int            a;
+  int            b;
   constexpr auto operator<=>(pod const&) const noexcept = default;
 };
 
-
-namespace acl
-{
 template <>
-struct traits<std::string> : traits<>
+struct acl::default_options<std::string>
 {
   static constexpr std::uint32_t pool_size       = 2;
   static constexpr std::uint32_t index_pool_size = 2;
 };
-
-} // namespace acl
-
 
 namespace helper
 {
@@ -43,14 +37,13 @@ static void insert(Cont& cont, std::uint32_t offset, std::uint32_t count)
 
 } // namespace helper
 
-
 struct tracker
 {
-  int tracking = 0;
+  int  tracking = 0;
   char name     = 0;
 
   tracker() noexcept = default;
-  tracker(char c) : name(c){}
+  tracker(char c) : name(c) {}
 };
 
 struct destroy_tracker
@@ -80,7 +73,7 @@ struct destroy_tracker
       ref = nullptr;
     }
   }
-  destroy_tracker& operator=(destroy_tracker&& other) noexcept 
+  destroy_tracker& operator=(destroy_tracker&& other) noexcept
   {
     if (ref)
       ref->tracking--;
@@ -88,7 +81,7 @@ struct destroy_tracker
     other.ref = nullptr;
     return *this;
   }
-  destroy_tracker& operator=(destroy_tracker const& other) noexcept 
+  destroy_tracker& operator=(destroy_tracker const& other) noexcept
   {
     if (ref)
       ref->tracking--;

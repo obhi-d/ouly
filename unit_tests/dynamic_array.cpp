@@ -1,5 +1,5 @@
 
-#include <acl/dynamic_array.hpp>
+#include <acl/array_types.hpp>
 #include <catch2/catch_all.hpp>
 #include <string>
 
@@ -26,7 +26,7 @@ TEST_CASE("dynamic_array: Validate use of dynamic_array")
 
 TEST_CASE("dynamic_array: Validate use of fixed size  dynamic_array")
 {
-  using darray = acl::dynamic_array<std::string, acl::default_allocator<>, 10>;
+  using darray = acl::fixed_array<std::string, 10>;
   darray table;
 
   table = darray(10, "something");

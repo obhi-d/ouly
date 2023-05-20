@@ -13,44 +13,45 @@ namespace acl
 {
 /// @brief Represents a sparse table of elements. Free slots are reused.
 /// @tparam Ty Vector type
-/// @tparam Allocator Underlying allocator
-/// @tparam Traits At minimum the traits must define:
+/// @tparam allocator_type Underlying allocator_type
+/// @tparam Options At minimum the options must define:
 ///          - pool_size Power of 2, count of elements in a single chunk/page/pool
 ///          - [optional] using offset = acl::offset<Member>; Indicates the member to self pointer
 ///          - [optional] self_index_pool_size Pool size for self indices if offset is missing
-template <typename Ty, typename Allocator = default_allocator<>, typename Traits = acl::traits<Ty>>
-class sparse_table : public Allocator
+template <typename Ty, typename Options = acl::default_options<Ty>>
+class sparse_table : public detail::allocator_type<Options>
 {
-  static_assert(sizeof(Ty) >= sizeof(typename Traits::size_type), "Type must big enough to hold a link");
 
 public:
+  using options        = Options;
   using value_type     = Ty;
-  using size_type      = detail::choose_size_t<uint32_t, Traits>;
+  using size_type      = detail::choose_size_t<uint32_t, Options>;
   using link           = acl::link<value_type, size_type>;
-  using allocator_type = Allocator;
+  using allocator_type = detail::allocator_type<Options>;
+
+  static_assert(sizeof(Ty) >= sizeof(size_type), "Type must big enough to hold a link");
 
 private:
-  static constexpr auto pool_div    = detail::log2(Traits::pool_size);
+  static constexpr auto pool_div    = detail::log2(detail::pool_size_v<Options>);
   static constexpr auto pool_size   = static_cast<size_type>(1) << pool_div;
   static constexpr auto pool_mod    = pool_size - 1;
-  static constexpr bool has_backref = detail::HasBackrefValue<Traits>;
-  using this_type                   = sparse_table<Ty, Allocator, Traits>;
+  static constexpr bool has_backref = detail::HasBackrefValue<Options>;
+  using this_type                   = sparse_table<Ty, Options>;
   using storage                     = detail::aligned_storage<sizeof(value_type), alignof(value_type)>;
-  using allocator                   = Allocator;
 
   struct default_index_pool_size
   {
-    static constexpr uint32_t self_index_pool_size = 128;
+    static constexpr uint32_t self_index_pool_size_v = 128;
   };
 
   struct self_index_traits_base
   {
-    using size_type = uint32_t;
-    static constexpr uint32_t pool_size =
-      std::conditional_t<detail::HasSelfIndexPoolSize<Traits>, Traits, default_index_pool_size>::self_index_pool_size;
-    static constexpr bool     use_sparse_index = true;
-    static constexpr uint32_t null_v           = 0;
-    static constexpr bool     zero_memory      = true;
+    using size_type                              = uint32_t;
+    static constexpr uint32_t pool_size_v        = std::conditional_t<detail::HasSelfIndexPoolSize<Options>, Options,
+                                                               default_index_pool_size>::self_index_pool_size_v;
+    static constexpr bool     use_sparse_index_v = true;
+    static constexpr uint32_t null_v             = 0;
+    static constexpr bool     zero_out_memory    = true;
   };
 
   template <typename TrTy>
@@ -63,12 +64,12 @@ private:
     using offset = typename TrTy::offset;
   };
 
-  using self_index = detail::backref_type<Allocator, self_index_traits<Traits>>;
+  using self_index = detail::backref_type<self_index_traits<Options>>;
 
 public:
   inline sparse_table() noexcept {}
-  inline sparse_table(Allocator&& alloc) noexcept : Allocator(std::move<Allocator>(alloc)) {}
-  inline sparse_table(Allocator const& alloc) noexcept : Allocator(alloc) {}
+  inline sparse_table(allocator_type&& alloc) noexcept : allocator_type(std::move<allocator_type>(alloc)) {}
+  inline sparse_table(allocator_type const& alloc) noexcept : allocator_type(alloc) {}
   inline sparse_table(sparse_table&& other) noexcept
   {
     *this = std::move(other);
@@ -89,15 +90,15 @@ public:
     clear();
     shrink_to_fit();
 
-    (Allocator&)* this = std::move((Allocator&)other);
-    items_             = std::move(other.items_);
-    self_              = std::move(other.self_);
-    length_            = other.length_;
-    extend_            = other.extend_;
-    free_slot_         = other.free_slot_;
-    other.length_      = 0;
-    other.extend_      = 1;
-    other.free_slot_   = link::null_v;
+    (allocator_type&)* this = std::move((allocator_type&)other);
+    items_                  = std::move(other.items_);
+    self_                   = std::move(other.self_);
+    length_                 = other.length_;
+    extend_                 = other.extend_;
+    free_slot_              = other.free_slot_;
+    other.length_           = 0;
+    other.extend_           = 1;
+    other.free_slot_        = link::null_v;
     return *this;
   }
 
@@ -107,7 +108,7 @@ public:
     clear();
     shrink_to_fit();
 
-    static_cast<Allocator&>(*this) = static_cast<Allocator const&>(other);
+    static_cast<allocator_type&>(*this) = static_cast<allocator_type const&>(other);
     items_.resize(other.items_.size());
     for (auto& data : items_)
       data = acl::allocate<storage>(*this, sizeof(storage) * pool_size);
@@ -457,11 +458,11 @@ private:
     return (r && detail::is_valid(r));
   }
 
-  podvector<storage*, allocator> items_;
-  self_index                     self_;
-  size_type                      length_    = 0;
-  size_type                      extend_    = 1;
-  size_type                      free_slot_ = link::null_v;
+  podvector<storage*, allocator_type> items_;
+  self_index                          self_;
+  size_type                           length_    = 0;
+  size_type                           extend_    = 1;
+  size_type                           free_slot_ = link::null_v;
 };
 
 } // namespace acl

@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include "../sparse_table.hpp"
-#include "vlist.hpp"
 #include "memory_move.hpp"
+#include "vlist.hpp"
 
 namespace acl::detail
 {
@@ -17,20 +17,20 @@ template <typename usize_type, typename extension>
 struct block
 {
 
-  using size_type                        = usize_type;
-  size_type                       offset = detail::k_null_sz<size_type>;
-  size_type                       size   = 0;
-  std::uint32_t                   arena  = 0;
-  std::uint32_t                   self   = {};
-  using uint32_pair = std::pair<uint32_t, uint32_t>;
+  using size_type      = usize_type;
+  size_type     offset = detail::k_null_sz<size_type>;
+  size_type     size   = 0;
+  std::uint32_t arena  = 0;
+  std::uint32_t self   = {};
+  using uint32_pair    = std::pair<uint32_t, uint32_t>;
   union
   {
-    uhandle                       data;
-    uint32_t                      reserved32_;
-    list_node                     list_;
-    uint32_pair                   rtup_;
-    uint64_t                      reserved64_;
-    extension                     ext = {};
+    uhandle     data;
+    uint32_t    reserved32_;
+    list_node   list_;
+    uint32_pair rtup_;
+    uint64_t    reserved64_;
+    extension   ext = {};
   };
 
   detail::list_node arena_order = detail::list_node();
@@ -41,10 +41,10 @@ struct block
 
   struct table_traits
   {
-    using size_type                              = std::uint32_t;
-    static constexpr std::uint32_t pool_size     = 4096;
+    using size_type                                = std::uint32_t;
+    static constexpr std::uint32_t pool_size       = 4096;
     static constexpr std::uint32_t index_pool_size = 4096;
-    using offset                                 = acl::offset<&block<size_type, extension>::self>;
+    using offset                                   = acl::member<&block<size_type, extension>::self>;
   };
 
   block() {}
@@ -89,8 +89,7 @@ struct block
 };
 
 template <typename size_type, typename extension>
-using block_bank = acl::sparse_table<block<size_type, extension>, default_allocator<>,
-                                     typename block<size_type, extension>::table_traits>;
+using block_bank = acl::sparse_table<block<size_type, extension>, typename block<size_type, extension>::table_traits>;
 
 template <typename usize_type, typename uextension>
 struct block_accessor

@@ -17,24 +17,24 @@
 // https://en.cppreference.com/w/cpp/header/vector
 namespace acl
 {
-template <typename T, typename Allocator = default_allocator<>, typename SizeType = typename Allocator::size_type>
-class podvector : public Allocator
+template <typename Ty, typename Options = acl::default_options<Ty>>
+class podvector : public detail::allocator_type<Options>
 {
 public:
-  using value_type                = T;
-  using allocator_type            = Allocator;
-  using size_type                 = SizeType;
+  using value_type                = Ty;
+  using allocator_type            = detail::allocator_type<Options>;
+  using size_type                 = detail::choose_size_t<uint32_t, Options>;
   using difference_type           = size_type;
   using reference                 = value_type&;
   using const_reference           = const value_type&;
-  using pointer                   = T*;
-  using const_pointer             = T const*;
-  using iterator                  = T*;
-  using const_iterator            = T const*;
+  using pointer                   = Ty*;
+  using const_pointer             = Ty const*;
+  using iterator                  = Ty*;
+  using const_iterator            = Ty const*;
   using reverse_iterator          = std::reverse_iterator<iterator>;
   using const_reverse_iterator    = std::reverse_iterator<const_iterator>;
-  using allocator                 = Allocator;
-  using allocator_tag             = typename Allocator::tag;
+  using allocator                 = allocator_type;
+  using allocator_tag             = typename allocator_type::tag;
   using allocator_is_always_equal = typename acl::allocator_traits<allocator_tag>::is_always_equal;
   using propagate_allocator_on_move =
     typename acl::allocator_traits<allocator_tag>::propagate_on_container_move_assignment;
@@ -42,24 +42,25 @@ public:
     typename acl::allocator_traits<allocator_tag>::propagate_on_container_copy_assignment;
   using propagate_allocator_on_swap = typename acl::allocator_traits<allocator_tag>::propagate_on_container_swap;
 
-  explicit podvector(const Allocator& alloc = Allocator()) noexcept
-      : Allocator(alloc), data_(nullptr), size_(0), capacity_(0){};
+  explicit podvector(const allocator_type& alloc = allocator_type()) noexcept
+      : allocator_type(alloc), data_(nullptr), size_(0), capacity_(0){};
 
   explicit podvector(size_type n) noexcept : data_(allocate(n)), size_(n), capacity_(n) {}
 
-  podvector(size_type n, const T& value, const Allocator& alloc = Allocator())
-      : Allocator(alloc), data_(allocate(n)), size_(n), capacity_(n)
+  podvector(size_type n, const Ty& value, const allocator_type& alloc = allocator_type())
+      : allocator_type(alloc), data_(allocate(n)), size_(n), capacity_(n)
   {
     std::uninitialized_fill_n(data_, n, value);
   }
 
   template <class InputIterator>
-  podvector(InputIterator first, InputIterator last, const Allocator& alloc = Allocator()) noexcept : Allocator(alloc)
+  podvector(InputIterator first, InputIterator last, const allocator_type& alloc = allocator_type()) noexcept
+      : allocator_type(alloc)
   {
     construct_from_range(first, last, std::is_integral<InputIterator>());
   }
 
-  podvector(const podvector<T, Allocator>& x) noexcept
+  podvector(const podvector& x) noexcept
 
       : data_(allocate(x.capacity_)), size_(x.size_), capacity_(x.capacity_)
   {
@@ -69,18 +70,18 @@ public:
   {
     std::memset(&x, 0, sizeof(x));
   };
-  podvector(const podvector& x, const Allocator& alloc) noexcept
-      : Allocator(alloc), data_(allocate(x.capacity_)), size_(x.size_), capacity_(x.capacity_)
+  podvector(const podvector& x, const allocator_type& alloc) noexcept
+      : allocator_type(alloc), data_(allocate(x.capacity_)), size_(x.size_), capacity_(x.capacity_)
   {
     copy(std::begin(x), std::end(x), data_);
   }
-  podvector(podvector&& x, const Allocator& alloc) noexcept
-      : Allocator(alloc), data_(x.data_), size_(x.size_), capacity_(x.capacity_)
+  podvector(podvector&& x, const allocator_type& alloc) noexcept
+      : allocator_type(alloc), data_(x.data_), size_(x.size_), capacity_(x.capacity_)
   {
     std::memset(&x, 0, sizeof(x));
   };
-  podvector(std::initializer_list<T> x, const Allocator& alloc = Allocator()) noexcept
-      : Allocator(alloc), size_(static_cast<size_type>(x.size())), capacity_(size_)
+  podvector(std::initializer_list<Ty> x, const allocator_type& alloc = allocator_type()) noexcept
+      : allocator_type(alloc), size_(static_cast<size_type>(x.size())), capacity_(size_)
   {
     data_ = allocate(static_cast<size_type>(x.size()));
     copy(std::begin(x), std::end(x), data_);
@@ -90,15 +91,15 @@ public:
   {
     deallocate();
   }
-  podvector<T, Allocator>& operator=(const podvector<T, Allocator>& x) noexcept
+  podvector& operator=(const podvector& x) noexcept
   {
     return assign_copy(x, propagate_allocator_on_copy());
   }
-  podvector<T, Allocator>& operator=(podvector<T, Allocator>&& x) noexcept
+  podvector& operator=(podvector&& x) noexcept
   {
     return assign_move(std::move(x), propagate_allocator_on_move());
   }
-  podvector& operator=(std::initializer_list<T> x) noexcept
+  podvector& operator=(std::initializer_list<Ty> x) noexcept
   {
     if (capacity_ < x.size())
     {
@@ -123,7 +124,7 @@ public:
     size_ = static_cast<size_type>(s);
     copy(first, last, data_);
   }
-  void assign(size_type n, const T& value) noexcept
+  void assign(size_type n, const Ty& value) noexcept
   {
     if (capacity_ < n)
     {
@@ -134,7 +135,7 @@ public:
     size_ = static_cast<size_type>(n);
     std::uninitialized_fill_n(data_, n, value);
   }
-  void assign(std::initializer_list<T> x) noexcept
+  void assign(std::initializer_list<Ty> x) noexcept
   {
     if (capacity_ < x.size())
     {
@@ -209,14 +210,14 @@ public:
   }
   size_type max_size() const noexcept
   {
-    return Allocator::max_size();
+    return allocator_type::max_size();
   }
   void resize(size_type sz) noexcept
   {
     reserve(sz);
     size_ = sz;
   }
-  void resize(size_type sz, const T& c) noexcept
+  void resize(size_type sz, const Ty& c) noexcept
   {
     reserve(sz);
     if (sz > size_)
@@ -289,11 +290,11 @@ public:
   }
 
   // data access
-  T* data() noexcept
+  Ty* data() noexcept
   {
     return data_;
   }
-  const T* data() const noexcept
+  const Ty* data() const noexcept
   {
     return data_;
   }
@@ -304,15 +305,15 @@ public:
   {
     if (capacity_ < size_ + 1)
       unchecked_reserve(size_ + std::max<size_type>(size_ >> 1, 1));
-    data_[size_++] = T(std::forward<Args>(args)...);
+    data_[size_++] = Ty(std::forward<Args>(args)...);
   }
-  void push_back(const T& x) noexcept
+  void push_back(const Ty& x) noexcept
   {
     if (capacity_ < size_ + 1)
       unchecked_reserve(size_ + std::max<size_type>(size_ >> 1, 1));
     data_[size_++] = x;
   }
-  void push_back(T&& x) noexcept
+  void push_back(Ty&& x) noexcept
   {
     if (capacity_ < size_ + 1)
       unchecked_reserve(size_ + std::max<size_type>(size_ >> 1, 1));
@@ -328,22 +329,22 @@ public:
   iterator emplace(const_iterator position, Args&&... args) noexcept
   {
     size_type p = insert_hole(position);
-    data_[p]    = T(std::forward<Args>(args)...);
+    data_[p]    = Ty(std::forward<Args>(args)...);
     return data_ + p;
   }
-  iterator insert(const_iterator position, const T& x) noexcept
+  iterator insert(const_iterator position, const Ty& x) noexcept
   {
     size_type p = insert_hole(position);
     data_[p]    = x;
     return data_ + p;
   }
-  iterator insert(const_iterator position, T&& x) noexcept
+  iterator insert(const_iterator position, Ty&& x) noexcept
   {
     size_type p = insert_hole(position);
     data_[p]    = std::move(x);
     return data_ + p;
   }
-  iterator insert(const_iterator position, size_type n, const T& x) noexcept
+  iterator insert(const_iterator position, size_type n, const Ty& x) noexcept
   {
     return insert_range(position, n, x, std::true_type());
   }
@@ -353,7 +354,7 @@ public:
     return insert_range(position, first, last, std::is_integral<InputIterator>());
   }
 
-  iterator insert(const_iterator position, std::initializer_list<T> x) noexcept
+  iterator insert(const_iterator position, std::initializer_list<Ty> x) noexcept
   {
     size_type p = insert_hole(position, static_cast<size_type>(x.size()));
     copy(std::begin(x), std::end(x), data_ + p);
@@ -364,7 +365,7 @@ public:
   {
     assert(position < end());
     std::memmove(const_cast<iterator>(position), position + 1,
-                 static_cast<std::size_t>((data_ + size_) - (position + 1)) * sizeof(T));
+                 static_cast<std::size_t>((data_ + size_) - (position + 1)) * sizeof(Ty));
     size_--;
     return const_cast<iterator>(position);
   }
@@ -372,11 +373,11 @@ public:
   {
     assert(last < end());
     std::uint32_t n = static_cast<std::uint32_t>(std::distance(first, last));
-    std::memmove(const_cast<iterator>(first), last, static_cast<std::size_t>((data_ + size_) - (last)) * sizeof(T));
+    std::memmove(const_cast<iterator>(first), last, static_cast<std::size_t>((data_ + size_) - (last)) * sizeof(Ty));
     size_ -= n;
     return const_cast<iterator>(first);
   }
-  void swap(podvector<T, Allocator>& x) noexcept
+  void swap(podvector& x) noexcept
   {
     swap(x, propagate_allocator_on_swap());
   }
@@ -388,7 +389,7 @@ public:
 private:
   inline size_type insert_hole(const_iterator it, size_type n = 1) noexcept
   {
-    size_type p   = static_cast<size_type>(std::distance<const T*>(data_, it));
+    size_type p   = static_cast<size_type>(std::distance<const Ty*>(data_, it));
     size_type nsz = size_ + n;
     if (capacity_ < nsz)
     {
@@ -397,7 +398,7 @@ private:
     else
     {
       pointer src = const_cast<iterator>(it);
-      std::memmove(src + n, src, (size_ - p) * sizeof(T));
+      std::memmove(src + n, src, (size_ - p) * sizeof(Ty));
     }
     size_ = nsz;
     return p;
@@ -411,29 +412,31 @@ private:
       capacity_ = x.size_;
     }
     size_ = x.size_;
-    std::memcpy(data_, x.data_, x.size_ * sizeof(T));
+    std::memcpy(data_, x.data_, x.size_ * sizeof(Ty));
     return *this;
   }
 
   inline podvector& assign_copy(const podvector& x, std::true_type) noexcept
   {
-    if (allocator_is_always_equal::value || static_cast<const Allocator&>(x) == static_cast<const Allocator&>(*this))
+    if (allocator_is_always_equal::value ||
+        static_cast<const allocator_type&>(x) == static_cast<const allocator_type&>(*this))
       assign(x, std::false_type());
     else
     {
       deallocate();
-      Allocator::operator=(static_cast<const Allocator&>(x));
+      allocator_type::operator=(static_cast<const allocator_type&>(x));
       data_     = allocate(x.size_);
       capacity_ = x.size_;
       size_     = x.size_;
-      std::memcpy(data_, x.data_, x.size_ * sizeof(T));
+      std::memcpy(data_, x.data_, x.size_ * sizeof(Ty));
     }
     return *this;
   }
 
   inline podvector& assign_move(podvector&& x, std::false_type) noexcept
   {
-    if (allocator_is_always_equal::value || static_cast<const Allocator&>(x) == static_cast<const Allocator&>(*this))
+    if (allocator_is_always_equal::value ||
+        static_cast<const allocator_type&>(x) == static_cast<const allocator_type&>(*this))
     {
       deallocate();
       data_       = x.data_;
@@ -450,7 +453,7 @@ private:
   inline podvector& assign_move(podvector&& x, std::true_type) noexcept
   {
     deallocate();
-    Allocator::operator=(std::move(static_cast<Allocator&>(x)));
+    allocator_type::operator=(std::move(static_cast<allocator_type&>(x)));
     data_       = x.data_;
     size_       = x.size_;
     capacity_   = x.capacity_;
@@ -464,7 +467,7 @@ private:
   {
     if constexpr (std::is_same<pointer, InputIt>::value)
     {
-      std::memcpy(dest, first, static_cast<std::size_t>(std::distance(first, last)) * sizeof(T));
+      std::memcpy(dest, first, static_cast<std::size_t>(std::distance(first, last)) * sizeof(Ty));
     }
     else
     {
@@ -474,13 +477,13 @@ private:
 
   inline pointer allocate(size_type n) noexcept
   {
-    return acl::allocate<T>(static_cast<Allocator&>(*this),
-                             static_cast<typename allocator::size_type>(n * sizeof(T)));
+    return acl::allocate<Ty>(static_cast<allocator_type&>(*this),
+                             static_cast<typename allocator::size_type>(n * sizeof(Ty)));
   }
 
   inline void deallocate() noexcept
   {
-    acl::deallocate(static_cast<Allocator&>(*this), data_, capacity_ * sizeof(T));
+    acl::deallocate(static_cast<allocator_type&>(*this), data_, capacity_ * sizeof(Ty));
   }
 
   inline void unchecked_reserve(size_type n) noexcept
@@ -488,7 +491,7 @@ private:
     pointer d = allocate(n);
     if (data_)
     {
-      std::memcpy(d, data_, size_ * sizeof(T));
+      std::memcpy(d, data_, size_ * sizeof(Ty));
       deallocate();
     }
     data_     = d;
@@ -500,60 +503,60 @@ private:
     pointer d = allocate(n);
     if (data_)
     {
-      std::memcpy(d, data_, at * sizeof(T));
-      std::memcpy(d + at + holes, data_ + at, (size_ - at) * sizeof(T));
+      std::memcpy(d, data_, at * sizeof(Ty));
+      std::memcpy(d + at + holes, data_ + at, (size_ - at) * sizeof(Ty));
       deallocate();
     }
     data_     = d;
     capacity_ = n;
   }
 
-  void swap(podvector<T, Allocator>& x, std::false_type) noexcept
+  void swap(podvector& x, std::false_type) noexcept
   {
     std::swap(capacity_, x.capacity_);
     std::swap(size_, x.size_);
     std::swap(data_, x.data_);
   }
 
-  void swap(podvector<T, Allocator>& x, std::true_type) noexcept
+  void swap(podvector& x, std::true_type) noexcept
   {
     std::swap(capacity_, x.capacity_);
     std::swap(size_, x.size_);
     std::swap(data_, x.data_);
-    std::swap<Allocator>(this, x);
+    std::swap<allocator_type>(this, x);
   }
 
-  friend void swap(podvector<T, Allocator>& lhs, podvector<T, Allocator>& rhs) noexcept
+  friend void swap(podvector& lhs, podvector& rhs) noexcept
   {
     lhs.swap(rhs);
   }
 
-  friend bool operator==(const podvector<T, Allocator>& x, const podvector<T, Allocator>& y) noexcept
+  friend bool operator==(const podvector& x, const podvector& y) noexcept
   {
     return x.size_ == y.size_ && std::memcmp(x.data_, y.data_, x.size_) == 0;
   }
 
-  friend bool operator<(const podvector<T, Allocator>& x, const podvector<T, Allocator>& y) noexcept
+  friend bool operator<(const podvector& x, const podvector& y) noexcept
   {
     return std::lexicographical_compare(x.begin(), x.end(), y.begin(), y.end());
   }
 
-  friend bool operator!=(const podvector<T, Allocator>& x, const podvector<T, Allocator>& y) noexcept
+  friend bool operator!=(const podvector& x, const podvector& y) noexcept
   {
     return !(x == y);
   }
 
-  friend bool operator>(const podvector<T, Allocator>& x, const podvector<T, Allocator>& y) noexcept
+  friend bool operator>(const podvector& x, const podvector& y) noexcept
   {
     return std::lexicographical_compare(y.begin(), y.end(), x.begin(), x.end());
   }
 
-  friend bool operator>=(const podvector<T, Allocator>& x, const podvector<T, Allocator>& y) noexcept
+  friend bool operator>=(const podvector& x, const podvector& y) noexcept
   {
     return !std::lexicographical_compare(x.begin(), x.end(), y.begin(), y.end());
   }
 
-  friend bool operator<=(const podvector<T, Allocator>& x, const podvector<T, Allocator>& y) noexcept
+  friend bool operator<=(const podvector& x, const podvector& y) noexcept
   {
     return !std::lexicographical_compare(y.begin(), y.end(), x.begin(), x.end());
   }
@@ -567,7 +570,7 @@ private:
     return data_ + p;
   }
 
-  inline iterator insert_range(const_iterator position, size_type n, const T& x, std::true_type) noexcept
+  inline iterator insert_range(const_iterator position, size_type n, const Ty& x, std::true_type) noexcept
   {
     size_type p = insert_hole(position, n);
     std::uninitialized_fill_n(data_ + p, n, x);
@@ -583,7 +586,7 @@ private:
     copy(first, last, data_);
   }
 
-  inline void construct_from_range(size_type n, const T& value, std::true_type) noexcept
+  inline void construct_from_range(size_type n, const Ty& value, std::true_type) noexcept
   {
     size_     = n;
     data_     = allocate(size_);

@@ -10,15 +10,13 @@
 namespace acl
 {
 /// @remarks Defines a dynamic non-growable vector like container
-template <typename T, typename Allocator = default_allocator<>, uint32_t N = 0>
-class dynamic_array;
-
-template <typename T, typename Allocator>
-class dynamic_array<T, Allocator, 0> : public Allocator
+template <typename T, typename Allocator = acl::default_allocator<>>
+class dynamic_array : public Allocator
 {
 
 public:
-  using value_type = T;
+  using value_type     = T;
+  using allocator_type = Allocator;
 
   dynamic_array() = default;
 
@@ -173,24 +171,29 @@ private:
   uint32_t count_ = 0;
 };
 
-template <typename T, typename Allocator, uint32_t N>
-class dynamic_array : public Allocator
+/// @brief This is a fixed sized array, but dynamically allocated
+/// @tparam T Type of the object
+/// @tparam Allocator Allocator allocator type
+/// @tparam N size of the array
+template <typename T, uint32_t N, typename Allocator = acl::default_allocator<>>
+class fixed_array : public Allocator
 {
 
 public:
-  using value_type = T;
+  using value_type     = T;
+  using allocator_type = Allocator;
 
   inline static constexpr uint32_t count_ = N;
   static_assert(count_ > 0);
 
-  dynamic_array() = default;
+  fixed_array() = default;
 
-  inline dynamic_array(dynamic_array&& other) noexcept : data_(other.data_)
+  inline fixed_array(fixed_array&& other) noexcept : data_(other.data_)
   {
     other.data_ = nullptr;
   }
 
-  inline dynamic_array& operator=(dynamic_array&& other) noexcept
+  inline fixed_array& operator=(fixed_array&& other) noexcept
   {
     clear();
     data_       = other.data_;
@@ -198,9 +201,9 @@ public:
     return *this;
   }
 
-  inline dynamic_array(dynamic_array const& other) noexcept : dynamic_array(other.begin(), other.end()) {}
+  inline fixed_array(fixed_array const& other) noexcept : fixed_array(other.begin(), other.end()) {}
 
-  inline dynamic_array& operator=(dynamic_array const& other) noexcept
+  inline fixed_array& operator=(fixed_array const& other) noexcept
   {
     clear();
     data_ = (T*)Allocator::allocate(sizeof(T) * count_, alignarg<T>);
@@ -209,7 +212,7 @@ public:
   }
 
   template <typename It>
-  inline dynamic_array(It first, It last) noexcept
+  inline fixed_array(It first, It last) noexcept
   {
     auto count = (static_cast<uint32_t>(std::distance(first, last)));
     data_      = (T*)Allocator::allocate(sizeof(T) * count_, alignarg<T>);
@@ -219,10 +222,10 @@ public:
   }
 
   template <typename OT>
-  inline dynamic_array(std::initializer_list<OT> data) noexcept : dynamic_array(data.begin(), data.end())
+  inline fixed_array(std::initializer_list<OT> data) noexcept : fixed_array(data.begin(), data.end())
   {}
 
-  inline dynamic_array(uint32_t count, T const& fill = T()) noexcept
+  inline fixed_array(uint32_t count, T const& fill = T()) noexcept
   {
     data_ = (T*)Allocator::allocate(sizeof(T) * count_, alignarg<T>);
     std::uninitialized_fill_n(data_, std::min(count, count_), fill);
@@ -230,7 +233,7 @@ public:
       std::uninitialized_fill_n(data_ + count, count_ - count, T());
   }
 
-  inline ~dynamic_array() noexcept
+  inline ~fixed_array() noexcept
   {
     clear();
   }
@@ -293,12 +296,12 @@ public:
     return count_;
   }
 
-  inline bool operator==(dynamic_array const& other) const noexcept
+  inline bool operator==(fixed_array const& other) const noexcept
   {
     return count_ == other.size() && std::ranges::equal(*this, other);
   }
 
-  inline bool operator!=(dynamic_array const& other) const noexcept
+  inline bool operator!=(fixed_array const& other) const noexcept
   {
     return !(*this == other);
   }

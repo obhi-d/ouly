@@ -158,14 +158,11 @@ struct selfref
   selfref(std::uint32_t v) : value(v) {}
 };
 
-namespace acl
-{
 template <>
-struct traits<selfref> : traits<>
+struct acl::default_options<selfref>
 {
-  using offset = acl::offset<&selfref::self>;
+  using offset = acl::member<&selfref::self>;
 };
-} // namespace acl
 
 TEST_CASE("packed_table: Test selfref", "[packed_table][backref]")
 {
@@ -275,7 +272,7 @@ struct rand_device
 struct traits_1
 {
   static constexpr bool use_sparse                = false;
-  using offset                                    = acl::offset<&data::self>;
+  using offset                                    = acl::member<&data::self>;
   static constexpr uint32_t pool_size             = 128;
   static constexpr uint32_t self_index_pool_size  = 128;
   static constexpr uint32_t keys_index_pool_size  = 128;
@@ -287,7 +284,7 @@ struct traits_1
 struct traits_2
 {
   static constexpr bool use_sparse                = true;
-  using offset                                    = acl::offset<&data::self>;
+  using offset                                    = acl::member<&data::self>;
   static constexpr uint32_t pool_size             = 128;
   static constexpr uint32_t self_index_pool_size  = 128;
   static constexpr uint32_t keys_index_pool_size  = 128;
@@ -310,7 +307,7 @@ struct traits_3
 struct traits_4
 {
   static constexpr bool use_sparse                = true;
-  using offset                                    = acl::offset<&data::self>;
+  using offset                                    = acl::member<&data::self>;
   static constexpr uint32_t pool_size             = 128;
   static constexpr uint32_t self_index_pool_size  = 128;
   static constexpr uint32_t keys_index_pool_size  = 128;
@@ -356,8 +353,8 @@ TEMPLATE_TEST_CASE("Validate packed_table", "[packed_table.all]", traits_1, trai
                    traits_6, traits_7)
 {
 
-  acl::packed_table<data, acl::default_allocator<>, TestType> table;
-  using link = acl::packed_table<data, acl::default_allocator<>, TestType>::link;
+  acl::packed_table<data, TestType> table;
+  using link = acl::packed_table<data, TestType>::link;
   std::vector<std::pair<data, link>> reference_data;
 
   std::random_device rd;

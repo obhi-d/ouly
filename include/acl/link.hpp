@@ -1,6 +1,6 @@
 #pragma once
-#include "type_traits.hpp"
 #include "detail/utils.hpp"
+#include "type_traits.hpp"
 #include <compare>
 #include <concepts>
 #include <cstdint>
@@ -17,21 +17,21 @@ struct link
   static constexpr size_type null_v = 0;
   static constexpr size_type mask_v = std::numeric_limits<size_type>::max() >> N;
 
-  constexpr link() noexcept     = default;
+  constexpr link() noexcept              = default;
   constexpr link(const link& i) noexcept = default;
   constexpr explicit link(size_type i) noexcept : offset(i) {}
 
   template <typename Uy>
-  constexpr explicit link(const link<Uy, SizeType>& i) noexcept 
-    requires std::convertible_to<Uy*, Ty*>
-  : offset(i.offset)
+  constexpr explicit link(const link<Uy, SizeType>& i) noexcept
+  requires std::convertible_to<Uy*, Ty*>
+      : offset(i.offset)
   {}
 
   constexpr link& operator=(const link& i) noexcept = default;
 
   template <typename Uy>
   constexpr link& operator=(const link<Uy, SizeType>& i) noexcept
-    requires std::convertible_to<Uy*, Ty*>
+  requires std::convertible_to<Uy*, Ty*>
   {
     offset = i.offset;
     return *this;
@@ -48,7 +48,7 @@ struct link
       return offset;
   }
 
-  constexpr inline uint8_t revision() const noexcept 
+  constexpr inline uint8_t revision() const noexcept
   {
     if constexpr (detail::debug)
     {
@@ -59,7 +59,7 @@ struct link
       return 0;
   }
 
-  constexpr inline link revise() const noexcept 
+  constexpr inline link revise() const noexcept
   {
     if constexpr (detail::debug)
     {
@@ -69,43 +69,42 @@ struct link
       return link(offset);
   }
 
-
-  constexpr inline size_type value() const noexcept 
+  constexpr inline size_type value() const noexcept
   {
     return offset;
   }
 
-  constexpr inline size_type unmasked() const noexcept 
+  constexpr inline size_type unmasked() const noexcept
   {
     return offset & mask_v;
   }
 
-  constexpr inline size_type get_mask() const noexcept 
+  constexpr inline size_type get_mask() const noexcept
   {
     return (offset & (~mask_v));
   }
 
-  constexpr inline size_type has_mask(size_type m) const noexcept 
+  constexpr inline size_type has_mask(size_type m) const noexcept
   {
     return (offset & m) != 0;
   }
 
-  constexpr inline void mask(size_type m) noexcept 
+  constexpr inline void mask(size_type m) noexcept
   {
     offset |= (m & ~mask_v);
   }
 
-  constexpr inline void unmask() noexcept 
+  constexpr inline void unmask() noexcept
   {
     offset &= mask_v;
   }
 
-  constexpr inline explicit operator size_type() const noexcept 
+  constexpr inline explicit operator size_type() const noexcept
   {
     return offset;
   }
 
-  constexpr inline explicit operator bool() const noexcept 
+  constexpr inline explicit operator bool() const noexcept
   {
     return offset != null_v;
   }
@@ -115,12 +114,12 @@ struct link
     return as_index() <=> second.as_index();
   }
 
-  constexpr inline friend auto operator<=>(size_type first, link const& second) noexcept 
+  constexpr inline friend auto operator<=>(size_type first, link const& second) noexcept
   {
     return first <=> second.as_index();
   }
 
-  constexpr inline friend auto operator<=>(link const& second, size_type first) noexcept 
+  constexpr inline friend auto operator<=>(link const& second, size_type first) noexcept
   {
     return second.as_index() <=> first;
   }
@@ -155,9 +154,8 @@ struct link
     return second.as_index() != first;
   }
 
-
   size_type offset = null_v;
 };
 
-using vlink = link<std::void_t<>, std::uint64_t, 8>;
+using vlink = link<std::void_t<>, std::size_t, 8>;
 } // namespace acl

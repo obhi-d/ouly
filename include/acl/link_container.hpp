@@ -21,11 +21,15 @@ struct default_link_container_traits
 template <typename Ty, typename Traits>
 class basic_link_container
 {
+public:
+  using allocator_type = detail::allocator_type<Traits>;
+  using traits         = Traits;
+
+private:
   using storage_type = acl::detail::aligned_storage<sizeof(Ty), alignof(Ty)>;
-  using vector_type =
-    std::conditional_t<detail::HasUseSparseAttrib<Traits>, sparse_vector<storage_type, default_allocator<>, Traits>,
-                       vector<storage_type>>;
-  using size_type = detail::choose_size_t<uint32_t, Traits>;
+  using vector_type  = std::conditional_t<detail::HasUseSparseAttrib<Traits>, sparse_vector<storage_type, Traits>,
+                                         vector<storage_type, allocator_type>>;
+  using size_type    = detail::choose_size_t<uint32_t, Traits>;
 
 public:
   using registry = basic_link_registry<Ty, size_type>;
@@ -42,8 +46,7 @@ public:
   }
 
   template <typename ITy>
-    requires std::same_as<ITy, Ty> || std::same_as<ITy, void>
-  void sync(basic_link_registry<ITy, size_type> const& imax)
+  requires std::same_as<ITy, Ty> || std::same_as<ITy, void> void sync(basic_link_registry<ITy, size_type> const& imax)
   {
     items_.resize(imax.max_size());
 #ifdef ACL_DEBUG
@@ -60,8 +63,7 @@ public:
   }
 
   template <typename ITy, typename... Args>
-    requires std::same_as<ITy, Ty> || std::same_as<ITy, void>
-  auto& emplace(acl::link<ITy, size_type> l, Args&&... args)
+  requires std::same_as<ITy, Ty> || std::same_as<ITy, void> auto& emplace(acl::link<ITy, size_type> l, Args&&... args)
   {
     Ty* obj = (Ty*)&items_[l.as_index()];
     std::construct_at<Ty>(obj, std::forward<Args>(args)...);
@@ -69,8 +71,7 @@ public:
   }
 
   template <typename ITy>
-    requires std::same_as<ITy, Ty> || std::same_as<ITy, void>
-  void erase(acl::link<ITy, size_type> l)
+  requires std::same_as<ITy, Ty> || std::same_as<ITy, void> void erase(acl::link<ITy, size_type> l)
   {
     if constexpr (!std::is_trivially_destructible_v<Ty>)
       std::destroy_at((Ty*)&items_[l.as_index()]);
@@ -80,8 +81,7 @@ public:
   }
 
   template <typename ITy>
-    requires std::same_as<ITy, Ty> || std::same_as<ITy, void>
-  Ty& at(acl::link<ITy, size_type> l)
+  requires std::same_as<ITy, Ty> || std::same_as<ITy, void> Ty& at(acl::link<ITy, size_type> l)
   {
     if constexpr (acl::detail::debug)
       assert(revisions_[l.as_index()] == l.revision());
@@ -89,8 +89,7 @@ public:
   }
 
   template <typename ITy>
-    requires std::same_as<ITy, Ty> || std::same_as<ITy, void>
-  Ty const& at(acl::link<ITy, size_type> l) const
+  requires std::same_as<ITy, Ty> || std::same_as<ITy, void> Ty const& at(acl::link<ITy, size_type> l) const
   {
     if constexpr (acl::detail::debug)
       assert(revisions_[l.as_index()] == l.revision());

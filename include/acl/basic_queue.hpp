@@ -7,20 +7,20 @@
 namespace acl
 {
 
-template <typename Ty, typename Allocator = default_allocator<>, typename Traits = acl::traits<Ty>>
-class basic_queue : public Allocator
+template <typename Ty, typename Options = acl::default_options<Ty>>
+class basic_queue : public detail::allocator_type<Options>
 {
 public:
   using value_type     = Ty;
-  using size_type      = detail::choose_size_t<uint32_t, Traits>;
-  using allocator_type = Allocator;
+  using size_type      = detail::choose_size_t<uint32_t, Options>;
+  using allocator_type = detail::allocator_type<Options>;
 
 private:
-  static constexpr auto pool_div  = detail::log2(Traits::pool_size);
+  static constexpr auto pool_div  = detail::log2(detail::pool_size_v<Options>);
   static constexpr auto pool_size = static_cast<size_type>(1) << pool_div;
   static constexpr auto pool_mod  = pool_size - 1;
   using storage                   = detail::aligned_storage<sizeof(value_type), alignof(value_type)>;
-  static constexpr bool has_pod   = detail::HasTrivialAttrib<Traits>;
+  static constexpr bool has_pod   = detail::HasTrivialAttrib<Options>;
 
   struct deque_block
   {
@@ -108,7 +108,7 @@ private:
       free_ = free_->next;
     else
     {
-      db       = acl::allocate<deque_block>(static_cast<Allocator&>(*this), sizeof(deque_block), alignarg<Ty>);
+      db       = acl::allocate<deque_block>(static_cast<allocator_type&>(*this), sizeof(deque_block), alignarg<Ty>);
       db->next = nullptr;
     }
 
@@ -132,7 +132,7 @@ private:
     while (start)
     {
       auto next = start->next;
-      acl::deallocate(static_cast<Allocator&>(*this), start, sizeof(deque_block), alignarg<Ty>);
+      acl::deallocate(static_cast<allocator_type&>(*this), start, sizeof(deque_block), alignarg<Ty>);
       start = next;
     }
   }

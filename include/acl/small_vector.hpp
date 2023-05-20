@@ -18,13 +18,13 @@
 // https://en.cppreference.com/w/cpp/header/vector
 namespace acl
 {
-template <typename Ty, size_t N = 0, typename Allocator = default_allocator<>, typename Traits = acl::traits<Ty>>
-class small_vector : public Allocator
+template <typename Ty, size_t N = 0, typename Options = acl::default_options<Ty>>
+class small_vector : public detail::allocator_type<Options>
 {
 public:
   using value_type                = Ty;
-  using allocator_type            = Allocator;
-  using size_type                 = detail::choose_size_t<uint32_t, Traits>;
+  using allocator_type            = detail::allocator_type<Options>;
+  using size_type                 = detail::choose_size_t<uint32_t, Options>;
   using difference_type           = size_type;
   using reference                 = value_type&;
   using const_reference           = const value_type&;
@@ -34,8 +34,8 @@ public:
   using const_iterator            = Ty const*;
   using reverse_iterator          = std::reverse_iterator<iterator>;
   using const_reverse_iterator    = std::reverse_iterator<const_iterator>;
-  using allocator                 = Allocator;
-  using allocator_tag             = typename Allocator::tag;
+  using allocator                 = allocator_type;
+  using allocator_tag             = typename allocator_type::tag;
   using allocator_is_always_equal = typename acl::allocator_traits<allocator_tag>::is_always_equal;
   using propagate_allocator_on_move =
     typename acl::allocator_traits<allocator_tag>::propagate_on_container_move_assignment;
@@ -44,15 +44,15 @@ public:
   using propagate_allocator_on_swap = typename acl::allocator_traits<allocator_tag>::propagate_on_container_swap;
 
 private:
-  using traits                                          = Traits;
-  static constexpr bool HasNullMethod                   = detail::HasNullMethod<traits, value_type>;
-  static constexpr bool HasNullValue                    = detail::HasNullValue<traits, value_type>;
-  static constexpr bool HasNullConstruct                = detail::HasNullConstruct<traits, value_type>;
-  static constexpr bool has_zero_memory                 = detail::HasZeroMemoryAttrib<traits>;
-  static constexpr bool has_no_fill                     = detail::HasNoFillAttrib<traits>;
-  static constexpr bool has_pod                         = detail::HasTrivialAttrib<traits>;
+  using options                                         = Options;
+  static constexpr bool HasNullMethod                   = detail::HasNullMethod<options, value_type>;
+  static constexpr bool HasNullValue                    = detail::HasNullValue<options, value_type>;
+  static constexpr bool HasNullConstruct                = detail::HasNullConstruct<options, value_type>;
+  static constexpr bool has_zero_memory                 = detail::HasZeroMemoryAttrib<options>;
+  static constexpr bool has_no_fill                     = detail::HasNoFillAttrib<options>;
+  static constexpr bool has_pod                         = detail::HasTrivialAttrib<options>;
   static constexpr bool has_trivial_dtor                = has_pod || std::is_trivially_destructible_v<Ty>;
-  static constexpr bool has_trivially_destroyed_on_move = detail::HasTriviallyDestroyedOnMoveAttrib<traits>;
+  static constexpr bool has_trivially_destroyed_on_move = detail::HasTriviallyDestroyedOnMoveAttrib<options>;
 
   using storage = detail::aligned_storage<sizeof(value_type), alignof(value_type)>;
   struct heap_storage
@@ -80,26 +80,26 @@ private:
   };
 
 public:
-  explicit small_vector(const Allocator& alloc = Allocator()) noexcept : Allocator(alloc) {}
+  explicit small_vector(const allocator_type& alloc = allocator_type()) noexcept : allocator_type(alloc) {}
 
   explicit small_vector(size_type n) noexcept
   {
     resize(n);
   }
 
-  small_vector(size_type n, const Ty& value, const Allocator& alloc = Allocator()) : Allocator(alloc)
+  small_vector(size_type n, const Ty& value, const allocator_type& alloc = allocator_type()) : allocator_type(alloc)
   {
     resize(n, value);
   }
 
   template <class InputIterator>
-  small_vector(InputIterator first, InputIterator last, const Allocator& alloc = Allocator()) noexcept
-      : Allocator(alloc)
+  small_vector(InputIterator first, InputIterator last, const allocator_type& alloc = allocator_type()) noexcept
+      : allocator_type(alloc)
   {
     construct_from_range(first, last, std::is_integral<InputIterator>());
   }
 
-  small_vector(const small_vector& x) noexcept : Allocator((Allocator const&)x)
+  small_vector(const small_vector& x) noexcept : allocator_type((allocator_type const&)x)
   {
     if (x.size() > inline_capacity)
       unchecked_reserve_in_heap(x.size());
@@ -107,12 +107,12 @@ public:
     copy_construct(std::begin(x), std::end(x), get_data());
   }
 
-  small_vector(small_vector&& x) noexcept : Allocator(std::move((Allocator&)x))
+  small_vector(small_vector&& x) noexcept : allocator_type(std::move((allocator_type&)x))
   {
     *this = std::move(x);
   }
 
-  small_vector(const small_vector& x, const Allocator& alloc) noexcept : Allocator(alloc)
+  small_vector(const small_vector& x, const allocator_type& alloc) noexcept : allocator_type(alloc)
   {
     if (x.size() > inline_capacity)
       unchecked_reserve_in_heap(x.size());
@@ -120,11 +120,12 @@ public:
     copy_construct(std::begin(x), std::end(x), get_data());
   }
 
-  small_vector(small_vector&& x, const Allocator& alloc) noexcept : Allocator(alloc)
+  small_vector(small_vector&& x, const allocator_type& alloc) noexcept : allocator_type(alloc)
   {
     *this = std::move(x);
   };
-  small_vector(std::initializer_list<Ty> x, const Allocator& alloc = Allocator()) noexcept : Allocator(alloc)
+  small_vector(std::initializer_list<Ty> x, const allocator_type& alloc = allocator_type()) noexcept
+      : allocator_type(alloc)
   {
     if (x.size() > inline_capacity)
       unchecked_reserve_in_heap(static_cast<size_type>(x.size()));
@@ -253,7 +254,7 @@ public:
 
   size_type max_size() const noexcept
   {
-    return Allocator::max_size();
+    return allocator_type::max_size();
   }
 
   void resize(size_type sz) noexcept
@@ -727,7 +728,7 @@ private:
   inline small_vector& assign_copy(const small_vector& x, std::true_type) noexcept
   {
     clear();
-    Allocator::operator=(static_cast<const Allocator&>(x));
+    allocator_type::operator=(static_cast<const allocator_type&>(x));
     if (capacity() < x.size())
     {
       unchecked_reserve_in_heap(x.size());
@@ -744,7 +745,8 @@ private:
 
   inline small_vector& assign_move(small_vector&& x, std::false_type) noexcept
   {
-    if (allocator_is_always_equal::value || static_cast<const Allocator&>(x) == static_cast<const Allocator&>(*this))
+    if (allocator_is_always_equal::value ||
+        static_cast<const allocator_type&>(x) == static_cast<const allocator_type&>(*this))
     {
       clear();
       if (x.is_inlined())
@@ -772,7 +774,7 @@ private:
   {
     clear();
 
-    Allocator::operator=(std::move(static_cast<Allocator&>(x)));
+    allocator_type::operator=(std::move(static_cast<allocator_type&>(x)));
     if (x.is_inlined())
     {
       size_ = x.size_;
@@ -815,7 +817,7 @@ private:
     static_assert(std::is_trivially_copyable_v<Ty>);
     std::swap(x.data_store_.ldata_, data_store_.ldata_);
     std::swap(size_, x.size_);
-    std::swap<Allocator>(this, x);
+    std::swap<allocator_type>(this, x);
   }
 
   friend void swap(small_vector& lhs, small_vector& rhs) noexcept

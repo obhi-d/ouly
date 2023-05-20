@@ -1,6 +1,6 @@
 
 #include "acl/output_serializer.hpp"
-#include "acl/dynamic_array.hpp"
+#include "acl/array_types.hpp"
 #include <catch2/catch_all.hpp>
 #include <compare>
 #include <map>

@@ -9,18 +9,17 @@ namespace acl
 template <typename T, typename SizeType = size_t>
 constexpr SizeType alignarg = alignof(T) > alignof(std::max_align_t) ? alignof(T) : 0;
 
-template <typename Ty = std::void_t<>>
-struct traits
-{
-  using size_type                                = std::uint32_t;
-  static constexpr std::uint32_t pool_size       = 4096;
-  static constexpr std::uint32_t index_pool_size = 4096;
-  // static constexpr bool          assume_pod  = false;
-  // null
-  // static constexpr T null_v = {};
-  // using offset
-  // using offset = acl::offset<&selfref::self>;
-};
+template <typename... Option>
+struct options : public Option...
+{};
+
+template <>
+struct options<>
+{};
+
+template <typename T>
+struct default_options
+{};
 
 template <typename Ty = std::void_t<>>
 struct allocator_traits
@@ -31,20 +30,124 @@ struct allocator_traits
   using propagate_on_container_swap            = std::true_type;
 };
 
+///--------------- Basic Options ----------------
+
+/// @brief Option to provide member pointer
+/// @tparam M
 template <auto M>
-struct offset
+struct member;
+
+/// @brief Specialization that provided class_type
+/// @tparam T class_type for the member
+/// @tparam M member_type for the member
+/// @tparam MPtr Pointer to member
+template <typename T, typename M, M T::*MPtr>
+struct member<MPtr>
 {
-  inline static auto& get(auto& to) noexcept
+  using class_type  = T;
+  using member_type = M;
+  using offset      = acl::member<MPtr>;
+
+  inline static member_type& get(class_type& to) noexcept
   {
-    return to.*M;
+    return to.*MPtr;
   }
 
-  inline static auto const& get(auto const& to) noexcept
+  inline static member_type const& get(class_type const& to) noexcept
   {
-    return to.*M;
+    return to.*MPtr;
   }
 };
 
+/// @brief Option to control underlying pool size
+template <uint32_t PoolSize = 4096>
+struct pool_size
+{
+  static constexpr uint32_t pool_size_v = PoolSize;
+};
+
+/// @brief Option to control the pool size of index maps used by container
+template <uint32_t PoolSize = 4096>
+struct index_pool_size
+{
+  static constexpr uint32_t index_pool_size_v = PoolSize;
+};
+
+/// @brief Self index pool size controls the pool size for back references
+template <uint32_t PoolSize = 4096>
+struct self_index_pool_size
+{
+  static constexpr uint32_t self_index_pool_size_v = PoolSize;
+};
+
+/// @brief Key index pool size controls the pool size for key indexes in tables
+template <uint32_t PoolSize = 4096>
+struct keys_index_pool_size
+{
+  static constexpr uint32_t keys_index_pool_size_v = PoolSize;
+};
+
+/// @brief Null value, only applicable to constexpr types
+template <auto NullValue>
+struct null_value
+{
+  static constexpr auto null_v = NullValue;
+};
+
+/// @brief Indexes will have this as their size type
+template <typename T = uint32_t>
+struct basic_size_type
+{
+  using size_type = T;
+};
+
+struct assume_pod
+{
+  static constexpr bool assume_pod_v = true;
+};
+
+struct no_fill
+{
+  static constexpr bool no_fill_v = true;
+};
+
+struct trivially_destroyed_on_move
+{
+  static constexpr bool trivially_destroyed_on_move_v = true;
+};
+
+struct use_sparse
+{
+  static constexpr bool use_sparse_v = true;
+};
+
+struct use_sparse_index
+{
+  static constexpr bool use_sparse_index_v = true;
+};
+
+struct self_use_sparse_index
+{
+  static constexpr bool self_use_sparse_index_v = true;
+};
+
+struct keys_use_sparse_index
+{
+  static constexpr bool keys_use_sparse_index_v = true;
+};
+
+struct zero_out_memory
+{
+  static constexpr bool zero_out_memory_v = true;
+};
+
+struct disable_pool_tracking
+{
+  static constexpr bool disable_pool_tracking_v = true;
+};
+
+///------------------------------------------------
+/// @brief Class type to string_view name of the class
 template <typename T>
 constexpr std::string_view type_name()
 {
@@ -59,13 +162,6 @@ constexpr std::uint32_t type_hash()
 
 struct nocheck : std::false_type
 {};
-
-/// Specialize backref
-/// template <>
-/// struct traits<MyType>
-/// {
-///   using offset = acl::offset<&MyType::self>;
-/// };
 
 template <typename T>
 struct function_traits;
@@ -115,50 +211,44 @@ struct function_traits : public function_traits<decltype(&T::operator())>
 
 namespace detail
 {
-
+// clang-format off
 template <typename Traits, typename U>
 concept HasNullValue = requires(U t) {
-                         {
-                           ((Traits::null_v))
-                           } -> std::convertible_to<U>;
-                         {
-                           Traits::null_v == t
-                           } -> std::same_as<bool>;
-                       };
+  { Traits::null_v } -> std::convertible_to<U>;
+  { Traits::null_v == t } -> std::same_as<bool>;
+};
 
 template <typename Traits, typename U>
 concept HasNullMethod = requires(U v) {
-                          {
-                            Traits::is_null(v)
-                            } noexcept -> std::same_as<bool>;
-                        };
+  { Traits::is_null(v) } noexcept -> std::same_as<bool>;
+};
 
 template <typename Traits, typename U>
 concept HasNullConstruct = requires(U v) {
-                             Traits::null_construct(v);
-                             Traits::null_reset(v);
-                           };
+  Traits::null_construct(v);
+  Traits::null_reset(v);
+};
 
 template <typename Traits>
 concept HasIndexPoolSize = requires {
-                             {
-                               ((Traits::index_pool_size))
-                               } -> std::convertible_to<uint32_t>;
-                           };
+  { Traits::index_pool_size_v } -> std::convertible_to<uint32_t>;
+};
+
+template <typename Traits>
+concept HasPoolSize = requires {
+  { Traits::pool_size_v } -> std::convertible_to<uint32_t>;
+};
 
 template <typename Traits>
 concept HasSelfIndexPoolSize = requires {
-                                 {
-                                   ((Traits::self_index_pool_size))
-                                   } -> std::convertible_to<uint32_t>;
-                               };
+  { Traits::self_index_pool_size_v } -> std::convertible_to<uint32_t>;
+};
 
 template <typename Traits>
 concept HasKeysIndexPoolSize = requires {
-                                 {
-                                   ((Traits::keys_index_pool_size))
-                                   } -> std::convertible_to<uint32_t>;
-                               };
+  { Traits::keys_index_pool_size_v } -> std::convertible_to<uint32_t>;
+};
+
 template <typename Traits>
 concept HasBackrefValue = requires { typename Traits::offset; };
 
@@ -166,77 +256,39 @@ template <typename Traits>
 concept HasSizeType = requires { typename Traits::size_type; };
 
 template <typename Traits>
-concept HasTrivialAttrib = requires {
-                             Traits::assume_pod;
-                             {
-                               std::bool_constant<Traits::assume_pod>()
-                               } -> std::same_as<std::true_type>;
-                           };
+concept HasTrivialAttrib = Traits::assume_pod_v;
 
 template <typename Traits>
-concept HasNoFillAttrib = requires {
-                            Traits::no_fill;
-                            {
-                              std::bool_constant<Traits::no_fill>()
-                              } -> std::same_as<std::true_type>;
-                          };
+concept HasNoFillAttrib = Traits::no_fill_v;
 
 template <typename Traits>
-concept HasTriviallyDestroyedOnMoveAttrib = requires {
-                                              Traits::no_fill;
-                                              {
-                                                std::bool_constant<Traits::trivially_destroyed_on_move>()
-                                                } -> std::same_as<std::true_type>;
-                                            };
-template <typename Traits>
-concept HasUseSparseAttrib = requires {
-                               Traits::use_sparse;
-                               {
-                                 std::bool_constant<Traits::use_sparse>()
-                                 } -> std::same_as<std::true_type>;
-                             };
+concept HasTriviallyDestroyedOnMoveAttrib = Traits::trivially_destroyed_on_move_v;
 
 template <typename Traits>
-concept HasUseSparseIndexAttrib = requires {
-                                    Traits::use_sparse_index;
-                                    {
-                                      std::bool_constant<Traits::use_sparse_index>()
-                                      } -> std::same_as<std::true_type>;
-                                  };
+concept HasUseSparseAttrib = Traits::use_sparse_v;
 
 template <typename Traits>
-concept HasSelfUseSparseIndexAttrib = requires {
-                                        Traits::self_use_sparse_index;
-                                        {
-                                          std::bool_constant<Traits::use_self_sparse_index>()
-                                          } -> std::same_as<std::true_type>;
-                                      };
+concept HasUseSparseIndexAttrib = Traits::use_sparse_index_v;
 
 template <typename Traits>
-concept HasKeysUseSparseIndexAttrib = requires {
-                                        Traits::keys_use_sparse_index;
-                                        {
-                                          std::bool_constant<Traits::use_keys_sparse_index>()
-                                          } -> std::same_as<std::true_type>;
-                                      };
+concept HasSelfUseSparseIndexAttrib = Traits::self_use_sparse_index_v;
 
 template <typename Traits>
-concept HasZeroMemoryAttrib = requires {
-                                Traits::zero_memory;
-                                {
-                                  std::bool_constant<Traits::zero_memory>()
-                                  } -> std::same_as<std::true_type>;
-                              };
+concept HasKeysUseSparseIndexAttrib = Traits::keys_use_sparse_index_v;
+
+template <typename Traits>
+concept HasZeroMemoryAttrib = Traits::zero_out_memory_v;
+
+template <typename Traits>
+concept HasDisablePoolTrackingAttrib = Traits::disble_pool_tracking_v;
 
 template <typename V, typename R>
 concept OptionalValueLike = requires(V v) {
-                              {
-                                *v
-                                } -> std::convertible_to<R>;
-                              {
-                                (bool)v
-                                } -> std::convertible_to<bool>;
-                            };
+  {*v } -> std::convertible_to<R>;
+  { (bool)v } -> std::convertible_to<bool>;
+};
+template <typename T>
+concept HasAllocatorAttribs = requires { typename T::allocator_type; };
 
 template <typename S, typename T1, typename... Args>
 struct choose_size_ty
@@ -297,6 +349,21 @@ struct size_type<ua_t, std::void_t<typename ua_t::size_type>>
 template <typename ua_t>
 using size_t = typename size_type<ua_t>::type;
 
+template <typename T>
+struct pool_size
+{
+    static constexpr uint32_t value = 4096;
+};
+
+template <HasPoolSize T>
+struct pool_size<T>
+{
+    static constexpr uint32_t value = T::pool_size_v;
+};
+
+template <typename T>
+constexpr uint32_t pool_size_v = detail::pool_size<T>::value;
+// clang-format on
 } // namespace detail
 
 } // namespace acl

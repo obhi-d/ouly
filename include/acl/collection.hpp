@@ -1,7 +1,6 @@
 
 #pragma once
 
-#include "allocator.hpp"
 #include "default_allocator.hpp"
 #include "detail/config.hpp"
 #include "detail/utils.hpp"
@@ -15,30 +14,28 @@ namespace acl
 
 /// @brief A collection of links, but not stored in vectors, instead managed by bitmap
 /// @tparam Ty
-/// @tparam Allocator any allocator type under acl
-template <typename Cont, typename Allocator = default_allocator<>,
-          typename Traits = acl::traits<typename Cont::value_type>>
-class collection : public Allocator
+/// @tparam Options options controlling behaviour of the container
+template <typename Ty, typename Options = acl::default_options<Ty>>
+class collection : public detail::allocator_type<Options>
 {
 public:
-  using value_type     = typename Cont::value_type;
-  using size_type      = detail::choose_size_t<uint32_t, Traits>;
+  using value_type     = Ty;
+  using size_type      = detail::choose_size_t<uint32_t, Options>;
   using link           = acl::link<value_type, size_type>;
-  using allocator_type = Allocator;
+  using allocator_type = detail::allocator_type<Options>;
 
 private:
-  static constexpr auto pool_div  = detail::log2(Traits::pool_size);
+  static constexpr auto pool_div  = detail::log2(detail::pool_size_v<Options>);
   static constexpr auto pool_size = static_cast<size_type>(1) << pool_div;
   static constexpr auto pool_mod  = pool_size - 1;
-  using this_type                 = collection<Cont, Allocator>;
-  using base_type                 = Allocator;
+  using this_type                 = collection<Ty, Options>;
+  using base_type                 = allocator_type;
   using storage                   = std::uint8_t;
-  using allocator                 = Allocator;
 
 public:
   inline collection() noexcept {}
-  inline collection(Allocator&& alloc) noexcept : base_type(std::move<Allocator>(alloc)) {}
-  inline collection(Allocator const& alloc) noexcept : base_type(alloc) {}
+  inline collection(allocator_type&& alloc) noexcept : base_type(std::move<allocator_type>(alloc)) {}
+  inline collection(allocator_type const& alloc) noexcept : base_type(alloc) {}
   inline collection(collection&& other) noexcept = default;
   inline collection(collection const& other) noexcept
   {
@@ -82,24 +79,24 @@ public:
     return *this;
   }
 
-  template <typename Lambda>
+  template <typename Cont, typename Lambda>
   void for_each(Cont& cont, Lambda&& lambda) noexcept
   {
     for_each_l<Cont, Lambda, value_type>(cont, 0, range(), std::forward<Lambda>(lambda));
   }
-  template <typename Lambda>
+  template <typename Cont, typename Lambda>
   void for_each(Cont const& cont, Lambda&& lambda) const noexcept
   {
     const_cast<this_type*>(this)->for_each_l(cont, 0, range(), std::forward<Lambda>(lambda));
   }
 
-  template <typename Lambda>
+  template <typename Cont, typename Lambda>
   void for_each(Cont& cont, size_type first, size_type last, Lambda&& lambda) noexcept
   {
     for_each_l<Cont, Lambda, value_type>(cont, first, last, std::forward<Lambda>(lambda));
   }
 
-  template <typename Lambda>
+  template <typename Cont, typename Lambda>
   void for_each(Cont const& cont, size_type first, size_type last, Lambda&& lambda) const noexcept
   {
     const_cast<this_type*>(this)->for_each_l(cont, first, last, std::forward<Lambda>(lambda));
@@ -155,15 +152,15 @@ public:
       {
         for (size_type i = 0, end = static_cast<size_type>(items.size()) / 2; i < end; ++i)
         {
-          acl::deallocate(static_cast<Allocator&>(*this), items[i * 2 + 0], bit_page_size);
-          acl::deallocate(static_cast<Allocator&>(*this), items[i * 2 + 1], haz_page_size);
+          acl::deallocate(static_cast<allocator_type&>(*this), items[i * 2 + 0], bit_page_size);
+          acl::deallocate(static_cast<allocator_type&>(*this), items[i * 2 + 1], haz_page_size);
         }
       }
       else
       {
         for (auto i : items)
         {
-          acl::deallocate(static_cast<Allocator&>(*this), i, bit_page_size);
+          acl::deallocate(static_cast<allocator_type&>(*this), i, bit_page_size);
         }
       }
     }
@@ -268,9 +265,9 @@ private:
     }
   }
 
-  podvector<storage*, allocator> items;
-  size_type                      length  = 0;
-  size_type                      max_lnk = 0;
+  podvector<storage*, allocator_type> items;
+  size_type                           length  = 0;
+  size_type                           max_lnk = 0;
 };
 
 } // namespace acl

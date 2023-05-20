@@ -13,9 +13,8 @@ namespace acl
 {
 /// @brief Contenst are packed in vector or sparse vector
 /// @tparam Ty Type of object
-/// @tparam Allocator Underlying allocator
-/// @tparam Traits Controls the parameters for class instantiation
-///   At a minimum expected traits must include:
+/// @tparam Options Controls the parameters for class instantiation
+///   At a minimum expected options must include:
 ///         - use_sparse : bool - true to use sparse vector
 ///         - pool_size : integer - Pool size of the sparse vector when sparse vector is used to store data
 ///         - offset : typename - acl::offset<&type::offset> self backref member
@@ -25,27 +24,27 @@ namespace acl
 ///         - self_use_sparse_index : bool - use sparse vector for self reference
 ///         - keys_use_sparse_index : bool - use sparse vector for key index
 ///         - size_type : typename - uint32_t to reduce footprint
-template <typename Ty, typename Allocator = default_allocator<>, typename Traits = acl::traits<Ty>>
-class packed_table : public Allocator
+template <typename Ty, typename Options = acl::default_options<Ty>>
+class packed_table : public detail::allocator_type<Options>
 {
 
   static_assert(std::is_move_assignable_v<Ty>, "Type must be move assignable");
   static_assert(std::is_default_constructible_v<Ty>, "Type must be default constructibe");
 
 public:
+  using options        = Options;
   using value_type     = Ty;
-  using size_type      = detail::choose_size_t<uint32_t, Traits>;
+  using size_type      = detail::choose_size_t<uint32_t, Options>;
   using link           = acl::link<value_type, size_type>;
-  using allocator_type = Allocator;
+  using allocator_type = detail::allocator_type<Options>;
 
 private:
-  static constexpr bool has_backref = detail::HasBackrefValue<Traits>;
-  static constexpr bool has_sparse  = detail::HasUseSparseAttrib<Traits>;
+  static constexpr bool has_backref = detail::HasBackrefValue<options>;
+  static constexpr bool has_sparse  = detail::HasUseSparseAttrib<options>;
 
-  using this_type    = packed_table<value_type, Allocator, Traits>;
-  using vector_type  = std::conditional_t<has_sparse, sparse_vector<Ty, Allocator, Traits>, vector<Ty, Allocator>>;
+  using this_type    = packed_table<value_type, options>;
+  using vector_type  = std::conditional_t<has_sparse, sparse_vector<Ty, options>, vector<Ty, allocator_type>>;
   using storage      = detail::aligned_storage<sizeof(value_type), alignof(value_type)>;
-  using allocator    = Allocator;
   using optional_ptr = acl::detail::optional_ptr<Ty>;
 
   struct default_index_pool_size
@@ -60,11 +59,11 @@ private:
   {
     using size_type = uint32_t;
     static constexpr uint32_t pool_size =
-      std::conditional_t<detail::HasSelfIndexPoolSize<Traits>, Traits, default_index_pool_size>::self_index_pool_size;
-    static constexpr bool     use_sparse_index = std::conditional_t<detail::HasSelfUseSparseIndexAttrib<Traits>, Traits,
+      std::conditional_t<detail::HasSelfIndexPoolSize<options>, options, default_index_pool_size>::self_index_pool_size;
+    static constexpr bool use_sparse_index = std::conditional_t<detail::HasSelfUseSparseIndexAttrib<options>, options,
                                                                 default_index_pool_size>::self_use_sparse_index;
-    static constexpr uint32_t null_v           = 0;
-    static constexpr bool     zero_memory      = true;
+    static constexpr uint32_t null_v       = 0;
+    static constexpr bool     zero_memory  = true;
   };
 
   template <typename TrTy>
@@ -81,20 +80,20 @@ private:
   {
     using size_type = uint32_t;
     static constexpr uint32_t pool_size =
-      std::conditional_t<detail::HasKeysIndexPoolSize<Traits>, Traits, default_index_pool_size>::keys_index_pool_size;
-    static constexpr bool     use_sparse_index = std::conditional_t<detail::HasKeysUseSparseIndexAttrib<Traits>, Traits,
+      std::conditional_t<detail::HasKeysIndexPoolSize<options>, options, default_index_pool_size>::keys_index_pool_size;
+    static constexpr bool use_sparse_index = std::conditional_t<detail::HasKeysUseSparseIndexAttrib<options>, options,
                                                                 default_index_pool_size>::keys_use_sparse_index;
-    static constexpr uint32_t null_v           = 0;
-    static constexpr bool     zero_memory      = true;
+    static constexpr uint32_t null_v       = 0;
+    static constexpr bool     zero_memory  = true;
   };
 
-  using self_index = detail::backref_type<Allocator, self_index_traits<Traits>>;
-  using key_index  = detail::indirection_type<Allocator, key_index_traits>;
+  using self_index = detail::backref_type<self_index_traits<options>>;
+  using key_index  = detail::indirection_type<key_index_traits>;
 
 public:
   inline packed_table() noexcept {}
-  inline packed_table(Allocator&& alloc) noexcept : Allocator(std::move<Allocator>(alloc)) {}
-  inline packed_table(Allocator const& alloc) noexcept : Allocator(alloc) {}
+  inline packed_table(allocator_type&& alloc) noexcept : allocator_type(std::move<allocator_type>(alloc)) {}
+  inline packed_table(allocator_type const& alloc) noexcept : allocator_type(alloc) {}
   inline packed_table(packed_table&& other) noexcept
   {
     *this = std::move(other);
