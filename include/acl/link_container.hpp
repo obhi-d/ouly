@@ -22,7 +22,7 @@ template <typename Ty, typename Traits>
 class basic_link_container
 {
 public:
-  using allocator_type = detail::allocator_type<Traits>;
+  using allocator_type = detail::custom_allocator_t<Traits>;
   using traits         = Traits;
 
 private:

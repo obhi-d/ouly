@@ -1,5 +1,7 @@
 #pragma once
+#include "allocator.hpp"
 #include "detail/common.hpp"
+#include "detail/memory_stats.hpp"
 #include "detail/memory_tracker.hpp"
 #include "std_allocator_wrapper.hpp"
 #include "type_traits.hpp"
@@ -49,7 +51,10 @@ struct default_alloc_statistics
 
 #ifdef ACL_REC_STATS
 
-ACL_EXTERN ACL_API detail::statistics<default_allocator_tag, true> default_allocator_statistics_instance;
+using default_alloc_statistics_type =
+  detail::statistics<default_allocator_tag, acl::options<opt::compute_stats, opt::print_stats>>;
+
+ACL_EXTERN ACL_API default_alloc_statistics_type default_allocator_statistics_instance;
 
 template <>
 struct default_alloc_statistics<true>
@@ -62,7 +67,7 @@ struct default_alloc_statistics<true>
   {
     return get_instance().report_deallocate(i_sz);
   }
-  inline static detail::statistics<default_allocator_tag, true>& get_instance()
+  inline static default_alloc_statistics_type& get_instance()
   {
     return default_allocator_statistics_instance;
   }
@@ -92,39 +97,119 @@ inline void print_final_stats()
 #endif
 }
 
-template <typename size_arg = std::size_t, bool k_compute_stats = false, bool k_track_memory = false,
-          typename debug_tracer = std::monostate>
-struct ACL_EMPTY_BASES default_allocator : detail::default_alloc_statistics<k_compute_stats>,
-                                           detail::memory_tracker<default_allocator_tag, debug_tracer, k_track_memory>
+// ----------------- Allocator Options -----------------
+namespace opt
+{
+
+struct track_memory
+{
+  static constexpr bool track_memory_v = true;
+};
+
+struct debug_tracer
+{
+  using debug_tracer_t = std::monostate;
+};
+
+struct min_alignment
+{
+  static constexpr size_t min_alignment_v = alignof(std::max_align_t);
+};
+
+template <typename T>
+struct underlying_allocator
+{
+  using underlying_allocator_t = T;
+};
+
+} // namespace opt
+
+// ----------------- Allocator Options -----------------
+namespace detail
+{
+// clang-format off
+// defaults
+
+template <typename O>
+concept HasTrackMemory = O::track_memory_v;
+
+template <typename O>
+concept HasDebugTracer = requires { typename O::debug_tracer_t; };
+
+template <typename O>
+concept HasMinAlignment = requires { {O::min_alignment_v} -> std::convertible_to<std::size_t>; };
+
+template <typename T>
+concept HasUnderlyingAllocator = requires { typename T::underlying_allocator_t; };
+
+template <typename T>
+struct debug_tracer
+{
+    using type = detail::dummy_debug_tracer;
+};
+
+template <HasDebugTracer T>
+struct debug_tracer<T>
+{
+  using type = typename T::debug_tracer_t;
+};
+
+template <typename T>
+using debug_tracer_t = typename debug_tracer<T>::type;
+
+template <typename T>
+struct min_alignment
+{
+    static constexpr auto value = alignof(std::max_align_t);
+};
+
+template <HasMinAlignment T>
+struct min_alignment<T>
+{
+  static constexpr auto value = T::min_alignment_v;
+};
+
+
+template <typename T>
+constexpr auto min_alignment_v = min_alignment<T>::value;
+
+// clang-format on
+} // namespace detail
+// ----------------- Allocator Options -----------------
+
+template <typename Options = acl::options<>>
+struct ACL_EMPTY_BASES default_allocator
+    : detail::default_alloc_statistics<detail::HasComputeStats<Options>>,
+      detail::memory_tracker<default_allocator_tag, detail::debug_tracer_t<Options>, detail::HasTrackMemory<Options>>
 {
   using tag        = default_allocator_tag;
   using address    = void*;
-  using size_type  = size_arg;
-  using statistics = detail::default_alloc_statistics<k_compute_stats>;
-  using tracker    = detail::memory_tracker<default_allocator_tag, debug_tracer, k_track_memory>;
+  using size_type  = detail::choose_size_t<std::size_t, Options>;
+  using statistics = detail::default_alloc_statistics<detail::HasComputeStats<Options>>;
+  using tracker =
+    detail::memory_tracker<default_allocator_tag, detail::debug_tracer_t<Options>, detail::HasTrackMemory<Options>>;
 
-  default_allocator() {}
-  default_allocator(default_allocator const&) {}
-  default_allocator& operator=(default_allocator const&)
-  {
-    return *this;
-  }
+  static constexpr auto align = detail::min_alignment_v<Options>;
 
-  inline static address allocate(size_type i_sz, size_type i_alignment = 0)
+  template <typename Alignment = alignment<align>>
+  inline static address allocate(size_type i_sz, Alignment i_alignment = {})
   {
     auto measure = statistics::report_allocate(i_sz);
+
     return tracker::when_allocate(
       i_alignment > alignof(std::max_align_t) ? acl::aligned_alloc(i_alignment, i_sz) : acl::malloc(i_sz), i_sz);
   }
 
-  inline static address zero_allocate(size_type i_sz, size_type i_alignment = 0)
+  template <typename Alignment = alignment<align>>
+  inline static address zero_allocate(size_type i_sz, Alignment i_alignment = {})
   {
     auto measure = statistics::report_allocate(i_sz);
     return tracker::when_allocate(
       i_alignment > alignof(std::max_align_t) ? acl::aligned_zmalloc(i_alignment, i_sz) : acl::zmalloc(i_sz), i_sz);
   }
 
-  inline static void deallocate(address i_addr, size_type i_sz, size_type i_alignment = 0)
+  template <typename Alignment = alignment<align>>
+  inline static void deallocate(address i_addr, size_type i_sz, Alignment i_alignment = {})
   {
     auto  measure = statistics::report_deallocate(i_sz);
     void* fixup   = tracker::when_deallocate(i_addr, i_sz);
@@ -153,18 +238,34 @@ struct ACL_EMPTY_BASES default_allocator : detail::default_alloc_statistics<k_co
 namespace detail
 {
 template <typename T>
-struct custom_allocator_type
+struct custom_allocator
 {
   using type = default_allocator<>;
 };
 template <detail::HasAllocatorAttribs T>
-struct custom_allocator_type<T>
+struct custom_allocator<T>
 {
   using type = typename T::allocator_type;
 };
 
 template <typename Traits>
-using allocator_type = typename custom_allocator_type<Traits>::type;
+using custom_allocator_t = typename custom_allocator<Traits>::type;
+
+template <typename T>
+struct underlying_allocator
+{
+  using type = default_allocator<>;
+};
+
+template <detail::HasUnderlyingAllocator T>
+struct underlying_allocator<T>
+{
+  using type = typename T::underlying_allocator_t;
+};
+
+template <typename Traits>
+using underlying_allocator_t = typename underlying_allocator<Traits>::type;
+
 } // namespace detail
 
 template <typename T, typename UA = default_allocator<std::size_t>>

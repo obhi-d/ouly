@@ -9,18 +9,19 @@ namespace acl
 struct linear_allocator_tag
 {};
 
-template <typename underlying_allocator = acl::default_allocator<>, bool k_compute_stats = false>
-class linear_allocator : detail::statistics<linear_allocator_tag, k_compute_stats, underlying_allocator>
+template <typename Options = acl::options<>>
+class linear_allocator : detail::statistics<linear_allocator_tag, Options>
 {
 public:
-  using tag        = linear_allocator_tag;
-  using statistics = detail::statistics<linear_allocator_tag, k_compute_stats, underlying_allocator>;
-  using size_type  = typename underlying_allocator::size_type;
-  using address    = typename underlying_allocator::address;
+  using tag                  = linear_allocator_tag;
+  using statistics           = detail::statistics<linear_allocator_tag, Options>;
+  using underlying_allocator = detail::underlying_allocator_t<Options>;
+  using size_type            = typename underlying_allocator::size_type;
+  using address              = typename underlying_allocator::address;
 
   template <typename... Args>
-  linear_allocator(size_type i_arena_size, Args&&... i_args)
-      : k_arena_size(i_arena_size), left_over(i_arena_size), statistics(std::forward<Args>(i_args)...)
+  linear_allocator(size_type i_arena_size, Args&&... i_args) noexcept
+      : k_arena_size(i_arena_size), left_over(i_arena_size)
   {
     statistics::report_new_arena();
     buffer = underlying_allocator::allocate(k_arena_size, 0);
@@ -35,7 +36,7 @@ public:
     other.left_over = 0;
   }
 
-  ~linear_allocator()
+  ~linear_allocator() noexcept
   {
     underlying_allocator::deallocate(buffer, k_arena_size);
   }
@@ -57,7 +58,8 @@ public:
     return underlying_allocator::null();
   }
 
-  address allocate(size_type i_size, size_type i_alignment = 0)
+  template <typename Alignment = alignment<>>
+  address allocate(size_type i_size, Alignment i_alignment = {})
   {
     auto measure = statistics::report_allocate(i_size);
     // assert
@@ -89,14 +91,16 @@ public:
       return reinterpret_cast<address>(reinterpret_cast<std::uint8_t*>(buffer) + offset);
   }
 
-  address zero_allocate(size_type i_size, size_type i_alignment = 0)
+  template <typename Alignment = alignment<>>
+  address zero_allocate(size_type i_size, Alignment i_alignment = {})
   {
     auto z = allocate(i_size, i_alignment);
     std::memset(z, 0, i_size);
     return z;
   }
 
-  void deallocate(address i_data, size_type i_size, size_type i_alignment = 0)
+  template <typename Alignment = alignment<>>
+  void deallocate(address i_data, size_type i_size, Alignment i_alignment = {})
   {
     auto measure = statistics::report_deallocate(i_size);
 

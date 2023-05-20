@@ -40,13 +40,20 @@ struct name_index_map<H>
 };
 } // namespace detail
 
+// lookup option
+template <typename N>
+struct name_lookup
+{
+  using name_map_type = N;
+};
+
 /// @brief Store data as name value pairs, value can be any blob of data
 ///
 /// @remark Data is stored as a blob, names are stored seperately if required for lookup
 ///         Data can also be retrieved by index.
 ///         There is no restriction on the data type that is supported (POD or non-POD both are supported).
 template <typename Options = acl::options<>>
-class blackboard : public detail::allocator_type<Options>
+class blackboard : public detail::custom_allocator_t<Options>
 {
   using dtor = bool (*)(void*);
 
@@ -58,7 +65,7 @@ class blackboard : public detail::allocator_type<Options>
 
   using options                               = Options;
   static constexpr size_t total_atoms_in_page = detail::pool_size_v<options>;
-  using allocator                             = detail::allocator_type<options>;
+  using allocator                             = detail::custom_allocator_t<options>;
   using base_type                             = allocator;
   using name_index_map                        = typename detail::name_index_map<options>::type;
 
@@ -252,7 +259,7 @@ private:
                   .dtor_fn = reinterpret_cast<dtor>(&destroy_at<T>)};
   }
 
-  using index_list = podvector<atom_t, acl::options<basic_size_type<size_t>>>;
+  using index_list = podvector<atom_t, acl::options<opt::basic_size_type<size_t>>>;
 
   podvector<atom_t*> managed_data;
   index_list         offsets;

@@ -55,7 +55,8 @@ struct rand_device
 template <typename T>
 void bench_arena(uint32_t size, std::string_view name)
 {
-  using allocator_t = acl::arena_allocator<T, alloc_mem_manager, uint32_t, false>;
+  using allocator_t = acl::arena_allocator<
+    acl::options<acl::opt::strategy<T>, acl::opt::manager<alloc_mem_manager>, acl::opt::basic_size_type<uint32_t>>>;
   constexpr uint32_t        nbatch = 100000;
   alloc_mem_manager         mgr;
   std::vector<acl::ihandle> allocations;
@@ -64,46 +65,45 @@ void bench_arena(uint32_t size, std::string_view name)
   bench.output(&std::cout);
   bench.minEpochIterations(15);
   bench.batch(nbatch).run(std::string{name},
-                         [&]
-                         {
-                           rand_device dev;
-                           allocator_t allocator(size, mgr);
-                           for (std::uint32_t allocs = 0; allocs < nbatch; ++allocs)
-                           {
-                             if ((dev.update() & 0x1) || allocations.empty())
-                             {
-                               acl::fixed_alloc_desc<std::uint32_t, T::min_granularity> desc(
-                                 (dev.update() % 100) * T::min_granularity, 0, {});
-                               allocations.push_back(allocator.allocate(desc).halloc);
-                             }
-                             else
-                             {
-                               allocator.deallocate(allocations.back());
-                               allocations.pop_back();
-                             }
-                           }
-                           allocations.clear();
-                         });
+                          [&]
+                          {
+                            rand_device dev;
+                            allocator_t allocator(size, mgr);
+                            for (std::uint32_t allocs = 0; allocs < nbatch; ++allocs)
+                            {
+                              if ((dev.update() & 0x1) || allocations.empty())
+                              {
+                                acl::fixed_alloc_desc<std::uint32_t, T::min_granularity> desc(
+                                  (dev.update() % 100) * T::min_granularity, 0, {});
+                                allocations.push_back(allocator.allocate(desc).halloc);
+                              }
+                              else
+                              {
+                                allocator.deallocate(allocations.back());
+                                allocations.pop_back();
+                              }
+                            }
+                            allocations.clear();
+                          });
 }
 
 int main(int argc, char* argv[])
 {
   constexpr uint32_t size = 256 * 256;
 
-
   //  (acl::strat::slotted_v0<uint32_t, 256, 255, 4, acl::strat::best_fit_tree<uint32_t>>),
   //  (acl::strat::slotted_v1<uint32_t, 256, 255, 4, acl::strat::best_fit_tree<uint32_t>>),
   //  (acl::strat::slotted_v2<uint32_t, 256, 255, 8, 4, acl::strat::best_fit_tree<uint32_t>>)
-  bench_arena<acl::strat::greedy_v0<uint32_t>>(size, "greedy-v0");
-  bench_arena<acl::strat::greedy_v1<uint32_t>>(size, "greedy-v1");
-  bench_arena<acl::strat::best_fit_tree<uint32_t>>(size, "bf-tree");
-  bench_arena<acl::strat::best_fit_v0<uint32_t>>(size, "bf-v0");
-  bench_arena<acl::strat::slotted_v0<uint32_t>>(size, "slot-v0");
-  bench_arena<acl::strat::slotted_v1<uint32_t>>(size, "slot-v1");
-  bench_arena<acl::strat::slotted_v2<uint32_t>>(size, "slot-v2");
-  bench_arena<acl::strat::slotted_v0<uint32_t, 256, 255, 4, acl::strat::best_fit_tree<uint32_t>>>(size, "slot-v0-t");
-  bench_arena<acl::strat::slotted_v1<uint32_t, 256, 255, 4, acl::strat::best_fit_tree<uint32_t>>>(size, "slot-v1-t");
-  bench_arena<acl::strat::slotted_v2<uint32_t, 256, 255, 8, 4, acl::strat::best_fit_tree<uint32_t>>>(size, "slot-v2-t");
+  bench_arena<acl::strat::greedy_v0<>>(size, "greedy-v0");
+  bench_arena<acl::strat::greedy_v1<>>(size, "greedy-v1");
+  bench_arena<acl::strat::best_fit_tree<>>(size, "bf-tree");
+  bench_arena<acl::strat::best_fit_v0<>>(size, "bf-v0");
+  bench_arena<acl::strat::slotted_v0<>>(size, "slot-v0");
+  bench_arena<acl::strat::slotted_v1<>>(size, "slot-v1");
+  bench_arena<acl::strat::slotted_v2<>>(size, "slot-v2");
+  bench_arena<acl::strat::slotted_v0<acl::opt::fallback_start<acl::strat::best_fit_tree<uint32_t>>>>(size, "slot-v0-t");
+  bench_arena<acl::strat::slotted_v1<acl::opt::fallback_start<acl::strat::best_fit_tree<uint32_t>>>>(size, "slot-v1-t");
+  bench_arena<acl::strat::slotted_v2<acl::opt::fallback_start<acl::strat::best_fit_tree<uint32_t>>>>(size, "slot-v2-t");
 
   return 0;
 }

@@ -8,12 +8,12 @@ namespace acl
 {
 
 template <typename Ty, typename Options = acl::default_options<Ty>>
-class basic_queue : public detail::allocator_type<Options>
+class basic_queue : public detail::custom_allocator_t<Options>
 {
 public:
   using value_type     = Ty;
   using size_type      = detail::choose_size_t<uint32_t, Options>;
-  using allocator_type = detail::allocator_type<Options>;
+  using allocator_type = detail::custom_allocator_t<Options>;
 
 private:
   static constexpr auto pool_div  = detail::log2(detail::pool_size_v<Options>);

@@ -11,8 +11,8 @@
 
 TEST_CASE("collection: Validate packed_table emplace", "[packed_table][emplace]")
 {
-  static_assert(acl::options<acl::pool_size<>>::pool_size_v == 4096, "Default pool size");
-  static_assert(acl::detail::log2(acl::options<acl::pool_size<>>::pool_size_v) == 12, "Default pool size");
+  static_assert(acl::options<acl::opt::pool_size<>>::pool_size_v == 4096, "Default pool size");
+  static_assert(acl::detail::log2(acl::options<acl::opt::pool_size<>>::pool_size_v) == 12, "Default pool size");
   acl::packed_table<int> table;
   acl::collection<int>   collection;
 

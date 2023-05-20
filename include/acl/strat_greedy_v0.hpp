@@ -1,29 +1,29 @@
 #pragma once
 #include "detail/arena.hpp"
+#include "type_traits.hpp"
 
 namespace acl::strat
 {
 
-/// \remarks
-/// This class provides a mechanism to allocate blocks of addresses
-/// by linearly searching through a list of available free sizes and
-/// returning the first chunk that can fit the requested memory size.
-template <typename usize_type>
+/// @brief This class provides a mechanism to allocate blocks of addresses
+///        by linearly searching through a list of available free sizes and
+///        returning the first chunk that can fit the requested memory size.
+template <typename Options = acl::options<>>
 class greedy_v0
 {
   using optional_addr = detail::optional_val<detail::k_null_32>;
 
 public:
-  static constexpr usize_type min_granularity = 4;
-
   using extension       = uint64_t;
-  using size_type       = usize_type;
+  using size_type       = detail::choose_size_t<uint32_t, Options>;
   using arena_bank      = detail::arena_bank<size_type, extension>;
   using block_bank      = detail::block_bank<size_type, extension>;
   using block           = detail::block<size_type, extension>;
   using bank_data       = detail::bank_data<size_type, extension>;
   using block_link      = typename block_bank::link;
   using allocate_result = uint32_t;
+
+  static constexpr size_type min_granularity = 4;
 
   greedy_v0() noexcept            = default;
   greedy_v0(greedy_v0 const&)     = default;
@@ -60,13 +60,13 @@ public:
     blk.size       = size;
     if (remaining > 0)
     {
-      auto& list   = bank.arenas[blk.arena].block_order;
-      auto  arena  = blk.arena;
+      auto& list  = bank.arenas[blk.arena].block_order;
+      auto  arena = blk.arena;
 
       auto newblk = bank.blocks.emplace(blk.offset + size, remaining, arena, found, true);
       list.insert_after(bank.blocks, (uint32_t)free_node.second, (uint32_t)newblk);
       // reinsert the left-over size in free list
-      free_node.first = remaining;
+      free_node.first  = remaining;
       free_node.second = newblk;
     }
     else
@@ -86,11 +86,11 @@ public:
 
   inline void add_free(block_bank& blocks, std::uint32_t block)
   {
-    auto  hblock          = block_link(block);
-    auto slot = ensure_free_slot();
-    auto& blk             = blocks[hblock];
-    blk.reserved32_       = slot;
-    free_list[slot].first = blk.size;
+    auto  hblock           = block_link(block);
+    auto  slot             = ensure_free_slot();
+    auto& blk              = blocks[hblock];
+    blk.reserved32_        = slot;
+    free_list[slot].first  = blk.size;
     free_list[slot].second = hblock;
   }
 
@@ -110,10 +110,10 @@ public:
 
   inline void erase(block_bank& blocks, std::uint32_t node)
   {
-    auto hblock = block_link(node);
-    auto idx    = blocks[hblock].reserved32_;
-    auto& free_node = free_list[idx];
-    free_node.first = 0;
+    auto  hblock     = block_link(node);
+    auto  idx        = blocks[hblock].reserved32_;
+    auto& free_node  = free_list[idx];
+    free_node.first  = 0;
     free_node.second = block_link(free_slot);
     free_slot        = idx;
   }
@@ -129,7 +129,7 @@ public:
     return count;
   }
 
-  inline usize_type total_free_size(block_bank const& blocks) const
+  inline size_type total_free_size(block_bank const& blocks) const
   {
     size_type sz = 0;
     for (auto fn : free_list)
@@ -175,7 +175,6 @@ protected:
     }
     return r;
   }
-
 
   std::vector<std::pair<size_type, block_link>> free_list;
   uint32_t                                      free_slot = 0;

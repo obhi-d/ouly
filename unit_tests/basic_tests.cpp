@@ -90,9 +90,9 @@ TEST_CASE("Validate general_allocator", "[general_allocator]")
 {
 
   using namespace acl;
-  using allocator_t   = default_allocator<std::uint32_t, true, false>;
+  using allocator_t   = default_allocator<acl::options<acl::opt::compute_stats>>;
   using std_allocator = allocator_wrapper<int, allocator_t>;
-  std_allocator allocator;
+  [[maybe_unused]] std_allocator allocator;
 
   allocator_t::address data = allocator_t::allocate(256, 128);
   CHECK((reinterpret_cast<std::uintptr_t>(data) & 127) == 0);

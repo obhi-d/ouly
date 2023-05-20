@@ -4,20 +4,17 @@
 namespace acl::strat
 {
 
-/// \remarks
-/// This class provides a mechanism to allocate blocks of addresses
-/// by linearly searching through a list of available free sizes and
-/// returning the first chunk that can fit the requested memory size.
-template <typename usize_type>
+/// @brief This class provides a mechanism to allocate blocks of addresses
+///        by linearly searching through a list of available free sizes and
+///        returning the first chunk that can fit the requested memory size.
+template <typename Options = acl::options<>>
 class greedy_v1
 {
   using optional_addr = detail::optional_val<detail::k_null_0>;
 
 public:
-  static constexpr usize_type min_granularity = 4;
-
   using extension       = uint64_t;
-  using size_type       = usize_type;
+  using size_type       = detail::choose_size_t<uint32_t, Options>;
   using arena_bank      = detail::arena_bank<size_type, extension>;
   using block_bank      = detail::block_bank<size_type, extension>;
   using block           = detail::block<size_type, extension>;
@@ -25,12 +22,14 @@ public:
   using block_link      = typename block_bank::link;
   using allocate_result = uint32_t;
 
+  static constexpr size_type min_granularity = 4;
+
   greedy_v1() noexcept            = default;
   greedy_v1(greedy_v1 const&)     = default;
   greedy_v1(greedy_v1&&) noexcept = default;
 
-  greedy_v1&           operator=(greedy_v1 const&)     = default;
-  greedy_v1&           operator=(greedy_v1&&) noexcept = default;
+  greedy_v1& operator=(greedy_v1 const&)     = default;
+  greedy_v1& operator=(greedy_v1&&) noexcept = default;
 
   inline optional_addr try_allocate(bank_data& bank, size_type size)
   {
@@ -135,7 +134,7 @@ public:
     return count;
   }
 
-  inline usize_type total_free_size(block_bank const& blocks) const
+  inline size_type total_free_size(block_bank const& blocks) const
   {
     size_type sz = 0;
     uint32_t  i  = head;
@@ -148,7 +147,7 @@ public:
     return sz;
   }
 
-  void validate_integrity(block_bank const& blocks) const 
+  void validate_integrity(block_bank const& blocks) const
   {
     uint32_t i = head;
     uint32_t p = 0;

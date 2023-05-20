@@ -19,7 +19,7 @@ namespace acl
 ///          - [optional] using offset = acl::offset<Member>; Indicates the member to self pointer
 ///          - [optional] self_index_pool_size Pool size for self indices if offset is missing
 template <typename Ty, typename Options = acl::default_options<Ty>>
-class sparse_table : public detail::allocator_type<Options>
+class sparse_table : public detail::custom_allocator_t<Options>
 {
 
 public:
@@ -27,7 +27,7 @@ public:
   using value_type     = Ty;
   using size_type      = detail::choose_size_t<uint32_t, Options>;
   using link           = acl::link<value_type, size_type>;
-  using allocator_type = detail::allocator_type<Options>;
+  using allocator_type = detail::custom_allocator_t<Options>;
 
   static_assert(sizeof(Ty) >= sizeof(size_type), "Type must big enough to hold a link");
 

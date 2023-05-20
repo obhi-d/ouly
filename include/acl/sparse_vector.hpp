@@ -25,12 +25,12 @@ namespace acl
 ///                  @note [option] disable_pool_tracking : true to indicate if individaul pool should not be tracked,
 ///                  is false by default
 template <typename Ty, typename Options = acl::default_options<Ty>>
-class sparse_vector : public detail::allocator_type<Options>
+class sparse_vector : public detail::custom_allocator_t<Options>
 {
 public:
   using value_type     = Ty;
   using size_type      = detail::choose_size_t<uint32_t, Options>;
-  using allocator_type = detail::allocator_type<Options>;
+  using allocator_type = detail::custom_allocator_t<Options>;
   using options        = Options;
 
 private:

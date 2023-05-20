@@ -44,7 +44,7 @@ struct block
     using size_type                                = std::uint32_t;
     static constexpr std::uint32_t pool_size       = 4096;
     static constexpr std::uint32_t index_pool_size = 4096;
-    using offset                                   = acl::member<&block<size_type, extension>::self>;
+    using offset                                   = opt::member<&block<size_type, extension>::self>;
   };
 
   block() {}

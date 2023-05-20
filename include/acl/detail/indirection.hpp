@@ -82,7 +82,7 @@ public:
   }
 
 private:
-  vector<size_type, allocator_type<Traits>> links_;
+  vector<size_type, custom_allocator_t<Traits>> links_;
 };
 
 //============================================================

@@ -12,20 +12,15 @@ namespace acl
 struct linear_stack_allocator_tag
 {};
 
-template <typename underlying_allocator = acl::default_allocator<>, bool k_compute_stats = false>
-class linear_stack_allocator
-    : public detail::statistics<linear_stack_allocator_tag, k_compute_stats, underlying_allocator>
+template <typename Options = acl::options<>>
+class linear_stack_allocator : detail::statistics<linear_stack_allocator_tag, Options>
 {
 public:
-  using tag        = linear_stack_allocator_tag;
-  using statistics = detail::statistics<linear_stack_allocator_tag, k_compute_stats, underlying_allocator>;
-  using size_type  = typename underlying_allocator::size_type;
-  using address    = typename underlying_allocator::address;
-
-  enum : size_type
-  {
-    k_minimum_size = static_cast<size_type>(64)
-  };
+  using tag                  = linear_stack_allocator_tag;
+  using statistics           = detail::statistics<linear_stack_allocator_tag, Options>;
+  using underlying_allocator = detail::underlying_allocator_t<Options>;
+  using size_type            = typename underlying_allocator::size_type;
+  using address              = typename underlying_allocator::address;
 
   struct rewind_point
   {
@@ -54,8 +49,8 @@ public:
   };
 
   template <typename... Args>
-  explicit linear_stack_allocator(size_type i_arena_size, Args&&... i_args)
-      : k_arena_size(i_arena_size), statistics(std::forward<Args>(i_args)...), current_arena(0)
+  explicit linear_stack_allocator(size_type i_arena_size, Args&&... i_args) noexcept
+      : k_arena_size(i_arena_size), current_arena(0)
   {
     // Initializing the cursor is important for the
     // allocate loop to work.
@@ -69,7 +64,7 @@ public:
     other.current_arena = 0;
   }
 
-  ~linear_stack_allocator()
+  ~linear_stack_allocator() noexcept
   {
     for (auto& arena : arenas)
     {
@@ -109,7 +104,8 @@ public:
     return m;
   }
 
-  address allocate(size_type i_size, size_type i_alignment = 0)
+  template <typename Alignment = alignment<>>
+  address allocate(size_type i_size, Alignment i_alignment = {})
   {
 
     auto measure = statistics::report_allocate(i_size);
@@ -162,14 +158,16 @@ public:
       return ret_value;
   }
 
-  address zero_allocate(size_type i_size, size_type i_alignment = 0)
+  template <typename Alignment = alignment<>>
+  address zero_allocate(size_type i_size, Alignment i_alignment = {})
   {
     auto z = allocate(i_size, i_alignment);
     std::memset(z, 0, i_size);
     return z;
   }
 
-  void deallocate(address i_data, size_type i_size, size_type i_alignment = 0)
+  template <typename Alignment = alignment<>>
+  void deallocate(address i_data, size_type i_size, Alignment i_alignment = {})
   {
     // does not support deallocate, only rewinds are supported
   }

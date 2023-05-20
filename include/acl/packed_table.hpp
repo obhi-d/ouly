@@ -25,7 +25,7 @@ namespace acl
 ///         - keys_use_sparse_index : bool - use sparse vector for key index
 ///         - size_type : typename - uint32_t to reduce footprint
 template <typename Ty, typename Options = acl::default_options<Ty>>
-class packed_table : public detail::allocator_type<Options>
+class packed_table : public detail::custom_allocator_t<Options>
 {
 
   static_assert(std::is_move_assignable_v<Ty>, "Type must be move assignable");
@@ -36,7 +36,7 @@ public:
   using value_type     = Ty;
   using size_type      = detail::choose_size_t<uint32_t, Options>;
   using link           = acl::link<value_type, size_type>;
-  using allocator_type = detail::allocator_type<Options>;
+  using allocator_type = detail::custom_allocator_t<Options>;
 
 private:
   static constexpr bool has_backref = detail::HasBackrefValue<options>;

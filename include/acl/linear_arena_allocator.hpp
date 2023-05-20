@@ -8,15 +8,15 @@ namespace acl
 struct linear_arena_allocator_tag
 {};
 
-template <typename underlying_allocator = acl::default_allocator<>, bool k_compute_stats = false>
-class linear_arena_allocator
-    : public detail::statistics<linear_arena_allocator_tag, k_compute_stats, underlying_allocator>
+template <typename Options = acl::options<>>
+class linear_arena_allocator : detail::statistics<linear_arena_allocator_tag, Options>
 {
 public:
-  using tag        = linear_arena_allocator_tag;
-  using statistics = detail::statistics<linear_arena_allocator_tag, k_compute_stats, underlying_allocator>;
-  using size_type  = typename underlying_allocator::size_type;
-  using address    = typename underlying_allocator::address;
+  using tag                  = linear_arena_allocator_tag;
+  using statistics           = detail::statistics<linear_arena_allocator_tag, Options>;
+  using underlying_allocator = detail::underlying_allocator_t<Options>;
+  using size_type            = typename underlying_allocator::size_type;
+  using address              = typename underlying_allocator::address;
 
   enum : size_type
   {
@@ -25,7 +25,7 @@ public:
 
   template <typename... Args>
   explicit linear_arena_allocator(size_type i_arena_size, Args&&... i_args)
-      : k_arena_size(i_arena_size), statistics(std::forward<Args>(i_args)...), current_arena(0)
+      : k_arena_size(i_arena_size), current_arena(0)
   {
     // Initializing the cursor is important for the
     // allocate loop to work.
@@ -33,13 +33,13 @@ public:
 
   linear_arena_allocator(linear_arena_allocator const&) = delete;
 
-  linear_arena_allocator(linear_arena_allocator&& other)
-      noexcept : arenas(std::move(other.arenas)), current_arena(other.current_arena), k_arena_size(other.k_arena_size)
+  linear_arena_allocator(linear_arena_allocator&& other) noexcept
+      : arenas(std::move(other.arenas)), current_arena(other.current_arena), k_arena_size(other.k_arena_size)
   {
     other.current_arena = 0;
   }
 
-  ~linear_arena_allocator()
+  ~linear_arena_allocator() noexcept
   {
     for (auto& arena : arenas)
     {
@@ -63,7 +63,8 @@ public:
     return underlying_allocator::null();
   }
 
-  address allocate(size_type i_size, size_type i_alignment = 0)
+  template <typename Alignment = alignment<>>
+  address allocate(size_type i_size, Alignment i_alignment = {})
   {
 
     auto measure = statistics::report_allocate(i_size);
@@ -118,14 +119,16 @@ public:
       return ret_value;
   }
 
-  address zero_allocate(size_type i_size, size_type i_alignment = 0)
+  template <typename Alignment = alignment<>>
+  address zero_allocate(size_type i_size, Alignment i_alignment = {})
   {
     auto z = allocate(i_size, i_alignment);
     std::memset(z, 0, i_size);
     return z;
   }
 
-  void deallocate(address i_data, size_type i_size, size_type i_alignment = 0)
+  template <typename Alignment = alignment<>>
+  void deallocate(address i_data, size_type i_size, Alignment i_alignment = {})
   {
     auto measure = statistics::report_deallocate(i_size);
 

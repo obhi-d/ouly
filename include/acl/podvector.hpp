@@ -18,11 +18,11 @@
 namespace acl
 {
 template <typename Ty, typename Options = acl::default_options<Ty>>
-class podvector : public detail::allocator_type<Options>
+class podvector : public detail::custom_allocator_t<Options>
 {
 public:
   using value_type                = Ty;
-  using allocator_type            = detail::allocator_type<Options>;
+  using allocator_type            = detail::custom_allocator_t<Options>;
   using size_type                 = detail::choose_size_t<uint32_t, Options>;
   using difference_type           = size_type;
   using reference                 = value_type&;

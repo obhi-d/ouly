@@ -1,4 +1,5 @@
 #pragma once
+
 #include "detail/type_name.hpp"
 #include <cstdint>
 #include <tuple>
@@ -6,8 +7,6 @@
 
 namespace acl
 {
-template <typename T, typename SizeType = size_t>
-constexpr SizeType alignarg = alignof(T) > alignof(std::max_align_t) ? alignof(T) : 0;
 
 template <typename... Option>
 struct options : public Option...
@@ -31,6 +30,8 @@ struct allocator_traits
 };
 
 ///--------------- Basic Options ----------------
+namespace opt
+{
 
 /// @brief Option to provide member pointer
 /// @tparam M
@@ -46,7 +47,7 @@ struct member<MPtr>
 {
   using class_type  = T;
   using member_type = M;
-  using offset      = acl::member<MPtr>;
+  using offset      = opt::member<MPtr>;
 
   inline static member_type& get(class_type& to) noexcept
   {
@@ -145,6 +146,8 @@ struct disable_pool_tracking
 {
   static constexpr bool disable_pool_tracking_v = true;
 };
+
+} // namespace opt
 
 ///------------------------------------------------
 /// @brief Class type to string_view name of the class

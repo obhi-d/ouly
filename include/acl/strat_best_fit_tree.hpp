@@ -1,38 +1,35 @@
 ﻿#pragma once
 #include "detail/arena.hpp"
 #include "detail/rbtree.hpp"
+#include "type_traits.hpp"
 
 namespace acl::strat
 {
 /// @brief  Strategy class using RBTree for arena_allocator
-/// @tparam usize_type size type
-/// @remarks
-///   Class uses best fit using rbtree implementation to find the best match
-///   for requested size
-template <typename usize_type>
+/// @tparam Options accepted options are only opt::basic_size_type
+/// @remarks Class uses best fit using rbtree implementation to find the best match for requested size
+template <typename Options = acl::options<>>
 class best_fit_tree
 {
   using optional_addr = detail::optional_val<acl::detail::k_null_0>;
 
 public:
+  best_fit_tree() noexcept                = default;
+  best_fit_tree(best_fit_tree const&)     = default;
+  best_fit_tree(best_fit_tree&&) noexcept = default;
 
-  best_fit_tree() noexcept = default;
-  best_fit_tree(best_fit_tree const&) = default;
-  best_fit_tree(best_fit_tree &&) noexcept = default;
-
-  best_fit_tree& operator=(best_fit_tree const&) = default;
+  best_fit_tree& operator=(best_fit_tree const&)     = default;
   best_fit_tree& operator=(best_fit_tree&&) noexcept = default;
 
-  static constexpr usize_type min_granularity = 4;
-
   using extension  = acl::detail::tree_node<1>;
-  using size_type  = usize_type;
+  using size_type  = detail::choose_size_t<uint32_t, Options>;
   using arena_bank = detail::arena_bank<size_type, extension>;
   using block_bank = detail::block_bank<size_type, extension>;
   using block      = detail::block<size_type, extension>;
   using bank_data  = detail::bank_data<size_type, extension>;
   using block_link = typename block_bank::link;
-  
+
+  static constexpr size_type min_granularity = 4;
 
   struct blk_tree_node_accessor
   {
@@ -85,7 +82,7 @@ public:
     }
   };
 
-  using tree_type = detail::rbtree<blk_tree_node_accessor, 1>;
+  using tree_type       = detail::rbtree<blk_tree_node_accessor, 1>;
   using allocate_result = uint32_t;
 
   inline auto try_allocate(bank_data& bank, size_type size)
@@ -95,7 +92,7 @@ public:
   }
 
   inline std::uint32_t commit(bank_data& bank, size_type size, std::uint32_t found)
-  {    
+  {
     auto& blk = bank.blocks[block_link(found)];
     // Marker
     size_type     offset    = blk.offset;
@@ -135,8 +132,7 @@ public:
     tree.insert(blocks, block);
   }
 
-  inline void replace_and_grow(block_bank& blocks, std::uint32_t block, std::uint32_t new_block,
-                               size_type new_size)
+  inline void replace_and_grow(block_bank& blocks, std::uint32_t block, std::uint32_t new_block, size_type new_size)
   {
     tree.erase(blocks, block);
     blocks[block_link(new_block)].size = new_size;
@@ -171,10 +167,9 @@ public:
 
   template <typename Owner>
   inline void init(Owner const& owner)
-  {
-  }
+  {}
 
 private:
   tree_type tree;
 };
-} // namespace acl::detail
+} // namespace acl::strat

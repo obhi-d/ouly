@@ -2,8 +2,67 @@
 #include "../default_allocator.hpp"
 #include "arena_block.hpp"
 
+namespace acl::opt
+{
+template <size_t value>
+struct granularity
+{
+  static constexpr size_t granularity_v = value;
+};
+
+template <size_t value>
+struct max_bucket
+{
+  static constexpr size_t max_bucket_v = value;
+};
+
+template <size_t value>
+struct search_window
+{
+  static constexpr size_t search_window_v = value;
+};
+
+template <typename T>
+struct fallback_start
+{
+  using fallback_strat_t = T;
+};
+
+template <size_t value>
+struct fixed_max_per_slot
+{
+  static constexpr size_t fixed_max_per_slot_v = value;
+};
+
+} // namespace acl::opt
+
 namespace acl::detail
 {
+// Concepts
+// clang-format off
+template <typename T>
+concept HasGranularity = requires { {T::granularity_v} -> std::convertible_to<std::size_t>; };
+template <typename T>
+concept HasMaxBucket = requires { {T::max_bucket_v} -> std::convertible_to<std::size_t>; };
+template <typename T>
+concept HasSearchWindow = requires { {T::search_window_v} -> std::convertible_to<std::size_t>; };
+template <typename T>
+concept HasFixedMaxPerSlot = requires { {T::fixed_max_per_slot_v} -> std::convertible_to<std::size_t>; };
+template <typename T>
+concept HasFallbackStrat = requires { typename T::fallback_strat_t; };
+
+template <typename T>
+constexpr auto granularity_v = std::conditional_t<HasGranularity<T>, T, acl::opt::granularity<256>>::granularity_v;
+template <typename T>
+constexpr auto max_bucket_v = std::conditional_t<HasMaxBucket<T>, T, acl::opt::max_bucket<255>>::max_bucket_v;
+template <typename T>
+constexpr auto search_window_v = std::conditional_t<HasSearchWindow<T>, T, acl::opt::search_window<4>>::search_window_v;
+template <typename T>
+constexpr auto fixed_max_per_slot_v = std::conditional_t<HasFixedMaxPerSlot<T>, T, acl::opt::fixed_max_per_slot<8>>::fixed_max_per_slot_v;
+template <typename T, typename D>
+using fallback_strat_t = typename std::conditional_t<HasFallbackStrat<T>, T, acl::opt::fallback_start<D>>::fallback_strat_t;
+
+// clang-format on
 
 //  -█████╗-██████╗-███████╗███╗---██╗-█████╗-
 //  ██╔══██╗██╔══██╗██╔════╝████╗--██║██╔══██╗
@@ -36,8 +95,7 @@ struct arena_accessor
   using size_type  = usize_type;
   using container  = bank_type;
 
-  inline static void erase(bank_type& bank,
-    std::uint32_t node)
+  inline static void erase(bank_type& bank, std::uint32_t node)
   {
     bank.erase(node);
   }
@@ -93,4 +151,5 @@ struct bank_data
     arenas.emplace();
   }
 };
+
 } // namespace acl::detail

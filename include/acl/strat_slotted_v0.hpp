@@ -7,31 +7,33 @@
 namespace acl::strat
 {
 
-/// \remarks
-/// This strategy employes an immediate cache of memory of dynamic size
-///   Blocks are allocated from cache, if free blocks are available in cache
-///   Cache size grows as new fixed granulairty memory blocks are freed.
-///   The bucket granularity is fixed, and the expectation is allocation is based
-///   on a multiple of this unit size.
-///   The certain number of bucket slots are made avialable based on max_bucket
-template <typename usize_t = std::size_t, std::size_t granularity = 256, std::size_t max_bucket = 255,
-          usize_t search_window = 4, typename fallback_strat = strat::best_fit_v0<usize_t>>
+/// @brief This strategy employes an immediate cache of memory of dynamic size
+///        Blocks are allocated from cache, if free blocks are available in cache
+///        Cache size grows as new fixed granulairty memory blocks are freed.
+///        The bucket granularity is fixed, and the expectation is allocation is based
+///        on a multiple of this unit size.
+///        The certain number of bucket slots are made avialable based on max_bucket
+template <typename Options = acl::options<>>
 class slotted_v0
 {
-public:
-  using fallback_allocator = fallback_strat;
 
-  using extension                = fallback_allocator::extension;
+public:
+  static constexpr auto granularity   = detail::granularity_v<Options>;
+  static constexpr auto max_bucket    = detail::max_bucket_v<Options>;
+  static constexpr auto search_window = detail::search_window_v<Options>;
+  using fallback_allocator            = detail::fallback_strat_t<Options, strat::best_fit_v0<Options>>;
+
+  using extension                = typename fallback_allocator::extension;
   using fallback_allocate_result = typename fallback_allocator::allocate_result;
 
-  static constexpr usize_t min_granularity = static_cast<usize_t>(granularity);
-
-  using size_type  = usize_t;
+  using size_type  = detail::choose_size_t<uint32_t, Options>;
   using arena_bank = detail::arena_bank<size_type, extension>;
   using block_bank = detail::block_bank<size_type, extension>;
   using block      = detail::block<size_type, extension>;
   using bank_data  = detail::bank_data<size_type, extension>;
   using block_link = typename block_bank::link;
+
+  static constexpr size_type min_granularity = static_cast<size_type>(granularity);
 
   static constexpr size_type max_size_     = static_cast<size_type>(granularity * max_bucket);
   static constexpr size_type sz_div        = static_cast<size_type>(detail::log2(granularity));
@@ -208,7 +210,7 @@ public:
 
     fallback.validate_integrity(blocks);
   }
-  
+
   template <typename Owner>
   inline void init(Owner const& owner)
   {}

@@ -1,27 +1,24 @@
 ﻿#pragma once
 #include "detail/arena.hpp"
+#include "type_traits.hpp"
 #include <optional>
 
 namespace acl::strat
 {
 
 /// @brief  Strategy class for arena_allocator that stores a
-///   sorted list of free available slots.
-///   Binary search is used to find the best slot that fits
-///   the requested memory
-///   TODO : optimize, branchless binary
-template <typename usize_type>
+///         sorted list of free available slots.
+///         Binary search is used to find the best slot that fits
+///         the requested memory
+/// @todo   optimize, branchless binary
+template <typename Options = acl::options<>>
 class best_fit_v0
 {
   using optional_addr = std::optional<detail::free_list::iterator>;
 
 public:
-
-
-  static constexpr usize_type min_granularity = 4;
-
   using extension       = uint64_t;
-  using size_type       = usize_type;
+  using size_type       = detail::choose_size_t<uint32_t, Options>;
   using arena_bank      = detail::arena_bank<size_type, extension>;
   using block_bank      = detail::block_bank<size_type, extension>;
   using block           = detail::block<size_type, extension>;
@@ -29,13 +26,14 @@ public:
   using block_link      = typename block_bank::link;
   using allocate_result = detail::free_list::iterator;
 
-  best_fit_v0() noexcept                = default;
+  static constexpr size_type min_granularity = 4;
+
+  best_fit_v0() noexcept              = default;
   best_fit_v0(best_fit_v0 const&)     = default;
   best_fit_v0(best_fit_v0&&) noexcept = default;
 
   best_fit_v0& operator=(best_fit_v0 const&)     = default;
   best_fit_v0& operator=(best_fit_v0&&) noexcept = default;
-
 
   inline optional_addr try_allocate(bank_data& bank, size_type size)
   {
@@ -46,7 +44,7 @@ public:
 
   inline std::uint32_t commit(bank_data& bank, size_type size, auto found)
   {
-    
+
     std::uint32_t free_node = *found;
     auto&         blk       = bank.blocks[block_link(free_node)];
     // Marker
@@ -87,7 +85,7 @@ public:
 
   inline void grow_free_node(block_bank& blocks, std::uint32_t block, size_type newsize)
   {
-    auto&     blk = blocks[block_link(block)];
+    auto& blk = blocks[block_link(block)];
 
     auto end = free_ordering.end();
     auto it  = find_free_it(blocks, free_ordering.begin(), end, blk.size);
@@ -109,7 +107,7 @@ public:
   inline void replace_and_grow(block_bank& blocks, std::uint32_t block, std::uint32_t new_block, size_type new_size)
   {
     size_type size = blocks[block_link(block)].size;
-    
+
     auto end = free_ordering.end();
     auto it  = find_free_it(blocks, free_ordering.begin(), end, size);
     if constexpr (detail::debug)
@@ -122,9 +120,8 @@ public:
     {
       while (*it != block)
         it++;
-        
     }
-    
+
     blocks[block_link(new_block)].size = new_size;
     reinsert_right(blocks, it, new_block);
   }
@@ -138,7 +135,6 @@ public:
       while (it != end && *it != block)
         it++;
       assert(it < end);
-
     }
     else
     {
@@ -153,7 +149,7 @@ public:
     return static_cast<std::uint32_t>(free_ordering.size());
   }
 
-  inline usize_type total_free_size(block_bank const& blocks) const
+  inline size_type total_free_size(block_bank const& blocks) const
   {
     size_type sz = 0;
     for (auto fn : free_ordering)
@@ -185,14 +181,12 @@ protected:
   {
     auto blkid            = block_link(block);
     blocks[blkid].is_free = true;
-    auto it = find_free_it(blocks, free_ordering.begin(), free_ordering.end(),
-                           blocks[blkid].size);
+    auto it               = find_free_it(blocks, free_ordering.begin(), free_ordering.end(), blocks[blkid].size);
     free_ordering.emplace(it, block);
   }
 
   template <typename It>
-  static inline auto find_free_it(block_bank& blocks, It b, It e,
-                           size_type i_size) 
+  static inline auto find_free_it(block_bank& blocks, It b, It e, size_type i_size)
   {
     return std::lower_bound(b, e, i_size,
                             [&blocks](std::uint32_t block, size_type i_size) -> bool
@@ -203,7 +197,7 @@ protected:
 
   inline auto find_free(block_bank& blocks, auto b, auto e, size_type i_size) const
   {
-    auto it  = find_free_it(blocks, b, e, i_size);
+    auto it = find_free_it(blocks, b, e, i_size);
     return (it != e) ? optional_addr(it) : optional_addr();
   }
 
@@ -254,7 +248,6 @@ protected:
     }
   }
 
-  
   detail::free_list free_ordering;
 };
 
