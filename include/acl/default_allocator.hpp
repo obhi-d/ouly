@@ -106,14 +106,16 @@ struct track_memory
   static constexpr bool track_memory_v = true;
 };
 
+template <typename T>
 struct debug_tracer
 {
-  using debug_tracer_t = std::monostate;
+  using debug_tracer_t = T;
 };
 
+template <std::size_t N>
 struct min_alignment
 {
-  static constexpr std::size_t min_alignment_v = alignof(std::max_align_t);
+  static constexpr std::size_t min_alignment_v = N;
 };
 
 template <typename T>
