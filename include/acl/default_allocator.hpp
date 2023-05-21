@@ -124,6 +124,12 @@ struct underlying_allocator
   using underlying_allocator_t = T;
 };
 
+template <typename T>
+struct allocator_type
+{
+  using allocator_t = T;
+};
+
 } // namespace opt
 
 // ----------------- Allocator Options -----------------
@@ -247,7 +253,7 @@ struct custom_allocator
 template <detail::HasAllocatorAttribs T>
 struct custom_allocator<T>
 {
-  using type = typename T::allocator_type;
+  using type = typename T::allocator_t;
 };
 
 template <typename Traits>

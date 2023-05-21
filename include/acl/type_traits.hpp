@@ -291,7 +291,7 @@ concept OptionalValueLike = requires(V v) {
   { (bool)v } -> std::convertible_to<bool>;
 };
 template <typename T>
-concept HasAllocatorAttribs = requires { typename T::allocator_type; };
+concept HasAllocatorAttribs = requires { typename T::allocator_t; };
 
 template <typename S, typename T1, typename... Args>
 struct choose_size_ty
