@@ -145,7 +145,7 @@ private:
       get().error(type_name<Class>(), make_error_code(serializer_error::invalid_tuple_size));
       return false;
     }
-    return [ this, &obj ]<size_t... N>(std::index_sequence<N...>)
+    return [ this, &obj ]<std::size_t... N>(std::index_sequence<N...>)
     {
       return (at<N>(obj) && ...);
     }
@@ -378,15 +378,15 @@ private:
     return result;
   }
 
-  template <size_t N, typename Class>
+  template <std::size_t N, typename Class>
   bool at(Class& obj) noexcept
   {
     using type = detail::remove_cref<std::tuple_element_t<N, Class>>;
     return (*this)(const_cast<type&>(std::get<N>(obj)));
   }
 
-  template <size_t const I, typename Class, typename L>
-  static constexpr auto find_alt(size_t i, L&& lambda) noexcept -> bool
+  template <std::size_t const I, typename Class, typename L>
+  static constexpr auto find_alt(std::size_t i, L&& lambda) noexcept -> bool
   {
     if (I == i)
       return std::forward<L>(lambda)(std::integral_constant<uint32_t, I>{});

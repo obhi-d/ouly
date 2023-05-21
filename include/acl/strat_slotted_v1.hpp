@@ -182,7 +182,7 @@ public:
   inline std::uint32_t total_free_nodes(block_bank const& blocks) const
   {
     std::uint32_t count = 0;
-    for (size_t i = 0; i < buckets.size(); ++i)
+    for (std::size_t i = 0; i < buckets.size(); ++i)
     {
       auto const& b = buckets[i];
       if ((uint32_t)b.block)
@@ -208,10 +208,10 @@ public:
 
   void validate_integrity(block_bank const& blocks) const
   {
-    uint32_t f              = free_entries;
-    size_t   nb_free_slots  = 0;
-    size_t   nb_free_nodes  = 0;
-    size_t   nb_empty_slots = 0;
+    uint32_t    f              = free_entries;
+    std::size_t nb_free_slots  = 0;
+    std::size_t nb_free_nodes  = 0;
+    std::size_t nb_empty_slots = 0;
     while (f)
     {
       ACL_ASSERT(buckets[f].block == block_link(0));

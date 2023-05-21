@@ -560,9 +560,9 @@ void for_each_field(Fn&& fn, Class& obj) noexcept
 {
   using ClassType = std::remove_const_t<Class>;
   static_assert(detail::tuple_size<ClassType> > 0, "Invalid tuple size");
-  return [&]<size_t... I>(std::index_sequence<I...>, auto tup)
+  return [&]<std::size_t... I>(std::index_sequence<I...>, auto tup)
   {
-    (fn(obj, std::get<I>(tup), std::integral_constant<size_t, I>()), ...);
+    (fn(obj, std::get<I>(tup), std::integral_constant<std::size_t, I>()), ...);
   }
   (std::make_index_sequence<detail::tuple_size<ClassType>>(), detail::reflect_<ClassType>());
 }

@@ -63,11 +63,11 @@ class blackboard : public detail::custom_allocator_t<Options>
     dtor  dtor_fn;
   };
 
-  using options                               = Options;
-  static constexpr size_t total_atoms_in_page = detail::pool_size_v<options>;
-  using allocator                             = detail::custom_allocator_t<options>;
-  using base_type                             = allocator;
-  using name_index_map                        = typename detail::name_index_map<options>::type;
+  using options                                    = Options;
+  static constexpr std::size_t total_atoms_in_page = detail::pool_size_v<options>;
+  using allocator                                  = detail::custom_allocator_t<options>;
+  using base_type                                  = allocator;
+  using name_index_map                             = typename detail::name_index_map<options>::type;
 
   static constexpr std::uint64_t inlined_mask_v = 0x8000000000000000;
   static constexpr std::uint64_t deleted_mask_v = 0x4000000000000000;
@@ -259,7 +259,7 @@ private:
                   .dtor_fn = reinterpret_cast<dtor>(&destroy_at<T>)};
   }
 
-  using index_list = podvector<atom_t, acl::options<opt::basic_size_type<size_t>>>;
+  using index_list = podvector<atom_t, acl::options<opt::basic_size_type<std::size_t>>>;
 
   podvector<atom_t*> managed_data;
   index_list         offsets;

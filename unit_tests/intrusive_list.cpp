@@ -425,7 +425,7 @@ TEMPLATE_TEST_CASE(
   for (auto& v : arr)
     il.push_front(v);
 
-  for (size_t i = 0; i < 4; ++i)
+  for (std::size_t i = 0; i < 4; ++i)
     il.insert(arr[i], arr2[i]);
 
   REQUIRE(il.size() == 8);

@@ -18,7 +18,7 @@
 // https://en.cppreference.com/w/cpp/header/vector
 namespace acl
 {
-template <typename Ty, size_t N = 0, typename Options = acl::default_options<Ty>>
+template <typename Ty, std::size_t N = 0, typename Options = acl::default_options<Ty>>
 class small_vector : public detail::custom_allocator_t<Options>
 {
 public:

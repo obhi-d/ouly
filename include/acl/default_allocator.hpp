@@ -113,7 +113,7 @@ struct debug_tracer
 
 struct min_alignment
 {
-  static constexpr size_t min_alignment_v = alignof(std::max_align_t);
+  static constexpr std::size_t min_alignment_v = alignof(std::max_align_t);
 };
 
 template <typename T>

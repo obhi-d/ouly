@@ -213,7 +213,7 @@ protected:
     {
       std::uint32_t* src   = &*it;
       std::uint32_t* dest  = src + 1;
-      size_t         count = std::distance(it, of);
+      std::size_t    count = std::distance(it, of);
       std::memmove(dest, src, count * sizeof(std::uint32_t));
       *it = node;
     }
@@ -237,7 +237,7 @@ protected:
     {
       std::uint32_t* dest  = &(*of);
       std::uint32_t* src   = dest + 1;
-      size_t         count = std::distance(next, it);
+      std::size_t    count = std::distance(next, it);
       std::memmove(dest, src, count * sizeof(std::uint32_t));
       auto ptr = (dest + count);
       *ptr     = node;

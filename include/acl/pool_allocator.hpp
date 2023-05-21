@@ -9,7 +9,7 @@ namespace acl
 struct pool_allocator_tag
 {};
 template <typename underlying_allocator = acl::default_allocator<>, bool k_compute_stats = false,
-          size_t default_atom_size = 32, size_t default_atom_count = 16>
+          std::size_t default_atom_size = 32, std::size_t default_atom_count = 16>
 class pool_allocator : detail::statistics<pool_allocator_tag, k_compute_stats, underlying_allocator>
 {
 public:

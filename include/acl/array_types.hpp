@@ -90,13 +90,13 @@ public:
     }
   }
 
-  T& operator[](size_t i) noexcept
+  T& operator[](std::size_t i) noexcept
   {
     ACL_ASSERT(i < count_);
     return data_[i];
   }
 
-  T const& operator[](size_t i) const noexcept
+  T const& operator[](std::size_t i) const noexcept
   {
     ACL_ASSERT(i < count_);
     return data_[i];
@@ -249,13 +249,13 @@ public:
     }
   }
 
-  T& operator[](size_t i) noexcept
+  T& operator[](std::size_t i) noexcept
   {
     ACL_ASSERT(i < count_);
     return data_[i];
   }
 
-  T const& operator[](size_t i) const noexcept
+  T const& operator[](std::size_t i) const noexcept
   {
     ACL_ASSERT(i < count_);
     return data_[i];

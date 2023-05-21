@@ -103,7 +103,7 @@ private:
     uint8_t size = static_cast<uint8_t>(tup_size);
     (*this)(size);
 
-    [ this, &obj ]<size_t... N>(std::index_sequence<N...>)
+    [ this, &obj ]<std::size_t... N>(std::index_sequence<N...>)
     {
       return (at<N>(obj), ...);
     }
@@ -235,7 +235,7 @@ private:
 
 public:
   template <typename Class, typename Decl, std::size_t I>
-  inline void operator()(Class const& obj, Decl const& decl, std::integral_constant<size_t, I>) noexcept
+  inline void operator()(Class const& obj, Decl const& decl, std::integral_constant<std::size_t, I>) noexcept
   {
     (*this)(decl.value(obj));
   }
@@ -258,7 +258,7 @@ private:
     return ser_.get();
   }
 
-  template <size_t N, typename Class>
+  template <std::size_t N, typename Class>
   void at(Class const& obj) noexcept
   {
     (*this)(std::get<N>(obj));

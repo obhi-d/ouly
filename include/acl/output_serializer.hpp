@@ -131,7 +131,7 @@ private:
   {
     // Invalid type is unexpected
     get().begin_array();
-    [ this, &obj ]<size_t... N>(std::index_sequence<N...>)
+    [ this, &obj ]<std::size_t... N>(std::index_sequence<N...>)
     {
       return (at<N>(obj), ...);
     }
@@ -278,7 +278,7 @@ private:
 
 public:
   template <typename Class, typename Decl, std::size_t I>
-  inline void operator()(Class const& obj, Decl const& decl, std::integral_constant<size_t, I>) noexcept
+  inline void operator()(Class const& obj, Decl const& decl, std::integral_constant<std::size_t, I>) noexcept
   {
     if constexpr (I != 0)
       get().next();
@@ -297,7 +297,7 @@ private:
     return ser_.get();
   }
 
-  template <size_t N, typename Class>
+  template <std::size_t N, typename Class>
   void at(Class const& obj) noexcept
   {
     if constexpr (N != 0)

@@ -176,7 +176,7 @@ TEST_CASE("output_serializer: ArrayLike")
 
   json j = json::parse(instance.get());
   REQUIRE(j.size() == 5);
-  for (size_t i = 0; i < j.size(); ++i)
+  for (std::size_t i = 0; i < j.size(); ++i)
     REQUIRE(j[i] == example[i]);
 }
 
@@ -213,7 +213,7 @@ TEST_CASE("output_serializer: CastableToStringView")
 
     inline explicit operator std::string_view() const
     {
-      return std::string_view(myBuffer, (size_t)length);
+      return std::string_view(myBuffer, (std::size_t)length);
     }
   };
 
@@ -292,7 +292,7 @@ struct ReflexToSV
 template <>
 std::string_view acl::to_string_view<ReflexToSV>(ReflexToSV const& a)
 {
-  return std::string_view(a.myBuffer, (size_t)a.length);
+  return std::string_view(a.myBuffer, (std::size_t)a.length);
 }
 
 TEST_CASE("output_serializer: TransformToStringView")

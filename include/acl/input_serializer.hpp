@@ -31,7 +31,7 @@ concept InputSerializer = requires(V v)
   { v.failed() } -> ::std::same_as<bool>;
 
   // size
-  { v.size() } -> ::std::convertible_to<size_t>;
+  { v.size() } -> ::std::convertible_to<std::size_t>;
                                  
   // function for_each: Should accept a lambda that accepts a key and value_type
   // This function should consume a field that is a map of key, values
@@ -164,7 +164,7 @@ private:
       get().error(type_name<Class>(), make_error_code(serializer_error::invalid_type));
       return false;
     }
-    return [ this, &obj ]<size_t... N>(std::index_sequence<N...>)
+    return [ this, &obj ]<std::size_t... N>(std::index_sequence<N...>)
     {
       return (at<N>(obj) && ...);
     }
@@ -466,7 +466,7 @@ private:
     return ser_.get();
   }
 
-  template <size_t N, typename Class>
+  template <std::size_t N, typename Class>
   bool at(Class& obj) noexcept
   {
     auto ser = get().at(N);
@@ -478,8 +478,8 @@ private:
     return true;
   }
 
-  template <size_t const I, typename Class, typename L>
-  static constexpr auto find_alt(size_t i, L&& lambda) noexcept -> bool
+  template <std::size_t const I, typename Class, typename L>
+  static constexpr auto find_alt(std::size_t i, L&& lambda) noexcept -> bool
   {
     if (I == i)
       return std::forward<L>(lambda)(std::integral_constant<uint32_t, I>{});

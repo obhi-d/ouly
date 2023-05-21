@@ -1,17 +1,18 @@
 
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 
 namespace acl
 {
 
-template <size_t value_ = 0>
+template <std::size_t value_ = 0>
 struct alignment
 {
   static constexpr auto value = value_;
   inline constexpr alignment() noexcept {}
-  inline constexpr operator size_t() const noexcept
+  inline constexpr operator std::size_t() const noexcept
   {
     return value;
   }

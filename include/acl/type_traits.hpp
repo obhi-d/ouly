@@ -172,8 +172,8 @@ struct function_traits;
 template <typename R, typename... Args>
 struct function_traits<R (*)(Args...)>
 {
-  static constexpr size_t arity = sizeof...(Args);
-  using result_type             = R;
+  static constexpr std::size_t arity = sizeof...(Args);
+  using result_type                  = R;
   template <std::size_t Index>
   using arg_type                           = typename std::tuple_element_t<Index, std::tuple<Args...>>;
   constexpr static bool is_free_function   = true;
@@ -185,8 +185,8 @@ struct function_traits<R (*)(Args...)>
 template <typename R, typename C, typename... Args>
 struct function_traits<R (C::*)(Args...)>
 {
-  static constexpr size_t arity = sizeof...(Args);
-  using result_type             = R;
+  static constexpr std::size_t arity = sizeof...(Args);
+  using result_type                  = R;
   template <std::size_t Index>
   using arg_type                           = typename std::tuple_element_t<Index, std::tuple<Args...>>;
   constexpr static bool is_free_function   = false;
@@ -198,8 +198,8 @@ struct function_traits<R (C::*)(Args...)>
 template <typename R, typename C, typename... Args>
 struct function_traits<R (C::*)(Args...) const>
 {
-  static constexpr size_t arity = sizeof...(Args);
-  using result_type             = R;
+  static constexpr std::size_t arity = sizeof...(Args);
+  using result_type                  = R;
   template <std::size_t Index>
   using arg_type                           = typename std::tuple_element_t<Index, std::tuple<Args...>>;
   constexpr static bool is_free_function   = false;
@@ -349,8 +349,6 @@ struct size_type<ua_t, std::void_t<typename ua_t::size_type>>
   using type = typename ua_t::size_type;
 };
 
-template <typename ua_t>
-using size_t = typename size_type<ua_t>::type;
 
 template <typename T>
 struct pool_size

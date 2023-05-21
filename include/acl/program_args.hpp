@@ -207,7 +207,7 @@ public:
     return f;
   }
 
-  inline size_t get_max_arg_length() const noexcept
+  inline std::size_t get_max_arg_length() const noexcept
   {
     return max_arg_length_;
   }
@@ -246,7 +246,7 @@ private:
 
   template <typename V>
   static std::optional<V> convert_to(string_type const& sv) noexcept
-    requires(std::same_as<V, string_type>)
+  requires(std::same_as<V, string_type>)
   {
     return sv;
   }
