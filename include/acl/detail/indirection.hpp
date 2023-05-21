@@ -78,7 +78,7 @@ public:
 
   inline bool contains_valid(size_type i) const
   {
-    return i < links_.size() && detail::is_valid(links_[i]);
+    return i < links_.size() && links_[i] != Traits::null_v && detail::is_valid(links_[i]);
   }
 
 private:
@@ -156,7 +156,12 @@ public:
 
   inline bool contains_valid(size_type i) const
   {
-    return i < links_.size() && detail::is_valid(links_[i]);
+    if (i < links_.size())
+    {
+      auto v = links_[i];
+      return v != Traits::null_v && detail::is_valid(v);
+    }
+    return false;
   }
 
   inline void clear()

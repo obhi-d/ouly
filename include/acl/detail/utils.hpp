@@ -59,7 +59,7 @@ template <typename Tuple>
 using tuple_of_crefs = decltype(tuple_element_crefs(std::declval<Tuple>()));
 
 template <typename size_type>
-constexpr size_type invalidated_mask_v = (static_cast<size_type>(0x80) << ((sizeof(size_type) - 1) * 8));
+constexpr size_type high_bit_mask_v = (static_cast<size_type>(0x80) << ((sizeof(size_type) - 1) * 8));
 
 /*
 *
@@ -126,7 +126,7 @@ constexpr size_type log2(size_type val)
 }
 
 template <typename size_type>
-inline size_type hazard_idx(size_type val, std::uint8_t spl)
+inline constexpr size_type hazard_idx(size_type val, std::uint8_t spl)
 {
   if constexpr (detail::debug)
   {
@@ -138,7 +138,7 @@ inline size_type hazard_idx(size_type val, std::uint8_t spl)
 }
 
 template <typename size_type>
-inline std::uint8_t hazard_val(size_type val)
+inline constexpr std::uint8_t hazard_val(size_type val)
 {
   if constexpr (detail::debug)
     return (val >> ((sizeof(size_type) - 1) * 8));
@@ -147,7 +147,7 @@ inline std::uint8_t hazard_val(size_type val)
 }
 
 template <typename size_type>
-inline auto index_val(size_type val)
+inline constexpr auto index_val(size_type val)
 {
   constexpr size_type one  = 1;
   constexpr size_type mask = (one << ((sizeof(size_type) - one) * 8)) - 1;
@@ -158,7 +158,7 @@ inline auto index_val(size_type val)
 }
 
 template <typename size_type>
-inline size_type revise(size_type val)
+inline constexpr size_type revise(size_type val)
 {
   if constexpr (detail::debug)
     return hazard_idx(index_val(val), (hazard_val(val) + 1));
@@ -167,30 +167,30 @@ inline size_type revise(size_type val)
 }
 
 template <typename size_type>
-inline size_type invalidate(size_type val)
+inline constexpr size_type invalidate(size_type val)
 {
-  return invalidated_mask_v<size_type> | val;
+  return high_bit_mask_v<size_type> | val;
 }
 
 template <typename size_type>
-inline size_type validate(size_type val)
+inline constexpr size_type validate(size_type val)
 {
-  return (~invalidated_mask_v<size_type>)&(val);
+  return (~high_bit_mask_v<size_type>)&(val);
 }
 
 template <typename size_type>
-inline size_type revise_invalidate(size_type val)
+inline constexpr size_type revise_invalidate(size_type val)
 {
   if constexpr (detail::debug)
-    return hazard_idx(index_val(val), (hazard_val(val) + 1) | 0x80);
+    return (hazard_idx(index_val(val), (hazard_val(val) + 1) | 0x80));
   else
     return invalidate(val);
 }
 
 template <typename size_type>
-inline size_type is_valid(size_type val)
+inline constexpr size_type is_valid(size_type val)
 {
-  return !(invalidated_mask_v<size_type> & val);
+  return !(high_bit_mask_v<size_type> & val);
 }
 
 constexpr uint32_t fnv1a_32(std::string_view view)
@@ -204,6 +204,12 @@ constexpr uint32_t fnv1a_32(std::string_view view)
     hash *= prime;
   }
   return hash;
+}
+
+template <typename T>
+inline void move(T& dest, T& src)
+{
+  dest = std::move(src);
 }
 
 } // namespace detail

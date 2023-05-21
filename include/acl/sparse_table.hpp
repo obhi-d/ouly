@@ -23,11 +23,15 @@ class sparse_table : public detail::custom_allocator_t<Options>
 {
 
 public:
-  using options        = Options;
-  using value_type     = Ty;
-  using size_type      = detail::choose_size_t<uint32_t, Options>;
-  using link           = acl::link<value_type, size_type>;
-  using allocator_type = detail::custom_allocator_t<Options>;
+  using options         = Options;
+  using value_type      = Ty;
+  using reference       = Ty&;
+  using const_reference = Ty const&;
+  using pointer         = Ty*;
+  using const_pointer   = Ty const*;
+  using size_type       = detail::choose_size_t<uint32_t, Options>;
+  using link            = acl::link<value_type, size_type>;
+  using allocator_type  = detail::custom_allocator_t<Options>;
 
   static_assert(sizeof(Ty) >= sizeof(size_type), "Type must big enough to hold a link");
 

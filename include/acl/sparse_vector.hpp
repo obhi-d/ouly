@@ -28,10 +28,14 @@ template <typename Ty, typename Options = acl::default_options<Ty>>
 class sparse_vector : public detail::custom_allocator_t<Options>
 {
 public:
-  using value_type     = Ty;
-  using size_type      = detail::choose_size_t<uint32_t, Options>;
-  using allocator_type = detail::custom_allocator_t<Options>;
-  using options        = Options;
+  using value_type      = Ty;
+  using reference       = Ty&;
+  using const_reference = Ty const&;
+  using pointer         = Ty*;
+  using const_pointer   = Ty const*;
+  using size_type       = detail::choose_size_t<uint32_t, Options>;
+  using allocator_type  = detail::custom_allocator_t<Options>;
+  using options         = Options;
 
 private:
   using this_type = sparse_vector<value_type, Options>;

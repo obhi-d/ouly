@@ -1,5 +1,6 @@
 #include "test_common.hpp"
 #include <acl/packed_table.hpp>
+#include <acl/soavector.hpp>
 #include <catch2/catch_all.hpp>
 #include <compare>
 #include <iomanip>
@@ -9,6 +10,43 @@
 #include <string_view>
 #include <unordered_map>
 #include <unordered_set>
+
+TEST_CASE("Validate packed_table with soavector", "[packed_table.soavector]")
+{
+  using pack_type   = acl::pack<int, std::string>;
+  using vector_type = acl::soavector<pack_type>;
+  acl::packed_table<pack_type, acl::opt::custom_vector<vector_type>> table;
+
+  auto e0 = table.emplace(10, "10");
+  auto e1 = table.emplace(20, "20");
+  auto e2 = table.emplace(30, "30");
+  auto e3 = table.emplace(40, "40");
+
+  REQUIRE(table.at(e0) == std::tuple<int, std::string>(10, "10"));
+  REQUIRE(table.at(e1) == std::tuple<int, std::string>(20, "20"));
+  REQUIRE(table.at(e2) == std::tuple<int, std::string>(30, "30"));
+  REQUIRE(table.at(e3) == std::tuple<int, std::string>(40, "40"));
+
+  table.erase(e2);
+  REQUIRE(table.contains(e2) == false);
+
+  table.emplace(30, "30");
+
+  std::unordered_set<std::string> check = {"10", "20", "30", "40"};
+  table.for_each(
+    [&](vector_type::const_reference v)
+    {
+      REQUIRE(check.erase(std::get<1>(v)) == 1);
+    });
+  REQUIRE(check.empty());
+  check          = {"10", "20", "30", "40"};
+  auto const& vv = table.data();
+  for (uint32_t i = 1; i < vv.size(); ++i)
+  {
+    REQUIRE(check.erase(vv.at<1>(i)) == 1);
+  }
+  REQUIRE(check.empty());
+}
 
 TEST_CASE("packed_table: Validate packed_table emplace", "[packed_table][emplace]")
 {
@@ -210,8 +248,8 @@ TEST_CASE("packed_table: Validate emplace_at", "[packed_table][emplace_at]")
 
   REQUIRE(table2.contains(e10) == false);
   REQUIRE(table2.contains(e20) == true);
-  REQUIRE(table2.get_if(e10) == nullptr);
-  REQUIRE(table2.get_if(e20) != nullptr);
+  REQUIRE(table2.find(e10).has_value() == false);
+  REQUIRE(table2.find(e20).has_value());
   REQUIRE(table2.at(e20) == 17);
 
   table2.erase(e20);

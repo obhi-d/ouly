@@ -11,6 +11,45 @@
 
 namespace acl
 {
+
+namespace opt
+{
+// custom vector
+template <typename T>
+struct custom_vector
+{
+  using custom_vector_t = T;
+};
+
+} // namespace opt
+
+namespace detail
+{
+
+template <typename T>
+concept HasCustomVector = requires {
+                            typename T::custom_vector_t;
+                            typename T::custom_vector_t::value_type;
+                            typename T::custom_vector_t::reference;
+                            typename T::custom_vector_t::const_reference;
+                            typename T::custom_vector_t::pointer;
+                            typename T::custom_vector_t::const_pointer;
+                          };
+
+template <typename Opt, typename V>
+struct custom_vector_type
+{
+  using type =
+    std::conditional_t<HasUseSparseAttrib<Opt>, sparse_vector<V, Opt>, vector<V, detail::custom_allocator_t<Opt>>>;
+};
+
+template <HasCustomVector Opt>
+struct custom_vector_type<Opt, typename Opt::custom_vector_t::value_type>
+{
+  using type = Opt::custom_vector_t;
+};
+
+} // namespace detail
 /// @brief Contenst are packed in vector or sparse vector
 /// @tparam Ty Type of object
 /// @tparam Options Controls the parameters for class instantiation
@@ -32,20 +71,24 @@ class packed_table : public detail::custom_allocator_t<Options>
   static_assert(std::is_default_constructible_v<Ty>, "Type must be default constructibe");
 
 public:
-  using options        = Options;
-  using value_type     = Ty;
-  using size_type      = detail::choose_size_t<uint32_t, Options>;
-  using link           = acl::link<value_type, size_type>;
-  using allocator_type = detail::custom_allocator_t<Options>;
+  using options         = Options;
+  using vector_type     = typename detail::custom_vector_type<options, Ty>::type;
+  using value_type      = typename vector_type::value_type;
+  using reference       = typename vector_type::reference;
+  using const_reference = typename vector_type::const_reference;
+  using pointer         = typename vector_type::pointer;
+  using const_pointer   = typename vector_type::const_pointer;
+  using size_type       = detail::choose_size_t<uint32_t, Options>;
+  using link            = acl::link<value_type, size_type>;
+  using allocator_type  = detail::custom_allocator_t<Options>;
 
 private:
   static constexpr bool has_backref = detail::HasBackrefValue<options>;
-  static constexpr bool has_sparse  = detail::HasUseSparseAttrib<options>;
 
-  using this_type    = packed_table<value_type, options>;
-  using vector_type  = std::conditional_t<has_sparse, sparse_vector<Ty, options>, vector<Ty, allocator_type>>;
-  using storage      = detail::aligned_storage<sizeof(value_type), alignof(value_type)>;
-  using optional_ptr = acl::detail::optional_ptr<Ty>;
+  using this_type     = packed_table<value_type, options>;
+  using storage       = detail::aligned_storage<sizeof(value_type), alignof(value_type)>;
+  using optional_val  = acl::detail::optional_ref<reference>;
+  using optional_cval = acl::detail::optional_ref<const_reference>;
 
   struct default_index_pool_size
   {
@@ -148,7 +191,7 @@ public:
   template <typename Lambda>
   void for_each(Lambda&& lambda) const noexcept
   {
-    const_cast<this_type*>(this)->for_each_l<Lambda, value_type const>(std::forward<Lambda>(lambda));
+    for_each_l<Lambda, value_type const>(std::forward<Lambda>(lambda));
   }
 
   /// @brief Lambda called for each element in range
@@ -165,7 +208,7 @@ public:
   template <typename Lambda>
   void for_each(size_type first, size_type last, Lambda&& lambda) const noexcept
   {
-    const_cast<this_type*>(this)->for_each_l<Lambda, value_type const>(first, last, std::forward<Lambda>(lambda));
+    for_each_l<Lambda, value_type const>(first, last, std::forward<Lambda>(lambda));
   }
 
   /// @brief Returns size of packed array
@@ -216,7 +259,7 @@ public:
     }
     else
     {
-      l = keys_.size();
+      l = detail::validate(keys_.size());
       keys_.push_back(key);
     }
 
@@ -288,11 +331,23 @@ public:
 
   /// @brief Find an object associated with a link
   /// @return optional value of the object
-  optional_ptr find(link lnk) noexcept
+  optional_val find(link lnk) noexcept
   {
-    if (keys_.contains(lnk))
+    if (keys_.contains_valid(lnk.as_index()))
     {
-      auto idx = keys_.get(lnk.as_index());
+      auto idx = detail::index_val(keys_.get(lnk.as_index()));
+      return values_[idx];
+    }
+    return {};
+  }
+
+  /// @brief Find an object associated with a link
+  /// @return optional value of the object
+  optional_cval find(link lnk) const noexcept
+  {
+    if (keys_.contains_valid(lnk.as_index()))
+    {
+      auto idx = detail::index_val(keys_.get(lnk.as_index()));
       return values_[idx];
     }
     return {};
@@ -315,41 +370,28 @@ public:
     free_key_slot_ = 0;
   }
 
-  inline value_type& at(link l) noexcept
+  inline reference at(link l) noexcept
   {
     if constexpr (detail::debug)
       validate(l);
     return item_at(l.as_index());
   }
 
-  inline value_type const& at(link l) const noexcept
+  inline const_reference at(link l) const noexcept
   {
-    return const_cast<this_type*>(this)->at(l);
+    if constexpr (detail::debug)
+      validate(l);
+    return item_at(l.as_index());
   }
 
-  inline value_type& operator[](link l) noexcept
+  inline reference operator[](link l) noexcept
   {
     return at(l);
   }
 
-  inline value_type const& operator[](link l) const noexcept
+  inline const_reference operator[](link l) const noexcept
   {
     return at(l);
-  }
-
-  inline value_type* get_if(link l) noexcept
-  {
-    if (keys_.contains_valid(l.as_index()))
-    {
-      return &item_at(l.as_index());
-    }
-
-    return nullptr;
-  }
-
-  inline value_type const* get_if(link l) const noexcept
-  {
-    return const_cast<this_type*>(this)->at(l);
   }
 
   inline bool contains(link l) const noexcept
@@ -418,17 +460,17 @@ private:
     return self_.get(item_at_idx(idx));
   }
 
-  inline auto& item_at(size_type l) noexcept
+  inline reference item_at(size_type l) noexcept
   {
     return item_at_idx(detail::index_val(keys_.get(l)));
   }
 
-  inline auto& item_at_idx(size_type item_id) noexcept
+  inline reference item_at_idx(size_type item_id) noexcept
   {
     return values_[item_id];
   }
 
-  inline auto const& item_at_idx(size_type item_id) const noexcept
+  inline const_reference item_at_idx(size_type item_id) const noexcept
   {
     return values_[item_id];
   }
@@ -439,8 +481,8 @@ private:
     auto item_id   = keys_.get(lnk);
     keys_.get(lnk) = free_key_slot_;
     free_key_slot_ = detail::invalidate(l.value());
-    auto& lb       = values_[item_id];
-    auto& back     = values_.back();
+    reference lb   = values_[item_id];
+    reference back = values_.back();
     if (&back != &lb)
     {
 
@@ -449,7 +491,17 @@ private:
       else
         keys_.get(detail::index_val(self_.best_erase(item_id))) = item_id;
 
-      lb = std::move(back);
+      if constexpr (acl::detail::is_tuple<value_type>::value)
+      {
+        // move each tuple element reference
+        [&]<std::size_t... I>(std::index_sequence<I...>)
+        {
+          (detail::move(std::get<I>(lb), std::get<I>(back)), ...);
+        }
+        (std::make_index_sequence<std::tuple_size_v<value_type>>());
+      }
+      else
+        lb = std::move(back);
     }
     else
     {
@@ -469,6 +521,12 @@ private:
   }
 
   template <typename Lambda, typename Cast>
+  inline void for_each_l(Lambda&& lambda) const noexcept
+  {
+    for_each_l<Lambda, Cast>(1, static_cast<size_type>(values_.size()), std::forward<Lambda>(lambda));
+  }
+
+  template <typename Lambda, typename Cast>
   inline void for_each_l(size_type first, size_type last, Lambda&& lambda) noexcept
   {
     constexpr auto arity = function_traits<Lambda>::arity;
@@ -477,7 +535,20 @@ private:
       if constexpr (arity == 2)
         lambda(link(get_ref_at_idx(first)), static_cast<Cast&>(values_[first]));
       else
-        lambda(static_cast<Cast&>(values_[first]));
+        lambda(values_[first]);
+    }
+  }
+
+  template <typename Lambda, typename Cast>
+  inline void for_each_l(size_type first, size_type last, Lambda&& lambda) const noexcept
+  {
+    constexpr auto arity = function_traits<Lambda>::arity;
+    for (; first != last; ++first)
+    {
+      if constexpr (arity == 2)
+        lambda(link(get_ref_at_idx(first)), static_cast<Cast&>(values_[first]));
+      else
+        lambda(values_[first]);
     }
   }
 

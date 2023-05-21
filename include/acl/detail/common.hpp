@@ -118,29 +118,37 @@ constexpr std::uint64_t k_null_64  = std::numeric_limits<std::uint64_t>::max();
 constexpr uhandle       k_null_uh  = std::numeric_limits<uhandle>::max();
 
 template <class T>
-struct optional_ptr
+struct optional_ref
 {
-  constexpr optional_ptr() = default;
-  constexpr optional_ptr(T* iv) noexcept : value(iv) {}
+  using type               = std::remove_reference_t<T>;
+  constexpr optional_ref() = default;
+  constexpr optional_ref(type& iv) noexcept : value(&iv) {}
 
   inline constexpr operator bool() const noexcept
   {
     return value != nullptr;
   }
 
-  inline constexpr T* operator*() const noexcept
+  inline constexpr type& operator*() const noexcept
+  {
+    ACL_ASSERT(value);
+    return *value;
+  }
+
+  inline constexpr type* operator->() const noexcept
   {
     return value;
   }
 
-  inline constexpr T* operator->() const noexcept
+  inline constexpr explicit operator type*() const noexcept
   {
     return value;
   }
 
-  inline constexpr explicit operator T*() const noexcept
+  inline constexpr explicit operator type&() const noexcept
   {
-    return value;
+    ACL_ASSERT(value);
+    return *value;
   }
 
   inline constexpr bool has_value() const noexcept
@@ -153,16 +161,16 @@ struct optional_ptr
     value = nullptr;
   }
 
-  inline constexpr T* release() const noexcept
+  inline constexpr type* release() const noexcept
   {
     auto r = value;
     value  = nullptr;
     return r;
   }
 
-  inline constexpr auto operator<=>(const optional_ptr& other) const noexcept = default;
+  inline constexpr auto operator<=>(const optional_ref& other) const noexcept = default;
 
-  T* value = nullptr;
+  type* value = nullptr;
 };
 
 template <auto nullv>
