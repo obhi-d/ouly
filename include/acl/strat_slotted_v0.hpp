@@ -51,7 +51,7 @@ public:
 
   inline allocate_result try_allocate(bank_data& bank, size_type size)
   {
-    assert((size & sz_mask) == 0);
+    ACL_ASSERT((size & sz_mask) == 0);
     if (size <= max_size_)
     {
       size_type id = (size >> sz_div);
@@ -135,7 +135,7 @@ public:
     }
     else
     {
-      assert(!b.is_slotted);
+      ACL_ASSERT(!b.is_slotted);
       fallback.add_free(blocks, block);
     }
   }
@@ -161,7 +161,7 @@ public:
     {
       b.is_slotted = false;
       auto& vec    = buckets[(b.size >> sz_div)];
-      assert(b.reserved32_ < (uint32_t)vec.size());
+      ACL_ASSERT(b.reserved32_ < (uint32_t)vec.size());
       {
         auto back                            = vec.back();
         vec[b.reserved32_]                   = back;
@@ -195,15 +195,15 @@ public:
   {
     if (!buckets.empty())
     {
-      assert(buckets[0].empty());
+      ACL_ASSERT(buckets[0].empty());
       for (uint32_t i = 1; i < static_cast<uint32_t>(buckets.size()); ++i)
       {
         for (uint32_t v = 0; v < (uint32_t)buckets[i].size(); ++v)
         {
           auto const& b = blocks[block_link(buckets[i][v])];
-          assert(b.is_slotted);
-          assert(b.reserved32_ == v);
-          assert(b.size == static_cast<size_type>(granularity * i));
+          ACL_ASSERT(b.is_slotted);
+          ACL_ASSERT(b.reserved32_ == v);
+          ACL_ASSERT(b.size == static_cast<size_type>(granularity * i));
         }
       }
     }

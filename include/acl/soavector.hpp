@@ -503,42 +503,42 @@ public:
   template <std::size_t i>
   ireference<i> at(size_type n) noexcept
   {
-    assert(n < size_);
+    ACL_ASSERT(n < size_);
     return std::get<i>(data_)[n];
   }
 
   template <std::size_t i>
   iconst_reference<i> at(size_type n) const noexcept
   {
-    assert(n < size_);
+    ACL_ASSERT(n < size_);
     return std::get<i>(data_)[n];
   }
 
   template <std::size_t i>
   ireference<i> front() noexcept
   {
-    assert(0 < size_);
+    ACL_ASSERT(0 < size_);
     return std::get<i>(data_)[0];
   }
 
   template <std::size_t i>
   iconst_reference<i> front() const noexcept
   {
-    assert(0 < size_);
+    ACL_ASSERT(0 < size_);
     return std::get<i>(data_)[0];
   }
 
   template <std::size_t i>
   ireference<i> back() noexcept
   {
-    assert(0 < size_);
+    ACL_ASSERT(0 < size_);
     return std::get<i>(data_)[size_ - 1];
   }
 
   template <std::size_t i>
   iconst_reference<i> back() const noexcept
   {
-    assert(0 < size_);
+    ACL_ASSERT(0 < size_);
     return std::get<i>(data_)[size_ - 1];
   }
 
@@ -575,7 +575,7 @@ public:
 
   void pop_back() noexcept
   {
-    assert(size_);
+    ACL_ASSERT(size_);
     destroy_at(--size_, index_seq);
   }
 
@@ -618,7 +618,7 @@ public:
   template <typename Ty>
   void erase_at(Ty* data, size_type first, size_type last) noexcept
   {
-    assert(last < size());
+    ACL_ASSERT(last < size());
     if constexpr (std::is_trivially_copyable_v<Ty>)
       std::memmove(data + first, data + last, (size_ - last) * sizeof(Ty));
     else
@@ -646,7 +646,7 @@ public:
 
   size_type erase(size_type position) noexcept
   {
-    assert(position < size());
+    ACL_ASSERT(position < size());
     erase_at(position, index_seq);
     size_--;
     return position;
@@ -654,7 +654,7 @@ public:
 
   size_type erase(size_type first, size_type last) noexcept
   {
-    assert(last < size());
+    ACL_ASSERT(last < size());
     erase_at(first, last, index_seq);
     size_ -= (last - first);
     return first;

@@ -86,7 +86,7 @@ TEST_CASE("Validate pool_allocator with alignment", "[pool_allocator]")
       r.data  = reinterpret_cast<trivial_object*>(allocator.allocate(r.count * sizeof(trivial_object), 128));
 
       records.push_back(r);
-      assert(validate());
+      ACL_ASSERT(validate());
       CHECK(validate());
     }
     else
@@ -95,7 +95,7 @@ TEST_CASE("Validate pool_allocator with alignment", "[pool_allocator]")
       std::uint32_t                                chosen = choose(gen);
       allocator.deallocate(records[chosen].data, records[chosen].count * sizeof(trivial_object), 128);
       records.erase(records.begin() + chosen);
-      assert(validate());
+      ACL_ASSERT(validate());
       CHECK(validate());
     }
   }

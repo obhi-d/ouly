@@ -132,7 +132,7 @@ public:
   T& at(key_type name) noexcept
   {
     auto it = lookup.find(name);
-    assert(it != lookup.end());
+    ACL_ASSERT(it != lookup.end());
     return at<T>(it->second);
   }
 
@@ -167,7 +167,7 @@ public:
         auto& atom = offsets[lookup_ent.value()];
         if constexpr (acl::detail::debug)
         {
-          assert(atom.dtor_fn == reinterpret_cast<dtor>(&destroy_at<T>));
+          ACL_ASSERT(atom.dtor_fn == reinterpret_cast<dtor>(&destroy_at<T>));
         }
 
         T* data = reinterpret_cast<T*>(atom.data);

@@ -61,8 +61,10 @@ public:
     return pop_front_unsafe();
   }
 
-  inline Ty pop_front_unsafe()
+  inline Ty pop_front_unsafe() noexcept
   {
+    ACL_ASSERT(!empty());
+
     if (front_ == pool_size)
     {
       remove_head();
@@ -79,7 +81,7 @@ public:
     return (head_ == tail_ && front_ == back_);
   }
 
-  void clear()
+  void clear() noexcept
   {
     auto block = head_;
     auto start = front_;

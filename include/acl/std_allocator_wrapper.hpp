@@ -112,7 +112,7 @@ class allocator_ref : public detail::allocator_common<T>
 
   inline pointer allocate(size_type cnt) const
   {
-    assert(ref_);
+    ACL_ASSERT(ref_);
     pointer ret =
         reinterpret_cast<pointer>(ref_->allocate(static_cast<size_type>(sizeof(T) * cnt), alignarg<T>));
     return ret;
@@ -120,7 +120,7 @@ class allocator_ref : public detail::allocator_common<T>
 
   inline void deallocate(pointer p, size_type cnt) const
   {
-    assert(ref_);
+    ACL_ASSERT(ref_);
     ref_->deallocate(p, static_cast<size_type>(sizeof(T) * cnt), alignarg<T>);
   }
 

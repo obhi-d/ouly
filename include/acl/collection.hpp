@@ -178,7 +178,7 @@ private:
     auto block = hazard_page(nb >> pool_div);
     auto index = nb & pool_mod;
 
-    assert(items[block][index] == hz);
+    ACL_ASSERT(items[block][index] == hz);
   }
 
   inline size_type bit_page(size_type p) const noexcept

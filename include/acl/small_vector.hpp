@@ -303,25 +303,25 @@ public:
   // element access:
   reference operator[](size_type n) noexcept
   {
-    assert(n < size());
+    ACL_ASSERT(n < size());
     return get_data()[n];
   }
 
   const_reference operator[](size_type n) const noexcept
   {
-    assert(n < size());
+    ACL_ASSERT(n < size());
     return get_data()[n];
   }
 
   reference at(size_type n)
   {
-    assert(n < size());
+    ACL_ASSERT(n < size());
     return get_data()[n];
   }
 
   const_reference at(size_type n) const noexcept
   {
-    assert(n < size());
+    ACL_ASSERT(n < size());
     return get_data()[n];
   }
 
@@ -381,7 +381,7 @@ public:
   void pop_back() noexcept
   {
     auto sz = size();
-    assert(sz);
+    ACL_ASSERT(sz);
 
     auto last = size_--;
     if (size_ <= inline_capacity && last > inline_capacity)
@@ -435,7 +435,7 @@ public:
 
   iterator erase(const_iterator position) noexcept
   {
-    assert(position < end());
+    ACL_ASSERT(position < end());
     auto data = get_data();
     auto last = size_--;
     if constexpr (std::is_trivially_copyable_v<Ty> || has_pod)
@@ -467,7 +467,7 @@ public:
 
   iterator erase(const_iterator first, const_iterator last) noexcept
   {
-    assert(last < end());
+    ACL_ASSERT(last < end());
     std::uint32_t n = static_cast<std::uint32_t>(std::distance(first, last));
     if constexpr (std::is_trivially_copyable_v<Ty> || has_pod)
     {
@@ -695,11 +695,11 @@ private:
           new (--dst_it) Ty(std::move(*(--src_it)));
         for (; src_it != src;)
           *(--dst_it) = std::move(*(--src_it));
-        assert(src_it == src);
+        ACL_ASSERT(src_it == src);
 
         if constexpr (!has_trivial_dtor && !has_trivially_destroyed_on_move)
         {
-          assert(src_it <= dst_it);
+          ACL_ASSERT(src_it <= dst_it);
           for (; src_it != dst_it; ++src_it)
             std::destroy_at(src_it);
         }

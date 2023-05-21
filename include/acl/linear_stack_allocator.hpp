@@ -76,7 +76,7 @@ public:
 
   linear_stack_allocator& operator=(linear_stack_allocator&& other) noexcept
   {
-    assert(k_arena_size == other.k_arena_size);
+    ACL_ASSERT(k_arena_size == other.k_arena_size);
     arenas              = std::move(other.arenas);
     current_arena       = other.current_arena;
     other.current_arena = 0;
@@ -109,7 +109,7 @@ public:
   {
 
     auto measure = statistics::report_allocate(i_size);
-    // assert
+    // ACL_ASSERT
     auto fixup = i_alignment - 1;
     // make sure you allocate enough space
     // but keep alignment distance so that next allocations

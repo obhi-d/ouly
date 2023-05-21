@@ -103,7 +103,7 @@ public:
       auto& list  = bank.arenas[blk.arena].block_order;
       auto  arena = blk.arena;
       // Create a new free block, since its smaller than the original block, insert it in the bucket
-      auto newblk = bank.blocks.emplace(blk.offset + size, remaining, arena, 0, true, true);
+      auto newblk = bank.blocks.emplace(blk.offset + size, remaining, arena, extension(), true, true);
       list.insert_after(bank.blocks, (uint32_t)block, (uint32_t)newblk);
 
       if (!buckets[remaining >> sz_div].try_emplace(newblk))
@@ -138,7 +138,7 @@ public:
     }
     else
     {
-      assert(!b.is_slotted);
+      ACL_ASSERT(!b.is_slotted);
       fallback.add_free(blocks, block);
     }
   }
@@ -192,14 +192,14 @@ public:
   {
     if (!buckets.empty())
     {
-      assert(buckets[0].empty());
+      ACL_ASSERT(buckets[0].empty());
       for (uint32_t i = 1; i < static_cast<uint32_t>(buckets.size()); ++i)
       {
         for (uint32_t v = 0; v < buckets[i].size; ++v)
         {
           auto const& b = blocks[block_link(buckets[i].slots[v])];
-          assert(b.is_slotted);
-          assert(b.size == static_cast<size_type>(granularity * i));
+          ACL_ASSERT(b.is_slotted);
+          ACL_ASSERT(b.size == static_cast<size_type>(granularity * i));
         }
       }
     }

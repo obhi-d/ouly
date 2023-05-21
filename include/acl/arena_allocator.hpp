@@ -134,7 +134,7 @@ public:
     auto measure = this->statistics::report_allocate(desc.size());
     auto size    = desc.adjusted_size();
 
-    assert(desc.huser() != detail::k_null_uh);
+    ACL_ASSERT(desc.huser() != detail::k_null_uh);
     if (desc.flags() & f_dedicated_arena || size >= arena_size)
     {
       auto ret = add_arena(desc.huser(), size, false);
@@ -299,9 +299,9 @@ public:
       }
     }
 
-    assert(total_free_nodes == ibank.strat.total_free_nodes(ibank.bank.blocks));
+    ACL_ASSERT(total_free_nodes == ibank.strat.total_free_nodes(ibank.bank.blocks));
     auto total = ibank.strat.total_free_size(ibank.bank.blocks);
-    assert(total == ibank.bank.free_size);
+    ACL_ASSERT(total == ibank.bank.free_size);
 
     for (auto arena_it     = ibank.bank.arena_order.begin(ibank.bank.arenas),
               arena_end_it = ibank.bank.arena_order.end(ibank.bank.arenas);
@@ -316,7 +316,7 @@ public:
            blk_it != blk_end_it; ++blk_it)
       {
         auto& blk = *blk_it;
-        assert(blk.offset == expected_offset);
+        ACL_ASSERT(blk.offset == expected_offset);
         expected_offset += blk.size;
       }
     }
@@ -393,7 +393,7 @@ private:
             ta                                = refresh.strat.try_allocate(refresh.bank, blk.size);
             arena_allocated                   = true;
           }
-          assert(ta);
+          ACL_ASSERT(ta);
 
           auto  new_blk_id = refresh.strat.commit(refresh.bank, blk.size, *ta);
           auto& new_blk    = refresh.bank.blocks[block_link(new_blk_id)];

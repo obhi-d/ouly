@@ -105,7 +105,7 @@ public:
       auto& list  = bank.arenas[blk.arena].block_order;
       auto  arena = blk.arena;
       // Create a new free block, since its smaller than the original block, insert it in the bucket
-      auto newblk = bank.blocks.emplace(blk.offset + size, remaining, arena, 0, true, true);
+      auto newblk = bank.blocks.emplace(blk.offset + size, remaining, arena, extension(), true, true);
       list.insert_after(bank.blocks, (uint32_t)block, (uint32_t)newblk);
       // append to free list
       append_free_top(bank.blocks, (uint32_t)(remaining >> sz_div), newblk);
@@ -129,7 +129,7 @@ public:
     }
     else
     {
-      assert(b.is_slotted == false);
+      ACL_ASSERT(b.is_slotted == false);
       fallback.add_free(blocks, block);
     }
   }
@@ -187,7 +187,7 @@ public:
       auto const& b = buckets[i];
       if ((uint32_t)b.block)
       {
-        assert(blocks[b.block].is_free);
+        ACL_ASSERT(blocks[b.block].is_free);
         count++;
       }
     }
@@ -214,7 +214,7 @@ public:
     size_t   nb_empty_slots = 0;
     while (f)
     {
-      assert(buckets[f].block == block_link(0));
+      ACL_ASSERT(buckets[f].block == block_link(0));
       f = buckets[f].next;
       nb_free_slots++;
     }
@@ -230,8 +230,8 @@ public:
         {
           auto const& ib  = buckets[curr];
           auto const& blk = blocks[ib.block];
-          assert(blk.rtup_.first == prev);
-          assert(blk.rtup_.second == curr);
+          ACL_ASSERT(blk.rtup_.first == prev);
+          ACL_ASSERT(blk.rtup_.second == curr);
           prev = curr;
           curr = ib.next;
           nb_free_nodes++;
@@ -243,7 +243,7 @@ public:
       }
     }
 
-    assert(buckets.size() - (nb_free_slots + nb_empty_slots) == nb_free_nodes);
+    ACL_ASSERT(buckets.size() - (nb_free_slots + nb_empty_slots) == nb_free_nodes);
     fallback.validate_integrity(blocks);
   }
 
@@ -271,7 +271,7 @@ private:
   inline void remove_free_top(block_bank& bank, uint32_t udx)
   {
     auto& bucket_node = buckets[udx];
-    assert(bucket_node.block);
+    ACL_ASSERT(bucket_node.block);
     if (bucket_node.next)
     {
       auto  next   = bucket_node.next;

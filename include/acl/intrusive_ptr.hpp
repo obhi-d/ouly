@@ -102,13 +102,13 @@ public:
 
   inline T* operator->() const noexcept
   {
-    assert(self_);
+    ACL_ASSERT(self_);
     return self_;
   }
 
   inline operator T&() const noexcept
   {
-    assert(self_);
+    ACL_ASSERT(self_);
     return *self_;
   }
 

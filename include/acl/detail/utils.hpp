@@ -130,7 +130,7 @@ inline size_type hazard_idx(size_type val, std::uint8_t spl)
 {
   if constexpr (detail::debug)
   {
-    assert(val < (static_cast<size_type>(1) << ((sizeof(size_type) - 1) * 8)));
+    ACL_ASSERT(val < (static_cast<size_type>(1) << ((sizeof(size_type) - 1) * 8)));
     return (static_cast<size_type>(spl) << ((sizeof(size_type) - 1) * 8)) | val;
   }
   else

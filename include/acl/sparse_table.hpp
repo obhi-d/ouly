@@ -37,7 +37,7 @@ private:
   static constexpr auto pool_mod    = pool_size - 1;
   static constexpr bool has_backref = detail::HasBackrefValue<Options>;
   using this_type                   = sparse_table<Ty, Options>;
-  using storage                     = detail::aligned_storage<sizeof(value_type), alignof(value_type)>;
+  using storage                     = value_type;
 
   struct default_index_pool_size
   {
@@ -232,7 +232,7 @@ public:
   void replace(link point, value_type&& args) noexcept
   {
     if constexpr (detail::debug)
-      assert(contains(point));
+      ACL_ASSERT(contains(point));
 
     at(point) = std::move(args);
   }
@@ -329,7 +329,7 @@ public:
 
   bool contains(link l) const noexcept
   {
-    assert(is_valid_ref(l.value()));
+    ACL_ASSERT(is_valid_ref(l.value()));
     auto idx = detail::index_val(l.value());
     return idx < extend_ && (l.value() == get_ref_at_idx(idx));
   }
@@ -344,7 +344,7 @@ private:
   {
     auto idx  = detail::index_val(l.value());
     auto self = get_ref_at_idx(idx);
-    assert(self == l.value());
+    ACL_ASSERT(self == l.value());
   }
 
   inline auto get_ref_at_idx(size_type idx) const noexcept

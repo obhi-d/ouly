@@ -92,13 +92,13 @@ public:
 
   T& operator[](size_t i) noexcept
   {
-    assert(i < count_);
+    ACL_ASSERT(i < count_);
     return data_[i];
   }
 
   T const& operator[](size_t i) const noexcept
   {
-    assert(i < count_);
+    ACL_ASSERT(i < count_);
     return data_[i];
   }
 
@@ -251,13 +251,13 @@ public:
 
   T& operator[](size_t i) noexcept
   {
-    assert(i < count_);
+    ACL_ASSERT(i < count_);
     return data_[i];
   }
 
   T const& operator[](size_t i) const noexcept
   {
-    assert(i < count_);
+    ACL_ASSERT(i < count_);
     return data_[i];
   }
 

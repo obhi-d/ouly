@@ -37,7 +37,7 @@ function(add_unit_test)
   set(target_name "test_${unit_test_NAME}")
   add_executable(${target_name} ${unit_test_FILES} "validity_main.cpp")
   target_link_libraries(${target_name} acl::acl Catch2::Catch2 ${unit_test_LINK_LIBS})
-  target_compile_definitions(${target_name} PUBLIC -DACL_REC_STATS)
+  target_compile_definitions(${target_name} PUBLIC -DACL_REC_STATS -DACL_THROW_ON_ERROR)
   ## Skip test?
   if (NOT unit_test_SKIP_TEST)
     add_test(${target_name} ${target_name})

@@ -93,7 +93,7 @@ public:
     {
       while (it != end && *it != block)
         it++;
-      assert(it < end);
+      ACL_ASSERT(it < end);
     }
     else
     {
@@ -114,7 +114,7 @@ public:
     {
       while (it != end && *it != block)
         it++;
-      assert(it < end);
+      ACL_ASSERT(it < end);
     }
     else
     {
@@ -134,7 +134,7 @@ public:
     {
       while (it != end && *it != block)
         it++;
-      assert(it < end);
+      ACL_ASSERT(it < end);
     }
     else
     {
@@ -154,7 +154,7 @@ public:
     size_type sz = 0;
     for (auto fn : free_ordering)
     {
-      assert(blocks[block_link(fn)].is_free);
+      ACL_ASSERT(blocks[block_link(fn)].is_free);
       sz += blocks[block_link(fn)].size;
     }
 
@@ -166,7 +166,7 @@ public:
     size_type sz = 0;
     for (auto fn : free_ordering)
     {
-      assert(sz <= blocks[block_link(fn)].size);
+      ACL_ASSERT(sz <= blocks[block_link(fn)].size);
       sz = blocks[block_link(fn)].size;
     }
   }

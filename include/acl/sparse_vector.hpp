@@ -455,7 +455,7 @@ public:
 
   void pop_back()
   {
-    assert(length_ > 0);
+    ACL_ASSERT(length_ > 0);
     if constexpr (detail::debug)
       validate(length_ - 1);
     erase_at(--length_);
@@ -475,7 +475,7 @@ public:
 
   void shrink(size_type idx) noexcept
   {
-    assert(length_ > idx);
+    ACL_ASSERT(length_ > idx);
     if constexpr (!std::is_trivially_destructible_v<value_type> && !has_pod)
     {
       for (size_type i = idx; i < length_; ++i)
@@ -486,7 +486,7 @@ public:
 
   void grow(size_type idx) noexcept
   {
-    assert(length_ < idx);
+    ACL_ASSERT(length_ < idx);
     auto block = idx >> pool_div;
     auto index = idx & pool_mod;
 
@@ -532,13 +532,13 @@ public:
 
   value_type& at(size_type l) noexcept
   {
-    assert(l < length_);
+    ACL_ASSERT(l < length_);
     return item_at(l);
   }
 
   value_type const& at(size_type l) const noexcept
   {
-    assert(l < length_);
+    ACL_ASSERT(l < length_);
     return item_at(l);
   }
 
@@ -650,7 +650,7 @@ private:
 
   inline void validate(size_type idx) const noexcept
   {
-    assert(contains(idx));
+    ACL_ASSERT(contains(idx));
   }
 
   inline auto& item_at(size_type idx) noexcept
@@ -707,7 +707,7 @@ private:
     auto bstart     = start >> pool_div;
     auto bend       = end >> pool_div;
     auto item_start = start & pool_mod;
-    assert(bstart <= bend);
+    ACL_ASSERT(bstart <= bend);
     constexpr auto arity = function_traits<Lambda>::arity;
     for (size_type block = bstart; block != bend; ++block)
     {

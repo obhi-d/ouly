@@ -47,26 +47,32 @@ struct block
     using offset                                   = opt::member<&block<size_type, extension>::self>;
   };
 
-  block() {}
-  block(size_type ioffset, size_type isize, std::uint32_t iarena) : offset(ioffset), size(isize), arena(iarena) {}
-  block(size_type ioffset, size_type isize, std::uint32_t iarena, uhandle idata)
-      : offset(ioffset), size(isize), arena(iarena), data(idata)
+  block() noexcept {}
+  block(size_type ioffset, size_type isize, std::uint32_t iarena) noexcept : offset(ioffset), size(isize), arena(iarena)
   {}
-  block(size_type ioffset, size_type isize, std::uint32_t iarena, uhandle idata, bool ifree)
-      : offset(ioffset), size(isize), arena(iarena), data(idata), is_free(ifree)
+  block(size_type ioffset, size_type isize, std::uint32_t iarena, uhandle idata) noexcept
+      : offset(ioffset), size(isize), arena(iarena), rtup_(idata, 0)
   {}
-  block(size_type ioffset, size_type isize, std::uint32_t iarena, uint32_pair idata, bool ifree)
+  block(size_type ioffset, size_type isize, std::uint32_t iarena, uhandle idata, bool ifree) noexcept
+      : offset(ioffset), size(isize), arena(iarena), rtup_(idata, 0), is_free(ifree)
+  {}
+  block(size_type ioffset, size_type isize, std::uint32_t iarena, uint32_pair idata, bool ifree) noexcept
       : offset(ioffset), size(isize), arena(iarena), rtup_(idata), is_free(ifree)
   {}
-  block(size_type ioffset, size_type isize, std::uint32_t iarena, list_node idata, bool ifree)
+  block(size_type ioffset, size_type isize, std::uint32_t iarena, list_node idata, bool ifree) noexcept
       : offset(ioffset), size(isize), arena(iarena), list_(idata), is_free(ifree)
   {}
-  block(size_type ioffset, size_type isize, std::uint32_t iarena, extension idata, bool ifree)
+  block(size_type ioffset, size_type isize, std::uint32_t iarena, extension idata, bool ifree) noexcept
       : offset(ioffset), size(isize), arena(iarena), ext(idata), is_free(ifree)
   {}
-  block(size_type ioffset, size_type isize, std::uint32_t iarena, uhandle idata, bool ifree, bool islotted)
-      : offset(ioffset), size(isize), arena(iarena), data(idata), is_free(ifree), is_slotted(islotted)
+  block(size_type ioffset, size_type isize, std::uint32_t iarena, uhandle idata, bool ifree, bool islotted) noexcept
+  requires(!std::convertible_to<uhandle, extension>)
+      : offset(ioffset), size(isize), arena(iarena), rtup_(idata, 0), is_free(ifree), is_slotted(islotted)
   {}
+  block(size_type ioffset, size_type isize, std::uint32_t iarena, extension idata, bool ifree, bool islotted) noexcept
+      : offset(ioffset), size(isize), arena(iarena), ext(idata), is_free(ifree), is_slotted(islotted)
+  {}
+
   ~block() {}
 
   inline std::pair<size_type, size_type> adjusted_block() const

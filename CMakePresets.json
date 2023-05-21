@@ -90,7 +90,8 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
         "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
-        "ASAN_ENABLED": "OFF"
+        "ASAN_ENABLED": "OFF",
+        "ACL_BUILD_TESTS": "ON"
       },
       "vendor": { "microsoft.com/VisualStudioSettings/CMake/1.0": { "hostOS": [ "Windows" ] } }
     }

@@ -277,7 +277,7 @@ private:
 
     auto index_opt = get().at(0);
     // Missing value is not an error
-    assert(index_opt);
+    ACL_ASSERT(index_opt);
 
     auto index = (*index_opt).as_uint64();
     if (!index)
@@ -288,7 +288,7 @@ private:
 
     auto value_opt = get().at(1);
 
-    assert(value_opt);
+    ACL_ASSERT(value_opt);
 
     auto value = *value_opt;
     return find_alt<std::variant_size_v<Class> - 1, Class>(

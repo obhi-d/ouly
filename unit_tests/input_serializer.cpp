@@ -49,7 +49,7 @@ public:
   template <typename L>
   requires(acl::function_traits<L>::arity == 2) bool for_each(L&& lambda) const noexcept
   {
-    assert(value.get().is_object());
+    ACL_ASSERT(value.get().is_object());
     for (auto const& [key, value] : value.get().items())
     {
       if (!lambda(std::string_view(key), Serializer(owner, value)))

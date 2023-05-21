@@ -75,17 +75,20 @@ private:
   template <typename Container>
   struct tnode_it
   {
-    void set() requires(!std::is_const_v<Container>)
+    void set()
+    requires(!std::is_const_v<Container>)
     {
       Accessor::set_flag(*ref);
     }
 
-    void set(bool b) requires(!std::is_const_v<Container>)
+    void set(bool b)
+    requires(!std::is_const_v<Container>)
     {
       Accessor::set_flag(*ref, b);
     }
 
-    void unset() requires(!std::is_const_v<Container>)
+    void unset()
+    requires(!std::is_const_v<Container>)
     {
       Accessor::unset_flag(*ref);
     }
@@ -95,17 +98,20 @@ private:
       return Accessor::is_set(*ref);
     }
 
-    void set_parent(std::uint32_t par) requires(!std::is_const_v<Container>)
+    void set_parent(std::uint32_t par)
+    requires(!std::is_const_v<Container>)
     {
       Accessor::links(*ref).parent = par;
     }
 
-    void set_left(std::uint32_t left) requires(!std::is_const_v<Container>)
+    void set_left(std::uint32_t left)
+    requires(!std::is_const_v<Container>)
     {
       Accessor::links(*ref).left = left;
     }
 
-    void set_right(std::uint32_t right) requires(!std::is_const_v<Container>)
+    void set_right(std::uint32_t right)
+    requires(!std::is_const_v<Container>)
     {
       Accessor::links(*ref).right = right;
     }
@@ -576,7 +582,7 @@ public:
 
   void erase(container& cont, std::uint32_t iz)
   {
-    assert(iz != Tombstone);
+    ACL_ASSERT(iz != Tombstone);
 
     node_it z(cont, iz);
     node_it y                = z;
@@ -676,7 +682,7 @@ public:
     in_order_traversal(blocks,
                        [&last](node_type const& n)
                        {
-                         assert(last <= Accessor::value(n));
+                         ACL_ASSERT(last <= Accessor::value(n));
                          last = Accessor::value(n);
                        });
 
@@ -688,7 +694,7 @@ public:
     if (node == Tombstone)
       return;
     auto& n = Accessor::node(blocks, node);
-    assert(Accessor::links(n).parent == parent);
+    ACL_ASSERT(Accessor::links(n).parent == parent);
     validate_parents(blocks, node, Accessor::links(n).left);
     validate_parents(blocks, node, Accessor::links(n).right);
   }

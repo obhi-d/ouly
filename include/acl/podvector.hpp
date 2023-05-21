@@ -250,42 +250,42 @@ public:
   // element access:
   reference operator[](size_type n) noexcept
   {
-    assert(n < size_);
+    ACL_ASSERT(n < size_);
     return data_[n];
   }
   const_reference operator[](size_type n) const noexcept
   {
-    assert(n < size_);
+    ACL_ASSERT(n < size_);
     return data_[n];
   }
   reference at(size_type n)
   {
-    assert(n < size_);
+    ACL_ASSERT(n < size_);
     return data_[n];
   }
   const_reference at(size_type n) const noexcept
   {
-    assert(n < size_);
+    ACL_ASSERT(n < size_);
     return data_[n];
   }
   reference front()
   {
-    assert(0 < size_);
+    ACL_ASSERT(0 < size_);
     return data_[0];
   }
   const_reference front() const noexcept
   {
-    assert(0 < size_);
+    ACL_ASSERT(0 < size_);
     return data_[0];
   }
   reference back()
   {
-    assert(0 < size_);
+    ACL_ASSERT(0 < size_);
     return data_[size_ - 1];
   }
   const_reference back() const noexcept
   {
-    assert(0 < size_);
+    ACL_ASSERT(0 < size_);
     return data_[size_ - 1];
   }
 
@@ -321,7 +321,7 @@ public:
   }
   void pop_back() noexcept
   {
-    assert(size_);
+    ACL_ASSERT(size_);
     size_--;
   }
 
@@ -363,7 +363,7 @@ public:
 
   iterator erase(const_iterator position) noexcept
   {
-    assert(position < end());
+    ACL_ASSERT(position < end());
     std::memmove(const_cast<iterator>(position), position + 1,
                  static_cast<std::size_t>((data_ + size_) - (position + 1)) * sizeof(Ty));
     size_--;
@@ -371,7 +371,7 @@ public:
   }
   iterator erase(const_iterator first, const_iterator last) noexcept
   {
-    assert(last < end());
+    ACL_ASSERT(last < end());
     std::uint32_t n = static_cast<std::uint32_t>(std::distance(first, last));
     std::memmove(const_cast<iterator>(first), last, static_cast<std::size_t>((data_ + size_) - (last)) * sizeof(Ty));
     size_ -= n;

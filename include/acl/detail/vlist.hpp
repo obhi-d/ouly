@@ -97,26 +97,26 @@ public:
     }
 
     inline value_type& operator*()
-      requires(!std::is_const_v<ContainerTy>)
+    requires(!std::is_const_v<ContainerTy>)
     {
       return Accessor::get(owner, index);
     }
 
     inline value_type* operator->()
-      requires(!std::is_const_v<ContainerTy>)
+    requires(!std::is_const_v<ContainerTy>)
     {
       return &Accessor::get(owner, index);
     }
 
     [[nodiscard]] inline std::uint32_t prev() const
     {
-      // assert(index < owner.size());
+      // ACL_ASSERT(index < owner.size());
       return Accessor::node(owner, index).prev;
     }
 
     [[nodiscard]] inline std::uint32_t next() const
     {
-      // assert(index < owner.size());
+      // ACL_ASSERT(index < owner.size());
       return Accessor::node(owner, index).next;
     }
 
@@ -194,7 +194,7 @@ public:
 
   inline void insert_after(container& cont, std::uint32_t loc, std::uint32_t node)
   {
-    assert(loc != 0);
+    ACL_ASSERT(loc != 0);
     auto& l_node = Accessor::node(cont, node);
     auto& l_loc  = Accessor::node(cont, loc);
 
@@ -206,7 +206,7 @@ public:
     else
     {
       last = node;
-      assert(l_node.next == 0);
+      ACL_ASSERT(l_node.next == 0);
     }
     l_node.prev = loc;
     l_loc.next  = node;
@@ -232,7 +232,7 @@ public:
       else
       {
         first = node;
-        assert(l_node.prev == 0);
+        ACL_ASSERT(l_node.prev == 0);
       }
 
       l_loc.prev  = node;

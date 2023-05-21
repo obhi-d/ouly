@@ -43,14 +43,14 @@ inline void free(void* f)
 }
 inline void* aligned_alloc(std::size_t alignment, std::size_t size)
 {
-  assert(alignment > 0);
-  assert((alignment & (alignment - 1)) == 0);
+  ACL_ASSERT(alignment > 0);
+  ACL_ASSERT((alignment & (alignment - 1)) == 0);
   return ACL_CUSTOM_MALLOC_NS::aligned_alloc(alignment, size);
 }
 inline void* aligned_zmalloc(std::size_t alignment, std::size_t size)
 {
-  assert(alignment > 0);
-  assert((alignment & (alignment - 1)) == 0);
+  ACL_ASSERT(alignment > 0);
+  ACL_ASSERT((alignment & (alignment - 1)) == 0);
   return ACL_CUSTOM_MALLOC_NS::aligned_zmalloc(alignment, size);
 }
 inline void aligned_free(void* ptr)

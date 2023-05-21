@@ -58,7 +58,7 @@ struct alloc_mem_manager
   template <typename Allocator>
   void end_defragment(Allocator& allocator)
   {
-    // assert validity
+    // ACL_ASSERT validity
     for (std::size_t i = 0; i < allocs.size(); ++i)
     {
       auto& src = backup_allocs[i];
@@ -66,7 +66,7 @@ struct alloc_mem_manager
 
       auto source_data = backup_arenas[src.info.harena].data() + src.info.offset;
       auto dest_data   = arenas[dst.info.harena].data() + dst.info.offset;
-      assert(!std::memcmp(source_data, dest_data, src.size));
+      ACL_ASSERT(!std::memcmp(source_data, dest_data, src.size));
     }
 
     backup_arenas.clear();
@@ -86,13 +86,13 @@ struct alloc_mem_manager
   void move_memory([[maybe_unused]] acl::uhandle src_arena, [[maybe_unused]] acl::uhandle dst_arena,
                    [[maybe_unused]] std::size_t from, [[maybe_unused]] std::size_t to, std::size_t size)
   {
-    assert(arenas[dst_arena].size() >= to + size);
-    assert(arenas[src_arena].size() >= from + size);
+    ACL_ASSERT(arenas[dst_arena].size() >= to + size);
+    ACL_ASSERT(arenas[src_arena].size() >= from + size);
     std::memmove(arenas[dst_arena].data() + to, arenas[src_arena].data() + from, size);
   }
 };
 
-TEMPLATE_TEST_CASE("Validate arena_allocator seed1542249547 bug", "[arena_allocator.strat]",
+TEMPLATE_TEST_CASE("Validate arena_allocator seed1542249547 init bug", "[arena_allocator.strat]",
                    // clang-format off
   (acl::strat::slotted_v2<acl::opt::fallback_start<acl::strat::best_fit_tree<>>>)
                    // clang-format on

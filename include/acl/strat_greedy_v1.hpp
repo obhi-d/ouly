@@ -87,7 +87,7 @@ public:
   {
     auto  hblock = block_link(block);
     auto& blk    = blocks[hblock];
-    assert(blk.list_.prev == 0);
+    ACL_ASSERT(blk.list_.prev == 0);
     blk.list_.next = head;
     if (head)
       blocks[block_link(head)].list_.prev = block;
@@ -127,7 +127,7 @@ public:
     while (i)
     {
       auto const& blk = blocks[block_link(i)];
-      assert(blk.size);
+      ACL_ASSERT(blk.size);
       count++;
       i = blk.list_.next;
     }
@@ -154,8 +154,8 @@ public:
     while (i)
     {
       auto const& blk = blocks[block_link(i)];
-      assert(blk.is_free);
-      assert(blk.list_.prev == p);
+      ACL_ASSERT(blk.is_free);
+      ACL_ASSERT(blk.list_.prev == p);
       p = i;
       i = blk.list_.next;
     }

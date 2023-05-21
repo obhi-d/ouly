@@ -83,16 +83,18 @@ public:
   template <typename ITy>
   requires std::same_as<ITy, Ty> || std::same_as<ITy, void> Ty& at(acl::link<ITy, size_type> l)
   {
-    if constexpr (acl::detail::debug)
-      assert(revisions_[l.as_index()] == l.revision());
+#ifdef ACL_DEBUG
+    ACL_ASSERT(revisions_[l.as_index()] == l.revision());
+#endif
     return *(Ty*)&items_[l.as_index()];
   }
 
   template <typename ITy>
   requires std::same_as<ITy, Ty> || std::same_as<ITy, void> Ty const& at(acl::link<ITy, size_type> l) const
   {
-    if constexpr (acl::detail::debug)
-      assert(revisions_[l.as_index()] == l.revision());
+#ifdef ACL_DEBUG
+    ACL_ASSERT(revisions_[l.as_index()] == l.revision());
+#endif
     return *(Ty const*)&items_[l.as_index()];
   }
 

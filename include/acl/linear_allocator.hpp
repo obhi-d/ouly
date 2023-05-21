@@ -45,7 +45,7 @@ public:
 
   linear_allocator& operator=(linear_allocator&& other) noexcept
   {
-    assert(k_arena_size == other.k_arena_size);
+    ACL_ASSERT(k_arena_size == other.k_arena_size);
     buffer          = other.buffer;
     left_over       = other.left_over;
     other.buffer    = nullptr;
@@ -62,7 +62,7 @@ public:
   address allocate(size_type i_size, Alignment i_alignment = {})
   {
     auto measure = statistics::report_allocate(i_size);
-    // assert
+    // ACL_ASSERT
     auto const fixup = i_alignment - 1;
     // make sure you allocate enough space
     // but keep alignment distance so that next allocations
@@ -70,7 +70,7 @@ public:
     if (i_alignment)
       i_size += i_alignment;
 
-    assert(left_over >= i_size);
+    ACL_ASSERT(left_over >= i_size);
     size_type offset = k_arena_size - left_over;
     left_over -= i_size;
     if (i_alignment)

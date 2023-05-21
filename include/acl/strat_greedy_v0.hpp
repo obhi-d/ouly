@@ -45,7 +45,7 @@ public:
 
   inline std::uint32_t commit(bank_data& bank, size_type size, uint32_t found)
   {
-    assert(found < static_cast<uint32_t>(free_list.size()));
+    ACL_ASSERT(found < static_cast<uint32_t>(free_list.size()));
 
     auto& free_node = free_list[found];
     auto  block     = free_node.second;
@@ -148,8 +148,8 @@ public:
       if (fn.first)
       {
         auto& blk = blocks[fn.second];
-        assert(blk.size == fn.first);
-        assert(blk.reserved32_ == i);
+        ACL_ASSERT(blk.size == fn.first);
+        ACL_ASSERT(blk.reserved32_ == i);
       }
     }
   }

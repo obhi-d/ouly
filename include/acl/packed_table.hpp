@@ -257,7 +257,7 @@ public:
   void replace(link point, value_type&& args) noexcept
   {
     if constexpr (detail::debug)
-      assert(contains(point));
+      ACL_ASSERT(contains(point));
 
     auto  k   = keys_.get(point.as_index());
     auto& val = values_[k];
@@ -366,7 +366,7 @@ public:
   {
     for (uint32_t first = 1, last = size(); first < last; ++first)
     {
-      assert(keys_.get(detail::index_val(get_ref_at_idx(first))) == first);
+      ACL_ASSERT(keys_.get(detail::index_val(get_ref_at_idx(first))) == first);
     }
 
     std::vector<uint32_t> frees;
@@ -374,8 +374,8 @@ public:
     while (fi)
     {
       auto idx = detail::index_val(detail::validate(fi));
-      assert(keys_.get(idx) != idx);
-      assert(std::ranges::find(frees, idx) == frees.end());
+      ACL_ASSERT(keys_.get(idx) != idx);
+      ACL_ASSERT(std::ranges::find(frees, idx) == frees.end());
       fi = keys_.get(idx);
       frees.emplace_back(idx);
     }
@@ -403,7 +403,7 @@ private:
     auto lnk  = l.as_index();
     auto idx  = keys_.get(lnk);
     auto self = get_ref_at_idx(idx);
-    assert(self == l.value());
+    ACL_ASSERT(self == l.value());
   }
 
   inline auto get_ref_at_idx(size_type idx) const noexcept

@@ -27,24 +27,24 @@ public:
       : k_atom_size(i_atom_size), k_atom_count(i_atom_count), statistics(std::forward<Args>(i_args)...)
   {}
 
-  pool_allocator(pool_allocator const& i_other)     = delete;
-  inline pool_allocator(pool_allocator&& i_other) noexcept 
- //  array_arena arrays;
- //  solo_arena      solo;
- //  const size_type k_atom_count;
- //  const size_type k_atom_size;
- //  arena_linker    linked_arenas;
+  pool_allocator(pool_allocator const& i_other) = delete;
+  inline pool_allocator(pool_allocator&& i_other) noexcept
+      //  array_arena arrays;
+      //  solo_arena      solo;
+      //  const size_type k_atom_count;
+      //  const size_type k_atom_size;
+      //  arena_linker    linked_arenas;
       : arrays(std::move(i_other.arrays)), solo(std::move(i_other.solo)), k_atom_count(i_other.k_atom_count),
         k_atom_size(i_other.k_atom_size), linked_arenas(std::move(i_other.linked_arenas))
   {}
 
-  pool_allocator& operator=(pool_allocator const& i_other) = delete;
-  inline pool_allocator& operator=(pool_allocator&& i_other) noexcept 
+  pool_allocator&        operator=(pool_allocator const& i_other) = delete;
+  inline pool_allocator& operator=(pool_allocator&& i_other) noexcept
   {
     arrays = (std::move(i_other.arrays));
-    solo = std::move(i_other.solo);
-    assert(k_atom_count == i_other.k_atom_count);
-    assert(k_atom_size = i_other.k_atom_size);
+    solo   = std::move(i_other.solo);
+    ACL_ASSERT(k_atom_count == i_other.k_atom_count);
+    ACL_ASSERT(k_atom_size = i_other.k_atom_size);
     linked_arenas = std::move(i_other.linked_arenas);
     return *this;
   }
@@ -321,7 +321,7 @@ private:
       len = arrays.length();
     }
 
-    assert(len >= i_count);
+    ACL_ASSERT(len >= i_count);
     std::uint8_t* ptr       = arrays.get_value();
     std::uint8_t* head      = ptr + (i_count * k_atom_size);
     size_type     left_over = len - i_count;
