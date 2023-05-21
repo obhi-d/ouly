@@ -27,6 +27,7 @@ inline static constexpr bool debug = false;
 #define ACL_ASSERT(expression) assert(expression)
 #else
 #include <cstdio>
+#include <cstdlib>
 #define ACL_STRINGIFY_LINE(x) #x
 #define ACL_ASSERT_IMPL(file, line, expression)                                                                        \
   do                                                                                                                   \
