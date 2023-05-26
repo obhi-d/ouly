@@ -20,7 +20,7 @@ concept ReferenceCounted = requires(T* a) {
                            };
 // clang-format on
 
-template <ReferenceCounted T>
+template <typename T>
 class intrusive_ptr
 {
 public:
@@ -30,6 +30,7 @@ public:
   inline constexpr intrusive_ptr(std::nullptr_t) noexcept {}
   inline explicit constexpr intrusive_ptr(T* self) noexcept : self_(self)
   {
+    static_assert(ReferenceCounted<T>, "Type must be reference counted.");
     if (self_ != nullptr)
       intrusive_count_add(self_);
   }
@@ -59,6 +60,7 @@ public:
 
   inline constexpr ~intrusive_ptr() noexcept
   {
+    static_assert(ReferenceCounted<T>, "Type must be reference counted.");
     reset();
   }
 
