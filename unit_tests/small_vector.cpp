@@ -1,7 +1,7 @@
 
 #include "test_common.hpp"
-#include <acl/small_vector.hpp>
-#include <acl/linear_allocator.hpp>
+#include <acl/allocators/linear_allocator.hpp>
+#include <acl/containers/small_vector.hpp>
 #include <catch2/catch_all.hpp>
 #include <compare>
 #include <utility>
@@ -86,7 +86,6 @@ TEST_CASE("small_vector: size construct", "[small_vector][construct]")
 
   test_size(5, true);
   test_size(10, false);
-
 }
 
 TEST_CASE("small_vector: size and value construct", "[small_vector][construct]")
@@ -103,7 +102,6 @@ TEST_CASE("small_vector: size and value construct", "[small_vector][construct]")
   test_size(5, true);
   test_size(10, false);
 }
-
 
 TEST_CASE("small_vector: construct from range", "[small_vector][construct]")
 {
@@ -163,7 +161,7 @@ TEST_CASE("small_vector: copy/move ctor with linear_allocator", "[small_vector][
   auto test_size = [](uint32_t size, bool inlined)
   {
     using type = acl::small_vector<std::string, 5>;
-    type                    values;
+    type values;
     for (uint32_t i = 0; i < size; ++i)
       values.emplace_back(to_lstring(i));
     auto v1 = type(values, acl::default_allocator<>());
@@ -187,8 +185,8 @@ TEST_CASE("small_vector: initializer", "[small_vector][construct]")
 {
   auto test_size = []<uint32_t... I>(std::integer_sequence<uint32_t, I...> seq, bool inlined)
   {
-    using type = acl::small_vector<std::string, 5>;
-    type inited = { to_lstring(I)... };
+    using type  = acl::small_vector<std::string, 5>;
+    type inited = {to_lstring(I)...};
     type values;
     for (uint32_t i = 0; i < seq.size(); ++i)
       values.emplace_back(to_lstring(i));
@@ -205,8 +203,8 @@ TEST_CASE("small_vector: initializer", "[small_vector][construct]")
 
 TEST_CASE("small_vector: shrink to fit", "[small_vector][shrink_to_fit]")
 {
-  tracker                               a, b, c, d, e, f;
-  
+  tracker a, b, c, d, e, f;
+
   acl::small_vector<destroy_tracker, 4> v1;
   v1.push_back(destroy_tracker(a));
   v1.push_back(destroy_tracker(b));
@@ -229,12 +227,11 @@ TEST_CASE("small_vector: shrink to fit", "[small_vector][shrink_to_fit]")
   v1.pop_back();
   REQUIRE(v1.back() == destroy_tracker(b));
   REQUIRE(v1.is_inlined() == true);
-  
+
   v1.clear();
 
   REQUIRE(a.tracking == 0);
   REQUIRE(b.tracking == 0);
-  
 }
 
 TEST_CASE("small_vector: insert", "[small_vector][insert]")
@@ -335,8 +332,7 @@ TEST_CASE("small_vector: insert", "[small_vector][insert]")
   REQUIRE(v1.size() == 6);
 }
 
-
-TEST_CASE("small_vector: erase", "[small_vector][erase]") 
+TEST_CASE("small_vector: erase", "[small_vector][erase]")
 {
   tracker a('a'), b('b'), c('c'), d('d'), e('e'), f('f'), g('g'), h('h');
 

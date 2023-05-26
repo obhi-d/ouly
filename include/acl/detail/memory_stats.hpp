@@ -129,7 +129,6 @@ struct statistics_impl<tag_arg, Opt, std::true_type> : base_stats_t<Opt>
   std::atomic_uint64_t allocation         = 0;
   std::atomic_uint64_t deallocation_count = 0;
   std::atomic_uint64_t allocation_count   = 0;
-  std::atomic_uint64_t allocator_data     = 0;
   timer_t              allocation_timing;
   timer_t              deallocation_timing;
   bool                 stats_printed = false;
@@ -174,10 +173,14 @@ struct statistics_impl<tag_arg, Opt, std::true_type> : base_stats_t<Opt>
     ss << line;
     if constexpr (HasBaseStats<Opt>)
     {
-      ss << "BaseStats for: " << acl::type_name<base_stats_t<Opt>>() << "\n";
-      ss << line;
-      ss << base_stats_t<Opt>::print();
-      ss << line;
+      auto stats = base_stats_t<Opt>::print();
+      if (!stats.empty())
+      {
+        ss << "BaseStats for: " << acl::type_name<base_stats_t<Opt>>() << "\n";
+        ss << line;
+        ss << base_stats_t<Opt>::print();
+        ss << line;
+      }
     }
     return ss.str();
   }

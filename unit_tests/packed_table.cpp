@@ -1,6 +1,6 @@
 #include "test_common.hpp"
-#include <acl/packed_table.hpp>
-#include <acl/soavector.hpp>
+#include <acl/containers/packed_table.hpp>
+#include <acl/containers/soavector.hpp>
 #include <catch2/catch_all.hpp>
 #include <compare>
 #include <iomanip>

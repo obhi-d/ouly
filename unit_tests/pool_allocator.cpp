@@ -1,10 +1,11 @@
-#include <acl/pool_allocator.hpp>
+#include <acl/allocators/pool_allocator.hpp>
+#include <acl/allocators/std_allocator_wrapper.hpp>
 #include <catch2/catch_all.hpp>
 
 TEST_CASE("Validate pool_allocator", "[pool_allocator]")
 {
   using namespace acl;
-  using allocator_t = pool_allocator<default_allocator<std::uint32_t, 0, true>, true>;
+  using allocator_t = pool_allocator<acl::options<acl::opt::compute_stats>>;
   struct trivial_object
   {
     std::uint8_t value[16];
@@ -53,7 +54,7 @@ TEST_CASE("Validate pool_allocator", "[pool_allocator]")
 TEST_CASE("Validate pool_allocator with alignment", "[pool_allocator]")
 {
   using namespace acl;
-  using allocator_t = pool_allocator<default_allocator<std::uint32_t, 0, true>, true>;
+  using allocator_t = pool_allocator<acl::options<acl::opt::compute_stats>>;
   struct trivial_object
   {
     std::uint8_t value[16];
@@ -107,9 +108,9 @@ TEST_CASE("Validate std_allocator", "[std_allocator]")
   using namespace acl;
   acl::pool_allocator<> pool_allocator(8, 1000);
   {
-    using std_allocator = acl::std_allocator_wrapper<std::uint64_t, acl::pool_allocator<>>;
-    acl::vector<std::uint64_t, std_allocator> vlist =
-      acl::vector<std::uint64_t, std_allocator>(std_allocator(pool_allocator));
+    using std_allocator = acl::allocator_ref<std::uint64_t, acl::pool_allocator<>>;
+    std::vector<std::uint64_t, std_allocator> vlist =
+      std::vector<std::uint64_t, std_allocator>(std_allocator(pool_allocator));
 
     for (std::uint64_t i = 0; i < 1000; ++i)
       vlist.push_back(i);

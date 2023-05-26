@@ -1,4 +1,4 @@
-#include <acl/link_container.hpp>
+#include <acl/containers/link_container.hpp>
 #include <catch2/catch_all.hpp>
 #include <iostream>
 #include <string>
@@ -18,8 +18,8 @@ struct link_traits_2
 TEST_CASE("link_container: Validate", "[link_container][void]")
 {
 
-  acl::link_registry<> registry;
-  auto                 e1 = registry.emplace();
+  acl::link_registry<>     registry;
+  auto                     e1 = registry.emplace();
   acl::link_container<int> table;
   table.sync(registry);
   table.emplace(e1, 100);
@@ -32,9 +32,9 @@ TEMPLATE_TEST_CASE("link_container: Validate", "[link_container][trivial]", link
   typename acl::link_container<int, TestType>           table;
 
   auto e1 = registry.emplace();
-  auto e2  = registry.emplace();
-  auto e3  = registry.emplace();
-  auto e4  = registry.emplace();
+  auto e2 = registry.emplace();
+  auto e3 = registry.emplace();
+  auto e4 = registry.emplace();
 
   table.sync(registry);
   table.emplace(e1, 100);

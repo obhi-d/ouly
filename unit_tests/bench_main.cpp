@@ -1,5 +1,5 @@
 #define ANKERL_NANOBENCH_IMPLEMENT
-#include <acl/arena_allocator.hpp>
+#include <acl/allocators/arena_allocator.hpp>
 #include <nanobench.h>
 #include <string_view>
 

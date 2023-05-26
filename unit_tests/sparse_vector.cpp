@@ -1,6 +1,6 @@
 
 #include "test_common.hpp"
-#include <acl/sparse_vector.hpp>
+#include <acl/containers/sparse_vector.hpp>
 #include <catch2/catch_all.hpp>
 #include <string>
 

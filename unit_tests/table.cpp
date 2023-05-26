@@ -1,11 +1,11 @@
 
-#include <acl/soavector.hpp>
-#include <acl/table.hpp>
+#include <acl/containers/soavector.hpp>
+#include <acl/containers/table.hpp>
 #include <catch2/catch_all.hpp>
 #include <string>
 
 TEST_CASE("table: Validate table emplace", "[table][emplace]")
-{  
+{
   acl::table<std::string> v1;
 
   auto a1 = v1.emplace("first");

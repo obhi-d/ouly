@@ -19,10 +19,10 @@
 #include <variant>
 #include <vector>
 
-#include <acl/type_traits.hpp>
+#include <acl/utility/type_traits.hpp>
 
 #ifndef ACL_CUSTOM_MALLOC_NS
-#include "acl/malloc_ns.hpp"
+#include <acl/utility/malloc_ns.hpp>
 #define ACL_CUSTOM_MALLOC_NS acl::detail
 #endif
 

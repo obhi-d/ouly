@@ -1,8 +1,7 @@
 #include "test_common.hpp"
-#include <acl/soavector.hpp>
+#include <acl/containers/soavector.hpp>
 #include <catch2/catch_all.hpp>
 #include <string>
-
 
 TEST_CASE("soavector: Validate soavector emplace", "[soavector][emplace]")
 {

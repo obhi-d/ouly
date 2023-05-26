@@ -1,8 +1,8 @@
 #pragma once
 #include "common.hpp"
 #include "utils.hpp"
-#include <acl/default_allocator.hpp>
-#include <acl/podvector.hpp>
+#include <acl/allocators/default_allocator.hpp>
+#include <acl/containers/podvector.hpp>
 #include <type_traits>
 #include <vector>
 
@@ -22,9 +22,9 @@ class table
   using freepool = std::conditional_t<IsPOD, free_idx, podvector<std::uint32_t>>;
 
 public:
-  table() noexcept = default;
-  table(table const&) = default;
-  table(table &&) noexcept = default;
+  table() noexcept        = default;
+  table(table const&)     = default;
+  table(table&&) noexcept = default;
 
   table& operator=(table const&)     = default;
   table& operator=(table&&) noexcept = default;

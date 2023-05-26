@@ -1,8 +1,8 @@
 
-#include "acl/intrusive_list.hpp"
-#include <string>
-#include <catch2/catch_all.hpp>
+#include <acl/containers/intrusive_list.hpp>
 #include <array>
+#include <catch2/catch_all.hpp>
+#include <string>
 
 struct sobject
 {
@@ -131,7 +131,7 @@ TEMPLATE_TEST_CASE("Validate intrusive_list push_back", "[intrusive_list][push_b
   std::array arr   = {value_type("a"), value_type("b"), value_type("c"), value_type("d")};
   for (auto& v : arr)
     il.push_back(v);
-  
+
   auto b = arr.begin();
   for (auto& i : il)
   {
@@ -141,8 +141,9 @@ TEMPLATE_TEST_CASE("Validate intrusive_list push_back", "[intrusive_list][push_b
   REQUIRE(il.size() == 4);
 }
 
-TEMPLATE_TEST_CASE("Validate intrusive_list push_front", "[intrusive_list][push_front]",
-                   // clang-format off
+TEMPLATE_TEST_CASE(
+  "Validate intrusive_list push_front", "[intrusive_list][push_front]",
+  // clang-format off
                    ( acl::intrusive_list<&sobject::hook, true, true>   ),
                    ( acl::intrusive_list<&sobject::hook, true, false>  ),
                    ( acl::intrusive_list<&sobject::hook, false, true>  ),
@@ -151,7 +152,7 @@ TEMPLATE_TEST_CASE("Validate intrusive_list push_front", "[intrusive_list][push_
                    ( acl::intrusive_list<&object::hook, true, false>   ),
                    ( acl::intrusive_list<&object::hook, false, true>   ),
                    ( acl::intrusive_list<&object::hook, false, false>  )
-                   // clang-format on
+  // clang-format on
 )
 {
   TestType il;
@@ -191,7 +192,7 @@ TEMPLATE_TEST_CASE("Validate intrusive_list append_front", "[intrusive_list][app
   REQUIRE(il.size() == 4);
 
   TestType il2;
-  
+
   {
     il2.append_front(std::move(il));
 
@@ -215,7 +216,7 @@ TEMPLATE_TEST_CASE("Validate intrusive_list append_front", "[intrusive_list][app
   auto i = il2.begin();
   for (auto b = arr2.rbegin(), e = arr2.rend(); b != e; ++b, ++i)
   {
-    REQUIRE(&(*i) == &(*b)); 
+    REQUIRE(&(*i) == &(*b));
   }
   for (auto b = arr.rbegin(), e = arr.rend(); b != e; ++b, ++i)
   {
@@ -279,8 +280,8 @@ TEMPLATE_TEST_CASE("Validate intrusive_list append_back", "[intrusive_list][appe
   REQUIRE(il2.size() == 8);
 }
 
-
-TEMPLATE_TEST_CASE("Validate intrusive_list erase_after", "[intrusive_list][erase_after]",
+TEMPLATE_TEST_CASE(
+  "Validate intrusive_list erase_after", "[intrusive_list][erase_after]",
   // clang-format off
                    ( acl::intrusive_list<&sobject::hook, true, true>   ),
                    ( acl::intrusive_list<&sobject::hook, true, false>  ),
@@ -299,7 +300,7 @@ TEMPLATE_TEST_CASE("Validate intrusive_list erase_after", "[intrusive_list][eras
   std::array arr   = {value_type("d"), value_type("c"), value_type("b"), value_type("a")};
   for (auto& v : arr)
     il.push_front(v);
-  
+
   il.erase_after(arr[1]);
 
   REQUIRE(il.size() == 3);
@@ -376,7 +377,7 @@ TEMPLATE_TEST_CASE(
   using value_type = TestType::value_type;
   std::array arr   = {value_type("a"), value_type("b"), value_type("c"), value_type("d")};
   std::array arr2  = {value_type("1"), value_type("2"), value_type("3"), value_type("4")};
-  
+
   for (auto& v : arr)
     il.push_front(v);
 
@@ -403,17 +404,15 @@ TEMPLATE_TEST_CASE(
   REQUIRE((*b).value == "1");
   b++;
   REQUIRE(b == il.end());
-
 }
 
-TEMPLATE_TEST_CASE(
-  "Validate intrusive_list insert", "[intrusive_list][insert]",
-  // clang-format off
+TEMPLATE_TEST_CASE("Validate intrusive_list insert", "[intrusive_list][insert]",
+                   // clang-format off
                    ( acl::intrusive_list<&object::hook, true, true>    ),
                    ( acl::intrusive_list<&object::hook, true, false>   ),
                    ( acl::intrusive_list<&object::hook, false, true>   ),
                    ( acl::intrusive_list<&object::hook, false, false>  )
-  // clang-format on
+                   // clang-format on
 
 )
 {
@@ -450,12 +449,11 @@ TEMPLATE_TEST_CASE(
   REQUIRE(b == il.end());
 }
 
-TEMPLATE_TEST_CASE(
-  "Validate intrusive_list append", "[intrusive_list][append]",
-  // clang-format off
+TEMPLATE_TEST_CASE("Validate intrusive_list append", "[intrusive_list][append]",
+                   // clang-format off
                    ( acl::intrusive_list<&object::hook, true, true>    ),
                    ( acl::intrusive_list<&object::hook, false, true>   )
-  // clang-format on
+                   // clang-format on
 
 )
 {
@@ -527,12 +525,11 @@ TEMPLATE_TEST_CASE(
   REQUIRE(b == il.end());
 }
 
-TEMPLATE_TEST_CASE(
-  "Validate intrusive_list erase", "[intrusive_list][erase]",
-  // clang-format off
+TEMPLATE_TEST_CASE("Validate intrusive_list erase", "[intrusive_list][erase]",
+                   // clang-format off
                    ( acl::intrusive_list<&object::hook, true, true>    ),
                    ( acl::intrusive_list<&object::hook, false, true>   )
-  // clang-format on
+                   // clang-format on
 
 )
 {

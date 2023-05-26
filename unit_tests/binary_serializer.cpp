@@ -1,7 +1,7 @@
 
-#include "acl/array_types.hpp"
-#include "acl/binary_input_serializer.hpp"
-#include "acl/binary_output_serializer.hpp"
+#include "acl/containers/array_types.hpp"
+#include "acl/serializers/binary_input_serializer.hpp"
+#include "acl/serializers/binary_output_serializer.hpp"
 #include <array>
 #include <catch2/catch_all.hpp>
 #include <charconv>

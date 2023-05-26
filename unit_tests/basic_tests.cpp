@@ -1,12 +1,12 @@
 
-#include <acl/default_allocator.hpp>
-#include <acl/error_codes.hpp>
-#include <acl/export.hxx>
-#include <acl/intrusive_ptr.hpp>
-#include <acl/packed_table.hpp>
-#include <acl/sparse_table.hpp>
-#include <acl/std_allocator_wrapper.hpp>
-#include <acl/tagged_ptr.hpp>
+#include <acl/allocators/default_allocator.hpp>
+#include <acl/allocators/std_allocator_wrapper.hpp>
+#include <acl/containers/packed_table.hpp>
+#include <acl/containers/sparse_table.hpp>
+#include <acl/utility/error_codes.hpp>
+#include <acl/utility/export.hxx>
+#include <acl/utility/intrusive_ptr.hpp>
+#include <acl/utility/tagged_ptr.hpp>
 #include <catch2/catch_all.hpp>
 
 TEST_CASE("Validate malloc")

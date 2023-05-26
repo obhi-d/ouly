@@ -1,7 +1,7 @@
 ﻿#pragma once
-#include "../sparse_table.hpp"
 #include "memory_move.hpp"
 #include "vlist.hpp"
+#include <acl/containers/sparse_table.hpp>
 
 namespace acl::detail
 {
