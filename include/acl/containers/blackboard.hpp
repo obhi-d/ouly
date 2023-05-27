@@ -40,12 +40,16 @@ struct name_index_map<H>
 };
 } // namespace detail
 
+namespace opt
+{
 // lookup option
 template <typename N>
-struct name_lookup
+struct name_map
 {
   using name_map_type = N;
 };
+
+} // namespace opt
 
 /// @brief Store data as name value pairs, value can be any blob of data
 ///
