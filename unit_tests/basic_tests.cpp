@@ -49,11 +49,11 @@ struct myClass : myBase
 
 int intrusive_count_add(myBase* m)
 {
-  return ++m->c;
+  return m->c++;
 }
 int intrusive_count_sub(myBase* m)
 {
-  return --m->c;
+  return m->c--;
 }
 int intrusive_count_get(myBase* m)
 {

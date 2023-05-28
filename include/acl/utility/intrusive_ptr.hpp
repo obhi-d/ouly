@@ -11,9 +11,9 @@ namespace acl
 // clang-format off
 template <typename T>
 concept ReferenceCounted = requires(T* a) {
-                             // Should return the updated value
+                             // Should return the previous value
                              {intrusive_count_add(a)}->std::integral;
-                             // Should return the updated value
+                             // Should return the previous value
                              {intrusive_count_sub(a)}->std::integral;
                              // Should return the current value
                              {intrusive_count_get(a)}->std::integral;
@@ -66,7 +66,7 @@ public:
 
   inline constexpr void reset(T* other = nullptr) noexcept
   {
-    if (self_ != nullptr && !intrusive_count_sub(self_))
+    if (self_ != nullptr && intrusive_count_sub(self_) == 1)
     {
       delete self_;
     }
