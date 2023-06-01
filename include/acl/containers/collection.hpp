@@ -25,8 +25,8 @@ public:
   using allocator_type = detail::custom_allocator_t<Options>;
 
 private:
-  static constexpr auto pool_div  = detail::log2(detail::pool_size_v<Options>);
-  static constexpr auto pool_size = static_cast<size_type>(1) << pool_div;
+  static constexpr auto pool_mul  = detail::log2(detail::pool_size_v<Options>);
+  static constexpr auto pool_size = static_cast<size_type>(1) << pool_mul;
   static constexpr auto pool_mod  = pool_size - 1;
   using this_type                 = collection<Ty, Options>;
   using base_type                 = allocator_type;
@@ -175,7 +175,7 @@ public:
 private:
   inline void validate_hazard(size_type nb, std::uint8_t hz) const noexcept
   {
-    auto block = hazard_page(nb >> pool_div);
+    auto block = hazard_page(nb >> pool_mul);
     auto index = nb & pool_mod;
 
     ACL_ASSERT(items[block][index] == hz);
@@ -199,7 +199,7 @@ private:
 
   inline bool is_bit_set(size_type nb) const noexcept
   {
-    auto                   block = bit_page(nb >> pool_div);
+    auto                   block = bit_page(nb >> pool_mul);
     auto                   index = nb & pool_mod;
     constexpr std::uint8_t one   = 1;
 
@@ -208,7 +208,7 @@ private:
 
   inline void unset_bit(size_type nb) noexcept
   {
-    auto block = bit_page(nb >> pool_div);
+    auto block = bit_page(nb >> pool_mul);
     auto index = nb & pool_mod;
 
     constexpr std::uint8_t one = 1;
@@ -217,7 +217,7 @@ private:
 
   inline void set_bit(size_type nb) noexcept
   {
-    auto block = bit_page(nb >> pool_div);
+    auto block = bit_page(nb >> pool_mul);
     auto index = nb & pool_mod;
 
     if (block >= items.size())
@@ -240,14 +240,14 @@ private:
 
   inline void set_hazard(size_type nb, std::uint8_t hz) noexcept
   {
-    auto block          = hazard_page(nb >> pool_div);
+    auto block          = hazard_page(nb >> pool_mul);
     auto index          = nb & pool_mod;
     items[block][index] = hz;
   }
 
   inline std::uint8_t get_hazard(size_type nb) noexcept
   {
-    auto block = hazard_page(nb >> pool_div);
+    auto block = hazard_page(nb >> pool_mul);
     auto index = nb & pool_mod;
     return items[block][index];
   }

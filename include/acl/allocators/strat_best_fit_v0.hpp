@@ -1,4 +1,5 @@
 ﻿#pragma once
+
 #include <acl/detail/arena.hpp>
 #include <acl/utility/type_traits.hpp>
 #include <optional>
@@ -24,7 +25,7 @@ public:
   using block           = detail::block<size_type, extension>;
   using bank_data       = detail::bank_data<size_type, extension>;
   using block_link      = typename block_bank::link;
-  using allocate_result = detail::free_list::iterator;
+  using allocate_result = optional_addr;
 
   static constexpr size_type min_granularity = 4;
 
@@ -42,9 +43,9 @@ public:
     return find_free(bank.blocks, free_ordering.begin(), free_ordering.end(), size);
   }
 
-  inline std::uint32_t commit(bank_data& bank, size_type size, auto found)
+  inline std::uint32_t commit(bank_data& bank, size_type size, optional_addr const& found_)
   {
-
+    auto          found     = *found_;
     std::uint32_t free_node = *found;
     auto&         blk       = bank.blocks[block_link(free_node)];
     // Marker
@@ -195,7 +196,7 @@ protected:
                             });
   }
 
-  inline auto find_free(block_bank& blocks, auto b, auto e, size_type i_size) const
+  inline optional_addr find_free(block_bank& blocks, auto b, auto e, size_type i_size) const
   {
     auto it = find_free_it(blocks, b, e, i_size);
     return (it != e) ? optional_addr(it) : optional_addr();
@@ -208,18 +209,21 @@ protected:
     {
       *of = node;
     }
-    auto it = find_free_it(blocks, begin_it, of, blocks[block_link(node)].size);
-    if (it != of)
-    {
-      std::uint32_t* src   = &*it;
-      std::uint32_t* dest  = src + 1;
-      std::size_t    count = std::distance(it, of);
-      std::memmove(dest, src, count * sizeof(std::uint32_t));
-      *it = node;
-    }
     else
     {
-      *of = node;
+      auto it = find_free_it(blocks, begin_it, of, blocks[block_link(node)].size);
+      if (it != of)
+      {
+        std::uint32_t* src   = &*it;
+        std::uint32_t* dest  = src + 1;
+        std::size_t    count = std::distance(it, of);
+        std::memmove(dest, src, count * sizeof(std::uint32_t));
+        *it = node;
+      }
+      else
+      {
+        *of = node;
+      }
     }
   }
 
@@ -232,19 +236,22 @@ protected:
     {
       *of = node;
     }
-    auto it = find_free_it(blocks, next, end_it, blocks[block_link(node)].size);
-    if (it != next)
-    {
-      std::uint32_t* dest  = &(*of);
-      std::uint32_t* src   = dest + 1;
-      std::size_t    count = std::distance(next, it);
-      std::memmove(dest, src, count * sizeof(std::uint32_t));
-      auto ptr = (dest + count);
-      *ptr     = node;
-    }
     else
     {
-      *of = node;
+      auto it = find_free_it(blocks, next, end_it, blocks[block_link(node)].size);
+      if (it != next)
+      {
+        std::uint32_t* dest  = &(*of);
+        std::uint32_t* src   = dest + 1;
+        std::size_t    count = std::distance(next, it);
+        std::memmove(dest, src, count * sizeof(std::uint32_t));
+        auto ptr = (dest + count);
+        *ptr     = node;
+      }
+      else
+      {
+        *of = node;
+      }
     }
   }
 

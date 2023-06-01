@@ -8,6 +8,8 @@
 
 #include "strat_best_fit_tree.hpp"
 #include "strat_best_fit_v0.hpp"
+#include "strat_best_fit_v1.hpp"
+#include "strat_best_fit_v2.hpp"
 #include "strat_greedy_v0.hpp"
 #include "strat_greedy_v1.hpp"
 #include "strat_slotted_v0.hpp"
@@ -144,7 +146,7 @@ public:
     std::uint32_t id = null();
     if (auto ta = ibank.strat.try_allocate(ibank.bank, size))
     {
-      id = ibank.strat.commit(ibank.bank, size, *ta);
+      id = ibank.strat.commit(ibank.bank, size, ta);
     }
     else
     {
@@ -153,14 +155,14 @@ public:
         defragment();
 
         if (ta = ibank.strat.try_allocate(ibank.bank, size))
-          id = ibank.strat.commit(ibank.bank, size, *ta);
+          id = ibank.strat.commit(ibank.bank, size, ta);
       }
 
       if (id == null())
       {
         add_arena(detail::k_null_sz<uhandle>, arena_size, true);
         if (ta = ibank.strat.try_allocate(ibank.bank, size))
-          id = ibank.strat.commit(ibank.bank, size, *ta);
+          id = ibank.strat.commit(ibank.bank, size, ta);
       }
     }
 
@@ -395,7 +397,7 @@ private:
           }
           ACL_ASSERT(ta);
 
-          auto  new_blk_id = refresh.strat.commit(refresh.bank, blk.size, *ta);
+          auto  new_blk_id = refresh.strat.commit(refresh.bank, blk.size, ta);
           auto& new_blk    = refresh.bank.blocks[block_link(new_blk_id)];
           refresh.bank.arenas[new_blk.arena].free -= blk.size;
           refresh.bank.free_size -= blk.size;

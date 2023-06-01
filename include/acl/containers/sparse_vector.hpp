@@ -51,8 +51,8 @@ private:
   static constexpr bool has_trivial_copy   = std::is_trivially_copyable_v<Ty> || has_pod;
   static constexpr bool has_backref        = detail::HasBackrefValue<Options>;
 
-  static constexpr auto pool_div       = detail::log2(detail::pool_size_v<Options>);
-  static constexpr auto pool_size      = static_cast<size_type>(1) << pool_div;
+  static constexpr auto pool_mul       = detail::log2(detail::pool_size_v<Options>);
+  static constexpr auto pool_size      = static_cast<size_type>(1) << pool_mul;
   static constexpr auto pool_bytes     = pool_size * sizeof(value_type);
   static constexpr auto allocate_bytes = has_pool_tracking ? pool_bytes + sizeof(uint32_t) : pool_bytes;
   static constexpr auto pool_mod       = pool_size - 1;
@@ -348,7 +348,7 @@ public:
   template <typename... Args>
   auto& ensure(size_type idx) noexcept
   {
-    auto block = idx >> pool_div;
+    auto block = idx >> pool_mul;
     auto index = idx & pool_mod;
 
     ensure_block(block);
@@ -489,7 +489,7 @@ public:
   void grow(size_type idx) noexcept
   {
     ACL_ASSERT(length_ < idx);
-    auto block = idx >> pool_div;
+    auto block = idx >> pool_mul;
     auto index = idx & pool_mod;
 
     ensure_block(block);
@@ -508,7 +508,7 @@ public:
   /// @brief Drop unused pages
   void shrink_to_fit() noexcept
   {
-    auto from = (length_ + pool_mod) >> pool_div;
+    auto from = (length_ + pool_mod) >> pool_mul;
     for (size_type block = from; block < items_.size(); ++block)
     {
       if (items_[block])
@@ -556,20 +556,20 @@ public:
 
   bool contains(size_type idx) const noexcept
   {
-    auto block = (idx >> pool_div);
+    auto block = (idx >> pool_mul);
     return block < items_.size() && items_[block] && !is_null(cast(items_[block][idx & pool_mod]));
   }
 
   Ty get_value(size_type idx) const noexcept
   requires(has_null_value)
   {
-    auto block = (idx >> pool_div);
+    auto block = (idx >> pool_mul);
     return block < items_.size() && items_[block] ? cast(items_[block][idx & pool_mod]) : options::null_v;
   }
 
   Ty& get_unsafe(size_type idx) const noexcept
   {
-    return cast(items_[(idx >> pool_div)][idx & pool_mod]);
+    return cast(items_[(idx >> pool_mul)][idx & pool_mod]);
   }
 
   bool empty() const noexcept
@@ -657,20 +657,20 @@ private:
 
   inline auto& item_at(size_type idx) noexcept
   {
-    auto block = (idx >> pool_div);
+    auto block = (idx >> pool_mul);
     ensure_block(block);
     return cast(items_[block][idx & pool_mod]);
   }
 
   inline auto& item_at(size_type idx) const noexcept
   {
-    auto block = (idx >> pool_div);
+    auto block = (idx >> pool_mul);
     return cast(items_[block][idx & pool_mod]);
   }
 
   inline void erase_at(size_type idx) noexcept
   {
-    auto block = (idx >> pool_div);
+    auto block = (idx >> pool_mul);
 
     if constexpr (has_null_value)
       cast(items_[block][idx & pool_mod]) = options::null_v;
@@ -706,8 +706,8 @@ private:
   {
     if (start == end)
       return;
-    auto bstart     = start >> pool_div;
-    auto bend       = end >> pool_div;
+    auto bstart     = start >> pool_mul;
+    auto bend       = end >> pool_mul;
     auto item_start = start & pool_mod;
     ACL_ASSERT(bstart <= bend);
     constexpr auto arity = function_traits<Lambda>::arity;
@@ -761,7 +761,7 @@ private:
           if (is_null(cast(store[e])))
             continue;
         }
-        lambda((block << pool_div) | e, cast(store[e]));
+        lambda((block << pool_mul) | e, cast(store[e]));
       }
     }
   }
@@ -769,7 +769,7 @@ private:
   template <typename... Args>
   auto& emplace_at_idx(size_type idx, Args&&... args) noexcept
   {
-    auto block = idx >> pool_div;
+    auto block = idx >> pool_mul;
     auto index = idx & pool_mod;
 
     ensure_block(block);

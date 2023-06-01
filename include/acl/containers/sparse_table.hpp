@@ -34,8 +34,8 @@ public:
   static_assert(sizeof(Ty) >= sizeof(size_type), "Type must big enough to hold a link");
 
 private:
-  static constexpr auto pool_div    = detail::log2(detail::pool_size_v<Options>);
-  static constexpr auto pool_size   = static_cast<size_type>(1) << pool_div;
+  static constexpr auto pool_mul    = detail::log2(detail::pool_size_v<Options>);
+  static constexpr auto pool_size   = static_cast<size_type>(1) << pool_mul;
   static constexpr auto pool_mod    = pool_size - 1;
   static constexpr bool has_backref = detail::HasBackrefValue<Options>;
   using this_type                   = sparse_table<Ty, Options>;
@@ -195,7 +195,7 @@ public:
   /// @return active pool count
   size_type active_pools() const noexcept
   {
-    return extend_ >> pool_div;
+    return extend_ >> pool_mul;
   }
 
   /// @brief Get item pool and number of items_ give the pool number
@@ -221,7 +221,7 @@ public:
     auto lnk = ensure_slot();
     auto idx = detail::index_val(lnk);
 
-    auto block = idx >> pool_div;
+    auto block = idx >> pool_mul;
     auto index = idx & pool_mod;
 
     std::construct_at(reinterpret_cast<value_type*>(items_[block] + index), std::forward<Args>(args)...);
@@ -258,7 +258,7 @@ public:
   /// @brief Drop unused pages
   void shrink_to_fit() noexcept
   {
-    auto block = (extend_ + pool_size - 1) >> pool_div;
+    auto block = (extend_ + pool_size - 1) >> pool_mul;
     for (auto i = block, end = static_cast<size_type>(items_.size()); i < end; ++i)
       acl::deallocate(*this, items_[i], sizeof(storage) * pool_size);
     items_.resize(block);
@@ -380,12 +380,12 @@ private:
 
   inline auto& item_at_idx(size_type item_id) noexcept
   {
-    return reinterpret_cast<value_type&>(items_[item_id >> pool_div][item_id & pool_mod]);
+    return reinterpret_cast<value_type&>(items_[item_id >> pool_mul][item_id & pool_mod]);
   }
 
   inline auto const& item_at_idx(size_type item_id) const noexcept
   {
-    return reinterpret_cast<value_type const&>(items_[item_id >> pool_div][item_id & pool_mod]);
+    return reinterpret_cast<value_type const&>(items_[item_id >> pool_mul][item_id & pool_mod]);
   }
 
   inline void erase_at(size_type l) noexcept
@@ -394,7 +394,7 @@ private:
 
     auto lnk = detail::index_val(l);
 
-    auto& item = reinterpret_cast<value_type&>(items_[lnk >> pool_div][lnk & pool_mod]);
+    auto& item = reinterpret_cast<value_type&>(items_[lnk >> pool_mul][lnk & pool_mod]);
 
     if constexpr (!std::is_trivially_destructible_v<value_type>)
       std::destroy_at(&item);
@@ -415,7 +415,7 @@ private:
     size_type lnk;
     if (free_slot_ == link::null_v)
     {
-      auto block = extend_ >> pool_div;
+      auto block = extend_ >> pool_mul;
       if (block >= items_.size())
         items_.emplace_back(acl::allocate<storage>(*this, sizeof(storage) * pool_size));
 
@@ -448,9 +448,9 @@ private:
       if (is_valid_ref(ref))
       {
         if constexpr (arity == 2)
-          lambda(link(get_ref_at_idx(first)), reinterpret_cast<Cast&>(items_[first >> pool_div][first & pool_mod]));
+          lambda(link(get_ref_at_idx(first)), reinterpret_cast<Cast&>(items_[first >> pool_mul][first & pool_mod]));
         else
-          lambda(reinterpret_cast<Cast&>(items_[first >> pool_div][first & pool_mod]));
+          lambda(reinterpret_cast<Cast&>(items_[first >> pool_mul][first & pool_mod]));
       }
     }
   }

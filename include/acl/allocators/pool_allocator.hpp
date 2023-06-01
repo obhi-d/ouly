@@ -18,6 +18,12 @@ struct atom_count
 template <std::size_t N>
 struct atom_size
 {
+  static constexpr std::size_t atom_size_v = 1 << detail::log2(N);
+};
+
+template <std::size_t N>
+struct atom_size_npt
+{
   static constexpr std::size_t atom_size_v = N;
 };
 } // namespace opt

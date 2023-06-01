@@ -57,7 +57,7 @@ void bench_arena(uint32_t size, std::string_view name)
 {
   using allocator_t = acl::arena_allocator<
     acl::options<acl::opt::strategy<T>, acl::opt::manager<alloc_mem_manager>, acl::opt::basic_size_type<uint32_t>>>;
-  constexpr uint32_t        nbatch = 100000;
+  constexpr uint32_t        nbatch = 200000;
   alloc_mem_manager         mgr;
   std::vector<acl::ihandle> allocations;
   allocations.reserve(nbatch);
@@ -95,9 +95,16 @@ int main(int argc, char* argv[])
   //  (acl::strat::slotted_v1<uint32_t, 256, 255, 4, acl::strat::best_fit_tree<uint32_t>>),
   //  (acl::strat::slotted_v2<uint32_t, 256, 255, 8, 4, acl::strat::best_fit_tree<uint32_t>>)
   bench_arena<acl::strat::greedy_v0<>>(size, "greedy-v0");
+  bench_arena<acl::strat::greedy_v0<>>(size, "greedy-v0");
   bench_arena<acl::strat::greedy_v1<>>(size, "greedy-v1");
   bench_arena<acl::strat::best_fit_tree<>>(size, "bf-tree");
   bench_arena<acl::strat::best_fit_v0<>>(size, "bf-v0");
+  bench_arena<acl::strat::best_fit_v1<acl::opt::bsearch_min0>>(size, "bf-v1-min0");
+  bench_arena<acl::strat::best_fit_v1<acl::opt::bsearch_min1>>(size, "bf-v1-min1");
+  bench_arena<acl::strat::best_fit_v1<acl::opt::bsearch_min2>>(size, "bf-v1-min2");
+  bench_arena<acl::strat::best_fit_v2<acl::opt::bsearch_min0>>(size, "bf-v2-min0");
+  bench_arena<acl::strat::best_fit_v2<acl::opt::bsearch_min1>>(size, "bf-v2-min1");
+  bench_arena<acl::strat::best_fit_v2<acl::opt::bsearch_min2>>(size, "bf-v2-min2");
   bench_arena<acl::strat::slotted_v0<>>(size, "slot-v0");
   bench_arena<acl::strat::slotted_v1<>>(size, "slot-v1");
   bench_arena<acl::strat::slotted_v2<>>(size, "slot-v2");

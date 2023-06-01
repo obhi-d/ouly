@@ -92,9 +92,26 @@ struct alloc_mem_manager
   }
 };
 
-TEMPLATE_TEST_CASE("Validate arena_allocator seed1542249547 init bug", "[arena_allocator.strat]",
+TEMPLATE_TEST_CASE("Validate arena_allocator", "[arena_allocator.strat]",
                    // clang-format off
+  
+  (acl::strat::best_fit_v1<acl::opt::bsearch_min2>),
+  (acl::strat::best_fit_v1<acl::opt::bsearch_min0>),
+  (acl::strat::best_fit_v1<acl::opt::bsearch_min1>),
+  (acl::strat::best_fit_v2<acl::opt::bsearch_min0>),
+  (acl::strat::best_fit_v2<acl::opt::bsearch_min1>),
+  (acl::strat::best_fit_v2<acl::opt::bsearch_min2>),
+  (acl::strat::greedy_v1<>),
+  (acl::strat::greedy_v0<>),
+  (acl::strat::best_fit_tree<>),
+  (acl::strat::best_fit_v0<>),
+  (acl::strat::slotted_v0<>),
+  (acl::strat::slotted_v1<>),
+  (acl::strat::slotted_v2<>),
+  (acl::strat::slotted_v0<acl::opt::fallback_start<acl::strat::best_fit_tree<>>>),
+  (acl::strat::slotted_v1<acl::opt::fallback_start<acl::strat::best_fit_tree<>>>),
   (acl::strat::slotted_v2<acl::opt::fallback_start<acl::strat::best_fit_tree<>>>)
+
                    // clang-format on
 )
 {
@@ -103,8 +120,7 @@ TEMPLATE_TEST_CASE("Validate arena_allocator seed1542249547 init bug", "[arena_a
                                       acl::opt::basic_size_type<uint32_t>, acl::opt::compute_stats>>;
 
   std::random_device rd;
-  unsigned int       seed = 1542249547;
-  // rd();
+  unsigned int       seed = rd();
   std::cout << " Seed : " << acl::type_name<TestType>() << " : " << seed << std::endl;
   std::minstd_rand                        gen(seed);
   std::bernoulli_distribution             dice(0.7);
@@ -143,18 +159,8 @@ TEMPLATE_TEST_CASE("Validate arena_allocator seed1542249547 init bug", "[arena_a
   }
 }
 
-TEMPLATE_TEST_CASE("Validate arena_allocator", "[arena_allocator.strat]",
+TEMPLATE_TEST_CASE("Validate arena_allocator seed1542249547 init bug", "[arena_allocator.strat]",
                    // clang-format off
-  
-  (acl::strat::greedy_v1<>),
-  (acl::strat::greedy_v0<>),
-  (acl::strat::best_fit_tree<>),
-  (acl::strat::best_fit_v0<>),
-  (acl::strat::slotted_v0<>),
-  (acl::strat::slotted_v1<>),
-  (acl::strat::slotted_v2<>),
-  (acl::strat::slotted_v0<acl::opt::fallback_start<acl::strat::best_fit_tree<>>>),
-  (acl::strat::slotted_v1<acl::opt::fallback_start<acl::strat::best_fit_tree<>>>),
   (acl::strat::slotted_v2<acl::opt::fallback_start<acl::strat::best_fit_tree<>>>)
                    // clang-format on
 )
@@ -164,7 +170,8 @@ TEMPLATE_TEST_CASE("Validate arena_allocator", "[arena_allocator.strat]",
                                       acl::opt::basic_size_type<uint32_t>, acl::opt::compute_stats>>;
 
   std::random_device rd;
-  unsigned int       seed = rd();
+  unsigned int       seed = 1542249547;
+  // rd();
   std::cout << " Seed : " << acl::type_name<TestType>() << " : " << seed << std::endl;
   std::minstd_rand                        gen(seed);
   std::bernoulli_distribution             dice(0.7);

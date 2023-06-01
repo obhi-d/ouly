@@ -16,8 +16,8 @@ public:
   using allocator_type = detail::custom_allocator_t<Options>;
 
 private:
-  static constexpr auto pool_div  = detail::log2(detail::pool_size_v<Options>);
-  static constexpr auto pool_size = static_cast<size_type>(1) << pool_div;
+  static constexpr auto pool_mul  = detail::log2(detail::pool_size_v<Options>);
+  static constexpr auto pool_size = static_cast<size_type>(1) << pool_mul;
   static constexpr auto pool_mod  = pool_size - 1;
   using storage                   = detail::aligned_storage<sizeof(value_type), alignof(value_type)>;
   static constexpr bool has_pod   = detail::HasTrivialAttrib<Options>;

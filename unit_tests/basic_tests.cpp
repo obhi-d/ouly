@@ -9,6 +9,57 @@
 #include <acl/utility/tagged_ptr.hpp>
 #include <catch2/catch_all.hpp>
 
+#define BINARY_SEARCH_STEP                                                                                             \
+  do                                                                                                                   \
+  {                                                                                                                    \
+    const size_t* const middle = it + (size >> 1);                                                                     \
+    size                       = (size + 1) >> 1;                                                                      \
+    it                         = *middle < key ? middle : it;                                                          \
+  }                                                                                                                    \
+  while (0)
+
+static inline auto mini0(size_t const* it, size_t size, size_t key) noexcept
+{
+  while (size > 2)
+    BINARY_SEARCH_STEP;
+  it += size > 1 && (*it < key);
+  it += size > 0 && (*it < key);
+  return it;
+}
+
+static inline auto mini1(size_t const* it, size_t size, size_t key) noexcept
+{
+  do
+  {
+    BINARY_SEARCH_STEP;
+  }
+  while (size > 2);
+  it += size > 1 && (*it < key);
+  it += size > 0 && (*it < key);
+  return it;
+}
+
+static inline auto mini2(size_t const* it, size_t size, size_t key) noexcept
+{
+  do
+  {
+    BINARY_SEARCH_STEP;
+    BINARY_SEARCH_STEP;
+  }
+  while (size > 2);
+  it += size > 1 && (*it < key);
+  it += size > 0 && (*it < key);
+  return it;
+}
+
+TEST_CASE("Lower bound")
+{
+  std::vector<size_t> vec{3, 20, 60, 400};
+
+  auto i = mini0(vec.data(), 3, 40);
+  REQUIRE(i < vec.data() + vec.size());
+}
+
 TEST_CASE("Validate malloc")
 {
   char* data = (char*)acl::detail::malloc(100);

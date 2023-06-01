@@ -46,8 +46,8 @@ public:
     uint32_t value = 0;
   };
 
-  using allocate_result_v = std::variant<std::monostate, fallback_allocate_result, bucket_idx>;
-  using allocate_result   = detail::variant_result<allocate_result_v>;
+  using allocate_result_v = detail::variant_result<std::variant<std::monostate, fallback_allocate_result, bucket_idx>>;
+  using allocate_result   = allocate_result_v;
 
   inline allocate_result try_allocate(bank_data& bank, size_type size)
   {
@@ -61,19 +61,20 @@ public:
         {
           if (!buckets[id].empty())
           {
-            return allocate_result(bucket_idx{id});
+            return allocate_result_v(bucket_idx{id});
           }
         }
       }
     }
 
     if (auto fta = fallback.try_allocate(bank, size))
-      return allocate_result(*fta);
-    return allocate_result();
+      return allocate_result_v(*fta);
+    return allocate_result_v();
   }
 
-  inline std::uint32_t commit(bank_data& bank, size_type size, allocate_result_v const& vdx)
+  inline std::uint32_t commit(bank_data& bank, size_type size, allocate_result_v const& r)
   {
+    auto const& vdx = *r;
     if (std::holds_alternative<fallback_allocate_result>(vdx))
     {
       // Commit will result in a split, but we do not ask for the

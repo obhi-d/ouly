@@ -83,7 +83,7 @@ public:
   };
 
   using tree_type       = detail::rbtree<blk_tree_node_accessor, 1>;
-  using allocate_result = uint32_t;
+  using allocate_result = optional_addr;
 
   inline auto try_allocate(bank_data& bank, size_type size)
   {
@@ -91,9 +91,9 @@ public:
     return optional_addr((bank.blocks[block_link(blk)].size < size) ? 0 : blk);
   }
 
-  inline std::uint32_t commit(bank_data& bank, size_type size, std::uint32_t found)
+  inline std::uint32_t commit(bank_data& bank, size_type size, optional_addr found)
   {
-    auto& blk = bank.blocks[block_link(found)];
+    auto& blk = bank.blocks[block_link(found.value)];
     // Marker
     size_type     offset    = blk.offset;
     std::uint32_t arena_num = blk.arena;
@@ -101,18 +101,18 @@ public:
     blk.is_free = false;
 
     auto remaining = blk.size - size;
-    tree.erase(bank.blocks, found);
+    tree.erase(bank.blocks, found.value);
     blk.size = size;
     if (remaining > 0)
     {
       auto& list   = bank.arenas[blk.arena].block_order;
       auto  arena  = blk.arena;
       auto  newblk = bank.blocks.emplace(blk.offset + size, remaining, arena, extension(), true);
-      list.insert_after(bank.blocks, found, (uint32_t)newblk);
+      list.insert_after(bank.blocks, found.value, (uint32_t)newblk);
       tree.insert(bank.blocks, (uint32_t)newblk);
     }
 
-    return found;
+    return found.value;
   }
 
   inline void add_free_arena([[maybe_unused]] block_bank& blocks, std::uint32_t block)

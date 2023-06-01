@@ -21,7 +21,7 @@ public:
   using block           = detail::block<size_type, extension>;
   using bank_data       = detail::bank_data<size_type, extension>;
   using block_link      = typename block_bank::link;
-  using allocate_result = uint32_t;
+  using allocate_result = optional_addr;
 
   static constexpr size_type min_granularity = 4;
 
@@ -43,11 +43,11 @@ public:
     return optional_addr();
   }
 
-  inline std::uint32_t commit(bank_data& bank, size_type size, uint32_t found)
+  inline std::uint32_t commit(bank_data& bank, size_type size, optional_addr found)
   {
-    ACL_ASSERT(found < static_cast<uint32_t>(free_list.size()));
+    ACL_ASSERT(found.value < static_cast<uint32_t>(free_list.size()));
 
-    auto& free_node = free_list[found];
+    auto& free_node = free_list[found.value];
     auto  block     = free_node.second;
     auto& blk       = bank.blocks[block];
     // Marker
@@ -63,7 +63,7 @@ public:
       auto& list  = bank.arenas[blk.arena].block_order;
       auto  arena = blk.arena;
 
-      auto newblk = bank.blocks.emplace(blk.offset + size, remaining, arena, found, true);
+      auto newblk = bank.blocks.emplace(blk.offset + size, remaining, arena, found.value, true);
       list.insert_after(bank.blocks, (uint32_t)free_node.second, (uint32_t)newblk);
       // reinsert the left-over size in free list
       free_node.first  = remaining;
@@ -73,7 +73,7 @@ public:
     {
       free_node.first  = 0;
       free_node.second = block_link(free_slot);
-      free_slot        = found;
+      free_slot        = found.value;
     }
 
     return (uint32_t)block;

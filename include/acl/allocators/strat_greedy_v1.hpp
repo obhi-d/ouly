@@ -20,7 +20,7 @@ public:
   using block           = detail::block<size_type, extension>;
   using bank_data       = detail::bank_data<size_type, extension>;
   using block_link      = typename block_bank::link;
-  using allocate_result = uint32_t;
+  using allocate_result = optional_addr;
 
   static constexpr size_type min_granularity = 4;
 
@@ -44,9 +44,9 @@ public:
     return optional_addr();
   }
 
-  inline std::uint32_t commit(bank_data& bank, size_type size, uint32_t found)
+  inline std::uint32_t commit(bank_data& bank, size_type size, optional_addr found)
   {
-    auto& blk = bank.blocks[block_link(found)];
+    auto& blk = bank.blocks[block_link(found.value)];
     // Marker
     size_type     offset    = blk.offset;
     std::uint32_t arena_num = blk.arena;
@@ -61,7 +61,7 @@ public:
       auto  arena = blk.arena;
 
       auto newblk = bank.blocks.emplace(blk.offset + size, remaining, arena, blk.list_, true);
-      list.insert_after(bank.blocks, found, (uint32_t)newblk);
+      list.insert_after(bank.blocks, found.value, (uint32_t)newblk);
 
       if (blk.list_.next)
         bank.blocks[block_link(blk.list_.next)].list_.prev = (uint32_t)newblk;
@@ -73,9 +73,9 @@ public:
     }
     else
     {
-      erase(bank.blocks, found);
+      erase(bank.blocks, found.value);
     }
-    return found;
+    return found.value;
   }
 
   inline void add_free_arena([[maybe_unused]] block_bank& blocks, std::uint32_t block)
