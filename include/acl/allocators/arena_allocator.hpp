@@ -1,11 +1,11 @@
 ﻿#pragma once
 
-#include "alloc_desc.hpp"
 #include <acl/detail/arena.hpp>
 
 #include <bit>
 #include <concepts>
 #include <functional>
+#include <tuple>
 
 #include "strat_best_fit_tree.hpp"
 #include "strat_best_fit_v0.hpp"
@@ -41,7 +41,7 @@ concept HasDefragmentSupport = requires(T a, A& allocator, acl::uhandle src_aren
                                  // End defragmentation
                                  a.end_defragment(allocator);
                                  // Rebind an allocation to another value
-                                 a.rebind_alloc(alloc_info, typename A::alloc_info());
+                                 a.rebind_alloc(alloc_info, src_arena, alloc_info, typename A::size_type());
                                  // Move memory from source arena to another
                                  a.move_memory(src_arena, dst_arena, from, to, size);
                                };
@@ -56,11 +56,13 @@ struct extension
 {
   using extension_t = T;
 };
+
 template <MemoryManager T>
 struct manager
 {
   using manager_t = T;
 };
+
 template <typename T>
 struct strategy
 {
@@ -71,6 +73,36 @@ struct strategy
 
 namespace acl::detail
 {
+
+template <typename T>
+concept HasMemoryManager = requires { typename T::manager_t; };
+
+template <typename T>
+concept HasAllocStrategy = requires { typename T::strategy_t; };
+
+template <typename T>
+struct manager
+{
+  using manager_t = std::false_type;
+};
+
+template <HasMemoryManager T>
+struct manager<T>
+{
+  using manager_t = typename T::manager_t;
+};
+
+template <typename T>
+struct strategy
+{
+  using strategy_t = acl::strat::best_fit_v2<acl::opt::bsearch_min1>;
+};
+
+template <HasAllocStrategy T>
+struct strategy<T>
+{
+  using strategy_t = typename T::strategy_t;
+};
 
 struct defrag_stats
 {
@@ -96,21 +128,31 @@ struct defrag_stats
   }
 };
 
+struct arena_allocator_tag
+{};
+
 } // namespace acl::detail
 
 namespace acl
 {
 
-template <typename Options>
-class arena_allocator : public detail::statistics<typename Options::strategy_t,
-                                                  acl::options<Options, opt::base_stats<detail::defrag_stats>>>
+template <typename Options = std::monostate>
+class arena_allocator
+    : detail::statistics<detail::arena_allocator_tag, acl::options<Options, opt::base_stats<detail::defrag_stats>>>
 {
+
+public:
+  using strategy      = typename detail::strategy<Options>::strategy_t;
+  using extension     = typename strategy::extension;
+  using arena_manager = typename detail::manager<Options>::manager_t;
+  using size_type     = detail::choose_size_t<uint32_t, Options>;
+  using this_type     = arena_allocator<Options>;
+
+  static constexpr bool has_memory_mgr = detail::HasMemoryManager<Options>;
+  static constexpr bool can_defragment = HasDefragmentSupport<arena_manager, this_type>;
+
 protected:
-  using strategy  = typename Options::strategy_t;
-  using extension = typename strategy::extension;
-  using manager   = typename Options::manager_t;
-  using size_type = detail::choose_size_t<uint32_t, Options>;
-  using options   = Options;
+  using options = Options;
 
   using block          = detail::block<size_type, extension>;
   using block_bank     = detail::block_bank<size_type, extension>;
@@ -118,16 +160,14 @@ protected:
   using block_list     = detail::block_list<size_type, extension>;
   using arena_bank     = detail::arena_bank<size_type, extension>;
   using arena_list     = detail::arena_list<size_type, extension>;
-  using statistics =
-    detail::statistics<typename Options::strategy_t, acl::options<Options, opt::base_stats<detail::defrag_stats>>>;
+
+  using super =
+    detail::statistics<detail::arena_allocator_tag, acl::options<Options, opt::base_stats<detail::defrag_stats>>>;
+
+  using statistics = super;
   using block_link = typename block_bank::link;
 
-  using this_type                      = arena_allocator<Options>;
-  static constexpr bool can_defragment = HasDefragmentSupport<manager, this_type>;
-
-  using memory_move   = detail::memory_move<size_type>;
-  using arena_manager = manager;
-  using bank_data     = detail::bank_data<size_type, extension>;
+  using bank_data = detail::bank_data<size_type, extension>;
 
   struct remap_data
   {
@@ -136,22 +176,55 @@ protected:
   };
 
 public:
-  using alloc_offset = acl::alloc_offset<size_type>;
-  using alloc_info   = acl::alloc_info<size_type>;
-  using option_flags = std::uint32_t;
+  struct memory_move
+  {
+    size_type     from;
+    size_type     to;
+    size_type     size;
+    std::uint32_t arena_src;
+    std::uint32_t arena_dst;
 
-  template <typename... Args>
-  inline arena_allocator(size_type i_arena_size, arena_manager& i_manager, Args&&... iargs)
-      : statistics(std::forward<Args>(iargs)...), mgr(i_manager), arena_size(i_arena_size)
+    inline bool is_moved() const noexcept
+    {
+      return (from != to || arena_src != arena_dst);
+    }
+
+    memory_move() = default;
+    memory_move(size_type ifrom, size_type ito, size_type isize, std::uint32_t iarena_src, std::uint32_t iarena_dst)
+        : from(ifrom), to(ito), size(isize), arena_src(iarena_src), arena_dst(iarena_dst)
+    {}
+  };
+
+  /// Allocation info: [optional] arena, offset, input_handle
+  using alloc_info =
+    std::conditional_t<has_memory_mgr, std::tuple<uhandle, ihandle, size_type>, std::pair<ihandle, size_type>>;
+
+  inline arena_allocator(size_type i_arena_size, arena_manager& i_manager) noexcept
+  requires(has_memory_mgr)
+      : mgr(&i_manager), arena_size(i_arena_size)
   {
     ibank.strat.init(*this);
   }
 
-  arena_allocator(arena_allocator const&)     = default;
-  arena_allocator(arena_allocator&&) noexcept = default;
+  inline arena_allocator() noexcept
+  {
+    if constexpr (!has_memory_mgr)
+      add_arena(detail::k_null_sz<uhandle>, arena_size, true);
+  }
 
-  arena_allocator& operator=(arena_allocator const&)     = default;
-  arena_allocator& operator=(arena_allocator&&) noexcept = default;
+  template <typename... Args>
+  inline arena_allocator(size_type i_arena_size) noexcept : arena_size(i_arena_size)
+  {
+    ibank.strat.init(*this);
+    if constexpr (!has_memory_mgr)
+      add_arena(detail::k_null_sz<uhandle>, arena_size, true);
+  }
+
+  arena_allocator(arena_allocator const&) noexcept = default;
+  arena_allocator(arena_allocator&&) noexcept      = default;
+
+  arena_allocator& operator=(arena_allocator const&) noexcept = default;
+  arena_allocator& operator=(arena_allocator&&) noexcept      = default;
 
   inline auto get_root_block() const
   {
@@ -159,24 +232,26 @@ public:
   }
 
   //! get allocation info
-  inline alloc_offset get_alloc_offset(ihandle i_address) const
+  inline auto get_alloc_offset(ihandle i_address) const
   {
     auto const& blk = ibank.bank.blocks[block_link(i_address)];
-    return alloc_offset(blk.arena, blk.offset);
+    return std::pair(blk.arena, blk.offset);
   }
 
   //! Allocate
-  template <typename alloc_desc_t>
-  alloc_info allocate(alloc_desc_t const& desc)
+  template <typename Alignment = alignment<>, typename Dedicated = std::false_type>
+  alloc_info allocate(size_type isize, Alignment i_alignment = {}, uhandle huser = {}, Dedicated = {})
   {
-    auto measure = this->statistics::report_allocate(desc.size());
-    auto size    = desc.adjusted_size();
+    auto measure = this->statistics::report_allocate(isize);
+    auto size    = isize + static_cast<size_type>(i_alignment);
 
-    ACL_ASSERT(desc.huser() != detail::k_null_uh);
-    if (desc.flags() & f_dedicated_arena || size >= arena_size)
+    if (Dedicated::value || size >= arena_size)
     {
-      auto ret = add_arena(desc.huser(), size, false);
-      return alloc_info(ibank.bank.arenas[ret.first].data, 0, ret.second);
+      auto ret = add_arena(huser, size, false);
+      if constexpr (has_memory_mgr)
+        return alloc_info(ibank.bank.arenas[ret.first].data, ret.second, 0);
+      else
+        return alloc_info(ret.second, 0);
     }
 
     std::uint32_t id = null();
@@ -186,29 +261,26 @@ public:
     }
     else
     {
-      if constexpr (can_defragment)
+      if constexpr (has_memory_mgr)
       {
-        if (desc.flags() & f_defrag)
+        if (id == null())
         {
-          defragment();
-
+          add_arena(detail::k_null_sz<uhandle>, arena_size, true);
           if (ta = ibank.strat.try_allocate(ibank.bank, size))
             id = ibank.strat.commit(ibank.bank, size, ta);
         }
-      }
-
-      if (id == null())
-      {
-        add_arena(detail::k_null_sz<uhandle>, arena_size, true);
-        if (ta = ibank.strat.try_allocate(ibank.bank, size))
-          id = ibank.strat.commit(ibank.bank, size, ta);
       }
     }
 
     if (id == null())
       return alloc_info();
+
     auto& blk = ibank.bank.blocks[block_link(id)];
-    return alloc_info(ibank.bank.arenas[blk.arena].data, finalize_commit(blk, desc.huser(), desc), id);
+
+    if constexpr (has_memory_mgr)
+      return alloc_info(ibank.bank.arenas[blk.arena].data, id, finalize_commit(blk, huser, i_alignment));
+    else
+      return alloc_info(id, finalize_commit(blk, huser, i_alignment));
   }
 
   //! Deallocate, size is optional
@@ -254,24 +326,27 @@ public:
       merges |= f_right;
     }
 
-    if (arena.free == arena.size && mgr.get().drop_arena(arena.data))
+    if constexpr (has_memory_mgr)
     {
-      // drop arena?
-      if (left)
+      if (arena.free == arena.size && mgr->drop_arena(arena.data))
       {
-        ibank.strat.erase(ibank.bank.blocks, left);
-      }
-      if (right)
-      {
-        ibank.strat.erase(ibank.bank.blocks, right);
-      }
+        // drop arena?
+        if (left)
+        {
+          ibank.strat.erase(ibank.bank.blocks, left);
+        }
+        if (right)
+        {
+          ibank.strat.erase(ibank.bank.blocks, right);
+        }
 
-      std::uint32_t arena_id = blk.arena;
-      ibank.bank.free_size -= arena.size;
-      arena.size = 0;
-      arena.block_order.clear(ibank.bank.blocks);
-      ibank.bank.arena_order.erase(ibank.bank.arenas, arena_id);
-      return;
+        std::uint32_t arena_id = blk.arena;
+        ibank.bank.free_size -= arena.size;
+        arena.size = 0;
+        arena.block_order.clear(ibank.bank.blocks);
+        ibank.bank.arena_order.erase(ibank.bank.arenas, arena_id);
+        return;
+      }
     }
 
     switch (merges)
@@ -365,48 +440,10 @@ public:
     ibank.strat.validate_integrity(ibank.bank.blocks);
   }
 
-private:
-  inline std::pair<ihandle, ihandle> add_arena(uhandle ihandle, size_type iarena_size, bool empty)
-  {
-    this->statistics::report_new_arena();
-    auto ret                          = add_arena(ibank, ihandle, iarena_size, empty);
-    ibank.bank.arenas[ret.first].data = mgr.get().add_arena(ret.first, iarena_size);
-    return ret;
-  }
-
-  inline static std::pair<ihandle, ihandle> add_arena(remap_data& ibank, uhandle ihandle, size_type iarena_size,
-                                                      bool iempty)
-  {
-
-    std::uint32_t arena_id  = ibank.bank.arenas.emplace();
-    auto&         arena_ref = ibank.bank.arenas[arena_id];
-    arena_ref.size          = iarena_size;
-    auto   block_id         = ibank.bank.blocks.emplace();
-    block& block_ref        = ibank.bank.blocks[block_id];
-    block_ref.offset        = 0;
-    block_ref.arena         = arena_id;
-    block_ref.data          = ihandle;
-    block_ref.size          = iarena_size;
-    if (iempty)
-    {
-      block_ref.is_free = true;
-      arena_ref.free    = iarena_size;
-      ibank.strat.add_free_arena(ibank.bank.blocks, (uint32_t)block_id);
-      ibank.bank.free_size += iarena_size;
-    }
-    else
-    {
-      arena_ref.free = 0;
-    }
-    arena_ref.block_order.push_back(ibank.bank.blocks, (uint32_t)block_id);
-    ibank.bank.arena_order.push_back(ibank.bank.arenas, arena_id);
-    return std::make_pair(arena_id, (uint32_t)block_id);
-  }
-
   void defragment()
   requires(can_defragment)
   {
-    mgr.get().begin_defragment(*this);
+    mgr->begin_defragment(*this);
     std::uint32_t arena_id = ibank.bank.arena_order.first;
     // refresh all banks
     remap_data refresh;
@@ -463,37 +500,75 @@ private:
 
     for (auto& m : moves)
       // follow the copy sequence to ensure there is no overwrite
-      mgr.get().move_memory(ibank.bank.arenas[m.arena_src].data, refresh.bank.arenas[m.arena_dst].data, m.from, m.to,
-                            m.size);
+      mgr->move_memory(ibank.bank.arenas[m.arena_src].data, refresh.bank.arenas[m.arena_dst].data, m.from, m.to,
+                       m.size);
 
     for (auto rb : rebinds)
     {
       auto& dst_blk = refresh.bank.blocks[block_link(rb)];
-      mgr.get().rebind_alloc(dst_blk.data,
-                             alloc_info(refresh.bank.arenas[dst_blk.arena].data, dst_blk.adjusted_offset(), rb));
+      mgr->rebind_alloc(dst_blk.data, refresh.bank.arenas[dst_blk.arena].data, rb, dst_blk.adjusted_offset());
     }
 
     for (auto arena_it = deleted_arenas.begin(ibank.bank.arenas); arena_it; arena_it = deleted_arenas.erase(arena_it))
     {
       auto& arena = *arena_it;
-      mgr.get().remove_arena(arena.data);
+      mgr->remove_arena(arena.data);
       if constexpr (detail::HasComputeStats<Options>)
         statistics::report_defrag_arenas_removed();
     }
 
     ibank.bank  = std::move(refresh.bank);
     ibank.strat = std::move(refresh.strat);
-    mgr.get().end_defragment(*this);
+    mgr->end_defragment(*this);
   }
 
-  template <typename alloc_desc_t>
-  inline size_type finalize_commit(block& blk, uhandle huser, alloc_desc_t const& desc)
+private:
+  inline std::pair<ihandle, ihandle> add_arena(uhandle ihandle, size_type iarena_size, bool empty)
+  {
+    this->statistics::report_new_arena();
+    auto ret = add_arena(ibank, ihandle, iarena_size, empty);
+    if constexpr (has_memory_mgr)
+      ibank.bank.arenas[ret.first].data = mgr->add_arena(ret.first, iarena_size);
+    return ret;
+  }
+
+  inline static std::pair<ihandle, ihandle> add_arena(remap_data& ibank, uhandle ihandle, size_type iarena_size,
+                                                      bool iempty)
+  {
+
+    std::uint32_t arena_id  = ibank.bank.arenas.emplace();
+    auto&         arena_ref = ibank.bank.arenas[arena_id];
+    arena_ref.size          = iarena_size;
+    auto   block_id         = ibank.bank.blocks.emplace();
+    block& block_ref        = ibank.bank.blocks[block_id];
+    block_ref.offset        = 0;
+    block_ref.arena         = arena_id;
+    block_ref.data          = ihandle;
+    block_ref.size          = iarena_size;
+    if (iempty)
+    {
+      block_ref.is_free = true;
+      arena_ref.free    = iarena_size;
+      ibank.strat.add_free_arena(ibank.bank.blocks, (uint32_t)block_id);
+      ibank.bank.free_size += iarena_size;
+    }
+    else
+    {
+      arena_ref.free = 0;
+    }
+    arena_ref.block_order.push_back(ibank.bank.blocks, (uint32_t)block_id);
+    ibank.bank.arena_order.push_back(ibank.bank.arenas, arena_id);
+    return std::make_pair(arena_id, (uint32_t)block_id);
+  }
+
+  template <typename Alignment = alignment<>>
+  inline size_type finalize_commit(block& blk, uhandle huser, Alignment ialign)
   {
     blk.data      = huser;
-    blk.alignment = desc.alignment_bits();
+    blk.alignment = static_cast<std::uint8_t>(std::popcount(static_cast<uint32_t>(ialign)));
     ibank.bank.arenas[blk.arena].free -= blk.size;
     ibank.bank.free_size -= blk.size;
-    size_type alignment = desc.alignment_mask();
+    size_type alignment = static_cast<size_type>(ialign);
     return ((blk.offset + alignment) & ~alignment);
   }
 
@@ -522,9 +597,9 @@ private:
     }
   }
 
-  remap_data                            ibank;
-  std::reference_wrapper<arena_manager> mgr;
-  size_type                             arena_size;
+  remap_data     ibank;
+  size_type      arena_size = std::numeric_limits<size_type>::max();
+  arena_manager* mgr        = nullptr;
 };
 
 } // namespace acl

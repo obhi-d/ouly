@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
 
@@ -16,7 +17,20 @@ struct alignment
   {
     return value;
   }
+
+  inline constexpr auto log2() const noexcept
+  {
+    auto constexpr half = value_ >> 1;
+    return value_ ? 1 + alignment<half>::log2() : -1;
+  }
 };
+
+template <typename T>
+concept HasLog2 = requires(T a) {
+                    {
+                      a.log2()
+                      } -> std::same_as<std::size_t>;
+                  };
 
 template <typename T>
 constexpr auto alignarg = alignment<alignof(T)>();

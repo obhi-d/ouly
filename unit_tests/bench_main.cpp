@@ -5,7 +5,6 @@
 
 struct alloc_mem_manager
 {
-  using alloc_info = acl::alloc_info<uint32_t>;
 
   uint32_t arena_nb = 0;
 
@@ -22,20 +21,6 @@ struct alloc_mem_manager
   }
 
   void remove_arena(acl::uhandle h) {}
-
-  template <typename Allocator>
-  void begin_defragment(Allocator& allocator)
-  {}
-
-  template <typename Allocator>
-  void end_defragment(Allocator& allocator)
-  {}
-
-  void rebind_alloc([[maybe_unused]] acl::uhandle halloc, alloc_info info) {}
-
-  void move_memory([[maybe_unused]] acl::uhandle src_arena, [[maybe_unused]] acl::uhandle dst_arena,
-                   [[maybe_unused]] std::size_t from, [[maybe_unused]] std::size_t to, std::size_t size)
-  {}
 };
 
 struct rand_device
@@ -73,9 +58,9 @@ void bench_arena(uint32_t size, std::string_view name)
                             {
                               if ((dev.update() & 0x1) || allocations.empty())
                               {
-                                acl::fixed_alloc_desc<std::uint32_t, T::min_granularity> desc(
-                                  (dev.update() % 100) * T::min_granularity, 0, {});
-                                allocations.push_back(allocator.allocate(desc).halloc);
+                                auto alloc_size            = (dev.update() % 100) + 4;
+                                auto [arena, halloc, size] = allocator.allocate(alloc_size * T::min_granularity);
+                                allocations.push_back(halloc);
                               }
                               else
                               {

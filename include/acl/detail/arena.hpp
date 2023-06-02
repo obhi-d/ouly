@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "arena_block.hpp"
 #include <acl/allocators/default_allocator.hpp>
+#include <acl/detail/table.hpp>
 
 namespace acl::opt
 {
