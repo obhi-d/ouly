@@ -175,6 +175,9 @@ TEST_CASE("Validate tagged_ptr", "[tagged_ptr]")
 
   tagged_string.set(&my_string, tagged_string.get_next_tag());
   CHECK(tagged_string != second);
+
+  tagged_ptr<std::void_t<>> null = nullptr;
+  CHECK(!null);
 }
 
 TEST_CASE("Validate error_codes", "[error_code]")
