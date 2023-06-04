@@ -1,6 +1,4 @@
-#ifndef SHORT_ALLOC_H
-#define SHORT_ALLOC_H
-
+#pragma once
 // The MIT License (MIT)
 //
 // Copyright (c) 2015 Howard Hinnant
@@ -40,7 +38,7 @@ public:
     ptr_ = nullptr;
   }
   arena() noexcept : ptr_(buf_) {}
-  arena(const arena&) = delete;
+  arena(const arena&)            = delete;
   arena& operator=(const arena&) = delete;
 
   template <std::size_t ReqAlign>
@@ -119,7 +117,7 @@ private:
   arena_type& a_;
 
 public:
-  std_short_alloc(const std_short_alloc&) = default;
+  std_short_alloc(const std_short_alloc&)            = default;
   std_short_alloc& operator=(const std_short_alloc&) = delete;
 
   std_short_alloc(arena_type& a) noexcept : a_(a)
@@ -164,4 +162,3 @@ inline bool operator!=(const std_short_alloc<T, N, A1>& x, const std_short_alloc
   return !(x == y);
 }
 } // namespace acl
-#endif // SHORT_ALLOC_H

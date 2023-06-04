@@ -1,3 +1,4 @@
+#pragma once
 
 #include <acl/detail/table.hpp>
 

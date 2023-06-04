@@ -1,3 +1,5 @@
+#pragma once
+
 #include <compare>
 #include <cstddef>
 #include <cstdint>
