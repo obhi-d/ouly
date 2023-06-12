@@ -111,7 +111,7 @@ int intrusive_count_get(myBase* m)
   return m->c;
 }
 
-TEST_CASE("Validate general_allocator", "[intrusive_ptr]")
+TEST_CASE("Validate smart pointer", "[intrusive_ptr]")
 {
   int check = 0;
 
@@ -148,6 +148,8 @@ TEST_CASE("Validate general_allocator", "[general_allocator]")
   allocator_t::address data = allocator_t::allocate(256, 128);
   CHECK((reinterpret_cast<std::uintptr_t>(data) & 127) == 0);
   allocator_t::deallocate(data, 256, 128);
+  // Should be fine to free nullptr
+  allocator_t::deallocate(nullptr, 0, 0);
 }
 
 TEST_CASE("Validate tagged_ptr", "[tagged_ptr]")

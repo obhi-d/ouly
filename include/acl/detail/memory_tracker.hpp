@@ -98,6 +98,8 @@ struct ACL_API memory_tracker_impl
 
   void when_deallocate(void* i_data, std::size_t i_size)
   {
+    if (!i_data)
+      return;
     std::unique_lock<std::mutex> ul(lock);
     std::stringstream            ss;
     if (i_data == ignore_first)
