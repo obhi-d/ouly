@@ -1,10 +1,10 @@
 #pragma once
 #include <acl/allocators/allocator.hpp>
+#include <acl/allocators/memory_stats.hpp>
+#include <acl/allocators/memory_tracker.hpp>
 #include <acl/allocators/std_allocator_wrapper.hpp>
-#include <acl/detail/common.hpp>
-#include <acl/detail/memory_stats.hpp>
-#include <acl/detail/memory_tracker.hpp>
-#include <acl/utility/type_traits.hpp>
+#include <acl/utils/common.hpp>
+#include <acl/utils/type_traits.hpp>
 
 namespace acl
 {

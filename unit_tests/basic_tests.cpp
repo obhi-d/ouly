@@ -3,10 +3,10 @@
 #include <acl/allocators/std_allocator_wrapper.hpp>
 #include <acl/containers/packed_table.hpp>
 #include <acl/containers/sparse_table.hpp>
-#include <acl/utility/error_codes.hpp>
-#include <acl/utility/export.hxx>
-#include <acl/utility/intrusive_ptr.hpp>
-#include <acl/utility/tagged_ptr.hpp>
+#include <acl/utils/error_codes.hpp>
+#include <acl/utils/export.hxx>
+#include <acl/utils/intrusive_ptr.hpp>
+#include <acl/utils/tagged_ptr.hpp>
 #include <catch2/catch_all.hpp>
 
 #define BINARY_SEARCH_STEP                                                                                             \

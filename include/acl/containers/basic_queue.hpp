@@ -2,7 +2,7 @@
 
 #include <acl/allocators/allocator.hpp>
 #include <acl/allocators/default_allocator.hpp>
-#include <acl/detail/utils.hpp>
+#include <acl/utils/utils.hpp>
 #include <optional>
 
 namespace acl

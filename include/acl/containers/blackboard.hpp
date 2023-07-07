@@ -2,9 +2,9 @@
 #include "podvector.hpp"
 #include <acl/allocators/allocator.hpp>
 #include <acl/allocators/default_allocator.hpp>
-#include <acl/detail/config.hpp>
-#include <acl/detail/utils.hpp>
-#include <acl/utility/link.hpp>
+#include <acl/utils/config.hpp>
+#include <acl/utils/link.hpp>
+#include <acl/utils/utils.hpp>
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -21,10 +21,10 @@ concept InventoryDataType = std::is_trivial_v<T> || std::is_move_constructible_v
 
 template <typename T>
 concept HashMap = requires {
-                    typename T::name_map_type;
-                    requires std::same_as<typename T::name_map_type::mapped_type, acl::vlink>;
-                    typename T::name_map_type::key_type;
-                  };
+  typename T::name_map_type;
+  requires std::same_as<typename T::name_map_type::mapped_type, acl::vlink>;
+  typename T::name_map_type::key_type;
+};
 namespace detail
 {
 template <typename H>

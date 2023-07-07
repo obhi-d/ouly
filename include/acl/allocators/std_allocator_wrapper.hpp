@@ -1,7 +1,7 @@
 
 #pragma once
 
-#include <acl/utility/type_traits.hpp>
+#include <acl/utils/type_traits.hpp>
 #include <memory>
 #include <memory_resource>
 

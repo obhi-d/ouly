@@ -1,6 +1,6 @@
 #pragma once
 
-#include <acl/detail/common.hpp>
+#include <acl/utils/common.hpp>
 
 #include "default_allocator.hpp"
 #include "strat_best_fit_v0.hpp"

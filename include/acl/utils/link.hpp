@@ -1,6 +1,6 @@
 #pragma once
 #include "type_traits.hpp"
-#include <acl/detail/utils.hpp>
+#include <acl/utils/utils.hpp>
 #include <compare>
 #include <concepts>
 #include <cstdint>

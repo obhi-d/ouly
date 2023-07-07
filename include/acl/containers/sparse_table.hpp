@@ -1,10 +1,10 @@
 #pragma once
 
 #include "podvector.hpp"
-#include <acl/detail/indirection.hpp>
-#include <acl/detail/utils.hpp>
-#include <acl/utility/link.hpp>
-#include <acl/utility/type_traits.hpp>
+#include <acl/containers/indirection.hpp>
+#include <acl/utils/link.hpp>
+#include <acl/utils/type_traits.hpp>
+#include <acl/utils/utils.hpp>
 #include <memory>
 
 namespace acl

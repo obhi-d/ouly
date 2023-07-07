@@ -8,8 +8,8 @@
 #pragma once
 #include <acl/allocators/allocator.hpp>
 #include <acl/allocators/default_allocator.hpp>
-#include <acl/detail/utils.hpp>
-#include <acl/utility/type_traits.hpp>
+#include <acl/utils/type_traits.hpp>
+#include <acl/utils/utils.hpp>
 #include <cassert>
 #include <cstdint>
 #include <cstring>

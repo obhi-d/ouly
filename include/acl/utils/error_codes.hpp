@@ -1,7 +1,7 @@
 
 #pragma once
 
-#include <acl/detail/type_name.hpp>
+#include <acl/utils/type_name.hpp>
 #include <string>
 #include <system_error>
 

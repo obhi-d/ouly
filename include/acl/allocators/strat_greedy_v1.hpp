@@ -1,5 +1,5 @@
 #pragma once
-#include <acl/detail/arena.hpp>
+#include <acl/allocators/arena.hpp>
 
 namespace acl::strat
 {

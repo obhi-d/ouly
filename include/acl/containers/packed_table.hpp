@@ -1,9 +1,9 @@
 #pragma once
 
 #include "sparse_vector.hpp"
-#include <acl/detail/indirection.hpp>
-#include <acl/utility/link.hpp>
-#include <acl/utility/type_traits.hpp>
+#include <acl/containers/indirection.hpp>
+#include <acl/utils/link.hpp>
+#include <acl/utils/type_traits.hpp>
 
 #include <memory>
 #include <tuple>
@@ -27,13 +27,13 @@ namespace detail
 
 template <typename T>
 concept HasCustomVector = requires {
-                            typename T::custom_vector_t;
-                            typename T::custom_vector_t::value_type;
-                            typename T::custom_vector_t::reference;
-                            typename T::custom_vector_t::const_reference;
-                            typename T::custom_vector_t::pointer;
-                            typename T::custom_vector_t::const_pointer;
-                          };
+  typename T::custom_vector_t;
+  typename T::custom_vector_t::value_type;
+  typename T::custom_vector_t::reference;
+  typename T::custom_vector_t::const_reference;
+  typename T::custom_vector_t::pointer;
+  typename T::custom_vector_t::const_pointer;
+};
 
 template <typename Opt, typename V>
 struct custom_vector_type
@@ -496,8 +496,7 @@ private:
         [&]<std::size_t... I>(std::index_sequence<I...>)
         {
           (detail::move(std::get<I>(lb), std::get<I>(back)), ...);
-        }
-        (std::make_index_sequence<std::tuple_size_v<value_type>>());
+        }(std::make_index_sequence<std::tuple_size_v<value_type>>());
       }
       else
         lb = std::move(back);

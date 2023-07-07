@@ -27,10 +27,10 @@ struct alignment
 
 template <typename T>
 concept HasLog2 = requires(T a) {
-                    {
-                      a.log2()
-                      } -> std::same_as<std::size_t>;
-                  };
+  {
+    a.log2()
+  } -> std::same_as<std::size_t>;
+};
 
 template <typename T>
 constexpr auto alignarg = alignment<alignof(T)>();
@@ -60,6 +60,25 @@ Ty* zallocate(Allocator& allocator, typename Allocator::size_type size_in_bytes,
 
 template <typename Ty, typename Allocator, typename Alignment = alignment<alignof(Ty)>>
 void deallocate(Allocator& allocator, Ty* data, typename Allocator::size_type size_in_bytes, Alignment alignment = {})
+{
+  allocator.deallocate(data, size_in_bytes, alignment);
+}
+
+template <typename Ty, typename Allocator, typename Alignment = alignment<alignof(Ty)>>
+Ty* allocate(Allocator const& allocator, typename Allocator::size_type size_in_bytes, Alignment alignment = {})
+{
+  return reinterpret_cast<Ty*>(allocator.allocate(size_in_bytes, alignment));
+}
+
+template <typename Ty, typename Allocator, typename Alignment = alignment<alignof(Ty)>>
+Ty* zallocate(Allocator const& allocator, typename Allocator::size_type size_in_bytes, Alignment alignment = {})
+{
+  return reinterpret_cast<Ty*>(allocator.zero_allocate(size_in_bytes, alignment));
+}
+
+template <typename Ty, typename Allocator, typename Alignment = alignment<alignof(Ty)>>
+void deallocate(Allocator const& allocator, Ty* data, typename Allocator::size_type size_in_bytes,
+                Alignment alignment = {})
 {
   allocator.deallocate(data, size_in_bytes, alignment);
 }

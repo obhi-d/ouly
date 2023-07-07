@@ -3,10 +3,10 @@
 //
 #pragma once
 
-#include <acl/detail/reflection_utils.hpp>
-#include <acl/utility/error_codes.hpp>
-#include <acl/utility/reflection.hpp>
-#include <acl/utility/type_traits.hpp>
+#include <acl/utils/error_codes.hpp>
+#include <acl/utils/reflection.hpp>
+#include <acl/utils/reflection_utils.hpp>
+#include <acl/utils/type_traits.hpp>
 #include <cassert>
 #include <memory>
 #include <optional>
@@ -164,11 +164,10 @@ private:
       get().error(type_name<Class>(), make_error_code(serializer_error::invalid_type));
       return false;
     }
-    return [ this, &obj ]<std::size_t... N>(std::index_sequence<N...>)
+    return [this, &obj]<std::size_t... N>(std::index_sequence<N...>)
     {
       return (at<N>(obj) && ...);
-    }
-    (std::make_index_sequence<std::tuple_size_v<Class>>());
+    }(std::make_index_sequence<std::tuple_size_v<Class>>());
   }
 
   template <detail::StringMapLike Class>

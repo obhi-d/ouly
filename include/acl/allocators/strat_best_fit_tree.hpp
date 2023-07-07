@@ -1,7 +1,7 @@
 ﻿#pragma once
-#include <acl/detail/arena.hpp>
-#include <acl/detail/rbtree.hpp>
-#include <acl/utility/type_traits.hpp>
+#include <acl/allocators/arena.hpp>
+#include <acl/containers/rbtree.hpp>
+#include <acl/utils/type_traits.hpp>
 
 namespace acl::strat
 {

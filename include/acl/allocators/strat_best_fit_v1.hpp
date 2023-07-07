@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include "best_fit_options.hpp"
-#include <acl/detail/arena.hpp>
-#include <acl/utility/type_traits.hpp>
+#include <acl/allocators/arena.hpp>
+#include <acl/utils/type_traits.hpp>
 #include <optional>
 
 namespace acl::strat

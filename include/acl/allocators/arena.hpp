@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include "arena_block.hpp"
 #include <acl/allocators/default_allocator.hpp>
-#include <acl/detail/table.hpp>
+#include <acl/containers/table.hpp>
 
 namespace acl::opt
 {
@@ -86,7 +86,7 @@ struct arena
 };
 
 template <typename usize_type, typename uextension>
-using arena_bank = detail::table<detail::arena<usize_type, uextension>, true>;
+using arena_bank = table<detail::arena<usize_type, uextension>, true>;
 
 template <typename usize_type, typename uextension>
 struct arena_accessor

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <acl/detail/type_name.hpp>
+#include <acl/utils/type_name.hpp>
 #include <cstdint>
 #include <tuple>
 #include <type_traits>

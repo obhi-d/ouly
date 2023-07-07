@@ -1,6 +1,6 @@
 #pragma once
-#include <acl/detail/arena.hpp>
-#include <acl/utility/type_traits.hpp>
+#include <acl/allocators/arena.hpp>
+#include <acl/utils/type_traits.hpp>
 
 namespace acl::strat
 {

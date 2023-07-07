@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include <acl/detail/arena.hpp>
+#include "arena.hpp"
 
 #include <bit>
 #include <concepts>
@@ -21,30 +21,30 @@ namespace acl
 {
 template <typename T>
 concept MemoryManager = requires(T m) {
-                          /// Drop Arena
-                          {
-                            m.drop_arena(acl::uhandle())
-                            } -> std::same_as<bool>;
-                          /// Add an arena
-                          {
-                            m.add_arena(acl::ihandle(), std::size_t())
-                            } -> std::same_as<acl::uhandle>;
-                          // Remoe an arena
-                          m.remove_arena(acl::uhandle());
-                        };
+  /// Drop Arena
+  {
+    m.drop_arena(acl::uhandle())
+  } -> std::same_as<bool>;
+  /// Add an arena
+  {
+    m.add_arena(acl::ihandle(), std::size_t())
+  } -> std::same_as<acl::uhandle>;
+  // Remoe an arena
+  m.remove_arena(acl::uhandle());
+};
 
 template <typename T, typename A>
 concept HasDefragmentSupport = requires(T a, A& allocator, acl::uhandle src_arena, acl::uhandle dst_arena,
                                         acl::uhandle alloc_info, std::size_t from, std::size_t to, std::size_t size) {
-                                 // Begin defragment
-                                 a.begin_defragment(allocator);
-                                 // End defragmentation
-                                 a.end_defragment(allocator);
-                                 // Rebind an allocation to another value
-                                 a.rebind_alloc(alloc_info, src_arena, alloc_info, typename A::size_type());
-                                 // Move memory from source arena to another
-                                 a.move_memory(src_arena, dst_arena, from, to, size);
-                               };
+  // Begin defragment
+  a.begin_defragment(allocator);
+  // End defragmentation
+  a.end_defragment(allocator);
+  // Rebind an allocation to another value
+  a.rebind_alloc(alloc_info, src_arena, alloc_info, typename A::size_type());
+  // Move memory from source arena to another
+  a.move_memory(src_arena, dst_arena, from, to, size);
+};
 
 } // namespace acl
 
