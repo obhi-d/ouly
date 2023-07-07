@@ -1,18 +1,17 @@
+export module acl.utils:program_args;
 
-#pragma once
+import <algorithm>;
+import <any>;
+import <charconv>;
+import <cstdint>;
+import <optional>;
+import <ranges>;
+import <sstream>;
+import <string_view>;
+import <variant>;
+import <vector>;
 
-#include <algorithm>
-#include <any>
-#include <charconv>
-#include <cstdint>
-#include <optional>
-#include <ranges>
-#include <sstream>
-#include <string_view>
-#include <variant>
-#include <vector>
-
-namespace acl
+export namespace acl
 {
 enum class program_document_type
 {
@@ -28,11 +27,10 @@ concept ProgramArgScalarType = std::is_same_v<uint32_t, V> || std::is_same_v<int
 template <typename V>
 concept ProgramArgBoolType = std::is_same_v<bool, V>;
 template <typename V, typename S>
-concept ProgramArgArrayType = !
-std::same_as<V, S>&& requires(V a) {
-                       typename V::value_type;
-                       a.push_back(typename V::value_type());
-                     };
+concept ProgramArgArrayType = !std::same_as<V, S> && requires(V a) {
+  typename V::value_type;
+  a.push_back(typename V::value_type());
+};
 
 template <typename string_type = std::string_view>
 class program_args

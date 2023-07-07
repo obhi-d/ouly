@@ -1,13 +1,12 @@
 
-#pragma once
+export module acl.utils:error_codes;
 
-#include <acl/detail/type_name.hpp>
-#include <string>
-#include <system_error>
+import <string>;
+import <system_error>;
 
 // enums
 
-namespace acl
+export namespace acl
 {
 
 enum class serializer_error
@@ -33,7 +32,7 @@ struct error_category : std::error_category
 {
   inline const char* name() const noexcept final
   {
-    return detail::type_name<E>().data();
+    return type_name<E>().data();
   }
 
   inline std::string message(int ev) const final
@@ -56,6 +55,6 @@ inline std::error_code make_error_code(E e)
 
 } // namespace acl
 
-template <>
+export template <>
 struct std::is_error_code_enum<acl::serializer_error> : true_type
 {};

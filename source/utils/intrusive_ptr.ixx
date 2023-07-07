@@ -1,11 +1,10 @@
+export module acl.utils:intrusive_ptr;
 
-#pragma once
+import <cassert>;
+import <compare>;
+import <concepts>;
 
-#include <cassert>
-#include <compare>
-#include <concepts>
-
-namespace acl
+export namespace acl
 {
 
 // clang-format off

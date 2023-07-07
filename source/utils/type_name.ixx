@@ -1,6 +1,6 @@
-#pragma once
 
-#include "utils.hpp"
+export module acl.utils:type_name;
+
 #include <cstddef>
 #include <cstdint>
 #include <stdexcept>
@@ -23,6 +23,7 @@
 
 namespace acl::detail
 {
+
 template <typename T>
 constexpr std::string_view type_name()
 {
@@ -39,3 +40,21 @@ constexpr std::uint32_t type_hash()
 }
 
 } // namespace acl::detail
+
+export namespace acl
+{
+///------------------------------------------------
+/// @brief Class type to string_view name of the class
+template <typename T>
+constexpr std::string_view type_name()
+{
+  return detail::type_name<std::remove_cv_t<std::remove_reference_t<T>>>();
+}
+
+template <typename T>
+constexpr std::uint32_t type_hash()
+{
+  return detail::type_hash<std::remove_cv_t<std::remove_reference_t<T>>>();
+}
+
+} // namespace acl

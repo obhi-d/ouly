@@ -1,13 +1,12 @@
-#pragma once
-#include "type_traits.hpp"
-#include <acl/detail/utils.hpp>
-#include <compare>
-#include <concepts>
-#include <cstdint>
-#include <limits>
-#include <type_traits>
+export module acl.utils:link;
 
-namespace acl
+import <compare>;
+import <concepts>;
+import <cstdint>;
+import <limits>;
+import <type_traits>;
+
+export namespace acl
 {
 
 template <typename Ty, typename SizeType = std::uint32_t, std::uint32_t N = 1>

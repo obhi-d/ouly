@@ -1,11 +1,11 @@
-#pragma once
 
-#include <acl/detail/type_name.hpp>
-#include <cstdint>
-#include <tuple>
-#include <type_traits>
+export module acl.utils:type_traits;
 
-namespace acl
+import <cstdint>;
+import <tuple>;
+import <type_traits>;
+
+export namespace acl
 {
 
 template <typename... Option>
@@ -30,7 +30,7 @@ struct allocator_traits
 };
 
 ///--------------- Basic Options ----------------
-namespace opt
+export namespace opt
 {
 
 /// @brief Option to provide member pointer
@@ -148,20 +148,6 @@ struct disable_pool_tracking
 };
 
 } // namespace opt
-
-///------------------------------------------------
-/// @brief Class type to string_view name of the class
-template <typename T>
-constexpr std::string_view type_name()
-{
-  return detail::type_name<std::remove_cv_t<std::remove_reference_t<T>>>();
-}
-
-template <typename T>
-constexpr std::uint32_t type_hash()
-{
-  return detail::type_hash<std::remove_cv_t<std::remove_reference_t<T>>>();
-}
 
 struct nocheck : std::false_type
 {};

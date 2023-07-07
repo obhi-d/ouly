@@ -6,7 +6,7 @@
 #include <type_traits>
 #include <vector>
 
-namespace acl::detail
+namespace acl
 {
 
 template <DefaultConstructible T, bool IsPOD = std::is_trivial_v<T>>
@@ -113,4 +113,4 @@ private:
   freepool free_pool;
 };
 
-} // namespace acl::detail
+} // namespace acl

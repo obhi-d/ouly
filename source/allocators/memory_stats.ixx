@@ -122,6 +122,11 @@ struct statistics_impl
   }
 };
 
+inline void print_debug_info(std::string const& s)
+{
+  std::cout << s;
+}
+
 template <typename tag_arg, typename Opt>
 struct statistics_impl<tag_arg, Opt, std::true_type> : base_stats_t<Opt>
 {

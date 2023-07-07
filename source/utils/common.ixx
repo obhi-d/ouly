@@ -1,64 +1,26 @@
-#pragma once
 
-#include <algorithm>
-#include <array>
-#include <atomic>
-#include <cassert>
-#include <chrono>
-#include <compare>
-#include <cstdint>
-#include <cstring>
-#include <iostream>
-#include <limits>
-#include <new>
-#include <random>
-#include <sstream>
-#include <string>
-#include <type_traits>
-#include <typeinfo>
-#include <variant>
-#include <vector>
+export module acl:detail;
+
+import <algorithm>;
+import <array>;
+import <atomic>;
+import <cassert>;
+import <chrono>;
+import <compare>;
+import <cstdint>;
+import <cstring>;
+import <iostream>;
+import <limits>;
+import <new>;
+import <random>;
+import <sstream>;
+import <string>;
+import <type_traits>;
+import <typeinfo>;
+import <variant>;
+import <vector>;
 
 #include <acl/utility/type_traits.hpp>
-
-#ifndef ACL_CUSTOM_MALLOC_NS
-#include <acl/utility/malloc_ns.hpp>
-#define ACL_CUSTOM_MALLOC_NS acl::detail
-#endif
-
-namespace acl
-{
-
-inline void* malloc(std::size_t s)
-{
-  return ACL_CUSTOM_MALLOC_NS::malloc(s);
-}
-inline void* zmalloc(std::size_t s)
-{
-  return ACL_CUSTOM_MALLOC_NS::zmalloc(s);
-}
-inline void free(void* f)
-{
-  return ACL_CUSTOM_MALLOC_NS::free(f);
-}
-inline void* aligned_alloc(std::size_t alignment, std::size_t size)
-{
-  ACL_ASSERT(alignment > 0);
-  ACL_ASSERT((alignment & (alignment - 1)) == 0);
-  return ACL_CUSTOM_MALLOC_NS::aligned_alloc(alignment, size);
-}
-inline void* aligned_zmalloc(std::size_t alignment, std::size_t size)
-{
-  ACL_ASSERT(alignment > 0);
-  ACL_ASSERT((alignment & (alignment - 1)) == 0);
-  return ACL_CUSTOM_MALLOC_NS::aligned_zmalloc(alignment, size);
-}
-inline void aligned_free(void* ptr)
-{
-  return ACL_CUSTOM_MALLOC_NS::aligned_free(ptr);
-}
-
-} // namespace acl
 
 #if defined(_MSC_VER)
 #include <intrin.h>
@@ -242,18 +204,6 @@ struct variant_result
 
   var res;
 };
-
-enum ordering_by : std::uint32_t
-{
-  e_size,
-  e_offset,
-  k_count
-};
-
-inline void print_debug_info(std::string const& s)
-{
-  std::cout << s;
-}
 
 } // namespace detail
 

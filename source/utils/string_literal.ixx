@@ -1,11 +1,11 @@
 
-#pragma once
+export module acl.utils:string_literal;
 
-#include <algorithm>
-#include <cstdint>
-#include <string_view>
+import <algorithm>;
+import <cstdint>;
+import <string_view>;
 
-namespace acl
+export namespace acl
 {
 
 template <std::size_t N>

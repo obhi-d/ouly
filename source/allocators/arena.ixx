@@ -1,9 +1,9 @@
-﻿#pragma once
-#include "arena_block.hpp"
-#include <acl/allocators/default_allocator.hpp>
-#include <acl/detail/table.hpp>
+﻿
+export module acl.allocators:arena;
 
-namespace acl::opt
+import :arena_block;
+
+export namespace acl::opt
 {
 template <std::size_t value>
 struct granularity

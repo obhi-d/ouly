@@ -1,13 +1,12 @@
-#pragma once
 
-#include <compare>
-#include <cstddef>
-#include <cstdint>
-#include <type_traits>
+export module acl.utils:tagged_ptr;
 
-namespace acl
-{
-namespace detail
+import <compare>;
+import <cstddef>;
+import <cstdint>;
+import <type_traits>;
+
+namespace acl::detail
 {
 template <typename T>
 struct reference_type
@@ -20,7 +19,10 @@ struct reference_type<void>
 {
   using type = void*;
 };
-} // namespace detail
+} // namespace acl::detail
+
+export namespace acl
+{
 
 template <typename T>
 class tagged_ptr
