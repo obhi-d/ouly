@@ -76,6 +76,7 @@ add_unit_test(NAME output_serializer FILES "output_serializer.cpp" LINK_LIBS "nl
 add_unit_test(NAME binary_serializer FILES "binary_serializer.cpp" )
 add_unit_test(NAME pool_allocator FILES "pool_allocator.cpp" )
 add_unit_test(NAME linear_allocator FILES "linear_allocator.cpp" )
+add_unit_test(NAME scli_tests FILES "scli_tests.cpp")
 add_unit_test(NAME math_common FILES "math_common.cpp")
 add_unit_test(NAME math_euler_angles FILES "math_euler_angles.cpp")
 add_unit_test(NAME math_frustum FILES "math_frustum.cpp")

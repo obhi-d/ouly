@@ -12,6 +12,11 @@
 namespace acl
 {
 
+struct endl_type
+{};
+
+static constexpr endl_type endl = {};
+
 template <typename T>
 concept DefaultConstructible = std::is_default_constructible_v<T>;
 
