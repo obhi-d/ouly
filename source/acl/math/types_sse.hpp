@@ -1,134 +1,189 @@
 #pragma once
 
-#include "vml_commons.hpp"
+#include "types.hpp"
 #define USE_SSE2
 #include "sse_mathfun.h"
+#include "vml_commons.hpp"
 
-#if VML_USE_SSE_AVX
-
-namespace acl::sse_types
+namespace acl
 {
 
-template <typename scalar_t>
-struct quad_type
-{
-  using type = std::array<scalar_t, 4>;
-};
-template <>
-struct quad_type<float>
-{
-  using type = __m128;
-};
-// template <> struct quad_type<std::int32_t> { using type = __m128i; };
+#ifdef ACL_USE_SSE2
 
-template <typename scalar_t>
-using quad_t = typename quad_type<scalar_t>::type;
-template <typename scalar_t>
-using vec2_t = std::array<scalar_t, 2>;
-template <typename scalar_t>
-using vec3_t = std::array<scalar_t, 3>;
-template <typename scalar_t>
-using vec3a_t = quad_t<scalar_t>;
-template <typename scalar_t>
-using vec4_t = quad_t<scalar_t>;
-template <typename scalar_t>
-using plane_t = quad_t<scalar_t>;
-template <typename scalar_t>
-using quat_t = quad_t<scalar_t>;
-template <typename scalar_t>
-using sphere_t = quad_t<scalar_t>;
-template <typename scalar_t>
-using axis_angle_t = quad_t<scalar_t>;
-template <typename scalar_t>
-using polar_coord_t = vec2_t<scalar_t>;
-template <typename scalar_t>
-using euler_angles_t = vec3_t<scalar_t>;
-
-template <typename scalar_t>
-struct rect_t
+template <typename stag_t>
+union quad_t<float, stag_t>
 {
-  union
+  using tag  = vector_tag;
+  using stag = stag_t;
+
+  __m128               v;
+  std::array<float, 4> xyzw;
+  struct
   {
-    vec2_t<scalar_t>                r[2];
-    std::array<vec2_t<scalar_t>, 2> m;
-    scalar_t                        e[2][2];
-  };
-  rect_t(){};
-  template <typename... RowType>
-  rect_t(RowType... args) : m{args...}
-  {}
-
-  inline constexpr auto operator<=>(rect_t const& other) const noexcept
-  {
-    return m <=> other.m;
-  }
-};
-
-template <typename scalar_t>
-struct aabb_t
-{
-  union
-  {
-    vec3a_t<scalar_t>                r[2];
-    std::array<vec3a_t<scalar_t>, 2> m;
-    scalar_t                         e[2][4];
-  };
-  aabb_t(){};
-  template <typename... RowType>
-  aabb_t(RowType... args) : m{args...}
-  {}
-
-  inline constexpr auto operator<=>(aabb_t const& other) const noexcept
-  {
-    return m <=> other.m;
-  }
-};
-
-template <typename scalar_t>
-struct mat4_t
-{
-  //! @note This is possibly non isoc++, but knowing it will work for all
-  //! compilers is why I am putting it here
-  union
-  {
-    vec4_t<scalar_t>         r[4];
-    std::array<scalar_t, 16> m;
-    scalar_t                 e[4][4];
+    float x;
+    float y;
+    float z;
+    float w;
   };
 
-  mat4_t(){};
-  template <typename... ScalarType>
-  mat4_t(ScalarType... args) : m{static_cast<scalar_t>(args)...}
-  {}
-
-  inline constexpr auto operator<=>(mat4_t const& other) const noexcept
+  inline constexpr bool operator<=(quad_t const& other) noexcept
   {
-    return m <=> other.m;
+    return _mm_movemask_epi8(_mm_castps_si128(_mm_cmpngt_ps(other.v, v))) == 0;
   }
+
+  inline constexpr bool operator>=(quad_t const& other) noexcept
+  {
+    return _mm_movemask_epi8(_mm_castps_si128(_mm_cmpnlt_ps(other.v, v))) == 0;
+  }
+
+  inline constexpr bool operator>(quad_t const& other) noexcept
+  {
+    return _mm_movemask_epi8(_mm_castps_si128(_mm_cmpngt_ps(v, other.v))) != 0;
+  }
+
+  inline constexpr bool operator<(quad_t const& other) const noexcept
+  {
+    return _mm_movemask_epi8(_mm_castps_si128(_mm_cmpnlt_ps(v, other.v))) != 0;
+  }
+
+  inline constexpr bool operator==(quad_t const& other) const noexcept
+  {
+    return _mm_movemask_epi8(_mm_castps_si128(_mm_cmpneq_ps(v, other.v))) == 0;
+  }
+
+  inline constexpr bool operator!=(quad_t const& other) const noexcept
+  {
+    return _mm_movemask_epi8(_mm_castps_si128(_mm_cmpneq_ps(v, other.v))) != 0;
+  }
+
+  inline operator const __m128&() const noexcept
+  {
+    return v;
+  }
+  inline operator __m128&() noexcept
+  {
+    return v;
+  }
+
+  inline float& operator[](int i) noexcept
+  {
+    return xyzw[i];
+  }
+  inline constexpr float operator[](int i) const noexcept
+  {
+    return xyzw[i];
+  }
+
+  inline constexpr quad_t(acl::noinit) noexcept {}
+  inline constexpr quad_t() noexcept requires(!std::is_same_v<stag, quaternion_tag>) : xyzw{0, 0, 0, 0} {}
+  inline constexpr quad_t() noexcept requires(std::is_same_v<stag, quaternion_tag>) : xyzw{0, 0, 0, 1} {}
+  inline constexpr explicit quad_t(std::array<float, 4> s) noexcept : xyzw(s) {}
+  inline constexpr explicit quad_t(float s) noexcept : xyzw{s, s, s, s} {}
+  inline constexpr quad_t(float vx, float vy, float vz, float vw) noexcept : xyzw{vx, vy, vz, vw} {}
+  inline quad_t(__m128 vv) noexcept : v{vv} {}
+  template <typename utag_t>
+  inline constexpr quad_t(quad_t<float, utag_t> const& other) noexcept : v(other.v)
+  {} // implicit conversion allowed for this
+  template <typename utag_t>
+  inline constexpr quad_t& operator=(quad_t<float, utag_t> const& other) noexcept
+  {
+    v = other.v;
+    return *this;
+  } // implicit conversion allowed for this
 };
 
-template <typename scalar_t>
-struct mat3_t
-{
-  //! @note This is possibly non isoc++, but knowing it will work for all
-  //! compilers is why I am putting it here
-  union
-  {
-    vec4_t<scalar_t>         r[3];
-    std::array<scalar_t, 12> m;
-    scalar_t                 e[3][4];
-  };
-  mat3_t(){};
-  template <typename... ScalarType>
-  mat3_t(ScalarType... args) : m{static_cast<scalar_t>(args)...}
-  {}
+static constexpr bool has_sse = true;
 
-  inline constexpr auto operator<=>(mat3_t const& other) const noexcept
-  {
-    return m <=> other.m;
-  }
-};
+#else
 
-} // namespace acl::sse_types
+static constexpr bool has_sse   = false;
 
 #endif
+
+#ifdef ACL_USE_SSE3
+static constexpr bool has_sse3 = true;
+#else
+static constexpr bool has_sse3  = false;
+#endif
+
+#ifdef ACL_USE_SSE41
+static constexpr bool has_sse41 = true;
+#else
+static constexpr bool has_sse41 = false;
+#endif
+
+#ifdef ACL_USE_AVX
+template <typename stag_t>
+union quad_t<double, stag_t>
+{
+  using tag  = vector_tag;
+  using stag = stag_t;
+
+  std::array<__m128d, 2> v;
+  std::array<double, 4>  xyzw;
+  struct
+  {
+    double x;
+    double y;
+    double z;
+    double w;
+  };
+
+  inline operator const std::array<__m128d, 2>&() const noexcept
+  {
+    return v;
+  }
+  inline operator std::array<__m128d, 2>&() noexcept
+  {
+    return v;
+  }
+
+  inline constexpr auto operator<=>(quad_t const& other) const noexcept
+  {
+    return xyzw <=> other.xyzw;
+  }
+
+  inline constexpr auto operator==(quad_t const& other) const noexcept
+  {
+    return xyzw == other.xyzw;
+  }
+
+  inline constexpr auto operator!=(quad_t const& other) const noexcept
+  {
+    return xyzw != other.xyzw;
+  }
+
+  inline double& operator[](int i) noexcept
+  {
+    return xyzw[i];
+  }
+  inline constexpr double operator[](int i) const noexcept
+  {
+    return xyzw[i];
+  }
+
+  inline constexpr quad_t(acl::noinit) noexcept {}
+  inline constexpr quad_t() noexcept requires(!std::is_same_v<stag, quaternion_tag>) : xyzw{0, 0, 0, 0} {}
+  inline constexpr quad_t() noexcept requires(std::is_same_v<stag, quaternion_tag>) : xyzw{0, 0, 0, 1} {}
+  inline constexpr explicit quad_t(std::array<float, 4> s) noexcept : xyzw(s) {}
+  inline constexpr explicit quad_t(float s) noexcept : xyzw{s, s, s, s} {}
+  inline constexpr quad_t(float vx, float vy, float vz, float vw) noexcept : xyzw{vx, vy, vz, vw} {}
+  inline explicit quad_t(__m128d xy, __m128d zw) noexcept : v{xy, zw} {}
+  template <typename utag_t>
+  inline constexpr quad_t(quad_t<double, utag_t> const& other) noexcept : v(other.v)
+  {} // implicit conversion allowed for this
+  template <typename utag_t>
+  inline constexpr quad_t& operator=(quad_t<double, utag_t> const& other) noexcept
+  {
+    v = other.v;
+    return *this;
+  } // implicit conversion allowed for this
+};
+
+static constexpr bool has_avx = true;
+
+#else
+static constexpr bool has_avx   = false;
+#endif
+
+} // namespace acl

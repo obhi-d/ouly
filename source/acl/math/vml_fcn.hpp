@@ -31,58 +31,18 @@ static constexpr float k_const_epsilon_big  = 0.0625f;
 static constexpr float k_max_relative_error = 0.005f;
 
 /** acl function overrides */
-inline float floor(float value)
-{
-  return std::floor(value);
-}
-inline float arc_tan(float value)
-{
-  return std::atan(value);
-}
-inline float arc_tan2(float y, float x)
-{
-  return std::atan2(y, x);
-}
-inline float arc_sin(float value)
-{
-  return std::asin(value);
-}
-inline float arc_cos(float value)
-{
-  return std::acos(value);
-}
 inline float abs(float value)
 {
   return std::fabs(value);
-}
-inline float sqrt(float val)
-{
-  return std::sqrt(val);
 }
 inline float recip_sqrt(float val)
 {
   return 1.f / std::sqrt(val);
 }
-inline float sin(float value)
-{
-  return std::sin(value);
-}
-template <typename T>
-inline T sign(T x)
-{
-  return (x > 0) - (x < 0);
-}
-inline float cos(float value)
-{
-  return std::cos(value);
-}
-inline float tan(float value)
-{
-  return std::tan(value);
-}
+
 inline std::pair<float, float> sin_cos(float i_val)
 {
-  return {acl::sin(i_val), acl::cos(i_val)};
+  return {std::sin(i_val), std::cos(i_val)};
 }
 //-------------------------------------------------------
 // Other utilities
@@ -284,7 +244,7 @@ inline float to_degrees(float value)
   return (value)*57.295779513f;
 }
 
-/* Famous fast reciprocal sqrt */
+/* Famous fast reciprocal std::sqrt */
 inline float fast_recip_sqrt(float x)
 {
   std::int32_t i;

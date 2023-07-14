@@ -25,7 +25,7 @@
 
 }
 
-%define api.location.type {scli::location}
+%define api.location.type {acl::scli::location}
 %param { acl::scli& scli }
 %lex-param { void* SCANNER_PARAM  }
 %locations

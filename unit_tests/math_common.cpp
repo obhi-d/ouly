@@ -4,28 +4,28 @@
 
 TEST_CASE("Validate rect", "[rect]")
 {
-  acl::rect_t r  = acl::rect::set(100.0, 0, 200.0, 400.0);
-  auto        m2 = acl::rect::center(r);
-  CHECK(acl::vec2::equals(acl::vec2_t{150, 200}, m2));
-  m2 = acl::rect::half_size(r);
-  CHECK(acl::vec2::equals(acl::vec2_t{50, 200}, m2));
-  m2 = acl::rect::size(r);
-  CHECK(acl::vec2::equals(acl::vec2_t{100, 400}, m2));
+  acl::rect r  = acl::rect(100.0f, 0.0f, 200.0f, 400.0f);
+  auto        m2 = acl::center(r);
+  CHECK(acl::equals(acl::vec2{150, 200}, m2));
+  m2 = acl::half_size(r);
+  CHECK(acl::equals(acl::vec2{50, 200}, m2));
+  m2 = acl::size(r);
+  CHECK(acl::equals(acl::vec2{100, 400}, m2));
 }
 
 TEST_CASE("Validate irect", "[irect]")
 {
-  acl::irect_t r  = acl::irect::set(100, 0, 200, 400);
-  auto         m2 = acl::irect::center(r);
-  CHECK(acl::ivec2::equals(acl::ivec2_t{150, 200}, m2));
-  m2 = acl::irect::half_size(r);
-  CHECK(acl::ivec2::equals(acl::ivec2_t{50, 200}, m2));
-  m2 = acl::irect::size(r);
-  CHECK(acl::ivec2::equals(acl::ivec2_t{100, 400}, m2));
-  CHECK(acl::irect::width(r) == 100);
-  CHECK(acl::irect::height(r) == 400);
-  CHECK(acl::irect::left(r) == 100);
-  CHECK(acl::irect::top(r) == 0);
-  CHECK(acl::irect::right(r) == 200);
-  CHECK(acl::irect::bottom(r) == 400);
+  acl::irect r  = acl::irect(100, 0, 200, 400);
+  auto         m2 = acl::center(r);
+  CHECK(acl::equals(acl::ivec2{150, 200}, m2));
+  m2 = acl::half_size(r);
+  CHECK(acl::equals(acl::ivec2{50, 200}, m2));
+  m2 = acl::size(r);
+  CHECK(acl::equals(acl::ivec2{100, 400}, m2));
+  CHECK(acl::width(r) == 100);
+  CHECK(acl::height(r) == 400);
+  CHECK(acl::left(r) == 100);
+  CHECK(acl::top(r) == 0);
+  CHECK(acl::right(r) == 200);
+  CHECK(acl::bottom(r) == 400);
 }

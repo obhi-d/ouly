@@ -7,91 +7,86 @@
 
 namespace acl
 {
-struct transform_t
+template <typename scalar_t>
+inline void set_identity_transform(transform_t<scalar_t>& t) noexcept
 {
-  //! Rotation
-  quat_t rotation;
-  //! Translation and scale (w = scale)
-  vec4_t translation_and_scale;
-};
+    t = transform_t<scalar_t>();
+}
 
-struct transform
+template <typename scalar_t>
+inline void make_mat4(transform_t<scalar_t> const& t) noexcept
 {
-  static inline void        identity(transform_t& _);
-  static inline transform_t identity();
-  static inline void        matrix(transform_t const& _, mat4_t& out);
-  static inline vec3a_t     translation(transform_t const& _);
-  static inline quat_t      rotation(transform_t const& _);
-  static inline float       scale(transform_t const& _);
-  static inline void        set_translation(transform_t& _, vec3a_t const&);
-  static inline void        set_rotation(transform_t& _, quat_t const&);
-  static inline void        set_scale(transform_t& _, float);
-  static inline transform_t combine(transform_t const& parent_combined, transform_t const& local);
-  static inline vec3a_t     mul(vec3a::pref p, transform_t const& _);
-};
+  return make_mat4(t.translation_and_scale.w, t.rotation, make_vec3a(t.translation_and_scale));
+}
 
-static_assert(sizeof(transform_t) == sizeof(vec4_t) * 2, "Fix size");
+template <typename scalar_t>
+inline vec3a_t<scalar_t> translation(transform_t<scalar_t> const& t) noexcept
+{
+  return make_vec3a(t.translation_and_scale);
+}
 
-inline void transform::identity(transform_t& _)
+template <typename scalar_t>
+inline vec3a_t<scalar_t> rotation(transform_t<scalar_t> const& t) noexcept
 {
-  _.rotation              = quat::identity();
-  _.translation_and_scale = vec4::set(0, 0, 0, 1);
+  return t.rotation;
 }
-inline transform_t transform::identity()
-{
-  transform_t tmp;
-  identity(tmp);
-  return tmp;
-}
-inline void transform::matrix(transform_t const& _, mat4_t& out)
-{
-  out = mat4::from_scale_rotation_translation(vec4::w(_.translation_and_scale), _.rotation,
-                                              vec3a::from_vec4(_.translation_and_scale));
-}
-inline vec3a_t transform::translation(transform_t const& _)
-{
-  return vec3a::from_vec4(_.translation_and_scale);
-}
-inline quat_t transform::rotation(transform_t const& _)
-{
-  return _.rotation;
-}
-inline float transform::scale(transform_t const& _)
-{
-  return vec4::w(_.translation_and_scale);
-}
-inline void transform::set_translation(transform_t& _, vec3a_t const& v)
-{
-#if VML_USE_SSE_AVX
-  _.translation_and_scale = _mm_or_ps(_mm_and_ps(_.translation_and_scale, clear_xyz()), v);
-#else
-  _.translation_and_scale = {v[0], v[1], v[2], _.translation_and_scale[3]};
-#endif
-}
-inline void transform::set_rotation(transform_t& _, quat_t const& r)
-{
-  _.rotation = r;
-}
-inline void transform::set_scale(transform_t& _, float scale)
-{
-  _.translation_and_scale = vec4::set_w(_.translation_and_scale, scale);
-}
-inline transform_t transform::combine(transform_t const& parent_combined, transform_t const& local)
-{
-  transform_t _;
-  _.rotation            = quat::mul(parent_combined.rotation, local.rotation);
-  vec3a_t rotated_trans = quat::transform(
-    parent_combined.rotation, quad::mul(translation(local), quad::splat_w(parent_combined.translation_and_scale)));
 
-  _.translation_and_scale = quad::mul(quad::add(parent_combined.translation_and_scale, rotated_trans),
-                                      quad::set_111w(local.translation_and_scale, 3));
-  return _;
-}
-inline vec3a_t transform::mul(vec3a::pref v, transform_t const& _)
+template <typename scalar_t>
+inline scalar_t scale(transform_t<scalar_t> const& t) noexcept
 {
-  vec3a_t rotated_trans = quat::transform(_.rotation, quad::mul(v, quad::splat_w(_.translation_and_scale)));
+  return t.translation_and_scale.w;
+}
 
-  return vec3a::from_vec4(vec4::add(_.translation_and_scale, rotated_trans));
+template <typename scalar_t>
+inline void set_translation(transform_t<scalar_t>& t, vec3a_t<scalar_t> const& v) noexcept
+{
+  if constexpr (has_sse)
+  t.translation_and_scale = _mm_or_ps(_mm_and_ps(t.translation_and_scale, clear_xyz()), v);
+else
+  t.translation_and_scale = {v[0], v[1], v[2], t.translation_and_scale[3]};
+
+}
+
+template <typename scalar_t>
+inline void set_rotation(transform_t<scalar_t>& t, quat_t<scalar_t> const& v) noexcept
+{
+  t.rotation = v;
+}
+
+template <typename scalar_t>
+inline void set_scale(transform_t<scalar_t>& t, scalar_t v) noexcept
+{
+  t.translation_and_scale.w = v;
+}
+
+template <typename scalar_t>
+inline auto concat(transform_t<scalar_t> const& parent_combined, transform_t<scalar_t> const& local) noexcept
+{
+  auto ret = transform_t<scalar_t>( mul(parent_combined.rotation, local.rotation),
+                        rotate(mul(translation(local), splat_w(parent_combined.translation_and_scale)), parent_combined.rotation));
+
+  ret.translation_and_scale = mul(add(parent_combined.translation_and_scale, ret.translation_and_scale),
+                                      set_111w(local.translation_and_scale, 3));
+  return ret;
+}
+
+template <typename scalar_t>
+inline vec3a_t<scalar_t> mul(vec3a_t<scalar_t> const& v, transform_t<scalar_t> const& t)
+{
+  auto rotated_trans = mul(mul(v, splat_w(t.translation_and_scale)), t.rotation);
+  return make_vec3a(add(t.translation_and_scale, rotated_trans));
+}
+
+template <typename scalar_t>
+inline vec3a_t<scalar_t> operator*(vec3a_t<scalar_t> const& v, transform_t<scalar_t> const& t)
+{
+  return mul(v, t);
+}
+
+template <typename scalar_t>
+inline auto operator*(transform_t<scalar_t> const& parent_combined, transform_t<scalar_t> const& local) noexcept
+{
+  return concat(parent_combined, local);
 }
 
 } // namespace acl

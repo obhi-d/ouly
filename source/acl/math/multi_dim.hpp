@@ -3,86 +3,67 @@
 #include "quad.hpp"
 namespace acl
 {
-template <typename concrete>
-struct multi_dim
+
+template <Matrix M, typename scalar_t>
+inline M mul(scalar_t v, M const& m) noexcept
 {
-  using type        = typename concrete::type;
-  using ref         = type&;
-  using pref        = type const&;
-  using cref        = type const&;
-  using scalar_type = typename concrete::scalar_type;
-  using row_type    = typename concrete::row_type;
-  using row_tag     = typename concrete::row_tag;
+    M r;
+    for (uint32_t i = 0 ; i < m.r.size(); ++i)
+       r.r[i] = mul(v, m.r[i]);
+    return r;
+}
 
-  static constexpr std::uint32_t element_count = concrete::element_count;
-  static constexpr std::uint32_t row_count     = concrete::row_count;
-  static constexpr std::uint32_t column_count  = concrete::column_count;
-
-  static inline bool        equals(pref m1, pref m2);
-  static inline row_type    row(pref m, std::uint32_t i);
-  static inline scalar_type get(pref m, std::uint32_t i, std::uint32_t j);
-  static inline type        add(pref m1, pref m2);
-  static inline type        sub(pref m1, pref m2);
-  //! @brief Scale
-  static inline type mul(pref m, scalar_type v);
-  static inline type mul(scalar_type v, pref m);
-  static inline void set_row(ref m, std::uint32_t i, row_type const& p);
-};
-
-template <typename concrete>
-inline typename multi_dim<concrete>::type multi_dim<concrete>::mul(pref m, scalar_type v)
+template <Matrix M, typename scalar_t>
+inline M mul(M const& m, scalar_t v) noexcept
 {
   return mul(v, m);
 }
-template <typename concrete>
-inline typename multi_dim<concrete>::type multi_dim<concrete>::mul(scalar_type v, pref m)
+
+template <Matrix M>
+inline bool equals(M const& m1, M const& m2) noexcept
 {
-  multi_dim<concrete>::type r;
-  for (std::uint32_t i = 0; i < row_count; ++i)
-    r.r[i] = row_tag::mul(v, row(m, i));
-  return r;
-}
-template <typename concrete>
-inline bool multi_dim<concrete>::equals(pref m1, pref m2)
-{
-  for (std::uint32_t i = 0; i < row_count; ++i)
-    if (!row_tag::equals(row(m1, i), row(m2, i)))
+  for (uint32_t i = 0; i < m1.r.size(); ++i)
+    if (!equals(m1.r[i], m2.r[i]))
       return false;
   return true;
 }
 
-template <typename concrete>
-inline typename multi_dim<concrete>::row_type multi_dim<concrete>::row(pref m, std::uint32_t i)
+template <Matrix M>
+inline auto const& row(M const& m, uint32_t i) noexcept
 {
   return m.r[i];
 }
 
-template <typename concrete>
-inline typename multi_dim<concrete>::scalar_type multi_dim<concrete>::get(pref m, std::uint32_t i, std::uint32_t j)
+template <Matrix M, typename R>
+inline void set_row(M const& m, uint32_t i, R const& r) noexcept
+{
+  m.r[i] = r;
+}
+
+template <Matrix M>
+inline auto const& get(M const& m, uint32_t i, uint32_t j) noexcept
 {
   return m.e[i][j];
 }
 
-template <typename concrete>
-inline typename multi_dim<concrete>::type multi_dim<concrete>::add(pref m1, pref m2)
+
+template <Matrix M>
+inline auto const& add(M const& m1, M const& m2) noexcept
 {
-  type r;
-  for (unsigned int i = 0; i < concrete::row_count; ++i)
-    r.r[i] = row_tag::add(m1.r[i], m2.r[i]);
+  M r;
+  for (uint32_t i = 0; i < m1.r.size(); ++i)
+    r.r[i] = add(m1.r[i], m2.r[i]);
   return r;
 }
 
-template <typename concrete>
-inline typename multi_dim<concrete>::type multi_dim<concrete>::sub(pref m1, pref m2)
+
+template <Matrix M>
+inline auto const& sub(M const& m1, M const& m2) noexcept
 {
-  type r;
-  for (unsigned int i = 0; i < concrete::row_count; ++i)
-    r.r[i] = row_tag::sub(m1.r[i], m2.r[i]);
+  M r;
+  for (uint32_t i = 0; i < m1.r.size(); ++i)
+    r.r[i] = sub(m1.r[i], m2.r[i]);
   return r;
 }
-template <typename concrete>
-inline void multi_dim<concrete>::set_row(ref m, std::uint32_t i, row_type const& r)
-{
-  m.r[i] = r;
-}
+
 } // namespace acl

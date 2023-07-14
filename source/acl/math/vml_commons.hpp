@@ -1,20 +1,34 @@
 #pragma once
 
-#if VML_USE_SSE_AVX
-
-#include <emmintrin.h>
-#include <smmintrin.h>
-#include <xmmintrin.h>
-
-#ifdef _MSC_VER
-#define acl_cast_i128_ps(v) _mm_castsi128_ps(v)
-#define acl_cast_ps_i128(v) _mm_castps_si128(v)
-#else
-#define acl_cast_i128_ps(v) (__m128)(v)
-#define acl_cast_ps_i128(v) (__m128i)(v)
+#ifdef ACL_USE_SSE3
+#ifndef ACL_USE_SSE2
+# define ACL_USE_SSE2
+#endif
 #endif
 
+
+#ifdef ACL_USE_SSE41
+#ifndef ACL_USE_SSE3
+# define ACL_USE_SSE3
 #endif
+#ifndef ACL_USE_SSE2
+# define ACL_USE_SSE2
+#endif
+#endif
+
+#ifdef ACL_USE_AVX
+#ifndef ACL_USE_SSE41
+# define ACL_USE_SSE41
+#endif
+#ifndef ACL_USE_SSE3
+# define ACL_USE_SSE3
+#endif
+#ifndef ACL_USE_SSE2
+# define ACL_USE_SSE2
+#endif
+#endif
+
+#include <immintrin.h>
 
 #ifdef _MSC_VER
 #include <intrin.h>
@@ -26,35 +40,35 @@
 #include <initializer_list>
 #include <limits>
 #include <memory>
+#include <type_traits>
 
 namespace acl
 {
-#if VML_USE_SSE_AVX
-inline auto clear_w_mask() noexcept
-{
-  return acl_cast_i128_ps(_mm_set_epi32(0x00000000, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF));
-}
+struct noinit{};
+static constexpr noinit noinit_v{};
 
-inline auto xyz0_w1() noexcept
-{
-  return _mm_set_ps(1.0f, 0.0f, 0.0f, 0.0f);
-}
-
-inline auto clear_xyz() noexcept
-{
-  return acl_cast_i128_ps(_mm_set_epi32(0xFFFFFFFF, 0, 0, 0));
-}
-#endif
 //! Integer representation of a floating-point value.
-constexpr int32_t float_to_int(float value)
+inline int32_t float_to_int(float value)
 {
   return *(int32_t*)&value;
 }
 
 //! Signed integer representation of a floating-point value.
-constexpr uint32_t float_to_uint(float value)
+inline uint32_t float_to_uint(float value)
 {
   return *(uint32_t*)&value;
+}
+
+//! Integer representation of a floating-point value.
+inline int64_t float_to_int(double value)
+{
+  return *(int64_t*)&value;
+}
+
+//! Signed integer representation of a floating-point value.
+inline uint64_t float_to_uint(double value)
+{
+  return *(uint64_t*)&value;
 }
 
 constexpr float pixel_align(float v)

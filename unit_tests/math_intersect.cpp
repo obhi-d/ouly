@@ -5,14 +5,14 @@
 TEST_CASE("Validate intersect::bounding_volume_frustum_coherent", "[intersect::bounding_volume_frustum_coherent]")
 {
   // define a custom prism
-  acl::mat4_t                 m = acl::mat4::from_orthographic_projection(-50.0f, 50.0f, -45.0f, 45.0f, 1.0f, 1000.0f);
-  acl::frustum_t              frustum_orig = acl::frustum::from_mat4_transpose(acl::mat4::transpose(m));
-  auto                        planes       = acl::frustum::get_planes(frustum_orig);
+  acl::mat4                 m = acl::make_mat4_from_orthographic_projection(-50.0f, 50.0f, -45.0f, 45.0f, 1.0f, 1000.0f);
+  acl::frustum              frustum_orig = acl::make_frustum(acl::transpose(m));
+  auto                        planes       = acl::get_planes(frustum_orig);
   std::array<acl::plane_t, 8> custom_planes;
-  std::memcpy(custom_planes.data(), planes.first, planes.second * sizeof(acl::plane_t));
-  custom_planes[6] = acl::plane::set(acl::frustum::get_plane(frustum_orig, acl::frustum::plane_type::k_far), 900.0f);
+  std::memcpy(custom_planes.data(), planes.data(), planes.size() * sizeof(acl::plane_t));
+  custom_planes[6] = acl::plane(acl::get_plane(frustum_orig, acl::frustum::k_far), 900.0f);
 
-  custom_planes[7] = acl::plane::set(acl::frustum::get_plane(frustum_orig, acl::frustum::plane_type::k_near), -10.0f);
+  custom_planes[7] = acl::plane(acl::frustum::get_plane(frustum_orig, acl::frustum::k_near), -10.0f);
 
   acl::frustum_t custom = acl::frustum::from_planes(nullptr, static_cast<std::uint32_t>(custom_planes.size()));
   acl::frustum_t unused = acl::frustum::from_planes(custom_planes.data(), 6);
@@ -62,8 +62,8 @@ TEST_CASE("Validate intersect::bounding_volume_frustum", "[intersect::bounding_v
   auto                        planes       = acl::frustum::get_planes(frustum_orig);
   std::array<acl::plane_t, 8> custom_planes;
   std::memcpy(custom_planes.data(), planes.first, planes.second * sizeof(acl::plane_t));
-  custom_planes[6] = acl::plane::set(acl::frustum::get_plane(frustum_orig, acl::frustum::plane_type::k_far), 900.0f);
-  custom_planes[7] = acl::plane::set(acl::frustum::get_plane(frustum_orig, acl::frustum::plane_type::k_near), -10.0f);
+  custom_planes[6] = acl::plane(acl::frustum::get_plane(frustum_orig, acl::frustum::k_far), 900.0f);
+  custom_planes[7] = acl::plane(acl::frustum::get_plane(frustum_orig, acl::frustum::k_near), -10.0f);
 
   acl::frustum_t custom =
     acl::frustum::from_planes(custom_planes.data(), static_cast<std::uint32_t>(custom_planes.size()));
@@ -99,8 +99,8 @@ TEST_CASE("Validate intersect::bounding_sphere_frustum", "[intersect::bounding_s
   auto                        planes       = acl::frustum::get_planes(frustum_orig);
   std::array<acl::plane_t, 8> custom_planes;
   std::memcpy(custom_planes.data(), planes.first, planes.second * sizeof(acl::plane_t));
-  custom_planes[6] = acl::plane::set(acl::frustum::get_plane(frustum_orig, acl::frustum::plane_type::k_far), 900.0f);
-  custom_planes[7] = acl::plane::set(acl::frustum::get_plane(frustum_orig, acl::frustum::plane_type::k_near), -10.0f);
+  custom_planes[6] = acl::plane(acl::frustum::get_plane(frustum_orig, acl::frustum::k_far), 900.0f);
+  custom_planes[7] = acl::plane(acl::frustum::get_plane(frustum_orig, acl::frustum::k_near), -10.0f);
 
   acl::frustum_t custom =
     acl::frustum::from_planes(custom_planes.data(), static_cast<std::uint32_t>(custom_planes.size()));

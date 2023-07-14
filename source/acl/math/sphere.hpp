@@ -4,42 +4,42 @@
 namespace acl
 {
 
-struct sphere : public quad
+template <typename scalar_t>
+inline sphere_t<scalar_t> make_sphere(vec3a_t<scalar_t> const& v, float radius) noexcept
 {
-  using quad::set;
-  inline static sphere_t set(vec3a::pref _, float radius);
-  inline static quad_t   vradius(quad::pref _);
-  inline static float    radius(quad::pref _);
-  inline static vec3a_t  center(quad::pref _);
-  inline static float    max_radius(vec3a_t const&);
-  inline static sphere_t scale_radius(sphere::pref, float scale);
-};
-inline sphere_t sphere::set(vec3a::pref _, float radius)
-{
-  return quad::set_w(_, radius);
+  return sphere_t<scalar_t>{set_w(v, radius).v};
 }
-inline float sphere::radius(quad::pref _)
+
+template <typename scalar_t>
+inline scalar_t radius(sphere_t<scalar_t> const& v)
 {
-  return quad::w(_);
+  return w(v);
 }
-inline quad_t sphere::vradius(quad::pref _)
+
+template <typename scalar_t>
+inline quad_t<scalar_t> vradius(sphere_t<scalar_t> const& v)
 {
-#if VML_USE_SSE_AVX
-  return _mm_shuffle_ps(_, _, _MM_SHUFFLE(0, 0, 0, 3));
-#else
-  return {quad::w(_), 0, 0, 0};
-#endif
+  if constexpr (has_sse && std::is_same_v<scalar_t, float>)
+      return quad_t<scalar_t>(_mm_shuffle_ps(v.v, v.v, _MM_SHUFFLE(0, 0, 0, 3)));
+else
+  return quad_t<scalar_t>{w(v), 0, 0, 0};
 }
-inline vec3a_t sphere::center(quad::pref _)
+
+template <typename scalar_t>
+inline vec3a_t<scalar_t> center(sphere_t<scalar_t> const& v)
 {
-  return vec3a::from_vec4(_);
+  return make_vec3a(v);
 }
-inline float sphere::max_radius(vec3a_t const& _)
+
+template <typename scalar_t>
+inline scalar_t max_radius(vec3a_t<scalar_t> const& v)
 {
-  return vec3a::length(_);
+  return length(v);
 }
-inline sphere_t sphere::scale_radius(sphere::pref p, float scale)
+
+template <typename scalar_t>
+inline sphere_t<scalar_t> scale_radius(vec3a_t<scalar_t> const& p, scalar_t scale)
 {
-  return quad::mul(p, quat::set(1.0f, 1.0f, 1.0f, scale));
+  return sphere_t<scalar_t>(mul(p, vec3a_t<scalar_t>(1.0f, 1.0f, 1.0f, scale)));
 }
 } // namespace acl

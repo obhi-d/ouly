@@ -32,7 +32,7 @@
 
 
 /**
- ** \file C:/repos/acl/source/acl/dsl/parse_impl.hpp
+ ** \file /home/obhi/Code/acl/source/acl/dsl/parse_impl.hpp
  ** Define the acl::parser class.
  */
 
@@ -42,8 +42,8 @@
 // especially those whose name start with YY_ or yy_.  They are
 // private implementation details that can be changed or removed.
 
-#ifndef YY_SCLI_C_REPOS_ACL_SOURCE_ACL_DSL_PARSE_IMPL_HPP_INCLUDED
-# define YY_SCLI_C_REPOS_ACL_SOURCE_ACL_DSL_PARSE_IMPL_HPP_INCLUDED
+#ifndef YY_SCLI_HOME_OBHI_CODE_ACL_SOURCE_ACL_DSL_PARSE_IMPL_HPP_INCLUDED
+# define YY_SCLI_HOME_OBHI_CODE_ACL_SOURCE_ACL_DSL_PARSE_IMPL_HPP_INCLUDED
 // "%code requires" blocks.
 
 #include "parse_impl.hpp"
@@ -452,7 +452,7 @@ namespace acl {
     typedef value_type semantic_type;
 
     /// Symbol locations.
-    typedef scli::location location_type;
+    typedef acl::scli::location location_type;
 
     /// Syntax errors thrown from user actions.
     struct syntax_error : std::runtime_error
@@ -1689,4 +1689,4 @@ switch (yykind)
 
 
 
-#endif // !YY_SCLI_C_REPOS_ACL_SOURCE_ACL_DSL_PARSE_IMPL_HPP_INCLUDED
+#endif // !YY_SCLI_HOME_OBHI_CODE_ACL_SOURCE_ACL_DSL_PARSE_IMPL_HPP_INCLUDED

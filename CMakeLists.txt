@@ -7,8 +7,13 @@ option(ACL_BUILD_TESTS "Build the unit tests when BUILD_TESTING is enabled." OFF
 option(ASAN_ENABLED "Build this target with AddressSanitizer" OFF)
 option(ACL_REC_STATS "No stats for allocator" OFF)
 option(ACL_GENERATE_SCLI_PARSER "Generate parsers." ON)
+option(ACL_USE_SSE2 "Math library should use SSE2." OFF)
+option(ACL_USE_SSE3 "Math library should use SSE3." OFF)
+option(ACL_USE_AVX "Math library should use AVX." OFF)
+
 set   (ACL_BISON_EXE            "bison"                                               CACHE STRING "Bison execuatable")
 set   (ACL_FLEX_EXE             "flex"                                                CACHE STRING "Flex executable"  )
+
 
 ##
 ## CONFIGURATION
@@ -56,7 +61,7 @@ add_library( ${ACL_TARGET_NAME}
 )
 
 add_library(${PROJECT_NAME}::${ACL_TARGET_NAME} ALIAS ${ACL_TARGET_NAME})
-
+set_property(TARGET ${ACL_TARGET_NAME}  PROPERTY CXX_STANDARD 20)
 
 if(MSVC)
   target_sources(

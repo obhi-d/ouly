@@ -96,7 +96,7 @@ TEST_CASE("Validate quad::arithmetic", "[quad::arithmetic]")
   acl::quad_t r = acl::quad::mul_x(p, q);
   CHECK(acl::quad::x(r) == Catch::Approx(4413.0f));
   r = acl::quad::recip_sqrt_x(r);
-  CHECK(acl::real::equals(acl::quad::x(r), (1 / acl::sqrt(4413.0f))));
+  CHECK(acl::equals(acl::quad::x(r), (1 / std::sqrt(4413.0f))));
   p = acl::quad::set(110.0f, 223.0f, 11.0f, 10.0f);
   q = acl::quad::set(10.0f);
   r = acl::quad::div(p, q);
@@ -110,13 +110,13 @@ TEST_CASE("Validate quad::arithmetic", "[quad::arithmetic]")
   CHECK(acl::quad::z(r) == Catch::Approx(120.0f));
   CHECK(acl::quad::w(r) == Catch::Approx(110.0f));
   r = acl::quad::vhadd(p);
-  CHECK(acl::real::equals(acl::quad::x(r), acl::quad::hadd(p)));
+  CHECK(acl::equals(acl::quad::x(r), acl::quad::hadd(p)));
   q = acl::quad::set(441.3f, 5.0f, 51.0f, 10.0f);
   r = acl::quad::recip_sqrt(q);
-  CHECK(acl::real::equals(acl::quad::x(r), (1 / acl::sqrt(441.3f))));
-  CHECK(acl::real::equals(acl::quad::y(r), (1 / acl::sqrt(5.0f))));
-  CHECK(acl::real::equals(acl::quad::z(r), (1 / acl::sqrt(51.0f))));
-  CHECK(acl::real::equals(acl::quad::w(r), (1 / acl::sqrt(10.0f))));
+  CHECK(acl::equals(acl::quad::x(r), (1 / std::sqrt(441.3f))));
+  CHECK(acl::equals(acl::quad::y(r), (1 / std::sqrt(5.0f))));
+  CHECK(acl::equals(acl::quad::z(r), (1 / std::sqrt(51.0f))));
+  CHECK(acl::equals(acl::quad::w(r), (1 / std::sqrt(10.0f))));
   std::uint32_t select_mask[4] = {0xffffffff, 0, 0xffffffff, 0};
   q                            = acl::quad::set(441.3f, 5.0f, 51.0f, 10.0f);
   p                            = acl::quad::set(10.0f, 23.0f, -1.0f, 20.0f);

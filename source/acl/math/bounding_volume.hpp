@@ -8,184 +8,161 @@
 
 namespace acl
 {
-struct bounds_info_t
-{
-  vec3_t center       = {};
-  vec3_t half_extends = {};
-  float  radius       = {};
-};
 
-struct bounds_info
+/// @brief Appends the 'info' bounding box to 'dest'.
+template <typename scalar_t>
+static inline bounds_info_t<scalar_t>& append(bounds_info_t<scalar_t>& dest, bounds_info_t<scalar_t> const& src) noexcept
 {
-  //! Appends the 'info' bounding box to '_' this one.
-  static inline bounds_info_t& update(bounds_info_t& _, bounds_info_t const& info)
+  if (src.radius > 0)
   {
-    if (info.radius > 0)
+    if (dest.radius <= 0)
+      dest = src;
+    else
     {
-      if (_.radius <= 0)
-        _ = info;
-      else
-      {
-        vec3_t min_p   = vec3::min(vec3::sub(_.center, _.half_extends), vec3::sub(info.center, info.half_extends));
-        vec3_t max_p   = vec3::max(vec3::add(_.center, _.half_extends), vec3::add(info.center, info.half_extends));
-        vec3_t a       = vec3::abs(vec3::sub(_.center, info.center));
-        _.center       = vec3::half(vec3::add(min_p, max_p));
-        _.half_extends = vec3::half(vec3::sub(max_p, min_p));
-        _.radius += (info.radius + acl::sqrt(vec3::dot(a, a)));
-        _.radius *= 0.5f;
-      }
+      vec3_t min_p      = min(sub(dest.center, dest.half_extends), sub(src.center, src.half_extends));
+      vec3_t max_p      = max(add(dest.center, dest.half_extends), add(src.center, src.half_extends));
+      vec3_t a          = abs(sub(dest.center, src.center));
+      dest.center       = half(add(min_p, max_p));
+      dest.half_extends = half(sub(max_p, min_p));
+      dest.radius += (src.radius + std::sqrt(dot(a, a)));
+      dest.radius *= 0.5f;
     }
-    return _;
   }
-};
-
-//! Represents a bounding volume, consisting of
-//! an AABB and a bounding sphere, the AABB shares
-//! the center with the sphere
-struct bounding_volume_t
-{
-  //! center wrt some coordinate system
-  sphere_t spherical_vol;
-  //! half half_extends dx/2, dy/2, dz/2
-  vec3a_t half_extends;
-  //! center wrt some coordinate system mostly 0,0,0
-  sphere_t orig_spherical_vol;
-  //! half half_extends dx/2, dy/2, dz/2
-  vec4_t orig_half_extends;
-};
-
-struct bounding_volume
-{
-  using type = bounding_volume_t;
-  using pref = bounding_volume_t const&;
-  using ref  = bounding_volume_t&;
-
-  //! Returns the bounding box center
-  inline static vec3a_t center(bounding_volume_t const&);
-  //! Returns the bounding box half size
-  inline static vec3a_t half_extends(bounding_volume_t const&);
-  //! Returns the bounding sphere radius
-  inline static float radius(bounding_volume_t const&);
-  //! Returns the bounding sphere radius
-  inline static quad_t vradius(bounding_volume_t const&);
-  //! Nullify bounding volume (set it to (0,0,0),0)
-  inline static void nullify(bounding_volume_t&);
-  //! Compute from axis aliogned bounding box
-  inline static type from_box(vec3a_t const& center, vec3a_t const& half_extends);
-  inline static type set(vec3a_t const& center, vec3a_t const& half_extends, float radius);
-  inline static type set(sphere_t const& sphere, vec3a_t const& half_extends);
-  //! Given a matrix, update the bounding volume using the original extends and
-  //! radius
-  inline static void update(bounding_volume_t& _, mat4::pref m);
-  //! Given a scale, rotation and translation, update the bounding volume using
-  //! the original extends and radius
-  inline static void update(bounding_volume_t& _, float scale, quat::pref rot, vec3a::pref translation);
-  //! Given a transform, rotation and translation, update the bounding volume
-  //! using the original extends and radius
-  inline static void update(bounding_volume_t& _, transform_t const& tf);
-  //! Compute the bounding volume from a set of points
-  inline static void update(bounding_volume_t& _, vec3a_t const* points, std::uint32_t count);
-  //! Compute the bounding volume by appending another bounding volume to it
-  inline static void update(bounding_volume_t& _, bounding_volume_t const&);
-};
-
-inline vec3a_t bounding_volume::center(bounding_volume_t const& _)
-{
-  return sphere::center(_.spherical_vol);
+  return dest;
 }
 
-inline vec3a_t bounding_volume::half_extends(bounding_volume_t const& _)
+/// @brief Returns the bounding box center
+template <typename scalar_t>
+inline vec3a_t<scalar_t> center(bounding_volume_t<scalar_t> const& v) noexcept
 {
-  return _.half_extends;
+  return center(v.spherical_vol);
 }
 
-inline float bounding_volume::radius(bounding_volume_t const& _)
+/// @brief Returns the bounding box half size
+template <typename scalar_t>
+inline vec3a_t<scalar_t> half_extends(bounding_volume_t<scalar_t> const& v) noexcept
 {
-  return sphere::radius(_.spherical_vol);
+  return v.half_extends;
 }
 
-inline quad_t bounding_volume::vradius(bounding_volume_t const& _)
+/// @brief Returns the bounding sphere radius
+template <typename scalar_t>
+inline scalar_t radius(bounding_volume_t<scalar_t> const& v) noexcept
 {
-  return sphere::vradius(_.spherical_vol);
+  return radius(v.spherical_vol);
 }
 
-inline void bounding_volume::nullify(bounding_volume_t& _)
+/// @brief Returns the bounding sphere radius
+template <typename scalar_t>
+inline quad_t<scalar_t> vradius(bounding_volume_t<scalar_t> const& v) noexcept
 {
-  _.spherical_vol = _.orig_spherical_vol = _.half_extends = _.orig_half_extends = vec4::zero();
+  return vradius(v.spherical_vol);
 }
 
-inline bounding_volume::type bounding_volume::from_box(vec3a_t const& center, vec3a_t const& half_extends)
+template <typename scalar_t>
+inline void nullify(bounding_volume_t<scalar_t>& v) noexcept
 {
-  bounding_volume_t _;
-  _.spherical_vol = _.orig_spherical_vol = sphere::set(center, sphere::max_radius(half_extends));
-  _.half_extends = _.orig_half_extends = half_extends;
-  return _;
+  v.spherical_vol = v.half_extends = zero<scalar_t, default_tag>();
 }
 
-inline bounding_volume::type bounding_volume::set(vec3a_t const& center, vec3a_t const& half_extends, float radius)
+/// @brief Compute from axis aliogned bounding box
+template <typename scalar_t>
+inline bounding_volume_t<scalar_t> make_bounding_volume(vec3a_t<scalar_t> const& center, 
+                                                        vec3a_t<scalar_t> const& half_extends) noexcept
 {
-  bounding_volume_t _;
-  _.spherical_vol = _.orig_spherical_vol = sphere::set(center, radius);
-  _.half_extends = _.orig_half_extends = half_extends;
-  return _;
+  return bounding_volume_t<scalar_t>(make_sphere(center, max_radius(half_extends)), half_extends);
 }
 
-inline bounding_volume::type bounding_volume::set(sphere_t const& sphere_arg, vec3a_t const& half_extends)
+template <typename scalar_t>
+inline bounding_volume_t<scalar_t> make_bounding_volume(vec3a_t<scalar_t> const& center,
+                                                        vec3a_t<scalar_t> const& half_extends, float radius) noexcept
 {
-  bounding_volume_t _;
-  _.spherical_vol = _.orig_spherical_vol = sphere_arg;
-  _.half_extends = _.orig_half_extends = half_extends;
-  return _;
+  return bounding_volume_t<scalar_t>(make_sphere(center, radius), half_extends);
 }
 
-inline void bounding_volume::update(bounding_volume_t& _, mat4::pref m)
+template <typename scalar_t>
+inline bounding_volume_t<scalar_t> make_bounding_volume(sphere_t<scalar_t> const& sphere,
+                                                        vec3a_t<scalar_t> const&  halfextends)
+{
+  return bounding_volume_t(sphere, halfextends);
+}
+
+/// @brief Given a matrix, update the bounding volume using the original extends and
+/// @brief radius
+template <typename scalar_t>
+inline auto mul(bounding_volume_t<scalar_t> const& bv, mat4_t<scalar_t> const& m) noexcept
 {
   // TODO test which is tighter avro's bound transform or this one
-  _.spherical_vol =
-    sphere::scale_radius(sphere::set(mat4::transform_assume_ortho(m, sphere::center(_.orig_spherical_vol)),
-                                     sphere::radius(_.orig_spherical_vol)),
-                         mat4::max_scale(m));
-
-  _.half_extends = mat4::transform_bounds_extends(m, _.orig_half_extends);
+  return  bounding_volume_t<scalar_t>(scale_radius(
+    set_w(transform_assume_ortho(m, center(bv.spherical_vol)), radius(bv.spherical_vol)), max_scale(m)),
+   transform_bounds_extends(m, bv.half_extends));
 }
 
-inline void bounding_volume::update(bounding_volume_t& _, float scale, quat::pref rot, vec3a::pref translation)
+template <typename scalar_t>
+inline auto operator*(bounding_volume_t<scalar_t> const& bv, mat4_t<scalar_t> const& m) noexcept
 {
-
-  _.spherical_vol = sphere::scale_radius(
-    sphere::set(vec3a::add(quat::transform(rot, sphere::center(_.orig_spherical_vol)), translation),
-                sphere::radius(_.spherical_vol)),
-    scale);
-  _.half_extends = quat::transform_bounds_extends(rot, vec3a::mul(_.orig_half_extends, scale));
+  return mul(bv, m);
 }
 
-inline void bounding_volume::update(bounding_volume_t& _, transform_t const& tf)
+template <typename scalar_t>
+inline auto update(bounding_volume_t<scalar_t> const& bv, scalar_t scale, quat_t<scalar_t> const& rot, vec3a_t<scalar_t> const& translation) noexcept
 {
-  update(_, transform::scale(tf), transform::rotation(tf), transform::translation(tf));
+  return bounding_volume_t<scalar_t>(
+    scale_radius(set_w(add(mul(center(bv.orig_spherical_vol), rot), translation), radius(bv.spherical_vol)), scale), 
+   transform_bounds_extends(rot, mul(bv.orig_half_extends, scale)));
 }
 
-inline void bounding_volume::update(bounding_volume_t& _, vec3a_t const* points, std::uint32_t count)
+template <typename scalar_t>
+inline auto mul(bounding_volume_t<scalar_t>& bv, transform_t<scalar_t> const& tf) noexcept
 {
-  aabb_t box = aabb::set(center(_), half_extends(_));
+  return transform(bv, scale(tf), rotation(tf), translation(tf));
+}
+
+template <typename scalar_t>
+inline auto operator*(bounding_volume_t<scalar_t>& bv, transform_t<scalar_t> const& tf) noexcept
+{
+  return transform(bv, scale(tf), rotation(tf), translation(tf));
+}
+
+template <typename scalar_t>
+inline auto& append(bounding_volume_t<scalar_t>& bv, vec3a_t<scalar_t> const* points, uint32_t count) noexcept
+{
+  auto box = aabb_t<scalar_t>(center(bv), half_extends(bv));
   for (std::uint32_t i = 0; i < count; i++)
-    box = aabb::append(box, points[i]);
-  _ = from_box(aabb::center(box), aabb::half_size(box));
+    box = append(box, points[i]);
+  return make_bounding_volume(center(box), half_size(box));
 }
 
-inline void bounding_volume::update(bounding_volume_t& _, bounding_volume_t const& vol)
+template <typename scalar_t>
+inline auto& append(bounding_volume_t<scalar_t>& bv, bounding_volume_t<scalar_t> const& vol) noexcept
 {
-  vec3a_t center_this  = center(_);
-  vec3a_t center_other = center(vol);
+  auto center_this  = center(bv);
+  auto center_other = center(vol);
 
-  vec3a_t a       = vec3a::abs(vec3a::sub(center_this, center_other));
-  vec3a_t min_p   = vec3a::min(vec3a::sub(center_this, _.half_extends), vec3a::sub(center_other, vol.half_extends));
-  vec3a_t max_p   = vec3a::max(vec3a::add(center_this, _.half_extends), vec3a::add(center_other, vol.half_extends));
-  _.half_extends  = vec3a::half(vec3a::sub(max_p, min_p));
-  _.spherical_vol = vec3a::set_w(
-    vec3a::half(vec3a::add(min_p, max_p)),
-    vec3a::half_x(vec3a::add_x(vec3a::add_x(sphere::vradius(vol.spherical_vol), sphere::vradius(_.spherical_vol)),
-                               vec3a::sqrt_x(vec3a::vdot(a, a)))));
-  _.orig_spherical_vol = _.spherical_vol;
-  _.orig_half_extends  = _.half_extends;
+  auto a          = abs(sub(center_this, center_other));
+  auto min_p      = min(sub(center_this, bv.half_extends), sub(center_other, vol.half_extends));
+  auto max_p      = max(add(center_this, bv.half_extends), add(center_other, vol.half_extends));
+  
+  bv.spherical_vol =
+    set_w(half(add(min_p, max_p)),
+          half_x(add_x(add_x(vradius(vol.spherical_vol), vradius(bv.spherical_vol)), sqrt_x(vdot(a, a)))));
+  bv.half_extends = half(sub(max_p, min_p));
+  return bv;
 }
+
+template <typename scalar_t>
+inline bounding_volume_t<scalar_t> mul(bounding_volume_t<scalar_t> const& bv, mat4_t<scalar_t> const& m) noexcept
+{
+  // TODO test which is tighter avro's bound transform or this one
+  return { scale_radius(
+    set_w(transform_assume_ortho(m, center(bv.spherical_vol)), radius(bv.spherical_vol)), max_scale(m)), 
+   transform_bounds_extends(m, bv.orig_half_extends) };
+}
+
+template <typename scalar_t>
+inline bounding_volume_t<scalar_t> operator*(bounding_volume_t<scalar_t> const& bv, mat4_t<scalar_t> const& m) noexcept
+{
+  return mul(bv, m);
+}
+
 } // namespace acl

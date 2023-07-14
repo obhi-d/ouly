@@ -77,62 +77,65 @@ add_unit_test(NAME binary_serializer FILES "binary_serializer.cpp" )
 add_unit_test(NAME pool_allocator FILES "pool_allocator.cpp" )
 add_unit_test(NAME linear_allocator FILES "linear_allocator.cpp" )
 add_unit_test(NAME scli_tests FILES "scli_tests.cpp")
-add_unit_test(NAME math_common FILES "math_common.cpp")
-add_unit_test(NAME math_euler_angles FILES "math_euler_angles.cpp")
-add_unit_test(NAME math_frustum FILES "math_frustum.cpp")
-add_unit_test(NAME math_intersect FILES "math_intersect.cpp")
-add_unit_test(NAME math_mat3 FILES "math_mat3.cpp")
-add_unit_test(NAME math_mat4 FILES "math_mat4.cpp")
-add_unit_test(NAME math_plane FILES "math_plane.cpp")
-add_unit_test(NAME math_quad FILES "math_quad.cpp")
-add_unit_test(NAME math_quat FILES "math_quat.cpp")
-add_unit_test(NAME math_transform FILES "math_transform.cpp")
-add_unit_test(NAME math_vec FILES "math_vec.cpp")
-add_unit_test(NAME math_aabb FILES "math_aabb.cpp")
-add_unit_test(NAME math_axis_angle FILES "math_axis_angle.cpp")
-add_unit_test(NAME math_bounding_volume FILES "math_bounding_volume.cpp")
-add_unit_test(NAME sse_math_common FILES "math_common.cpp"                   DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=2" )
-add_unit_test(NAME sse_math_euler_angles FILES "math_euler_angles.cpp"       DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=2" )
-add_unit_test(NAME sse_math_frustum FILES "math_frustum.cpp"                 DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=2" )
-add_unit_test(NAME sse_math_intersect FILES "math_intersect.cpp"             DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=2" )
-add_unit_test(NAME sse_math_mat3 FILES "math_mat3.cpp"                       DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=2" )
-add_unit_test(NAME sse_math_mat4 FILES "math_mat4.cpp"                       DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=2" )
-add_unit_test(NAME sse_math_plane FILES "math_plane.cpp"                     DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=2" )
-add_unit_test(NAME sse_math_quad FILES "math_quad.cpp"                       DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=2" )
-add_unit_test(NAME sse_math_quat FILES "math_quat.cpp"                       DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=2" )
-add_unit_test(NAME sse_math_transform FILES "math_transform.cpp"             DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=2" )
-add_unit_test(NAME sse_math_vec FILES "math_vec.cpp"                         DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=2" )
-add_unit_test(NAME sse_math_aabb FILES "math_aabb.cpp"                       DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=2" )
-add_unit_test(NAME sse_math_axis_angle FILES "math_axis_angle.cpp"           DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=2" )
-add_unit_test(NAME sse_math_bounding_volume FILES "math_bounding_volume.cpp" DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=2" )
-add_unit_test(NAME sse3_math_common FILES "math_common.cpp"                   DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=3" )
-add_unit_test(NAME sse3_math_euler_angles FILES "math_euler_angles.cpp"       DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=3" )
-add_unit_test(NAME sse3_math_frustum FILES "math_frustum.cpp"                 DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=3" )
-add_unit_test(NAME sse3_math_intersect FILES "math_intersect.cpp"             DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=3" )
-add_unit_test(NAME sse3_math_mat3 FILES "math_mat3.cpp"                       DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=3" )
-add_unit_test(NAME sse3_math_mat4 FILES "math_mat4.cpp"                       DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=3" )
-add_unit_test(NAME sse3_math_plane FILES "math_plane.cpp"                     DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=3" )
-add_unit_test(NAME sse3_math_quad FILES "math_quad.cpp"                       DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=3" )
-add_unit_test(NAME sse3_math_quat FILES "math_quat.cpp"                       DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=3" )
-add_unit_test(NAME sse3_math_transform FILES "math_transform.cpp"             DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=3" )
-add_unit_test(NAME sse3_math_vec FILES "math_vec.cpp"                         DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=3" )
-add_unit_test(NAME sse3_math_aabb FILES "math_aabb.cpp"                       DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=3" )
-add_unit_test(NAME sse3_math_axis_angle FILES "math_axis_angle.cpp"           DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=3" )
-add_unit_test(NAME sse3_math_bounding_volume FILES "math_bounding_volume.cpp" DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=3" )
-add_unit_test(NAME avx_math_common FILES "math_common.cpp"                   DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=4" )
-add_unit_test(NAME avx_math_euler_angles FILES "math_euler_angles.cpp"       DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=4" )
-add_unit_test(NAME avx_math_frustum FILES "math_frustum.cpp"                 DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=4" )
-add_unit_test(NAME avx_math_intersect FILES "math_intersect.cpp"             DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=4" )
-add_unit_test(NAME avx_math_mat3 FILES "math_mat3.cpp"                       DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=4" )
-add_unit_test(NAME avx_math_mat4 FILES "math_mat4.cpp"                       DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=4" )
-add_unit_test(NAME avx_math_plane FILES "math_plane.cpp"                     DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=4" )
-add_unit_test(NAME avx_math_quad FILES "math_quad.cpp"                       DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=4" )
-add_unit_test(NAME avx_math_quat FILES "math_quat.cpp"                       DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=4" )
-add_unit_test(NAME avx_math_transform FILES "math_transform.cpp"             DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=4" )
-add_unit_test(NAME avx_math_vec FILES "math_vec.cpp"                         DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=4" )
-add_unit_test(NAME avx_math_aabb FILES "math_aabb.cpp"                       DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=4" )
-add_unit_test(NAME avx_math_axis_angle FILES "math_axis_angle.cpp"           DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=4" )
-add_unit_test(NAME avx_math_bounding_volume FILES "math_bounding_volume.cpp" DEFINES "-DVML_USE_SSE_AVX=1" "-DVML_USE_SSE_LEVEL=4" )
+add_unit_test(NAME math_all FILES "math_common.cpp"
+                                  "math_euler_angles.cpp"
+                                  "math_frustum.cpp"
+                                  "math_intersect.cpp"
+                                  "math_mat3.cpp"
+                                  "math_mat4.cpp"
+                                  "math_plane.cpp"
+                                  "math_quad.cpp"
+                                  "math_quat.cpp"
+                                  "math_transform.cpp"
+                                  "math_vec.cpp"
+                                  "math_aabb.cpp"
+                                  "math_axis_angle.cpp"
+                                  "math_bounding_volume.cpp")
+
+add_unit_test(NAME math_all_sse2 FILES "math_common.cpp"
+                                  "math_euler_angles.cpp"
+                                  "math_frustum.cpp"
+                                  "math_intersect.cpp"
+                                  "math_mat3.cpp"
+                                  "math_mat4.cpp"
+                                  "math_plane.cpp"
+                                  "math_quad.cpp"
+                                  "math_quat.cpp"
+                                  "math_transform.cpp"
+                                  "math_vec.cpp"
+                                  "math_aabb.cpp"
+                                  "math_axis_angle.cpp"
+                                  "math_bounding_volume.cpp" DEFINES "-DACL_USE_SSE2=1")
+
+add_unit_test(NAME math_all_sse3 FILES "math_common.cpp"
+                                  "math_euler_angles.cpp"
+                                  "math_frustum.cpp"
+                                  "math_intersect.cpp"
+                                  "math_mat3.cpp"
+                                  "math_mat4.cpp"
+                                  "math_plane.cpp"
+                                  "math_quad.cpp"
+                                  "math_quat.cpp"
+                                  "math_transform.cpp"
+                                  "math_vec.cpp"
+                                  "math_aabb.cpp"
+                                  "math_axis_angle.cpp"
+                                  "math_bounding_volume.cpp" DEFINES "-DACL_USE_SSE3=1")
+
+add_unit_test(NAME math_all_avx FILES "math_common.cpp"
+                                  "math_euler_angles.cpp"
+                                  "math_frustum.cpp"
+                                  "math_intersect.cpp"
+                                  "math_mat3.cpp"
+                                  "math_mat4.cpp"
+                                  "math_plane.cpp"
+                                  "math_quad.cpp"
+                                  "math_quat.cpp"
+                                  "math_transform.cpp"
+                                  "math_vec.cpp"
+                                  "math_aabb.cpp"
+                                  "math_axis_angle.cpp"
+                                  "math_bounding_volume.cpp" DEFINES "-DACL_USE_AVX=1")
 
 
 add_executable(acl-bench

@@ -7,183 +7,159 @@
 
 namespace acl
 {
-template <typename concrete>
-struct mat_base : public multi_dim<concrete>
-{
-  using typename multi_dim<concrete>::type;
-  using typename multi_dim<concrete>::ref;
-  using typename multi_dim<concrete>::pref;
-  using typename multi_dim<concrete>::scalar_type;
-  using typename multi_dim<concrete>::row_tag;
-  using typename multi_dim<concrete>::row_type;
-
-  //! @brief Create a matrix from vector mapping that
-  //! can rotate the vector axis1 to axis2 when post multiplied to axis1.
-  static inline type from_vector_mapping(vec3::pref v1, vec3::pref v2);
-  //! @brief rotate vector in place
-  static inline void rotate(pref m, vec3::type* io_stream, std::uint32_t i_stride, std::uint32_t i_count);
-  //! @brief rotate vector
-  static inline vec3a_t rotate(pref m, vec3a::pref v);
-  //! @brief set a rotation for a given matrix
-  static inline void set_rotation(ref _, quat::pref rot);
-  //! @brief Returns a look at matrix based on a look at vector and up direction
-  static inline void set_as_view(ref m, vec3a::pref view_dir, vec3a::pref up_dir);
-};
-
-template <typename concrete>
-inline typename mat_base<concrete>::type mat_base<concrete>::from_vector_mapping(vec3::pref axis1, vec3::pref axis2)
+/// @brief Create a matrix from vector mapping that can rotate the vector axis1 to axis2 when post multiplied to axis1.
+template <TransformMatrix M, typename scalar_t>
+inline M make_rotation_from_vector_mapping(vec3_t<scalar_t> const& axis1, vec3_t<scalar_t> const& axis2)
 {
   /** \todo sse **/
-  type        m;
-  scalar_type cs, xy_1_c, xz_1_c, yz_1_c;
-  cs = vec3::dot(axis1, axis2);
-  scalar_type _1_c;
-  vec3_t      axis = vec3::cross(axis1, axis2);
+  auto cs = dot(axis1, axis2);
+
+  auto axis = cross(axis1, axis2);
   // OPTIMIZE: we can also check the angle to
   // see if its a multiple of Pi.
-  if (acl::abs(axis[0]) < acl::k_const_epsilon_med && acl::abs(axis[1]) < acl::k_const_epsilon_med &&
-      acl::abs(axis[2]) < acl::k_const_epsilon_med)
+  if (std::abs(axis.x) < acl::k_const_epsilon_med && std::abs(axis.y) < acl::k_const_epsilon_med &&
+      std::abs(axis.z) < acl::k_const_epsilon_med)
   {
     // take a cross for that
-    axis = vec3::cross(axis1, vec3::set(0.0f, 1.0f, 0.0f));
-    if (acl::abs(axis[0]) < acl::k_const_epsilon_med && acl::abs(axis[1]) < acl::k_const_epsilon_med &&
-        acl::abs(axis[2]) < acl::k_const_epsilon_med)
+    axis = cross(axis1, vec3_t<scalar_t>(0.0f, 1.0f, 0.0f));
+    if (std::abs(axis.x) < acl::k_const_epsilon_med && std::abs(axis.y) < acl::k_const_epsilon_med &&
+        std::abs(axis.z) < acl::k_const_epsilon_med)
     {
-      axis = vec3::cross(axis1, vec3::set(1.0f, 0.0f, 0.0f));
+      axis = cross(axis1, vec3_t<scalar_t>(1.0f, 0.0f, 0.0f));
     }
   }
-  _1_c        = 1.0f - cs;
-  vec3_t xyzs = vec3::mul(axis, -acl::sqrt(1 - cs * cs));
-  vec3_t mstr = vec3::mul(axis, axis);
+  auto _1_c   = 1.0f - cs;
+  auto xyzs   = mul(axis, -std::sqrt(1 - cs * cs));
+  auto mstr   = mul(axis, axis);
   mstr        = mstr * _1_c;
-  xy_1_c      = axis[0] * axis[1] * _1_c;
-  xz_1_c      = axis[0] * axis[2] * _1_c;
-  yz_1_c      = axis[1] * axis[2] * _1_c;
+  auto xy_1_c = axis.x * axis.y * _1_c;
+  auto xz_1_c = axis.x * axis.z * _1_c;
+  auto yz_1_c = axis.y * axis.z * _1_c;
 
-  m.r[0] = row_tag::set(cs + mstr[0], xy_1_c - xyzs[2], xz_1_c + xyzs[1], 0);
-  m.r[1] = row_tag::set(xy_1_c + xyzs[2], cs + mstr[1], yz_1_c - xyzs[0], 0);
-  m.r[2] = row_tag::set(xz_1_c - xyzs[1], yz_1_c + xyzs[0], cs + mstr[2], 0);
+  M m{noinit_v};
+  m.r[0].v = vec4_t<scalar_t>(cs + mstr.x, xy_1_c - xyzs.z, xz_1_c + xyzs.y, 0);
+  m.r[1].v = vec4_t<scalar_t>(xy_1_c + xyzs.z, cs + mstr.y, yz_1_c - xyzs.x, 0);
+  m.r[2].v = vec4_t<scalar_t>(xz_1_c - xyzs.y, yz_1_c + xyzs.x, cs + mstr.z, 0);
 
   return m;
 }
 
-template <typename concrete>
-inline void mat_base<concrete>::rotate(pref m, vec3::type* io_stream, std::uint32_t i_stride, std::uint32_t i_count)
+/// @brief rotate vector in place
+template <TransformMatrix M, typename scalar_t>
+inline void rotate(M const& m, vec3_t<scalar_t>* io_stream, std::uint32_t i_stride, std::uint32_t i_count)
 {
   assert(io_stream);
   const std::uint8_t* inout_vec = (const std::uint8_t*)io_stream;
-#if VML_USE_SSE_AVX
-  std::uint8_t* out_vec = (std::uint8_t*)io_stream;
-  union
+  if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
-    quad_t      v;
-    scalar_type s[4];
-  } store;
+    for (std::uint32_t i = 0; i < i_count; i++)
+    {
+      __m128 x                  = _mm_load_ps1(reinterpret_cast<const scalar_t*>(inout_vec));
+      __m128 y                  = _mm_load_ps1(reinterpret_cast<const scalar_t*>(inout_vec + 4));
+      __m128 res                = _mm_load_ps1(reinterpret_cast<const scalar_t*>(inout_vec + 8));
+      res                       = _mm_mul_ps(res, m.r[2].v);
+      y                         = _mm_mul_ps(y, m.r[1].v);
+      res                       = _mm_add_ps(res, y);
+      x                         = _mm_mul_ps(x, m.r[0].v);
+      res                       = _mm_add_ps(res, x);
+      auto vres                 = normalize(vec3a_t<scalar_t>(res));
+      ((scalar_t*)inout_vec)[0] = vres.xyzw[0];
+      ((scalar_t*)inout_vec)[1] = vres.s[1];
+      ((scalar_t*)inout_vec)[2] = vres.s[2];
 
-  for (std::uint32_t i = 0; i < i_count; i++)
-  {
-    quad_t x   = _mm_load_ps1(reinterpret_cast<const scalar_type*>(inout_vec));
-    quad_t y   = _mm_load_ps1(reinterpret_cast<const scalar_type*>(inout_vec + 4));
-    quad_t res = _mm_load_ps1(reinterpret_cast<const scalar_type*>(inout_vec + 8));
-    res        = _mm_mul_ps(res, m.r[2]);
-    y          = _mm_mul_ps(y, m.r[1]);
-    res        = _mm_add_ps(res, y);
-    x          = _mm_mul_ps(x, m.r[0]);
-    res        = _mm_add_ps(res, x);
-    res        = vec3a::normalize(res);
-    _mm_store_ps(store.s, res);
-    ((scalar_type*)inout_vec)[0] = store.s[0];
-    ((scalar_type*)inout_vec)[1] = store.s[1];
-    ((scalar_type*)inout_vec)[2] = store.s[2];
-
-    inout_vec += i_stride;
+      inout_vec += i_stride;
+    }
   }
-#else
-  quad_t x, y, z, r;
-  for (std::uint32_t i = 0; i < i_count; i++)
+  else
   {
-    x = quad::set(((scalar_type*)inout_vec)[0]);
-    y = quad::set(((scalar_type*)inout_vec)[1]);
-    z = quad::set(((scalar_type*)inout_vec)[2]);
 
-    r = vec3a::mul(z, row(m, 2));
-    r = vec3a::madd(y, row(m, 1), r);
-    r = vec3a::normalize(vec3a::madd(x, row(m, 0), r));
+    for (std::uint32_t i = 0; i < i_count; i++)
+    {
+      auto x = vec3a_t<scalar_t>(((scalar_t*)inout_vec)[0]);
+      auto y = vec3a_t<scalar_t>(((scalar_t*)inout_vec)[1]);
+      auto z = vec3a_t<scalar_t>(((scalar_t*)inout_vec)[2]);
 
-    ((scalar_type*)inout_vec)[0] = r[0];
-    ((scalar_type*)inout_vec)[1] = r[1];
-    ((scalar_type*)inout_vec)[2] = r[2];
+      auto r = mul(z, row(m, 2));
+      r      = madd(y, row(m, 1), r);
+      r      = normalize(madd(x, row(m, 0), r));
 
-    inout_vec += i_stride;
+      ((scalar_t*)inout_vec)[0] = r[0];
+      ((scalar_t*)inout_vec)[1] = r[1];
+      ((scalar_t*)inout_vec)[2] = r[2];
+
+      inout_vec += i_stride;
+    }
   }
-#endif
 }
 
-template <typename concrete>
-inline vec3a_t mat_base<concrete>::rotate(pref m, vec3a::pref v)
+template <TransformMatrix M, typename scalar_t>
+inline vec3a_t<scalar_t> rotate(vec3a_t<scalar_t> v, M const& m)
 {
-#if VML_USE_SSE_AVX
-  quad_t v_res  = _mm_shuffle_ps(v, v, _MM_SHUFFLE(0, 0, 0, 0));
-  v_res         = _mm_mul_ps(v_res, m.r[0]);
-  quad_t v_temp = _mm_shuffle_ps(v, v, _MM_SHUFFLE(1, 1, 1, 1));
-  v_temp        = _mm_mul_ps(v_temp, m.r[1]);
-  v_res         = _mm_add_ps(v_res, v_temp);
-  v_temp        = _mm_shuffle_ps(v, v, _MM_SHUFFLE(2, 2, 2, 2));
-  v_temp        = _mm_mul_ps(v_temp, m.r[2]);
-  v_res         = _mm_add_ps(v_res, v_temp);
-  return v_res;
-#else
-  quad_t r = vec3a::mul(vec3a::splat_z(v), row(m, 2));
-  r        = vec3a::madd(vec3a::splat_y(v), row(m, 1), r);
-  r        = vec3a::madd(vec3a::splat_x(v), row(m, 0), r);
-  return r;
-#endif
+  if constexpr (has_sse && std::is_same_v<float, scalar_t>)
+  {
+    auto v_res  = _mm_shuffle_ps(v, v, _MM_SHUFFLE(0, 0, 0, 0));
+    v_res       = _mm_mul_ps(v_res, m.r[0].v);
+    auto v_temp = _mm_shuffle_ps(v, v, _MM_SHUFFLE(1, 1, 1, 1));
+    v_temp      = _mm_mul_ps(v_temp, m.r[1].v);
+    v_res       = _mm_add_ps(v_res, v_temp);
+    v_temp      = _mm_shuffle_ps(v, v, _MM_SHUFFLE(2, 2, 2, 2));
+    v_temp      = _mm_mul_ps(v_temp, m.r[2].v);
+    v_res       = _mm_add_ps(v_res, v_temp);
+    return v_res;
+  }
+  else
+  {
+    auto r = mul(splat_z(v), row(m, 2));
+    r      = madd(splat_y(v), row(m, 1), r);
+    r      = madd(splat_x(v), row(m, 0), r);
+    return r;
+  }
 }
 
-template <typename concrete>
-inline void mat_base<concrete>::set_rotation(ref m, quat::pref rot)
+template <TransformMatrix M, typename scalar_t>
+inline void set_rotation(M& m, quat_t<scalar_t> const& rot)
 {
-  scalar_type q[4] = {quat::x(rot), quat::y(rot), quat::z(rot), quat::w(rot)};
-  m.e[0][3]        = 0.0f;
-  m.e[1][3]        = 0.0f;
-  m.e[2][3]        = 0.0f;
-  scalar_type x2   = q[0] + q[0];
-  scalar_type y2   = q[1] + q[1];
-  scalar_type z2   = q[2] + q[2];
+  scalar_t q[4] = {x(rot), y(rot), z(rot), w(rot)};
+  m.e[0][3]     = 0.0f;
+  m.e[1][3]     = 0.0f;
+  m.e[2][3]     = 0.0f;
+  scalar_t x2   = q[0] + q[0];
+  scalar_t y2   = q[1] + q[1];
+  scalar_t z2   = q[2] + q[2];
   {
-    scalar_type xx2 = q[0] * x2;
-    scalar_type yy2 = q[1] * y2;
-    scalar_type zz2 = q[2] * z2;
-    m.e[0][0]       = 1.0f - yy2 - zz2;
-    m.e[1][1]       = 1.0f - xx2 - zz2;
-    m.e[2][2]       = 1.0f - xx2 - yy2;
+    scalar_t xx2 = q[0] * x2;
+    scalar_t yy2 = q[1] * y2;
+    scalar_t zz2 = q[2] * z2;
+    m.e[0][0]    = 1.0f - yy2 - zz2;
+    m.e[1][1]    = 1.0f - xx2 - zz2;
+    m.e[2][2]    = 1.0f - xx2 - yy2;
   }
   {
-    scalar_type yz2 = q[1] * z2;
-    scalar_type wx2 = q[3] * x2;
-    m.e[2][1]       = yz2 - wx2;
-    m.e[1][2]       = yz2 + wx2;
+    scalar_t yz2 = q[1] * z2;
+    scalar_t wx2 = q[3] * x2;
+    m.e[2][1]    = yz2 - wx2;
+    m.e[1][2]    = yz2 + wx2;
   }
   {
-    scalar_type xy2 = q[0] * y2;
-    scalar_type wz2 = q[3] * z2;
-    m.e[1][0]       = xy2 - wz2;
-    m.e[0][1]       = xy2 + wz2;
+    scalar_t xy2 = q[0] * y2;
+    scalar_t wz2 = q[3] * z2;
+    m.e[1][0]    = xy2 - wz2;
+    m.e[0][1]    = xy2 + wz2;
   }
   {
-    scalar_type xz2 = q[0] * z2;
-    scalar_type wy2 = q[3] * y2;
-    m.e[0][2]       = xz2 - wy2;
-    m.e[2][0]       = xz2 + wy2;
+    scalar_t xz2 = q[0] * z2;
+    scalar_t wy2 = q[3] * y2;
+    m.e[0][2]    = xz2 - wy2;
+    m.e[2][0]    = xz2 + wy2;
   }
 }
 
-template <typename concrete>
-inline void mat_base<concrete>::set_as_view(ref ret, vec3a::pref view_dir, vec3a::pref up_dir)
+template <TransformMatrix M, typename scalar_t>
+inline void set_as_view(M& ret, vec3a_t<scalar_t> const& view_dir, vec3a_t<scalar_t> const& up_dir)
 {
   // TODO needs validation
-  ret.r[2] = vec3a::normalize(view_dir);
-  ret.r[0] = vec3a::normalize(vec3a::cross(view_dir, up_dir));
-  ret.r[1] = vec3a::cross(ret.r[0], ret.r[2]);
+  ret.r[2].v = normalize(view_dir);
+  ret.r[0].v = normalize(cross(view_dir, up_dir));
+  ret.r[1].v = cross(ret.r[0].v, ret.r[2].v);
 }
 } // namespace acl

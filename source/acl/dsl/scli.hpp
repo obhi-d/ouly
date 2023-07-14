@@ -548,7 +548,7 @@ struct param_context_impl_vl : param_context
         };
         members[ii].emplace = [](cmd_state* cstate)
         {
-          (*reinterpret_cast<ParamClass*>(cstate)).emplace<I::value>();
+          (*reinterpret_cast<ParamClass*>(cstate)).template emplace<I::value>();
         };
       });
   }
@@ -561,7 +561,7 @@ struct param_context_impl_vl : param_context
       auto idx = reinterpret_cast<ParamClass*>(cstate)->index();
       return std::pair<param_context*, cmd_state*>{members[idx].internal_ctx, members[idx].offset(cstate)};
     }
-    scli.error(scli, "Type must have been set for variant parameter.", param_name);
+    scli.error(scli.source, "Type must have been set for variant parameter.", param_name);
     return std::pair<param_context*, cmd_state*>{nullptr, nullptr};
     // container like will be called sequentially, so we can ignore param_pos
   }
@@ -826,7 +826,7 @@ inline param_context* param_context_impl<Class>::get_instance()
       static_assert(flag, "This type is not parameterized");
     }
     ();
-    return false;
+    return nullptr;
   }
 }
 
