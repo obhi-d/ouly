@@ -1,9 +1,9 @@
 #pragma once
 
-#ifdef __GNUC__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wignored-attributes"
-#endif
+// #ifdef __GNUC__
+// #pragma GCC diagnostic push
+// #pragma GCC diagnostic ignored "-Wignored-attributes"
+// #endif
 
 #include "aabb.hpp"
 #include "axis_angle.hpp"
@@ -33,12 +33,13 @@
 
 #include "vec_base.hpp"
 
+#include "color.hpp"
 #include "vec2.hpp"
 #include "vec3.hpp"
 #include "vec3a.hpp"
 #include "vec4.hpp"
 #include "vml_fcn.hpp"
 
-#ifdef __GNUC__
-#pragma GCC diagnostic pop
-#endif
+// #ifdef __GNUC__
+// #pragma GCC diagnostic pop
+// #endif

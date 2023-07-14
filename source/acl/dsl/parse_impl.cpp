@@ -44,11 +44,13 @@
 
 
 // Unqualified %code blocks.
+#line 38 "C:/repos/acl/source/acl/dsl/scli.yy"
 
 #include "scli.hpp"
 #define SCANNER_PARAM scli.get_scanner()
 YY_DECL;
 
+#line 54 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
 
 
 #ifndef YY_
@@ -139,7 +141,9 @@ YY_DECL;
 #define YYERROR         goto yyerrorlab
 #define YYRECOVERING()  (!!yyerrstatus_)
 
+#line 7 "C:/repos/acl/source/acl/dsl/scli.yy"
 namespace acl {
+#line 147 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
 
   /// Build a parser object.
   scli_parser::scli_parser (acl::scli& scli_yyarg)
@@ -332,15 +336,21 @@ namespace acl {
         switch (yykind)
     {
       case symbol_kind::S_REGION_ID: // REGION_ID
+#line 65 "C:/repos/acl/source/acl/dsl/scli.yy"
                  { yyoutput << yysym.value.template as < std::string_view > (); }
+#line 342 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
         break;
 
       case symbol_kind::S_TEXT_REGION_ID: // TEXT_REGION_ID
+#line 65 "C:/repos/acl/source/acl/dsl/scli.yy"
                  { yyoutput << yysym.value.template as < std::string_view > (); }
+#line 348 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
         break;
 
       case symbol_kind::S_STRING: // STRING
+#line 65 "C:/repos/acl/source/acl/dsl/scli.yy"
                  { yyoutput << yysym.value.template as < std::string_view > (); }
+#line 354 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
         break;
 
       default:
@@ -459,10 +469,12 @@ namespace acl {
 
 
     // User initialization code.
+#line 33 "C:/repos/acl/source/acl/dsl/scli.yy"
 {
   yyla.location.source_name = scli.get_file_name();
 }
 
+#line 478 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
 
 
     /* Initialize the stack.  The initial state will be set in
@@ -608,79 +620,92 @@ namespace acl {
         {
           switch (yyn)
             {
-  case 5: // statement: ";"
-                                                         {                                                                      }
-    break;
-
-  case 6: // statement: commanddecl
-                                                         {                                                                      }
-    break;
-
-  case 7: // statement: "}"
+  case 6: // statement: "}"
+#line 77 "C:/repos/acl/source/acl/dsl/scli.yy"
                                                          { scli.exit_command_scope();  scli.destroy_comamnd_state();            }
+#line 627 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
     break;
 
-  case 8: // statement: REGION_ID
+  case 7: // statement: REGION_ID
+#line 78 "C:/repos/acl/source/acl/dsl/scli.yy"
                                                          { scli.enter_region(std::move(yystack_[0].value.as < std::string_view > ()));                                    }
+#line 633 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
     break;
 
-  case 9: // statement: TEXT_REGION_ID TEXT_CONTENTS
+  case 8: // statement: TEXT_REGION_ID TEXT_CONTENTS
+#line 79 "C:/repos/acl/source/acl/dsl/scli.yy"
                                                          { scli.enter_text_region(std::move(yystack_[1].value.as < std::string_view > ()), std::move(yystack_[0].value.as < acl::text_content > ()));                }
+#line 639 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
     break;
 
-  case 10: // statement: "import" STRING_LITERAL ";"
+  case 9: // statement: "import" STRING_LITERAL ";"
+#line 80 "C:/repos/acl/source/acl/dsl/scli.yy"
                                                          { scli.import_script(std::move(yystack_[1].value.as < acl::text_content > ()));                                   }
+#line 645 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
     break;
 
-  case 11: // commandname: STRING
-                     { scli.set_next_command(yystack_[0].value.as < std::string_view > ()); }
+  case 10: // commandname: STRING
+#line 82 "C:/repos/acl/source/acl/dsl/scli.yy"
+                              { scli.set_next_command(yystack_[0].value.as < std::string_view > ()); }
+#line 651 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
     break;
 
-  case 12: // commandname: STRING ":"
-                     { scli.set_next_command(yystack_[1].value.as < std::string_view > ()); }
+  case 11: // commandname: STRING ":"
+#line 83 "C:/repos/acl/source/acl/dsl/scli.yy"
+                              { scli.set_next_command(yystack_[1].value.as < std::string_view > ()); }
+#line 657 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
     break;
 
-  case 13: // commanddecl: commandname parameters.0.N ";"
+  case 12: // commanddecl: commandname ";"
+#line 86 "C:/repos/acl/source/acl/dsl/scli.yy"
+                                                     { scli.execute_command(); scli.destroy_comamnd_state(); }
+#line 663 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
+    break;
+
+  case 13: // commanddecl: commandname parameters.1.N ";"
+#line 87 "C:/repos/acl/source/acl/dsl/scli.yy"
                                                              { scli.execute_command(); scli.destroy_comamnd_state(); }
+#line 669 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
     break;
 
-  case 14: // commanddecl: commandname parameters.0.N "{"
+  case 14: // commanddecl: commandname parameters.1.N "{"
+#line 88 "C:/repos/acl/source/acl/dsl/scli.yy"
                                                              { scli.execute_command(); scli.enter_command_scope();   }
+#line 675 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
     break;
 
-  case 16: // parameters.0.N: parameter
-                                                {  }
-    break;
-
-  case 17: // parameters.0.N: parameters.0.N parameter
-                                                              {  }
-    break;
-
-  case 19: // parameter: STRING "="
+  case 18: // parameter: STRING "="
+#line 95 "C:/repos/acl/source/acl/dsl/scli.yy"
                                                { scli.set_next_param_name(yystack_[1].value.as < std::string_view > ()); }
+#line 681 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
     break;
 
-  case 20: // parameter: STRING_LITERAL
+  case 19: // parameter: STRING_LITERAL
+#line 96 "C:/repos/acl/source/acl/dsl/scli.yy"
                                                { scli.set_param(std::move(yystack_[0].value.as < acl::text_content > ())); }
+#line 687 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
     break;
 
-  case 21: // parameter: STRING
+  case 20: // parameter: STRING
+#line 97 "C:/repos/acl/source/acl/dsl/scli.yy"
                                                { scli.set_param(yystack_[0].value.as < std::string_view > ()); }
+#line 693 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
     break;
 
-  case 22: // parameter: "["
+  case 21: // parameter: "["
+#line 98 "C:/repos/acl/source/acl/dsl/scli.yy"
                                                        { scli.enter_param_scope(); }
+#line 699 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
     break;
 
-  case 23: // parameter: "]"
+  case 22: // parameter: "]"
+#line 99 "C:/repos/acl/source/acl/dsl/scli.yy"
                                                        { scli.exit_param_scope(); }
-    break;
-
-  case 24: // parameter: ","
-                                                       { }
+#line 705 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
     break;
 
 
+#line 709 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
 
             default:
               break;
@@ -1039,71 +1064,71 @@ namespace acl {
   const signed char
   scli_parser::yypact_[] =
   {
-       0,   -19,   -19,   -19,   -18,   -19,   -16,   -12,     8,     0,
-      13,   -19,     9,   -19,   -19,   -19,   -19,   -19,   -19,   -19,
+       0,   -19,   -19,   -18,   -19,   -17,   -12,     4,     0,    17,
+     -19,     5,   -19,   -19,   -19,   -19,   -19,   -19,   -19,   -19,
       -2,   -19,     3,   -19,   -19,   -19,   -19,   -19,   -19
   };
 
   const signed char
   scli_parser::yydefact_[] =
   {
-       0,     2,     5,     7,     0,     8,     0,    11,     0,     0,
-      15,     6,     0,     9,    12,     1,     4,    22,    23,    24,
-      21,    20,     0,    16,    10,    19,    13,    14,    17
+       0,     4,     6,     0,     7,     0,    10,     0,     0,    17,
+       5,     0,     8,    11,     1,     3,    12,    21,    22,    23,
+      20,    19,     0,    15,     9,    18,    13,    14,    16
   };
 
   const signed char
   scli_parser::yypgoto_[] =
   {
-     -19,     5,   -19,   -19,   -19,   -19,     2
+     -19,     6,   -19,   -19,   -19,   -19,   -10
   };
 
   const signed char
   scli_parser::yydefgoto_[] =
   {
-       0,     8,     9,    10,    11,    22,    23
+       0,     7,     8,     9,    10,    22,    23
   };
 
   const signed char
   scli_parser::yytable_[] =
   {
-       1,    12,    14,     2,    13,     3,    26,    27,    15,    17,
-      18,    25,    24,    19,    16,     4,     5,     6,     7,    17,
-      18,    20,    21,    19,    28,     0,     0,     0,     0,     0,
-       0,    20,    21
+       1,    11,    13,    12,    14,     2,    26,    27,    24,    17,
+      18,    25,    28,    19,    15,     3,     4,     5,     6,     0,
+      16,    20,    21,    17,    18,     0,     0,    19,     0,     0,
+       0,     0,     0,     0,     0,    20,    21
   };
 
   const signed char
   scli_parser::yycheck_[] =
   {
-       0,    19,    14,     3,    20,     5,     3,     4,     0,     6,
-       7,    13,     3,    10,     9,    15,    16,    17,    18,     6,
-       7,    18,    19,    10,    22,    -1,    -1,    -1,    -1,    -1,
-      -1,    18,    19
+       0,    19,    14,    20,     0,     5,     3,     4,     3,     6,
+       7,    13,    22,    10,     8,    15,    16,    17,    18,    -1,
+       3,    18,    19,     6,     7,    -1,    -1,    10,    -1,    -1,
+      -1,    -1,    -1,    -1,    -1,    18,    19
   };
 
   const signed char
   scli_parser::yystos_[] =
   {
-       0,     0,     3,     5,    15,    16,    17,    18,    22,    23,
-      24,    25,    19,    20,    14,     0,    22,     6,     7,    10,
+       0,     0,     5,    15,    16,    17,    18,    22,    23,    24,
+      25,    19,    20,    14,     0,    22,     3,     6,     7,    10,
       18,    19,    26,    27,     3,    13,     3,     4,    27
   };
 
   const signed char
   scli_parser::yyr1_[] =
   {
-       0,    21,    22,    22,    22,    23,    23,    23,    23,    23,
-      23,    24,    24,    25,    25,    26,    26,    26,    27,    27,
-      27,    27,    27,    27,    27
+       0,    21,    22,    22,    23,    23,    23,    23,    23,    23,
+      24,    24,    25,    25,    25,    26,    26,    27,    27,    27,
+      27,    27,    27,    27
   };
 
   const signed char
   scli_parser::yyr2_[] =
   {
-       0,     2,     1,     1,     2,     1,     1,     1,     1,     2,
-       3,     1,     2,     3,     3,     0,     1,     2,     0,     2,
-       1,     1,     1,     1,     1
+       0,     2,     1,     2,     1,     1,     1,     1,     2,     3,
+       1,     2,     2,     3,     3,     1,     2,     0,     2,     1,
+       1,     1,     1,     1
   };
 
 
@@ -1117,7 +1142,7 @@ namespace acl {
   "\"}\"", "\"[\"", "\"]\"", "\"<\"", "\">\"", "\",\"", "\"(\"", "\")\"",
   "\"=\"", "\":\"", "\"import\"", "REGION_ID", "TEXT_REGION_ID", "STRING",
   "STRING_LITERAL", "TEXT_CONTENTS", "$accept", "script", "statement",
-  "commandname", "commanddecl", "parameters.0.N", "parameter", YY_NULLPTR
+  "commandname", "commanddecl", "parameters.1.N", "parameter", YY_NULLPTR
   };
 #endif
 
@@ -1126,9 +1151,9 @@ namespace acl {
   const signed char
   scli_parser::yyrline_[] =
   {
-       0,    71,    71,    72,    73,    76,    77,    78,    79,    80,
-      81,    83,    84,    87,    88,    91,    92,    93,    96,    96,
-      97,    98,    99,   100,   101
+       0,    71,    71,    72,    75,    76,    77,    78,    79,    80,
+      82,    83,    86,    87,    88,    91,    92,    95,    95,    96,
+      97,    98,    99,   100
   };
 
   void
@@ -1159,8 +1184,11 @@ namespace acl {
 #endif // SCLI_DEBUG
 
 
+#line 7 "C:/repos/acl/source/acl/dsl/scli.yy"
 } // acl
+#line 1190 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
 
+#line 104 "C:/repos/acl/source/acl/dsl/scli.yy"
 
 /*============================================================================*/
 

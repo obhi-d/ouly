@@ -32,7 +32,7 @@
 
 
 /**
- ** \file /home/obhi/Code/acl/source/acl/dsl/parse_impl.hpp
+ ** \file C:/repos/acl/source/acl/dsl/parse_impl.hpp
  ** Define the acl::parser class.
  */
 
@@ -42,9 +42,10 @@
 // especially those whose name start with YY_ or yy_.  They are
 // private implementation details that can be changed or removed.
 
-#ifndef YY_SCLI_HOME_OBHI_CODE_ACL_SOURCE_ACL_DSL_PARSE_IMPL_HPP_INCLUDED
-# define YY_SCLI_HOME_OBHI_CODE_ACL_SOURCE_ACL_DSL_PARSE_IMPL_HPP_INCLUDED
+#ifndef YY_SCLI_C_REPOS_ACL_SOURCE_ACL_DSL_PARSE_IMPL_HPP_INCLUDED
+# define YY_SCLI_C_REPOS_ACL_SOURCE_ACL_DSL_PARSE_IMPL_HPP_INCLUDED
 // "%code requires" blocks.
+#line 16 "C:/repos/acl/source/acl/dsl/scli.yy"
 
 #include "parse_impl.hpp"
 #include "scli.hpp"
@@ -56,6 +57,7 @@
 #define YY_DECL extern acl::scli_parser::symbol_type scli_lex(acl::scli& scli, void* yyscanner)
 
 
+#line 61 "C:/repos/acl/source/acl/dsl/parse_impl.hpp"
 
 # include <cassert>
 # include <cstdlib> // std::abort
@@ -202,7 +204,9 @@
 # endif /* ! defined YYDEBUG */
 #endif  /* ! defined SCLI_DEBUG */
 
+#line 7 "C:/repos/acl/source/acl/dsl/scli.yy"
 namespace acl {
+#line 210 "C:/repos/acl/source/acl/dsl/parse_impl.hpp"
 
 
 
@@ -543,7 +547,7 @@ namespace acl {
         S_statement = 23,                        // statement
         S_commandname = 24,                      // commandname
         S_commanddecl = 25,                      // commanddecl
-        S_26_parameters_0_N = 26,                // parameters.0.N
+        S_26_parameters_1_N = 26,                // parameters.1.N
         S_parameter = 27                         // parameter
       };
     };
@@ -1496,9 +1500,9 @@ switch (yykind)
     /// Constants.
     enum
     {
-      yylast_ = 32,     ///< Last index in yytable_.
+      yylast_ = 36,     ///< Last index in yytable_.
       yynnts_ = 7,  ///< Number of nonterminal symbols.
-      yyfinal_ = 15 ///< Termination state number.
+      yyfinal_ = 14 ///< Termination state number.
     };
 
 
@@ -1684,9 +1688,11 @@ switch (yykind)
   }
 
 
+#line 7 "C:/repos/acl/source/acl/dsl/scli.yy"
 } // acl
+#line 1694 "C:/repos/acl/source/acl/dsl/parse_impl.hpp"
 
 
 
 
-#endif // !YY_SCLI_HOME_OBHI_CODE_ACL_SOURCE_ACL_DSL_PARSE_IMPL_HPP_INCLUDED
+#endif // !YY_SCLI_C_REPOS_ACL_SOURCE_ACL_DSL_PARSE_IMPL_HPP_INCLUDED

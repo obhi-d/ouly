@@ -6,13 +6,13 @@ namespace acl
 {
 
 template <typename scalar_t>
-inline plane_t<scalar_t> make_plane(vec3a_t<scalar_t> const& i_normal, float d)
+inline plane_t<scalar_t> make_plane(vec3a_t<scalar_t> const& i_normal, float d) noexcept
 {
   return set_w(i_normal, d);
 }
 
 template <typename scalar_t>
-inline plane_t<scalar_t> normalize(plane_t<scalar_t> const& i_plane)
+inline plane_t<scalar_t> normalize(plane_t<scalar_t> const& i_plane) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -61,7 +61,7 @@ inline plane_t<scalar_t> normalize(plane_t<scalar_t> const& i_plane)
 }
 
 template <typename scalar_t>
-inline vec3a_t<scalar_t> vdot(plane_t<scalar_t> const& p, vec3a_t<scalar_t> const& v)
+inline vec3a_t<scalar_t> vdot(plane_t<scalar_t> const& p, vec3a_t<scalar_t> const& v) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
     return vdot(p, _mm_or_ps(v, xyz0_w1()));
@@ -70,7 +70,7 @@ inline vec3a_t<scalar_t> vdot(plane_t<scalar_t> const& p, vec3a_t<scalar_t> cons
 }
 
 template <typename scalar_t>
-inline float dot(plane_t<scalar_t> const& p, vec3a_t<scalar_t> const& v)
+inline float dot(plane_t<scalar_t> const& p, vec3a_t<scalar_t> const& v) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
     return x(vdot(p, v));
@@ -79,13 +79,13 @@ inline float dot(plane_t<scalar_t> const& p, vec3a_t<scalar_t> const& v)
 }
 
 template <typename scalar_t>
-inline scalar_t dot_with_normal(plane_t<scalar_t> const& p, vec3a_t<scalar_t> const& v)
+inline scalar_t dot_with_normal(plane_t<scalar_t> const& p, vec3a_t<scalar_t> const& v) noexcept
 {
   return dot(make_vec3a(p), v);
 }
 
 template <typename scalar_t>
-inline vec3a_t<scalar_t> abs_normal(plane_t<scalar_t> const& p)
+inline vec3a_t<scalar_t> abs_normal(plane_t<scalar_t> const& p) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
     return abs(_mm_and_ps(p, clear_w_mask()));
@@ -94,7 +94,7 @@ inline vec3a_t<scalar_t> abs_normal(plane_t<scalar_t> const& p)
 }
 
 template <typename scalar_t>
-inline vec3a_t<scalar_t> get_normal(plane_t<scalar_t> const& p)
+inline vec3a_t<scalar_t> get_normal(plane_t<scalar_t> const& p) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
     return _mm_and_ps(p, clear_w_mask());

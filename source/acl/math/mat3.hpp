@@ -7,7 +7,7 @@ namespace acl
 {
 
 template <typename scalar_t>
-inline mat3_t<scalar_t> transpose(mat3_t<scalar_t> m)
+inline mat3_t<scalar_t> transpose(mat3_t<scalar_t> m) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -30,7 +30,7 @@ inline mat3_t<scalar_t> transpose(mat3_t<scalar_t> m)
 }
 
 template <typename scalar_t>
-inline mat3_t<scalar_t> make_mat3(quat_t<scalar_t> rot)
+inline mat3_t<scalar_t> make_mat3(quat_t<scalar_t> rot) noexcept
 {
   mat3_t<scalar_t> ret{noinit_v};
   set_rotation(ret, rot);

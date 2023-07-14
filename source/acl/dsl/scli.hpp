@@ -66,6 +66,8 @@ struct cmd_context : param_context
   {
     return nullptr;
   }
+
+  virtual void add_sub_command(std::string_view name, std::unique_ptr<cmd_context> cmd) {}
 };
 
 using text_content = std::variant<std::string_view, std::string>;
@@ -830,26 +832,30 @@ inline param_context* param_context_impl<Class>::get_instance()
   }
 }
 
-struct cmd_context_base : cmd_context
+struct cmd_group : cmd_context
 {
-  void add_sub_command(std::string_view name, std::unique_ptr<cmd_context_base> cmd)
+  void add_sub_command(std::string_view name, std::unique_ptr<cmd_context> cmd) override
   {
-    sub_objects[name] = std::move(cmd);
+    if (name == "*")
+      default_executer = std::move(cmd);
+    else
+      sub_objects[name] = std::move(cmd);
   }
 
-  cmd_context* get_context(scli& scli, std::string_view cmd_name)
+  cmd_context* get_context(scli& scli, std::string_view cmd_name) override
   {
     auto it = sub_objects.find(cmd_name);
     if (it != sub_objects.end())
       return it->second.get();
-    return nullptr;
+    return default_executer.get();
   }
 
-  std::unordered_map<std::string_view, std::unique_ptr<cmd_context_base>> sub_objects;
+  std::unique_ptr<cmd_context>                                       default_executer;
+  std::unordered_map<std::string_view, std::unique_ptr<cmd_context>> sub_objects;
 };
 
 template <typename CmdClass>
-struct cmd_proxy : cmd_context_base
+struct cmd_proxy : cmd_context
 {
   struct state
   {
@@ -884,18 +890,10 @@ struct cmd_proxy : cmd_context_base
 
   bool enter(scli& scli, cmd_state* cstate) override
   {
-    auto cs = reinterpret_cast<state*>(cstate);
-    if constexpr (detail::HasEntry<CmdClass>)
-      return cs->data.enter(scli);
-    return true;
+    return false;
   }
 
-  void exit(scli& scli, cmd_state* cstate) override
-  {
-    auto cs = reinterpret_cast<state*>(cstate);
-    if constexpr (detail::HasExit<CmdClass>)
-      cs->data.exit(scli);
-  }
+  void exit(scli& scli, cmd_state* cstate) override {}
 
   std::pair<param_context*, cmd_state*> enter_param_context(scli& scli, int param_pos, std::string_view param_name,
                                                             cmd_state* cstate) override
@@ -917,6 +915,26 @@ struct cmd_proxy : cmd_context_base
                    cmd_state* cstate) override
   {
     return value_ctx->parse_param(scli, param_pos, param_name, value, cstate);
+  }
+};
+
+template <typename CmdClass>
+struct cmd_group_proxy : cmd_proxy<CmdClass>
+{
+  using typename cmd_proxy<CmdClass>::state;
+  bool enter(scli& scli, cmd_state* cstate) override
+  {
+    auto cs = reinterpret_cast<state*>(cstate);
+    if constexpr (detail::HasEntry<CmdClass>)
+      return cs->data.enter(scli);
+    return true;
+  }
+
+  void exit(scli& scli, cmd_state* cstate) override
+  {
+    auto cs = reinterpret_cast<state*>(cstate);
+    if constexpr (detail::HasExit<CmdClass>)
+      cs->data.exit(scli);
   }
 };
 
@@ -946,19 +964,15 @@ struct region
 template <string_literal Name, typename CmdType>
 constexpr auto cmd = detail::command<Name, CmdType>();
 
-template <string_literal Name>
-constexpr auto region = detail::region<Name>();
-
 class scli::builder
 {
 public:
-  template <typename Name>
-  scli::builder& operator*(Name) noexcept
+  scli::builder& operator[](std::string_view name) noexcept
   {
     stack.clear();
-    auto dc     = std::make_unique<detail::cmd_context_base>();
+    auto dc     = std::make_unique<detail::cmd_group>();
     current_ctx = dc.get();
-    region_map.emplace((std::string_view)Name::name(), std::move(dc));
+    region_map.emplace(name, std::move(dc));
     return *this;
   }
 
@@ -972,7 +986,7 @@ public:
   template <detail::CommandType C>
   scli::builder& operator+(C other) noexcept
   {
-    auto proxy = std::make_unique<detail::cmd_proxy<typename C::command_type>>();
+    auto proxy = std::make_unique<detail::cmd_group_proxy<typename C::command_type>>();
     stack.emplace_back(current_ctx);
     current_ctx = proxy.get();
     current_ctx->add_sub_command(other.name(), std::move(proxy));
@@ -989,9 +1003,9 @@ public:
   std::shared_ptr<scli::context> build();
 
 private:
-  detail::cmd_context_base*                                                       current_ctx;
-  std::vector<detail::cmd_context_base*>                                          stack;
-  std::unordered_map<std::string_view, std::unique_ptr<detail::cmd_context_base>> region_map;
+  cmd_context*                                                       current_ctx;
+  std::vector<cmd_context*>                                          stack;
+  std::unordered_map<std::string_view, std::unique_ptr<cmd_context>> region_map;
 };
 
 using scli_source = scli::location;

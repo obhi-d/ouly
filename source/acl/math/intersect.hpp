@@ -20,8 +20,8 @@ inline result_t test_intersection(bounding_volume_t<scalar_t> const& i_vol1,
 
 /// @brief Test bounding volume frustum_t intersection using coherency and masking.
 template <typename scalar_t>
-inline result_t test_intersection_coherent(bounding_volume_t<scalar_t> const& i_vol,
-                                           frustum_t<scalar_t> const& i_frustum, coherency& io_coherency) noexcept;
+inline result_t test_intersection(bounding_volume_t<scalar_t> const& i_vol, frustum_t<scalar_t> const& i_frustum,
+                                  coherency& io_coherency) noexcept;
 
 /// @brief Test bounding volume frustum_t intersection
 template <typename scalar_t>
@@ -45,8 +45,8 @@ inline result_t test_intersection(bounding_volume_t<scalar_t> const& vol1,
 }
 
 template <typename scalar_t>
-inline result_t test_intersection_coherent(bounding_volume_t<scalar_t> const& i_vol,
-                                           frustum_t<scalar_t> const& i_frustum, coherency& io_coherency) noexcept
+inline result_t test_intersection(bounding_volume_t<scalar_t> const& i_vol, frustum_t<scalar_t> const& i_frustum,
+                                  coherency& io_coherency) noexcept
 {
 
   result_t      result    = result_t::k_inside;

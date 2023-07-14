@@ -14,39 +14,20 @@
 
 namespace acl
 {
-static constexpr float k_round_off                = 0.000001f;
-static constexpr float k_pi                       = 3.14159265358900f;
-static constexpr float k_2pi                      = 2 * k_pi;
-static constexpr float k_pi_by_2                  = k_pi / 2;
-static constexpr float k_1_by_pi                  = 0.31830988618379067153776752674503f;
-static constexpr float k_1_by_2pi                 = 0.15915494309189533576888376337254f;
-static constexpr float k_degrees_to_radian_factor = 0.0174532925199f;
 
-static constexpr float k_scalar_max = 3.402823466e+38f;
-static constexpr float k_scalar_big = 999999999.0f;
-
-static constexpr float k_const_epsilon      = 1.192092896e-06f;
-static constexpr float k_const_epsilon_med  = 0.0009765625f;
-static constexpr float k_const_epsilon_big  = 0.0625f;
-static constexpr float k_max_relative_error = 0.005f;
-
-/** acl function overrides */
-inline float abs(float value)
-{
-  return std::fabs(value);
-}
-inline float recip_sqrt(float val)
+// acl function overrides
+inline float recip_sqrt(float val) noexcept
 {
   return 1.f / std::sqrt(val);
 }
 
-inline std::pair<float, float> sin_cos(float i_val)
+inline std::pair<float, float> sin_cos(float i_val) noexcept
 {
   return {std::sin(i_val), std::cos(i_val)};
 }
 //-------------------------------------------------------
 // Other utilities
-inline std::uint32_t bit_pos(std::uint32_t v)
+inline std::uint32_t bit_pos(std::uint32_t v) noexcept
 {
 #ifdef _MSC_VER
   unsigned long index;
@@ -59,12 +40,12 @@ inline std::uint32_t bit_pos(std::uint32_t v)
 #endif
 }
 
-inline uint32_t bit_count(std::uint32_t i)
+inline uint32_t bit_count(std::uint32_t i) noexcept
 {
   return (uint32_t)std::popcount(i);
 }
 
-inline std::uint32_t prev_pow2(std::uint32_t v)
+inline std::uint32_t prev_pow2(std::uint32_t v) noexcept
 {
   v--;
   v |= v >> 1;
@@ -75,7 +56,7 @@ inline std::uint32_t prev_pow2(std::uint32_t v)
   return (++v) >> 1;
 }
 
-inline std::uint32_t next_pow2(std::uint32_t v)
+inline std::uint32_t next_pow2(std::uint32_t v) noexcept
 {
   v--;
   v |= v >> 1;
@@ -86,7 +67,7 @@ inline std::uint32_t next_pow2(std::uint32_t v)
   return ++v;
 }
 
-inline bool is_pow2(std::uint32_t val)
+inline bool is_pow2(std::uint32_t val) noexcept
 {
   return (val & (val - 1)) == 0;
 }
@@ -94,7 +75,7 @@ inline bool is_pow2(std::uint32_t val)
 // inlined functions
 // wrap angle between -pi & +pi
 template <typename IntType>
-inline IntType round_up(IntType number, IntType multiple)
+inline IntType round_up(IntType number, IntType multiple) noexcept
 {
   IntType remainder = number % multiple;
   if (remainder == 0)
@@ -102,7 +83,7 @@ inline IntType round_up(IntType number, IntType multiple)
   return number + multiple - remainder;
 }
 
-inline float wrap_pi(float theta)
+inline float wrap_pi(float theta) noexcept
 {
   theta += acl::k_pi;
   theta -= std::floor(theta * acl::k_1_by_2pi) * acl::k_2pi;
@@ -111,14 +92,14 @@ inline float wrap_pi(float theta)
 }
 // float to fixed point conversion, float must be
 // between 0-1
-inline std::uint32_t float_to_fixed(float f, std::uint32_t n)
+inline std::uint32_t float_to_fixed(float f, std::uint32_t n) noexcept
 {
   // value * maxvalue
   return static_cast<std::uint32_t>(f * ((1 << (n)) - 1));
 }
 // fixed to float, float returned is between
 // zero and one
-inline float fixed_to_float(std::uint32_t f, std::uint32_t n)
+inline float fixed_to_float(std::uint32_t f, std::uint32_t n) noexcept
 {
   // value / maxvalue
   return static_cast<float>(f) / (float)((1 << n) - 1);
@@ -126,7 +107,7 @@ inline float fixed_to_float(std::uint32_t f, std::uint32_t n)
 // fixed to fixed, fixed returned is between
 // zero and one
 
-inline std::uint32_t fixed_to_fixed(std::uint32_t f, std::uint32_t f_base, std::uint32_t req_base)
+inline std::uint32_t fixed_to_fixed(std::uint32_t f, std::uint32_t f_base, std::uint32_t req_base) noexcept
 {
   // ((max(reqb)/max(fb)) * f)
   // the trick is if reqb < fb we can straightforwardly
@@ -142,7 +123,7 @@ inline std::uint32_t fixed_to_fixed(std::uint32_t f, std::uint32_t f_base, std::
 //-- this might be required elsewhere, for now just do it
 // algorithmetically
 
-inline std::uint16_t float_to_half_i(std::uint32_t i)
+inline std::uint16_t float_to_half_i(std::uint32_t i) noexcept
 {
   // can use SSE here, but lets
   // do it naive way.
@@ -175,12 +156,12 @@ inline std::uint16_t float_to_half_i(std::uint32_t i)
   }
 }
 
-inline std::uint16_t float_to_half(float f)
+inline std::uint16_t float_to_half(float f) noexcept
 {
   return float_to_half_i(*(std::uint32_t*)&f);
 }
 
-inline std::uint32_t half_to_float_i(std::uint16_t y)
+inline std::uint32_t half_to_float_i(std::uint16_t y) noexcept
 {
   // can use SSE here, but lets
   // do it naive way.
@@ -223,7 +204,7 @@ inline std::uint32_t half_to_float_i(std::uint16_t y)
   return (s << 31) | (e << 23) | m;
 }
 
-inline float half_to_float(std::uint16_t y)
+inline float half_to_float(std::uint16_t y) noexcept
 {
   union
   {
@@ -234,18 +215,20 @@ inline float half_to_float(std::uint16_t y)
   return o.f;
 }
 
-inline float to_radians(float value)
+template <typename scalar_t>
+inline scalar_t to_radians(scalar_t value) noexcept
 {
   return k_degrees_to_radian_factor * (value);
 }
 
-inline float to_degrees(float value)
+template <typename scalar_t>
+inline scalar_t to_degrees(scalar_t value) noexcept
 {
   return (value)*57.295779513f;
 }
 
 /* Famous fast reciprocal std::sqrt */
-inline float fast_recip_sqrt(float x)
+inline float fast_recip_sqrt(float x) noexcept
 {
   std::int32_t i;
   float        y, r;
@@ -258,7 +241,7 @@ inline float fast_recip_sqrt(float x)
 }
 
 /* sin of angle in the range of [0, pi/2]*/
-inline float sin_of_ang_between_0_to_half_pi(float a)
+inline float sin_of_ang_between_0_to_half_pi(float a) noexcept
 {
   float s, t;
   s = a * a;
@@ -278,7 +261,7 @@ inline float sin_of_ang_between_0_to_half_pi(float a)
 }
 
 /* Arc tan when x and y are positives */
-inline float arc_tan_positive_xy(float y, float x)
+inline float arc_tan_positive_xy(float y, float x) noexcept
 {
   float a, d, s, t;
   if (y > x)
@@ -314,7 +297,7 @@ inline float arc_tan_positive_xy(float y, float x)
   return t;
 }
 
-inline bool almost_equals_ulps(float i_a, float i_b, int max_ulps)
+inline bool almost_equals_ulps(float i_a, float i_b, int max_ulps) noexcept
 {
   assert(sizeof(float) == sizeof(int));
   if (i_a == i_b)
@@ -334,21 +317,52 @@ inline bool almost_equals_ulps(float i_a, float i_b, int max_ulps)
   return false;
 }
 
-inline bool almost_equals_rel_or_abs(float i_a, float i_b, float max_diff, float max_rel_diff)
+inline bool almost_equals_rel_or_abs(float i_a, float i_b, float max_diff, float max_rel_diff) noexcept
 {
-  float diff = fabs(i_a - i_b);
+  float diff = std::abs(i_a - i_b);
   if (diff < max_diff)
     return true;
-  i_a           = fabs(i_a);
-  i_b           = fabs(i_b);
+  i_a           = std::abs(i_a);
+  i_b           = std::abs(i_b);
   float largest = i_b > i_a ? i_b : i_a;
   if (diff <= largest * max_rel_diff)
     return true;
   return false;
 }
 
+inline bool almost_equals_ulps(double i_a, double i_b, int max_ulps) noexcept
+{
+  if (i_a == i_b)
+    return true;
+  int64_t a_int = *(int64_t*)&i_a;
+  // Make a_int lexicographically ordered as a twos-complement int
+  if (a_int < 0)
+    a_int = 0x8000000000000000 - a_int;
+  // Make b_int lexicographically ordered as a twos-complement int
+  int64_t b_int = *(int64_t*)&i_b;
+  if (b_int < 0)
+    b_int = 0x8000000000000000 - b_int;
+
+  int64_t int_diff = std::abs(a_int - b_int);
+  if (int_diff <= max_ulps)
+    return true;
+  return false;
+}
+
+inline bool almost_equals_rel_or_abs(double i_a, double i_b, double max_diff, double max_rel_diff) noexcept
+{
+  double diff = std::abs(i_a - i_b);
+  if (diff < max_diff)
+    return true;
+  i_a            = std::abs(i_a);
+  i_b            = std::abs(i_b);
+  double largest = i_b > i_a ? i_b : i_a;
+  if (diff <= largest * max_rel_diff)
+    return true;
+  return false;
+}
 template <typename type>
-inline void clamp(type& clampwhat, type lowvalue, type hivalue)
+inline void clamp(type& clampwhat, type lowvalue, type hivalue) noexcept
 {
   clampwhat = std::max(lowvalue, std::min(clampwhat, hivalue));
 }

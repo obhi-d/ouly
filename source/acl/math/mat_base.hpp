@@ -9,7 +9,7 @@ namespace acl
 {
 /// @brief Create a matrix from vector mapping that can rotate the vector axis1 to axis2 when post multiplied to axis1.
 template <TransformMatrix M, typename scalar_t>
-inline M make_rotation_from_vector_mapping(vec3_t<scalar_t> const& axis1, vec3_t<scalar_t> const& axis2)
+inline M make_rotation_from_vector_mapping(vec3_t<scalar_t> const& axis1, vec3_t<scalar_t> const& axis2) noexcept
 {
   /** \todo sse **/
   auto cs = dot(axis1, axis2);
@@ -46,7 +46,7 @@ inline M make_rotation_from_vector_mapping(vec3_t<scalar_t> const& axis1, vec3_t
 
 /// @brief rotate vector in place
 template <TransformMatrix M, typename scalar_t>
-inline void rotate(M const& m, vec3_t<scalar_t>* io_stream, std::uint32_t i_stride, std::uint32_t i_count)
+inline void rotate(M const& m, vec3_t<scalar_t>* io_stream, std::uint32_t i_stride, std::uint32_t i_count) noexcept
 {
   assert(io_stream);
   const std::uint8_t* inout_vec = (const std::uint8_t*)io_stream;
@@ -93,7 +93,7 @@ inline void rotate(M const& m, vec3_t<scalar_t>* io_stream, std::uint32_t i_stri
 }
 
 template <TransformMatrix M, typename scalar_t>
-inline vec3a_t<scalar_t> rotate(vec3a_t<scalar_t> v, M const& m)
+inline vec3a_t<scalar_t> rotate(vec3a_t<scalar_t> v, M const& m) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -117,7 +117,7 @@ inline vec3a_t<scalar_t> rotate(vec3a_t<scalar_t> v, M const& m)
 }
 
 template <TransformMatrix M, typename scalar_t>
-inline void set_rotation(M& m, quat_t<scalar_t> const& rot)
+inline void set_rotation(M& m, quat_t<scalar_t> const& rot) noexcept
 {
   scalar_t q[4] = {x(rot), y(rot), z(rot), w(rot)};
   m.e[0][3]     = 0.0f;
@@ -155,7 +155,7 @@ inline void set_rotation(M& m, quat_t<scalar_t> const& rot)
 }
 
 template <TransformMatrix M, typename scalar_t>
-inline void set_as_view(M& ret, vec3a_t<scalar_t> const& view_dir, vec3a_t<scalar_t> const& up_dir)
+inline void set_as_view(M& ret, vec3a_t<scalar_t> const& view_dir, vec3a_t<scalar_t> const& up_dir) noexcept
 {
   // TODO needs validation
   ret.r[2].v = normalize(view_dir);

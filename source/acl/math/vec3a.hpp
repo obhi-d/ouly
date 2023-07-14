@@ -17,7 +17,7 @@ inline vec3a_t<scalar_t> make_vec3a(scalar_t p) noexcept
 }
 
 template <typename scalar_t, typename stag>
-inline vec3a_t<scalar_t> make_vec3a(quad_t<scalar_t, stag> const& p)
+inline vec3a_t<scalar_t> make_vec3a(quad_t<scalar_t, stag> const& p) noexcept
 {
   if constexpr (has_sse && std::is_same_v<scalar_t, float>)
     return vec3a_t<scalar_t>(_mm_and_ps(p, clear_w_mask()));
@@ -26,7 +26,7 @@ inline vec3a_t<scalar_t> make_vec3a(quad_t<scalar_t, stag> const& p)
 }
 
 template <typename scalar_t>
-inline vec3a_t<scalar_t> normalize(vec3a_t<scalar_t> const& vec)
+inline vec3a_t<scalar_t> normalize(vec3a_t<scalar_t> const& vec) noexcept
 {
   if constexpr (has_sse && std::is_same_v<scalar_t, float>)
   {
@@ -76,7 +76,7 @@ inline vec3a_t<scalar_t> normalize(vec3a_t<scalar_t> const& vec)
 }
 
 template <typename scalar_t>
-inline scalar_t dot(vec3a_t<scalar_t> const& q1, vec3a_t<scalar_t> const& q2)
+inline scalar_t dot(vec3a_t<scalar_t> const& q1, vec3a_t<scalar_t> const& q2) noexcept
 {
   if constexpr (has_sse && std::is_same_v<scalar_t, float>)
     return x(vdot(q1, q2));
@@ -85,7 +85,7 @@ inline scalar_t dot(vec3a_t<scalar_t> const& q1, vec3a_t<scalar_t> const& q2)
 }
 
 template <typename scalar_t>
-inline vec3a_t<scalar_t> vdot(vec3a_t<scalar_t> const& vec1, vec3a_t<scalar_t> const& vec2)
+inline vec3a_t<scalar_t> vdot(vec3a_t<scalar_t> const& vec1, vec3a_t<scalar_t> const& vec2) noexcept
 {
   if constexpr (has_sse && std::is_same_v<scalar_t, float>)
   {
@@ -118,7 +118,7 @@ inline vec3a_t<scalar_t> vdot(vec3a_t<scalar_t> const& vec1, vec3a_t<scalar_t> c
 }
 
 template <typename scalar_t>
-inline vec3a_t<scalar_t> cross(vec3a_t<scalar_t> const& vec1, vec3a_t<scalar_t> const& vec2)
+inline vec3a_t<scalar_t> cross(vec3a_t<scalar_t> const& vec1, vec3a_t<scalar_t> const& vec2) noexcept
 {
   if constexpr (has_sse && std::is_same_v<scalar_t, float>)
   {
@@ -148,7 +148,7 @@ inline vec3a_t<scalar_t> cross(vec3a_t<scalar_t> const& vec1, vec3a_t<scalar_t> 
 }
 
 template <typename scalar_t>
-inline bool greater_all(vec3a_t<scalar_t> const& q1, vec3a_t<scalar_t> const& q2)
+inline bool greater_all(vec3a_t<scalar_t> const& q1, vec3a_t<scalar_t> const& q2) noexcept
 {
   if constexpr (has_sse && std::is_same_v<scalar_t, float>)
     return ((_mm_movemask_ps(_mm_cmpgt_ps(q1, q2)) & 0x7) == 0x7);
@@ -157,7 +157,7 @@ inline bool greater_all(vec3a_t<scalar_t> const& q1, vec3a_t<scalar_t> const& q2
 }
 
 template <typename scalar_t>
-inline bool greater_any(vec3a_t<scalar_t> const& q1, vec3a_t<scalar_t> const& q2)
+inline bool greater_any(vec3a_t<scalar_t> const& q1, vec3a_t<scalar_t> const& q2) noexcept
 {
   if constexpr (has_sse && std::is_same_v<scalar_t, float>)
     return ((_mm_movemask_ps(_mm_cmpgt_ps(q1, q2))) & 0x7) != 0;
@@ -166,7 +166,7 @@ inline bool greater_any(vec3a_t<scalar_t> const& q1, vec3a_t<scalar_t> const& q2
 }
 
 template <typename scalar_t>
-inline bool lesser_all(vec3a_t<scalar_t> const& a, vec3a_t<scalar_t> const& b)
+inline bool lesser_all(vec3a_t<scalar_t> const& a, vec3a_t<scalar_t> const& b) noexcept
 {
   if constexpr (has_sse && std::is_same_v<scalar_t, float>)
     return ((_mm_movemask_ps(_mm_cmplt_ps(a, b)) & 0x7) == 0x7);
@@ -175,7 +175,7 @@ inline bool lesser_all(vec3a_t<scalar_t> const& a, vec3a_t<scalar_t> const& b)
 }
 
 template <typename scalar_t>
-inline bool lesser_any(vec3a_t<scalar_t> const& a, vec3a_t<scalar_t> const& b)
+inline bool lesser_any(vec3a_t<scalar_t> const& a, vec3a_t<scalar_t> const& b) noexcept
 {
   if constexpr (has_sse && std::is_same_v<scalar_t, float>)
     return (_mm_movemask_ps(_mm_cmplt_ps(a, b)) & 0x7) != 0;
@@ -183,36 +183,4 @@ inline bool lesser_any(vec3a_t<scalar_t> const& a, vec3a_t<scalar_t> const& b)
     return a[0] < b[0] || a[1] < b[1] || a[2] < b[2];
 }
 
-template <typename scalar_t>
-inline vec3a_t<scalar_t> mul(vec3a_t<scalar_t> const& v, mat4_t<scalar_t> const& m)
-{
-  if constexpr (has_sse && std::is_same_v<scalar_t, float>)
-  {
-
-    auto ret    = _mm_shuffle_ps(v.v, v.v, _MM_SHUFFLE(0, 0, 0, 0));
-    ret         = _mm_mul_ps(ret, m.r[0]);
-    auto v_temp = _mm_shuffle_ps(v.v, v.v, _MM_SHUFFLE(1, 1, 1, 1));
-    v_temp      = _mm_mul_ps(v_temp, m.r[1]);
-    ret         = _mm_add_ps(ret, v_temp);
-    v_temp      = _mm_shuffle_ps(v.v, v.v, _MM_SHUFFLE(2, 2, 2, 2));
-    v_temp      = _mm_mul_ps(v_temp, m.r[2]);
-    ret         = _mm_add_ps(ret, v_temp);
-    ret         = _mm_add_ps(ret, m.r[3]);
-    return vec3a_t<scalar_t>(_mm_and_ps(ret, clear_w_mask()));
-  }
-  else
-  {
-    quad_t<scalar_t> r, x, y, z;
-
-    z = splat_z(v);
-    y = splat_y(v);
-    x = splat_x(v);
-
-    r = madd(z, m.r[2], m.r[3]);
-    r = madd(y, m.r[1], r);
-    r = madd(x, m.r[0], r);
-
-    return make_vec3a(r);
-  }
-}
 } // namespace acl

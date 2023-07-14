@@ -67,30 +67,29 @@ YY_DECL;
 %start script
 
 %%
-/*============================================================================*/
-script: END
-    | statement           
-	| statement script      
+
+script:    statement           
+	     | statement script      
 
 statement:                                   
-		  SEMICOLON                              {                                                                      }
-		| commanddecl                            {                                                                      }
+          END
+		| commanddecl                            
 		| RBRACKET                               { scli.exit_command_scope();  scli.destroy_comamnd_state();            }
 		| REGION_ID                              { scli.enter_region(std::move($1));                                    }
 		| TEXT_REGION_ID TEXT_CONTENTS           { scli.enter_text_region(std::move($1), std::move($2));                }
 		| IMPORT STRING_LITERAL SEMICOLON        { scli.import_script(std::move($2));                                   }
 
-commandname:  STRING { scli.set_next_command($1); }
-      | STRING COLON { scli.set_next_command($1); }
+commandname:   STRING         { scli.set_next_command($1); }
+             | STRING COLON   { scli.set_next_command($1); }
 
 commanddecl: 
-		   commandname parameters.0.N SEMICOLON      { scli.execute_command(); scli.destroy_comamnd_state(); }
-		 | commandname parameters.0.N LBRACKET       { scli.execute_command(); scli.enter_command_scope();   }
+           commandname SEMICOLON                     { scli.execute_command(); scli.destroy_comamnd_state(); }
+		 | commandname parameters.1.N SEMICOLON      { scli.execute_command(); scli.destroy_comamnd_state(); }
+		 | commandname parameters.1.N LBRACKET       { scli.execute_command(); scli.enter_command_scope();   }
 		 
 
-parameters.0.N:   /* empty string */      
-				  | parameter	{  }
-				  | parameters.0.N parameter  {  } 
+parameters.1.N:     parameter	
+				  | parameters.1.N parameter  
 				  ;
 
 parameter: | STRING ASSIGN                     { scli.set_next_param_name($1); }
@@ -98,7 +97,7 @@ parameter: | STRING ASSIGN                     { scli.set_next_param_name($1); }
            | STRING                            { scli.set_param($1); }
 		   | LSQBRACKET                        { scli.enter_param_scope(); }
 		   | RSQBRACKET                        { scli.exit_param_scope(); }
-		   | COMMA                             { }
+		   | COMMA                             
 		   ;
 
 

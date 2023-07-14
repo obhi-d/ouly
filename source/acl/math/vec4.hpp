@@ -6,7 +6,7 @@ namespace acl
 {
 
 template <typename scalar_t>
-inline vec4_t<scalar_t> mul(vec4_t<scalar_t> const& v, mat4_t<scalar_t> const& m)
+inline vec4_t<scalar_t> mul(vec4_t<scalar_t> const& v, mat4_t<scalar_t> const& m) noexcept
 {
   if constexpr (has_sse && std::is_same_v<scalar_t, float>)
   {

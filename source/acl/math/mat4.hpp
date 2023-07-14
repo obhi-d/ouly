@@ -17,6 +17,12 @@ inline scalar_t max_scale(mat4_t<scalar_t> const& m) noexcept
   return std::sqrt(std::max(std::max(sqlength(m.r[0].v), sqlength(m.r[1].v)), sqlength(m.r[2].v)));
 }
 
+template <typename scalar_t>
+inline bool equals(mat4_t<scalar_t> const& a, mat4_t<scalar_t> const& b) noexcept
+{
+  return equals(a[0], b[0]) && equals(a[1], b[1]) && equals(a[2], b[2]) && equals(a[3], b[3]);
+}
+
 /// @brief Full matrix multiplication
 template <typename scalar_t>
 inline mat4_t<scalar_t> mul(mat4_t<scalar_t> const& m1, mat4_t<scalar_t> const& m2) noexcept
@@ -308,7 +314,7 @@ inline vec4_t<scalar_t> transform_assume_ortho(mat4_t<scalar_t> const& m, vec3a_
 }
 
 template <typename scalar_t>
-inline vec4_t<scalar_t> transform_and_project(mat4_t<scalar_t> const& m, vec3a_t<scalar_t> const& v)
+inline vec4_t<scalar_t> transform_and_project(mat4_t<scalar_t> const& m, vec3a_t<scalar_t> const& v) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -341,7 +347,46 @@ inline vec4_t<scalar_t> transform_and_project(mat4_t<scalar_t> const& m, vec3a_t
 }
 
 template <typename scalar_t>
-inline vec3a_t<scalar_t> transform_bounds_extends(mat4_t<scalar_t> const& m, vec3a_t<scalar_t> const& v)
+inline vec3a_t<scalar_t> mul(vec3a_t<scalar_t> const& v, mat4_t<scalar_t> const& m) noexcept
+{
+  if constexpr (has_sse && std::is_same_v<scalar_t, float>)
+  {
+
+    auto ret    = _mm_shuffle_ps(v.v, v.v, _MM_SHUFFLE(0, 0, 0, 0));
+    ret         = _mm_mul_ps(ret, m.r[0]);
+    auto v_temp = _mm_shuffle_ps(v.v, v.v, _MM_SHUFFLE(1, 1, 1, 1));
+    v_temp      = _mm_mul_ps(v_temp, m.r[1]);
+    ret         = _mm_add_ps(ret, v_temp);
+    v_temp      = _mm_shuffle_ps(v.v, v.v, _MM_SHUFFLE(2, 2, 2, 2));
+    v_temp      = _mm_mul_ps(v_temp, m.r[2]);
+    ret         = _mm_add_ps(ret, v_temp);
+    ret         = _mm_add_ps(ret, m.r[3]);
+    return vec3a_t<scalar_t>(_mm_and_ps(ret, clear_w_mask()));
+  }
+  else
+  {
+    quad_t<scalar_t> r, x, y, z;
+
+    z = splat_z(v);
+    y = splat_y(v);
+    x = splat_x(v);
+
+    r = madd(z, m.r[2], m.r[3]);
+    r = madd(y, m.r[1], r);
+    r = madd(x, m.r[0], r);
+
+    return make_vec3a(r);
+  }
+}
+
+template <typename scalar_t>
+inline vec3a_t<scalar_t> operator*(vec3a_t<scalar_t> const& v, mat4_t<scalar_t> const& m) noexcept
+{
+  return mul(v, m);
+}
+
+template <typename scalar_t>
+inline vec3a_t<scalar_t> transform_bounds_extends(mat4_t<scalar_t> const& m, vec3a_t<scalar_t> const& v) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -375,7 +420,7 @@ inline vec3a_t<scalar_t> transform_bounds_extends(mat4_t<scalar_t> const& m, vec
 }
 
 template <typename scalar_t>
-inline aabb_t<scalar_t> transform_aabb(mat4_t<scalar_t> const& m, aabb_t<scalar_t> const& box)
+inline aabb_t<scalar_t> mul(aabb_t<scalar_t> const& box, mat4_t<scalar_t> const& m) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -421,7 +466,13 @@ inline aabb_t<scalar_t> transform_aabb(mat4_t<scalar_t> const& m, aabb_t<scalar_
 }
 
 template <typename scalar_t>
-inline mat4_t<scalar_t> make_mat4(scalar_t scale, quat_t<scalar_t> const& rot, vec3a_t<scalar_t> const& pos)
+inline aabb_t<scalar_t> operator*(aabb_t<scalar_t> const& box, mat4_t<scalar_t> const& m) noexcept
+{
+  return mul(box, m);
+}
+
+template <typename scalar_t>
+inline mat4_t<scalar_t> make_mat4(scalar_t scale, quat_t<scalar_t> const& rot, vec3a_t<scalar_t> const& pos) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -502,7 +553,7 @@ inline mat4_t<scalar_t> make_mat4(scalar_t scale, quat_t<scalar_t> const& rot, v
 }
 
 template <typename scalar_t>
-inline mat4_t<scalar_t> make_mat4_from_scale(vec3a_t<scalar_t> const& scale)
+inline mat4_t<scalar_t> make_mat4_from_scale(vec3a_t<scalar_t> const& scale) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -537,7 +588,7 @@ inline mat4_t<scalar_t> make_mat4_from_scale(vec3a_t<scalar_t> const& scale)
 }
 
 template <typename scalar_t>
-inline mat4_t<scalar_t> make_mat4_from_translation(vec3a_t<scalar_t> const& pos)
+inline mat4_t<scalar_t> make_mat4_from_translation(vec3a_t<scalar_t> const& pos) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -572,7 +623,7 @@ inline mat4_t<scalar_t> make_mat4_from_translation(vec3a_t<scalar_t> const& pos)
 }
 
 template <typename scalar_t>
-inline mat4_t<scalar_t> make_mat4_form_quaternion(quat_t<scalar_t> const& rot)
+inline mat4_t<scalar_t> make_mat4_form_quaternion(quat_t<scalar_t> const& rot) noexcept
 {
   mat4_t<scalar_t> ret{noinit_v};
   set_rotation(ret, rot);
@@ -592,14 +643,14 @@ inline mat4_t<scalar_t> make_mat4_form_quaternion(quat_t<scalar_t> const& rot)
 }
 
 template <typename scalar_t>
-inline mat4_t<scalar_t> make_view_from_world_mat4(mat4_t<scalar_t> const& m)
+inline mat4_t<scalar_t> make_view_from_world_mat4(mat4_t<scalar_t> const& m) noexcept
 {
   return inverse_assume_ortho(m);
 }
 
 template <typename scalar_t>
 inline mat4_t<scalar_t> make_view_from_look_at(vec3a_t<scalar_t> const& eye, vec3a_t<scalar_t> const& look_at,
-                                               vec3a_t<scalar_t> const& vup)
+                                               vec3a_t<scalar_t> const& vup) noexcept
 {
   mat4_t<scalar_t> m{noinit_v};
   auto             zaxis = m.r[2].v = normalize(sub(look_at, eye));
@@ -616,7 +667,7 @@ inline mat4_t<scalar_t> make_view_from_look_at(vec3a_t<scalar_t> const& eye, vec
 
 template <typename scalar_t>
 inline mat4_t<scalar_t> make_orthographic_projection(scalar_t min_x, scalar_t max_x, scalar_t min_y, scalar_t max_y,
-                                                     scalar_t zn, scalar_t zf)
+                                                     scalar_t zn, scalar_t zf) noexcept
 {
   float dx_recip = 1.0f / (zf - zn);
   // clang-format off
@@ -630,7 +681,7 @@ inline mat4_t<scalar_t> make_orthographic_projection(scalar_t min_x, scalar_t ma
 }
 
 template <typename scalar_t>
-inline mat4_t<scalar_t> make_orthographic_projection(scalar_t w, scalar_t h, scalar_t zn, scalar_t zf)
+inline mat4_t<scalar_t> make_orthographic_projection(scalar_t w, scalar_t h, scalar_t zn, scalar_t zf) noexcept
 {
   float dx_recip = 1.0f / (zf - zn);
   // clang-format off
@@ -645,7 +696,7 @@ inline mat4_t<scalar_t> make_orthographic_projection(scalar_t w, scalar_t h, sca
 
 template <typename scalar_t>
 inline mat4_t<scalar_t> make_perspective_projection(scalar_t field_of_view, scalar_t aspect_ratio, scalar_t zn,
-                                                    scalar_t zf)
+                                                    scalar_t zf) noexcept
 {
   field_of_view *= 0.5f;
 
@@ -662,7 +713,7 @@ inline mat4_t<scalar_t> make_perspective_projection(scalar_t field_of_view, scal
 }
 
 template <typename scalar_t>
-inline mat4_t<scalar_t> mul(mat4_t<scalar_t> const& m, scalar_t scale)
+inline mat4_t<scalar_t> mul(mat4_t<scalar_t> const& m, scalar_t scale) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -689,13 +740,13 @@ inline mat4_t<scalar_t> mul(mat4_t<scalar_t> const& m, scalar_t scale)
 }
 
 template <typename scalar_t>
-inline mat4_t<scalar_t> mul(scalar_t scale, mat4_t<scalar_t> const& m)
+inline mat4_t<scalar_t> mul(scalar_t scale, mat4_t<scalar_t> const& m) noexcept
 {
   return mul(m, scale);
 }
 
 template <typename scalar_t>
-inline mat4_t<scalar_t> transpose(mat4_t<scalar_t> const& m)
+inline mat4_t<scalar_t> transpose(mat4_t<scalar_t> const& m) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -715,7 +766,7 @@ inline mat4_t<scalar_t> transpose(mat4_t<scalar_t> const& m)
 }
 
 template <typename scalar_t>
-inline void transpose_in_place(mat4_t<scalar_t>& m)
+inline void transpose_in_place(mat4_t<scalar_t>& m) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -734,7 +785,7 @@ inline void transpose_in_place(mat4_t<scalar_t>& m)
 
 /// @brief Matrix full inverse computation
 template <typename scalar_t>
-inline mat4_t<scalar_t> inverse(mat4_t<scalar_t> const& m)
+inline mat4_t<scalar_t> inverse(mat4_t<scalar_t> const& m) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -916,7 +967,7 @@ inline mat4_t<scalar_t> inverse(mat4_t<scalar_t> const& m)
 }
 
 template <typename scalar_t>
-inline mat4_t<scalar_t> inverse_assume_ortho(mat4_t<scalar_t> const& m)
+inline mat4_t<scalar_t> inverse_assume_ortho(mat4_t<scalar_t> const& m) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -963,13 +1014,13 @@ inline mat4_t<scalar_t> inverse_assume_ortho(mat4_t<scalar_t> const& m)
   }
 }
 template <typename scalar_t>
-inline mat3_t<scalar_t> const& as_mat3(mat4_t<scalar_t> const& m)
+inline mat3_t<scalar_t> const& as_mat3(mat4_t<scalar_t> const& m) noexcept
 {
   return reinterpret_cast<mat3_t<scalar_t> const&>(m);
 }
 
 template <typename scalar_t>
-inline mat3_t<scalar_t>& as_mat3(mat4_t<scalar_t>& m)
+inline mat3_t<scalar_t>& as_mat3(mat4_t<scalar_t>& m) noexcept
 {
   return reinterpret_cast<mat3_t<scalar_t>&>(m);
 }

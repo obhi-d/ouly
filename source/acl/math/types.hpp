@@ -27,7 +27,8 @@ struct transform_matrix_tag
 {};
 struct plane_tag
 {};
-
+struct color_tag
+{};
 
 template <typename scalar_t = float, typename stag_t = default_tag>
 union quad_t
@@ -45,6 +46,20 @@ union quad_t
     scalar_t y;
     scalar_t z;
     scalar_t w;
+  };
+  struct
+  {
+    scalar_t r;
+    scalar_t g;
+    scalar_t b;
+    scalar_t a;
+  };
+  struct
+  {
+    scalar_t a;
+    scalar_t b;
+    scalar_t c;
+    scalar_t d;
   };
 
   inline constexpr auto operator<=>(quad_t const& other) const noexcept
@@ -73,6 +88,9 @@ union quad_t
 
   inline constexpr quad_t(acl::noinit) noexcept {}
   template <typename utag_t>
+  inline constexpr quad_t(quad_t<scalar_t, utag_t> const& other, scalar_t w) noexcept : v(other.x, other.y, other.z, w)
+  {}
+  template <typename utag_t>
   inline constexpr quad_t(quad_t<scalar_t, utag_t> const& other) noexcept : v(other.v)
   {} // implicit conversion allowed for this
   template <typename utag_t>
@@ -81,8 +99,14 @@ union quad_t
     v = other.v;
     return *this;
   } // implicit conversion allowed for this
-  inline constexpr quad_t() noexcept requires(!std::is_same_v<stag, quaternion_tag>) : xyzw{0, 0, 0, 0} {}
-  inline constexpr quad_t() noexcept requires(std::is_same_v<stag, quaternion_tag>) : xyzw{0, 0, 0, 1} {}
+  inline constexpr quad_t() noexcept
+    requires(!std::is_same_v<stag, quaternion_tag>)
+      : xyzw{0, 0, 0, 0}
+  {}
+  inline constexpr quad_t() noexcept
+    requires(std::is_same_v<stag, quaternion_tag>)
+      : xyzw{0, 0, 0, 1}
+  {}
   inline constexpr explicit quad_t(std::array<scalar_t, 4> s) noexcept : xyzw(s) {}
   inline constexpr explicit quad_t(scalar_t s) noexcept : xyzw{s, s, s, s} {}
   inline constexpr quad_t(scalar_t vx, scalar_t vy, scalar_t vz, scalar_t vw) noexcept : xyzw{vx, vy, vz, vw} {}
@@ -211,6 +235,8 @@ template <typename scalar_t>
 using polar_coord_t = vec2_t<scalar_t>;
 template <typename scalar_t>
 using euler_angles_t = vec3_t<scalar_t>;
+template <typename scalar_t>
+using color_t = quad_t<scalar_t, color_tag>;
 
 template <typename scalar_t>
 union rect_t
@@ -273,8 +299,7 @@ union aabb_t
   inline constexpr aabb_t(RowType... args) noexcept : m{args...}
   {}
 
-  inline constexpr aabb_t(vec3a_t<scalar_t> const& min_v, vec3a_t<scalar_t> const& max_v) noexcept : r{min_v, max_v}
-  {}
+  inline constexpr aabb_t(vec3a_t<scalar_t> const& min_v, vec3a_t<scalar_t> const& max_v) noexcept : r{min_v, max_v} {}
 
   inline constexpr auto operator<=>(aabb_t const& other) const noexcept
   {
@@ -305,7 +330,7 @@ union aabb_t
 template <typename scalar_t>
 union mat4_t
 {
-  using tag = matrix_tag;
+  using tag  = matrix_tag;
   using stag = transform_matrix_tag;
 
   std::array<vec4_t<scalar_t>, 4>        r;
@@ -314,12 +339,10 @@ union mat4_t
 
   inline constexpr mat4_t(acl::noinit) noexcept : r{acl::noinit_v, acl::noinit_v, acl::noinit_v, acl::noinit_v} {}
 
-  inline constexpr mat4_t() noexcept : r{
-          vec4_t<scalar_t>(1, 0, 0, 0),
-          vec4_t<scalar_t>(0, 1, 0, 0),
-          vec4_t<scalar_t>(0, 0, 1, 0),
-          vec4_t<scalar_t>(0, 0, 0, 1)
-      } {}
+  inline constexpr mat4_t() noexcept
+      : r{vec4_t<scalar_t>(1, 0, 0, 0), vec4_t<scalar_t>(0, 1, 0, 0), vec4_t<scalar_t>(0, 0, 1, 0),
+          vec4_t<scalar_t>(0, 0, 0, 1)}
+  {}
 
   template <typename... ScalarType>
   inline constexpr mat4_t(ScalarType... args) noexcept : m{static_cast<scalar_t>(args)...}
@@ -352,13 +375,13 @@ union mat4_t
   inline auto const& operator[](int i) const noexcept
   {
     return r[i];
-  }  
+  }
 };
 
 template <typename scalar_t>
 union mat3_t
 {
-  using tag = matrix_tag;
+  using tag  = matrix_tag;
   using stag = transform_matrix_tag;
 
   std::array<vec4_t<scalar_t>, 3>        r;
@@ -367,11 +390,9 @@ union mat3_t
 
   inline constexpr mat3_t(acl::noinit) noexcept : r{acl::noinit_v, acl::noinit_v, acl::noinit_v, acl::noinit_v} {}
 
-  inline constexpr mat3_t() noexcept : r{
-          vec4_t<scalar_t>(1, 0, 0, 0),
-          vec4_t<scalar_t>(0, 1, 0, 0),
-          vec4_t<scalar_t>(0, 0, 1, 0)
-      } {}
+  inline constexpr mat3_t() noexcept
+      : r{vec4_t<scalar_t>(1, 0, 0, 0), vec4_t<scalar_t>(0, 1, 0, 0), vec4_t<scalar_t>(0, 0, 1, 0)}
+  {}
 
   template <typename... ScalarType>
   inline constexpr mat3_t(ScalarType... args) noexcept : m{static_cast<scalar_t>(args)...}
@@ -402,7 +423,7 @@ union mat3_t
   inline auto const& operator[](int i) const noexcept
   {
     return r[i];
-  }  
+  }
 };
 
 template <typename scalar_t>
@@ -440,10 +461,13 @@ struct transform_t
 
   inline transform_t() noexcept = default;
   inline transform_t(noinit) noexcept : rotation(noinit_v), translation_and_scale(noinit_v) {}
-  inline transform_t(quat_t<scalar_t> const& r, vec4_t<scalar_t> const& ts) noexcept : rotation(r), translation_and_scale(ts) {}
-  inline transform_t(quat_t<scalar_t> const& r, vec3a_t<scalar_t> const& ts, float scale) noexcept : rotation(r), translation_and_scale(ts.xy, ts.y, ts.z, scale) {}
+  inline transform_t(quat_t<scalar_t> const& r, vec4_t<scalar_t> const& ts) noexcept
+      : rotation(r), translation_and_scale(ts)
+  {}
+  inline transform_t(quat_t<scalar_t> const& r, vec3a_t<scalar_t> const& ts, float scale) noexcept
+      : rotation(r), translation_and_scale(ts.xy, ts.y, ts.z, scale)
+  {}
 };
-
 
 struct coherency
 {
@@ -569,7 +593,13 @@ struct frustum_t
     return plane_count;
   }
 
-  inline plane_t<scalar_t> operator[](std::uint32_t i) const noexcept
+  inline plane_t<scalar_t> const& operator[](std::uint32_t i) const noexcept
+  {
+    assert(i < plane_count);
+    return (plane_count > k_fixed_plane_count) ? pplanes[i] : planes[i];
+  }
+
+  inline plane_t<scalar_t>& operator[](std::uint32_t i) noexcept
   {
     assert(i < plane_count);
     return (plane_count > k_fixed_plane_count) ? pplanes[i] : planes[i];
@@ -586,6 +616,8 @@ struct frustum_t
   /// @param mat transpose(View*Projection) or transpose(Proj)*transpose(View) matrix
   void build(mat4_t<scalar_t> const& combo) noexcept
   {
+    if (plane_count > k_fixed_plane_count && pplanes)
+      acl::deallocate(default_allocator<>(), pplanes, sizeof(acl::plane_t<scalar_t>) * plane_count);
     // Near clipping planeT
     planes[k_near] = normalize(row(combo, 2));
     // Far clipping planeT
@@ -612,11 +644,11 @@ struct frustum_t
 
   union
   {
-    plane_t<scalar_t>  planes[k_fixed_plane_count];
-    plane_t<scalar_t>* pplanes;
+    std::array<plane_t<scalar_t>, k_fixed_plane_count> planes = {};
+    plane_t<scalar_t>*                                 pplanes;
   };
   // if plane_count <= 6, we use planes, otherwise we use planes
-  std::uint32_t plane_count;
+  std::uint32_t plane_count = 0;
 };
 
 template <typename T>
@@ -629,6 +661,10 @@ template <typename T>
 concept NonQuadVector = std::same_as<typename T::tag, vector_tag> && std::same_as<typename T::stag, nonquad_tag>;
 
 template <typename T>
-concept TransformMatrix = std::same_as<typename T::tag, matrix_tag> && std::same_as<typename T::stag, transform_matrix_tag>;
+concept Color = std::same_as<typename T::tag, vector_tag> && std::same_as<typename T::stag, color_tag>;
+
+template <typename T>
+concept TransformMatrix =
+  std::same_as<typename T::tag, matrix_tag> && std::same_as<typename T::stag, transform_matrix_tag>;
 
 } // namespace acl

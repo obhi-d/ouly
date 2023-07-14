@@ -41,7 +41,7 @@ inline quat_t<scalar_t> make_quaternion(vec3_t<scalar_t> const& axis, scalar_t a
 }
 
 template <typename scalar_t>
-inline quat_t<scalar_t> from_axis_angle(axis_angle_t<scalar_t> const& ax) noexcept
+inline quat_t<scalar_t> make_quaternion(axis_angle_t<scalar_t> const& ax) noexcept
 {
   if constexpr (has_sse && std::is_same_v<scalar_t, float>)
   {
@@ -64,22 +64,16 @@ inline quat_t<scalar_t> from_axis_angle(axis_angle_t<scalar_t> const& ax) noexce
 }
 
 template <typename scalar_t>
-inline quat_t<scalar_t> make_quaternion(mat4_t<scalar_t> const& m) noexcept
-{
-  return from_mat3(*reinterpret_cast<const mat3_t<scalar_t>*>(&m));
-}
-
-template <typename scalar_t>
 inline quat_t<scalar_t> make_quaternion(mat3_t<scalar_t> const& m) noexcept
 {
-  
+
   auto trace = m.e[0][0] + m.e[1][1] + m.e[2][2] + 1.0f;
   if (trace > 0.0f)
   {
     return set((m.e[1][2] - m.e[2][1]) / (2.0f * std::sqrt(trace)), (m.e[2][0] - m.e[0][2]) / (2.0f * std::sqrt(trace)),
                (m.e[0][1] - m.e[1][0]) / (2.0f * std::sqrt(trace)), std::sqrt(trace) / 2.0f);
   }
-  int maxi    = 0;
+  int  maxi    = 0;
   auto maxdiag = m.e[0][0];
 
   if (m.e[1][1] > maxdiag)
@@ -94,29 +88,37 @@ inline quat_t<scalar_t> make_quaternion(mat3_t<scalar_t> const& m) noexcept
     maxi    = 2;
   }
 
-  
   switch (maxi)
   {
-  case 0: {
+  case 0:
+  {
     auto s    = 2.0f * std::sqrt(1.0f + m.e[0][0] - m.e[1][1] - m.e[2][2]);
     auto invS = 1 / s;
     return set(0.25f * s, (m.e[0][1] + m.e[1][0]) * invS, (m.e[0][2] + m.e[2][0]) * invS,
                (m.e[1][2] - m.e[2][1]) * invS);
   }
-  case 1: {
+  case 1:
+  {
     auto s    = 2.0f * std::sqrt(1.0f + m.e[1][1] - m.e[0][0] - m.e[2][2]);
     auto invS = 1 / s;
     return set((m.e[0][1] + m.e[1][0]) * invS, 0.25f * s, (m.e[1][2] + m.e[2][1]) * invS,
                (m.e[2][0] - m.e[0][2]) * invS);
   }
   case 2:
-  default: {
+  default:
+  {
     auto s    = 2.0f * std::sqrt(1.0f + m.e[2][2] - m.e[0][0] - m.e[1][1]);
     auto invS = 1 / s;
     return set((m.e[0][2] + m.e[2][0]) * invS, (m.e[1][2] + m.e[2][1]) * invS, 0.25f * s,
                (m.e[0][1] - m.e[1][0]) * invS);
   }
   }
+}
+
+template <typename scalar_t>
+inline quat_t<scalar_t> make_quaternion(mat4_t<scalar_t> const& m) noexcept
+{
+  return make_quaternion(*reinterpret_cast<const mat3_t<scalar_t>*>(&m));
 }
 
 template <typename scalar_t>
@@ -213,10 +215,10 @@ inline quat_t<scalar_t> mul(quat_t<scalar_t> const& q1, quat_t<scalar_t> const& 
   }
 
   else
-    return set((q2[3] * q1[0]) + (q2[0] * q1[3]) - (q2[1] * q1[2]) + (q2[2] * q1[1]),
-               (q2[3] * q1[1]) + (q2[0] * q1[2]) + (q2[1] * q1[3]) - (q2[2] * q1[0]),
-               (q2[3] * q1[2]) - (q2[0] * q1[1]) + (q2[1] * q1[0]) + (q2[2] * q1[3]),
-               (q2[3] * q1[3]) - (q2[0] * q1[0]) - (q2[1] * q1[1]) - (q2[2] * q1[2]));
+    return quat_t<scalar_t>((q2[3] * q1[0]) + (q2[0] * q1[3]) - (q2[1] * q1[2]) + (q2[2] * q1[1]),
+                            (q2[3] * q1[1]) + (q2[0] * q1[2]) + (q2[1] * q1[3]) - (q2[2] * q1[0]),
+                            (q2[3] * q1[2]) - (q2[0] * q1[1]) + (q2[1] * q1[0]) + (q2[2] * q1[3]),
+                            (q2[3] * q1[3]) - (q2[0] * q1[0]) - (q2[1] * q1[1]) - (q2[2] * q1[2]));
 }
 
 template <typename scalar_t>
@@ -229,7 +231,7 @@ inline vec3a_t<scalar_t> rotate(vec3a_t<scalar_t> const& v, quat_t<scalar_t> con
 }
 
 template <typename scalar_t>
-inline vec3a_t<scalar_t> rotate_bounds_extends(vec3a_t<scalar_t> const& v, quat_t<scalar_t> const& rot)
+inline vec3a_t<scalar_t> rotate_bounds_extends(vec3a_t<scalar_t> const& v, quat_t<scalar_t> const& rot) noexcept
 {
   if constexpr (has_sse && std::is_same_v<scalar_t, float>)
   {
@@ -293,7 +295,7 @@ inline vec3a_t<scalar_t> rotate_bounds_extends(vec3a_t<scalar_t> const& v, quat_
 }
 
 template <typename scalar_t>
-inline quat_t<scalar_t> slerp(quat_t<scalar_t> const& from, quat_t<scalar_t> const& to, scalar_t t)
+inline quat_t<scalar_t> slerp(quat_t<scalar_t> const& from, quat_t<scalar_t> const& to, scalar_t t) noexcept
 {
   scalar_t sinom, omega, scale0, scale1;
   auto     cosom     = dot(from, to);
@@ -316,7 +318,7 @@ inline quat_t<scalar_t> slerp(quat_t<scalar_t> const& from, quat_t<scalar_t> con
 }
 
 template <typename scalar_t>
-inline quat_t<scalar_t> inverse(quat_t<scalar_t> const& q)
+inline quat_t<scalar_t> inverse(quat_t<scalar_t> const& q) noexcept
 {
   return conjugate(q);
 }
@@ -328,7 +330,13 @@ inline quat_t<scalar_t> operator*(quat_t<scalar_t> const& q1, quat_t<scalar_t> c
 }
 
 template <typename scalar_t>
-inline quat_t<scalar_t> operator*(vec3a_t<scalar_t> const& q1, quat_t<scalar_t> const& q2) noexcept
+inline vec3a_t<scalar_t> mul(vec3a_t<scalar_t> const& q1, quat_t<scalar_t> const& q2) noexcept
+{
+  return rotate(q1, q2);
+}
+
+template <typename scalar_t>
+inline vec3a_t<scalar_t> operator*(vec3a_t<scalar_t> const& q1, quat_t<scalar_t> const& q2) noexcept
 {
   return mul(q1, q2);
 }

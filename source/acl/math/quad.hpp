@@ -6,28 +6,27 @@
 namespace acl
 {
 
-
 template <typename scalar_t, typename stag>
-inline bool equals(quad_t<scalar_t, stag> const& v1, quad_t<scalar_t, stag> const& v2)
+inline bool equals(quad_t<scalar_t, stag> const& v1, quad_t<scalar_t, stag> const& v2) noexcept
 {
   quad_t<scalar_t, stag> r = sub(v1, v2);
   return (bool)(equals(x(r), 0) && equals(y(r), 0) && equals(z(r), 0) && equals(w(r), 0));
 }
 
 template <typename scalar_t, typename stag>
-inline bool isnan(quad_t<scalar_t, stag> const& v)
+inline bool isnan(quad_t<scalar_t, stag> const& v) noexcept
 {
   return hadd(isnanv(v)) != 0;
 }
 
 template <typename scalar_t, typename stag>
-inline bool isinf(quad_t<scalar_t, stag> const& v)
+inline bool isinf(quad_t<scalar_t, stag> const& v) noexcept
 {
   return hadd(isinfv(v)) != 0;
 }
 
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> isnanv(quad_t<scalar_t, stag> const& v)
+inline quad_t<scalar_t, stag> isnanv(quad_t<scalar_t, stag> const& v) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -40,7 +39,7 @@ inline quad_t<scalar_t, stag> isnanv(quad_t<scalar_t, stag> const& v)
 }
 
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> isinfv(quad_t<scalar_t, stag> const& v)
+inline quad_t<scalar_t, stag> isinfv(quad_t<scalar_t, stag> const& v) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -58,7 +57,7 @@ inline quad_t<scalar_t, stag> isinfv(quad_t<scalar_t, stag> const& v)
 }
 
 template <typename scalar_t, typename stag>
-inline bool isnegative_x(quad_t<scalar_t, stag> const& q)
+inline bool isnegative_x(quad_t<scalar_t, stag> const& q) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -71,7 +70,7 @@ inline bool isnegative_x(quad_t<scalar_t, stag> const& q)
 }
 
 template <typename scalar_t, typename stag>
-inline bool isgreater_x(quad_t<scalar_t, stag> const& q1, quad_t<scalar_t, stag> const& q2)
+inline bool isgreater_x(quad_t<scalar_t, stag> const& q1, quad_t<scalar_t, stag> const& q2) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -84,7 +83,7 @@ inline bool isgreater_x(quad_t<scalar_t, stag> const& q1, quad_t<scalar_t, stag>
 }
 
 template <typename scalar_t, typename stag>
-inline bool islesser_x(quad_t<scalar_t, stag> const& q1, quad_t<scalar_t, stag> const& q2)
+inline bool islesser_x(quad_t<scalar_t, stag> const& q1, quad_t<scalar_t, stag> const& q2) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -97,7 +96,7 @@ inline bool islesser_x(quad_t<scalar_t, stag> const& q1, quad_t<scalar_t, stag> 
 }
 
 template <typename scalar_t>
-inline quad_t<scalar_t, default_tag> set(scalar_t v)
+inline quad_t<scalar_t, default_tag> set(scalar_t v) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -110,7 +109,7 @@ inline quad_t<scalar_t, default_tag> set(scalar_t v)
 }
 
 template <typename scalar_t>
-inline quad_t<scalar_t, default_tag> set(const scalar_t* v)
+inline quad_t<scalar_t, default_tag> set(const scalar_t* v) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -123,13 +122,13 @@ inline quad_t<scalar_t, default_tag> set(const scalar_t* v)
 }
 
 template <typename scalar_t>
-inline quad_t<scalar_t, default_tag> set(scalar_t x, scalar_t y, scalar_t z)
+inline quad_t<scalar_t, default_tag> set(scalar_t x, scalar_t y, scalar_t z) noexcept
 {
   return set(x, y, z, 0);
 }
 
 template <typename scalar_t>
-inline quad_t<scalar_t, default_tag> set(scalar_t x, scalar_t y, scalar_t z, scalar_t w)
+inline quad_t<scalar_t, default_tag> set(scalar_t x, scalar_t y, scalar_t z, scalar_t w) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -142,7 +141,7 @@ inline quad_t<scalar_t, default_tag> set(scalar_t x, scalar_t y, scalar_t z, sca
 }
 
 template <typename scalar_t>
-inline quad_t<scalar_t, default_tag> set_unaligned(scalar_t const* v)
+inline quad_t<scalar_t, default_tag> set_unaligned(scalar_t const* v) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -155,7 +154,8 @@ inline quad_t<scalar_t, default_tag> set_unaligned(scalar_t const* v)
 }
 
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> zero() noexcept requires (!std::same_as<stag, nonquad_tag>)
+inline quad_t<scalar_t, stag> zero() noexcept
+  requires(!std::same_as<stag, nonquad_tag>)
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -168,13 +168,13 @@ inline quad_t<scalar_t, stag> zero() noexcept requires (!std::same_as<stag, nonq
 }
 
 template <typename scalar_t, typename stag>
-inline scalar_t get(quad_t<scalar_t, stag> const& q, std::uint32_t idx)
+inline scalar_t get(quad_t<scalar_t, stag> const& q, std::uint32_t idx) noexcept
 {
   return q[idx];
 }
 
 template <typename scalar_t, typename stag>
-inline scalar_t x(quad_t<scalar_t, stag> const& q)
+inline scalar_t x(quad_t<scalar_t, stag> const& q) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -187,7 +187,7 @@ inline scalar_t x(quad_t<scalar_t, stag> const& q)
 }
 
 template <typename scalar_t, typename stag>
-inline scalar_t y(quad_t<scalar_t, stag> const& q)
+inline scalar_t y(quad_t<scalar_t, stag> const& q) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -201,7 +201,7 @@ inline scalar_t y(quad_t<scalar_t, stag> const& q)
 }
 
 template <typename scalar_t, typename stag>
-inline scalar_t z(quad_t<scalar_t, stag> const& q)
+inline scalar_t z(quad_t<scalar_t, stag> const& q) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -215,7 +215,7 @@ inline scalar_t z(quad_t<scalar_t, stag> const& q)
 }
 
 template <typename scalar_t, typename stag>
-inline scalar_t w(quad_t<scalar_t, stag> const& q)
+inline scalar_t w(quad_t<scalar_t, stag> const& q) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -229,7 +229,7 @@ inline scalar_t w(quad_t<scalar_t, stag> const& q)
 }
 
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> min(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> const& b)
+inline quad_t<scalar_t, stag> min(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> const& b) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -245,7 +245,7 @@ inline quad_t<scalar_t, stag> min(quad_t<scalar_t, stag> const& a, quad_t<scalar
 }
 
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> max(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> const& b)
+inline quad_t<scalar_t, stag> max(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> const& b) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -261,7 +261,7 @@ inline quad_t<scalar_t, stag> max(quad_t<scalar_t, stag> const& a, quad_t<scalar
 }
 
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> set_x(scalar_t val)
+inline quad_t<scalar_t, stag> set_x(scalar_t val) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -274,7 +274,7 @@ inline quad_t<scalar_t, stag> set_x(scalar_t val)
 }
 
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> set_x(quad_t<scalar_t, stag> const& q, scalar_t val)
+inline quad_t<scalar_t, stag> set_x(quad_t<scalar_t, stag> const& q, scalar_t val) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -288,25 +288,25 @@ inline quad_t<scalar_t, stag> set_x(quad_t<scalar_t, stag> const& q, scalar_t va
 }
 
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> set_y(quad_t<scalar_t, stag> const& q, scalar_t val)
+inline quad_t<scalar_t, stag> set_y(quad_t<scalar_t, stag> const& q, scalar_t val) noexcept
 {
   return {q[0], val, q[2], q[3]};
 }
 
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> set_z(quad_t<scalar_t, stag> const& q, scalar_t val)
+inline quad_t<scalar_t, stag> set_z(quad_t<scalar_t, stag> const& q, scalar_t val) noexcept
 {
   return {q[0], q[1], val, q[3]};
 }
 
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> set_w(quad_t<scalar_t, stag> const& q, scalar_t val)
+inline quad_t<scalar_t, stag> set_w(quad_t<scalar_t, stag> const& q, scalar_t val) noexcept
 {
   return {q[0], q[1], q[2], val};
 }
 
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> set_x(quad_t<scalar_t, stag> const& q, quad_t<scalar_t, stag> const& v)
+inline quad_t<scalar_t, stag> set_x(quad_t<scalar_t, stag> const& q, quad_t<scalar_t, stag> const& v) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -319,7 +319,7 @@ inline quad_t<scalar_t, stag> set_x(quad_t<scalar_t, stag> const& q, quad_t<scal
 }
 
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> set_y(quad_t<scalar_t, stag> const& q, quad_t<scalar_t, stag> const& v)
+inline quad_t<scalar_t, stag> set_y(quad_t<scalar_t, stag> const& q, quad_t<scalar_t, stag> const& v) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -336,7 +336,7 @@ inline quad_t<scalar_t, stag> set_y(quad_t<scalar_t, stag> const& q, quad_t<scal
 }
 
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> set_z(quad_t<scalar_t, stag> const& q, quad_t<scalar_t, stag> const& v)
+inline quad_t<scalar_t, stag> set_z(quad_t<scalar_t, stag> const& q, quad_t<scalar_t, stag> const& v) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -353,7 +353,7 @@ inline quad_t<scalar_t, stag> set_z(quad_t<scalar_t, stag> const& q, quad_t<scal
 }
 
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> set_w(quad_t<scalar_t, stag> const& q, quad_t<scalar_t, stag> const& v)
+inline quad_t<scalar_t, stag> set_w(quad_t<scalar_t, stag> const& q, quad_t<scalar_t, stag> const& v) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -370,7 +370,7 @@ inline quad_t<scalar_t, stag> set_w(quad_t<scalar_t, stag> const& q, quad_t<scal
 }
 
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> half_x(quad_t<scalar_t, stag> const& q)
+inline quad_t<scalar_t, stag> half_x(quad_t<scalar_t, stag> const& q) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -383,7 +383,7 @@ inline quad_t<scalar_t, stag> half_x(quad_t<scalar_t, stag> const& q)
 }
 
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> splat_x(quad_t<scalar_t, stag> const& q)
+inline quad_t<scalar_t, stag> splat_x(quad_t<scalar_t, stag> const& q) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -396,7 +396,7 @@ inline quad_t<scalar_t, stag> splat_x(quad_t<scalar_t, stag> const& q)
 }
 
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> splat_y(quad_t<scalar_t, stag> const& q)
+inline quad_t<scalar_t, stag> splat_y(quad_t<scalar_t, stag> const& q) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -409,7 +409,7 @@ inline quad_t<scalar_t, stag> splat_y(quad_t<scalar_t, stag> const& q)
 }
 
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> splat_z(quad_t<scalar_t, stag> const& q)
+inline quad_t<scalar_t, stag> splat_z(quad_t<scalar_t, stag> const& q) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -422,7 +422,7 @@ inline quad_t<scalar_t, stag> splat_z(quad_t<scalar_t, stag> const& q)
 }
 
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> splat_w(quad_t<scalar_t, stag> const& q)
+inline quad_t<scalar_t, stag> splat_w(quad_t<scalar_t, stag> const& q) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -435,7 +435,7 @@ inline quad_t<scalar_t, stag> splat_w(quad_t<scalar_t, stag> const& q)
 }
 
 template <typename scalar_t, typename stag>
-inline bool greater_any(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> const& b)
+inline bool greater_any(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> const& b) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -448,7 +448,7 @@ inline bool greater_any(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> 
 }
 
 template <typename scalar_t, typename stag>
-inline bool greater_all(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> const& b)
+inline bool greater_all(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> const& b) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -461,7 +461,7 @@ inline bool greater_all(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> 
 }
 
 template <typename scalar_t, typename stag>
-inline bool lesser_any(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> const& b)
+inline bool lesser_any(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> const& b) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -474,7 +474,7 @@ inline bool lesser_any(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> c
 }
 
 template <typename scalar_t, typename stag>
-inline bool lesser_all(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> const& b)
+inline bool lesser_all(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> const& b) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -487,7 +487,7 @@ inline bool lesser_all(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> c
 }
 
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> abs(quad_t<scalar_t, stag> const& q)
+inline quad_t<scalar_t, stag> abs(quad_t<scalar_t, stag> const& q) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -501,7 +501,7 @@ inline quad_t<scalar_t, stag> abs(quad_t<scalar_t, stag> const& q)
 }
 
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> negate(quad_t<scalar_t, stag> const& q)
+inline quad_t<scalar_t, stag> negate(quad_t<scalar_t, stag> const& q) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -515,7 +515,7 @@ inline quad_t<scalar_t, stag> negate(quad_t<scalar_t, stag> const& q)
 }
 
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> negate_w(quad_t<scalar_t, stag> const& q)
+inline quad_t<scalar_t, stag> negate_w(quad_t<scalar_t, stag> const& q) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -529,7 +529,7 @@ inline quad_t<scalar_t, stag> negate_w(quad_t<scalar_t, stag> const& q)
 }
 
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> add(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> const& b)
+inline quad_t<scalar_t, stag> add(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> const& b) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -542,7 +542,7 @@ inline quad_t<scalar_t, stag> add(quad_t<scalar_t, stag> const& a, quad_t<scalar
 }
 
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> sub(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> const& b)
+inline quad_t<scalar_t, stag> sub(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> const& b) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -555,7 +555,7 @@ inline quad_t<scalar_t, stag> sub(quad_t<scalar_t, stag> const& a, quad_t<scalar
 }
 
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> mul(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> const& b)
+inline quad_t<scalar_t, stag> mul(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> const& b) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -568,7 +568,7 @@ inline quad_t<scalar_t, stag> mul(quad_t<scalar_t, stag> const& a, quad_t<scalar
 }
 
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> add_x(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> const& b)
+inline quad_t<scalar_t, stag> add_x(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> const& b) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -581,7 +581,7 @@ inline quad_t<scalar_t, stag> add_x(quad_t<scalar_t, stag> const& a, quad_t<scal
 }
 
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> sub_x(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> const& b)
+inline quad_t<scalar_t, stag> sub_x(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> const& b) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -594,7 +594,7 @@ inline quad_t<scalar_t, stag> sub_x(quad_t<scalar_t, stag> const& a, quad_t<scal
 }
 
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> mul_x(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> const& b)
+inline quad_t<scalar_t, stag> mul_x(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> const& b) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -607,7 +607,7 @@ inline quad_t<scalar_t, stag> mul_x(quad_t<scalar_t, stag> const& a, quad_t<scal
 }
 
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> sqrt_x(quad_t<scalar_t, stag> const& a)
+inline quad_t<scalar_t, stag> sqrt_x(quad_t<scalar_t, stag> const& a) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -620,7 +620,7 @@ inline quad_t<scalar_t, stag> sqrt_x(quad_t<scalar_t, stag> const& a)
 }
 
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> recip_sqrt_x(quad_t<scalar_t, stag> const& a)
+inline quad_t<scalar_t, stag> recip_sqrt_x(quad_t<scalar_t, stag> const& a) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -633,7 +633,7 @@ inline quad_t<scalar_t, stag> recip_sqrt_x(quad_t<scalar_t, stag> const& a)
 }
 
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> div(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> const& b)
+inline quad_t<scalar_t, stag> div(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> const& b) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -646,7 +646,7 @@ inline quad_t<scalar_t, stag> div(quad_t<scalar_t, stag> const& a, quad_t<scalar
 }
 
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> mul(quad_t<scalar_t, stag> const& q, scalar_t val)
+inline quad_t<scalar_t, stag> mul(quad_t<scalar_t, stag> const& q, scalar_t val) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -660,7 +660,7 @@ inline quad_t<scalar_t, stag> mul(quad_t<scalar_t, stag> const& q, scalar_t val)
 }
 
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> mul(scalar_t val, quad_t<scalar_t, stag> const& q)
+inline quad_t<scalar_t, stag> mul(scalar_t val, quad_t<scalar_t, stag> const& q) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -674,7 +674,8 @@ inline quad_t<scalar_t, stag> mul(scalar_t val, quad_t<scalar_t, stag> const& q)
 }
 
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> madd(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> const& v, quad_t<scalar_t, stag> const& c)
+inline quad_t<scalar_t, stag> madd(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> const& v,
+                                   quad_t<scalar_t, stag> const& c) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -688,7 +689,7 @@ inline quad_t<scalar_t, stag> madd(quad_t<scalar_t, stag> const& a, quad_t<scala
 }
 
 template <typename scalar_t, typename stag>
-inline scalar_t hadd(quad_t<scalar_t, stag> const& v)
+inline scalar_t hadd(quad_t<scalar_t, stag> const& v) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -717,7 +718,7 @@ inline scalar_t hadd(quad_t<scalar_t, stag> const& v)
 }
 
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> vhadd(quad_t<scalar_t, stag> const& v)
+inline quad_t<scalar_t, stag> vhadd(quad_t<scalar_t, stag> const& v) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -746,7 +747,7 @@ inline quad_t<scalar_t, stag> vhadd(quad_t<scalar_t, stag> const& v)
 }
 
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> recip_sqrt(quad_t<scalar_t, stag> const& qpf)
+inline quad_t<scalar_t, stag> recip_sqrt(quad_t<scalar_t, stag> const& qpf) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -761,7 +762,8 @@ inline quad_t<scalar_t, stag> recip_sqrt(quad_t<scalar_t, stag> const& qpf)
 }
 
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> select(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> const& b, quad_t<scalar_t, stag> const& c)
+inline quad_t<scalar_t, stag> select(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> const& b,
+                                     quad_t<scalar_t, stag> const& c) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -772,10 +774,10 @@ inline quad_t<scalar_t, stag> select(quad_t<scalar_t, stag> const& a, quad_t<sca
   else
   {
     quad_t<scalar_t, stag> ret;
-    auto             iret = reinterpret_cast<std::uint32_t*>(&ret);
-    auto             iv1  = reinterpret_cast<std::uint32_t const*>(&a.v);
-    auto             iv2  = reinterpret_cast<std::uint32_t const*>(&b.v);
-    auto             ic   = reinterpret_cast<std::uint32_t const*>(&c.v);
+    auto                   iret = reinterpret_cast<std::uint32_t*>(&ret);
+    auto                   iv1  = reinterpret_cast<std::uint32_t const*>(&a.v);
+    auto                   iv2  = reinterpret_cast<std::uint32_t const*>(&b.v);
+    auto                   ic   = reinterpret_cast<std::uint32_t const*>(&c.v);
     for (int i = 0; i < 4; ++i)
       iret[i] = (~ic[i] & iv1[i]) | (ic[i] & iv2[i]);
     return ret;
@@ -783,7 +785,7 @@ inline quad_t<scalar_t, stag> select(quad_t<scalar_t, stag> const& a, quad_t<sca
 }
 
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> vdot(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> const& b)
+inline quad_t<scalar_t, stag> vdot(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> const& b) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -794,8 +796,8 @@ inline quad_t<scalar_t, stag> vdot(quad_t<scalar_t, stag> const& a, quad_t<scala
       auto v    = _mm_mul_ps(a.v, b.v);
       auto shuf = _mm_movehdup_ps(v); // broadcast elements 3,1 to 2,0
       auto sums = _mm_add_ps(v, shuf);
-      shuf        = _mm_movehl_ps(shuf, sums); // high half -> low half
-      sums        = _mm_add_ss(sums, shuf);
+      shuf      = _mm_movehl_ps(shuf, sums); // high half -> low half
+      sums      = _mm_add_ss(sums, shuf);
       return quad_t<scalar_t, stag>{sums};
     }
     else
@@ -803,8 +805,8 @@ inline quad_t<scalar_t, stag> vdot(quad_t<scalar_t, stag> const& a, quad_t<scala
       auto v    = _mm_mul_ps(a.v, b.v);
       auto shuf = _mm_shuffle_ps(v, v, _MM_SHUFFLE(2, 3, 0, 1)); // [ C D | A B ]
       auto sums = _mm_add_ps(v, shuf);                           // sums = [ D+C C+D | B+A A+B ]
-      shuf        = _mm_movehl_ps(shuf, sums);                     //  [   C   D | D+C C+D ]  // let the
-                                                                   //  compiler avoid a.v mov by reusing shuf
+      shuf      = _mm_movehl_ps(shuf, sums);                     //  [   C   D | D+C C+D ]  // let the
+                                                                 //  compiler avoid a.v mov by reusing shuf
       sums = _mm_add_ss(sums, shuf);
       return quad_t<scalar_t, stag>{sums};
     }
@@ -816,7 +818,7 @@ inline quad_t<scalar_t, stag> vdot(quad_t<scalar_t, stag> const& a, quad_t<scala
 }
 
 template <typename scalar_t, typename stag>
-inline scalar_t dot(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> const& b)
+inline scalar_t dot(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> const& b) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -829,7 +831,7 @@ inline scalar_t dot(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> cons
 }
 
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> normalize(quad_t<scalar_t, stag> const& v)
+inline quad_t<scalar_t, stag> normalize(quad_t<scalar_t, stag> const& v) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -870,41 +872,42 @@ inline auto clear_xyz() noexcept
 }
 
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> lerp(quad_t<scalar_t, stag> const& src, quad_t<scalar_t, stag> const& dst, scalar_t t)
+inline quad_t<scalar_t, stag> lerp(quad_t<scalar_t, stag> const& src, quad_t<scalar_t, stag> const& dst,
+                                   scalar_t t) noexcept
 {
   return madd(set(t), sub(dst, src), src);
 }
 
 template <typename scalar_t, typename stag>
-inline scalar_t length(quad_t<scalar_t, stag> const& vec)
+inline scalar_t length(quad_t<scalar_t, stag> const& vec) noexcept
 {
   return std::sqrt(dot(vec, vec));
 }
 
 template <typename scalar_t, typename stag>
-inline scalar_t sqlength(quad_t<scalar_t, stag> const& vec)
+inline scalar_t sqlength(quad_t<scalar_t, stag> const& vec) noexcept
 {
   return dot(vec, vec);
 }
 
 template <typename scalar_t, typename stag>
-inline scalar_t distance(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> const& b)
+inline scalar_t distance(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> const& b) noexcept
 {
   return length(sub(a.v, b.v));
 }
 
 template <typename scalar_t, typename stag>
-inline scalar_t sqdistance(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> const& b)
+inline scalar_t sqdistance(quad_t<scalar_t, stag> const& a, quad_t<scalar_t, stag> const& b) noexcept
 {
   return sqlength(sub(a.v, b.v));
 }
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> half(quad_t<scalar_t, stag> const& a)
+inline quad_t<scalar_t, stag> half(quad_t<scalar_t, stag> const& a) noexcept
 {
   return mul(a.v, 0.5f);
 }
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> set_000w(quad_t<scalar_t, stag> const& a, std::uint8_t select)
+inline quad_t<scalar_t, stag> set_000w(quad_t<scalar_t, stag> const& a, std::uint8_t select) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -928,7 +931,7 @@ inline quad_t<scalar_t, stag> set_000w(quad_t<scalar_t, stag> const& a, std::uin
   }
 }
 template <typename scalar_t, typename stag>
-inline quad_t<scalar_t, stag> set_111w(quad_t<scalar_t, stag> const& a, std::uint8_t select)
+inline quad_t<scalar_t, stag> set_111w(quad_t<scalar_t, stag> const& a, std::uint8_t select) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, scalar_t>)
   {
@@ -937,6 +940,52 @@ inline quad_t<scalar_t, stag> set_111w(quad_t<scalar_t, stag> const& a, std::uin
   else
   {
     return {1.0, 1.0, 1.0, a.v[select]};
+  }
+}
+
+template <typename scalar_t, typename stag>
+inline quad_t<scalar_t, stag> exp(quad_t<scalar_t, stag> const& a) noexcept
+{
+  if constexpr (has_sse && std::is_same_v<float, scalar_t>)
+  {
+    return exp_ps(a.v);
+  }
+  else
+  {
+    return {std::exp(a.x), std::exp(a.y), std::exp(a.z), std::exp(a.w)};
+  }
+}
+
+template <typename scalar_t, typename stag>
+inline quad_t<scalar_t, stag> log(quad_t<scalar_t, stag> const& a) noexcept
+{
+  if constexpr (has_sse && std::is_same_v<float, scalar_t>)
+  {
+    return log_ps(a.v);
+  }
+  else
+  {
+    return {std::log(a.x), std::log(a.y), std::log(a.z), std::log(a.w)};
+  }
+}
+
+template <typename scalar_t, typename stag>
+inline quad_t<scalar_t, stag> pow(quad_t<scalar_t, stag> const& a, scalar_t exp) noexcept
+{
+  return {std::pow(a.x, exp), std::pow(a.y, exp), std::pow(a.z, exp), std::pow(a.w, exp)};
+}
+
+/// @brief Power function for positive numbers only
+template <typename scalar_t, typename stag>
+inline quad_t<scalar_t, stag> ppow(quad_t<scalar_t, stag> const& a, scalar_t exp) noexcept
+{
+  if constexpr (has_sse && std::is_same_v<float, scalar_t>)
+  {
+    return exp_ps(_mm_mul_ps(_mm_set1_ps(exp), log_ps(a.v)));
+  }
+  else
+  {
+    return {std::pow(a.x, exp), std::pow(a.y, exp), std::pow(a.z, exp), std::pow(a.w, exp)};
   }
 }
 
@@ -976,4 +1025,4 @@ inline auto operator*(scalar_t a, quad_t<scalar_t, stag> const& b) noexcept
   return mul(a, b.v);
 }
 
-} // namespace acl::quad
+} // namespace acl

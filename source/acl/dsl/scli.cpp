@@ -5,7 +5,7 @@
 
 namespace acl
 {
-class scli::context : public detail::cmd_context_base
+class scli::context : public detail::cmd_group
 {
 public:
   friend class scli;

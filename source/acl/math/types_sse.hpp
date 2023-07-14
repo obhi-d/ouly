@@ -2,6 +2,7 @@
 
 #include "types.hpp"
 #define USE_SSE2
+#include "avx_mathfun.h"
 #include "sse_mathfun.h"
 #include "vml_commons.hpp"
 
@@ -24,6 +25,20 @@ union quad_t<float, stag_t>
     float y;
     float z;
     float w;
+  };
+  struct
+  {
+    float r;
+    float g;
+    float b;
+    float a;
+  };
+  struct
+  {
+    float a;
+    float b;
+    float c;
+    float d;
   };
 
   inline constexpr bool operator<=(quad_t const& other) noexcept
@@ -75,15 +90,25 @@ union quad_t<float, stag_t>
   }
 
   inline constexpr quad_t(acl::noinit) noexcept {}
-  inline constexpr quad_t() noexcept requires(!std::is_same_v<stag, quaternion_tag>) : xyzw{0, 0, 0, 0} {}
-  inline constexpr quad_t() noexcept requires(std::is_same_v<stag, quaternion_tag>) : xyzw{0, 0, 0, 1} {}
+  inline constexpr quad_t() noexcept
+  requires(!std::is_same_v<stag, quaternion_tag>)
+      : xyzw{0, 0, 0, 0}
+  {}
+  inline constexpr quad_t() noexcept
+  requires(std::is_same_v<stag, quaternion_tag>)
+      : xyzw{0, 0, 0, 1}
+  {}
   inline constexpr explicit quad_t(std::array<float, 4> s) noexcept : xyzw(s) {}
   inline constexpr explicit quad_t(float s) noexcept : xyzw{s, s, s, s} {}
   inline constexpr quad_t(float vx, float vy, float vz, float vw) noexcept : xyzw{vx, vy, vz, vw} {}
+  inline constexpr quad_t(float vx, float vy, float vz) noexcept : xyzw{vx, vy, vz, 0} {}
   inline quad_t(__m128 vv) noexcept : v{vv} {}
   template <typename utag_t>
   inline constexpr quad_t(quad_t<float, utag_t> const& other) noexcept : v(other.v)
   {} // implicit conversion allowed for this
+  template <typename utag_t>
+  inline constexpr quad_t(quad_t<float, utag_t> const& other, float w) noexcept : xyzw{other.x, other.y, other.z, w}
+  {}
   template <typename utag_t>
   inline constexpr quad_t& operator=(quad_t<float, utag_t> const& other) noexcept
   {
@@ -119,8 +144,8 @@ union quad_t<double, stag_t>
   using tag  = vector_tag;
   using stag = stag_t;
 
-  std::array<__m128d, 2> v;
-  std::array<double, 4>  xyzw;
+  __m256d               v;
+  std::array<double, 4> xyzw;
   struct
   {
     double x;
@@ -128,12 +153,26 @@ union quad_t<double, stag_t>
     double z;
     double w;
   };
+  struct
+  {
+    double r;
+    double g;
+    double b;
+    double a;
+  };
+  struct
+  {
+    double a;
+    double b;
+    double c;
+    double d;
+  };
 
-  inline operator const std::array<__m128d, 2>&() const noexcept
+  inline operator const __m256&() const noexcept
   {
     return v;
   }
-  inline operator std::array<__m128d, 2>&() noexcept
+  inline operator __m256&() noexcept
   {
     return v;
   }
@@ -163,12 +202,22 @@ union quad_t<double, stag_t>
   }
 
   inline constexpr quad_t(acl::noinit) noexcept {}
-  inline constexpr quad_t() noexcept requires(!std::is_same_v<stag, quaternion_tag>) : xyzw{0, 0, 0, 0} {}
-  inline constexpr quad_t() noexcept requires(std::is_same_v<stag, quaternion_tag>) : xyzw{0, 0, 0, 1} {}
-  inline constexpr explicit quad_t(std::array<float, 4> s) noexcept : xyzw(s) {}
-  inline constexpr explicit quad_t(float s) noexcept : xyzw{s, s, s, s} {}
-  inline constexpr quad_t(float vx, float vy, float vz, float vw) noexcept : xyzw{vx, vy, vz, vw} {}
-  inline explicit quad_t(__m128d xy, __m128d zw) noexcept : v{xy, zw} {}
+  inline constexpr quad_t() noexcept
+  requires(!std::is_same_v<stag, quaternion_tag>)
+      : xyzw{0, 0, 0, 0}
+  {}
+  inline constexpr quad_t() noexcept
+  requires(std::is_same_v<stag, quaternion_tag>)
+      : xyzw{0, 0, 0, 1}
+  {}
+  template <typename utag_t>
+  inline constexpr quad_t(quad_t<double, utag_t> const& other, double w) noexcept : xyzw{other.x, other.y, other.z, w}
+  {}
+  inline constexpr explicit quad_t(std::array<double, 4> s) noexcept : xyzw(s) {}
+  inline constexpr explicit quad_t(double s) noexcept : xyzw{s, s, s, s} {}
+  inline constexpr quad_t(double vx, double vy, double vz, double vw) noexcept : xyzw{vx, vy, vz, vw} {}
+  inline constexpr quad_t(double vx, double vy, double vz) noexcept : xyzw{vx, vy, vz, 0} {}
+  inline explicit quad_t(__m256d vv) noexcept : v{vv} {}
   template <typename utag_t>
   inline constexpr quad_t(quad_t<double, utag_t> const& other) noexcept : v(other.v)
   {} // implicit conversion allowed for this
