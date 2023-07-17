@@ -56,7 +56,7 @@ inline scalar_t get_w(quad_t<scalar_t, tag_t> const& v) noexcept
 template <ScalarType scalar_t, typename tag_t, ScalarType scalar2_t>
 inline quad_t<scalar_t, tag_t> set_x(quad_t<scalar_t, tag_t> const& v, scalar2_t val) noexcept
 {
-  return quad_t<scalar_t, tag_t>{v.x, v.y, v.z, static_cast<scalar_t>(val)};
+  return quad_t<scalar_t, tag_t>{static_cast<scalar_t>(val), v.y, v.z, v.w};
 }
 
 template <ScalarType scalar_t, typename tag_t, ScalarType scalar2_t>
@@ -74,7 +74,7 @@ inline quad_t<scalar_t, tag_t> set_z(quad_t<scalar_t, tag_t> const& v, scalar2_t
 template <ScalarType scalar_t, typename tag_t, ScalarType scalar2_t>
 inline quad_t<scalar_t, tag_t> set_w(quad_t<scalar_t, tag_t> const& v, scalar2_t val) noexcept
 {
-  return quad_t<scalar_t, tag_t>{v.x, v.y, v.w, static_cast<scalar_t>(val)};
+  return quad_t<scalar_t, tag_t>{v.x, v.y, v.z, static_cast<scalar_t>(val)};
 }
 
 template <ScalarType scalar_t, typename tag_t>

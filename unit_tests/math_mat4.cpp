@@ -2,7 +2,7 @@
 #include <catch2/catch_all.hpp>
 #include <cstring>
 
-TEMPLATE_TEST_CASE("Validate mul", "[mul]", float, double)
+TEMPLATE_TEST_CASE("Mat4: Validate mul", "[mul]", float, double)
 {
   acl::mat4_t<TestType> m1 = {
     5.0f, 7.0f, 9.0f, 10.0f, 2.0f, 3.0f, 3.0f, 8.0f, 8.0f, 10.0f, 2.0f, 3.0f, 3.0f, 3.0f, 4.0f, 8.0f,
@@ -35,7 +35,7 @@ TEMPLATE_TEST_CASE("Validate mul", "[mul]", float, double)
   CHECK(acl::equals<TestType>(m1[0] * m2, m1m2[0]));
 }
 
-TEMPLATE_TEST_CASE("Validate transform_assume_ortho", "[transform_assume_ortho]", float, double)
+TEMPLATE_TEST_CASE("Mat4: Validate transform_assume_ortho", "[transform_assume_ortho]", float, double)
 {
   acl::mat4_t<TestType> m = {
     0.0f, 0.80f, 0.60f, 0.0f, -0.80f, -0.36f, 0.48f, 0.0f, -0.60f, 0.48f, -0.64f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
@@ -68,7 +68,7 @@ TEMPLATE_TEST_CASE("Validate transform_assume_ortho", "[transform_assume_ortho]"
                               acl::vec3a_t<TestType>(-15.2000008f, 4.55999947f, -1.08f)));
 }
 
-TEMPLATE_TEST_CASE("Validate transform_and_project", "[transform_and_project]", float, double)
+TEMPLATE_TEST_CASE("Mat4: Validate transform_and_project", "[transform_and_project]", float, double)
 {
   acl::mat4_t<TestType> m = {
     5.0f, 7.0f, 9.0f, 10.0f, 2.0f, 3.0f, 3.0f, 8.0f, 8.0f, 10.0f, 2.0f, 3.0f, 3.0f, 3.0f, 4.0f, 8.0f,
@@ -93,33 +93,35 @@ TEMPLATE_TEST_CASE("Validate transform_and_project", "[transform_and_project]", 
   for (int i = 0; i < 4; ++i)
   {
     output[i] = points[i] * m;
-    output[i] /= acl::vec4_t<TestType>(points[i].w);
+    output[i] /= acl::vec4_t<TestType>(output[i].w);
     CHECK(acl::equals<TestType>(output[i], expected[i]));
     output[i] = points[i];
   }
 
-  auto v = acl::vec4_t<TestType>(3.000f, 10.000f, 12.000f) * m;
+  auto v = acl::vec4_t<TestType>(3.000f, 10.000f, 12.000f);
+  v      = v * m;
   v /= acl::vec4_t<TestType>(v.w);
   CHECK(acl::equals<TestType>(v, acl::vec4_t<TestType>(0.87012987013f, 1.12987012987f, 0.55194805194f, 1.0f)));
 }
 
-TEMPLATE_TEST_CASE("Validate transform_aabb", "[transform_aabb]", float, double)
+TEMPLATE_TEST_CASE("Mat4: Validate transform_aabb", "[transform_aabb]", float, double)
 {
-  acl::aabb_t<TestType> aabb   = acl::aabb_t<TestType>(acl::vec3a_t<TestType>(), acl::vec3a_t<TestType>(4, 2, 2));
+  acl::aabb_t<TestType> aabb =
+    acl::make_aabb_from_center_extends(acl::vec3a_t<TestType>(), acl::vec3a_t<TestType>(4, 2, 2));
   acl::mat4_t<TestType> scale  = acl::make_mat4_from_scale(acl::vec3a_t<TestType>(2, 2, 2));
   acl::mat4_t<TestType> rotate = acl::make_mat4_form_quaternion(
     acl::make_quaternion(acl::make_axis_angle(acl::vec3a_t<TestType>(0, 0, 1), acl::to_radians<TestType>(90.0f))));
   acl::mat4_t<TestType> translate = acl::make_mat4_from_translation(acl::vec3a_t<TestType>(10, 0, 0));
   acl::mat4_t<TestType> combined  = scale * rotate * translate;
   acl::aabb_t<TestType> expected =
-    acl::aabb_t<TestType>(acl::vec3a_t<TestType>(10, 0, 0), acl::vec3a_t<TestType>(4, 8, 4));
+    acl::make_aabb_from_center_extends(acl::vec3a_t<TestType>(10, 0, 0), acl::vec3a_t<TestType>(4, 8, 4));
 
   acl::aabb_t<TestType> result = aabb * combined;
 
   CHECK(acl::equals<TestType>(expected, result));
 }
 
-TEMPLATE_TEST_CASE("Validate from_perspective_projection", "[from_perspective_projection]", float, double)
+TEMPLATE_TEST_CASE("Mat4: Validate from_perspective_projection", "[from_perspective_projection]", float, double)
 {
   acl::mat4_t<TestType> proj    = acl::make_perspective_projection<TestType>(acl::k_pi_by_2, 1.2f, 1.0f, 100.0f);
   float                 y_scale = 1.0f / std::tan(static_cast<float>(3.14159265358979323846 / 4.0));
@@ -142,7 +144,7 @@ TEMPLATE_TEST_CASE("Validate from_perspective_projection", "[from_perspective_pr
   CHECK(acl::get(proj, 3, 3) == Catch::Approx(0.0f));
 }
 
-TEMPLATE_TEST_CASE("Validate inverse", "[inverse]", float, double)
+TEMPLATE_TEST_CASE("Mat4: Validate inverse", "[inverse]", float, double)
 {
   acl::mat4_t<TestType> m   = {3.6f, 6.3f, 4.4f, 6.7f, 1.2f, 5.7f, 6.5f, 2.2f,
                                7.8f, 5.5f, 3.6f, 7.7f, 3.3f, 5.3f, 5.6f, 7.7f};

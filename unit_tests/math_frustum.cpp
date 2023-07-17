@@ -1,7 +1,7 @@
 #include <acl/math/vml.hpp>
 #include <catch2/catch_all.hpp>
 
-TEMPLATE_TEST_CASE("Validate frustum_t<TestType>::set", "[frustum_t<TestType>::set]", float, double)
+TEMPLATE_TEST_CASE("Frustum: Validate frustum_t<TestType>::set", "[frustum_t<TestType>::set]", float, double)
 {
   acl::mat4_t<TestType>    m            = acl::make_orthographic_projection<TestType>(100.0f, 90.0f, 1.0f, 1000.0f);
   acl::frustum_t<TestType> frustum_orig = acl::make_frustum(acl::transpose(m));

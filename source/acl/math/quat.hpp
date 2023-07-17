@@ -8,6 +8,11 @@
 
 namespace acl
 {
+template <ScalarType scalar_t>
+inline quat_t<scalar_t> normalize(quat_t<scalar_t> const& r) noexcept
+{
+  return vml::normalize(r.v);
+}
 
 template <ScalarType scalar_t>
 inline quat_t<scalar_t> make_identity_quaternion() noexcept
@@ -70,23 +75,23 @@ inline quat_t<scalar_t> make_quaternion(mat3_t<scalar_t> const& m) noexcept
   {
     auto s    = 2.0f * std::sqrt(1.0f + m.e[0][0] - m.e[1][1] - m.e[2][2]);
     auto invS = 1 / s;
-    return quat_t<scalar_t>(0.25f * s, (m.e[0][1] + m.e[1][0]) * invS, (m.e[0][2] + m.e[2][0]) * invS,
-                            (m.e[1][2] - m.e[2][1]) * invS);
+    return normalize(quat_t<scalar_t>(0.25f * s, (m.e[0][1] + m.e[1][0]) * invS, (m.e[0][2] + m.e[2][0]) * invS,
+                                      (m.e[1][2] - m.e[2][1]) * invS));
   }
   case 1:
   {
     auto s    = 2.0f * std::sqrt(1.0f + m.e[1][1] - m.e[0][0] - m.e[2][2]);
     auto invS = 1 / s;
-    return quat_t<scalar_t>((m.e[0][1] + m.e[1][0]) * invS, 0.25f * s, (m.e[1][2] + m.e[2][1]) * invS,
-                            (m.e[2][0] - m.e[0][2]) * invS);
+    return normalize(quat_t<scalar_t>((m.e[0][1] + m.e[1][0]) * invS, 0.25f * s, (m.e[1][2] + m.e[2][1]) * invS,
+                                      (m.e[2][0] - m.e[0][2]) * invS));
   }
   case 2:
   default:
   {
     auto s    = 2.0f * std::sqrt(1.0f + m.e[2][2] - m.e[0][0] - m.e[1][1]);
     auto invS = 1 / s;
-    return quat_t<scalar_t>((m.e[0][2] + m.e[2][0]) * invS, (m.e[1][2] + m.e[2][1]) * invS, 0.25f * s,
-                            (m.e[0][1] - m.e[1][0]) * invS);
+    return normalize(quat_t<scalar_t>((m.e[0][2] + m.e[2][0]) * invS, (m.e[1][2] + m.e[2][1]) * invS, 0.25f * s,
+                                      (m.e[0][1] - m.e[1][0]) * invS));
   }
   }
 }
@@ -135,7 +140,7 @@ inline quat_t<scalar_t> slerp(quat_t<scalar_t> const& from, quat_t<scalar_t> con
   }
 
   scale1 = (cosom >= 0.0f) ? scale1 : -scale1;
-  return vml::add(vml::mul_quad_scalar(from.v, scale0), vml::mul_quad_scalar(to.v, scale1));
+  return vml::normalize(vml::add(vml::mul_quad_scalar(from.v, scale0), vml::mul_quad_scalar(to.v, scale1)));
 }
 
 template <ScalarType scalar_t>

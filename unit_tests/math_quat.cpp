@@ -3,7 +3,7 @@
 #include <cmath>
 #include <limits>
 
-TEMPLATE_TEST_CASE("Validate mul", "[mul]", float, double)
+TEMPLATE_TEST_CASE("Quat: Validate mul", "[mul]", float, double)
 {
 
   {
@@ -75,7 +75,7 @@ TEMPLATE_TEST_CASE("Validate mul", "[mul]", float, double)
   }
 }
 
-TEMPLATE_TEST_CASE("Validate slerp", "[slerp]", float, double)
+TEMPLATE_TEST_CASE("Quat: Validate slerp", "[slerp]", float, double)
 {
   acl::quat_t<TestType> p = acl::make_quaternion(acl::vec3a_t<TestType>(0, 1.0f, 0), acl::to_radians<TestType>(20.0f));
   acl::quat_t<TestType> q = acl::make_quaternion(acl::vec3a_t<TestType>(0, 1.0f, 0), acl::to_radians<TestType>(120.0f));

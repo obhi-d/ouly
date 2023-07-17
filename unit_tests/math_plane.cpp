@@ -1,7 +1,7 @@
 #include <acl/math/vml.hpp>
 #include <catch2/catch_all.hpp>
 
-TEMPLATE_TEST_CASE("Validate abs_normal", "[abs_normal]", float, double)
+TEMPLATE_TEST_CASE("Plane: Validate abs_normal", "[abs_normal]", float, double)
 {
   acl::plane_t<TestType> p = acl::plane_t<TestType>(-1.0f, 1.0f, -1.0f, 10.0f);
   acl::vec3a_t<TestType> n = acl::abs_normal(p);
@@ -11,7 +11,7 @@ TEMPLATE_TEST_CASE("Validate abs_normal", "[abs_normal]", float, double)
   CHECK(acl::get_z(n) == Catch::Approx(1.0));
 }
 
-TEMPLATE_TEST_CASE("Validate dot_with_normal", "[dot_with_normal]", float, double)
+TEMPLATE_TEST_CASE("Plane: Validate dot_with_normal", "[dot_with_normal]", float, double)
 {
   acl::plane_t<TestType> p = acl::plane_t<TestType>(-1.0f, 1.0f, -1.0f, 10.0f);
   acl::vec3a_t<TestType> n = acl::vec3a_t<TestType>(-2.0f, 3.0f, -5.0f);

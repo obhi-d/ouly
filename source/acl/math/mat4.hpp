@@ -221,4 +221,10 @@ inline auto operator-(mat4_t<scalar_t> const& a, mat4_t<scalar_t> const& b) noex
   return r;
 }
 
+template <typename scalar_t>
+inline bool test_orthogonal(mat4_t<scalar_t> const& m) noexcept
+{
+  return test_orthogonal(as_mat3(m));
+}
+
 } // namespace acl

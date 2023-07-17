@@ -14,7 +14,7 @@ inline bool equals(aabb_t<scalar_t> const& a, aabb_t<scalar_t> const& b) noexcep
 template <typename scalar_t>
 inline bool is_valid(aabb_t<scalar_t> const& box) noexcept
 {
-  return vml::greater_all(box.v[1], box.v[0]);
+  return greater_all(box.r[1], box.r[0]);
 }
 
 template <typename scalar_t>

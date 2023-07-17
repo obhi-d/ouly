@@ -23,8 +23,8 @@ inline bounds_info_t<scalar_t>& bounds_info_t<scalar_t>::operator+=(bounds_info_
       auto min_p   = min(center - half_extends, src.center - src.half_extends);
       auto max_p   = max(center + half_extends, src.center + src.half_extends);
       auto a       = abs(center - src.center);
-      center       = half(min_p + max_p);
-      half_extends = half(max_p + min_p);
+      center       = half(max_p + min_p);
+      half_extends = half(max_p - min_p);
       radius += (src.radius + std::sqrt(dot(a, a)));
       radius *= 0.5f;
     }
@@ -46,8 +46,7 @@ inline bounds_info_t<scalar_t> operator+(bounds_info_t<scalar_t> const& a, bound
   bounds_info_t<scalar_t> r;
   r.center       = half(min_p + max_p);
   r.half_extends = half(max_p - min_p);
-  r.radius += (b.radius + std::sqrt(dot(v, v)));
-  r.radius *= 0.5f;
+  r.radius       = (a.radius + (b.radius + std::sqrt(dot(v, v)))) * .5f;
   return r;
 }
 
@@ -145,10 +144,10 @@ inline bounding_volume_t<scalar_t> operator+(bounding_volume_t<scalar_t> const& 
   auto max_p = vml::max(vml::add(center_this.v, op1.half_extends.v), vml::add(center_other.v, op2.half_extends.v));
 
   bounding_volume_t<scalar_t> r{noinit_v};
-  r.spherical_vol =
-    vml::set_w(vml::half(vml::add(min_p, max_p)),
-               ((radius(op2.spherical_vol) + radius(op1.spherical_vol)) / 2) + std::sqrt(vml::dot(a, a)));
-  r.half_extends = vml::half(vml::sub(max_p, min_p));
+  r.spherical_vol = vml::set_w(vml::half(vml::add(min_p, max_p)),
+                               ((radius(op2.spherical_vol) + radius(op1.spherical_vol)) + std::sqrt(vml::dot(a, a))) *
+                                 static_cast<scalar_t>(0.5));
+  r.half_extends  = vml::half(vml::sub(max_p, min_p));
   return r;
 }
 

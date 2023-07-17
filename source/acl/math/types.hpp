@@ -181,6 +181,8 @@ struct quad_t
     return xyzw[i];
   }
 
+  static constexpr bool homogenous_vector = std::is_same_v<tag, quaternion_tag> || std::is_same_v<tag, vec4_tag>;
+
   inline constexpr quad_t(acl::noinit) noexcept {}
   template <typename utag_t>
   inline constexpr quad_t(quad_t<scalar_t, utag_t> const& other, scalar_t w) noexcept : v(other.x, other.y, other.z, w)
@@ -194,14 +196,7 @@ struct quad_t
     v = other.v;
     return *this;
   } // implicit conversion allowed for this
-  inline constexpr quad_t() noexcept
-    requires(!std::is_same_v<tag, quaternion_tag>)
-      : xyzw{0, 0, 0, 0}
-  {}
-  inline constexpr quad_t() noexcept
-    requires(std::is_same_v<tag, quaternion_tag>)
-      : xyzw{0, 0, 0, 1}
-  {}
+  inline constexpr quad_t() noexcept : xyzw{0, 0, 0, homogenous_vector ? 1 : 0} {}
 
   inline quad_t(quadv_t<scalar_t> const& s) noexcept : v(s) {}
   inline constexpr explicit quad_t(std::array<scalar_t, 4> const& s) noexcept
@@ -211,7 +206,8 @@ struct quad_t
   inline constexpr explicit quad_t(scalar_t s) noexcept : xyzw{s, s, s, s} {}
   inline constexpr explicit quad_t(scalar_t const v[4]) noexcept : xyzw{v[0], v[0], v[0], v[0]} {}
   inline constexpr quad_t(scalar_t vx, scalar_t vy, scalar_t vz, scalar_t vw) noexcept : xyzw{vx, vy, vz, vw} {}
-  inline constexpr quad_t(scalar_t vx, scalar_t vy, scalar_t vz) noexcept : xyzw{vx, vy, vz, 0} {}
+  inline constexpr quad_t(scalar_t vx, scalar_t vy, scalar_t vz) noexcept : xyzw{vx, vy, vz, homogenous_vector ? 1 : 0}
+  {}
 
   inline operator quadv_t<scalar_t> const&() const noexcept
   {

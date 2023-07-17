@@ -11,35 +11,71 @@
 			</ArrayItems>
 		</Expand>
 	</Type>
-  <Type Name="acl::small_vector&lt;*&gt;">
-    <DisplayString>{{ size={size_} }}</DisplayString>
-    <Expand>
-      <Item Name="[size]" ExcludeView="simple">size_</Item>
-      <Item Name="[capacity]" ExcludeView="simple" Condition="(size_ &lt;= inline_capacity)">inline_capacity</Item>
-      <Item Name="[capacity]" ExcludeView="simple" Condition="(size_ &gt; inline_capacity)">data_store_.hdata_.capacity_</Item>
-      <ArrayItems>
-        <Size>size_</Size>
-        <ValuePointer Condition="(size_ &lt;= inline_capacity)">($T1*)&amp;data_store_.ldata_</ValuePointer>
-        <ValuePointer Condition="(size_ &gt; inline_capacity)">($T1*)data_store_.hdata_.pdata_</ValuePointer>
-      </ArrayItems>
-    </Expand>
-  </Type>
-  <Type Name="acl::detail::list_data&lt;*&gt;">
-    <DisplayString>{{ head={head_} }}</DisplayString>
-    <Expand>
-      <LinkedListItems>
-        <HeadPointer>head_</HeadPointer>
-        <NextPointer>($T1*)( *(acl::slist_hook*)( ((char*)this) + ($T2) ) ).next</NextPointer>
-        <ValueNode>($T1*)this</ValueNode>
-      </LinkedListItems>
-    </Expand>
-  </Type>
+	<Type Name="acl::small_vector&lt;*&gt;">
+		<DisplayString>{{ size={size_} }}</DisplayString>
+		<Expand>
+			<Item Name="[size]" ExcludeView="simple">size_</Item>
+			<Item Name="[capacity]" ExcludeView="simple" Condition="(size_ &lt;= inline_capacity)">inline_capacity</Item>
+			<Item Name="[capacity]" ExcludeView="simple" Condition="(size_ &gt; inline_capacity)">data_store_.hdata_.capacity_</Item>
+			<ArrayItems>
+				<Size>size_</Size>
+				<ValuePointer Condition="(size_ &lt;= inline_capacity)">($T1*)&amp;data_store_.ldata_</ValuePointer>
+				<ValuePointer Condition="(size_ &gt; inline_capacity)">($T1*)data_store_.hdata_.pdata_</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+	<Type Name="acl::detail::list_data&lt;*&gt;">
+		<DisplayString>{{ head={head_} }}</DisplayString>
+		<Expand>
+			<LinkedListItems>
+				<HeadPointer>head_</HeadPointer>
+				<NextPointer>($T1*)( *(acl::slist_hook*)( ((char*)this) + ($T2) ) ).next</NextPointer>
+				<ValueNode>($T1*)this</ValueNode>
+			</LinkedListItems>
+		</Expand>
+	</Type>
 	<Type Name="acl::soavector&lt;*&gt;">
 		<DisplayString>{{ size={size_} }}</DisplayString>
 		<Expand>
 			<Item Name="[size]" ExcludeView="simple">size_</Item>
 			<Item Name="[capacity]" ExcludeView="simple">capacity_</Item>
 			<Item Name="[tuples]" ExcludeView="simple">data_</Item>
+		</Expand>
+	</Type>
+	<Type Name="acl::quad_t&lt;*&gt;">
+		<DisplayString>{x}, {y}, {z}, {w}</DisplayString>
+	</Type>
+	<Type Name="acl::mat4_t&lt;*&gt;">
+		<DisplayString>{m}</DisplayString>
+		<Expand>
+
+			<Item Name="[0]">e._Elems[0]._Elems, [4]na</Item>
+			<Item Name="[1]">e._Elems[1]._Elems, [4]na</Item>
+			<Item Name="[2]">e._Elems[2]._Elems, [4]na</Item>
+			<Item Name="[3]">e._Elems[3]._Elems, [4]na</Item>
+		</Expand>
+	</Type>
+	<Type Name="acl::mat3_t&lt;*&gt;">
+		<DisplayString>{m}</DisplayString>
+		<Expand>
+
+			<Item Name="[0]">e._Elems[0]._Elems, [4]na</Item>
+			<Item Name="[1]">e._Elems[1]._Elems, [4]na</Item>
+			<Item Name="[2]">e._Elems[2]._Elems, [4]na</Item>
+		</Expand>
+	</Type>
+	<Type Name="acl::aabb_t&lt;*&gt;">
+		<DisplayString>{r[0].x}, {r[0].y}, {r[0].z} (min), {r[1].x}, {r[1].y}, {r[1].z} (max)</DisplayString>
+	</Type>
+	<Type Name="acl::vec3_t&lt;*&gt;">
+		<DisplayString>{x}, {y}, {z}</DisplayString>
+		<Expand>
+			<Item Name="x">x</Item>
+			<Item Name="y">y</Item>
+			<Item Name="z">z</Item>
+			<Item Name="Pitch">x * 57.2957795131</Item>
+			<Item Name="Yaw">y * 57.2957795131</Item>
+			<Item Name="Roll">z * 57.2957795131</Item>
 		</Expand>
 	</Type>
 	<!--<Type Name="acl::detail::tuple_array_visualizer_base_ref&lt;*,*,true&gt;">

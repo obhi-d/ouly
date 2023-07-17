@@ -1,7 +1,7 @@
 #include <acl/math/vml.hpp>
 #include <catch2/catch_all.hpp>
 
-TEMPLATE_TEST_CASE("Validate axis_angle::set", "[axis_angle::set]", float, double)
+TEMPLATE_TEST_CASE("AxisAngle: Validate axis_angle::set", "[axis_angle::set]", float, double)
 {
   auto aa =
     acl::make_axis_angle(acl::normalize(acl::vec3a_t<TestType>(static_cast<TestType>(1.0f), static_cast<TestType>(1.0f),

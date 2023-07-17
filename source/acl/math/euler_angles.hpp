@@ -15,20 +15,20 @@ inline euler_angles_t<scalar_t> canonize(euler_angles_t<scalar_t> const& m) noex
   r.roll  = m.roll;
   // Now, check for "the back side" of the matrix r[0] outside
   // the canonical range of -pi/2 ... pi/2
-  if (r.pitch < -k_pi_by_2)
+  if (r.pitch < -static_cast<scalar_t>(k_pi_by_2_d))
   {
-    r.pitch = -k_pi_by_2 - r.pitch;
-    r.yaw += k_pi;
-    r.roll += k_pi;
+    r.pitch = -static_cast<scalar_t>(k_pi_by_2_d) - r.pitch;
+    r.yaw += static_cast<scalar_t>(k_pi_d);
+    r.roll += static_cast<scalar_t>(k_pi_d);
   }
-  else if (r.pitch > k_pi_by_2)
+  else if (r.pitch > static_cast<scalar_t>(k_pi_by_2_d))
   {
-    r.pitch = k_pi - r.pitch;
-    r.yaw += k_pi;
-    r.roll += k_pi;
+    r.pitch = static_cast<scalar_t>(k_pi_d) - r.pitch;
+    r.yaw += static_cast<scalar_t>(k_pi_d);
+    r.roll += static_cast<scalar_t>(k_pi_d);
   }
   // Now check for the gimbel Lock case (within a slight tolerance)
-  if (std::abs(r.pitch) > k_pi_by_2 - 1e-4)
+  if (std::abs(r.pitch) > static_cast<scalar_t>(k_pi_by_2_d) - 1e-4)
   {
     // We are in gimbel Lock. Assign all rotation
     // about the vertical axis to r[1]
@@ -47,59 +47,29 @@ inline euler_angles_t<scalar_t> canonize(euler_angles_t<scalar_t> const& m) noex
 }
 
 template <typename scalar_t>
-inline euler_angles_t<scalar_t> make_euler_angles(quat_t<scalar_t> const& src) noexcept
+inline euler_angles_t<scalar_t> make_euler_angles(quat_t<scalar_t> const& q) noexcept
 {
-  euler_angles_t<scalar_t> r;
+  euler_angles_t<scalar_t> euler;
 
-  // Extract sin(r[0])
-  auto sp = -2.0f * (src.y * src.z - src.w * src.x);
-  // Check for Gimbel Lock, giving slight tolerance for numerical imprecision
-  if (std::abs(sp) > 0.9999f)
-  {
-    // Looking straight up or down
-    r.pitch = k_pi_by_2 * sp;
-    // Compute r[1], slam r[2] to zero
-    r.yaw  = std::atan2(-src.x * src.z + src.w * src.y, 0.5f - src.y * src.y - src.z * src.z);
-    r.roll = 0.0f;
-  }
+  // Pitch (X-axis rotation)
+  scalar_t sinr_cosp = static_cast<scalar_t>(2.0) * (q.w * q.x + q.y * q.z);
+  scalar_t cosr_cosp = static_cast<scalar_t>(1.0) - static_cast<scalar_t>(2.0) * (q.x * q.x + q.y * q.y);
+  euler.pitch        = std::atan2(sinr_cosp, cosr_cosp);
+
+  // Yaw (Y-axis rotation)
+  scalar_t sinp = static_cast<scalar_t>(2.0) * (q.w * q.y - q.z * q.x);
+  if (std::abs(sinp) >= static_cast<scalar_t>(1.0))
+    euler.yaw =
+      std::copysign(static_cast<scalar_t>(k_pi_d) / static_cast<scalar_t>(2.0), sinp); // Use 90 degrees if out of range
   else
-  {
-    // Compute angles. We don't have to use the "safe" asin
-    // function because we already checked for range errors when
-    // checking for Gimbel Lock
-    r.pitch = std::asin(sp);
-    r.yaw   = std::atan2(src.x * src.z + src.w * src.y, 0.5f - src.x * src.x - src.y * src.y);
-    r.roll  = std::atan2(src.x * src.y + src.w * src.z, 0.5f - src.x * src.x - src.z * src.z);
-  }
-  return r;
-}
+    euler.yaw = std::asin(sinp);
 
-template <typename scalar_t>
-inline euler_angles_t<scalar_t> make_euler_angles_from_quat_conjugate(quat_t<scalar_t> const& src) noexcept
-{
-  euler_angles_t<scalar_t> r;
+  // Roll (Z-axis rotation)
+  scalar_t siny_cosp = static_cast<scalar_t>(2.0) * (q.w * q.z + q.x * q.y);
+  scalar_t cosy_cosp = static_cast<scalar_t>(1.0) - static_cast<scalar_t>(2.0) * (q.y * q.y + q.z * q.z);
+  euler.roll         = std::atan2(siny_cosp, cosy_cosp);
 
-  // Extract sin(r[0])
-  auto sp = -2.0f * (src.y * src.z + src.w * src.x);
-  // Check for Gimbel Lock, giving slight tolerance for numerical imprecision
-  if (std::abs(sp) > 0.9999f)
-  {
-    // Looking straight up or down
-    r.pitch = k_pi_by_2 * sp;
-    // Compute heading, slam bank to zero
-    r.yaw  = std::atan2(-src.x * src.z - src.w * src.y, 0.5f - src.y * src.y - src.z * src.z);
-    r.roll = 0.0f;
-  }
-  else
-  {
-    // Compute angles. We don't have to use the "safe" asin
-    // function because we already checked for range errors when
-    // checking for Gimbel Lock
-    r.pitch = std::asin(sp);
-    r.yaw   = std::atan2(src.x * src.z - src.w * src.y, 0.5f - src.x * src.x - src.y * src.y);
-    r.roll  = std::atan2(src.x * src.y - src.w * src.z, 0.5f - src.x * src.x - src.z * src.z);
-  }
-  return r;
+  return euler;
 }
 
 template <typename scalar_t>
@@ -109,7 +79,7 @@ inline euler_angles_t<scalar_t> make_euler_angles(mat3_t<scalar_t> const& src) n
   // Extract sin(r[0]) from e[3][2].
   auto sp = -src.e[2][1];
   // Check for Gimbel Lock
-  if (std::abs(sp) > 9.99999f)
+  if (std::abs(sp) > 0.99999f)
   {
     // Looking straight up or down
     r.pitch = k_pi_by_2 * sp;

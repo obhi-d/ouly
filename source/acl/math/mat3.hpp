@@ -60,4 +60,16 @@ inline auto operator*(mult_t a, mat3_t<scalar_t> const& b) noexcept
   return b * a;
 }
 
+template <typename scalar_t>
+inline bool test_orthogonal(mat3_t<scalar_t> const& m) noexcept
+{
+  vec3a_t<scalar_t> x = make_vec3a(m.r[0]);
+  vec3a_t<scalar_t> y = make_vec3a(m.r[0]);
+  vec3a_t<scalar_t> z = make_vec3a(m.r[0]);
+
+  return equals(sqlength(cross(x, y)), static_cast<scalar_t>(0)) &&
+         equals(sqlength(cross(y, z)), static_cast<scalar_t>(0)) &&
+         equals(sqlength(cross(z, x)), static_cast<scalar_t>(0));
+}
+
 } // namespace acl

@@ -76,7 +76,7 @@ inline bool lesser_all(vec3a_t<scalar_t> const& q1, vec3a_t<scalar_t> const& q2)
   if constexpr (has_sse)
     return vml::lesser_all(q1.v, q2.v);
   else
-    return q1[0] < q1[0] && q1[1] < q1[1] && q1[2] < q1[2];
+    return q1[0] < q2[0] && q1[1] < q2[1] && q1[2] < q2[2];
 }
 
 template <typename scalar_t>
@@ -85,7 +85,7 @@ inline bool lesser_any(vec3a_t<scalar_t> const& q1, vec3a_t<scalar_t> const& q2)
   if constexpr (has_sse)
     return vml::lesser_any(q1.v, q2.v);
   else
-    return q1[0] < q1[0] || q1[1] < q1[1] || q1[2] < q1[2];
+    return q1[0] < q2[0] || q1[1] < q2[1] || q1[2] < q2[2];
 }
 
 } // namespace acl

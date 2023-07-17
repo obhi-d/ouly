@@ -3,7 +3,7 @@
 #include <cmath>
 #include <limits>
 
-TEMPLATE_TEST_CASE("Validate isnan", "[isnan]", float, double)
+TEMPLATE_TEST_CASE("Vec4: Validate isnan", "[isnan]", float, double)
 {
   TestType              val[4] = {std::numeric_limits<TestType>::quiet_NaN(), 1.0f, -1.0f, 10.0f};
   acl::vec4_t<TestType> p      = acl::vec4_t<TestType>(val);
@@ -12,7 +12,7 @@ TEMPLATE_TEST_CASE("Validate isnan", "[isnan]", float, double)
   CHECK(acl::get_x(res) != 0.0f);
 }
 
-TEMPLATE_TEST_CASE("Validate isinf", "[isinf]", float, double)
+TEMPLATE_TEST_CASE("Vec4: Validate isinf", "[isinf]", float, double)
 {
   acl::vec4_t<TestType> p = {std::numeric_limits<float>::infinity(), 1.0f, -1.0f, 10.0f};
   CHECK(acl::isinf(p) == true);
@@ -22,7 +22,7 @@ TEMPLATE_TEST_CASE("Validate isinf", "[isinf]", float, double)
   CHECK(acl::get_x(acl::isinfv(p)) == 0.0f);
 }
 
-TEMPLATE_TEST_CASE("Validate isgreater_x", "[isgreater_x]", float, double)
+TEMPLATE_TEST_CASE("Vec4: Validate isgreater_x", "[isgreater_x]", float, double)
 {
   acl::vec4_t<TestType> p = acl::vec4_t<TestType>(-441.3f, 1.0f, -1.0f, 10.0f);
   acl::vec4_t<TestType> q = acl::vec4_t<TestType>(reinterpret_cast<TestType const*>(&p));
@@ -33,7 +33,7 @@ TEMPLATE_TEST_CASE("Validate isgreater_x", "[isgreater_x]", float, double)
   CHECK(acl::vml::isgreater_x(p.v, q.v) == true);
 }
 
-TEMPLATE_TEST_CASE("Validate set", "[set]", float, double)
+TEMPLATE_TEST_CASE("Vec4: Validate set", "[set]", float, double)
 {
   acl::vec4_t<TestType> p = acl::vec4_t<TestType>(41.3f, 0, 0, 0);
   CHECK(p[0] == Catch::Approx(41.3f));
@@ -70,7 +70,7 @@ TEMPLATE_TEST_CASE("Validate set", "[set]", float, double)
   CHECK(r[3] == Catch::Approx(31.3f));
 }
 
-TEMPLATE_TEST_CASE("Validate compare", "[compare]", float, double)
+TEMPLATE_TEST_CASE("Vec4: Validate compare", "[compare]", float, double)
 {
   acl::vec4_t<TestType> p = acl::vec4_t<TestType>(-441.3f, 23.0f, -1.0f, 10.0f);
   acl::vec4_t<TestType> q = acl::vec4_t<TestType>(441.3f, 5.0f, 51.0f, 10.0f);
@@ -89,7 +89,7 @@ TEMPLATE_TEST_CASE("Validate compare", "[compare]", float, double)
   CHECK(acl::lesser_all(r, q) == false);
 }
 
-TEMPLATE_TEST_CASE("Validate arithmetic", "[arithmetic]", float, double)
+TEMPLATE_TEST_CASE("Vec4: Validate arithmetic", "[arithmetic]", float, double)
 {
   acl::vec4_t<TestType> p = acl::vec4_t<TestType>(10.0f, 23.0f, -1.0f, 10.0f);
   acl::vec4_t<TestType> q = acl::vec4_t<TestType>(441.3f, 5.0f, 51.0f, 10.0f);

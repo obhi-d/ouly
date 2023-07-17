@@ -2,7 +2,7 @@
 #include <catch2/catch_all.hpp>
 #include <cstring>
 
-TEMPLATE_TEST_CASE("Validate intersect::bounding_volume_frustum_coherent",
+TEMPLATE_TEST_CASE("Intersect: Validate intersect::bounding_volume_frustum_coherent",
                    "[intersect::bounding_volume_frustum_coherent]", float, double)
 {
   // define a custom prism
@@ -15,8 +15,7 @@ TEMPLATE_TEST_CASE("Validate intersect::bounding_volume_frustum_coherent",
   custom_planes[6] = acl::plane_t<TestType>(frustum_orig[acl::frustum_t<TestType>::k_far], 900.0f);
   custom_planes[7] = acl::plane_t<TestType>(frustum_orig[acl::frustum_t<TestType>::k_near], -10.0f);
 
-  acl::frustum_t<TestType> custom =
-    acl::make_frustum((acl::plane_t<TestType>*)nullptr, static_cast<std::uint32_t>(custom_planes.size()));
+  acl::frustum_t<TestType> custom;
   acl::frustum_t<TestType> unused = acl::make_frustum(custom_planes.data(), 6);
 
   acl::frustum_t<TestType> unused_copy(unused);
@@ -29,7 +28,7 @@ TEMPLATE_TEST_CASE("Validate intersect::bounding_volume_frustum_coherent",
   unused            = acl::make_frustum(m);
   std::uint32_t idx = 0;
   for (auto& p : custom_planes)
-    custom[idx++] = p;
+    custom.planes.emplace_back(p);
 
   acl::frustum_t copy(custom);
   copy = custom;
@@ -58,7 +57,8 @@ TEMPLATE_TEST_CASE("Validate intersect::bounding_volume_frustum_coherent",
   CHECK(acl::test_intersection(vol, custom, state) == acl::result_t::k_intersecting);
 }
 
-TEMPLATE_TEST_CASE("Validate intersect::bounding_volume_frustum", "[intersect::bounding_volume_frustum]", float, double)
+TEMPLATE_TEST_CASE("Intersect: Validate intersect::bounding_volume_frustum", "[intersect::bounding_volume_frustum]",
+                   float, double)
 {
   // define a custom prism
 
@@ -72,7 +72,7 @@ TEMPLATE_TEST_CASE("Validate intersect::bounding_volume_frustum", "[intersect::b
   custom_planes[7] = acl::plane_t<TestType>(frustum_orig[acl::frustum_t<TestType>::k_near], -10.0f);
 
   acl::frustum_t<TestType> custom =
-    acl::make_frustum((acl::plane_t<TestType>*)nullptr, static_cast<std::uint32_t>(custom_planes.size()));
+    acl::make_frustum(custom_planes.data(), static_cast<std::uint32_t>(custom_planes.size()));
   acl::frustum_t<TestType> unused = acl::make_frustum(custom_planes.data(), 6);
 
   acl::bounding_volume_t<TestType> vol =
@@ -86,7 +86,7 @@ TEMPLATE_TEST_CASE("Validate intersect::bounding_volume_frustum", "[intersect::b
   CHECK(acl::test_intersection(vol, custom) == acl::result_t::k_intersecting);
 }
 
-TEMPLATE_TEST_CASE("Validate intersect::bounding_volumes", "[intersect::bounding_volumes]", float, double)
+TEMPLATE_TEST_CASE("Intersect: Validate intersect::bounding_volumes", "[intersect::bounding_volumes]", float, double)
 {
   // define a custom prism
   acl::bounding_volume_t<TestType> vol1 =
@@ -101,7 +101,8 @@ TEMPLATE_TEST_CASE("Validate intersect::bounding_volumes", "[intersect::bounding
   CHECK(acl::test_intersection(vol2, vol3) == acl::result_t::k_intersecting);
 }
 
-TEMPLATE_TEST_CASE("Validate intersect::bounding_sphere_frustum", "[intersect::bounding_sphere_frustum]", float, double)
+TEMPLATE_TEST_CASE("Intersect: Validate intersect::bounding_sphere_frustum", "[intersect::bounding_sphere_frustum]",
+                   float, double)
 {
   // define a custom prism
   auto m            = acl::make_orthographic_projection<TestType>(-50.0f, 50.0f, -45.0f, 45.0f, 1.0f, 1000.0f);

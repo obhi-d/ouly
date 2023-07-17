@@ -3,7 +3,7 @@
 #include <cmath>
 #include <limits>
 
-TEMPLATE_TEST_CASE("Validate combine", "[combine]", float, double)
+TEMPLATE_TEST_CASE("Transform: Validate combine", "[combine]", float, double)
 {
   acl::transform_t<TestType> t = acl::transform_t<TestType>();
   acl::quat_t<TestType>      rot =
