@@ -14,27 +14,16 @@ color_t<scalar_t> convert(color_t<scalar2_t> const& c) noexcept
   {
     constexpr float recip  = 1.0f / static_cast<float>(std::numeric_limits<scalar2_t>::max());
     constexpr float factor = static_cast<float>(std::numeric_limits<scalar_t>::max());
+    constexpr float cf     = recip * factor;
 
-    auto color = mul(
-      quad_t<float>{
-        c.r * recip,
-        c.g * recip,
-        c.b * recip,
-        c.a * recip,
-      },
-      factor);
+    auto color = c * cf;
     return color_t<scalar_t>{static_cast<scalar_t>(color.r), static_cast<scalar_t>(color.g),
                              static_cast<scalar_t>(color.b), static_cast<scalar_t>(color.a)};
   }
   else
   {
     constexpr scalar_t recip = 1 / static_cast<scalar_t>(std::numeric_limits<scalar2_t>::max());
-    return color_t<scalar_t>{
-      c.r * recip,
-      c.g * recip,
-      c.b * recip,
-      c.a * recip,
-    };
+    return c * recip;
   }
 }
 
@@ -50,14 +39,14 @@ template <typename scalar_t>
 color_t<scalar_t> linear_to_gamma(color_t<scalar_t> const& c, scalar_t gamma = k_default_gamma) noexcept
   requires(std::is_floating_point_v<scalar_t>)
 {
-  return color_t<scalar_t>{ppow(c, 1 / gamma), c.a};
+  return color_t<scalar_t>{vml::ppow(c, 1 / gamma), c.a};
 }
 
 template <typename scalar_t>
 color_t<scalar_t> gamma_to_linear(color_t<scalar_t> const& c, scalar_t gamma = k_default_gamma) noexcept
   requires(std::is_floating_point_v<scalar_t>)
 {
-  return color_t<scalar_t>{ppow(c, gamma), c.a};
+  return color_t<scalar_t>{vml::ppow(c, gamma), c.a};
 }
 
 template <typename scalar_t>
@@ -67,7 +56,7 @@ color_t<scalar_t> linear_to_gamma(color_t<scalar_t> const& c, scalar_t gamma = k
   constexpr float recip  = 1.0f / static_cast<float>(std::numeric_limits<scalar_t>::max());
   constexpr float factor = static_cast<float>(std::numeric_limits<scalar_t>::max());
   color_t<float>  fcol   = {c.r * recip, c.g * recip, c.b * recip, 0.0f};
-  auto            color  = mul(ppow(fcol, 1 / gamma), factor);
+  auto            color  = vml::mul(vml::ppow(fcol.v, 1 / gamma), factor);
   return color_t<scalar_t>{static_cast<scalar_t>(color.r), static_cast<scalar_t>(color.g),
                            static_cast<scalar_t>(color.b), static_cast<scalar_t>(c.a)};
 }
@@ -79,7 +68,7 @@ color_t<scalar_t> gamma_to_linear(color_t<scalar_t> const& c, scalar_t gamma = k
   constexpr float recip  = 1.0f / static_cast<float>(std::numeric_limits<scalar_t>::max());
   constexpr float factor = static_cast<float>(std::numeric_limits<scalar_t>::max());
   color_t<float>  fcol   = {c.r * recip, c.g * recip, c.b * recip, 0.0f};
-  auto            color  = mul(ppow(fcol, gamma), factor);
+  auto            color  = vml::mul(vml::ppow(fcol.v, gamma), factor);
   return color_t<scalar_t>{static_cast<scalar_t>(color.r), static_cast<scalar_t>(color.g),
                            static_cast<scalar_t>(color.b), static_cast<scalar_t>(c.a)};
 }

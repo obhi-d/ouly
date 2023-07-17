@@ -46,7 +46,7 @@ TEST_CASE("Test builder", "[scli][builder]")
 
   // clang-format off
   builder
-	  * acl::region<"root">
+	  [ "root" ]
 	    - acl::cmd<"echo", echo>
         - acl::cmd<"echo", say_hi>
       ;

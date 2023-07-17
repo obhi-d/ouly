@@ -30,7 +30,8 @@
   (this is the zlib license)
 */
 
-#include <xmmintrin.h>
+#define USE_SSE2
+#include <immintrin.h>
 
 /* yes I know, the top of this file is quite ugly */
 

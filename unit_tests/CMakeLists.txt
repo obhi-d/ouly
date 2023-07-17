@@ -38,6 +38,10 @@ function(add_unit_test)
   add_executable(${target_name} ${unit_test_FILES} "validity_main.cpp")
   target_link_libraries(${target_name} acl::acl Catch2::Catch2 ${unit_test_LINK_LIBS})
   target_compile_definitions(${target_name} PUBLIC -DACL_REC_STATS -DACL_THROW_ON_ERROR ${unit_test_DEFINES})
+  target_compile_options(${target_name} PRIVATE
+    $<$<CXX_COMPILER_ID:MSVC>:/WX>
+    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic -Werror>
+    )
   ## Skip test?
   if (NOT unit_test_SKIP_TEST)
     add_test(${target_name} ${target_name})

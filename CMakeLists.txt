@@ -29,7 +29,7 @@ if (ACL_GENERATE_SCLI_PARSER)
 		    "${ACL_INCLUDE_BUILD_DIR}/acl/dsl/parse_impl.cpp" 
 		
 	     COMMAND ${CMAKE_COMMAND} -E echo "Generating parse_impl.cpp"
-	     COMMAND ${ACL_BISON_EXE} -o "${ACL_INCLUDE_BUILD_DIR}/acl/dsl/parse_impl.cpp" --no-lines "${ACL_INCLUDE_BUILD_DIR}/acl/dsl/scli.yy"
+	     COMMAND ${ACL_BISON_EXE} -o "${ACL_INCLUDE_BUILD_DIR}/acl/dsl/parse_impl.cpp" "${ACL_INCLUDE_BUILD_DIR}/acl/dsl/scli.yy"
 
 	     DEPENDS 
 		    "${ACL_INCLUDE_BUILD_DIR}/acl/dsl/scli.yy"
@@ -58,6 +58,8 @@ add_library( ${ACL_TARGET_NAME}
     "${ACL_INCLUDE_BUILD_DIR}/acl/dsl/lexer_impl.cpp" 
     "${ACL_INCLUDE_BUILD_DIR}/acl/dsl/parse_impl.cpp" 
     "${ACL_INCLUDE_BUILD_DIR}/acl/dsl/scli.cpp"
+    "${ACL_INCLUDE_BUILD_DIR}/acl/math/sse_mathfun.cpp"
+    "${ACL_INCLUDE_BUILD_DIR}/acl/math/avx_mathfun.cpp"
 )
 
 add_library(${PROJECT_NAME}::${ACL_TARGET_NAME} ALIAS ${ACL_TARGET_NAME})

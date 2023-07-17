@@ -16,15 +16,18 @@ namespace acl
 {
 
 // acl function overrides
-inline float recip_sqrt(float val) noexcept
+template <typename T>
+inline T recip_sqrt(T val) noexcept
 {
-  return 1.f / std::sqrt(val);
+  return static_cast<T>(1.f) / std::sqrt(val);
 }
 
-inline std::pair<float, float> sin_cos(float i_val) noexcept
+template <typename scalar_t>
+inline std::pair<scalar_t, scalar_t> sin_cos(scalar_t i_val) noexcept
 {
   return {std::sin(i_val), std::cos(i_val)};
 }
+
 //-------------------------------------------------------
 // Other utilities
 inline std::uint32_t bit_pos(std::uint32_t v) noexcept
@@ -83,13 +86,15 @@ inline IntType round_up(IntType number, IntType multiple) noexcept
   return number + multiple - remainder;
 }
 
-inline float wrap_pi(float theta) noexcept
+template <typename scalar_t>
+inline scalar_t wrap_pi(scalar_t theta) noexcept
 {
-  theta += acl::k_pi;
-  theta -= std::floor(theta * acl::k_1_by_2pi) * acl::k_2pi;
-  theta -= acl::k_pi;
+  theta += static_cast<scalar_t>(acl::k_pi_d);
+  theta -= std::floor(theta * static_cast<scalar_t>(acl::k_1_by_2pi_d)) * static_cast<scalar_t>(acl::k_2pi_d);
+  theta -= static_cast<scalar_t>(acl::k_pi_d);
   return theta;
 }
+
 // float to fixed point conversion, float must be
 // between 0-1
 inline std::uint32_t float_to_fixed(float f, std::uint32_t n) noexcept
@@ -218,13 +223,13 @@ inline float half_to_float(std::uint16_t y) noexcept
 template <typename scalar_t>
 inline scalar_t to_radians(scalar_t value) noexcept
 {
-  return k_degrees_to_radian_factor * (value);
+  return static_cast<scalar_t>(k_degrees_to_radians_factor_d) * (value);
 }
 
 template <typename scalar_t>
 inline scalar_t to_degrees(scalar_t value) noexcept
 {
-  return (value)*57.295779513f;
+  return static_cast<scalar_t>(k_radians_to_degrees_factor_d) * (value);
 }
 
 /* Famous fast reciprocal std::sqrt */

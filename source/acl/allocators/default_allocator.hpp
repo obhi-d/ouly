@@ -219,8 +219,8 @@ struct ACL_EMPTY_BASES default_allocator
   template <typename Alignment = alignment<align>>
   inline static void deallocate(address i_addr, size_type i_sz, Alignment i_alignment = {})
   {
-    auto  measure = statistics::report_deallocate(i_sz);
-    void* fixup   = tracker::when_deallocate(i_addr, i_sz);
+    [[maybe_unused]] auto measure = statistics::report_deallocate(i_sz);
+    void*                 fixup   = tracker::when_deallocate(i_addr, i_sz);
     if (i_alignment > alignof(std::max_align_t))
       acl::aligned_free(fixup);
     else

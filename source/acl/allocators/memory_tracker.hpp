@@ -21,11 +21,11 @@ struct dummy_debug_tracer
       s << "Unknown";
       return s;
     }
-    friend bool operator==(const backtrace& f, const backtrace& s)
+    friend bool operator==(const backtrace&, const backtrace&)
     {
       return true;
     }
-    friend bool operator!=(const backtrace& f, const backtrace& s)
+    friend bool operator!=(const backtrace&, const backtrace&)
     {
       return false;
     }
@@ -33,7 +33,7 @@ struct dummy_debug_tracer
 
   struct hasher
   {
-    inline std::size_t operator()(const backtrace& t) const
+    inline std::size_t operator()(const backtrace&) const
     {
       return 0;
     }
@@ -41,7 +41,7 @@ struct dummy_debug_tracer
 
   struct trace_output
   {
-    inline void operator()(std::string_view s) const {}
+    inline void operator()(std::string_view) const {}
   };
 };
 

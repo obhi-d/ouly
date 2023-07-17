@@ -1,60 +1,60 @@
+#include <acl/math/vml.hpp>
 #include <catch2/catch_all.hpp>
 #include <cmath>
 #include <limits>
-#include <acl/math/vml.hpp>
 
-TEST_CASE("Validate transform::combine", "[transform::combine]")
+TEMPLATE_TEST_CASE("Validate combine", "[combine]", float, double)
 {
-  acl::transform_t t   = acl::transform::identity();
-  acl::quat_t      rot = acl::quat::from_axis_angle(acl::vec3::set(0, 1.0f, 0), acl::to_radians(20.0f));
+  acl::transform_t<TestType> t = acl::transform_t<TestType>();
+  acl::quat_t<TestType>      rot =
+    acl::make_quaternion(acl::vec3a_t<TestType>(0, 1.0f, 0), acl::to_radians<TestType>(20.0f));
 
-  acl::transform::set_translation(t, acl::vec3a::set(10.0f));
-  acl::transform::set_scale(t, 2.5f);
-  acl::transform::set_rotation(t, rot);
+  acl::set_translation(t, acl::vec3a_t<TestType>(10.0f));
+  acl::set_scale(t, 2.5f);
+  acl::set_rotation(t, rot);
 
-  acl::mat4_t scale     = acl::mat4::from_scale(acl::vec3a::set(2.5f));
-  acl::mat4_t rotate    = acl::mat4::from_rotation(rot);
-  acl::mat4_t translate = acl::mat4::from_translation(acl::vec3a::set(10.0f));
-  acl::mat4_t expected  = acl::mat4::mul(scale, acl::mat4::mul(rotate, translate));
+  acl::mat4_t<TestType> scale     = acl::make_mat4_from_scale(acl::vec3a_t<TestType>(2.5f));
+  acl::mat4_t<TestType> rotate    = acl::make_mat4_form_quaternion(rot);
+  acl::mat4_t<TestType> translate = acl::make_mat4_from_translation(acl::vec3a_t<TestType>(10.0f));
+  acl::mat4_t<TestType> expected  = scale * rotate * translate;
+  acl::mat4_t<TestType> result    = acl::make_mat4(t);
 
-  acl::mat4_t result;
+  CHECK(acl::equals<TestType>(result, expected));
 
-  acl::transform::matrix(t, result);
+  acl::transform_t<TestType> id;
 
-  CHECK(acl::mat4::equals(result, expected));
+  t = id * t;
 
-  acl::transform_t id;
-  acl::transform::identity(id);
+  result = acl::make_mat4(t);
 
-  t = acl::transform::combine(id, t);
+  CHECK(acl::equals<TestType>(result, expected));
 
-  acl::transform::matrix(t, result);
+  t = t * id;
 
-  CHECK(acl::mat4::equals(result, expected));
+  CHECK(acl::equals<TestType>(result, expected));
 
-  t = acl::transform::combine(t, id);
+  acl::transform_t<TestType> t2;
 
-  CHECK(acl::mat4::equals(result, expected));
+  acl::quat_t<TestType> rot2 =
+    acl::make_quaternion(acl::vec3a_t<TestType>(1.0f, 0.0f, 0), acl::to_radians<TestType>(120.0f));
 
-  acl::transform_t t2 = acl::transform::identity();
+  acl::set_translation(t2, acl::vec3a_t<TestType>(10.0f));
+  acl::set_scale(t2, 0.5f);
+  acl::set_rotation(t2, rot2);
 
-  acl::quat_t rot2 = acl::quat::from_axis_angle(acl::vec3::set(1.0f, 0.0f, 0), acl::to_radians(120.0f));
+  acl::transform_t<TestType> combined = t2 * t;
 
-  acl::transform::set_translation(t2, acl::vec3a::set(10.0f));
-  acl::transform::set_scale(t2, 0.5f);
-  acl::transform::set_rotation(t2, rot2);
+  acl::mat4_t<TestType> t2m = acl::make_mat4(t2);
+  auto                  tm  = acl::make_mat4(t);
+  auto                  exp = tm * t2m;
+  auto                  res = acl::make_mat4(combined);
 
-  acl::transform_t combined = acl::transform::combine(t2, t);
+  CHECK(acl::equals<TestType>(res, exp));
 
-  acl::mat4_t tm, t2m, exp, res;
-  acl::transform::matrix(t2, t2m);
-  acl::transform::matrix(t, tm);
-  exp = acl::mat4::mul(tm, t2m);
+  auto ct = acl::make_transform(tm);
 
-  acl::transform::matrix(combined, res);
+  CHECK(acl::equals<TestType>(ct, t));
 
-  CHECK(acl::mat4::equals(res, exp));
-
-  acl::vec3a_t point = acl::vec3a::set(15.0f, 442.04f, 23.0f);
-  CHECK(acl::vec3a::equals(acl::vec3a::mul(point, res), acl::transform::mul(point, combined)));
+  acl::vec3a_t<TestType> point = acl::vec3a_t<TestType>(15.0f, 442.04f, 23.0f);
+  CHECK(acl::equals<TestType>(point * res, point * combined));
 }

@@ -7,10 +7,10 @@ namespace acl
 template <Matrix M, typename scalar_t>
 inline M mul(scalar_t v, M const& m) noexcept
 {
-    M r;
-    for (uint32_t i = 0 ; i < m.r.size(); ++i)
-       r.r[i] = mul(v, m.r[i]);
-    return r;
+  M r;
+  for (uint32_t i = 0; i < m.r.size(); ++i)
+    r.r[i] = v * m.r[i];
+  return r;
 }
 
 template <Matrix M, typename scalar_t>
@@ -46,23 +46,21 @@ inline auto const& get(M const& m, uint32_t i, uint32_t j) noexcept
   return m.e[i][j];
 }
 
-
 template <Matrix M>
 inline auto const& add(M const& m1, M const& m2) noexcept
 {
   M r;
   for (uint32_t i = 0; i < m1.r.size(); ++i)
-    r.r[i] = add(m1.r[i], m2.r[i]);
+    r.r[i] = (m1.r[i] + m2.r[i]);
   return r;
 }
-
 
 template <Matrix M>
 inline auto const& sub(M const& m1, M const& m2) noexcept
 {
   M r;
   for (uint32_t i = 0; i < m1.r.size(); ++i)
-    r.r[i] = sub(m1.r[i], m2.r[i]);
+    r.r[i] = (m1.r[i] + m2.r[i]);
   return r;
 }
 

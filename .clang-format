@@ -3,7 +3,9 @@ Language: Cpp
 PenaltyReturnTypeOnItsOwnLine: 10000
 TabWidth: 2
 UseTab: Never
+DerivePointerAlignment: false
 PointerAlignment: Left
+ReferenceAlignment: Left
 AlignConsecutiveAssignments: true
 AlignConsecutiveDeclarations: true
 AlignConsecutiveMacros: true
@@ -15,11 +17,7 @@ AllowShortFunctionsOnASingleLine: Empty
 AllowShortLambdasOnASingleLine: Empty
 IncludeBlocks: Preserve
 BreakBeforeBraces: Custom
-BreakBeforeConceptDeclarations: Always
 ContinuationIndentWidth: 2
-RequiresClausePosition: WithFollowing
-IndentRequiresClause: False
-#RequiresExpressionIndentation: OuterScope
 BraceWrapping:
   AfterCaseLabel: true
   AfterClass: true
@@ -40,6 +38,9 @@ BraceWrapping:
   SplitEmptyRecord: false
   SplitEmptyNamespace: false
   
+BreakBeforeConceptDeclarations: Always
+RequiresExpressionIndentation: OuterScope
+AlignArrayOfStructures: Right
 
 ColumnLimit: 120
 ...

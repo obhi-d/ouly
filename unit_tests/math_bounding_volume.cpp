@@ -1,238 +1,242 @@
-#include <catch2/catch_all.hpp>
 #include <acl/math/vml.hpp>
+#include <catch2/catch_all.hpp>
 
-TEST_CASE("Validate bounds_info::update", "[bounds_info::update]")
+TEMPLATE_TEST_CASE("Validate bounds_info_t<TestType>::update", "[bounds_info_t<TestType>::update]", float, double)
 {
-  acl::bounds_info bounds = {{-2.0f, -2.0f, -2.0f}, {2.0f, 2.0f, 2.0f}, -1.0f};
+  acl::bounds_info_t<TestType> bounds = {
+    {-2.0f, -2.0f, -2.0f},
+    { 2.0f,  2.0f,  2.0f},
+    -1.0f
+  };
 
-  acl::bounds_info bounds1 = {{-2.0f, -2.0f, -2.0f}, {2.0f, 2.0f, 2.0f}, 3.4641f};
-  acl::bounds_info bounds2 = {{2.0f, 2.0f, 2.0f}, {2.0f, 2.0f, 2.0f}, 3.4641f};
+  acl::bounds_info_t<TestType> bounds1 = {
+    {-2.0f, -2.0f, -2.0f},
+    { 2.0f,  2.0f,  2.0f},
+    3.4641f
+  };
+  acl::bounds_info_t<TestType> bounds2 = {
+    {2.0f, 2.0f, 2.0f},
+    {2.0f, 2.0f, 2.0f},
+    3.4641f
+  };
 
-  acl::append(bounds, bounds1);
-  acl::append(bounds, bounds2);
+  bounds = (bounds + bounds1);
+  bounds = (bounds + bounds2);
 
-  REQUIRE(acl::x(bounds.center) == Catch::Approx(0.0f));
-  REQUIRE(acl::y(bounds.center) == Catch::Approx(0.0f));
-  REQUIRE(acl::z(bounds.center) == Catch::Approx(0.0f));
+  REQUIRE(acl::get_x(bounds.center) == Catch::Approx(0.0f));
+  REQUIRE(acl::get_y(bounds.center) == Catch::Approx(0.0f));
+  REQUIRE(acl::get_z(bounds.center) == Catch::Approx(0.0f));
 
-  REQUIRE(acl::x(bounds.half_extends) == Catch::Approx(4.0));
-  REQUIRE(acl::y(bounds.half_extends) == Catch::Approx(4.0));
-  REQUIRE(acl::z(bounds.half_extends) == Catch::Approx(4.0));
+  REQUIRE(acl::get_x(bounds.half_extends) == Catch::Approx(4.0));
+  REQUIRE(acl::get_y(bounds.half_extends) == Catch::Approx(4.0));
+  REQUIRE(acl::get_z(bounds.half_extends) == Catch::Approx(4.0));
 
   REQUIRE(bounds.radius == Catch::Approx(6.9282));
 }
 
-TEST_CASE("Validate bounding_volume::center", "[bounding_volume::center]")
+TEMPLATE_TEST_CASE("Validate bounding_volume_t<TestType>::center", "[bounding_volume_t<TestType>::center]", float,
+                   double)
 {
-  acl::bounding_volume bounds = {
-    acl::sphere(5.0f, 2.2f, 5.0f, 3.4641f),
-    acl::vec3a(2.0f, 2.0f, 2.0f) };
+  acl::bounding_volume_t<TestType> bounds = {acl::sphere_t<TestType>(5.0f, 2.2f, 5.0f, 3.4641f),
+                                             acl::vec3a_t<TestType>(2.0f, 2.0f, 2.0f)};
 
-  REQUIRE(acl::x(acl::center(bounds)) == Catch::Approx(5.0f));
-  REQUIRE(acl::y(acl::center(bounds)) == Catch::Approx(2.2f));
-  REQUIRE(acl::z(acl::center(bounds)) == Catch::Approx(5.0f));
+  REQUIRE(acl::get_x(acl::center(bounds)) == Catch::Approx(5.0f));
+  REQUIRE(acl::get_y(acl::center(bounds)) == Catch::Approx(2.2f));
+  REQUIRE(acl::get_z(acl::center(bounds)) == Catch::Approx(5.0f));
 }
 
-TEST_CASE("Validate bounding_volume::half_extends", "[bounding_volume::half_extends]")
+TEMPLATE_TEST_CASE("Validate bounding_volume_t<TestType>::half_extends", "[bounding_volume_t<TestType>::half_extends]",
+                   float, double)
 {
-  acl::bounding_volume bounds1 = {
-    acl::sphere(5.0f, 2.2f, 5.0f, 3.4641f),
-    acl::vec3a(2.0f, 2.0f, 2.0f)
-  };
+  acl::bounding_volume_t<TestType> bounds1 = {acl::sphere_t<TestType>(5.0f, 2.2f, 5.0f, 3.4641f),
+                                              acl::vec3a_t<TestType>(2.0f, 2.0f, 2.0f)};
 
-  REQUIRE(acl::vec3a(acl::half_extends(bounds1)) == Catch::Approx(2.0f));
-  REQUIRE(acl::vec3a(acl::half_extends(bounds1)) == Catch::Approx(2.0f));
-  REQUIRE(acl::vec3a(acl::half_extends(bounds1)) == Catch::Approx(2.0f));
+  REQUIRE(acl::get_x(acl::half_extends(bounds1)) == Catch::Approx(2.0f));
+  REQUIRE(acl::get_y(acl::half_extends(bounds1)) == Catch::Approx(2.0f));
+  REQUIRE(acl::get_z(acl::half_extends(bounds1)) == Catch::Approx(2.0f));
 }
 
-TEST_CASE("Validate bounding_volume::radius", "[bounding_volume::radius]")
+TEMPLATE_TEST_CASE("Validate bounding_volume_t<TestType>::radius", "[bounding_volume_t<TestType>::radius]", float,
+                   double)
 {
-  acl::bounding_volume bounds1 = {
-    acl::sphere(5.0f, 2.2f, 5.0f, 3.4641f),
-    acl::vec3a(2.0f, 2.0f, 2.0f)
-  };
+  acl::bounding_volume_t<TestType> bounds1 = {acl::sphere_t<TestType>(5.0f, 2.2f, 5.0f, 3.4641f),
+                                              acl::vec3a_t<TestType>(2.0f, 2.0f, 2.0f)};
 
   REQUIRE(acl::radius(bounds1) == Catch::Approx(3.4641f));
 }
 
-TEST_CASE("Validate bounding_volume::vradius", "[bounding_volume::vradius]")
+TEMPLATE_TEST_CASE("Validate bounding_volume_t<TestType>::vradius", "[bounding_volume_t<TestType>::vradius]", float,
+                   double)
 {
-  acl::bounding_volume bounds1 = {
-    acl::sphere(5.0f, 2.2f, 5.0f, 3.4641f),
-    acl::vec3a(2.0f, 2.0f, 2.0f),
-    acl::sphere(0.0f, 0.0f, 0.0f, 3.4641f),
-    acl::vec3a(2.0f, 2.0f, 2.0f),
-  };
+  acl::bounding_volume_t<TestType> bounds1 = {acl::sphere_t<TestType>(5.0f, 2.2f, 5.0f, 3.4641f),
+                                              acl::vec3a_t<TestType>(2.0f, 2.0f, 2.0f)};
 
-  REQUIRE(acl::x(acl::vradius(bounds1)) == Catch::Approx(3.4641f));
+  REQUIRE(acl::get_x(acl::vradius(bounds1)) == Catch::Approx(3.4641f));
 }
 
-TEST_CASE("Validate bounding_volume::nullify", "[bounding_volume::nullify]")
+TEMPLATE_TEST_CASE("Validate bounding_volume_t<TestType>::nullify", "[bounding_volume_t<TestType>::nullify]", float,
+                   double)
 {
-  acl::bounding_volume bounds1 = {
-    acl::sphere(5.0f, 2.2f, 5.0f, 3.4641f),
-    acl::vec3a(2.0f, 2.0f, 2.0f)
-  };
+  acl::bounding_volume_t<TestType> bounds1 = {acl::sphere_t<TestType>(5.0f, 2.2f, 5.0f, 3.4641f),
+                                              acl::vec3a_t<TestType>(2.0f, 2.0f, 2.0f)};
   acl::nullify(bounds1);
-  REQUIRE(acl::x(acl::center(bounds1)) == Catch::Approx(0.0f));
-  REQUIRE(acl::y(acl::center(bounds1)) == Catch::Approx(0.0f));
-  REQUIRE(acl::z(acl::center(bounds1)) == Catch::Approx(0.0f));
+  REQUIRE(acl::get_x(acl::center(bounds1)) == Catch::Approx(0.0f));
+  REQUIRE(acl::get_y(acl::center(bounds1)) == Catch::Approx(0.0f));
+  REQUIRE(acl::get_z(acl::center(bounds1)) == Catch::Approx(0.0f));
   REQUIRE(acl::radius(bounds1) == Catch::Approx(0.0f));
-  REQUIRE(acl::x(acl::half_extends(bounds1)) == Catch::Approx(0.0f));
-  REQUIRE(acl::y(acl::half_extends(bounds1)) == Catch::Approx(0.0f));
-  REQUIRE(acl::z(acl::half_extends(bounds1)) == Catch::Approx(0.0f));
+  REQUIRE(acl::get_x(acl::half_extends(bounds1)) == Catch::Approx(0.0f));
+  REQUIRE(acl::get_y(acl::half_extends(bounds1)) == Catch::Approx(0.0f));
+  REQUIRE(acl::get_z(acl::half_extends(bounds1)) == Catch::Approx(0.0f));
 }
 
-TEST_CASE("Validate bounding_volume::from_box", "[bounding_volume::from_box]")
+TEMPLATE_TEST_CASE("Validate bounding_volume_t<TestType>::from_box", "[bounding_volume_t<TestType>::from_box]", float,
+                   double)
 {
-  acl::bounding_volume bounds1 = acl::make_bounding_volume(acl::vec3a(2.0f, 1.0f, 5.0f), acl::vec3a(4.0f, 1.0f, 6.0f));
-  REQUIRE(acl::x(acl::center(bounds1)) == Catch::Approx(2.0f));
-  REQUIRE(acl::y(acl::center(bounds1)) == Catch::Approx(1.0f));
-  REQUIRE(acl::z(acl::center(bounds1)) == Catch::Approx(5.0f));
+  acl::bounding_volume_t<TestType> bounds1 =
+    acl::make_bounding_volume(acl::vec3a_t<TestType>(2.0f, 1.0f, 5.0f), acl::vec3a_t<TestType>(4.0f, 1.0f, 6.0f));
+  REQUIRE(acl::get_x(acl::center(bounds1)) == Catch::Approx(2.0f));
+  REQUIRE(acl::get_y(acl::center(bounds1)) == Catch::Approx(1.0f));
+  REQUIRE(acl::get_z(acl::center(bounds1)) == Catch::Approx(5.0f));
   REQUIRE(acl::radius(bounds1) == Catch::Approx(7.28011f));
-  REQUIRE(acl::x(acl::half_extends(bounds1)) == Catch::Approx(4.0f));
-  REQUIRE(acl::y(acl::half_extends(bounds1)) == Catch::Approx(1.0f));
-  REQUIRE(acl::z(acl::half_extends(bounds1)) == Catch::Approx(6.0f));
+  REQUIRE(acl::get_x(acl::half_extends(bounds1)) == Catch::Approx(4.0f));
+  REQUIRE(acl::get_y(acl::half_extends(bounds1)) == Catch::Approx(1.0f));
+  REQUIRE(acl::get_z(acl::half_extends(bounds1)) == Catch::Approx(6.0f));
 }
 
-TEST_CASE("Validate bounding_volume", "[bounding_volume]")
+TEMPLATE_TEST_CASE("Validate bounding_volume_t<TestType>", "[bounding_volume_t<TestType>]", float, double)
 {
-  acl::bounding_volume bounds1 = {
-    acl::sphere(5.0f, 2.2f, 5.0f, 3.4641f),
-    acl::vec3a(2.0f, 2.0f, 2.0f)
-  };
+  acl::bounding_volume_t<TestType> bounds1 = {acl::sphere_t<TestType>(5.0f, 2.2f, 5.0f, 3.4641f),
+                                              acl::vec3a_t<TestType>(2.0f, 2.0f, 2.0f)};
 
-  bounds1 = acl::make_bounding_volume(acl::vec3a(2.0f, 1.0f, 5.0f), acl::vec3a(4.0f, 1.0f, 6.0f), 1100.0f);
-  REQUIRE(acl::x(acl::center(bounds1)) == Catch::Approx(2.0f));
-  REQUIRE(acl::y(acl::center(bounds1)) == Catch::Approx(1.0f));
-  REQUIRE(acl::z(acl::center(bounds1)) == Catch::Approx(5.0f));
+  bounds1 = acl::make_bounding_volume(acl::vec3a_t<TestType>(2.0f, 1.0f, 5.0f),
+                                      acl::vec3a_t<TestType>(4.0f, 1.0f, 6.0f), 1100.0f);
+  REQUIRE(acl::get_x(acl::center(bounds1)) == Catch::Approx(2.0f));
+  REQUIRE(acl::get_y(acl::center(bounds1)) == Catch::Approx(1.0f));
+  REQUIRE(acl::get_z(acl::center(bounds1)) == Catch::Approx(5.0f));
   REQUIRE(acl::radius(bounds1) == Catch::Approx(1100.0f));
-  REQUIRE(acl::x(acl::half_extends(bounds1)) == Catch::Approx(4.0f));
-  REQUIRE(acl::y(acl::half_extends(bounds1)) == Catch::Approx(1.0f));
-  REQUIRE(acl::z(acl::half_extends(bounds1)) == Catch::Approx(6.0f));
+  REQUIRE(acl::get_x(acl::half_extends(bounds1)) == Catch::Approx(4.0f));
+  REQUIRE(acl::get_y(acl::half_extends(bounds1)) == Catch::Approx(1.0f));
+  REQUIRE(acl::get_z(acl::half_extends(bounds1)) == Catch::Approx(6.0f));
 
-  bounds1 =
-    acl::make_bounding_volume(acl::sphere(12.0f, 31.0f, 5.0f, 22.0f), acl::vec3a(14.0f, 15.0f, 61.0f));
-  REQUIRE(acl::x(acl::center(bounds1)) == Catch::Approx(12.0f));
-  REQUIRE(acl::y(acl::center(bounds1)) == Catch::Approx(31.0f));
-  REQUIRE(acl::z(acl::center(bounds1)) == Catch::Approx(5.0f));
+  bounds1 = acl::make_bounding_volume(acl::sphere_t<TestType>(12.0f, 31.0f, 5.0f, 22.0f),
+                                      acl::vec3a_t<TestType>(14.0f, 15.0f, 61.0f));
+  REQUIRE(acl::get_x(acl::center(bounds1)) == Catch::Approx(12.0f));
+  REQUIRE(acl::get_y(acl::center(bounds1)) == Catch::Approx(31.0f));
+  REQUIRE(acl::get_z(acl::center(bounds1)) == Catch::Approx(5.0f));
   REQUIRE(acl::radius(bounds1) == Catch::Approx(22.0f));
-  REQUIRE(acl::x(acl::half_extends(bounds1)) == Catch::Approx(14.0f));
-  REQUIRE(acl::y(acl::half_extends(bounds1)) == Catch::Approx(15.0f));
-  REQUIRE(acl::z(acl::half_extends(bounds1)) == Catch::Approx(61.0f));
+  REQUIRE(acl::get_x(acl::half_extends(bounds1)) == Catch::Approx(14.0f));
+  REQUIRE(acl::get_y(acl::half_extends(bounds1)) == Catch::Approx(15.0f));
+  REQUIRE(acl::get_z(acl::half_extends(bounds1)) == Catch::Approx(61.0f));
 }
 
-TEST_CASE("Validate bounding_volume::update(matrix)", "[bounding_volume::update(matrix)]")
+TEMPLATE_TEST_CASE("Validate bounding_volume_t<TestType>::update(matrix)",
+                   "[bounding_volume_t<TestType>::update(matrix)]", float, double)
 {
-  acl::bounding_volume bounds = {
-    acl::sphere(5.0f, 2.2f, 5.0f, 3.4641f),
-    acl::vec3a(2.0f, 2.0f, 2.0f) };
-  acl::bounding_volume bounds_orig = {
-    acl::sphere(0.0f, 0.0f, 0.0f, 3.4641f),
-    acl::vec3a(2.0f, 2.0f, 2.0f),
+  acl::bounding_volume_t<TestType> bounds      = {acl::sphere_t<TestType>(5.0f, 2.2f, 5.0f, 3.4641f),
+                                                  acl::vec3a_t<TestType>(2.0f, 2.0f, 2.0f)};
+  acl::bounding_volume_t<TestType> bounds_orig = {
+    acl::sphere_t<TestType>(0.0f, 0.0f, 0.0f, 3.4641f),
+    acl::vec3a_t<TestType>(2.0f, 2.0f, 2.0f),
   };
 
-  acl::mat4 m = acl::make_mat4(2.0f, acl::make_quaternion(acl::vec3(0.0f, 1.0f, 0.0f), acl::to_radians(45.0f)), acl::vec3a(2.0f, 0.0f, 0.0f));
+  acl::mat4_t<TestType> m =
+    acl::make_mat4(static_cast<TestType>(2.0f),
+                   acl::make_quaternion(acl::vec3a_t<TestType>(0.0f, 1.0f, 0.0f), acl::to_radians<TestType>(45.0f)),
+                   acl::vec3a_t<TestType>(2.0f, 0.0f, 0.0f));
 
   bounds = (bounds_orig * m);
 
-  REQUIRE(acl::x(acl::center(bounds)) == Catch::Approx(2.0f));
-  REQUIRE(acl::y(acl::center(bounds)) == Catch::Approx(0.0f));
-  REQUIRE(acl::z(acl::center(bounds)) == Catch::Approx(0.0f));
+  REQUIRE(acl::get_x(acl::center(bounds)) == Catch::Approx(2.0f));
+  REQUIRE(acl::get_y(acl::center(bounds)) == Catch::Approx(0.0f));
+  REQUIRE(acl::get_z(acl::center(bounds)) == Catch::Approx(0.0f));
   REQUIRE(acl::radius(bounds) == Catch::Approx(6.9282f));
-  REQUIRE(acl::x(acl::half_extends(bounds)) == Catch::Approx(5.65685f));
-  REQUIRE(acl::y(acl::half_extends(bounds)) == Catch::Approx(4.0f));
-  REQUIRE(acl::z(acl::half_extends(bounds)) == Catch::Approx(5.65685));
+  REQUIRE(acl::get_x(acl::half_extends(bounds)) == Catch::Approx(5.65685f));
+  REQUIRE(acl::get_y(acl::half_extends(bounds)) == Catch::Approx(4.0f));
+  REQUIRE(acl::get_z(acl::half_extends(bounds)) == Catch::Approx(5.65685));
 }
 
-TEST_CASE("Validate bounding_volume::update(srt)", "[bounding_volume::update(srt)]")
+TEMPLATE_TEST_CASE("Validate bounding_volume_t<TestType>::update(srt)", "[bounding_volume_t<TestType>::update(srt)]",
+                   float, double)
 {
-  acl::bounding_volume bounds1 = {
-    acl::sphere(5.0f, 2.2f, 5.0f, 3.4641f),
-    acl::vec3a(2.0f, 2.0f, 2.0f) };
-  acl::bounding_volume bounds_orig = {
-    acl::sphere(0.0f, 0.0f, 0.0f, 3.4641f),
-    acl::vec3a(2.0f, 2.0f, 2.0f)
-  };
+  acl::bounding_volume_t<TestType> bounds1     = {acl::sphere_t<TestType>(5.0f, 2.2f, 5.0f, 3.4641f),
+                                                  acl::vec3a_t<TestType>(2.0f, 2.0f, 2.0f)};
+  acl::bounding_volume_t<TestType> bounds_orig = {acl::sphere_t<TestType>(0.0f, 0.0f, 0.0f, 3.4641f),
+                                                  acl::vec3a_t<TestType>(2.0f, 2.0f, 2.0f)};
 
-  bounds1 = acl::transform(bounds_orig, 2.0f,
-                               acl::make_quaternion(acl::vec3(0.0f, 1.0f, 0.0f), acl::to_radians(45.0f)),
-                               acl::vec3a(2.0f, 0.0f, 0.0f));
+  bounds1 = acl::make_bounding_volume(
+    bounds_orig, static_cast<TestType>(2.0f),
+    acl::make_quaternion(acl::vec3a_t<TestType>(0.0f, 1.0f, 0.0f), acl::to_radians<TestType>(45.0f)),
+    acl::vec3a_t<TestType>(2.0f, 0.0f, 0.0f));
 
-  REQUIRE(acl::x(acl::center(bounds1)) == Catch::Approx(2.0f));
-  REQUIRE(acl::y(acl::center(bounds1)) == Catch::Approx(0.0f));
-  REQUIRE(acl::z(acl::center(bounds1)) == Catch::Approx(0.0f));
+  REQUIRE(acl::get_x(acl::center(bounds1)) == Catch::Approx(2.0f));
+  REQUIRE(acl::get_y(acl::center(bounds1)) == Catch::Approx(0.0f));
+  REQUIRE(acl::get_z(acl::center(bounds1)) == Catch::Approx(0.0f));
   REQUIRE(acl::radius(bounds1) == Catch::Approx(6.9282f));
-  REQUIRE(acl::x(acl::half_extends(bounds1)) == Catch::Approx(5.65685f));
-  REQUIRE(acl::y(acl::half_extends(bounds1)) == Catch::Approx(4.0f));
-  REQUIRE(acl::z(acl::half_extends(bounds1)) == Catch::Approx(5.65685));
+  REQUIRE(acl::get_x(acl::half_extends(bounds1)) == Catch::Approx(5.65685f));
+  REQUIRE(acl::get_y(acl::half_extends(bounds1)) == Catch::Approx(4.0f));
+  REQUIRE(acl::get_z(acl::half_extends(bounds1)) == Catch::Approx(5.65685));
 }
 
-TEST_CASE("Validate bounding_volume::update(transform)", "[bounding_volume::update(transform)]")
+TEMPLATE_TEST_CASE("Validate bounding_volume_t<TestType>::update(transform)",
+                   "[bounding_volume_t<TestType>::update(transform)]", float, double)
 {
-  acl::bounding_volume bounds1 = {
-    acl::sphere(5.0f, 2.2f, 5.0f, 3.4641f),
-    acl::vec3a(2.0f, 2.0f, 2.0f)};
-  acl::bounding_volume bounds_orig = {
-    acl::sphere(0.0f, 0.0f, 0.0f, 3.4641f),
-    acl::vec3a(2.0f, 2.0f, 2.0f)
-  };
+  acl::bounding_volume_t<TestType> bounds1     = {acl::sphere_t<TestType>(5.0f, 2.2f, 5.0f, 3.4641f),
+                                                  acl::vec3a_t<TestType>(2.0f, 2.0f, 2.0f)};
+  acl::bounding_volume_t<TestType> bounds_orig = {acl::sphere_t<TestType>(0.0f, 0.0f, 0.0f, 3.4641f),
+                                                  acl::vec3a_t<TestType>(2.0f, 2.0f, 2.0f)};
 
-  acl::transform tf;
-  tf.rotation = acl::make_quaternion(acl::vec3(0.0f, 1.0f, 0.0f), acl::to_radians(45.0f));
-  tf.translation_and_scale = acl::vec4(2.0f, 0.0f, 0.0f, 2.0f);
+  acl::transform_t<TestType> tf;
+  tf.rotation = acl::make_quaternion(acl::vec3a_t<TestType>(0.0f, 1.0f, 0.0f), acl::to_radians<TestType>(45.0f));
+  tf.translation_and_scale = acl::vec4_t<TestType>(2.0f, 0.0f, 0.0f, 2.0f);
 
-  bounds1 = (bounds_orig * tf);
+  bounds1 = bounds_orig * tf;
 
-  REQUIRE(acl::x(acl::center(bounds1)) == Catch::Approx(2.0f));
-  REQUIRE(acl::y(acl::center(bounds1)) == Catch::Approx(0.0f));
-  REQUIRE(acl::z(acl::center(bounds1)) == Catch::Approx(0.0f));
+  REQUIRE(acl::get_x(acl::center(bounds1)) == Catch::Approx(2.0f));
+  REQUIRE(acl::get_y(acl::center(bounds1)) == Catch::Approx(0.0f));
+  REQUIRE(acl::get_z(acl::center(bounds1)) == Catch::Approx(0.0f));
   REQUIRE(acl::radius(bounds1) == Catch::Approx(6.9282f));
-  REQUIRE(acl::x(acl::half_extends(bounds1)) == Catch::Approx(5.65685f));
-  REQUIRE(acl::y(acl::half_extends(bounds1)) == Catch::Approx(4.0f));
-  REQUIRE(acl::z(acl::half_extends(bounds1)) == Catch::Approx(5.65685));
+  REQUIRE(acl::get_x(acl::half_extends(bounds1)) == Catch::Approx(5.65685f));
+  REQUIRE(acl::get_y(acl::half_extends(bounds1)) == Catch::Approx(4.0f));
+  REQUIRE(acl::get_z(acl::half_extends(bounds1)) == Catch::Approx(5.65685));
 }
 
-TEST_CASE("Validate bounding_volume::update(bounding_volume)", "[bounding_volume::update(bounding_volume)]")
+TEMPLATE_TEST_CASE("Validate bounding_volume_t<TestType>::update(bounding_volume_t<TestType>)",
+                   "[bounding_volume_t<TestType>::update(bounding_volume_t<TestType>)]", float, double)
 {
-  acl::bounding_volume bounds1 = {
-    acl::sphere(5.0f, 4.0f, 5.0f, 3.4641f),
-    acl::vec3a(2.0f, 2.0f, 2.0f)
-  };
-  
-  acl::bounding_volume_t bounds2 = {
-    acl::sphere(-5.0f, -4.0f, 5.0f, 13.4641f),
-    acl::vec3a(10.0f, 10.0f, 10.0f)
-  };
-  
-  acl::append(bounds1, bounds2);
+  acl::bounding_volume_t<TestType> bounds1 = {acl::sphere_t<TestType>(5.0f, 4.0f, 5.0f, 3.4641f),
+                                              acl::vec3a_t<TestType>(2.0f, 2.0f, 2.0f)};
 
-  REQUIRE(acl::x(acl::center(bounds1)) == Catch::Approx(-4.0f));
-  REQUIRE(acl::y(acl::center(bounds1)) == Catch::Approx(-4.0f));
-  REQUIRE(acl::z(acl::center(bounds1)) == Catch::Approx(5.0f));
+  acl::bounding_volume_t<TestType> bounds2 = {acl::sphere_t<TestType>(-5.0f, -4.0f, 5.0f, 13.4641f),
+                                              acl::vec3a_t<TestType>(10.0f, 10.0f, 10.0f)};
+
+  bounds1 = (bounds1 + bounds2);
+
+  REQUIRE(acl::get_x(acl::center(bounds1)) == Catch::Approx(-4.0f));
+  REQUIRE(acl::get_y(acl::center(bounds1)) == Catch::Approx(-4.0f));
+  REQUIRE(acl::get_z(acl::center(bounds1)) == Catch::Approx(5.0f));
   REQUIRE(acl::radius(bounds1) == Catch::Approx(14.86722f));
-  REQUIRE(acl::x(acl:::half_extends(bounds1)) == Catch::Approx(11.0f));
-  REQUIRE(acl::y(acl:::half_extends(bounds1)) == Catch::Approx(10.0f));
-  REQUIRE(acl::z(acl:::half_extends(bounds1)) == Catch::Approx(10.0f));
+  REQUIRE(acl::get_x(acl::half_extends(bounds1)) == Catch::Approx(11.0f));
+  REQUIRE(acl::get_y(acl::half_extends(bounds1)) == Catch::Approx(10.0f));
+  REQUIRE(acl::get_z(acl::half_extends(bounds1)) == Catch::Approx(10.0f));
 }
 
-TEST_CASE("Validate bounding_volume::update(points)", "[bounding_volume::update(points)]")
+TEMPLATE_TEST_CASE("Validate bounding_volume_t<TestType>::update(points)",
+                   "[bounding_volume_t<TestType>::update(points)]", float, double)
 {
-  acl::bounding_volume bounds1 = {
-    acl::sphere(5.0f, 4.0f, 5.0f, 3.4641f),
-    acl::vec3a(2.0f, 2.0f, 2.0f)
-  };
+  acl::bounding_volume_t<TestType> bounds1 = {acl::sphere_t<TestType>(5.0f, 4.0f, 5.0f, 3.4641f),
+                                              acl::vec3a_t<TestType>(2.0f, 2.0f, 2.0f)};
 
-  acl::vec3a_t points[3] = {acl::vec3a(-5.0f, -4.0f, 5.0f), acl::vec3a(-15.0f, -14.0f, -5.0f),
-                            acl::vec3a(5.0f, 6.0f, 15.0f)};
+  acl::vec3a_t<TestType> points[3] = {acl::vec3a_t<TestType>(-5.0f, -4.0f, 5.0f),
+                                      acl::vec3a_t<TestType>(-15.0f, -14.0f, -5.0f),
+                                      acl::vec3a_t<TestType>(5.0f, 6.0f, 15.0f)};
 
-  acl::append(bounds1, points, 3);
+  bounds1 = bounds1 + acl::make_bounding_volume(points, 3);
 
-  REQUIRE(acl::x(acl::center(bounds1)) == Catch::Approx(-4.0f));
-  REQUIRE(acl::y(acl::center(bounds1)) == Catch::Approx(-4.0f));
-  REQUIRE(acl::z(acl::center(bounds1)) == Catch::Approx(5.0f));
+  REQUIRE(acl::get_x(acl::center(bounds1)) == Catch::Approx(-4.0f));
+  REQUIRE(acl::get_y(acl::center(bounds1)) == Catch::Approx(-4.0f));
+  REQUIRE(acl::get_z(acl::center(bounds1)) == Catch::Approx(5.0f));
   REQUIRE(acl::radius(bounds1) == Catch::Approx(17.91647f));
-  REQUIRE(acl::x(acl::half_extends(bounds1)) == Catch::Approx(11.0f));
-  REQUIRE(acl::y(acl::half_extends(bounds1)) == Catch::Approx(10.0f));
-  REQUIRE(acl::z(acl::half_extends(bounds1)) == Catch::Approx(10.0f));
+  REQUIRE(acl::get_x(acl::half_extends(bounds1)) == Catch::Approx(11.0f));
+  REQUIRE(acl::get_y(acl::half_extends(bounds1)) == Catch::Approx(10.0f));
+  REQUIRE(acl::get_z(acl::half_extends(bounds1)) == Catch::Approx(10.0f));
 }

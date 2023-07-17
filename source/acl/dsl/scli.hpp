@@ -29,8 +29,7 @@ struct param_context
 {
   virtual ~param_context() noexcept = default;
 
-  virtual std::pair<param_context*, cmd_state*> enter_param_context(scli&, int param_pos, std::string_view param_name,
-                                                                    cmd_state* cstate)
+  virtual std::pair<param_context*, cmd_state*> enter_param_context(scli&, int, std::string_view, cmd_state* cstate)
   {
     return {nullptr, cstate};
   }
@@ -842,7 +841,7 @@ struct cmd_group : cmd_context
       sub_objects[name] = std::move(cmd);
   }
 
-  cmd_context* get_context(scli& scli, std::string_view cmd_name) override
+  cmd_context* get_context(scli&, std::string_view cmd_name) override
   {
     auto it = sub_objects.find(cmd_name);
     if (it != sub_objects.end())

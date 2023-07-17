@@ -1,13 +1,12 @@
 #pragma once
 
-#include "types_sse.hpp"
+#include "types.hpp"
 #include "vml_fcn.hpp"
 
 namespace acl
 {
 
 using real            = float;
-using quad            = quad_t<float>;
 using vec2            = vec2_t<float>;
 using vec3            = vec3_t<float>;
 using vec3a           = vec3a_t<float>;
@@ -32,9 +31,9 @@ using transform       = transform_t<float>;
 using frustum         = frustum_t<float>;
 using color           = color_t<float>;
 using rgba8           = color_t<uint8_t>;
+using extends         = extends_t<float>;
 
 using real_d            = double;
-using quad_d            = quad_t<double>;
 using vec2_d            = vec2_t<double>;
 using vec3_d            = vec3_t<double>;
 using vec3a_d           = vec3a_t<double>;
@@ -57,6 +56,7 @@ using bounds_info_d     = bounds_info_t<double>;
 using bounding_volume_d = bounding_volume_t<double>;
 using transform_d       = transform_t<double>;
 using frustum_d         = frustum_t<double>;
+using extends_d         = extends_t<double>;
 
 using vec2_i  = vec2_t<int>;
 using vec3_i  = vec3_t<int>;
