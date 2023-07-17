@@ -25,8 +25,10 @@ jobs:
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
       run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DACL_BUILD_TESTS=ON
 
-    - name: Install lcov
-      run: sudo apt-get install -y lcov
+    - name: Install lcov & gcc
+      run:  |
+            sudo apt update
+            sudo apt-get install -y lcov gcc-13 g++-13
 
     - name: Build
       # Build your program with the given configuration
