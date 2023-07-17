@@ -55,10 +55,7 @@ inline vec3a_t<scalar_t> cross(vec3a_t<scalar_t> const& vec1, vec3a_t<scalar_t> 
 template <typename scalar_t>
 inline bool greater_all(vec3a_t<scalar_t> const& q1, vec3a_t<scalar_t> const& q2) noexcept
 {
-  if constexpr (has_sse)
-    return vml::greater_all(q1.v, q2.v);
-  else
-    return (q1[0] > q2[0] && q1[1] > q2[1] && q1[2] > q2[2]) != 0;
+  return vml::greater_all_3(q1.v, q2.v);
 }
 
 template <typename scalar_t>
@@ -73,10 +70,7 @@ inline bool greater_any(vec3a_t<scalar_t> const& q1, vec3a_t<scalar_t> const& q2
 template <typename scalar_t>
 inline bool lesser_all(vec3a_t<scalar_t> const& q1, vec3a_t<scalar_t> const& q2) noexcept
 {
-  if constexpr (has_sse)
-    return vml::lesser_all(q1.v, q2.v);
-  else
-    return q1[0] < q2[0] && q1[1] < q2[1] && q1[2] < q2[2];
+  return vml::lesser_all_3(q1.v, q2.v);
 }
 
 template <typename scalar_t>

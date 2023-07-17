@@ -569,6 +569,19 @@ inline bool greater_all(quadvt const& a, quadvt const& b) noexcept
 }
 
 template <typename quadvt>
+inline bool greater_all_3(quadvt const& a, quadvt const& b) noexcept
+{
+  if constexpr (has_sse && std::is_same_v<float, qscalar_t<quadvt>>)
+  {
+    return (_mm_movemask_ps(_mm_cmpgt_ps(a, b)) == 0x7);
+  }
+  else
+  {
+    return a[0] > b[0] && a[1] > b[1] && a[2] > b[2];
+  }
+}
+
+template <typename quadvt>
 inline bool lesser_any(quadvt const& a, quadvt const& b) noexcept
 {
   if constexpr (has_sse && std::is_same_v<float, qscalar_t<quadvt>>)
@@ -591,6 +604,19 @@ inline bool lesser_all(quadvt const& a, quadvt const& b) noexcept
   else
   {
     return a[0] < b[0] && a[1] < b[1] && a[2] < b[2] && a[3] < b[3];
+  }
+}
+
+template <typename quadvt>
+inline bool lesser_all_3(quadvt const& a, quadvt const& b) noexcept
+{
+  if constexpr (has_sse && std::is_same_v<float, qscalar_t<quadvt>>)
+  {
+    return (_mm_movemask_ps(_mm_cmplt_ps(a, b)) == 0x7);
+  }
+  else
+  {
+    return a[0] < b[0] && a[1] < b[1] && a[2] < b[2];
   }
 }
 
@@ -863,7 +889,7 @@ inline quadvt vdot(quadvt const& a, quadvt const& b) noexcept
 template <typename quadvt>
 inline qscalar_t<quadvt> dot(quadvt const& a, quadvt const& b) noexcept
 {
-  if constexpr (has_sse)
+  if constexpr (has_sse && std::is_same_v<float, qscalar_t<quadvt>>)
   {
     return get_x(vdot(a, b));
   }
@@ -1574,10 +1600,10 @@ inline quadv_array_t<scalar_t, 2> mul_aabb_mat4(quadv_array_t<scalar_t, 2> const
     min2      = _mm_mul_ps(min2, m[2]);
 
     quadv_array_t<scalar_t, 2> ret;
-    ret[0] =
-      _mm_add_ps(_mm_add_ps(_mm_min_ps(max0, min0), _mm_add_ps(_mm_min_ps(max1, min1), _mm_min_ps(max2, min2))), m[3]);
-    ret[1] =
-      _mm_add_ps(_mm_add_ps(_mm_max_ps(max0, min0), _mm_add_ps(_mm_max_ps(max1, min1), _mm_max_ps(max2, min2))), m[3]);
+    ret[0] = clear_w(
+      _mm_add_ps(_mm_add_ps(_mm_min_ps(max0, min0), _mm_add_ps(_mm_min_ps(max1, min1), _mm_min_ps(max2, min2))), m[3]));
+    ret[1] = clear_w(
+      _mm_add_ps(_mm_add_ps(_mm_max_ps(max0, min0), _mm_add_ps(_mm_max_ps(max1, min1), _mm_max_ps(max2, min2))), m[3]));
     return ret;
   }
   else
