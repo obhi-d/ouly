@@ -66,64 +66,6 @@ using tuple_of_crefs = decltype(tuple_element_crefs(std::declval<Tuple>()));
 template <typename size_type>
 constexpr size_type high_bit_mask_v = (static_cast<size_type>(0x80) << ((sizeof(size_type) - 1) * 8));
 
-/*
-*
-* TODO Fix natvis
-*
-template <typename T1, typename... Args>
-struct tuple_array_visualizer_base : tuple_array_visualizer_base<Args...>
-{
-  using base = tuple_array_visualizer_base<Args...>;
-  T1 data;
-};
-
-template <typename T1>
-struct tuple_array_visualizer_base<T1>
-{
-  T1 data;
-};
-
-template <typename Traits>
-concept HasBase = requires
-{
-  typename Traits::base;
-};
-
-template <typename T, typename D, bool HasBase>
-struct tuple_array_visualizer_base_ref;
-
-template <typename T, typename D>
-struct tuple_array_visualizer_base_ref<T, D, true>
-{
-  using base = tuple_array_visualizer_base_ref<T, typename D::base, has_base<typename D::base>>;
-  using type = D;
-  T data;
-};
-
-template <typename T, typename D>
-struct tuple_array_visualizer_base_ref<T, D, false>
-{
-  using type = D;
-  T data;
-};
-
-template <typename... Args>
-constexpr auto tuple_array_visualizer_ctd(std::tuple<Args...>&&) -> tuple_array_visualizer_base<std::decay_t<Args>*...>;
-
-template <typename Tuple>
-using tuple_array_viz_alias = decltype(tuple_array_visualizer_ctd(std::declval<Tuple>()));
-
-template <typename Type, typename Tuple>
-using tuple_array_visualizer =
-  tuple_array_visualizer_base_ref<Type, tuple_array_viz_alias<Tuple>, has_base<tuple_array_viz_alias<Tuple>>>;
-
-template <typename T>
-static auto do_not_optimize(T&& v)
-{
-  return v;
-}
-*/
-
 template <typename size_type>
 constexpr size_type log2(size_type val)
 {

@@ -84,6 +84,7 @@ add_unit_test(NAME binary_serializer FILES "binary_serializer.cpp" )
 add_unit_test(NAME pool_allocator FILES "pool_allocator.cpp" )
 add_unit_test(NAME linear_allocator FILES "linear_allocator.cpp" )
 add_unit_test(NAME scli_tests FILES "scli_tests.cpp")
+add_unit_test(NAME scheduler FILES "scheduler.cpp")
 add_unit_test(NAME math_all FILES "math_common.cpp"
                                   "math_euler_angles.cpp"
                                   "math_frustum.cpp"

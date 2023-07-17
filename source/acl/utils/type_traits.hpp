@@ -186,6 +186,7 @@ template <typename R, typename C, typename... Args>
 struct function_traits<R (C::*)(Args...)>
 {
   static constexpr std::size_t arity = sizeof...(Args);
+  using class_type                   = C;
   using result_type                  = R;
   template <std::size_t Index>
   using arg_type                           = typename std::tuple_element_t<Index, std::tuple<Args...>>;
