@@ -58,7 +58,7 @@ inline scalar_t scale(transform_t<scalar_t> const& t) noexcept
 template <ScalarType scalar_t>
 inline void set_translation(transform_t<scalar_t>& t, vec3a_t<scalar_t> const& v) noexcept
 {
-  t.translation_and_scale = {v[0], v[1], v[2], t.translation_and_scale[3]};
+  t.translation_and_scale = vec4_t<scalar_t>{v[0], v[1], v[2], t.translation_and_scale[3]};
 }
 
 template <ScalarType scalar_t>

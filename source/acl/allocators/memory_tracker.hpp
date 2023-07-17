@@ -48,11 +48,11 @@ struct dummy_debug_tracer
 template <typename tag_arg, typename debug_tracer = dummy_debug_tracer, bool enabled = false>
 struct memory_tracker
 {
-  inline static void* when_allocate(void* i_data, std::size_t i_size)
+  inline static void* when_allocate(void* i_data, [[maybe_unused]] std::size_t i_size)
   {
     return i_data;
   }
-  inline static void* when_deallocate(void* i_data, std::size_t i_size)
+  inline static void* when_deallocate(void* i_data, [[maybe_unused]] std::size_t i_size)
   {
     return i_data;
   }

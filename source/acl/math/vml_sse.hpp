@@ -7,18 +7,16 @@
 namespace acl::vml
 {
 
-template <typename iquadv_t>
-struct qvscalar_t
-{
-  using type = typename iquadv_t::value_type;
-};
-
 template <FloatingType scalar_t>
 using float_to_int_t = std::conditional_t<sizeof(scalar_t) == 4, int, int64_t>;
 template <FloatingType scalar_t>
 using float_to_uint_t = std::conditional_t<sizeof(scalar_t) == 4, uint32_t, int64_t>;
 
+template <ScalarType A>
+constexpr A get_quad_scalar_type(std::array<A, 4>) { return {}; }
 #ifdef ACL_USE_SSE2
+
+constexpr float get_quad_scalar_type(__m128) { return 0.0f; }
 
 __m128 exp_ps(__m128 x);
 __m128 log_ps(__m128 x);
@@ -26,11 +24,6 @@ __m128 sin_ps(__m128 x);
 __m128 cos_ps(__m128 x);
 void   sincos_ps(__m128 x, __m128*, __m128*);
 
-template <>
-struct qvscalar_t<__m128>
-{
-  using type = float;
-};
 
 #else
 inline auto exp_ps(auto x)
@@ -45,6 +38,12 @@ inline auto log_ps(auto x)
 
 #endif
 
+template <typename iquadv_t>
+struct qvscalar_t
+{
+  using type = decltype(get_quad_scalar_type(iquadv_t()));
+};
+
 #ifdef ACL_USE_AVX
 
 __m256 exp256_ps(__m256 x);
@@ -53,11 +52,6 @@ __m256 sin256_ps(__m256 x);
 __m256 cos256_ps(__m256 x);
 void   sincos256_ps(__m256 x, __m256*, __m256*);
 
-template <>
-struct qvscalar_t<__m256d>
-{
-  using type = double;
-};
 #else
 inline auto exp256_pd(auto x)
 {

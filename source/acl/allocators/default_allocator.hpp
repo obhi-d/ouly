@@ -202,7 +202,7 @@ struct ACL_EMPTY_BASES default_allocator
   template <typename Alignment = alignment<align>>
   inline static address allocate(size_type i_sz, Alignment i_alignment = {})
   {
-    auto measure = statistics::report_allocate(i_sz);
+    [[maybe_unused]] auto measure = statistics::report_allocate(i_sz);
 
     return tracker::when_allocate(
       i_alignment > alignof(std::max_align_t) ? acl::aligned_alloc(i_alignment, i_sz) : acl::malloc(i_sz), i_sz);
@@ -211,7 +211,7 @@ struct ACL_EMPTY_BASES default_allocator
   template <typename Alignment = alignment<align>>
   inline static address zero_allocate(size_type i_sz, Alignment i_alignment = {})
   {
-    auto measure = statistics::report_allocate(i_sz);
+    [[maybe_unused]] auto measure = statistics::report_allocate(i_sz);
     return tracker::when_allocate(
       i_alignment > alignof(std::max_align_t) ? acl::aligned_zmalloc(i_alignment, i_sz) : acl::zmalloc(i_sz), i_sz);
   }

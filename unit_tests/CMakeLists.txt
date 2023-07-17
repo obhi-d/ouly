@@ -32,7 +32,7 @@ function(add_unit_test)
 
   set(options SKIP_TEST SANITIZE)
   set(one_value_arg NAME)
-  set(multi_value_arg FILES LINK_LIBS DEFINES)
+  set(multi_value_arg FILES LINK_LIBS DEFINES CCARGS)
   cmake_parse_arguments(unit_test "${options}" "${one_value_arg}" "${multi_value_arg}" ${ARGN})
   set(target_name "test_${unit_test_NAME}")
   add_executable(${target_name} ${unit_test_FILES} "validity_main.cpp")
@@ -40,8 +40,11 @@ function(add_unit_test)
   target_compile_definitions(${target_name} PUBLIC -DACL_REC_STATS -DACL_THROW_ON_ERROR ${unit_test_DEFINES})
   target_compile_options(${target_name} PRIVATE
     $<$<CXX_COMPILER_ID:MSVC>:/WX>
-    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic -Werror>
     )
+  if (unit_test_CCARGS)
+      target_compile_options(${target_name} PRIVATE ${unit_test_CCARGS})
+      target_link_options(${target_name} PRIVATE ${unit_test_CCARGS})
+  endif()
   ## Skip test?
   if (NOT unit_test_SKIP_TEST)
     add_test(${target_name} ${target_name})
@@ -124,7 +127,7 @@ add_unit_test(NAME math_all_sse3 FILES "math_common.cpp"
                                   "math_vec.cpp"
                                   "math_aabb.cpp"
                                   "math_axis_angle.cpp"
-                                  "math_bounding_volume.cpp" DEFINES "-DACL_USE_SSE3=1")
+                                  "math_bounding_volume.cpp" DEFINES "-DACL_USE_SSE3=1" CCARGS "-msse3")
 
 add_unit_test(NAME math_all_avx FILES "math_common.cpp"
                                   "math_euler_angles.cpp"
@@ -139,7 +142,7 @@ add_unit_test(NAME math_all_avx FILES "math_common.cpp"
                                   "math_vec.cpp"
                                   "math_aabb.cpp"
                                   "math_axis_angle.cpp"
-                                  "math_bounding_volume.cpp" DEFINES "-DACL_USE_AVX=1")
+                                  "math_bounding_volume.cpp" DEFINES "-DACL_USE_AVX=1" CCARGS "-mavx")
 
 
 add_executable(acl-bench

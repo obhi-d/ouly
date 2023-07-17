@@ -15,7 +15,7 @@ TEST_CASE("Check basic_queue empty", "[basic_queue]")
   {
     queue.pop_front();
   }
-  catch (std::exception ex)
+  catch (std::exception const& ex)
   {
     CHECK(queue.empty() == true);
     exception = true;

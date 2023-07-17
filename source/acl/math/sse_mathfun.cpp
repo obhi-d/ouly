@@ -1,4 +1,3 @@
-#pragma once
 /* SIMD (SSE1+MMX or SSE2) implementation of sin, cos, exp and log
 
    Inspired by Intel Approximate Math library, and based on the

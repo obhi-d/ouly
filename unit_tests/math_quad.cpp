@@ -17,7 +17,7 @@ TEMPLATE_TEST_CASE("Vec4: Validate isinf", "[isinf]", float, double)
   acl::vec4_t<TestType> p = {std::numeric_limits<float>::infinity(), 1.0f, -1.0f, 10.0f};
   CHECK(acl::isinf(p) == true);
   CHECK(acl::get_x(acl::isinfv(p)) != 0.0f);
-  p = {1.0f, -std::numeric_limits<float>::infinity(), -1.0f, 10.0f};
+  p = acl::vec4_t<TestType>{1.0f, -std::numeric_limits<float>::infinity(), -1.0f, 10.0f};
   CHECK(acl::isinf(p) == true);
   CHECK(acl::get_x(acl::isinfv(p)) == 0.0f);
 }

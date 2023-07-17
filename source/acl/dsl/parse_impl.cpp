@@ -44,13 +44,13 @@
 
 
 // Unqualified %code blocks.
-#line 38 "C:/repos/acl/source/acl/dsl/scli.yy"
+#line 38 "/home/obhi/Code/acl/source/acl/dsl/scli.yy"
 
 #include "scli.hpp"
 #define SCANNER_PARAM scli.get_scanner()
 YY_DECL;
 
-#line 54 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
+#line 54 "/home/obhi/Code/acl/source/acl/dsl/parse_impl.cpp"
 
 
 #ifndef YY_
@@ -141,9 +141,9 @@ YY_DECL;
 #define YYERROR         goto yyerrorlab
 #define YYRECOVERING()  (!!yyerrstatus_)
 
-#line 7 "C:/repos/acl/source/acl/dsl/scli.yy"
+#line 7 "/home/obhi/Code/acl/source/acl/dsl/scli.yy"
 namespace acl {
-#line 147 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
+#line 147 "/home/obhi/Code/acl/source/acl/dsl/parse_impl.cpp"
 
   /// Build a parser object.
   scli_parser::scli_parser (acl::scli& scli_yyarg)
@@ -336,21 +336,21 @@ namespace acl {
         switch (yykind)
     {
       case symbol_kind::S_REGION_ID: // REGION_ID
-#line 65 "C:/repos/acl/source/acl/dsl/scli.yy"
+#line 65 "/home/obhi/Code/acl/source/acl/dsl/scli.yy"
                  { yyoutput << yysym.value.template as < std::string_view > (); }
-#line 342 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
+#line 342 "/home/obhi/Code/acl/source/acl/dsl/parse_impl.cpp"
         break;
 
       case symbol_kind::S_TEXT_REGION_ID: // TEXT_REGION_ID
-#line 65 "C:/repos/acl/source/acl/dsl/scli.yy"
+#line 65 "/home/obhi/Code/acl/source/acl/dsl/scli.yy"
                  { yyoutput << yysym.value.template as < std::string_view > (); }
-#line 348 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
+#line 348 "/home/obhi/Code/acl/source/acl/dsl/parse_impl.cpp"
         break;
 
       case symbol_kind::S_STRING: // STRING
-#line 65 "C:/repos/acl/source/acl/dsl/scli.yy"
+#line 65 "/home/obhi/Code/acl/source/acl/dsl/scli.yy"
                  { yyoutput << yysym.value.template as < std::string_view > (); }
-#line 354 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
+#line 354 "/home/obhi/Code/acl/source/acl/dsl/parse_impl.cpp"
         break;
 
       default:
@@ -469,12 +469,12 @@ namespace acl {
 
 
     // User initialization code.
-#line 33 "C:/repos/acl/source/acl/dsl/scli.yy"
+#line 33 "/home/obhi/Code/acl/source/acl/dsl/scli.yy"
 {
   yyla.location.source_name = scli.get_file_name();
 }
 
-#line 478 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
+#line 478 "/home/obhi/Code/acl/source/acl/dsl/parse_impl.cpp"
 
 
     /* Initialize the stack.  The initial state will be set in
@@ -621,91 +621,91 @@ namespace acl {
           switch (yyn)
             {
   case 6: // statement: "}"
-#line 77 "C:/repos/acl/source/acl/dsl/scli.yy"
+#line 77 "/home/obhi/Code/acl/source/acl/dsl/scli.yy"
                                                          { scli.exit_command_scope();  scli.destroy_comamnd_state();            }
-#line 627 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
+#line 627 "/home/obhi/Code/acl/source/acl/dsl/parse_impl.cpp"
     break;
 
   case 7: // statement: REGION_ID
-#line 78 "C:/repos/acl/source/acl/dsl/scli.yy"
+#line 78 "/home/obhi/Code/acl/source/acl/dsl/scli.yy"
                                                          { scli.enter_region(std::move(yystack_[0].value.as < std::string_view > ()));                                    }
-#line 633 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
+#line 633 "/home/obhi/Code/acl/source/acl/dsl/parse_impl.cpp"
     break;
 
   case 8: // statement: TEXT_REGION_ID TEXT_CONTENTS
-#line 79 "C:/repos/acl/source/acl/dsl/scli.yy"
+#line 79 "/home/obhi/Code/acl/source/acl/dsl/scli.yy"
                                                          { scli.enter_text_region(std::move(yystack_[1].value.as < std::string_view > ()), std::move(yystack_[0].value.as < acl::text_content > ()));                }
-#line 639 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
+#line 639 "/home/obhi/Code/acl/source/acl/dsl/parse_impl.cpp"
     break;
 
   case 9: // statement: "import" STRING_LITERAL ";"
-#line 80 "C:/repos/acl/source/acl/dsl/scli.yy"
+#line 80 "/home/obhi/Code/acl/source/acl/dsl/scli.yy"
                                                          { scli.import_script(std::move(yystack_[1].value.as < acl::text_content > ()));                                   }
-#line 645 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
+#line 645 "/home/obhi/Code/acl/source/acl/dsl/parse_impl.cpp"
     break;
 
   case 10: // commandname: STRING
-#line 82 "C:/repos/acl/source/acl/dsl/scli.yy"
+#line 82 "/home/obhi/Code/acl/source/acl/dsl/scli.yy"
                               { scli.set_next_command(yystack_[0].value.as < std::string_view > ()); }
-#line 651 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
+#line 651 "/home/obhi/Code/acl/source/acl/dsl/parse_impl.cpp"
     break;
 
   case 11: // commandname: STRING ":"
-#line 83 "C:/repos/acl/source/acl/dsl/scli.yy"
+#line 83 "/home/obhi/Code/acl/source/acl/dsl/scli.yy"
                               { scli.set_next_command(yystack_[1].value.as < std::string_view > ()); }
-#line 657 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
+#line 657 "/home/obhi/Code/acl/source/acl/dsl/parse_impl.cpp"
     break;
 
   case 12: // commanddecl: commandname ";"
-#line 86 "C:/repos/acl/source/acl/dsl/scli.yy"
+#line 86 "/home/obhi/Code/acl/source/acl/dsl/scli.yy"
                                                      { scli.execute_command(); scli.destroy_comamnd_state(); }
-#line 663 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
+#line 663 "/home/obhi/Code/acl/source/acl/dsl/parse_impl.cpp"
     break;
 
   case 13: // commanddecl: commandname parameters.1.N ";"
-#line 87 "C:/repos/acl/source/acl/dsl/scli.yy"
+#line 87 "/home/obhi/Code/acl/source/acl/dsl/scli.yy"
                                                              { scli.execute_command(); scli.destroy_comamnd_state(); }
-#line 669 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
+#line 669 "/home/obhi/Code/acl/source/acl/dsl/parse_impl.cpp"
     break;
 
   case 14: // commanddecl: commandname parameters.1.N "{"
-#line 88 "C:/repos/acl/source/acl/dsl/scli.yy"
+#line 88 "/home/obhi/Code/acl/source/acl/dsl/scli.yy"
                                                              { scli.execute_command(); scli.enter_command_scope();   }
-#line 675 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
+#line 675 "/home/obhi/Code/acl/source/acl/dsl/parse_impl.cpp"
     break;
 
   case 18: // parameter: STRING "="
-#line 95 "C:/repos/acl/source/acl/dsl/scli.yy"
+#line 95 "/home/obhi/Code/acl/source/acl/dsl/scli.yy"
                                                { scli.set_next_param_name(yystack_[1].value.as < std::string_view > ()); }
-#line 681 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
+#line 681 "/home/obhi/Code/acl/source/acl/dsl/parse_impl.cpp"
     break;
 
   case 19: // parameter: STRING_LITERAL
-#line 96 "C:/repos/acl/source/acl/dsl/scli.yy"
+#line 96 "/home/obhi/Code/acl/source/acl/dsl/scli.yy"
                                                { scli.set_param(std::move(yystack_[0].value.as < acl::text_content > ())); }
-#line 687 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
+#line 687 "/home/obhi/Code/acl/source/acl/dsl/parse_impl.cpp"
     break;
 
   case 20: // parameter: STRING
-#line 97 "C:/repos/acl/source/acl/dsl/scli.yy"
+#line 97 "/home/obhi/Code/acl/source/acl/dsl/scli.yy"
                                                { scli.set_param(yystack_[0].value.as < std::string_view > ()); }
-#line 693 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
+#line 693 "/home/obhi/Code/acl/source/acl/dsl/parse_impl.cpp"
     break;
 
   case 21: // parameter: "["
-#line 98 "C:/repos/acl/source/acl/dsl/scli.yy"
+#line 98 "/home/obhi/Code/acl/source/acl/dsl/scli.yy"
                                                        { scli.enter_param_scope(); }
-#line 699 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
+#line 699 "/home/obhi/Code/acl/source/acl/dsl/parse_impl.cpp"
     break;
 
   case 22: // parameter: "]"
-#line 99 "C:/repos/acl/source/acl/dsl/scli.yy"
+#line 99 "/home/obhi/Code/acl/source/acl/dsl/scli.yy"
                                                        { scli.exit_param_scope(); }
-#line 705 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
+#line 705 "/home/obhi/Code/acl/source/acl/dsl/parse_impl.cpp"
     break;
 
 
-#line 709 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
+#line 709 "/home/obhi/Code/acl/source/acl/dsl/parse_impl.cpp"
 
             default:
               break;
@@ -1184,11 +1184,11 @@ namespace acl {
 #endif // SCLI_DEBUG
 
 
-#line 7 "C:/repos/acl/source/acl/dsl/scli.yy"
+#line 7 "/home/obhi/Code/acl/source/acl/dsl/scli.yy"
 } // acl
-#line 1190 "C:/repos/acl/source/acl/dsl/parse_impl.cpp"
+#line 1190 "/home/obhi/Code/acl/source/acl/dsl/parse_impl.cpp"
 
-#line 104 "C:/repos/acl/source/acl/dsl/scli.yy"
+#line 104 "/home/obhi/Code/acl/source/acl/dsl/scli.yy"
 
 /*============================================================================*/
 

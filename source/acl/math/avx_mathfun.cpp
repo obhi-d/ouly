@@ -29,6 +29,7 @@
   (this is the zlib license)
 */
 
+#ifdef ACL_USE_AVX
 #include <immintrin.h>
 
 /* yes I know, the top of this file is quite ugly */
@@ -40,7 +41,7 @@ typedef __m256  v8sf; // vector of 8 float (avx)
 typedef __m256i v8si; // vector of 8 int   (avx)
 typedef __m128i v4si; // vector of 8 int   (avx)
 
-#define _PI32AVX_CONST(Name, Val) static const ALIGN32_BEG int _pi32avx_##Name[4] ALIGN32_END = {Val, Val, Val, Val}
+#define _PI32AVX_CONST(Name, Val) ALIGN32_BEG static const int _pi32avx_##Name[4] ALIGN32_END = {Val, Val, Val, Val}
 
 _PI32AVX_CONST(1, 1);
 _PI32AVX_CONST(inv1, ~1);
@@ -49,13 +50,13 @@ _PI32AVX_CONST(4, 4);
 
 /* declare some AVX constants -- why can't I figure a better way to do that? */
 #define _PS256_CONST(Name, Val)                                                                                        \
-  static const ALIGN32_BEG float _ps256_##Name[8] ALIGN32_END = {                                                      \
+  ALIGN32_BEG static const float _ps256_##Name[8] ALIGN32_END = {                                                      \
     static_cast<float>(Val), static_cast<float>(Val), static_cast<float>(Val), static_cast<float>(Val),                \
     static_cast<float>(Val), static_cast<float>(Val), static_cast<float>(Val), static_cast<float>(Val)}
 #define _PI32_CONST256(Name, Val)                                                                                      \
-  static const ALIGN32_BEG int _pi32_256_##Name[8] ALIGN32_END = {Val, Val, Val, Val, Val, Val, Val, Val}
+  ALIGN32_BEG static const int _pi32_256_##Name[8] ALIGN32_END = {Val, Val, Val, Val, Val, Val, Val, Val}
 #define _PS256_CONST_TYPE(Name, Type, Val)                                                                             \
-  static const ALIGN32_BEG Type _ps256_##Name[8] ALIGN32_END = {                                                       \
+  ALIGN32_BEG static const Type _ps256_##Name[8] ALIGN32_END = {                                                       \
     static_cast<Type>(Val), static_cast<Type>(Val), static_cast<Type>(Val), static_cast<Type>(Val),                    \
     static_cast<Type>(Val), static_cast<Type>(Val), static_cast<Type>(Val), static_cast<Type>(Val)}
 
@@ -726,3 +727,5 @@ void sincos256_ps(v8sf x, v8sf* s, v8sf* c)
   *s = _mm256_xor_ps(xmm1, sign_bit_sin);
   *c = _mm256_xor_ps(xmm2, sign_bit_cos);
 }
+
+#endif
