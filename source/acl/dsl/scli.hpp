@@ -220,6 +220,7 @@ public:
   void import_script(text_content&&);
   void parse(std::string_view src_name, std::string_view content) noexcept;
   void destroy_comamnd_state();
+  void init_root_context();
 
   static std::string_view default_import_handler(shared_state&, std::string_view) noexcept;
 
@@ -270,7 +271,7 @@ private:
   std::string_view source_name;
   param_stack      param_ctx_stack;
   command_stack    cmd_ctx_stack;
-  int              param_pos           = -1;
+  int              param_pos           = 0;
   int              skip_depth          = 0;
   int              pos                 = 0;
   int              pos_commit          = 0;

@@ -21,7 +21,7 @@ std::shared_ptr<scli::context> scli::builder::build()
 void scli::set_next_command(std::string_view name) noexcept
 {
   parameter   = {};
-  param_pos   = -1;
+  param_pos   = 0;
   current_cmd = nullptr;
   if (current_cmd_ctx)
   {
@@ -239,8 +239,11 @@ int scli::read(char* data, int size) noexcept
 
 void scli::destroy_comamnd_state()
 {
-  current_cmd->destroy(*this, current_cmd_state);
-  current_cmd_state = nullptr;
+  if (current_cmd)
+  {
+    current_cmd->destroy(*this, current_cmd_state);
+    current_cmd_state = nullptr;
+  }
 }
 
 std::string_view scli::default_import_handler(shared_state& sstate, std::string_view file) noexcept
@@ -270,6 +273,11 @@ std::string_view scli::default_import_handler(shared_state& sstate, std::string_
 
   auto r = sstate.imports.emplace(file, std::move(buffer));
   return r.first->second;
+}
+
+void scli::init_root_context()
+{
+  enter_region("root");
 }
 
 } // namespace acl

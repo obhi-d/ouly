@@ -71,9 +71,7 @@ YY_DECL;
 script:    statement           
 	     | statement script      
 
-statement:                                   
-          END
-		| commanddecl                            
+statement: commanddecl                            
 		| RBRACKET                               { scli.exit_command_scope();  scli.destroy_comamnd_state();            }
 		| REGION_ID                              { scli.enter_region(std::move($1));                                    }
 		| TEXT_REGION_ID TEXT_CONTENTS           { scli.enter_text_region(std::move($1), std::move($2));                }
@@ -107,6 +105,11 @@ parameter: | STRING ASSIGN                     { scli.set_next_param_name($1); }
 namespace acl
 {
 
+void scli_parser::error(const scli_parser::location_type& loc, const std::string& msg) 
+{
+    scli.error(loc, msg, "parse");
+}
+
 void scli::error(scli::location const& l, std::string_view err, std::string_view ctx) 
 {
   sstate.error_handler(l, err, ctx);
@@ -118,6 +121,7 @@ void scli::parse(std::string_view src_name, std::string_view content) noexcept
 	contents    = content;
 	enter_region("");
 	begin_scan();
+	init_root_context();
 	scli_parser parser(*this);
 	parser.parse();
 	end_scan();	
