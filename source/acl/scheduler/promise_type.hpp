@@ -4,11 +4,12 @@
 #include "awaiters.hpp"
 #include <array>
 #include <concepts>
+#include <semaphore>
 
-namespace acl
+namespace acl::detail
 {
 
-class base_promise : detail::coro_state
+class base_promise : public detail::coro_state
 {
 public:
   auto initial_suspend() noexcept
@@ -39,7 +40,7 @@ public:
       result().~Ty();
   }
 
-  template <std::constructible_from<Ty> V>
+  template <std::convertible_to<Ty> V>
   void return_value(V&& value) noexcept(std::is_nothrow_constructible_v<Ty, V&&>)
   {
     ::new (static_cast<void*>(std::addressof(data))) Ty(std::forward<V>(value));
@@ -114,4 +115,38 @@ public:
   }
 };
 
-} // namespace acl
+struct sync_waiter
+{
+  class promise_type
+  {
+  public:
+    inline auto initial_suspend() noexcept
+    {
+      return std::suspend_never();
+    }
+    inline auto final_suspend() noexcept
+    {
+      return std::suspend_never();
+    }
+    inline void unhandled_exception() noexcept
+    {
+      assert(0 && "Coroutine throwing! Terminate!");
+    }
+    void return_void() noexcept {}
+
+    sync_waiter get_return_object() const
+    {
+      return sync_waiter{};
+    }
+  };
+};
+
+template <typename Awaiter>
+sync_waiter wait(std::binary_semaphore& event, Awaiter&& task)
+{
+  co_await task;
+  event.release();
+  co_return;
+}
+
+} // namespace acl::detail

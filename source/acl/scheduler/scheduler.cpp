@@ -2,9 +2,17 @@
 #include "scheduler.hpp"
 #include "task.hpp"
 #include <acl/math/vml_fcn.hpp>
+#include <latch>
 
 namespace acl
 {
+
+thread_local detail::worker const* g_worker = nullptr;
+
+worker_context const& worker_context::get_context(work_group_id group)
+{
+  return g_worker->contexts[group.get_index()].get();
+}
 
 scheduler::~scheduler()
 {
@@ -12,18 +20,28 @@ scheduler::~scheduler()
     end_execution();
 }
 
-void scheduler::run(worker_id thread)
+void scheduler::run(worker_id worker)
 {
-  while (!stop.load(std::memory_order_relaxed))
+  g_worker = &workers[worker.get_index()];
+  entry_fn(worker);
+  while (true)
   {
-    work(thread);
+    while (work(worker))
+      ;
+
+    if (stop.load(std::memory_order_relaxed))
+      break;
+
+    sleep_status[worker.get_index()].store(true, std::memory_order_release);
+    wake_events[worker.get_index()].acquire();
+    sleep_status[worker.get_index()].store(false, std::memory_order_relaxed);
   }
 }
 
-bool scheduler::should_we_sleep(uint32_t thread) noexcept
+bool scheduler::should_we_sleep(worker_id thread) noexcept
 {
-  auto const& g = worker_groups[thread];
-  for (auto group = g.group_ids, end = g.group_ids + g.group_count; group != end; group++)
+  auto const& g = workers[thread.get_index()];
+  for (auto group = g.group_ids.begin(), end = g.group_ids.begin() + g.group_count; group != end; group++)
   {
     auto& wg = work_groups[*group];
     if (wg.work_count.load(std::memory_order_acquire) != 0)
@@ -32,15 +50,21 @@ bool scheduler::should_we_sleep(uint32_t thread) noexcept
   return true;
 }
 
-detail::work_item scheduler::get_work(worker_id thread) noexcept
+detail::work scheduler::get_work(worker_id thread) noexcept
 {
   auto work = std::move(immediate_work[thread.get_index()]);
+  if (work)
+  {
+    auto group = immediate_work_group[thread.get_index()];
+    work_groups[group.get_index()].work_count.fetch_sub(1, std::memory_order_release);
+    return std::make_pair(std::move(work), group);
+  }
   do
   {
     if (!work)
     {
-      auto const& g = worker_groups[thread.get_index()];
-      for (auto group = g.group_ids, end = g.group_ids + g.group_count; group != end; group++)
+      auto const& g = workers[thread.get_index()];
+      for (auto group = g.group_ids.begin(), end = g.group_ids.begin() + g.group_count; group != end; group++)
       {
         auto&    wg     = work_groups[*group];
         auto     mask   = wg.thread_count - 1;
@@ -55,7 +79,7 @@ detail::work_item scheduler::get_work(worker_id thread) noexcept
               wg.work_count.fetch_sub(1, std::memory_order_release);
               work = std::move(wg.queues[q].pop_front_unsafe());
               wg.locks[q].unlock<std::false_type>();
-              return work;
+              return std::make_pair(std::move(work), work_group_id(*group));
             }
             wg.locks[q].unlock<std::false_type>();
           }
@@ -63,9 +87,9 @@ detail::work_item scheduler::get_work(worker_id thread) noexcept
       }
       if (!work)
       {
-        for (auto group = g.group_ids, end = g.group_ids + g.group_count; group != end; group++)
+        for (auto group = g.group_ids.data(), end = g.group_ids.data() + g.group_count; group != end; group++)
         {
-          auto& wg = work_groups[g.group_ids[*group]];
+          auto& wg = work_groups[*group];
           if (wg.shared_queue.first.try_lock())
           {
             if (!wg.shared_queue.second.empty())
@@ -73,7 +97,7 @@ detail::work_item scheduler::get_work(worker_id thread) noexcept
               wg.work_count.fetch_sub(1, std::memory_order_release);
               work = std::move(wg.shared_queue.second.pop_front_unsafe());
               wg.shared_queue.first.unlock<std::false_type>();
-              return work;
+              return std::make_pair(std::move(work), work_group_id(*group));
             }
             wg.shared_queue.first.unlock<std::false_type>();
           }
@@ -81,96 +105,105 @@ detail::work_item scheduler::get_work(worker_id thread) noexcept
       }
     }
   }
-  while (!should_we_sleep(thread.get_index()));
+  while (!should_we_sleep(thread));
   return {};
 }
 
-void scheduler::work(worker_id thread) noexcept
+bool scheduler::work(worker_id ctx) noexcept
 {
-  auto work = get_work(thread);
-  if (!work)
+  auto work = get_work(ctx);
+  auto idx  = ctx.get_index();
+  if (work.first)
   {
-    sleep_status[thread.get_index()].store(true, std::memory_order_release);
-    wake_events[thread.get_index()].acquire();
-  }
-  else
-  {
-    auto [delegate_fn, context, tag] = work.unpack();
+    auto [delegate_fn, context, tag] = work.first.unpack();
     switch (tag)
     {
     case detail::work_type_coroutine:
       std::coroutine_handle<>::from_address(delegate_fn).resume();
       break;
     case detail::work_type_task_functor:
-      (*reinterpret_cast<task*>(delegate_fn))(context, thread);
+      (*reinterpret_cast<task*>(delegate_fn))(context, workers[idx].contexts[work.second.get_index()].get());
       break;
     case detail::work_type_free_functor:
-      reinterpret_cast<task_delegate>(delegate_fn)(context, thread);
+      reinterpret_cast<task_delegate>(delegate_fn)(context, workers[idx].contexts[work.second.get_index()].get());
       break;
     }
+    return true;
   }
+  return false;
 }
 
-void scheduler::work_no_sleep(worker_id thread) noexcept
-{
-  auto work = get_work(thread);
-  if (!work)
-    return;
-  else
-  {
-    auto [delegate_fn, context, tag] = work.unpack();
-    switch (tag)
-    {
-    case detail::work_type_coroutine:
-      std::coroutine_handle<>::from_address(delegate_fn).resume();
-      break;
-    case detail::work_type_task_functor:
-      (*reinterpret_cast<task*>(delegate_fn))(context, thread);
-      break;
-    case detail::work_type_free_functor:
-      reinterpret_cast<task_delegate>(delegate_fn)(context, thread);
-      break;
-    }
-  }
-}
-
-void scheduler::wake_up(uint32_t thread) noexcept
+void scheduler::wake_up(worker_id thread) noexcept
 {
   bool sleeping = true;
-  if (sleep_status[thread].compare_exchange_strong(sleeping, false))
+  if (sleep_status[thread.get_index()].compare_exchange_strong(sleeping, false))
   {
-    wake_events[thread].release();
+    wake_events[thread.get_index()].release();
     return;
   }
 }
 
-void scheduler::begin_execution()
+void scheduler::begin_execution(scheduler_worker_entry&& entry)
 {
-  immediate_work = std::make_unique<detail::work_item[]>(worker_count);
-  group_masks    = std::make_unique<uint32_t[]>(worker_count);
-  sleep_status   = std::make_unique<std::atomic_bool[]>(worker_count);
-  wake_events    = std::make_unique<detail::wake_event[]>(worker_count);
-  worker_groups  = std::make_unique<detail::worker_group_ids[]>(worker_count);
+  immediate_work       = std::make_unique<detail::work_item[]>(worker_count);
+  immediate_work_group = std::make_unique<work_group_id[]>(worker_count);
+  group_masks          = std::make_unique<uint32_t[]>(worker_count);
+  sleep_status         = std::make_unique<std::atomic_bool[]>(worker_count);
+  wake_events          = std::make_unique<detail::wake_event[]>(worker_count);
+  workers              = std::make_unique<detail::worker[]>(worker_count);
 
   threads.reserve(worker_count - 1);
 
   for (auto group = 0; group < 32; ++group)
   {
     auto const& g = work_groups[group];
+
     for (uint32_t i = g.start_thread_idx; i < g.end_thread_idx; ++i)
     {
+      auto& worker = workers[i];
       group_masks[i] |= 1u << group;
-      worker_groups[i].group_ids[worker_groups[i].group_count++] = group;
+      worker.group_ids[worker.group_count++] = group;
+    }
+  }
+
+  for (auto group = 0; group < 32; ++group)
+  {
+    auto const& g = work_groups[group];
+
+    for (uint32_t i = g.start_thread_idx; i < g.end_thread_idx; ++i)
+    {
+      auto& worker = workers[i];
+      worker.contexts[group].emplace(*this, worker_id(i), work_group_id(group), group_masks[i], i - g.start_thread_idx);
     }
   }
 
   stop = false;
   sleep_status[0].store(false);
+  auto start_counter = std::latch(worker_count);
+
+  entry_fn = [cust_entry = std::move(entry), &start_counter](worker_id worker)
+  {
+    start_counter.count_down();
+    if (cust_entry)
+      cust_entry(worker);
+  };
+
+  entry_fn(worker_id(0));
+
   for (uint32_t thread = 1; thread < worker_count; ++thread)
   {
     sleep_status[thread].store(false);
-    threads.emplace_back(&scheduler::run, this, worker_id(thread, group_masks[thread]));
+    threads.emplace_back(&scheduler::run, this, worker_id(thread));
   }
+
+  g_worker = &workers[0];
+  start_counter.wait();
+  entry_fn = {};
+}
+
+void scheduler::take_ownership() noexcept
+{
+  g_worker = &workers[0];
 }
 
 void scheduler::finish_pending_tasks() noexcept
@@ -189,7 +222,7 @@ void scheduler::finish_pending_tasks() noexcept
     }
 
     if (has_work)
-      work_no_sleep(worker_id(0, group_masks[0]));
+      work(worker_id(0));
   }
 }
 
@@ -199,15 +232,15 @@ void scheduler::end_execution()
   stop = true;
   for (uint32_t thread = 1; thread < worker_count; ++thread)
   {
-    wake_up(thread);
+    wake_up(worker_id(thread));
     threads[thread - 1].join();
   }
   threads.clear();
 }
 
-void scheduler::submit(detail::work_item work, uint32_t group, worker_id current)
+void scheduler::submit(detail::work_item work, work_group_id group, worker_id current)
 {
-  auto& wg = work_groups[group];
+  auto& wg = work_groups[group.get_index()];
   wg.work_count.fetch_add(1, std::memory_order_relaxed);
 
   while (true)
@@ -217,7 +250,8 @@ void scheduler::submit(detail::work_item work, uint32_t group, worker_id current
       bool sleeping = true;
       if (sleep_status[i].compare_exchange_weak(sleeping, false))
       {
-        immediate_work[i] = std::move(work);
+        immediate_work[i]       = std::move(work);
+        immediate_work_group[i] = group;
         wake_events[i].release();
         return;
       }
@@ -244,14 +278,15 @@ void scheduler::submit(detail::work_item work, uint32_t group, worker_id current
   }
 }
 
-void scheduler::create_group(uint32_t group, std::string name, uint32_t thread_offset, uint32_t thread_count)
+void scheduler::create_group(work_group_id group, std::string name, uint32_t thread_offset, uint32_t thread_count)
 {
-  assert(group < work_groups.size());
+  assert(group.get_index() < work_groups.size());
   thread_count = acl::next_pow2(thread_count);
-  worker_count = std::max(work_groups[group].create_group(std::move(name), thread_offset, thread_count), worker_count);
+  worker_count =
+    std::max(work_groups[group.get_index()].create_group(std::move(name), thread_offset, thread_count), worker_count);
 }
 
-uint32_t scheduler::create_group(std::string name, uint32_t thread_offset, uint32_t thread_count)
+work_group_id scheduler::create_group(std::string name, uint32_t thread_offset, uint32_t thread_count)
 {
   thread_count = acl::next_pow2(thread_count);
   for (uint32_t i = 0; i < work_groups.size(); ++i)
@@ -259,25 +294,25 @@ uint32_t scheduler::create_group(std::string name, uint32_t thread_offset, uint3
     if (!work_groups[i].thread_count)
     {
       worker_count = std::max(work_groups[i].create_group(std::move(name), thread_offset, thread_count), worker_count);
-      return i;
+      return work_group_id(i);
     }
   }
   // no empty group found
-  return std::numeric_limits<uint32_t>::max();
+  return work_group_id(std::numeric_limits<uint32_t>::max());
 }
 
-void scheduler::clear_group(uint32_t group)
+void scheduler::clear_group(work_group_id group)
 {
-  work_groups[group].start_thread_idx = 0;
-  work_groups[group].end_thread_idx   = 0;
-  work_groups[group].thread_count     = 0;
+  work_groups[group.get_index()].start_thread_idx = 0;
+  work_groups[group.get_index()].end_thread_idx   = 0;
+  work_groups[group.get_index()].thread_count     = 0;
 }
 
-uint32_t scheduler::find_group(std::string const& name)
+work_group_id scheduler::find_group(std::string const& name)
 {
   auto it = std::ranges::find(work_groups.begin(), work_groups.end(), name, &detail::work_group::name);
-  return it == work_groups.end() ? std::numeric_limits<uint32_t>::max()
-                                 : static_cast<uint32_t>(std::distance(work_groups.begin(), it));
+  return work_group_id(it == work_groups.end() ? std::numeric_limits<uint32_t>::max()
+                                               : static_cast<uint32_t>(std::distance(work_groups.begin(), it)));
 }
 
 } // namespace acl

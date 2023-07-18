@@ -5,38 +5,17 @@
 
 namespace acl
 {
-/// @brief A worker represents a specific thread. A worker can belong to any of maximum of 32 worker_groups allowed by
-/// the scheduler.
-class worker_id
-{
-public:
-  worker_id() noexcept = default;
-  worker_id(uint32_t id, uint32_t mask) noexcept : index(id), group_mask(mask) {}
-  /// @brief Retruns a positive integer != std::numeric_limits<uint32_t>::max() when valid.
-  /// @return
-  uint32_t get_index() const noexcept
-  {
-    return index;
-  }
 
-  bool belongs_to(uint32_t group_idx) const noexcept
-  {
-    return group_mask & (1u << group_idx);
-  }
-
-private:
-  uint32_t index      = 0;
-  uint32_t group_mask = 0;
-};
-
+class worker_context;
 struct task_context
 {};
-using task_delegate = void (*)(task_context*, worker_id);
+
+using task_delegate = void (*)(task_context*, worker_context const&);
 
 struct task
 {
-  virtual ~task() noexcept                                 = default;
-  virtual void operator()(task_context*, worker_id worker) = 0;
+  virtual ~task() noexcept                                      = default;
+  virtual void operator()(task_context*, worker_context const&) = 0;
 };
 
 namespace detail
@@ -55,7 +34,7 @@ public:
   }
 
   co_task(handle h) : coro(h) {}
-  co_task(co_task&& other) : coro(std::move(other.coro))
+  co_task(co_task&& other) noexcept : coro(std::move(other.coro))
   {
     other.coro = nullptr;
   }
@@ -100,6 +79,16 @@ public:
     coro.resume();
   }
 
+  /// @brief Returns result after waiting for the task to finish
+  R sync_wait_result() noexcept
+  {
+    std::binary_semaphore event{0};
+    detail::wait(event, *this);
+    event.acquire();
+    if constexpr (!std::is_same_v<R, void>)
+      return coro.promise().result();
+  }
+
 private:
   handle coro = {};
 };
@@ -117,21 +106,29 @@ concept CoroutineTask = requires(T a) {
 /// thread. This task can only be waited from a single wait point.
 /// @tparam R
 template <typename R>
-struct co_task : public detail::co_task<R, promise_type<co_task, R>>
+struct co_task : public detail::co_task<R, detail::promise_type<co_task, R>>
 {
-  using super = detail::co_task<R, promise_type<co_task, R>>;
-  using super::co_task;
-  inline co_task& operator=(co_task&&) noexcept = default;
+  using super  = detail::co_task<R, detail::promise_type<co_task, R>>;
+  using handle = super::handle;
+  co_task(handle h) : super(h) {}
+  co_task(co_task&& other) noexcept : super(std::move<super>(other)) {}
+  inline co_task& operator=(co_task const&) = delete;
+  inline co_task& operator=(co_task&& other) noexcept
+  {
+    (super&)(*this) = std::move<super>(other);
+    return *this;
+  }
 };
 /// @brief Use a sequence task to immediately executed. The expectation is you will co_await this task on another task,
 /// which will result in suspension of execution. This task allows waiting on another task and be suspended during
 /// execution from any thread. This task can only be waited from a single wait point.
 /// @tparam R
 template <typename R>
-struct co_sequence : public detail::co_task<R, sequence_promise<co_sequence, R>>
+struct co_sequence : public detail::co_task<R, detail::sequence_promise<co_sequence, R>>
 {
-  using super = detail::co_task<R, sequence_promise<co_sequence, R>>;
+  using super = detail::co_task<R, detail::sequence_promise<co_sequence, R>>;
   using super::co_task;
+  using super::handle;
   inline co_sequence& operator=(co_sequence&&) noexcept = default;
 };
 

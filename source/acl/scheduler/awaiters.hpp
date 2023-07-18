@@ -10,8 +10,8 @@ namespace acl
 namespace detail
 {
 static constexpr uint8_t coro_state_none         = 0;
-static constexpr uint8_t coro_state_can_continue = 0;
-static constexpr uint8_t coro_state_finished     = 0;
+static constexpr uint8_t coro_state_can_continue = 1;
+static constexpr uint8_t coro_state_finished     = 2;
 struct coro_state
 {
   std::coroutine_handle<> continuation = nullptr;
@@ -69,6 +69,7 @@ public:
     return coro.promise().result();
   }
 
+private:
   std::coroutine_handle<PromiseArg> coro;
 };
 

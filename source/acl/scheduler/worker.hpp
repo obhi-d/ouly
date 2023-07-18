@@ -3,6 +3,7 @@
 #pragma once
 
 #include "task.hpp"
+#include "worker_context.hpp"
 #include <acl/allocators/default_allocator.hpp>
 #include <acl/containers/basic_queue.hpp>
 #include <acl/utils/tagged_ptr.hpp>
@@ -16,9 +17,10 @@ namespace acl
 
 namespace detail
 {
-static constexpr uint8_t work_type_coroutine    = 0;
-static constexpr uint8_t work_type_task_functor = 1;
-static constexpr uint8_t work_type_free_functor = 2;
+static constexpr uint8_t  work_type_coroutine    = 0;
+static constexpr uint8_t  work_type_task_functor = 1;
+static constexpr uint8_t  work_type_free_functor = 2;
+static constexpr uint32_t max_worker_groups      = 32;
 
 using work_context = acl::tagged_ptr<task_context>;
 struct work_item
@@ -52,6 +54,8 @@ struct work_item
     return std::make_tuple(delegate_fn, item.get_ptr(), item.get_tag());
   }
 };
+
+using work = std::pair<work_item, work_group_id>;
 
 struct work_queue_traits
 {
@@ -107,10 +111,11 @@ struct wake_event
   std::binary_semaphore semaphore;
 };
 
-struct worker_group_ids
+struct worker
 {
-  uint32_t group_count = 0;
-  uint32_t group_ids[32];
+  std::array<uint32_t, max_worker_groups>           group_ids;
+  std::array<worker_context_opt, max_worker_groups> contexts;
+  uint32_t                                          group_count = 0;
 };
 
 } // namespace detail

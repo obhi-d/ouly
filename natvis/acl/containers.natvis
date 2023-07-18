@@ -42,6 +42,12 @@
 			<Item Name="[tuples]" ExcludeView="simple">data_</Item>
 		</Expand>
 	</Type>
+	<Type Name="acl::nullable_optional&lt;*&gt;">
+		<DisplayString>{($T1*)&amp;bytes_}</DisplayString>
+		<Expand>
+			<Item Name="[value]" ExcludeView="simple">($T1*)&amp;bytes_</Item>
+		</Expand>
+	</Type>
 	<Type Name="acl::quad_t&lt;*&gt;">
 		<DisplayString>{x}, {y}, {z}, {w}</DisplayString>
 	</Type>
