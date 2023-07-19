@@ -11,6 +11,7 @@
 #include <limits>
 #include <semaphore>
 #include <string>
+#include <tuple>
 
 namespace acl
 {
@@ -51,7 +52,7 @@ struct work_item
 
   auto unpack() const noexcept
   {
-    return std::make_tuple(delegate_fn, item.get_ptr(), item.get_tag());
+    return std::make_tuple((void*)delegate_fn, item.get_ptr(), item.get_tag());
   }
 };
 

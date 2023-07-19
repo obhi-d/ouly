@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <type_traits>
+#include <utility>
 
 namespace acl
 {
@@ -28,6 +29,7 @@ class tagged_ptr
 
 public:
   using tag_t = int8_t;
+  using pointer_t = T*;
 
 private:
   union pack
@@ -97,6 +99,11 @@ public:
   tag_t get_tag() const noexcept
   {
     return extract_tag(*this);
+  }
+
+  std::pair<T*, tag_t> unpack() const noexcept
+  {
+    return std::make_pair<T*, tag_t>(get_ptr(), get_tag());
   }
 
   tag_t get_next_tag() const noexcept
