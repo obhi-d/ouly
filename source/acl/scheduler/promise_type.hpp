@@ -113,6 +113,11 @@ public:
   {
     return std::suspend_never();
   }
+
+  task_class<Ty> get_return_object() noexcept
+  {
+    return task_class<Ty>(std::coroutine_handle<sequence_promise<task_class, Ty>>::from_promise(*this));
+  }
 };
 
 struct sync_waiter

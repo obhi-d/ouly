@@ -226,21 +226,21 @@ mid: or, feed
 
   // clang-format off
   builder
-	  [ "root" ]
-	    - acl::cmd<"first", classic_cmd>
-        - acl::cmd<"second", classic_cmd>
-        + acl::cmd<"third", classic_cmd>
-            + acl::cmd<"sky-wrath", classic_cmd>
-                - acl::cmd<"ursa", classic_cmd>
-                - acl::cmd<"bara", classic_cmd>
-                + acl::cmd<"into", classic_cmd>
-                    - acl::cmd<"found", classic_cmd>
-                    - acl::endl
-                - acl::cmd<"eventually", classic_cmd>
-                - acl::endl
-            - acl::cmd<"we", classic_cmd>
-            - acl::endl
-        - acl::cmd<"mid", classic_cmd>
+  [ "root" ]
+  - acl::cmd<"first", classic_cmd>
+  - acl::cmd<"second", classic_cmd>
+  + acl::cmd<"third", classic_cmd>
+      + acl::cmd<"sky-wrath", classic_cmd>
+          - acl::cmd<"ursa", classic_cmd>
+          - acl::cmd<"bara", classic_cmd>
+          + acl::cmd<"into", classic_cmd>
+              - acl::cmd<"found", classic_cmd>
+              - acl::endl
+          - acl::cmd<"eventually", classic_cmd>
+          - acl::endl
+      - acl::cmd<"we", classic_cmd>
+      - acl::endl
+  - acl::cmd<"mid", classic_cmd>
         ;
   // clang-format on
 

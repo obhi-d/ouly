@@ -122,3 +122,35 @@ TEST_CASE("scheduler: Test co_task")
   REQUIRE(result == continue_string);
   scheduler.end_execution();
 }
+
+acl::co_sequence<std::string> create_string_seq(acl::co_task<std::string>& tunein)
+{
+  std::string basic_string = "basic";
+  co_await tunein;
+  auto tune_result = tunein.result();
+  co_return basic_string + tune_result;
+}
+
+TEST_CASE("scheduler: Test co_sequence")
+{
+  acl::scheduler scheduler;
+  scheduler.create_group(acl::work_group_id(0), "default", 0, 2);
+
+  scheduler.begin_execution();
+
+  auto task        = continue_string();
+  auto string_task = create_string_seq(task);
+
+  scheduler.submit(task, acl::default_work_group_id, acl::main_worker_id);
+
+  std::string        continue_string = "basic";
+  constexpr uint32_t nb_elements     = 1000;
+  for (uint32_t i = 0; i < nb_elements; ++i)
+  {
+    continue_string += "-i-" + std::to_string(i);
+  }
+
+  auto result = string_task.sync_wait_result();
+  REQUIRE(result == continue_string);
+  scheduler.end_execution();
+}

@@ -128,8 +128,15 @@ struct co_sequence : public detail::co_task<R, detail::sequence_promise<co_seque
 {
   using super = detail::co_task<R, detail::sequence_promise<co_sequence, R>>;
   using super::co_task;
-  using super::handle;
-  inline co_sequence& operator=(co_sequence&&) noexcept = default;
+  using handle = super::handle;
+  co_sequence(handle h) : super(h) {}
+  co_sequence(co_sequence&& other) noexcept : super(std::move<super>(other)) {}
+  inline co_sequence& operator=(co_sequence const&) = delete;
+  inline co_sequence& operator=(co_sequence&& other) noexcept
+  {
+    (super&)(*this) = std::move<super>(other);
+    return *this;
+  }
 };
 
 } // namespace acl
