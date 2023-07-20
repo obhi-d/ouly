@@ -11,6 +11,59 @@ public:
   friend class scli;
 };
 
+struct classic_param_context_impl : param_context
+{
+  using param_data = detail::classic_param_data;
+  std::pair<param_context*, cmd_state*> enter_param_context(scli& scli_inst, int, std::string_view name,
+                                                            cmd_state* cstate) final
+  {
+    auto data = reinterpret_cast<param_data*>(cstate);
+    if (!data)
+    {
+      scli_inst.error(scli_inst.source, "Missing param context data", "param");
+      return {this, cstate};
+    }
+    data->stack.push_back(data->current);
+    auto current = data->current;
+    if (!current)
+    {
+      scli_inst.error(scli_inst.source, "Null scope", "param");
+      return {this, cstate};
+    }
+    auto newl     = std::make_unique<parameter_list>(name);
+    data->current = newl.get();
+    current->add(std::move(newl));
+    return {this, cstate};
+  }
+
+  void exit_param_context(scli& scli_inst, int, cmd_state*, cmd_state* cstate) final
+  {
+    auto data = reinterpret_cast<param_data*>(cstate);
+    if (data->stack.empty())
+    {
+      scli_inst.error(scli_inst.source, "Invalid param context pop", "param");
+      return;
+    }
+    data->current = data->stack.back();
+    data->stack.pop_back();
+  }
+
+  void parse_param(scli&, std::string_view value, cmd_state* cstate) final {}
+
+  void parse_param(scli& scli_inst, int param_pos, std::string_view param_name, std::string_view value,
+                   cmd_state* cstate) final
+  {
+    auto data = reinterpret_cast<param_data*>(cstate);
+    data->current->add(std::make_unique<parameter_value>(param_name, value));
+  }
+};
+
+param_context* detail::classic_param_context::get_instance()
+{
+  static classic_param_context_impl impl;
+  return &impl;
+}
+
 std::shared_ptr<scli::context> scli::builder::build()
 {
   auto r         = std::make_shared<scli::context>();
@@ -52,15 +105,20 @@ void scli::enter_command_scope()
 {
   if (current_cmd)
   {
-    bool entered = current_cmd->enter(*this, current_cmd_state);
+    if (!skip_depth)
+    {
+      bool entered = current_cmd->enter(*this, current_cmd_state);
 
-    cmd_ctx_stack.emplace_back(current_cmd, current_cmd_state);
+      cmd_ctx_stack.emplace_back(current_cmd_ctx, current_cmd_state);
 
-    current_cmd_ctx   = current_cmd;
-    current_cmd       = nullptr;
-    current_cmd_state = nullptr;
+      current_cmd_ctx   = current_cmd;
+      current_cmd       = nullptr;
+      current_cmd_state = nullptr;
 
-    if (skip_depth || !entered)
+      if (!entered)
+        skip_depth++;
+    }
+    else
       skip_depth++;
   }
 }
@@ -73,10 +131,14 @@ void scli::exit_command_scope()
       --skip_depth;
     if (!skip_depth)
     {
-      std::tie(current_cmd, current_cmd_state) = cmd_ctx_stack.back();
+      if (cmd_ctx_stack.empty())
+      {
+        error(source, "Unexpected command end }", command);
+      }
+      auto old_ctx                                 = current_cmd_ctx;
+      std::tie(current_cmd_ctx, current_cmd_state) = cmd_ctx_stack.back();
       cmd_ctx_stack.pop_back();
-      current_cmd_ctx = cmd_ctx_stack.back().first;
-      current_cmd->exit(*this, current_cmd_state);
+      old_ctx->exit(*this, current_cmd_state);
     }
   }
 }
@@ -125,16 +187,19 @@ void scli::enter_param_scope()
 
 void scli::exit_param_scope()
 {
-  if (param_ctx != parent_param_ctx)
+  if (param_ctx_stack.empty())
   {
-    auto save                                                = current_cmd_state;
-    param_ctx                                                = parent_param_ctx;
-    std::tie(parent_param_ctx, current_cmd_state, param_pos) = param_ctx_stack.back();
-    param_ctx_stack.pop_back();
-    if (param_ctx)
-      param_ctx->exit_param_context(*this, param_pos, save, current_cmd_state);
-    param_pos++;
+    error(source, "Invalid parameter stack pop.", parameter);
+    return;
   }
+
+  auto save                                                = current_cmd_state;
+  param_ctx                                                = parent_param_ctx;
+  std::tie(parent_param_ctx, current_cmd_state, param_pos) = param_ctx_stack.back();
+  param_ctx_stack.pop_back();
+  if (param_ctx)
+    param_ctx->exit_param_context(*this, param_pos, save, current_cmd_state);
+  param_pos++;
 }
 
 void scli::enter_region(std::string_view reg)

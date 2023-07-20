@@ -1,10 +1,12 @@
 
 #pragma once
 
+#include "parameter.hpp"
 #include <acl/allocators/linear_stack_allocator.hpp>
 #include <acl/utils/reflection.hpp>
 #include <acl/utils/reflection_utils.hpp>
 #include <acl/utils/string_literal.hpp>
+#include <charconv>
 #include <functional>
 #include <ostream>
 #include <string_view>
@@ -205,6 +207,11 @@ public:
     sstate.allocator.rewind(state->rewind);
   }
 
+  std::string_view get_command_name() noexcept
+  {
+    return command;
+  }
+
   /// @par Parser utilities
   void set_next_command(std::string_view name) noexcept;
   void execute_command();
@@ -282,10 +289,26 @@ private:
 namespace detail
 {
 template <typename C>
-concept HasExecuter = requires(C c, scli& s) {
+concept AutoCommand = requires(C c, scli& s) {
   {
     c.execute(s)
   } -> std::same_as<bool>;
+};
+
+template <typename C>
+concept SimpleCommand = requires(C c, scli& s, parameter_list params) {
+  {
+    c.execute(s, params)
+  } -> std::same_as<bool>;
+};
+
+template <typename C>
+concept ClassicCommand = requires(C c, scli& s, parameter_list params) {
+  {
+    c.execute(s)
+  } -> std::same_as<bool>;
+
+  typename C::classic_command_type;
 };
 
 template <typename C>
@@ -319,6 +342,11 @@ concept CommandType = requires(C c) {
 };
 
 // Subclasses
+struct classic_param_context
+{
+  static param_context* get_instance();
+};
+
 template <typename ParamClass>
 struct param_context_impl
 {
@@ -748,6 +776,13 @@ template <detail::MonostateLike ParamClass>
 struct param_context_impl_ml : param_context
 {};
 
+struct classic_param_data
+{
+  parameter_main               main;
+  parameter_list*              current = nullptr;
+  std::vector<parameter_list*> stack;
+};
+
 template <typename ParamClass>
 auto build_map()
 {}
@@ -756,7 +791,11 @@ template <typename Class>
 inline param_context* param_context_impl<Class>::get_instance()
 {
   // Ensure ordering with multiple matches
-  if constexpr (detail::BoundClass<Class>)
+  if constexpr (detail::ClassicCommand<Class>)
+  {
+    return detail::classic_param_context::get_instance();
+  }
+  else if constexpr (detail::BoundClass<Class>)
   {
     static param_context_impl_bc<Class> context;
     return &context;
@@ -855,7 +894,39 @@ struct cmd_group : cmd_context
 };
 
 template <typename CmdClass>
-struct cmd_proxy : cmd_context
+struct classic_command
+{
+  using classic_command_type = CmdClass;
+  classic_param_data data;
+
+  classic_command() noexcept
+  {
+    data.current = &data.main;
+  }
+
+  inline bool execute(scli& scli)
+  {
+    if constexpr (detail::SimpleCommand<CmdClass>)
+      return CmdClass().execute(scli, *data.current);
+    return true;
+  }
+
+  inline bool enter(scli& scli)
+  {
+    if constexpr (detail::HasEntry<CmdClass>)
+      return CmdClass().enter(scli);
+    return true;
+  }
+
+  inline void exit(scli& scli)
+  {
+    if constexpr (detail::HasExit<CmdClass>)
+      CmdClass().exit(scli);
+  }
+};
+
+template <typename CmdClass, typename Base = cmd_context>
+struct cmd_proxy : Base
 {
   struct state
   {
@@ -883,7 +954,7 @@ struct cmd_proxy : cmd_context
   bool execute(scli& scli, cmd_state* cstate) override
   {
     auto cs = reinterpret_cast<state*>(cstate);
-    if constexpr (detail::HasExecuter<CmdClass>)
+    if constexpr (detail::AutoCommand<CmdClass>)
       return cs->data.execute(scli);
     return true;
   }
@@ -919,9 +990,9 @@ struct cmd_proxy : cmd_context
 };
 
 template <typename CmdClass>
-struct cmd_group_proxy : cmd_proxy<CmdClass>
+struct cmd_group_proxy : cmd_proxy<CmdClass, cmd_group>
 {
-  using typename cmd_proxy<CmdClass>::state;
+  using typename cmd_proxy<CmdClass, cmd_group>::state;
   bool enter(scli& scli, cmd_state* cstate) override
   {
     auto cs = reinterpret_cast<state*>(cstate);
@@ -941,7 +1012,7 @@ struct cmd_group_proxy : cmd_proxy<CmdClass>
 template <string_literal Name, typename Type>
 struct command
 {
-  using command_type = Type;
+  using command_type = std::conditional_t<detail::SimpleCommand<Type>, classic_command<Type>, Type>;
   inline static constexpr std::string_view name() noexcept
   {
     return (std::string_view)Name;
@@ -987,9 +1058,10 @@ public:
   scli::builder& operator+(C other) noexcept
   {
     auto proxy = std::make_unique<detail::cmd_group_proxy<typename C::command_type>>();
-    stack.emplace_back(current_ctx);
-    current_ctx = proxy.get();
+    auto cmd   = proxy.get();
     current_ctx->add_sub_command(other.name(), std::move(proxy));
+    stack.emplace_back(current_ctx);
+    current_ctx = cmd;
     return *this;
   }
 
