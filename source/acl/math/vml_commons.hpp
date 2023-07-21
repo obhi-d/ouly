@@ -82,37 +82,74 @@ static constexpr noinit noinit_v{};
 //! Integer representation of a floating-point value.
 inline int32_t float_to_int(float value) noexcept
 {
-  return *(int32_t*)&value;
+  union
+  {
+    float   value;
+    int32_t ivalue;
+  } data;
+  data.value = value;
+  return data.ivalue;
 }
 
 //! Signed integer representation of a floating-point value.
 inline uint32_t float_to_uint(float value) noexcept
 {
-  return *(uint32_t*)&value;
+  union
+  {
+    float    value;
+    uint32_t ivalue;
+  } data;
+  data.value = value;
+  return data.ivalue;
 }
 
 //! Integer representation of a floating-point value.
 inline int64_t float_to_int(double value) noexcept
 {
-  return *(int64_t*)&value;
+  union
+  {
+    double  value;
+    int64_t ivalue;
+  } data;
+  data.value = value;
+  return data.ivalue;
 }
 
 //! Signed integer representation of a floating-point value.
 inline uint64_t float_to_uint(double value) noexcept
 {
-  return *(uint64_t*)&value;
+  union
+  {
+    double   value;
+    uint64_t ivalue;
+  } data;
+  data.value = value;
+  return data.ivalue;
 }
 
-inline float uint_to_float(std::uint32_t f) noexcept
+inline float uint_to_float(std::uint32_t value) noexcept
 {
   // value * maxvalue
-  return *reinterpret_cast<float*>(&f);
+  union
+  {
+    float    value;
+    uint32_t ivalue;
+  } data;
+  data.ivalue = value;
+  return data.value;
 }
 
-inline double uint_to_float(uint64_t f) noexcept
+inline double uint_to_float(uint64_t value) noexcept
 {
   // value * maxvalue
-  return *reinterpret_cast<double*>(&f);
+  // value * maxvalue
+  union
+  {
+    double   value;
+    uint64_t ivalue;
+  } data;
+  data.ivalue = value;
+  return data.value;
 }
 
 constexpr float pixel_align(float v) noexcept

@@ -117,14 +117,13 @@ TEMPLATE_TEST_CASE("Vec4: Validate arithmetic", "[arithmetic]", float, double)
   CHECK(acl::equals<TestType>(acl::get_y(r), (1 / std::sqrt(5.0f))));
   CHECK(acl::equals<TestType>(acl::get_z(r), (1 / std::sqrt(51.0f))));
   CHECK(acl::equals<TestType>(acl::get_w(r), (1 / std::sqrt(10.0f))));
-  using int_type                    = std::conditional_t<sizeof(TestType) == 4, uint32_t, uint64_t>;
-  constexpr int_type mask           = std::numeric_limits<int_type>::max();
-  constexpr int_type zmask          = 0;
-  TestType           select_mask[4] = {acl::uint_to_float(mask), acl::uint_to_float(zmask), acl::uint_to_float(mask),
-                                       acl::uint_to_float(zmask)};
-  q                                 = acl::vec4_t<TestType>(441.3f, 5.0f, 51.0f, 10.0f);
-  p                                 = acl::vec4_t<TestType>(10.0f, 23.0f, -1.0f, 20.0f);
-  r                                 = acl::vml::select(p.v, q.v, acl::vml::set_unaligned(select_mask));
+  using int_type                 = std::conditional_t<sizeof(TestType) == 4, uint32_t, uint64_t>;
+  constexpr int_type mask        = std::numeric_limits<int_type>::max();
+  constexpr int_type zmask       = 0;
+  auto               select_mask = acl::vec4_t<int_type>{mask, zmask, mask, zmask};
+  q                              = acl::vec4_t<TestType>(441.3f, 5.0f, 51.0f, 10.0f);
+  p                              = acl::vec4_t<TestType>(10.0f, 23.0f, -1.0f, 20.0f);
+  r                              = acl::vml::select(p.v, q.v, acl::vec4_t<TestType>(acl::cast(select_mask)).v);
   CHECK(acl::get_x(r) == Catch::Approx(441.3f));
   CHECK(acl::get_y(r) == Catch::Approx(23.0f));
   CHECK(acl::get_z(r) == Catch::Approx(51.0f));

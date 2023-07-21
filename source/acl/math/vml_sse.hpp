@@ -11,19 +11,26 @@ template <FloatingType scalar_t>
 using float_to_int_t = std::conditional_t<sizeof(scalar_t) == 4, int, int64_t>;
 template <FloatingType scalar_t>
 using float_to_uint_t = std::conditional_t<sizeof(scalar_t) == 4, uint32_t, int64_t>;
+template <IntegralType scalar_t>
+using int_to_float_t = std::conditional_t<sizeof(scalar_t) == 4, float, double>;
 
 template <ScalarType A>
-constexpr A get_quad_scalar_type(std::array<A, 4>) { return {}; }
+constexpr A get_quad_scalar_type(std::array<A, 4>)
+{
+  return {};
+}
 #ifdef ACL_USE_SSE2
 
-constexpr float get_quad_scalar_type(__m128) { return 0.0f; }
+constexpr float get_quad_scalar_type(__m128)
+{
+  return 0.0f;
+}
 
 __m128 exp_ps(__m128 x);
 __m128 log_ps(__m128 x);
 __m128 sin_ps(__m128 x);
 __m128 cos_ps(__m128 x);
 void   sincos_ps(__m128 x, __m128*, __m128*);
-
 
 #else
 inline auto exp_ps(auto x)
@@ -837,7 +844,7 @@ inline quadvt select(quadvt const& a, quadvt const& b, quadvt const& c) noexcept
     auto   iv2  = reinterpret_cast<float_to_int_t<scalar_t> const*>(&b);
     auto   ic   = reinterpret_cast<float_to_int_t<scalar_t> const*>(&c);
     for (int i = 0; i < 4; ++i)
-      iret[i] = (~ic[i] & iv1[i]) | (ic[i] & iv2[i]);
+      iret[i] = ((~ic[i]) & iv1[i]) | (ic[i] & iv2[i]);
     return ret;
   }
 }

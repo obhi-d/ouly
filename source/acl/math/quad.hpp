@@ -267,4 +267,29 @@ inline scalar_t sqdistance(quad_t<scalar_t, tag_t> const& a, quad_t<scalar_t, ta
 {
   return vml::sqdistance(a.v, b.v);
 }
+
+template <FloatingType scalar_t, typename tag_t>
+inline auto cast(quad_t<scalar_t, tag_t> const& a)
+{
+  union
+  {
+    std::array<scalar_t, 4>                      quad;
+    std::array<vml::float_to_int_t<scalar_t>, 4> iquad;
+  } data;
+  data.quad = a.xyzw;
+  return quad_t<vml::float_to_int_t<scalar_t>, 4>(data.iquad);
+}
+
+template <IntegralType scalar_t, typename tag_t>
+inline auto cast(quad_t<scalar_t, tag_t> const& a)
+{
+  union
+  {
+    std::array<scalar_t, 4>                      iquad;
+    std::array<vml::int_to_float_t<scalar_t>, 4> quad;
+  } data;
+  data.iquad = a.xyzw;
+  return data.quad;
+}
+
 } // namespace acl
