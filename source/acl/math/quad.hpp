@@ -277,7 +277,7 @@ inline auto cast(quad_t<scalar_t, tag_t> const& a)
     std::array<vml::float_to_int_t<scalar_t>, 4> iquad;
   } data;
   data.quad = a.xyzw;
-  return quad_t<vml::float_to_int_t<scalar_t>, 4>(data.iquad);
+  return data.iquad;
 }
 
 template <IntegralType scalar_t, typename tag_t>
