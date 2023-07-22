@@ -38,7 +38,11 @@ jobs:
         CC: gcc-13
         CXX: g++-13
 
-      
+  test:
+
+    runs-on: ubuntu-latest
+
+    steps:
     - name: Test
       working-directory: ${{github.workspace}}/build/unit_tests
       # Execute tests defined by the CMake configuration.
@@ -47,7 +51,7 @@ jobs:
 
     - name: Run lcov
       working-directory: ${{github.workspace}}/build/unit_tests
-      run: lcov -c --directory ${{github.workspace}}/include -d . --no-external -o lcov.info
+      run: lcov -c --directory ${{github.workspace}}/source -d . --no-external -o lcov.info
 
     - name: Coverage
       uses: coverallsapp/github-action@v2
