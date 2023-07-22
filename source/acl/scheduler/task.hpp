@@ -9,13 +9,29 @@ namespace acl
 class worker_context;
 struct task_context
 {};
+struct task_data
+{
+  union
+  {
+    task_context* context = nullptr;
+    struct
+    {
+      uint32_t uint_data_0;
+      uint32_t uint_data_1;
+    };
+  };
+  uint32_t uint_data   = 0;
+  uint16_t ushort_data = 0;
+  uint8_t  reserved_0; // this data is reserved space, and should not be used
+  uint8_t  reserved_1; // this data is reserved space, and should not be used
+};
 
-using task_delegate = void (*)(task_context*, worker_context const&);
+using task_delegate = void (*)(task_data, worker_context const&);
 
 struct task
 {
-  virtual ~task() noexcept                                      = default;
-  virtual void operator()(task_context*, worker_context const&) = 0;
+  virtual ~task() noexcept                                  = default;
+  virtual void operator()(task_data, worker_context const&) = 0;
 };
 
 namespace detail

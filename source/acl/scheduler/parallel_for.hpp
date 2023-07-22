@@ -18,16 +18,6 @@ void parallel_for(L&& lambda, FwIt range, uint32_t granularity, worker_context c
 {
   auto& s          = this_context.get_scheduler();
   using iterator_t = decltype(std::begin(range));
-  union uint_range
-  {
-    struct
-    {
-      uint32_t begin;
-      uint32_t end;
-    };
-    uintptr_t     range;
-    task_context* task;
-  };
 
   struct parallel_for_executer : public task
   {
@@ -35,17 +25,15 @@ void parallel_for(L&& lambda, FwIt range, uint32_t granularity, worker_context c
         : lambda_instance(lambda), first(f), counter(task_count)
     {}
 
-    void operator()(task_context* data, worker_context const& wc) override
+    void operator()(task_data data, worker_context const& wc) override
     {
-      uint_range urange;
-      urange.task = data;
       if constexpr (detail::RangeExcuter<L, iterator_t>)
       {
-        lambda_instance(first + urange.begin, first + urange.end, wc);
+        lambda_instance(first + data.uint_data_0, first + data.uint_data_1, wc);
       }
       else
       {
-        lambda_instance(*(first + urange.begin), wc);
+        lambda_instance(*(first + data.uint_data_0), wc);
       }
       counter.count_down();
     }
@@ -58,7 +46,7 @@ void parallel_for(L&& lambda, FwIt range, uint32_t granularity, worker_context c
   constexpr bool is_range_executor = detail::RangeExcuter<L, iterator_t>;
   uint32_t       count             = static_cast<uint32_t>(std::distance(std::begin(range), std::end(range)));
   const uint32_t task_count =
-    is_range_executor ? s.get_logical_divisor(this_context.get_work_group()) * granularity : count;
+    is_range_executor ? s.get_logical_divisor(this_context.get_workgroup()) * granularity : count;
   const uint32_t fixed = is_range_executor ? ((count + task_count - 1) / task_count) : 1;
   if (!task_count)
   {
@@ -76,19 +64,19 @@ void parallel_for(L&& lambda, FwIt range, uint32_t granularity, worker_context c
     uint32_t begin    = 0;
     for (uint32_t i = 1; i < task_count; ++i)
     {
-      uint_range urange;
-      urange.begin = begin;
-      urange.end   = std::min(begin + fixed, count);
-      s.submit(&executer, urange.task, this_context.get_work_group(), this_context.get_worker());
-      begin = urange.end;
+      task_data range;
+      range.uint_data_0 = begin;
+      range.uint_data_1 = std::min(begin + fixed, count);
+      s.submit(&executer, range, this_context.get_workgroup(), this_context.get_worker());
+      begin = range.uint_data_1;
     }
 
     // Work before wait
     {
-      uint_range urange;
-      urange.begin = begin;
-      urange.end   = std::min(begin + fixed, count);
-      executer(urange.task, this_context);
+      task_data range;
+      range.uint_data_0 = begin;
+      range.uint_data_1 = std::min(begin + fixed, count);
+      executer(range, this_context);
     }
 
     executer.counter.wait();
@@ -96,21 +84,21 @@ void parallel_for(L&& lambda, FwIt range, uint32_t granularity, worker_context c
 }
 
 template <typename L, typename FwIt>
-void parallel_for(L&& lambda, FwIt range, uint32_t granularity, worker_id current, work_group_id work_group,
+void parallel_for(L&& lambda, FwIt range, uint32_t granularity, worker_id current, workgroup_id workgroup,
                   scheduler& s)
 {
-  auto const& this_context = s.get_context(current, work_group);
+  auto const& this_context = s.get_context(current, workgroup);
   // Assert this context belongs to the work group selected for submission
   assert(
-    this_context.belongs_to(work_group) &&
+    this_context.belongs_to(workgroup) &&
     "Current worker does not belong to the work group for 'parallel_for' submission and thus cannot execute the task.");
   parallel_for(std::forward<L>(lambda), range, granularity, this_context);
 }
 
 template <typename L, typename FwIt>
-void parallel_for(L&& lambda, FwIt range, uint32_t granularity, work_group_id work_group)
+void parallel_for(L&& lambda, FwIt range, uint32_t granularity, workgroup_id workgroup)
 {
-  auto const& this_context = worker_context::get_context(work_group);
+  auto const& this_context = worker_context::get_context(workgroup);
   parallel_for(std::forward<L>(lambda), range, granularity, this_context);
 }
 

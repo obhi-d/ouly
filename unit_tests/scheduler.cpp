@@ -7,8 +7,8 @@
 TEST_CASE("scheduler: Construction")
 {
   acl::scheduler scheduler;
-  scheduler.create_group(acl::work_group_id(0), "default", 0, 16);
-  scheduler.create_group(acl::work_group_id(1), "io", 16, 2);
+  scheduler.create_group(acl::workgroup_id(0), "default", 0, 16);
+  scheduler.create_group(acl::workgroup_id(1), "io", 16, 2);
 
   scheduler.begin_execution();
 
@@ -30,7 +30,7 @@ TEST_CASE("scheduler: Construction")
 
   executor instance;
   for (uint32_t i = 0; i < instance.executed.size(); ++i)
-    scheduler.submit<&executor::execute>(instance, acl::work_group_id(i % 1), acl::main_worker_id);
+    scheduler.submit<&executor::execute>(instance, acl::workgroup_id(i % 1), acl::main_worker_id);
 
   scheduler.end_execution();
 
@@ -40,7 +40,7 @@ TEST_CASE("scheduler: Construction")
 TEST_CASE("scheduler: Simplest ParallelFor")
 {
   acl::scheduler scheduler;
-  scheduler.create_group(acl::work_group_id(0), "default", 0, 16);
+  scheduler.create_group(acl::workgroup_id(0), "default", 0, 16);
 
   scheduler.begin_execution();
 
@@ -60,7 +60,7 @@ TEST_CASE("scheduler: Simplest ParallelFor")
     {
       parallel_sum += a;
     },
-    std::span(list.begin(), list.end()), 2, acl::default_work_group_id);
+    std::span(list.begin(), list.end()), 2, acl::default_workgroup_id);
 
   REQUIRE(parallel_sum.load() == sum);
 
@@ -71,7 +71,7 @@ TEST_CASE("scheduler: Simplest ParallelFor")
       for (auto it = start; it != end; ++it)
         parallel_sum += *it;
     },
-    std::span(list.begin(), list.end()), 2, acl::default_work_group_id);
+    std::span(list.begin(), list.end()), 2, acl::default_workgroup_id);
 
   REQUIRE(parallel_sum.load() == sum);
 
@@ -101,15 +101,15 @@ acl::co_task<std::string> create_string(acl::co_task<std::string>& tunein)
 TEST_CASE("scheduler: Test co_task")
 {
   acl::scheduler scheduler;
-  scheduler.create_group(acl::work_group_id(0), "default", 0, 16);
+  scheduler.create_group(acl::workgroup_id(0), "default", 0, 16);
 
   scheduler.begin_execution();
 
   auto task        = continue_string();
   auto string_task = create_string(task);
 
-  scheduler.submit(task, acl::default_work_group_id, acl::main_worker_id);
-  scheduler.submit(string_task, acl::default_work_group_id, acl::main_worker_id);
+  scheduler.submit(task, acl::default_workgroup_id, acl::main_worker_id);
+  scheduler.submit(string_task, acl::default_workgroup_id, acl::main_worker_id);
 
   std::string        continue_string = "basic";
   constexpr uint32_t nb_elements     = 1000;
@@ -134,14 +134,14 @@ acl::co_sequence<std::string> create_string_seq(acl::co_task<std::string>& tunei
 TEST_CASE("scheduler: Test co_sequence")
 {
   acl::scheduler scheduler;
-  scheduler.create_group(acl::work_group_id(0), "default", 0, 2);
+  scheduler.create_group(acl::workgroup_id(0), "default", 0, 2);
 
   scheduler.begin_execution();
 
   auto task        = continue_string();
   auto string_task = create_string_seq(task);
 
-  scheduler.submit(task, acl::default_work_group_id, acl::main_worker_id);
+  scheduler.submit(task, acl::default_workgroup_id, acl::main_worker_id);
 
   std::string        continue_string = "basic";
   constexpr uint32_t nb_elements     = 1000;

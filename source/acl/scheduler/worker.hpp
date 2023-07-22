@@ -2,13 +2,16 @@
 
 #pragma once
 
+#include "spin_lock.hpp"
 #include "task.hpp"
 #include "worker_context.hpp"
 #include <acl/allocators/default_allocator.hpp>
 #include <acl/containers/basic_queue.hpp>
 #include <acl/utils/tagged_ptr.hpp>
+#include <condition_variable>
 #include <cstdint>
 #include <limits>
+#include <mutex>
 #include <semaphore>
 #include <string>
 #include <tuple>
@@ -22,12 +25,12 @@ static constexpr uint8_t  work_type_coroutine    = 0;
 static constexpr uint8_t  work_type_task_functor = 1;
 static constexpr uint8_t  work_type_free_functor = 2;
 static constexpr uint32_t max_worker_groups      = 32;
+static constexpr uint32_t max_local_work_item    = 32; // 2 cache lines
 
-using work_context = acl::tagged_ptr<task_context>;
 struct work_item
 {
-  work_context  item        = nullptr;
-  task_delegate delegate_fn = nullptr;
+  task_delegate delegate_fn = nullptr; // or a coro
+  task_data     data;
 
   inline explicit operator bool() noexcept
   {
@@ -35,76 +38,63 @@ struct work_item
   }
 
   inline work_item() noexcept = default;
-  inline work_item(task_context* ctx, task_delegate td, uint8_t h) : item(ctx, h), delegate_fn(td) {}
+  inline work_item(task_delegate tfn, task_data tdata) : delegate_fn(tfn), data(tdata) {}
 
-  inline work_item(work_item&& other) noexcept : item(other.item), delegate_fn(other.delegate_fn)
-  {
-    other.delegate_fn = nullptr;
-  }
+  inline work_item(work_item&& other) noexcept : delegate_fn(other.delegate_fn), data(other.data) {}
 
   inline work_item& operator=(work_item&& other) noexcept
   {
-    item              = other.item;
-    delegate_fn       = other.delegate_fn;
-    other.delegate_fn = nullptr;
+    delegate_fn = other.delegate_fn;
+    data        = other.data;
     return *this;
   }
 
   auto unpack() const noexcept
   {
-    return std::make_tuple((void*)delegate_fn, item.get_ptr(), item.get_tag());
+    return std::make_tuple((void*)delegate_fn, data);
   }
 };
-
-using work = std::pair<work_item, work_group_id>;
 
 struct work_queue_traits
 {
   static constexpr uint32_t pool_size_v = 2048;
   using allocator_t                     = acl::default_allocator<>;
 };
-using work_queue_t       = acl::basic_queue<work_item, work_queue_traits>;
-using concurrent_queue_t = std::pair<spin_lock, work_queue_t>;
 
-struct work_group
+using work_queue = acl::basic_queue<work_item, work_queue_traits>;
+using global_work_queue = std::pair<std::mutex, work_queue>;
+
+struct workgroup
 {
   // Global queues, one per thread group
-  std::string          name;
-  uint32_t             start_thread_idx = 0;
-  uint32_t             end_thread_idx   = 0;
-  uint32_t             thread_count     = 0;
-  std::atomic_uint32_t thread_selection = 0;
-  std::atomic_uint32_t work_count       = 0;
+  uint32_t start_thread_idx = 0;
+  uint32_t end_thread_idx   = 0;
+  uint32_t thread_count     = 0;
+
+  std::string name;
 
   inline uint32_t create_group(std::string gname, uint32_t start, uint32_t count) noexcept
   {
-    name             = std::move(gname);
     start_thread_idx = start;
     end_thread_idx   = start + count;
     thread_count     = count;
-    thread_selection = start;
-    queues           = std::make_unique<work_queue_t[]>(thread_count);
-    locks            = std::make_unique<spin_lock[]>(thread_count);
+    name             = std::move(gname);
     return end_thread_idx;
   }
-  // Local queue
-  concurrent_queue_t              shared_queue;
-  std::unique_ptr<work_queue_t[]> queues;
-  std::unique_ptr<spin_lock[]>    locks;
 
-  work_group() noexcept = default;
+  workgroup() noexcept = default;
 };
 
 struct wake_event
 {
   inline wake_event() noexcept : semaphore(0) {}
 
-  inline void acquire() noexcept
+  inline void wait() noexcept
   {
     semaphore.acquire();
   }
 
-  inline void release() noexcept
+  inline void notify() noexcept
   {
     semaphore.release();
   }
@@ -112,11 +102,23 @@ struct wake_event
   std::binary_semaphore semaphore;
 };
 
+struct local_queue
+{
+  std::atomic_uint32_t                       head;
+  std::atomic_uint32_t                       tail;
+  std::array<work_item, max_local_work_item> queue;
+};
+
 struct worker
 {
-  std::array<uint32_t, max_worker_groups>           group_ids;
+  // Contexts
   std::array<worker_context_opt, max_worker_groups> contexts;
-  uint32_t                                          group_count = 0;
+  // This thread can steal from any of the workers in the range [friend_worker_start, friend_worker_end)
+  uint32_t friend_worker_count = 0;
+  uint32_t friend_worker_start = std::numeric_limits<uint32_t>::max();
+  uint32_t push_offset = 0;
+  // Thread from which this worker should steal work
+  uint32_t stealing_source;
 };
 
 } // namespace detail

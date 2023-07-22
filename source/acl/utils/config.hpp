@@ -45,3 +45,15 @@ inline static constexpr bool debug = false;
 #else
 #define ACL_ASSERT(expression) assert(expression)
 #endif
+
+#ifdef _MSC_VER
+#if defined(_M_X64) || defined(_M_IA64)
+#define ACL_PACK_TAGGED_POINTER
+#endif
+#endif
+
+#ifdef __GNUC__
+#if defined(__x86_64__)
+#define ACL_PACK_TAGGED_POINTER
+#endif
+#endif
