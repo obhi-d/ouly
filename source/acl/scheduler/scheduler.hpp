@@ -149,7 +149,7 @@ private:
   // Global work items
   std::unique_ptr<detail::global_work_queue[]> global_work;
   std::unique_ptr<uint32_t[]>                  group_masks;
-  std::unique_ptr<std::atomic_flag[]>          wake_status;
+  std::unique_ptr<std::atomic_bool[]>          wake_status;
   std::unique_ptr<detail::wake_event[]>        wake_events;
   std::vector<std::thread>                     threads;
   uint32_t                                     worker_count         = 0;

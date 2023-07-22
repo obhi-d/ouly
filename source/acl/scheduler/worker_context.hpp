@@ -2,8 +2,8 @@
 #pragma once
 
 #include <acl/utils/nullable_optional.hpp>
-#include <limits.h>
 #include <cstdint>
+#include <limits>
 
 namespace acl
 {
@@ -101,11 +101,11 @@ public:
   static worker_context const& get_context(workgroup_id group);
 
 private:
-  scheduler&    owner;
-  worker_id     index;
-  workgroup_id  group_id;
-  uint32_t      group_mask   = 0;
-  uint32_t      group_offset = 0;
+  scheduler&   owner;
+  worker_id    index;
+  workgroup_id group_id;
+  uint32_t     group_mask   = 0;
+  uint32_t     group_offset = 0;
 };
 
 using worker_context_opt = acl::nullable_optional<worker_context>;

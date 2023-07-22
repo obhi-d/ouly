@@ -9,13 +9,10 @@ namespace acl
 {
 namespace detail
 {
-static constexpr uint8_t coro_state_none         = 0;
-static constexpr uint8_t coro_state_can_continue = 1;
-static constexpr uint8_t coro_state_finished     = 2;
 struct coro_state
 {
-  std::coroutine_handle<> continuation = nullptr;
-  std::atomic_uint8_t     state        = coro_state_none;
+  std::coroutine_handle<> continuation       = nullptr;
+  std::atomic_bool        continuation_state = false;
 };
 } // namespace detail
 
@@ -31,7 +28,7 @@ public:
   void await_suspend(std::coroutine_handle<AwaiterPromise> awaiting_coro) noexcept
   {
     detail::coro_state& state = awaiting_coro.promise();
-    if (state.state.exchange(detail::coro_state_finished) == detail::coro_state_can_continue)
+    if (state.continuation_state.exchange(true))
       state.continuation.resume();
   }
 
@@ -55,9 +52,8 @@ public:
     detail::coro_state& state = coro.promise();
     assert(!state.continuation);
     // set continuation
-    state.continuation   = awaiting_coro;
-    uint8_t can_continue = detail::coro_state_none;
-    return state.state.compare_exchange_strong(can_continue, detail::coro_state_can_continue);
+    state.continuation = awaiting_coro;
+    return state.continuation_state.exchange(true) == false;
   }
 
   decltype(auto) await_resume() noexcept

@@ -75,7 +75,7 @@ void scheduler::run(worker_id thread)
     if (stop.load(std::memory_order_relaxed))
       break;
 
-    wake_status[thread.get_index()].clear();
+    wake_status[thread.get_index()].store(false);
     wake_events[thread.get_index()].wait();
   }
 }
@@ -126,7 +126,7 @@ detail::work_item scheduler::get_work(worker_id thread) noexcept
 void scheduler::wake_up(worker_id thread) noexcept
 {
   bool sleeping = true;
-  if (!wake_status[thread.get_index()].test_and_set())
+  if (!wake_status[thread.get_index()].exchange(true))
   {
     wake_events[thread.get_index()].notify();
     return;
@@ -138,7 +138,7 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry)
   local_work  = std::make_unique<detail::work_item[]>(worker_count);
   global_work = std::make_unique<detail::global_work_queue[]>(worker_count);
   group_masks = std::make_unique<uint32_t[]>(worker_count);
-  wake_status = std::make_unique<std::atomic_flag[]>(worker_count);
+  wake_status = std::make_unique<std::atomic_bool[]>(worker_count);
   wake_events = std::make_unique<detail::wake_event[]>(worker_count);
   workers     = std::make_unique<detail::worker[]>(worker_count);
 
@@ -173,7 +173,7 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry)
     workers[w].friend_worker_count = workers[w].friend_worker_count - workers[w].friend_worker_start;
     workers[w].stealing_source     = workers[w].friend_worker_start + (w + 1) % workers[w].friend_worker_count;
     workers[w].id                  = worker_id(w);
-    wake_status[w].test_and_set();
+    wake_status[w].store(true);
   }
 
   stop               = false;
@@ -255,7 +255,7 @@ void scheduler::submit(detail::work_item work, worker_id current)
   for (uint32_t i = wg.start_thread_idx; i != wg.end_thread_idx; ++i)
   {
     bool sleeping = true;
-    if (!wake_status[i].test_and_set())
+    if (!wake_status[i].exchange(true))
     {
       local_work[i] = std::move(work);
       wake_events[i].notify();
@@ -273,7 +273,7 @@ void scheduler::submit(detail::work_item work, worker_id current)
       {
         global_work[q].second.emplace_back(std::move(work));
         global_work[q].first.unlock();
-        if (!wake_status[q].test_and_set())
+        if (!wake_status[q].exchange(true))
           wake_events[q].notify();
         return;
       }
