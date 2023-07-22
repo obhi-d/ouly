@@ -31,44 +31,44 @@ struct param_context
 {
   virtual ~param_context() noexcept = default;
 
-  virtual std::pair<param_context*, cmd_state*> enter_param_context(scli&, int, std::string_view, cmd_state* cstate)
+  inline virtual std::pair<param_context*, cmd_state*> enter_param_context(scli&, int, std::string_view, cmd_state* cstate)
   {
     return {nullptr, cstate};
   }
 
-  virtual void exit_param_context(scli&, int param_pos, cmd_state* cstate_inner, cmd_state* cstate_cur) {}
+  inline virtual void exit_param_context(scli&, int param_pos, cmd_state* cstate_inner, cmd_state* cstate_cur) {}
 
-  virtual void parse_param(scli&, std::string_view value, cmd_state*) {}
-  virtual void parse_param(scli&, int param_pos, std::string_view param_name, std::string_view value, cmd_state*) {}
+  inline virtual void parse_param(scli&, std::string_view value, cmd_state*) {}
+  inline virtual void parse_param(scli&, int param_pos, std::string_view param_name, std::string_view value, cmd_state*) {}
 };
 
 struct cmd_context : param_context
 {
-  virtual cmd_state* construct(scli&)
+  inline virtual cmd_state* construct(scli&)
   {
     return nullptr;
   }
 
-  virtual void destroy(scli&, cmd_state*) {}
+  inline virtual void destroy(scli&, cmd_state*) {}
 
-  virtual bool execute(scli&, cmd_state*)
+  inline virtual bool execute(scli&, cmd_state*)
   {
     return true;
   }
 
-  virtual bool enter(scli&, cmd_state*)
+  inline virtual bool enter(scli&, cmd_state*)
   {
     return true;
   }
 
-  virtual void exit(scli&, cmd_state*) {}
+  inline virtual void exit(scli&, cmd_state*) {}
 
-  virtual cmd_context* get_context(scli&, std::string_view cmd_name)
+  inline virtual cmd_context* get_context(scli&, std::string_view cmd_name)
   {
     return nullptr;
   }
 
-  virtual void add_sub_command(std::string_view name, std::unique_ptr<cmd_context> cmd) {}
+  inline virtual void add_sub_command(std::string_view name, std::unique_ptr<cmd_context> cmd) {}
 };
 
 using text_content = std::variant<std::string_view, std::string>;
@@ -85,7 +85,8 @@ public:
     uint32_t             line                                        = 1;
     uint32_t             character                                   = 1;
     inline auto          operator<=>(position const&) const noexcept = default;
-    friend std::ostream& operator<<(std::ostream& yyo, position const& l) noexcept
+
+    inline friend std::ostream& operator<<(std::ostream& yyo, position const& l) noexcept
     {
       yyo << l.line << ':' << l.character;
       return yyo;
@@ -95,17 +96,17 @@ public:
   class location
   {
   public:
-    void step() noexcept
+    inline void step() noexcept
     {
       begin = end;
     }
 
-    void columns(std::uint32_t l) noexcept
+    inline void columns(std::uint32_t l) noexcept
     {
       end.character += l;
     }
 
-    void lines(std::uint32_t l) noexcept
+    inline void lines(std::uint32_t l) noexcept
     {
       end.line += l;
       end.character = 0;
@@ -120,7 +121,7 @@ public:
       return value;
     }
 
-    friend std::ostream& operator<<(std::ostream& yyo, location const& l) noexcept
+    inline friend std::ostream& operator<<(std::ostream& yyo, location const& l) noexcept
 
     {
       std::string value = std::string(l.source_name.empty() ? "buffer" : l.source_name);
@@ -158,7 +159,7 @@ public:
     stack_allocator                               allocator;
     std::unordered_map<std::string, text_content> texts;
 
-    shared_state(context& cctx) : ctx(cctx), allocator(scli_stack_size)
+    inline shared_state(context& cctx) : ctx(cctx), allocator(scli_stack_size)
     {
       import_handler = [this](std::string_view imp) -> std::string_view
       {
@@ -171,7 +172,7 @@ public:
 
   /// @par API
   template <typename UserContext>
-  static void parse(context& c, UserContext& uc, std::string_view src_name, std::string_view content,
+  inline static void parse(context& c, UserContext& uc, std::string_view src_name, std::string_view content,
                     std::vector<std::string> include_paths = {}, error_handler_lambda ehl = {},
                     import_handler_lambda ihl = {}) noexcept
   {
@@ -186,14 +187,14 @@ public:
   }
 
   template <typename UserContext>
-  UserContext& get() noexcept
+  inline UserContext& get() noexcept
   {
     return *reinterpret_cast<UserContext*>(sstate.user_ctx);
   }
 
   /// @par Command management
   template <typename T>
-  T* create_cmd_state()
+  inline T* create_cmd_state()
   {
     auto rewind   = sstate.allocator.get_rewind_point();
     auto state    = new (sstate.allocator.allocate(sizeof(T), alignarg<T>)) T;
@@ -202,15 +203,18 @@ public:
   }
 
   template <typename T>
-  void destroy_cmd_state(T* state)
+  inline void destroy_cmd_state(T* state)
   {
     sstate.allocator.rewind(state->rewind);
   }
 
-  std::string_view get_command_name() noexcept
+  inline std::string_view get_command_name() noexcept
   {
     return command;
   }
+
+  /// @par API
+  ACL_API void parse(std::string_view src_name, std::string_view content) noexcept;
 
   /// @par Parser utilities
   void set_next_command(std::string_view name) noexcept;
@@ -225,7 +229,6 @@ public:
   void enter_region(std::string_view);
   void enter_text_region(std::string_view, text_content&&);
   void import_script(text_content&&);
-  void parse(std::string_view src_name, std::string_view content) noexcept;
   void destroy_comamnd_state();
   void init_root_context();
 
@@ -1038,7 +1041,7 @@ constexpr auto cmd = detail::command<Name, CmdType>();
 class scli::builder
 {
 public:
-  scli::builder& operator[](std::string_view name) noexcept
+  inline scli::builder& operator[](std::string_view name) noexcept
   {
     stack.clear();
     auto dc     = std::make_unique<detail::cmd_group>();
@@ -1065,7 +1068,7 @@ public:
     return *this;
   }
 
-  scli::builder& operator-(acl::endl_type) noexcept
+  inline scli::builder& operator-(acl::endl_type) noexcept
   {
     current_ctx = stack.back();
     stack.pop_back();

@@ -46,7 +46,7 @@ jobs:
 
     - name: Run lcov
       working-directory: ${{github.workspace}}/build/unit_tests
-      run: lcov -c --directory ${{github.workspace}}/source -d . --no-external -o lcov.info
+      run: lcov -c --directory ${{github.workspace}}/source -d . --no-external -o lcov.info --gcov-tool /usr/bin/gcov-13
 
     - name: Coverage
       uses: coverallsapp/github-action@v2

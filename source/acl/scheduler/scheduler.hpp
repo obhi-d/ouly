@@ -2,6 +2,7 @@
 #pragma once
 #include "task.hpp"
 #include "worker.hpp"
+#include <acl/utils/config.hpp>
 #include <acl/utils/type_traits.hpp>
 #include <array>
 #include <thread>
@@ -17,11 +18,11 @@ class scheduler
 public:
   static constexpr uint32_t work_scale = 4;
 
-  scheduler() noexcept = default;
-  ~scheduler() noexcept;
+  ACL_API scheduler() noexcept = default;
+  ACL_API ~scheduler() noexcept;
 
   template <CoroutineTask C>
-  void submit(C const& task_obj, workgroup_id submit_group, worker_id current) noexcept
+  inline void submit(C const& task_obj, workgroup_id submit_group, worker_id current) noexcept
   {
     task_data data;
     data.reserved_0 = detail::work_type_coroutine;
@@ -29,14 +30,14 @@ public:
     submit(detail::work_item(reinterpret_cast<task_delegate>(task_obj.address()), data), current);
   }
 
-  void submit(task* task_obj, task_data data, workgroup_id submit_group, worker_id current) noexcept
+  inline void submit(task* task_obj, task_data data, workgroup_id submit_group, worker_id current) noexcept
   {
     data.reserved_0 = detail::work_type_task_functor;
     data.reserved_1 = static_cast<uint8_t>(submit_group.get_index());
     submit(detail::work_item(reinterpret_cast<task_delegate>(task_obj), data), current);
   }
 
-  void submit(task_delegate task_obj, task_data data, workgroup_id submit_group, worker_id current) noexcept
+  inline void submit(task_delegate task_obj, task_data data, workgroup_id submit_group, worker_id current) noexcept
   {
     data.reserved_0 = detail::work_type_free_functor;
     data.reserved_1 = static_cast<uint8_t>(submit_group.get_index());
@@ -44,7 +45,7 @@ public:
   }
 
   template <auto M, typename Class>
-  void submit(Class& ctx, workgroup_id submit_group, worker_id current) noexcept
+  inline void submit(Class& ctx, workgroup_id submit_group, worker_id current) noexcept
   {
     task_data data;
     data.context    = reinterpret_cast<task_context*>(&ctx);
@@ -61,7 +62,7 @@ public:
   }
 
   template <auto M, typename Class>
-  void submit(Class& ctx, uint32_t additional_data, workgroup_id submit_group, worker_id current) noexcept
+  inline void submit(Class& ctx, uint32_t additional_data, workgroup_id submit_group, worker_id current) noexcept
   {
     task_data data;
     data.context    = reinterpret_cast<task_context*>(&ctx);
@@ -79,14 +80,14 @@ public:
   }
 
   /// @brief Submit a work for execution
-  void submit(detail::work_item work, worker_id current);
+  ACL_API void submit(detail::work_item work, worker_id current);
 
   /// @brief Begin scheduler execution, group creation is frozen after this call.
   /// @param entry An entry function can be provided that will be executed on all worker threads upon entry.
-  void begin_execution(scheduler_worker_entry&& entry = {});
+  ACL_API void begin_execution(scheduler_worker_entry&& entry = {});
   /// @brief Wait for threads to finish executing and end scheduler execution. Scheduler execution can be restarted
   /// using begin_execution. Unlocks scheduler and makes it mutable.
-  void end_execution();
+  ACL_API void end_execution();
 
   /// @brief Get worker count in the scheduler
   inline uint32_t get_worker_count() const noexcept
@@ -95,13 +96,13 @@ public:
   }
 
   /// @brief Ensure a work-group by id and set a name
-  void create_group(workgroup_id group, std::string name, uint32_t thread_offset, uint32_t thread_count);
+  ACL_API void create_group(workgroup_id group, std::string name, uint32_t thread_offset, uint32_t thread_count);
   /// @brief Get the next available group.
-  workgroup_id create_group(std::string name, uint32_t thread_offset, uint32_t thread_count);
+  ACL_API workgroup_id create_group(std::string name, uint32_t thread_offset, uint32_t thread_count);
   /// @brief Clear a group, and re-create it
-  void clear_group(workgroup_id group);
+  ACL_API void clear_group(workgroup_id group);
   /// @brief  Find an existing work group by name
-  workgroup_id find_group(std::string const& name);
+  ACL_API workgroup_id find_group(std::string const& name);
   /// @brief Get worker count in this group
   inline uint32_t get_worker_count(workgroup_id g) const noexcept
   {
@@ -127,8 +128,8 @@ public:
 
   /// @brief If multiple schedulers are active, this function should be called from main thread before using the
   /// scheduler
-  void take_ownership() noexcept;
-  void busy_work(worker_id) noexcept;
+  ACL_API void take_ownership() noexcept;
+  ACL_API void busy_work(worker_id) noexcept;
 
 private:
   void              finish_pending_tasks() noexcept;

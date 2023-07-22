@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include <acl/utils/config.hpp>
 #include <memory>
 #include <string_view>
 #include <variant>
@@ -42,7 +43,7 @@ private:
 class default_parameter : public parameter
 {
 public:
-  static default_parameter const* get_instance();
+  ACL_API static default_parameter const* get_instance();
 
   int64_t          as_int64(int64_t default_value) const noexcept final;
   uint64_t         as_uint64(uint64_t default_value) const noexcept final;
@@ -81,7 +82,7 @@ public:
     return param_value.empty();
   }
 
-  std::string to_string() const noexcept final;
+  ACL_API std::string to_string() const noexcept final;
 
 private:
   std::string param_value;
@@ -138,7 +139,7 @@ public:
     return param_value.empty();
   }
 
-  void add(std::unique_ptr<parameter> param)
+  inline void add(std::unique_ptr<parameter> param)
   {
     param_value.emplace_back(std::move(param));
   }

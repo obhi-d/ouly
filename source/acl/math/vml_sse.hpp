@@ -1,5 +1,6 @@
 #pragma once
 
+#include <acl/utils/config.hpp>
 #include "deduced_types.hpp"
 #include "real.hpp"
 #include "types.hpp"
@@ -26,11 +27,11 @@ constexpr float get_quad_scalar_type(__m128)
   return 0.0f;
 }
 
-__m128 exp_ps(__m128 x);
-__m128 log_ps(__m128 x);
-__m128 sin_ps(__m128 x);
-__m128 cos_ps(__m128 x);
-void   sincos_ps(__m128 x, __m128*, __m128*);
+ACL_API __m128 exp_ps(__m128 x);
+ACL_API __m128 log_ps(__m128 x);
+ACL_API __m128 sin_ps(__m128 x);
+ACL_API __m128 cos_ps(__m128 x);
+ACL_API void   sincos_ps(__m128 x, __m128*, __m128*);
 
 #else
 inline auto exp_ps(auto x)
@@ -53,11 +54,11 @@ struct qvscalar_t
 
 #ifdef ACL_USE_AVX
 
-__m256 exp256_ps(__m256 x);
-__m256 log256_ps(__m256 x);
-__m256 sin256_ps(__m256 x);
-__m256 cos256_ps(__m256 x);
-void   sincos256_ps(__m256 x, __m256*, __m256*);
+ACL_API __m256 exp256_ps(__m256 x);
+ACL_API __m256 log256_ps(__m256 x);
+ACL_API __m256 sin256_ps(__m256 x);
+ACL_API __m256 cos256_ps(__m256 x);
+ACL_API void   sincos256_ps(__m256 x, __m256*, __m256*);
 
 #else
 inline auto exp256_pd(auto x)

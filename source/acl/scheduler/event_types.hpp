@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include <acl/utils/config.hpp>
 #include "worker_context.hpp"
 #include <semaphore>
 
@@ -32,10 +33,10 @@ class scheduler;
 class busywork_event
 {
 public:
-  busywork_event(bool set) noexcept : semaphore((std::ptrdiff_t)set) {}
-  busywork_event() noexcept : semaphore(0) {}
+  inline busywork_event(bool set) noexcept : semaphore((std::ptrdiff_t)set) {}
+  inline busywork_event() noexcept : semaphore(0) {}
 
-  void wait(worker_id worker, scheduler& s);
+  ACL_API void wait(worker_id worker, scheduler& s);
 
   inline void notify()
   {
