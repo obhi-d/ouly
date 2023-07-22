@@ -838,14 +838,18 @@ inline quadvt select(quadvt const& a, quadvt const& b, quadvt const& c) noexcept
   }
   else
   {
-    quadvt ret;
-    auto   iret = reinterpret_cast<float_to_int_t<scalar_t>*>(&ret);
-    auto   iv1  = reinterpret_cast<float_to_int_t<scalar_t> const*>(&a);
-    auto   iv2  = reinterpret_cast<float_to_int_t<scalar_t> const*>(&b);
-    auto   ic   = reinterpret_cast<float_to_int_t<scalar_t> const*>(&c);
+    union
+    {
+      std::array<float_to_int_t<scalar_t>, 4> ival;
+      std::array<scalar_t, 4> val;
+    }ua, ub, uc, uret;
+
+    ua.val = a;
+    ub.val = b;
+    uc.val = c;
     for (int i = 0; i < 4; ++i)
-      iret[i] = ((~ic[i]) & iv1[i]) | (ic[i] & iv2[i]);
-    return ret;
+      uret.ival[i] = ((~uc.ival[i]) & ua.ival[i]) | (uc.ival[i] & ub.ival[i]);
+    return uret.val;
   }
 }
 
