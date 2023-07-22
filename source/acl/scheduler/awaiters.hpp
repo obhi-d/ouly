@@ -55,8 +55,9 @@ public:
     detail::coro_state& state = coro.promise();
     assert(!state.continuation);
     // set continuation
-    state.continuation = awaiting_coro;
-    return state.state.exchange(detail::coro_state_can_continue) == detail::coro_state_none;
+    state.continuation   = awaiting_coro;
+    uint8_t can_continue = detail::coro_state_none;
+    return state.state.compare_exchange_strong(can_continue, detail::coro_state_can_continue);
   }
 
   decltype(auto) await_resume() noexcept

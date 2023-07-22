@@ -1,11 +1,13 @@
 #pragma once
 
 #include "awaiters.hpp"
+#include "event_types.hpp"
 #include "promise_type.hpp"
+#include "worker_context.hpp"
 
 namespace acl
 {
-
+class scheduler;
 class worker_context;
 struct task_context
 {};
@@ -95,12 +97,23 @@ public:
     coro.resume();
   }
 
-  /// @brief Returns result after waiting for the task to finish
+  /// @brief Returns result after waiting for the task to finish, blocks the current thread until work is done
   R sync_wait_result() noexcept
   {
-    std::binary_semaphore event{0};
+    blocking_event event;
     detail::wait(event, *this);
-    event.acquire();
+    event.wait();
+    if constexpr (!std::is_same_v<R, void>)
+      return coro.promise().result();
+  }
+
+  /// @brief Returns result after waiting for the task to finish, with a non-blocking event, that tries to do work when
+  /// this coro is not available
+  R sync_wait_result(worker_id worker, scheduler& s) noexcept
+  {
+    busywork_event event;
+    detail::wait(event, *this);
+    event.wait(worker, s);
     if constexpr (!std::is_same_v<R, void>)
       return coro.promise().result();
   }

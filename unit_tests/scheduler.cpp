@@ -150,7 +150,7 @@ TEST_CASE("scheduler: Test co_sequence")
     continue_string += "-i-" + std::to_string(i);
   }
 
-  auto result = string_task.sync_wait_result();
+  auto result = string_task.sync_wait_result(acl::main_worker_id, scheduler);
   REQUIRE(result == continue_string);
   scheduler.end_execution();
 }

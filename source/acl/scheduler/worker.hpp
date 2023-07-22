@@ -61,7 +61,7 @@ struct work_queue_traits
   using allocator_t                     = acl::default_allocator<>;
 };
 
-using work_queue = acl::basic_queue<work_item, work_queue_traits>;
+using work_queue        = acl::basic_queue<work_item, work_queue_traits>;
 using global_work_queue = std::pair<std::mutex, work_queue>;
 
 struct workgroup
@@ -116,9 +116,11 @@ struct worker
   // This thread can steal from any of the workers in the range [friend_worker_start, friend_worker_end)
   uint32_t friend_worker_count = 0;
   uint32_t friend_worker_start = std::numeric_limits<uint32_t>::max();
-  uint32_t push_offset = 0;
+  uint32_t push_offset         = 0;
   // Thread from which this worker should steal work
   uint32_t stealing_source;
+  // worker id
+  worker_id id;
 };
 
 } // namespace detail

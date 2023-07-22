@@ -146,11 +146,11 @@ struct sync_waiter
   };
 };
 
-template <typename Awaiter>
-sync_waiter wait(std::binary_semaphore& event, Awaiter&& task)
+template <typename EventType, typename Awaiter>
+sync_waiter wait(EventType& event, Awaiter&& task)
 {
   co_await task;
-  event.release();
+  event.notify();
   co_return;
 }
 

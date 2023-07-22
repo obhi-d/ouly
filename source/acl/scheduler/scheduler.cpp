@@ -23,8 +23,6 @@ scheduler::~scheduler() noexcept
 
 inline void scheduler::do_work(worker_id thread, detail::work_item const& work) noexcept
 {
-  if (!work.delegate_fn)
-    return;
   switch (work.data.reserved_0)
   {
   case detail::work_type_coroutine:
@@ -41,6 +39,21 @@ inline void scheduler::do_work(worker_id thread, detail::work_item const& work) 
   }
 }
 
+void scheduler::busy_work(worker_id thread) noexcept
+{
+  {
+    auto& lw = local_work[thread.get_index()];
+    if (lw.delegate_fn)
+    {
+      do_work(thread, lw);
+      lw.delegate_fn = nullptr;
+      return;
+    }
+  }
+
+  work(thread);
+}
+
 void scheduler::run(worker_id thread)
 {
   g_worker = &workers[thread.get_index()];
@@ -49,8 +62,11 @@ void scheduler::run(worker_id thread)
   {
     {
       auto& lw = local_work[thread.get_index()];
-      do_work(thread, lw);
-      lw.delegate_fn = nullptr;
+      if (lw.delegate_fn)
+      {
+        do_work(thread, lw);
+        lw.delegate_fn = nullptr;
+      }
     }
 
     while (work(thread))
@@ -95,7 +111,7 @@ detail::work_item scheduler::get_work(worker_id thread) noexcept
     for (uint32_t steal_src = 0; steal_src != worker.friend_worker_count; ++steal_src)
     {
       uint32_t steal_from = (worker.stealing_source++) % worker.friend_worker_count;
-      auto& work_list = global_work[steal_from];
+      auto&    work_list  = global_work[steal_from];
       if (work_list.first.try_lock())
       {
         auto lck = std::scoped_lock(std::adopt_lock, work_list.first);
@@ -156,6 +172,7 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry)
   {
     workers[w].friend_worker_count = workers[w].friend_worker_count - workers[w].friend_worker_start;
     workers[w].stealing_source     = workers[w].friend_worker_start + (w + 1) % workers[w].friend_worker_count;
+    workers[w].id                  = worker_id(w);
     wake_status[w].test_and_set();
   }
 
@@ -188,14 +205,16 @@ void scheduler::take_ownership() noexcept
 
 void scheduler::finish_pending_tasks() noexcept
 {
-  uint32_t          empty_count = 0;
-  auto checked = std::vector<uint32_t>(worker_count);
+
+  uint32_t empty_count = 0;
+  auto     checked     = std::vector<uint32_t>(worker_count);
   std::iota(checked.begin(), checked.end(), 0);
+  auto worker = g_worker;
   while (!checked.empty())
   {
-    for (auto it = checked.begin(); it != checked.end(); )
+    for (auto it = checked.begin(); it != checked.end();)
     {
-      auto w = *it;
+      auto w        = *it;
       bool is_empty = true;
       do
       {
@@ -210,6 +229,8 @@ void scheduler::finish_pending_tasks() noexcept
       }
       else
         it = checked.erase(it);
+      if (worker)
+        busy_work(worker->id);
     }
   }
 }

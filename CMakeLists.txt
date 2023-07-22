@@ -61,6 +61,7 @@ add_library( ${ACL_TARGET_NAME}
     "${ACL_INCLUDE_BUILD_DIR}/acl/math/sse_mathfun.cpp"
     "${ACL_INCLUDE_BUILD_DIR}/acl/math/avx_mathfun.cpp"
     "${ACL_INCLUDE_BUILD_DIR}/acl/scheduler/scheduler.cpp"
+    "${ACL_INCLUDE_BUILD_DIR}/acl/scheduler/event_types.cpp"
     "${ACL_INCLUDE_BUILD_DIR}/acl/dsl/parameter.cpp"
 )
 

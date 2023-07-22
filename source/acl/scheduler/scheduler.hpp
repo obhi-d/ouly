@@ -47,7 +47,7 @@ public:
   void submit(Class& ctx, workgroup_id submit_group, worker_id current) noexcept
   {
     task_data data;
-    data.context = reinterpret_cast<task_context*>(&ctx);
+    data.context    = reinterpret_cast<task_context*>(&ctx);
     data.reserved_0 = detail::work_type_free_functor;
     data.reserved_1 = static_cast<uint8_t>(submit_group.get_index());
 
@@ -56,15 +56,16 @@ public:
              {
                std::invoke(M, *reinterpret_cast<Class*>(cctx.context), std::cref(wid));
              },
-             data), current);
+             data),
+           current);
   }
 
   template <auto M, typename Class>
   void submit(Class& ctx, uint32_t additional_data, workgroup_id submit_group, worker_id current) noexcept
   {
     task_data data;
-    data.context   = reinterpret_cast<task_context*>(&ctx);
-    data.uint_data = additional_data;
+    data.context    = reinterpret_cast<task_context*>(&ctx);
+    data.uint_data  = additional_data;
     data.reserved_0 = detail::work_type_free_functor;
     data.reserved_1 = static_cast<uint8_t>(submit_group.get_index());
 
@@ -127,16 +128,16 @@ public:
   /// @brief If multiple schedulers are active, this function should be called from main thread before using the
   /// scheduler
   void take_ownership() noexcept;
+  void busy_work(worker_id) noexcept;
 
 private:
-  void         finish_pending_tasks() noexcept;
-  inline void  do_work(worker_id, detail::work_item const&) noexcept;
-  void         wake_up(worker_id) noexcept;
-  void         run(worker_id);
-  bool         should_we_sleep(worker_id) noexcept;
+  void              finish_pending_tasks() noexcept;
+  inline void       do_work(worker_id, detail::work_item const&) noexcept;
+  void              wake_up(worker_id) noexcept;
+  void              run(worker_id);
   detail::work_item get_work(worker_id) noexcept;
 
-  inline bool work(worker_id) noexcept;
+  bool work(worker_id) noexcept;
 
   scheduler_worker_entry entry_fn;
   // Work groups
@@ -144,16 +145,16 @@ private:
   // Workers present in the scheduler
   std::unique_ptr<detail::worker[]> workers;
   // Local cache for work items, until they are pushed into global queue
-  std::unique_ptr<detail::work_item[]>       local_work;
+  std::unique_ptr<detail::work_item[]> local_work;
   // Global work items
   std::unique_ptr<detail::global_work_queue[]> global_work;
-  std::unique_ptr<uint32_t[]>                group_masks;
-  std::unique_ptr<std::atomic_flag[]>        wake_status;
-  std::unique_ptr<detail::wake_event[]>      wake_events;
-  std::vector<std::thread>                   threads;
-  uint32_t                                   worker_count         = 0;
-  uint32_t                                   logical_task_divisor = 32;
-  std::atomic_bool                           stop                 = false;
+  std::unique_ptr<uint32_t[]>                  group_masks;
+  std::unique_ptr<std::atomic_flag[]>          wake_status;
+  std::unique_ptr<detail::wake_event[]>        wake_events;
+  std::vector<std::thread>                     threads;
+  uint32_t                                     worker_count         = 0;
+  uint32_t                                     logical_task_divisor = 32;
+  std::atomic_bool                             stop                 = false;
 };
 
 } // namespace acl
