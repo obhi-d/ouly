@@ -136,6 +136,7 @@ private:
   inline void       do_work(worker_id, detail::work_item const&) noexcept;
   void              wake_up(worker_id) noexcept;
   void              run(worker_id);
+  detail::work_item try_get_work(worker_id) noexcept;
   detail::work_item get_work(worker_id) noexcept;
 
   bool work(worker_id) noexcept;

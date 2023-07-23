@@ -121,6 +121,8 @@ struct worker
   uint32_t stealing_source;
   // worker id
   worker_id id;
+  // quit event
+  std::atomic_bool quitting = false;
 };
 
 } // namespace detail

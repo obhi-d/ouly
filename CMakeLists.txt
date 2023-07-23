@@ -10,6 +10,7 @@ option(ACL_GENERATE_SCLI_PARSER "Generate parsers." OFF)
 option(ACL_USE_SSE2 "Math library should use SSE2." OFF)
 option(ACL_USE_SSE3 "Math library should use SSE3." OFF)
 option(ACL_USE_AVX "Math library should use AVX." OFF)
+option(ACL_TEST_COVERAGE "Build test coverage." OFF)
 
 set   (ACL_BISON_EXE            "bison"                                               CACHE STRING "Bison execuatable")
 set   (ACL_FLEX_EXE             "flex"                                                CACHE STRING "Flex executable"  )

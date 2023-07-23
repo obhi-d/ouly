@@ -72,24 +72,59 @@ void scheduler::run(worker_id thread)
     while (work(thread))
       ;
 
-    if (stop.load(std::memory_order_relaxed))
+    if (stop.load(std::memory_order_seq_cst))
       break;
 
     wake_status[thread.get_index()].store(false);
     wake_events[thread.get_index()].wait();
   }
+
+  workers[thread.get_index()].quitting.store(true);
 }
 
 inline bool scheduler::work(worker_id thread) noexcept
 {
-  auto wrk = get_work(thread);
+  auto wrk = try_get_work(thread);
   if (!wrk.delegate_fn)
-    return false;
+  {
+    wrk = get_work(thread);
+    if (!wrk.delegate_fn)
+      return false;
+  }
   do_work(thread, wrk);
   return true;
 }
 
 detail::work_item scheduler::get_work(worker_id thread) noexcept
+{
+  auto& worker = workers[thread.get_index()];
+
+  // try to get work from own queue
+
+  {
+    auto& work_list = global_work[thread.get_index()];
+    auto lck = std::scoped_lock(work_list.first);
+    if (!work_list.second.empty())
+      return work_list.second.pop_front_unsafe();
+  }
+
+  {
+    // try to steal from stealing sources, first from lock free queue
+    // read head
+    for (uint32_t steal_src = 0; steal_src != worker.friend_worker_count; ++steal_src)
+    {
+      uint32_t steal_from = (worker.stealing_source++) % worker.friend_worker_count;
+      auto&    work_list  = global_work[steal_from];
+      auto lck = std::scoped_lock(work_list.first);
+      if (!work_list.second.empty())
+          return work_list.second.pop_front_unsafe();
+    }
+  }
+
+  return {};
+}
+
+detail::work_item scheduler::try_get_work(worker_id thread) noexcept
 {
   auto& worker = workers[thread.get_index()];
 
@@ -181,9 +216,9 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry)
 
   entry_fn = [cust_entry = std::move(entry), &start_counter](worker_id worker)
   {
-    start_counter.count_down();
     if (cust_entry)
       cust_entry(worker);
+    start_counter.count_down();
   };
 
   entry_fn(worker_id(0));
@@ -241,7 +276,8 @@ void scheduler::end_execution()
   stop = true;
   for (uint32_t thread = 1; thread < worker_count; ++thread)
   {
-    wake_up(worker_id(thread));
+    while (!workers[thread].quitting.load())
+      wake_up(worker_id(thread));
     threads[thread - 1].join();
   }
   threads.clear();
