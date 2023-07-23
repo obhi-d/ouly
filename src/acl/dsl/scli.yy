@@ -15,7 +15,7 @@
 %code requires
 {
 #include "parse_impl.hpp"
-#include "scli.hpp"
+#include <acl/dsl/scli.hpp>
 
 
 #ifndef YY_NULLPTR
@@ -36,7 +36,6 @@
 
 %code
 {
-#include "scli.hpp"
 #define SCANNER_PARAM scli.get_scanner()
 YY_DECL;
 }

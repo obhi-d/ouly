@@ -32,7 +32,7 @@
 
 
 /**
- ** \file /home/obhi/Code/acl/source/acl/dsl/parse_impl.hpp
+ ** \file C:/repos/acl/src/acl/dsl/parse_impl.hpp
  ** Define the acl::parser class.
  */
 
@@ -42,13 +42,13 @@
 // especially those whose name start with YY_ or yy_.  They are
 // private implementation details that can be changed or removed.
 
-#ifndef YY_SCLI_HOME_OBHI_CODE_ACL_SOURCE_ACL_DSL_PARSE_IMPL_HPP_INCLUDED
-# define YY_SCLI_HOME_OBHI_CODE_ACL_SOURCE_ACL_DSL_PARSE_IMPL_HPP_INCLUDED
+#ifndef YY_SCLI_C_REPOS_ACL_SRC_ACL_DSL_PARSE_IMPL_HPP_INCLUDED
+# define YY_SCLI_C_REPOS_ACL_SRC_ACL_DSL_PARSE_IMPL_HPP_INCLUDED
 // "%code requires" blocks.
-#line 16 "/home/obhi/Code/acl/source/acl/dsl/scli.yy"
+#line 16 "C:/repos/acl/src/acl/dsl/scli.yy"
 
 #include "parse_impl.hpp"
-#include "scli.hpp"
+#include <acl/dsl/scli.hpp>
 
 
 #ifndef YY_NULLPTR
@@ -57,7 +57,7 @@
 #define YY_DECL extern acl::scli_parser::symbol_type scli_lex(acl::scli& scli, void* yyscanner)
 
 
-#line 61 "/home/obhi/Code/acl/source/acl/dsl/parse_impl.hpp"
+#line 61 "C:/repos/acl/src/acl/dsl/parse_impl.hpp"
 
 # include <cassert>
 # include <cstdlib> // std::abort
@@ -204,9 +204,9 @@
 # endif /* ! defined YYDEBUG */
 #endif  /* ! defined SCLI_DEBUG */
 
-#line 7 "/home/obhi/Code/acl/source/acl/dsl/scli.yy"
+#line 7 "C:/repos/acl/src/acl/dsl/scli.yy"
 namespace acl {
-#line 210 "/home/obhi/Code/acl/source/acl/dsl/parse_impl.hpp"
+#line 210 "C:/repos/acl/src/acl/dsl/parse_impl.hpp"
 
 
 
@@ -1688,11 +1688,11 @@ switch (yykind)
   }
 
 
-#line 7 "/home/obhi/Code/acl/source/acl/dsl/scli.yy"
+#line 7 "C:/repos/acl/src/acl/dsl/scli.yy"
 } // acl
-#line 1694 "/home/obhi/Code/acl/source/acl/dsl/parse_impl.hpp"
+#line 1694 "C:/repos/acl/src/acl/dsl/parse_impl.hpp"
 
 
 
 
-#endif // !YY_SCLI_HOME_OBHI_CODE_ACL_SOURCE_ACL_DSL_PARSE_IMPL_HPP_INCLUDED
+#endif // !YY_SCLI_C_REPOS_ACL_SRC_ACL_DSL_PARSE_IMPL_HPP_INCLUDED

@@ -1,6 +1,6 @@
 
-#include "parameter.hpp"
-#include "scli.hpp"
+#include <acl/dsl/parameter.hpp>
+#include <acl/dsl/scli.hpp>
 #include <charconv>
 
 namespace acl

@@ -6,7 +6,9 @@
 #include <acl/utils/error_codes.hpp>
 #include <acl/utils/export.hxx>
 #include <acl/utils/intrusive_ptr.hpp>
+#include <acl/utils/komihash.hpp>
 #include <acl/utils/tagged_ptr.hpp>
+#include <acl/utils/wyhash.hpp>
 #include <catch2/catch_all.hpp>
 
 #define BINARY_SEARCH_STEP                                                                                             \
@@ -182,7 +184,6 @@ TEST_CASE("Validate tagged_ptr", "[tagged_ptr]")
   CHECK(!null);
 }
 
-
 TEST_CASE("Validate compressed_ptr", "[compressed_ptr]")
 {
   using namespace acl;
@@ -220,4 +221,49 @@ TEST_CASE("Validate error_codes", "[error_code]")
   CHECK(&ec.category() == &acl::error_category<acl::serializer_error>::instance());
   CHECK(!ec.message().empty());
   CHECK(ec.category().name() != nullptr);
+}
+
+TEST_CASE("Validate Hash: wyhash", "[hash]")
+{
+  std::string   s = "A long string whose hash we are about to find out !";
+  acl::wyhash32 wyh32;
+
+  auto value32 = wyh32(s.c_str(), s.length());
+  REQUIRE(value32 != 0);
+
+  auto new_value32 = wyh32(s.c_str(), s.length());
+  REQUIRE(value32 != new_value32);
+
+  REQUIRE(wyh32() == new_value32);
+
+  acl::wyhash64 wyh64;
+
+  auto value64 = wyh64(s.c_str(), s.length());
+  REQUIRE(value64 != 0);
+
+  auto new_value64 = wyh64(s.c_str(), s.length());
+  REQUIRE(value64 != new_value64);
+
+  REQUIRE(wyh64() == new_value64);
+}
+
+TEST_CASE("Validate Hash: komihash", "[hash]")
+{
+  std::string     s = "A long string whose hash we are about to find out !";
+  acl::komihash64 k64;
+
+  auto value = k64(s.c_str(), s.length());
+  REQUIRE(value != 0);
+
+  auto new_value = k64(s.c_str(), s.length());
+  REQUIRE(value != new_value);
+
+  REQUIRE(k64() == new_value);
+
+  acl::komihash64_stream k64s;
+
+  k64s(s.c_str(), s.length());
+  k64s(s.c_str(), s.length());
+
+  REQUIRE(k64s() != 0);
 }

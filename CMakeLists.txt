@@ -20,32 +20,33 @@ set   (ACL_FLEX_EXE             "flex"                                          
 ## CONFIGURATION
 ##
 set(ACL_TARGET_NAME               ${PROJECT_NAME})
-set(ACL_INCLUDE_BUILD_DIR         "${PROJECT_SOURCE_DIR}/source")
+set(ACL_INCLUDE_BUILD_DIR         "${PROJECT_SOURCE_DIR}/include")
+set(ACL_SOURCE_BUILD_DIR          "${PROJECT_SOURCE_DIR}/src")
 
 include(GNUInstallDirs)
 
 if (ACL_GENERATE_SCLI_PARSER)
     add_custom_command( 
       OUTPUT 
-		    "${ACL_INCLUDE_BUILD_DIR}/acl/dsl/parse_impl.cpp" 
+		    "${ACL_SOURCE_BUILD_DIR}/acl/dsl/parse_impl.cpp" 
 		
 	     COMMAND ${CMAKE_COMMAND} -E echo "Generating parse_impl.cpp"
-	     COMMAND ${ACL_BISON_EXE} -o "${ACL_INCLUDE_BUILD_DIR}/acl/dsl/parse_impl.cpp" "${ACL_INCLUDE_BUILD_DIR}/acl/dsl/scli.yy"
+	     COMMAND ${ACL_BISON_EXE} -o "${ACL_SOURCE_BUILD_DIR}/acl/dsl/parse_impl.cpp" "${ACL_SOURCE_BUILD_DIR}/acl/dsl/scli.yy"
 
 	     DEPENDS 
-		    "${ACL_INCLUDE_BUILD_DIR}/acl/dsl/scli.yy"
+		    "${ACL_SOURCE_BUILD_DIR}/acl/dsl/scli.yy"
      )
 
     add_custom_command( 
 	    OUTPUT 
-		    "${ACL_INCLUDE_BUILD_DIR}/acl/dsl/lexer_impl.cpp" 
+		    "${ACL_SOURCE_BUILD_DIR}/acl/dsl/lexer_impl.cpp" 
 	
        COMMAND ${CMAKE_COMMAND} -E echo "Generating lexer_impl.cpp"	
-       COMMAND ${ACL_FLEX_EXE} -o "${ACL_INCLUDE_BUILD_DIR}/acl/dsl/lexer_impl.cpp" -L "${ACL_INCLUDE_BUILD_DIR}/acl/dsl/scli.l"
+       COMMAND ${ACL_FLEX_EXE} -o "${ACL_SOURCE_BUILD_DIR}/acl/dsl/lexer_impl.cpp" -L "${ACL_SOURCE_BUILD_DIR}/acl/dsl/scli.l"
 
 	     DEPENDS 
-		    "${ACL_INCLUDE_BUILD_DIR}/acl/dsl/scli.l"
-		    "${ACL_INCLUDE_BUILD_DIR}/acl/dsl/parse_impl.cpp"
+		    "${ACL_SOURCE_BUILD_DIR}/acl/dsl/scli.l"
+		    "${ACL_SOURCE_BUILD_DIR}/acl/dsl/parse_impl.cpp"
     )
 endif()
 
@@ -56,14 +57,14 @@ message("Target name: ${ACL_TARGET_NAME}")
 
 add_library( ${ACL_TARGET_NAME} 
       
-    "${ACL_INCLUDE_BUILD_DIR}/acl/dsl/lexer_impl.cpp" 
-    "${ACL_INCLUDE_BUILD_DIR}/acl/dsl/parse_impl.cpp" 
-    "${ACL_INCLUDE_BUILD_DIR}/acl/dsl/scli.cpp"
-    "${ACL_INCLUDE_BUILD_DIR}/acl/math/sse_mathfun.cpp"
-    "${ACL_INCLUDE_BUILD_DIR}/acl/math/avx_mathfun.cpp"
-    "${ACL_INCLUDE_BUILD_DIR}/acl/scheduler/scheduler.cpp"
-    "${ACL_INCLUDE_BUILD_DIR}/acl/scheduler/event_types.cpp"
-    "${ACL_INCLUDE_BUILD_DIR}/acl/dsl/parameter.cpp"
+    "${ACL_SOURCE_BUILD_DIR}/acl/dsl/lexer_impl.cpp" 
+    "${ACL_SOURCE_BUILD_DIR}/acl/dsl/parse_impl.cpp" 
+    "${ACL_SOURCE_BUILD_DIR}/acl/dsl/scli.cpp"
+    "${ACL_SOURCE_BUILD_DIR}/acl/dsl/parameter.cpp"
+    "${ACL_SOURCE_BUILD_DIR}/acl/math/sse_mathfun.cpp"
+    "${ACL_SOURCE_BUILD_DIR}/acl/math/avx_mathfun.cpp"
+    "${ACL_SOURCE_BUILD_DIR}/acl/scheduler/scheduler.cpp"
+    "${ACL_SOURCE_BUILD_DIR}/acl/scheduler/event_types.cpp"
 )
 
 add_library(${PROJECT_NAME}::${ACL_TARGET_NAME} ALIAS ${ACL_TARGET_NAME})
@@ -79,7 +80,7 @@ endif()
 
 target_include_directories(
     ${ACL_TARGET_NAME}
-    PUBLIC $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/source>
+    PUBLIC $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
@@ -130,5 +131,5 @@ install(FILES
   "${PROJECT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake"
   DESTINATION cmake)
 
-install(DIRECTORY source/acl DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(DIRECTORY include DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 

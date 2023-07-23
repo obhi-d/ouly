@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <string>
 #include <string_view>
-#include "scli.hpp"
+#include <acl/dsl/scli.hpp>
 #include "parse_impl.hpp"
 #define YY_NO_UNISTD_H
 #define YY_EXTRA_TYPE acl::scli*
