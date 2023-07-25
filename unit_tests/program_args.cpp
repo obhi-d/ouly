@@ -70,6 +70,32 @@ TEST_CASE("Validate program args sink", "[program_args][sink]")
   REQUIRE(sink_.flag == false);
 }
 
+TEST_CASE("Validate program args vector access", "[program_args][sink]")
+{
+  const char* arg_set[] = {"--help", "--one=foo", "-2=100", "--result=result"};
+
+  std::string       result;
+  acl::program_args pgargs;
+  pgargs.parse_args(4, arg_set);
+  struct sink
+  {
+    std::string_view one;
+    int              two  = 0;
+    bool             flag = false;
+  };
+
+  sink sink_;
+  pgargs.sink(sink_.two, "two", "2");
+  pgargs.sink(sink_.flag, "flag", "3");
+  pgargs.sink(sink_.two, "two", "2");
+  pgargs.sink(sink_.two, "two", "2");
+  pgargs.sink(result, "result");
+
+  REQUIRE(sink_.two == 100);
+  REQUIRE(sink_.flag == false);
+  REQUIRE(result == "result");
+}
+
 TEST_CASE("Validate program args vector", "[program_args][vector]")
 {
   const char* arg_set[] = {"--help", "--flag", "--one=[foo, bar, 2]", "-2=[100, 20, 30]", "-c=[3.4, 4.1, 6.1]"};

@@ -28,11 +28,10 @@ concept ProgramArgScalarType = std::is_same_v<uint32_t, V> || std::is_same_v<int
 template <typename V>
 concept ProgramArgBoolType = std::is_same_v<bool, V>;
 template <typename V, typename S>
-concept ProgramArgArrayType = !
-std::same_as<V, S>&& requires(V a) {
-                       typename V::value_type;
-                       a.push_back(typename V::value_type());
-                     };
+concept ProgramArgArrayType = requires(V a) {
+  typename V::value_type;
+  a.push_back(typename V::value_type());
+} && !std::same_as<V, std::basic_string<typename S::value_type>>;
 
 template <typename string_type = std::string_view>
 class program_args
@@ -56,15 +55,15 @@ public:
   public:
     inline auto& doc(string_type h) noexcept
     {
-      arg_.doc_ = h;
+      args_[arg_].doc_ = h;
       return *this;
     }
 
     inline operator bool() const noexcept
     {
-      if (arg_.value_.has_value())
+      if (args_[arg_].value_.has_value())
       {
-        auto outp = std::any_cast<bool>(&arg_.value_);
+        auto outp = std::any_cast<bool>(&args_[arg_].value_);
         return outp && *outp;
       }
       return false;
@@ -72,9 +71,9 @@ public:
 
     std::optional<V> value() const noexcept
     {
-      if (arg_.value_.has_value())
+      if (args_[arg_].value_.has_value())
       {
-        auto outp = std::any_cast<V>(&arg_.value_);
+        auto outp = std::any_cast<V>(&args_[arg_].value_);
         if (outp)
           return *outp;
       }
@@ -93,9 +92,9 @@ public:
   private:
     inline bool sink_copy(V& store) const noexcept
     {
-      if (arg_.value_.has_value())
+      if (args_[arg_].value_.has_value())
       {
-        auto outp = std::any_cast<V>(&arg_.value_);
+        auto outp = std::any_cast<V>(&args_[arg_].value_);
         if (outp)
         {
           store = *outp;
@@ -107,9 +106,9 @@ public:
 
     inline bool sink_ref(V*& store) const noexcept
     {
-      if (arg_.value_.has_value())
+      if (args_[arg_].value_.has_value())
       {
-        auto outp = std::any_cast<V>(&arg_.value_);
+        auto outp = std::any_cast<V>(&args_[arg_].value_);
         if (outp)
         {
           store = outp;
@@ -121,9 +120,10 @@ public:
 
     friend class program_args;
 
-    inline arg_decl(arg& a) noexcept : arg_(a) {}
+    inline arg_decl(std::vector<arg>& a, size_t i) noexcept : args_(a), arg_(i) {}
 
-    arg& arg_;
+    std::vector<arg>& args_;
+    size_t            arg_;
   };
 
   program_args() noexcept = default;
@@ -148,9 +148,9 @@ public:
     auto has_val  = asv.find_first_of('=');
     auto arg_name = asv.substr(0, has_val);
     if (has_val != asv.npos)
-      add(arg_name).value_ = asv.substr(has_val + 1);
+      arguments_[add(arg_name)].value_ = asv.substr(has_val + 1);
     else
-      add(arg_name).value_ = true;
+      arguments_[add(arg_name)].value_ = true;
   }
 
   inline void brief(string_type h) noexcept
@@ -167,25 +167,25 @@ public:
   inline arg_decl<V> decl(string_type name, string_type flag = string_type()) noexcept
   {
     // Resolve arg
-    auto& decl_arg = add(name);
-    if (!decl_arg.value_.has_value() && !flag.empty())
+    auto decl_arg = add(name);
+    if (!arguments_[decl_arg].value_.has_value() && !flag.empty())
     {
-      auto& flag_arg = add(flag);
-      if (flag_arg.value_.has_value())
-        decl_arg.value_ = flag_arg.value_;
+      auto flag_arg = add(flag);
+      if (arguments_[flag_arg].value_.has_value())
+        arguments_[decl_arg].value_ = arguments_[flag_arg].value_;
     }
     if constexpr (!std::is_same_v<string_type, V>)
     {
-      auto svalue = std::any_cast<string_type>(&decl_arg.value_);
+      auto svalue = std::any_cast<string_type>(&arguments_[decl_arg].value_);
       if (svalue)
       {
         auto value = convert_to<V>(*svalue);
         if (value)
-          decl_arg.value_ = *value;
+          arguments_[decl_arg].value_ = *value;
       }
     }
     max_arg_length_ = std::max(static_cast<uint32_t>(name.size()), max_arg_length_);
-    return arg_decl<V>(decl_arg);
+    return arg_decl<V>(arguments_, decl_arg);
   }
 
   template <typename T>
@@ -246,9 +246,8 @@ private:
 
   template <typename V>
   static std::optional<V> convert_to(string_type const& sv) noexcept
-  requires(std::same_as<V, string_type>)
   {
-    return sv;
+    return V(sv);
   }
 
   template <ProgramArgScalarType V>
@@ -275,16 +274,16 @@ private:
     return it != arguments_.end() ? std::optional<arg>((*it)) : std::optional<arg>();
   }
 
-  arg& add(string_type name) noexcept
+  size_t add(string_type name) noexcept
   {
     auto it = std::ranges::find(arguments_, name, &arg::name_);
     if (it == arguments_.end())
     {
       arguments_.emplace_back(name);
-      return arguments_.back();
+      return arguments_.size() - 1;
     }
     else
-      return *it;
+      return std::distance(arguments_.begin(), it);
   }
 
   std::vector<arg>         arguments_;
