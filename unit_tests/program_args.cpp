@@ -4,7 +4,8 @@
 struct arg_formatter
 {
   std::string text;
-  inline void operator()(acl::program_document_type type, std::string_view, std::string_view txt) noexcept
+  inline void operator()(acl::program_document_type type, std::string_view, std::string_view,
+                         std::string_view           txt) noexcept
   {
     text += txt;
   }
@@ -61,13 +62,37 @@ TEST_CASE("Validate program args sink", "[program_args][sink]")
   };
 
   sink sink_;
-  pgargs.sink(sink_.one, "one");
-  pgargs.sink(sink_.two, "two", "2");
-  pgargs.sink(sink_.flag, "flag", "3");
+  pgargs.sink(sink_.one, "one", "", "one documentation");
+  pgargs.sink(sink_.two, "two", "2", "two documentation");
+  pgargs.sink(sink_.flag, "flag", "3", "three documentation");
+  auto        arg_len = pgargs.get_max_arg_length();
+  std::string arg_doc;
+  pgargs.doc(
+    [arg_len, &arg_doc](acl::program_document_type doc_type, std::string_view type, std::string_view flag,
+                        std::string_view desc)
+    {
+      switch (doc_type)
+      {
+      case acl::program_document_type::brief_doc:
+        break;
+      case acl::program_document_type::full_doc:
+        break;
+      case acl::program_document_type::arg_doc:
+        arg_doc += type;
+        arg_doc += ", ";
+        arg_doc += flag;
+        arg_doc += " - ";
+        arg_doc += desc;
+        arg_doc += "| ";
 
+        break;
+      }
+    });
   REQUIRE(sink_.one == "foo");
   REQUIRE(sink_.two == 100);
   REQUIRE(sink_.flag == false);
+  REQUIRE(arg_doc ==
+          "help,  - | one,  - one documentation| two, 2 - two documentation| flag, 3 - three documentation| ");
 }
 
 TEST_CASE("Validate program args vector access", "[program_args][sink]")

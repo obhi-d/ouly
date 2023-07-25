@@ -22,7 +22,7 @@ enum class program_document_type
 };
 
 template <typename T>
-concept ProgramDocFormatter = requires(T a, program_document_type f) { a(f, "", ""); };
+concept ProgramDocFormatter = requires(T a, program_document_type f) { a(f, "", "", ""); };
 template <typename V>
 concept ProgramArgScalarType = std::is_same_v<uint32_t, V> || std::is_same_v<int32_t, V> || std::is_same_v<float, V>;
 template <typename V>
@@ -36,13 +36,15 @@ concept ProgramArgArrayType = requires(V a) {
 template <typename string_type = std::string_view>
 class program_args
 {
-  using value_type = std::any;
-
+  using value_type             = std::any;
+  static constexpr int is_flag = -1;
+  static constexpr int no_flag = -2; // doesnt have a flag
   struct arg
   {
     value_type  value_;
     string_type doc_;
     string_type name_;
+    int         flag_ = no_flag; // -1 means its a flag, -999 means
 
     constexpr arg() noexcept = default;
     constexpr inline arg(string_type name) noexcept : name_(name) {}
@@ -168,9 +170,15 @@ public:
   {
     // Resolve arg
     auto decl_arg = add(name);
+    int  flag_arg = no_flag;
+    if (!flag.empty())
+    {
+      flag_arg                   = (int)add(flag);
+      arguments_[flag_arg].flag_ = is_flag;
+    }
+    arguments_[decl_arg].flag_ = flag_arg;
     if (!arguments_[decl_arg].value_.has_value() && !flag.empty())
     {
-      auto flag_arg = add(flag);
       if (arguments_[flag_arg].value_.has_value())
         arguments_[decl_arg].value_ = arguments_[flag_arg].value_;
     }
@@ -199,11 +207,21 @@ public:
   inline auto& doc(formatter&& f) const noexcept
   {
     if (!brief_.empty())
-      f(program_document_type::brief_doc, "Usage", brief_);
+      f(program_document_type::brief_doc, "Usage", "", brief_);
     for (auto d : docs_)
-      f(program_document_type::full_doc, "Description", d);
+      f(program_document_type::full_doc, "Description", "", d);
     for (auto const& a : arguments_)
-      f(program_document_type::arg_doc, a.name_, a.doc_);
+    {
+      if (a.flag_ != is_flag)
+      {
+        if (a.flag_ != no_flag && (size_t)a.flag_ < arguments_.size())
+        {
+          f(program_document_type::arg_doc, a.name_, arguments_[(size_t)a.flag_].name_, a.doc_);
+        }
+        else
+          f(program_document_type::arg_doc, a.name_, "", a.doc_);
+      }
+    }
     return f;
   }
 
