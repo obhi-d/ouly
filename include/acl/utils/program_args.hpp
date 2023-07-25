@@ -171,10 +171,12 @@ public:
     // Resolve arg
     auto decl_arg = add(name);
     int  flag_arg = no_flag;
+    auto length   = static_cast<uint32_t>(name.size());
     if (!flag.empty())
     {
       flag_arg                   = (int)add(flag);
       arguments_[flag_arg].flag_ = is_flag;
+      length += static_cast<uint32_t>(flag.size()) + 2;
     }
     arguments_[decl_arg].flag_ = flag_arg;
     if (!arguments_[decl_arg].value_.has_value() && !flag.empty())
@@ -192,7 +194,7 @@ public:
           arguments_[decl_arg].value_ = *value;
       }
     }
-    max_arg_length_ = std::max(static_cast<uint32_t>(name.size()), max_arg_length_);
+    max_arg_length_ = std::max(length, max_arg_length_);
     return arg_decl<V>(arguments_, decl_arg);
   }
 
