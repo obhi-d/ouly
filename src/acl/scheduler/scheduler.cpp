@@ -10,9 +10,14 @@ namespace acl
 
 thread_local detail::worker const* g_worker = nullptr;
 
-worker_context const& worker_context::get_context(workgroup_id group)
+worker_context const& worker_context::get(workgroup_id group) noexcept
 {
   return g_worker->contexts[group.get_index()].get();
+}
+
+worker_id const& worker_id::get() noexcept
+{
+  return g_worker->id;
 }
 
 scheduler::~scheduler() noexcept
@@ -103,7 +108,7 @@ detail::work_item scheduler::get_work(worker_id thread) noexcept
 
   {
     auto& work_list = global_work[thread.get_index()];
-    auto lck = std::scoped_lock(work_list.first);
+    auto  lck       = std::scoped_lock(work_list.first);
     if (!work_list.second.empty())
       return work_list.second.pop_front_unsafe();
   }
@@ -115,9 +120,9 @@ detail::work_item scheduler::get_work(worker_id thread) noexcept
     {
       uint32_t steal_from = (worker.stealing_source++) % worker.friend_worker_count;
       auto&    work_list  = global_work[steal_from];
-      auto lck = std::scoped_lock(work_list.first);
+      auto     lck        = std::scoped_lock(work_list.first);
       if (!work_list.second.empty())
-          return work_list.second.pop_front_unsafe();
+        return work_list.second.pop_front_unsafe();
     }
   }
 

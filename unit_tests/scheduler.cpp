@@ -58,6 +58,11 @@ TEST_CASE("scheduler: Simplest ParallelFor")
   acl::parallel_for(
     [&parallel_sum](int a, acl::worker_context const& c)
     {
+      auto id = acl::worker_id::get();
+      REQUIRE(id.get_index() < 16);
+      auto ctx = acl::worker_context::get(acl::default_workgroup_id);
+      REQUIRE(ctx.get_worker().get_index() < 16);
+      REQUIRE(ctx.get_group_offset() < 16);
       parallel_sum += a;
     },
     std::span(list.begin(), list.end()), 2, acl::default_workgroup_id);

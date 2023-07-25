@@ -28,6 +28,9 @@ public:
     return index != std::numeric_limits<uint32_t>::max();
   }
 
+  /// @brief Returns the worker id for the current thread
+  static worker_id const& get() noexcept;
+
 private:
   uint32_t index = 0;
 };
@@ -98,7 +101,7 @@ public:
   }
 
   /// @brief returns the context on the current thread for a given worker group
-  static worker_context const& get_context(workgroup_id group);
+  static worker_context const& get(workgroup_id group) noexcept;
 
 private:
   scheduler&   owner;

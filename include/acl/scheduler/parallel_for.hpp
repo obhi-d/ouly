@@ -84,8 +84,7 @@ void parallel_for(L&& lambda, FwIt range, uint32_t granularity, worker_context c
 }
 
 template <typename L, typename FwIt>
-void parallel_for(L&& lambda, FwIt range, uint32_t granularity, worker_id current, workgroup_id workgroup,
-                  scheduler& s)
+void parallel_for(L&& lambda, FwIt range, uint32_t granularity, worker_id current, workgroup_id workgroup, scheduler& s)
 {
   auto const& this_context = s.get_context(current, workgroup);
   // Assert this context belongs to the work group selected for submission
@@ -98,7 +97,7 @@ void parallel_for(L&& lambda, FwIt range, uint32_t granularity, worker_id curren
 template <typename L, typename FwIt>
 void parallel_for(L&& lambda, FwIt range, uint32_t granularity, workgroup_id workgroup)
 {
-  auto const& this_context = worker_context::get_context(workgroup);
+  auto const& this_context = worker_context::get(workgroup);
   parallel_for(std::forward<L>(lambda), range, granularity, this_context);
 }
 
