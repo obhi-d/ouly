@@ -64,7 +64,7 @@ function(add_unit_test)
 
 endfunction(add_unit_test)
 
-add_unit_test(NAME basic_tests FILES "basic_tests.cpp")
+add_unit_test(NAME basic_tests FILES "basic_tests.cpp" "string_utils.cpp")
 add_unit_test(NAME intrusive_list FILES "intrusive_list.cpp")
 add_unit_test(NAME program_args FILES "program_args.cpp")
 add_unit_test(NAME small_vector FILES "small_vector.cpp")

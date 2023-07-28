@@ -65,6 +65,7 @@ add_library( ${ACL_TARGET_NAME}
     "${ACL_SOURCE_BUILD_DIR}/acl/math/avx_mathfun.cpp"
     "${ACL_SOURCE_BUILD_DIR}/acl/scheduler/scheduler.cpp"
     "${ACL_SOURCE_BUILD_DIR}/acl/scheduler/event_types.cpp"
+    "${ACL_SOURCE_BUILD_DIR}/acl/utils/string_utils.cpp"
 )
 
 add_library(${PROJECT_NAME}::${ACL_TARGET_NAME} ALIAS ${ACL_TARGET_NAME})
