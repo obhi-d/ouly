@@ -98,8 +98,92 @@ TEST_CASE("Validate string utils wordlist", "[string_utils]")
 
 TEST_CASE("Validate string functions", "[string_utils]")
 {
-  std::string_view white_pos = "  \t  \t here";
-  std::string_view no_white  = acl::eat_white(white_pos.data());
-  REQUIRE(no_white == "here");
-  auto u8str = u8"? E?da = Q,  n ? ?, ? f(i) = ? g(i), ?x??: ?x? = ???x?, ? ? ¬? = ¬(¬? ? ?),";
+  std::string cool = "a cool string that cools on its own cooling coolant";
+  std::string hot  = cool;
+  REQUIRE(acl::replace_first(hot, "cool", "hot"));
+  REQUIRE(hot == "a hot string that cools on its own cooling coolant");
+  hot = cool;
+  REQUIRE(acl::replace(hot, "cool", "hot") == 4);
+  REQUIRE(hot == "a hot string that hots on its own hoting hotant");
+
+  cool = "CoolIngLikeKing";
+  REQUIRE(acl::format_name(cool) == "Cool Ing Like King");
+  cool = "cool_ing_like_King";
+  REQUIRE(acl::format_name(cool) == "Cool Ing Like King");
+  cool = "CoolIngLikeKing";
+  REQUIRE(acl::to_lower(cool) == "coolinglikeking");
+  REQUIRE(acl::to_upper(cool) == "COOLINGLIKEKING");
+  REQUIRE(acl::split("Abc:Bcd") == acl::string_view_pair("Abc", "Bcd"));
+  REQUIRE(acl::split(":Bcd") == acl::string_view_pair("", "Bcd"));
+  REQUIRE(acl::split("Abc:") == acl::string_view_pair("Abc", ""));
+  REQUIRE(acl::split("Abc") == acl::string_view_pair("Abc", ""));
+  REQUIRE(acl::split("Abc", '.', false) == acl::string_view_pair("", "Abc"));
+  REQUIRE(acl::split_last("Abc:Cde:fgc", ':', false) == acl::string_view_pair("Abc:Cde", "fgc"));
+  REQUIRE(acl::split("Abc:Cde:fgc") == acl::string_view_pair("Abc", "Cde:fgc"));
+
+  std::vector<std::string_view> store;
+  std::string_view              line = ",some thing\tunlike anything  Other   than, this  ";
+  acl::tokenize(
+    [&store, &line](size_t start, size_t end)
+    {
+      store.emplace_back(line.begin() + start, line.begin() + end);
+    },
+    line, " \t,");
+
+  REQUIRE(store == std::vector<std::string_view>{"some", "thing", "unlike", "anything", "Other", "than", "this"});
+
+  auto data = std::string(" \t \nAbc");
+  REQUIRE(acl::trim_leading(data) == "Abc");
+  data = acl::trim_leading(data);
+  REQUIRE(data == "Abc");
+  REQUIRE(acl::trim_leading(std::string("Abc   \t\n")) == "Abc   \t\n");
+  REQUIRE(acl::trim_trailing(std::string("  \t\nAbc")) == "  \t\nAbc");
+  REQUIRE(acl::trim_trailing(std::string("Abc\t \n   ")) == "Abc");
+
+  REQUIRE(acl::trim(" \t\n Abc\t \n   ") == "Abc");
+  REQUIRE(acl::trim_leading(" \t \nAbc") == "Abc");
+  REQUIRE(acl::trim_leading("Abc   \t\n") == "Abc   \t\n");
+  REQUIRE(acl::trim_trailing("  \t\nAbc") == "  \t\nAbc");
+  REQUIRE(acl::trim_trailing("Abc\t \n   ") == "Abc");
+
+  REQUIRE(acl::trim(" \t\n Abc\t \n   ") == "Abc");
+  REQUIRE(acl::is_ascii(" \t\n Abc\t \n   ") == true);
+
+  std::string_view              text_wall = "a long wall of text\tthat will be\t wrapped into multiple lines ";
+  std::vector<std::string_view> lines;
+  acl::word_wrap(
+    [&lines, &text_wall](size_t start, size_t end)
+    {
+      lines.emplace_back(text_wall.begin() + start, text_wall.begin() + end);
+    },
+    32, text_wall);
+  std::string rec;
+  for (auto l : lines)
+  {
+    REQUIRE(l.size() <= 32);
+    rec += l;
+  }
+  REQUIRE(rec == text_wall);
+  std::string_view text_wall_ml =
+    "a long wall of text made of steel\nthat will be in time\trecorded\n and then\n\tthat will be\t\n split into\t "
+    "multiline\n\tof text and then again wrapped into multiple lines ";
+  lines.clear();
+  rec.clear();
+  acl::word_wrap(
+    [&lines, &text_wall_ml](size_t start, size_t end)
+    {
+      lines.emplace_back(text_wall_ml.begin() + start, text_wall_ml.begin() + end);
+    },
+    20, text_wall_ml);
+  for (auto l : lines)
+  {
+    REQUIRE(l.size() <= 20);
+    rec += l;
+  }
+  using namespace std::string_view_literals;
+  REQUIRE(rec == text_wall_ml);
+  REQUIRE(acl::is_number(" -43r"sv) == false);
+  REQUIRE(acl::is_number("-43"sv) == true);
+  REQUIRE(acl::is_number("a43r"sv) == false);
+  REQUIRE(acl::is_number("43"sv) == true);
 }
