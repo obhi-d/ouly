@@ -371,4 +371,28 @@ inline void clamp(type& clampwhat, type lowvalue, type hivalue) noexcept
 {
   clampwhat = std::max(lowvalue, std::min(clampwhat, hivalue));
 }
+
+// Bit Utils
+inline uint32_t log2_next_positive(uint32_t x)
+{
+#ifdef _MSC_VER
+  return (32 - __lzcnt(x - 1));
+#elif defined(__GNUC__) || defined(__clang__)
+  return (32 - __builtin_clz(x - 1));
+#else
+  return bit_pos(next_pow2(x));
+#endif
+}
+
+inline uint32_t log2_next(uint32_t x)
+{
+#ifdef _MSC_VER
+  return x == 1 ? 0 : (32 - __lzcnt(x - 1));
+#elif defined(__GNUC__) || defined(__clang__)
+  return x == 1 ? 0 : (32 - __builtin_clz(x - 1));
+#else
+  return bit_pos(next_pow2(x));
+#endif
+}
+
 } // namespace acl

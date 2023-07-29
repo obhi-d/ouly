@@ -28,4 +28,7 @@ TEMPLATE_TEST_CASE("Validate irect", "[irect]", float, double)
   CHECK(acl::top(r) == 0);
   CHECK(acl::right(r) == 200);
   CHECK(acl::bottom(r) == 400);
+  CHECK(acl::log2_next(1) == 0);
+  CHECK(acl::log2_next(251) == 8);
+  CHECK(acl::log2_next_positive(251) == 8);
 }
