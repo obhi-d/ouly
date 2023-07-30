@@ -3,9 +3,9 @@
 //
 #pragma once
 
-#include <acl/utils/reflection_utils.hpp>
 #include <acl/utils/error_codes.hpp>
 #include <acl/utils/reflection.hpp>
+#include <acl/utils/reflection_utils.hpp>
 #include <acl/utils/type_traits.hpp>
 #include <bit>
 #include <cassert>
@@ -33,8 +33,10 @@ concept BinaryInputStream = requires(V v, std::size_t N)
 };
 // clang-format on
 
-/// @brief Given an input serializer, load a bound class
-/// @note The endian parameter should match between output and input
+/**
+ * @brief Given an input serializer, load a bound class
+ * @note The endian parameter should match between output and input
+ */
 template <BinaryInputStream Serializer, std::endian Endian = std::endian::little>
 class binary_input_serializer
 {
@@ -145,11 +147,10 @@ private:
       get().error(type_name<Class>(), make_error_code(serializer_error::invalid_tuple_size));
       return false;
     }
-    return [ this, &obj ]<std::size_t... N>(std::index_sequence<N...>)
+    return [this, &obj]<std::size_t... N>(std::index_sequence<N...>)
     {
       return (at<N>(obj) && ...);
-    }
-    (std::make_index_sequence<std::tuple_size_v<Class>>());
+    }(std::make_index_sequence<std::tuple_size_v<Class>>());
   }
 
   template <detail::ContainerLike Class>

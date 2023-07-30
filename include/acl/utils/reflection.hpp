@@ -560,9 +560,11 @@ constexpr T byteswap(T value) noexcept
 
 } // namespace detail
 
-/// @brief This function iterates over members registered by bind
-/// @param fn A lambda accepting the instance of the object, a type info and the member index. The type info has a value
-/// method to access the internal member given the instance of the object
+/**
+ * @brief This function iterates over members registered by bind
+ * @param fn A lambda accepting the instance of the object, a type info and the member index. The type info has a value
+ * method to access the internal member given the instance of the object
+ */
 template <typename Class, typename Fn>
 void for_each_field(Fn&& fn, Class& obj) noexcept
 {
@@ -574,9 +576,11 @@ void for_each_field(Fn&& fn, Class& obj) noexcept
   }(std::make_index_sequence<detail::tuple_size<ClassType>>(), detail::reflect_<ClassType>());
 }
 
-/// @brief This function iterates over members registered by bind without the class object specified
-/// @param fn A lambda accepting a type info and the member index. The type info has a value method to access the
-/// internal member given the instance of the object
+/**
+ * @brief This function iterates over members registered by bind without the class object specified
+ * @param fn A lambda accepting a type info and the member index. The type info has a value method to access the
+ * internal member given the instance of the object
+ */
 template <typename Class, typename Fn>
 void for_each_field(Fn&& fn) noexcept
 {
@@ -594,12 +598,14 @@ constexpr uint32_t field_size() noexcept
   return detail::tuple_size<ClassType>;
 }
 
-/// @remarks Desired syntax would be
-/// bind< bind<"MyField", &T::my_field>,
+/**
+ * @remarks Desired syntax would be
+ * bind< bind<"MyField", &T::my_field>,
+ */
 
 template <string_literal Name, auto MPtr>
 constexpr auto bind() noexcept
-requires(detail::IsMemberPtr<MPtr>)
+  requires(detail::IsMemberPtr<MPtr>)
 {
   return detail::decl_member_ptr<Name, typename detail::member_ptr_type<MPtr>::class_t,
                                  typename detail::member_ptr_type<MPtr>::member_t, MPtr>();
@@ -607,7 +613,7 @@ requires(detail::IsMemberPtr<MPtr>)
 
 template <string_literal Name, auto Getter, auto Setter>
 constexpr auto bind() noexcept
-requires(detail::IsMemberGetterSetter<Getter, Setter>)
+  requires(detail::IsMemberGetterSetter<Getter, Setter>)
 {
   return detail::decl_get_set<Name, typename detail::member_getter_type<Getter>::class_t,
                               typename detail::member_getter_type<Getter>::return_t, Getter, Setter>();
@@ -615,7 +621,7 @@ requires(detail::IsMemberGetterSetter<Getter, Setter>)
 
 template <string_literal Name, auto Getter, auto Setter>
 constexpr auto bind() noexcept
-requires(detail::IsFreeGetterSetter<Getter, Setter>)
+  requires(detail::IsFreeGetterSetter<Getter, Setter>)
 {
   return detail::decl_free_get_set<Name, typename detail::free_getter_type<Getter>::class_t,
                                    typename detail::free_getter_type<Getter>::return_t, Getter, Setter>();
@@ -623,7 +629,7 @@ requires(detail::IsFreeGetterSetter<Getter, Setter>)
 
 template <string_literal Name, auto Getter, auto Setter>
 constexpr auto bind() noexcept
-requires(detail::IsFreeGetterByValSetter<Getter, Setter>)
+  requires(detail::IsFreeGetterByValSetter<Getter, Setter>)
 {
   return detail::decl_free_get_set<Name, typename detail::getter_by_value_type<Getter>::class_t,
                                    typename detail::getter_by_value_type<Getter>::return_t, Getter, Setter>();

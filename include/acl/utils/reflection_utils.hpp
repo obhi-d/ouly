@@ -8,43 +8,47 @@
 namespace acl::detail
 {
 template <typename T>
-requires(detail::NativeStringLike<T> || detail::CastableToStringView<T>)
+  requires(detail::NativeStringLike<T> || detail::CastableToStringView<T>)
 static inline std::string_view as_string(T const& val)
 {
   return std::string_view(val);
 }
 
 template <typename T>
-requires(!detail::NativeStringLike<T> && !detail::CastableToStringView<T> && !detail::TransformToString<T> &&
-         detail::ConvertibleToString<T>) static inline std::string as_string(T const& val)
+  requires(!detail::NativeStringLike<T> && !detail::CastableToStringView<T> && !detail::TransformToString<T> &&
+           detail::ConvertibleToString<T>)
+static inline std::string as_string(T const& val)
 {
   return acl::to_string(val);
 }
 
 template <typename T>
-requires(!detail::NativeStringLike<T> && !detail::CastableToStringView<T> &&
-         (detail::TransformToString<T> || detail::TransformToStringView<T>)) static inline auto as_string(T const& val)
+  requires(!detail::NativeStringLike<T> && !detail::CastableToStringView<T> &&
+           (detail::TransformToString<T> || detail::TransformToStringView<T>))
+static inline auto as_string(T const& val)
 {
   return acl::to_string(val);
 }
 
 template <typename C, typename... Args>
-requires(detail::HasValueType<C> && detail::HasEmplace<C, container_value_type<C>> &&
-         !detail::HasEmplaceBack<C, container_value_type<C>>) static inline void emplace(C& c, Args&&... args)
+  requires(detail::HasValueType<C> && detail::HasEmplace<C, container_value_type<C>> &&
+           !detail::HasEmplaceBack<C, container_value_type<C>>)
+static inline void emplace(C& c, Args&&... args)
 {
   c.emplace(std::forward<Args>(args)...);
 }
 
 template <typename C, typename... Args>
-requires(detail::HasValueType<C> && !detail::HasEmplace<C, container_value_type<C>> &&
-         detail::HasEmplaceBack<C, container_value_type<C>>) static inline void emplace(C& c, Args&&... args)
+  requires(detail::HasValueType<C> && !detail::HasEmplace<C, container_value_type<C>> &&
+           detail::HasEmplaceBack<C, container_value_type<C>>)
+static inline void emplace(C& c, Args&&... args)
 {
   c.emplace_back(std::forward<Args>(args)...);
 }
 
 template <typename C, typename... Args>
-requires(detail::HasValueType<C> && !detail::HasEmplace<C, container_value_type<C>> &&
-         !detail::HasEmplaceBack<C, container_value_type<C>> && detail::HasPushBack<C, container_value_type<C>>)
+  requires(detail::HasValueType<C> && !detail::HasEmplace<C, container_value_type<C>> &&
+           !detail::HasEmplaceBack<C, container_value_type<C>> && detail::HasPushBack<C, container_value_type<C>>)
 static inline void emplace(C& c, Args&&... args)
 {
   c.push_back(std::forward<Args>(args)...);

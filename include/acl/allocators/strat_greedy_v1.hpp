@@ -4,9 +4,11 @@
 namespace acl::strat
 {
 
-/// @brief This class provides a mechanism to allocate blocks of addresses
-///        by linearly searching through a list of available free sizes and
-///        returning the first chunk that can fit the requested memory size.
+/**
+ * @brief This class provides a mechanism to allocate blocks of addresses
+ *        by linearly searching through a list of available free sizes and
+ *        returning the first chunk that can fit the requested memory size.
+ */
 template <typename Options = acl::options<>>
 class greedy_v1
 {
@@ -171,6 +173,8 @@ protected:
   uint32_t head = 0;
 };
 
-/// alloc_strategy::best_fit Impl
+/**
+ * alloc_strategy::best_fit Impl
+ */
 
 } // namespace acl::strat

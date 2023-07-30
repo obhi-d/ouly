@@ -3,6 +3,4 @@
 #include "vec2.hpp"
 
 namespace acl
-{
-
-} // namespace acl
+{} // namespace acl

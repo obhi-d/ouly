@@ -10,7 +10,7 @@
 namespace acl
 {
 
-using scheduler_worker_entry = std::function<void(worker_id)>;
+using scheduler_worker_entry = std::function<void(worker_desc)>;
 
 class scheduler
 {
@@ -79,43 +79,65 @@ public:
            current);
   }
 
-  /// @brief Submit a work for execution
+  /**
+   * @brief Submit a work for execution
+   */
   ACL_API void submit(detail::work_item work, worker_id current);
 
-  /// @brief Begin scheduler execution, group creation is frozen after this call.
-  /// @param entry An entry function can be provided that will be executed on all worker threads upon entry.
+  /**
+   * @brief Begin scheduler execution, group creation is frozen after this call.
+   * @param entry An entry function can be provided that will be executed on all worker threads upon entry.
+   */
   ACL_API void begin_execution(scheduler_worker_entry&& entry = {});
-  /// @brief Wait for threads to finish executing and end scheduler execution. Scheduler execution can be restarted
-  /// using begin_execution. Unlocks scheduler and makes it mutable.
+  /**
+   * @brief Wait for threads to finish executing and end scheduler execution. Scheduler execution can be restarted
+   * using begin_execution. Unlocks scheduler and makes it mutable.
+   */
   ACL_API void end_execution();
 
-  /// @brief Get worker count in the scheduler
+  /**
+   * @brief Get worker count in the scheduler
+   */
   inline uint32_t get_worker_count() const noexcept
   {
     return worker_count;
   }
 
-  /// @brief Ensure a work-group by id and set a name
+  /**
+   * @brief Ensure a work-group by id and set a name
+   */
   ACL_API void create_group(workgroup_id group, std::string name, uint32_t thread_offset, uint32_t thread_count);
-  /// @brief Get the next available group.
+  /**
+   * @brief Get the next available group.
+   */
   ACL_API workgroup_id create_group(std::string name, uint32_t thread_offset, uint32_t thread_count);
-  /// @brief Clear a group, and re-create it
+  /**
+   * @brief Clear a group, and re-create it
+   */
   ACL_API void clear_group(workgroup_id group);
-  /// @brief  Find an existing work group by name
+  /**
+   * @brief  Find an existing work group by name
+   */
   ACL_API workgroup_id find_group(std::string const& name);
-  /// @brief Get worker count in this group
+  /**
+   * @brief Get worker count in this group
+   */
   inline uint32_t get_worker_count(workgroup_id g) const noexcept
   {
     return workgroups[g.get_index()].thread_count;
   }
 
-  /// @brief Get worker start index
+  /**
+   * @brief Get worker start index
+   */
   inline uint32_t get_worker_start_idx(workgroup_id g) const noexcept
   {
     return workgroups[g.get_index()].start_thread_idx;
   }
 
-  /// @brief Get worker d
+  /**
+   * @brief Get worker d
+   */
   inline uint32_t get_logical_divisor(workgroup_id g) const noexcept
   {
     return workgroups[g.get_index()].thread_count * work_scale;
@@ -126,8 +148,10 @@ public:
     return workers[worker.get_index()].contexts[group.get_index()].get();
   }
 
-  /// @brief If multiple schedulers are active, this function should be called from main thread before using the
-  /// scheduler
+  /**
+   * @brief If multiple schedulers are active, this function should be called from main thread before using the
+   * scheduler
+   */
   ACL_API void take_ownership() noexcept;
   ACL_API void busy_work(worker_id) noexcept;
 

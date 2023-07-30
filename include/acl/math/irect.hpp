@@ -3,5 +3,4 @@
 #include "rect.hpp"
 
 namespace acl
-{
-} // namespace acl
+{} // namespace acl

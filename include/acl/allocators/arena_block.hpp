@@ -5,13 +5,6 @@
 namespace acl::detail
 {
 
-//  ██████╗-██╗------██████╗--██████╗██╗--██╗
-//  ██╔══██╗██║-----██╔═══██╗██╔════╝██║-██╔╝
-//  ██████╔╝██║-----██║---██║██║-----█████╔╝-
-//  ██╔══██╗██║-----██║---██║██║-----██╔═██╗-
-//  ██████╔╝███████╗╚██████╔╝╚██████╗██║--██╗
-//  ╚═════╝-╚══════╝-╚═════╝--╚═════╝╚═╝--╚═╝
-//  -----------------------------------------
 template <typename usize_type, typename extension>
 struct block
 {
@@ -65,7 +58,7 @@ struct block
       : offset(ioffset), size(isize), arena(iarena), ext(idata), is_free(ifree)
   {}
   block(size_type ioffset, size_type isize, std::uint32_t iarena, uhandle idata, bool ifree, bool islotted) noexcept
-  requires(!std::convertible_to<uhandle, extension>)
+    requires(!std::convertible_to<uhandle, extension>)
       : offset(ioffset), size(isize), arena(iarena), rtup_(idata, 0), is_free(ifree), is_slotted(islotted)
   {}
   block(size_type ioffset, size_type isize, std::uint32_t iarena, extension idata, bool ifree, bool islotted) noexcept

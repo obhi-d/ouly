@@ -139,17 +139,23 @@ public:
     return *this;
   }
 
-  /// \thread_safe
+  /**
+   * \thread_safe
+   */
   inline void* do_allocate(std::size_t bytes, std::size_t alignment) override
   {
     return impl_->allocate(bytes, alignment);
   }
-  /// \thread_safe
+  /**
+   * \thread_safe
+   */
   inline void do_deallocate(void* ptr, std::size_t bytes, std::size_t alignment) override
   {
     return impl_->deallocate(ptr, bytes, alignment);
   }
-  /// \thread_safe
+  /**
+   * \thread_safe
+   */
   inline bool do_is_equal(const memory_resource& other) const noexcept override
   {
     // TODO
@@ -177,17 +183,23 @@ public:
     impl_ = std::move(r.impl_);
     return *this;
   }
-  /// \thread_safe
+  /**
+   * \thread_safe
+   */
   inline void* do_allocate(std::size_t bytes, std::size_t alignment) override
   {
     return impl_.allocate(bytes, alignment);
   }
-  /// \thread_safe
+  /**
+   * \thread_safe
+   */
   inline void do_deallocate(void* ptr, std::size_t bytes, std::size_t alignment) override
   {
     return impl_.deallocate(ptr, bytes, alignment);
   }
-  /// \thread_safe
+  /**
+   * \thread_safe
+   */
   inline bool do_is_equal(const memory_resource& other) const noexcept override
   {
     // TODO

@@ -178,7 +178,8 @@ struct quad_t
 
   inline constexpr quad_t(acl::noinit) noexcept {}
   template <typename utag_t>
-  inline constexpr quad_t(quad_t<scalar_t, utag_t> const& other, scalar_t w) noexcept : xyzw{other.x, other.y, other.z, w}
+  inline constexpr quad_t(quad_t<scalar_t, utag_t> const& other, scalar_t w) noexcept
+      : xyzw{other.x, other.y, other.z, w}
   {}
   template <typename utag_t>
   inline constexpr quad_t(quad_t<scalar_t, utag_t> const& other) noexcept : v(other.v)
@@ -360,7 +361,11 @@ struct vec3_t
   inline constexpr explicit vec3_t(scalar_t v) noexcept : xyz{v, v, v} {}
   inline constexpr vec3_t(scalar_t vx, scalar_t vy, scalar_t vz) noexcept : xyz{vx, vy, vz} {}
 
-  inline constexpr vec3_t& operator =(vec3_t const& other) noexcept { xyz = other.xyz; return *this; }
+  inline constexpr vec3_t& operator=(vec3_t const& other) noexcept
+  {
+    xyz = other.xyz;
+    return *this;
+  }
 };
 
 template <typename scalar_t>
@@ -429,7 +434,11 @@ struct rect_t
     return r[i];
   }
 
-  inline constexpr rect_t& operator =(rect_t const& other) noexcept { r = other.r; return *this; }
+  inline constexpr rect_t& operator=(rect_t const& other) noexcept
+  {
+    r = other.r;
+    return *this;
+  }
 };
 
 template <typename scalar_t>
@@ -482,7 +491,11 @@ struct aabb_t
     return r[i];
   }
 
-  inline constexpr aabb_t& operator =(aabb_t const& other) noexcept { r = other.r; return *this; }
+  inline constexpr aabb_t& operator=(aabb_t const& other) noexcept
+  {
+    r = other.r;
+    return *this;
+  }
 };
 
 template <typename scalar_t>
@@ -540,7 +553,11 @@ struct mat4_t
     return r[i];
   }
 
-  inline constexpr mat4_t& operator =(mat4_t const& other) noexcept { r = other.r; return *this; }
+  inline constexpr mat4_t& operator=(mat4_t const& other) noexcept
+  {
+    r = other.r;
+    return *this;
+  }
 };
 
 template <typename scalar_t>
@@ -595,7 +612,11 @@ struct mat3_t
     return r[i];
   }
 
-  inline constexpr mat3_t& operator =(mat3_t const& other) noexcept { r = other.r; return *this; }
+  inline constexpr mat3_t& operator=(mat3_t const& other) noexcept
+  {
+    r = other.r;
+    return *this;
+  }
 };
 
 template <typename scalar_t>

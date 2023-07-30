@@ -4,10 +4,10 @@
 #include <compare>
 #include <cstddef>
 #include <cstdint>
-#include <type_traits>
-#include <utility>
 #include <limits>
 #include <memory>
+#include <type_traits>
+#include <utility>
 
 namespace acl
 {
@@ -25,16 +25,15 @@ struct reference_type<void>
   using type = void*;
 };
 
-
 // Pointer compression, should not be used unless you are sure
 template <typename T>
 class compressed_ptr
 {
 
 public:
-  using tag_t = int8_t;
+  using tag_t     = int8_t;
   using pointer_t = T*;
-  using class_t = T;
+  using class_t   = T;
 
 private:
   union pack
@@ -121,20 +120,20 @@ public:
 
   void set_tag(tag_t t) noexcept
   {
-    pointer_t p        = get_ptr();
+    pointer_t p = get_ptr();
     value.value = pack_ptr(p, t);
   }
 
   /** smart pointer support  */
   /* @{ */
   typename detail::reference_type<class_t>::type operator*() const noexcept
-  requires(!std::is_same_v<class_t, void>)
+    requires(!std::is_same_v<class_t, void>)
   {
     return *get_ptr();
   }
 
   pointer_t operator->() const noexcept
-  requires(std::is_class_v<class_t> || std::is_union_v<class_t>)
+    requires(std::is_class_v<class_t> || std::is_union_v<class_t>)
   {
     return get_ptr();
   }
@@ -144,24 +143,21 @@ public:
     return get_ptr() != 0;
   }
   /* @} */
-
 };
-
 
 // Pointer compression, should not be used unless you are sure
 template <typename T>
 class tagged_ptr
 {
 
-  public:
-  using tag_t = int8_t;
+public:
+  using tag_t     = int8_t;
   using pointer_t = T*;
-  using class_t = T;
+  using class_t   = T;
 
 private:
-  T* pointer = nullptr;
-  tag_t tag  = 0;
-
+  T*    pointer = nullptr;
+  tag_t tag     = 0;
 
 public:
   tagged_ptr(std::nullptr_t) noexcept {}
@@ -171,7 +167,7 @@ public:
   void set(pointer_t p, tag_t t)
   {
     pointer = p;
-    tag = t;
+    tag     = t;
   }
 
   inline auto operator<=>(tagged_ptr const& other) const noexcept = default;
@@ -210,13 +206,13 @@ public:
   /** smart pointer support  */
   /* @{ */
   typename detail::reference_type<class_t>::type operator*() const noexcept
-      requires(!std::is_same_v<class_t, void>)
+    requires(!std::is_same_v<class_t, void>)
   {
     return *get_ptr();
   }
 
   pointer_t operator->() const noexcept
-      requires(std::is_class_v<class_t> || std::is_union_v<class_t>)
+    requires(std::is_class_v<class_t> || std::is_union_v<class_t>)
   {
     return get_ptr();
   }
@@ -228,7 +224,7 @@ public:
   /* @} */
 };
 
-}
+} // namespace detail
 
 #ifdef ACL_PACK_TAGGED_POINTER
 template <typename T>

@@ -8,20 +8,22 @@
 
 namespace acl
 {
-/// @brief Represents a sparse vector with only pages/chunks/pools allocated for non-empty indexes
-/// @tparam Ty Vector type
-/// @tparam allocator_type Underlying allocator_type
-/// @tparam Options Defined options for this type:
-///                  @note [option] pool_size Power of 2, count of elements in a single chunk/page/pool
-///                  @note [option] null_v : constexpr/static type Ty object that indicates a null value for the object
-///                  @note [option] is_null(Ty t) : method that returns true to identify null object
-///                  @note          null_construct(Ty& t) : construct a slot as null value, for non-trivial types,
-///                  constructor must be
-///                  @note          null_reset(Ty& t) : reset a slot as null value, you can choose to call destructor
-///                  here for
-///                                 non-trivial types, but it expects an assignment to a value representing null value.
-///                  @note [option] disable_pool_tracking : true to indicate if individaul pool should not be tracked,
-///                  is false by default
+/**
+ * @brief Represents a sparse vector with only pages/chunks/pools allocated for non-empty indexes
+ * @tparam Ty Vector type
+ * @tparam allocator_type Underlying allocator_type
+ * @tparam Options Defined options for this type:
+ *                  @note [option] pool_size Power of 2, count of elements in a single chunk/page/pool
+ *                  @note [option] null_v : constexpr/static type Ty object that indicates a null value for the object
+ *                  @note [option] is_null(Ty t) : method that returns true to identify null object
+ *                  @note          null_construct(Ty& t) : construct a slot as null value, for non-trivial types,
+ *                  constructor must be
+ *                  @note          null_reset(Ty& t) : reset a slot as null value, you can choose to call destructor
+ *                  here for
+ *                                 non-trivial types, but it expects an assignment to a value representing null value.
+ *                  @note [option] disable_pool_tracking : true to indicate if individaul pool should not be tracked,
+ *                  is false by default
+ */
 template <typename Ty, typename Options = acl::default_options<Ty>>
 class sparse_vector : public detail::custom_allocator_t<Options>
 {
@@ -62,67 +64,67 @@ private:
   using check_type                = std::conditional_t<has_pool_tracking, std::true_type, std::false_type>;
 
   inline constexpr static value_type* cast(storage* src)
-  requires(std::is_same_v<storage, value_type>)
+    requires(std::is_same_v<storage, value_type>)
   {
     return src;
   }
 
   inline constexpr static value_type* cast(storage* src)
-  requires(!std::is_same_v<storage, value_type>)
+    requires(!std::is_same_v<storage, value_type>)
   {
     return reinterpret_cast<value_type*>(src);
   }
 
   inline constexpr static value_type const* cast(storage const* src)
-  requires(std::is_same_v<storage, value_type>)
+    requires(std::is_same_v<storage, value_type>)
   {
     return src;
   }
 
   inline constexpr static value_type const* cast(storage const* src)
-  requires(!std::is_same_v<storage, value_type>)
+    requires(!std::is_same_v<storage, value_type>)
   {
     return reinterpret_cast<value_type*>(src);
   }
 
   inline constexpr static value_type& cast(storage& src)
-  requires(std::is_same_v<storage, value_type>)
+    requires(std::is_same_v<storage, value_type>)
   {
     return src;
   }
 
   inline constexpr static value_type& cast(storage& src)
-  requires(!std::is_same_v<storage, value_type>)
+    requires(!std::is_same_v<storage, value_type>)
   {
     return reinterpret_cast<value_type&>(src);
   }
 
   inline constexpr static value_type const& cast(storage const& src)
-  requires(std::is_same_v<storage, value_type>)
+    requires(std::is_same_v<storage, value_type>)
   {
     return src;
   }
 
   inline constexpr static value_type const& cast(storage const& src)
-  requires(!std::is_same_v<storage, value_type>)
+    requires(!std::is_same_v<storage, value_type>)
   {
     return reinterpret_cast<value_type&>(src);
   }
 
   inline static bool is_null(value_type const& other) noexcept
-  requires(has_null_method)
+    requires(has_null_method)
   {
     return options::is_null(other);
   }
 
   inline static bool is_null(value_type const& other) noexcept
-  requires(has_null_value && !has_null_method)
+    requires(has_null_value && !has_null_method)
   {
     return other == options::null_v;
   }
 
   inline static constexpr bool is_null(value_type const& other) noexcept
-  requires(!has_null_value && !has_null_method)
+    requires(!has_null_value && !has_null_method)
   {
     return false;
   }
@@ -136,7 +138,7 @@ public:
     *this = std::move(other);
   }
   inline sparse_vector(sparse_vector const& other) noexcept
-  requires(std::is_copy_constructible_v<value_type>)
+    requires(std::is_copy_constructible_v<value_type>)
   {
     *this = other;
   }
@@ -156,7 +158,7 @@ public:
   }
 
   sparse_vector& operator=(sparse_vector const& other) noexcept
-  requires(std::is_copy_constructible_v<value_type>)
+    requires(std::is_copy_constructible_v<value_type>)
   {
     clear();
     items_.resize(other.items_.size());
@@ -197,99 +199,125 @@ public:
     return *this;
   }
 
-  /// @brief Lambda called for each element
-  /// @tparam Lambda Lambda should accept A link and value_type& parameter
+  /**
+   * @brief Lambda called for each element
+   * @tparam Lambda Lambda should accept A link and value_type& parameter
+   */
   template <typename Lambda>
   void for_each(Lambda&& lambda) noexcept
   {
     for_each(items_, 0, length_, std::forward<Lambda>(lambda), check_type{});
   }
 
-  /// @brief Lambda called for each element
-  /// @tparam Lambda Lambda should accept A link and value_type const& parameter
+  /**
+   * @brief Lambda called for each element
+   * @tparam Lambda Lambda should accept A link and value_type const& parameter
+   */
   template <typename Lambda>
   void for_each(Lambda&& lambda) const noexcept
   {
     for_each(items_, 0, length_, std::forward<Lambda>(lambda), check_type{});
   }
 
-  /// @brief Lambda called for each element
-  /// @tparam Lambda Lambda should accept A link and value_type& parameter
+  /**
+   * @brief Lambda called for each element
+   * @tparam Lambda Lambda should accept A link and value_type& parameter
+   */
   template <typename Lambda>
   void for_each(Lambda&& lambda, size_type start, size_type end) noexcept
   {
     for_each(items_, start, end, std::forward<Lambda>(lambda), check_type{});
   }
 
-  /// @brief Lambda called for each element
-  /// @tparam Lambda Lambda should accept A link and value_type const& parameter
+  /**
+   * @brief Lambda called for each element
+   * @tparam Lambda Lambda should accept A link and value_type const& parameter
+   */
   template <typename Lambda>
   void for_each(Lambda&& lambda, size_type start, size_type end) const noexcept
   {
     for_each(items_, start, end, std::forward<Lambda>(lambda), check_type{});
   }
 
-  /// @brief Lambda called for each element
-  /// @tparam Lambda Lambda should accept A link and value_type& parameter
+  /**
+   * @brief Lambda called for each element
+   * @tparam Lambda Lambda should accept A link and value_type& parameter
+   */
   template <typename Lambda>
   void for_each(Lambda&& lambda, nocheck) noexcept
   {
     for_each(items_, 0, length_, std::forward<Lambda>(lambda), nocheck{});
   }
 
-  /// @brief Lambda called for each element
-  /// @tparam Lambda Lambda should accept A link and value_type const& parameter
+  /**
+   * @brief Lambda called for each element
+   * @tparam Lambda Lambda should accept A link and value_type const& parameter
+   */
   template <typename Lambda>
   void for_each(Lambda&& lambda, nocheck) const noexcept
   {
     for_each(items_, 0, length_, std::forward<Lambda>(lambda), nocheck{});
   }
 
-  /// @brief Lambda called for each element
-  /// @tparam Lambda Lambda should accept A link and value_type& parameter
+  /**
+   * @brief Lambda called for each element
+   * @tparam Lambda Lambda should accept A link and value_type& parameter
+   */
   template <typename Lambda>
   void for_each(Lambda&& lambda, size_type start, size_type end, nocheck) noexcept
   {
     for_each(items_, start, end, std::forward<Lambda>(lambda), nocheck());
   }
 
-  /// @brief Lambda called for each element
-  /// @tparam Lambda Lambda should accept A link and value_type const& parameter
+  /**
+   * @brief Lambda called for each element
+   * @tparam Lambda Lambda should accept A link and value_type const& parameter
+   */
   template <typename Lambda>
   void for_each(Lambda&& lambda, size_type start, size_type end, nocheck) const noexcept
   {
     for_each(items_, start, end, std::forward<Lambda>(lambda), nocheck());
   }
 
-  /// @brief Returns size of packed array
+  /**
+   * @brief Returns size of packed array
+   */
   size_type size() const noexcept
   {
     return length_;
   }
 
-  /// @brief Returns capacity of packed array
+  /**
+   * @brief Returns capacity of packed array
+   */
   size_type capacity() const noexcept
   {
     return static_cast<size_type>(items_.size()) * pool_size;
   }
 
-  /// @brief Returns the maximum entry slot currently already reserved for the table.
-  /// @remarks This value is more than item capacity, and is the current max link value.
+  /**
+   * @brief Returns the maximum entry slot currently already reserved for the table.
+   * @remarks This value is more than item capacity, and is the current max link value.
+   */
   size_type max_size() const noexcept
   {
     return capacity();
   }
 
-  /// @brief packed_table has active pool count depending upon number of elements it contains
-  /// @return active pool count
+  /**
+   * @brief packed_table has active pool count depending upon number of elements it contains
+   * @return active pool count
+   */
   size_type max_pools() const noexcept
   {
     return static_cast<size_type>(items_.size());
   }
 
-  /// @brief Get item pool and number of items_ give the pool number
-  /// @param i Must be between [0, active_pools())
-  /// @return Item pool raw array and array size
+  /**
+   * @brief Get item pool and number of items_ give the pool number
+   * @param i Must be between [0, active_pools())
+   * @return Item pool raw array and array size
+   */
   auto get_pool(size_type i) const noexcept -> std::tuple<value_type const*, size_type>
   {
     return cast(items_[i]);
@@ -331,9 +359,11 @@ public:
     // length_ is increased by emplace_at
     return emplace_at_idx(length_++, std::forward<Args>(args)...);
   }
-  /// @brief Emplace back an element. Order is not guranteed.
-  /// @tparam ...Args Constructor args for value_type
-  /// @return Returns link to the element pushed. link can be used to destroy entry.
+  /**
+   * @brief Emplace back an element. Order is not guranteed.
+   * @tparam ...Args Constructor args for value_type
+   * @return Returns link to the element pushed. link can be used to destroy entry.
+   */
   template <typename... Args>
   auto& emplace_at(size_type idx, Args&&... args) noexcept
   {
@@ -342,9 +372,11 @@ public:
     return dst;
   }
 
-  /// @brief Emplace back an element. Order is not guranteed.
-  /// @tparam ...Args Constructor args for value_type
-  /// @return Returns link to the element pushed. link can be used to destroy entry.
+  /**
+   * @brief Emplace back an element. Order is not guranteed.
+   * @tparam ...Args Constructor args for value_type
+   * @return Returns link to the element pushed. link can be used to destroy entry.
+   */
   template <typename... Args>
   auto& ensure(size_type idx) noexcept
   {
@@ -356,11 +388,13 @@ public:
     return *cast(items_[block] + index);
   }
 
-  /// @brief Merge another sparse_vector to this one
+  /**
+   * @brief Merge another sparse_vector to this one
+   */
   //  @note The merge will alter the order of elements
   //  Assumes vector is shrinked.
   void unordered_merge(sparse_vector&& other) noexcept
-  requires(allocator_is_always_equal::value && !has_pool_tracking)
+    requires(allocator_is_always_equal::value && !has_pool_tracking)
   {
     if (other.items_.empty())
       return;
@@ -422,11 +456,13 @@ public:
     // memcpy the rest
   }
 
-  /// @brief Merge multiple sparse_vectors into a single one, thereby destroying them
-  /// @tparam SparseVectorIt
-  /// @param first
-  /// @param end
-  /// @return
+  /**
+   * @brief Merge multiple sparse_vectors into a single one, thereby destroying them
+   * @tparam SparseVectorIt
+   * @param first
+   * @param end
+   * @return
+   */
   template <typename SparseVectorIt>
   inline void unordered_merge(SparseVectorIt first, SparseVectorIt end) noexcept
   {
@@ -441,13 +477,17 @@ public:
       unordered_merge(std::move(*first));
   }
 
-  /// @brief Construct an item in a given location, assuming the location was empty
+  /**
+   * @brief Construct an item in a given location, assuming the location was empty
+   */
   void replace(size_type point, value_type&& args) noexcept
   {
     at(point) = std::move(args);
   }
 
-  /// @brief Erase a single element.
+  /**
+   * @brief Erase a single element.
+   */
   void erase(size_type l) noexcept
   {
     if constexpr (detail::debug)
@@ -505,7 +545,9 @@ public:
     length_ = idx;
   }
 
-  /// @brief Drop unused pages
+  /**
+   * @brief Drop unused pages
+   */
   void shrink_to_fit() noexcept
   {
     auto from = (length_ + pool_mod) >> pool_mul;
@@ -518,7 +560,9 @@ public:
     items_.shrink_to_fit();
   }
 
-  /// @brief Set size to 0, memory is not released, objects are destroyed
+  /**
+   * @brief Set size to 0, memory is not released, objects are destroyed
+   */
   void clear() noexcept
   {
     if constexpr (!std::is_trivially_destructible_v<value_type> && !has_pod)
@@ -561,7 +605,7 @@ public:
   }
 
   Ty get_value(size_type idx) const noexcept
-  requires(has_null_value)
+    requires(has_null_value)
   {
     auto block = (idx >> pool_mul);
     return block < items_.size() && items_[block] ? cast(items_[block][idx & pool_mod]) : options::null_v;
@@ -627,25 +671,25 @@ private:
   }
 
   inline uint32_t& pool_occupation(storage* p) noexcept
-  requires(has_pool_tracking)
+    requires(has_pool_tracking)
   {
     return *reinterpret_cast<uint32_t*>(reinterpret_cast<std::uint8_t*>(p) + pool_bytes);
   }
 
   inline uint32_t pool_occupation(storage const* p) const noexcept
-  requires(has_pool_tracking)
+    requires(has_pool_tracking)
   {
     return *reinterpret_cast<uint32_t*>(reinterpret_cast<std::uint8_t const*>(p) + pool_bytes);
   }
 
   inline uint32_t& pool_occupation(size_type p) noexcept
-  requires(has_pool_tracking)
+    requires(has_pool_tracking)
   {
     return pool_occupation(items_[p]);
   }
 
   inline uint32_t pool_occupation(size_type p) const noexcept
-  requires(has_pool_tracking)
+    requires(has_pool_tracking)
   {
     return pool_occupation(items_[p]);
   }
@@ -699,8 +743,10 @@ private:
     items_[block] = nullptr;
   }
 
-  /// @brief Lambda called for each element
-  /// @tparam Lambda Lambda should accept value_type& parameter
+  /**
+   * @brief Lambda called for each element
+   * @tparam Lambda Lambda should accept value_type& parameter
+   */
   template <typename Lambda, typename Store, typename Check>
   inline static void for_each(Store& items_, size_type start, size_type end, Lambda&& lambda, Check) noexcept
   {

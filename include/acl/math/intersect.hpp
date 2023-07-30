@@ -13,22 +13,30 @@ enum class result_t : std::uint32_t
   k_intersecting
 };
 
-/// @brief Test bounding volume bounding volume intersection
+/**
+ * @brief Test bounding volume bounding volume intersection
+ */
 template <typename scalar_t>
 inline result_t test_intersection(bounding_volume_t<scalar_t> const& i_vol1,
                                   bounding_volume_t<scalar_t> const& i_vol2) noexcept;
 
-/// @brief Test bounding volume frustum_t intersection using coherency and masking.
+/**
+ * @brief Test bounding volume frustum_t intersection using coherency and masking.
+ */
 template <typename scalar_t>
 inline result_t test_intersection(bounding_volume_t<scalar_t> const& i_vol, frustum_t<scalar_t> const& i_frustum,
                                   coherency& io_coherency) noexcept;
 
-/// @brief Test bounding volume frustum_t intersection
+/**
+ * @brief Test bounding volume frustum_t intersection
+ */
 template <typename scalar_t>
 inline result_t test_intersection(bounding_volume_t<scalar_t> const& i_vol,
                                   frustum_t<scalar_t> const&         i_frustum) noexcept;
 
-/// @brief Intersect sphere with frustum_t
+/**
+ * @brief Intersect sphere with frustum_t
+ */
 template <typename scalar_t>
 inline result_t test_intersection(sphere_t<scalar_t> i_sphere, frustum_t<scalar_t> const& i_frustum) noexcept;
 

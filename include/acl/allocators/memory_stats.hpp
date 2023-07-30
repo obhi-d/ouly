@@ -151,7 +151,7 @@ struct statistics_impl<tag_arg, Opt, std::true_type> : base_stats_t<Opt>
   }
 
   std::string print()
-  requires(HasPrintStats<Opt>)
+    requires(HasPrintStats<Opt>)
   {
     std::string line(79, '=');
     line += "\n";

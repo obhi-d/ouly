@@ -14,9 +14,11 @@ struct default_link_container_traits
   static constexpr uint32_t pool_size  = 1024;
 };
 
-/// @brief Container for link_registry items. Item type must be standard layout, pod like objects.
-/// @tparam Ty
-/// @tparam Traits
+/**
+ * @brief Container for link_registry items. Item type must be standard layout, pod like objects.
+ * @tparam Ty
+ * @tparam Traits
+ */
 template <typename Ty, typename Traits>
 class basic_link_container
 {
@@ -45,7 +47,8 @@ public:
   }
 
   template <typename ITy>
-  requires std::same_as<ITy, Ty> || std::same_as<ITy, void> void sync(basic_link_registry<ITy, size_type> const& imax)
+    requires std::same_as<ITy, Ty> || std::same_as<ITy, void>
+  void sync(basic_link_registry<ITy, size_type> const& imax)
   {
     items_.resize(imax.max_size());
 #ifdef ACL_DEBUG
@@ -62,7 +65,8 @@ public:
   }
 
   template <typename ITy, typename... Args>
-  requires std::same_as<ITy, Ty> || std::same_as<ITy, void> auto& emplace(acl::link<ITy, size_type> l, Args&&... args)
+    requires std::same_as<ITy, Ty> || std::same_as<ITy, void>
+  auto& emplace(acl::link<ITy, size_type> l, Args&&... args)
   {
     Ty* obj = (Ty*)&items_[l.as_index()];
     std::construct_at<Ty>(obj, std::forward<Args>(args)...);
@@ -70,7 +74,8 @@ public:
   }
 
   template <typename ITy>
-  requires std::same_as<ITy, Ty> || std::same_as<ITy, void> void erase(acl::link<ITy, size_type> l)
+    requires std::same_as<ITy, Ty> || std::same_as<ITy, void>
+  void erase(acl::link<ITy, size_type> l)
   {
     if constexpr (!std::is_trivially_destructible_v<Ty>)
       std::destroy_at((Ty*)&items_[l.as_index()]);
@@ -80,7 +85,8 @@ public:
   }
 
   template <typename ITy>
-  requires std::same_as<ITy, Ty> || std::same_as<ITy, void> Ty& at(acl::link<ITy, size_type> l)
+    requires std::same_as<ITy, Ty> || std::same_as<ITy, void>
+  Ty& at(acl::link<ITy, size_type> l)
   {
 #ifdef ACL_DEBUG
     ACL_ASSERT(revisions_[l.as_index()] == l.revision());
@@ -89,7 +95,8 @@ public:
   }
 
   template <typename ITy>
-  requires std::same_as<ITy, Ty> || std::same_as<ITy, void> Ty const& at(acl::link<ITy, size_type> l) const
+    requires std::same_as<ITy, Ty> || std::same_as<ITy, void>
+  Ty const& at(acl::link<ITy, size_type> l) const
   {
 #ifdef ACL_DEBUG
     ACL_ASSERT(revisions_[l.as_index()] == l.revision());

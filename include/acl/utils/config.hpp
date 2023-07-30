@@ -58,8 +58,9 @@ inline static constexpr bool debug = false;
 #endif
 #endif
 
-/// Before including any config.hpp, if ACL_API is defined from a dll to exp
+/**
+ * Before including any config.hpp, if ACL_API is defined from a dll to exp
+ */
 #ifndef ACL_API
 #define ACL_API
 #endif
-

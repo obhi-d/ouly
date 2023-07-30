@@ -1,9 +1,9 @@
 #pragma once
 
-#include <acl/utils/config.hpp>
 #include "deduced_types.hpp"
 #include "real.hpp"
 #include "types.hpp"
+#include <acl/utils/config.hpp>
 
 namespace acl::vml
 {
@@ -842,8 +842,8 @@ inline quadvt select(quadvt const& a, quadvt const& b, quadvt const& c) noexcept
     union
     {
       std::array<float_to_int_t<scalar_t>, 4> ival;
-      std::array<scalar_t, 4> val;
-    }ua, ub, uc, uret;
+      std::array<scalar_t, 4>                 val;
+    } ua, ub, uc, uret;
 
     ua.val = a;
     ub.val = b;
@@ -1070,7 +1070,9 @@ inline quadvt log(quadvt const& a) noexcept
   }
 }
 
-/// @brief Power function for positive numbers only
+/**
+ * @brief Power function for positive numbers only
+ */
 template <typename quadvt>
 inline quadvt ppow(quadvt const& a, qscalar_t<quadvt> exp) noexcept
 {
@@ -1441,7 +1443,9 @@ inline quadv_array_t<scalar_t, 4> transpose(quadv_array_t<scalar_t, 4> const& m)
   return ret;
 }
 
-/// @brief Full matrix multiplication
+/**
+ * @brief Full matrix multiplication
+ */
 template <typename scalar_t>
 inline quadv_array_t<scalar_t, 4> mul_mat4(quadv_array_t<scalar_t, 4> const& m1,
                                            quadv_array_t<scalar_t, 4> const& m2) noexcept
@@ -1526,7 +1530,9 @@ inline quadv_array_t<scalar_t, 4> mul_mat4(quadv_array_t<scalar_t, 4> const& m1,
   return ret;
 }
 
-/// @brief Full matrix multiplication
+/**
+ * @brief Full matrix multiplication
+ */
 template <typename quadvt>
 inline quadvt mul_transform(quadvt const& v, quadv_array_t<qscalar_t<quadvt>, 4> const& m) noexcept
 {
@@ -1556,7 +1562,9 @@ inline quadvt mul_transform(quadvt const& v, quadv_array_t<qscalar_t<quadvt>, 4>
   }
 }
 
-/// @brief Full matrix multiplication
+/**
+ * @brief Full matrix multiplication
+ */
 template <typename quadvt>
 inline quadvt mul_extends_mat4(quadvt const& v, quadv_array_t<qscalar_t<quadvt>, 4> const& m) noexcept
 {
@@ -1714,7 +1722,9 @@ inline quadv_array_t<scalar_t, 4> make_mat4(scalar_t scale, quadvt const& rot, q
   }
 }
 
-/// @brief Matrix full inverse computation
+/**
+ * @brief Matrix full inverse computation
+ */
 template <typename scalar_t>
 inline quadv_array_t<scalar_t, 4> inverse(quadv_array_t<scalar_t, 4> const& m) noexcept
 {

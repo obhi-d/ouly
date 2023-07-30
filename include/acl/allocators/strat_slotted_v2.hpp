@@ -7,12 +7,14 @@
 namespace acl::strat
 {
 
-/// @brief This strategy employes an immediate cache of memory of fixed size.
-///        Blocks are allocated from cache, if free blocks are available in cache.
-///        Cache size is controlled by fixed_max_per_slot size, which is allocated per bucket slot.
-///        The bucket granularity is fixed, and the expectation is allocation is based
-///        on a multiple of this unit size.
-///        The certain number of bucket slots are made avialable based on max_bucket
+/**
+ * @brief This strategy employes an immediate cache of memory of fixed size.
+ *        Blocks are allocated from cache, if free blocks are available in cache.
+ *        Cache size is controlled by fixed_max_per_slot size, which is allocated per bucket slot.
+ *        The bucket granularity is fixed, and the expectation is allocation is based
+ *        on a multiple of this unit size.
+ *        The certain number of bucket slots are made avialable based on max_bucket
+ */
 template <typename Options = acl::options<>>
 class slotted_v2
 {

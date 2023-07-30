@@ -31,7 +31,8 @@ struct param_context
 {
   virtual ~param_context() noexcept = default;
 
-  inline virtual std::pair<param_context*, cmd_state*> enter_param_context(scli&, int, std::string_view, cmd_state* cstate)
+  inline virtual std::pair<param_context*, cmd_state*> enter_param_context(scli&, int, std::string_view,
+                                                                           cmd_state* cstate)
   {
     return {nullptr, cstate};
   }
@@ -39,7 +40,8 @@ struct param_context
   inline virtual void exit_param_context(scli&, int param_pos, cmd_state* cstate_inner, cmd_state* cstate_cur) {}
 
   inline virtual void parse_param(scli&, std::string_view value, cmd_state*) {}
-  inline virtual void parse_param(scli&, int param_pos, std::string_view param_name, std::string_view value, cmd_state*) {}
+  inline virtual void parse_param(scli&, int param_pos, std::string_view param_name, std::string_view value, cmd_state*)
+  {}
 };
 
 struct cmd_context : param_context
@@ -82,9 +84,9 @@ class scli
 public:
   struct position
   {
-    uint32_t             line                                        = 1;
-    uint32_t             character                                   = 1;
-    inline auto          operator<=>(position const&) const noexcept = default;
+    uint32_t    line                                        = 1;
+    uint32_t    character                                   = 1;
+    inline auto operator<=>(position const&) const noexcept = default;
 
     inline friend std::ostream& operator<<(std::ostream& yyo, position const& l) noexcept
     {
@@ -170,11 +172,13 @@ public:
 
   inline scli(shared_state& ss) noexcept : sstate(ss) {}
 
-  /// @par API
+  /**
+   * @par API
+   */
   template <typename UserContext>
   inline static void parse(context& c, UserContext& uc, std::string_view src_name, std::string_view content,
-                    std::vector<std::string> include_paths = {}, error_handler_lambda ehl = {},
-                    import_handler_lambda ihl = {}) noexcept
+                           std::vector<std::string> include_paths = {}, error_handler_lambda ehl = {},
+                           import_handler_lambda ihl = {}) noexcept
   {
     shared_state ss(c);
     ss.user_ctx = &uc;
@@ -192,7 +196,9 @@ public:
     return *reinterpret_cast<UserContext*>(sstate.user_ctx);
   }
 
-  /// @par Command management
+  /**
+   * @par Command management
+   */
   template <typename T>
   inline T* create_cmd_state()
   {
@@ -213,10 +219,14 @@ public:
     return command;
   }
 
-  /// @par API
+  /**
+   * @par API
+   */
   ACL_API void parse(std::string_view src_name, std::string_view content) noexcept;
 
-  /// @par Parser utilities
+  /**
+   * @par Parser utilities
+   */
   void set_next_command(std::string_view name) noexcept;
   void execute_command();
   void enter_command_scope();
@@ -234,7 +244,9 @@ public:
 
   static std::string_view default_import_handler(shared_state&, std::string_view) noexcept;
 
-  /// @par Lexer utilities
+  /**
+   * @par Lexer utilities
+   */
   int                     read(char* buffer, int siz) noexcept;
   void                    begin_scan() noexcept;
   void                    end_scan() noexcept;

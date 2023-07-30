@@ -23,28 +23,34 @@ using utf8  = char8_t;
 using utf32 = char32_t;
 using utf16 = char16_t;
 
-/// @brief Index of string
-/// @param to_find The string to find
-/// @param in The word list
-///
+/**
+ * @brief Index of string
+ * @param to_find The string to find
+ * @param in The word list
+ *
+ */
 inline uint32_t index_of(std::string const& in, std::string_view to_find)
 {
   return word_list<>::index_of(in, to_find);
 }
 
-/// @brief Check if string is present
-/// @param value The string to find
-/// @param in The word list
-///
+/**
+ * @brief Check if string is present
+ * @param value The string to find
+ * @param in The word list
+ *
+ */
 inline bool contains(std::string const& in, std::string const& to_find)
 {
   return in.find(to_find) != std::string::npos;
 }
 
-/// @brief Push the string at the very end of the buffer
-/// @param in The string array container
-/// @param word The string to push
-///
+/**
+ * @brief Push the string at the very end of the buffer
+ * @param in The string array container
+ * @param word The string to push
+ *
+ */
 inline void word_push_back(std::string& in, const std::string_view& word)
 {
   word_list<>::push_back(in, word);
@@ -128,9 +134,11 @@ inline std::string indent(int32_t amt)
   return s;
 }
 
-/// @brief	Replace first occurence of a substring in a string with another string in-place.
-/// @return	true if string was replaced.
-///
+/**
+ * @brief	Replace first occurence of a substring in a string with another string in-place.
+ * @return	true if string was replaced.
+ *
+ */
 inline bool replace_first(std::string& source, std::string_view search, std::string_view replace)
 {
   assert(!search.empty());
@@ -144,9 +152,11 @@ inline bool replace_first(std::string& source, std::string_view search, std::str
   return false;
 }
 
-/// @brief	Replace all occurences of a substring in a string with another string in-place.
-/// @return	Number of replacements
-///
+/**
+ * @brief	Replace all occurences of a substring in a string with another string in-place.
+ * @return	Number of replacements
+ *
+ */
 inline uint32_t replace(std::string& source, std::string_view search, std::string_view replace)
 
 {
@@ -164,14 +174,18 @@ inline uint32_t replace(std::string& source, std::string_view search, std::strin
   return count;
 }
 
-/// Formats a camel or upper case name into a formatted string.
-/// @example
-/// "madeInChina" to "Made In China" or
-/// MADE_IN_CHINA to "Made In China"
+/**
+ * Formats a camel or upper case name into a formatted string.
+ * @example
+ * "madeInChina" to "Made In China" or
+ * MADE_IN_CHINA to "Made In China"
+ */
 ACL_API std::string format_name(std::string const& str);
 
-/// @brief	Converts string to lower case.
-/// @param [in,out]	str	The string to convert.
+/**
+ * @brief	Converts string to lower case.
+ * @param [in,out]	str	The string to convert.
+ */
 template <typename StringType>
 inline StringType& to_lower(StringType& str)
 {
@@ -179,8 +193,10 @@ inline StringType& to_lower(StringType& str)
   return str;
 }
 
-/// @brief	Converts string to upper case.
-/// @param [in,out]	str	The string to convert.
+/**
+ * @brief	Converts string to upper case.
+ * @param [in,out]	str	The string to convert.
+ */
 template <typename StringType>
 inline StringType& to_upper(StringType& str)
 {
@@ -188,15 +204,19 @@ inline StringType& to_upper(StringType& str)
   return str;
 }
 
-/// Use the string hasher to find hash
+/**
+ * Use the string hasher to find hash
+ */
 inline auto hash(std::string_view v, uint32_t seed = 1337)
 {
   return acl::wyhash32(seed)(v.data(), (uint32_t)v.length());
 }
 
-/// @brief Separates a string pair of the format Abc:efg into 'Abc' and 'efg', if the separator is not present the
-/// returned pair has the second element filled with empty string if is_prefix is true, if is_prefix is false, the
-/// first string is set to empty
+/**
+ * @brief Separates a string pair of the format Abc:efg into 'Abc' and 'efg', if the separator is not present the
+ * returned pair has the second element filled with empty string if is_prefix is true, if is_prefix is false, the
+ * first string is set to empty
+ */
 inline string_view_pair split(std::string_view name, char by = ':', bool is_prefix = true) noexcept
 {
   size_t seperator = name.find_first_of(by);
@@ -214,9 +234,11 @@ inline string_view_pair split(std::string_view name, char by = ':', bool is_pref
   }
 }
 
-/// @brief Separates a string pair of the format Abc:efg into 'Abc' and 'efg', if the separator is not present the
-/// returned pair has the second element filled with empty string if is_prefix is true, if is_prefix is false, the
-/// first string is set to empty. The search begins from the end unlike in acl::split
+/**
+ * @brief Separates a string pair of the format Abc:efg into 'Abc' and 'efg', if the separator is not present the
+ * returned pair has the second element filled with empty string if is_prefix is true, if is_prefix is false, the
+ * first string is set to empty. The search begins from the end unlike in acl::split
+ */
 inline string_view_pair split_last(const std::string_view& name, char by = ':', bool is_prefix = true)
 {
   size_t seperator = name.find_last_of(by);
@@ -249,7 +271,9 @@ inline void tokenize(A&& acceptor, std::string_view value, std::string_view sepe
   while (what != std::string::npos);
 }
 
-/// @brief trim leading white space
+/**
+ * @brief trim leading white space
+ */
 inline auto trim_leading(std::string_view str)
 {
   size_t endpos = str.find_first_not_of(" \t\n\r");
@@ -258,7 +282,9 @@ inline auto trim_leading(std::string_view str)
   return str;
 }
 
-/// @brief trim trailing white space
+/**
+ * @brief trim trailing white space
+ */
 inline auto trim_trailing(std::string_view str)
 {
   size_t endpos = str.find_last_not_of(" \t\n\r");

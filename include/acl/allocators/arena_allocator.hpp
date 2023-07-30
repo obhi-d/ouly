@@ -21,11 +21,15 @@ namespace acl
 {
 template <typename T>
 concept MemoryManager = requires(T m) {
-  /// Drop Arena
+  /**
+   * Drop Arena
+   */
   {
     m.drop_arena(acl::uhandle())
   } -> std::same_as<bool>;
-  /// Add an arena
+  /**
+   * Add an arena
+   */
   {
     m.add_arena(acl::ihandle(), std::size_t())
   } -> std::same_as<acl::uhandle>;
@@ -195,12 +199,14 @@ public:
     {}
   };
 
-  /// Allocation info: [optional] arena, offset, input_handle
+  /**
+   * Allocation info: [optional] arena, offset, input_handle
+   */
   using alloc_info =
     std::conditional_t<has_memory_mgr, std::tuple<uhandle, ihandle, size_type>, std::pair<ihandle, size_type>>;
 
   inline arena_allocator(size_type i_arena_size, arena_manager& i_manager) noexcept
-  requires(has_memory_mgr)
+    requires(has_memory_mgr)
       : mgr(&i_manager), arena_size(i_arena_size)
   {
     ibank.strat.init(*this);
@@ -441,7 +447,7 @@ public:
   }
 
   void defragment()
-  requires(can_defragment)
+    requires(can_defragment)
   {
     mgr->begin_defragment(*this);
     std::uint32_t arena_id = ibank.bank.arena_order.first;

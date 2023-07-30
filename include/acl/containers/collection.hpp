@@ -12,9 +12,11 @@
 namespace acl
 {
 
-/// @brief A collection of links, but not stored in vectors, instead managed by bitmap
-/// @tparam Ty
-/// @tparam Options options controlling behaviour of the container
+/**
+ * @brief A collection of links, but not stored in vectors, instead managed by bitmap
+ * @tparam Ty
+ * @tparam Options options controlling behaviour of the container
+ */
 template <typename Ty, typename Options = acl::default_options<Ty>>
 class collection : public detail::custom_allocator_t<Options>
 {

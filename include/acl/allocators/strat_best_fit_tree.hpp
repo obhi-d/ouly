@@ -5,9 +5,11 @@
 
 namespace acl::strat
 {
-/// @brief  Strategy class using RBTree for arena_allocator
-/// @tparam Options accepted options are only opt::basic_size_type
-/// @remarks Class uses best fit using rbtree implementation to find the best match for requested size
+/**
+ * @brief  Strategy class using RBTree for arena_allocator
+ * @tparam Options accepted options are only opt::basic_size_type
+ * @remarks Class uses best fit using rbtree implementation to find the best match for requested size
+ */
 template <typename Options = acl::options<>>
 class best_fit_tree
 {

@@ -26,14 +26,20 @@ public:
   virtual float    as_float(float default_value) const noexcept     = 0;
   virtual double   as_double(double default_value) const noexcept   = 0;
   virtual bool     as_bool(bool default_value) const noexcept       = 0;
-  /// @brief Find a parameter by parameter position
-  /// @note This function will never return nullptr, it is safe to call any function over the pointer returned
+  /**
+   * @brief Find a parameter by parameter position
+   * @note This function will never return nullptr, it is safe to call any function over the pointer returned
+   */
   virtual parameter const* at(uint32_t i) const noexcept = 0;
-  /// @brief Find a parameter by parameter name
-  /// @note This function will never return nullptr, it is safe to call any function over the pointer returned
+  /**
+   * @brief Find a parameter by parameter name
+   * @note This function will never return nullptr, it is safe to call any function over the pointer returned
+   */
   virtual parameter const* find(std::string_view name) const noexcept = 0;
 
-  /// @brief Get a string representation of the parameter
+  /**
+   * @brief Get a string representation of the parameter
+   */
   virtual std::string to_string() const noexcept = 0;
 
 private:

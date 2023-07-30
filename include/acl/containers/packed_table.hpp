@@ -49,19 +49,21 @@ struct custom_vector_type<Opt, typename Opt::custom_vector_t::value_type>
 };
 
 } // namespace detail
-/// @brief Contenst are packed in vector or sparse vector
-/// @tparam Ty Type of object
-/// @tparam Options Controls the parameters for class instantiation
-///   At a minimum expected options must include:
-///         - use_sparse : bool - true to use sparse vector
-///         - pool_size : integer - Pool size of the sparse vector when sparse vector is used to store data
-///         - offset : typename - acl::offset<&type::offset> self backref member
-///         - self_index_pool_size : integer - when offset is missing, indicates the pool size of self references if
-///         they use sparse vector
-///         - keys_index_pool_size : integer - indicates the pool size of keys if they use sparse vector
-///         - self_use_sparse_index : bool - use sparse vector for self reference
-///         - keys_use_sparse_index : bool - use sparse vector for key index
-///         - size_type : typename - uint32_t to reduce footprint
+/**
+ * @brief Contenst are packed in vector or sparse vector
+ * @tparam Ty Type of object
+ * @tparam Options Controls the parameters for class instantiation
+ *   At a minimum expected options must include:
+ *         - use_sparse : bool - true to use sparse vector
+ *         - pool_size : integer - Pool size of the sparse vector when sparse vector is used to store data
+ *         - offset : typename - acl::offset<&type::offset> self backref member
+ *         - self_index_pool_size : integer - when offset is missing, indicates the pool size of self references if
+ *         they use sparse vector
+ *         - keys_index_pool_size : integer - indicates the pool size of keys if they use sparse vector
+ *         - self_use_sparse_index : bool - use sparse vector for self reference
+ *         - keys_use_sparse_index : bool - use sparse vector for key index
+ *         - size_type : typename - uint32_t to reduce footprint
+ */
 template <typename Ty, typename Options = acl::default_options<Ty>>
 class packed_table : public detail::custom_allocator_t<Options>
 {
@@ -141,7 +143,7 @@ public:
     *this = std::move(other);
   }
   inline packed_table(packed_table const& other) noexcept
-  requires(std::is_copy_constructible_v<value_type>)
+    requires(std::is_copy_constructible_v<value_type>)
   {
     *this = other;
   }
@@ -165,7 +167,7 @@ public:
   }
 
   packed_table& operator=(packed_table const& other) noexcept
-  requires(std::is_copy_constructible_v<value_type>)
+    requires(std::is_copy_constructible_v<value_type>)
   {
     clear();
     shrink_to_fit();
@@ -177,46 +179,58 @@ public:
     return *this;
   }
 
-  /// @brief Lambda called for each element
-  /// @tparam Lambda Lambda should accept A link and value_type& parameter
+  /**
+   * @brief Lambda called for each element
+   * @tparam Lambda Lambda should accept A link and value_type& parameter
+   */
   template <typename Lambda>
   void for_each(Lambda&& lambda) noexcept
   {
     for_each_l<Lambda, value_type>(std::forward<Lambda>(lambda));
   }
 
-  /// @brief Lambda called for each element
-  /// @tparam Lambda Lambda should accept A link and value_type const& parameter
+  /**
+   * @brief Lambda called for each element
+   * @tparam Lambda Lambda should accept A link and value_type const& parameter
+   */
   template <typename Lambda>
   void for_each(Lambda&& lambda) const noexcept
   {
     for_each_l<Lambda, value_type const>(std::forward<Lambda>(lambda));
   }
 
-  /// @brief Lambda called for each element in range
-  /// @tparam Lambda Lambda Lambda should accept A link and value_type& parameter
-  /// @param first first index in range. This should be between 1 and size()
-  /// @param last last index in range. This should be between 1 and size()
+  /**
+   * @brief Lambda called for each element in range
+   * @tparam Lambda Lambda Lambda should accept A link and value_type& parameter
+   * @param first first index in range. This should be between 1 and size()
+   * @param last last index in range. This should be between 1 and size()
+   */
   template <typename Lambda>
   void for_each(size_type first, size_type last, Lambda&& lambda) noexcept
   {
     for_each_l<Lambda, value_type>(first, last, std::forward<Lambda>(lambda));
   }
 
-  /// @copydoc for_each
+  /**
+   * @copydoc for_each
+   */
   template <typename Lambda>
   void for_each(size_type first, size_type last, Lambda&& lambda) const noexcept
   {
     for_each_l<Lambda, value_type const>(first, last, std::forward<Lambda>(lambda));
   }
 
-  /// @brief Returns size of packed array
+  /**
+   * @brief Returns size of packed array
+   */
   size_type size() const noexcept
   {
     return (size_type)values_.size();
   }
 
-  /// @brief Valid range that can be iterated over
+  /**
+   * @brief Valid range that can be iterated over
+   */
   size_type range() const noexcept
   {
     return (size_type)values_.size();
@@ -232,9 +246,11 @@ public:
     return values_;
   }
 
-  /// @brief Emplace back an element. Order is not guranteed.
-  /// @tparam ...Args Constructor args for value_type
-  /// @return Returns link to the element pushed. link can be used to destroy entry.
+  /**
+   * @brief Emplace back an element. Order is not guranteed.
+   * @tparam ...Args Constructor args for value_type
+   * @return Returns link to the element pushed. link can be used to destroy entry.
+   */
   template <typename... Args>
   link emplace(Args&&... args) noexcept
   {
@@ -271,7 +287,9 @@ public:
     return link(l);
   }
 
-  /// @brief Construct an item in a given location, assuming the location was empty
+  /**
+   * @brief Construct an item in a given location, assuming the location was empty
+   */
   template <typename... Args>
   void emplace_at(link point, Args&&... args) noexcept
   {
@@ -295,7 +313,9 @@ public:
       self_.ensure_at(key) = point.value();
   }
 
-  /// @brief Construct an item in a given location, assuming the location was empty
+  /**
+   * @brief Construct an item in a given location, assuming the location was empty
+   */
   void replace(link point, value_type&& args) noexcept
   {
     if constexpr (detail::debug)
@@ -312,7 +332,9 @@ public:
       self_.get(k) = point.value();
   }
 
-  /// @brief Erase a single element.
+  /**
+   * @brief Erase a single element.
+   */
   void erase(link l) noexcept
   {
     if constexpr (detail::debug)
@@ -320,16 +342,20 @@ public:
     erase_at(l);
   }
 
-  /// @brief Erase a single element by object when backref is available.
-  /// @remarks Only available if backref is available
+  /**
+   * @brief Erase a single element by object when backref is available.
+   * @remarks Only available if backref is available
+   */
   void erase(value_type const& obj) noexcept
-  requires(has_backref)
+    requires(has_backref)
   {
     erase_at(link(self_.get(obj)));
   }
 
-  /// @brief Find an object associated with a link
-  /// @return optional value of the object
+  /**
+   * @brief Find an object associated with a link
+   * @return optional value of the object
+   */
   optional_val find(link lnk) noexcept
   {
     if (keys_.contains_valid(lnk.as_index()))
@@ -340,8 +366,10 @@ public:
     return {};
   }
 
-  /// @brief Find an object associated with a link
-  /// @return optional value of the object
+  /**
+   * @brief Find an object associated with a link
+   * @return optional value of the object
+   */
   optional_cval find(link lnk) const noexcept
   {
     if (keys_.contains_valid(lnk.as_index()))
@@ -352,7 +380,9 @@ public:
     return {};
   }
 
-  /// @brief Drop unused pages
+  /**
+   * @brief Drop unused pages
+   */
   inline void shrink_to_fit() noexcept
   {
     keys_.shrink_to_fit();
@@ -360,7 +390,9 @@ public:
     self_.shrink_to_fit();
   }
 
-  /// @brief Set size to 0, memory is not released, objects are destroyed
+  /**
+   * @brief Set size to 0, memory is not released, objects are destroyed
+   */
   inline void clear() noexcept
   {
     keys_.clear();
@@ -448,13 +480,13 @@ private:
   }
 
   inline auto get_ref_at_idx(size_type idx) const noexcept
-  requires(!has_backref)
+    requires(!has_backref)
   {
     return self_.get(idx);
   }
 
   inline auto get_ref_at_idx(size_type idx) const noexcept
-  requires(has_backref)
+    requires(has_backref)
   {
     return self_.get(item_at_idx(idx));
   }
@@ -510,8 +542,10 @@ private:
     values_.pop_back();
   }
 
-  /// @brief Lambda called for each element
-  /// @tparam Lambda Lambda should accept value_type& parameter
+  /**
+   * @brief Lambda called for each element
+   * @tparam Lambda Lambda should accept value_type& parameter
+   */
   template <typename Lambda, typename Cast>
   inline void for_each_l(Lambda&& lambda) noexcept
   {

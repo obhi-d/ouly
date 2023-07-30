@@ -10,7 +10,9 @@
 namespace acl
 {
 
-/// @brief Appends the 'info' bounding box to 'dest'.
+/**
+ * @brief Appends the 'info' bounding box to 'dest'.
+ */
 template <typename scalar_t>
 inline bounds_info_t<scalar_t>& bounds_info_t<scalar_t>::operator+=(bounds_info_t<scalar_t> const& src) noexcept
 {
@@ -50,28 +52,36 @@ inline bounds_info_t<scalar_t> operator+(bounds_info_t<scalar_t> const& a, bound
   return r;
 }
 
-/// @brief Returns the bounding box center
+/**
+ * @brief Returns the bounding box center
+ */
 template <typename scalar_t>
 inline vec3a_t<scalar_t> center(bounding_volume_t<scalar_t> const& v) noexcept
 {
   return center(v.spherical_vol);
 }
 
-/// @brief Returns the bounding box half size
+/**
+ * @brief Returns the bounding box half size
+ */
 template <typename scalar_t>
 inline vec3a_t<scalar_t> half_extends(bounding_volume_t<scalar_t> const& v) noexcept
 {
   return v.half_extends;
 }
 
-/// @brief Returns the bounding sphere radius
+/**
+ * @brief Returns the bounding sphere radius
+ */
 template <typename scalar_t>
 inline scalar_t radius(bounding_volume_t<scalar_t> const& v) noexcept
 {
   return radius(v.spherical_vol);
 }
 
-/// @brief Returns the bounding sphere radius
+/**
+ * @brief Returns the bounding sphere radius
+ */
 template <typename scalar_t>
 inline auto vradius(bounding_volume_t<scalar_t> const& v) noexcept
 {
@@ -84,7 +94,9 @@ inline void nullify(bounding_volume_t<scalar_t>& v) noexcept
   v.spherical_vol = v.half_extends = vml::zero<scalar_t>();
 }
 
-/// @brief Compute from axis aliogned bounding box
+/**
+ * @brief Compute from axis aliogned bounding box
+ */
 template <typename scalar_t>
 inline bounding_volume_t<scalar_t> make_bounding_volume(vec3a_t<scalar_t> const& center,
                                                         vec3a_t<scalar_t> const& half_extends) noexcept
@@ -159,8 +171,10 @@ inline bounding_volume_t<scalar_t>& bounding_volume_t<scalar_t>::operator+=(
   return *this;
 }
 
-/// @brief Given a matrix, update the bounding volume using the original extends and
-/// @brief radius
+/**
+ * @brief Given a matrix, update the bounding volume using the original extends and
+ * @brief radius
+ */
 template <typename scalar_t>
 inline bounding_volume_t<scalar_t> operator*(bounding_volume_t<scalar_t> const& bv, mat4_t<scalar_t> const& m) noexcept
 {

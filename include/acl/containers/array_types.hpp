@@ -9,7 +9,9 @@
 
 namespace acl
 {
-/// @remarks Defines a dynamic non-growable vector like container
+/**
+ * @remarks Defines a dynamic non-growable vector like container
+ */
 template <typename T, typename Allocator = acl::default_allocator<>>
 class dynamic_array : public Allocator
 {
@@ -171,10 +173,12 @@ private:
   uint32_t count_ = 0;
 };
 
-/// @brief This is a fixed sized array, but dynamically allocated
-/// @tparam T Type of the object
-/// @tparam Allocator Allocator allocator type
-/// @tparam N size of the array
+/**
+ * @brief This is a fixed sized array, but dynamically allocated
+ * @tparam T Type of the object
+ * @tparam Allocator Allocator allocator type
+ * @tparam N size of the array
+ */
 template <typename T, uint32_t N, typename Allocator = acl::default_allocator<>>
 class fixed_array : public Allocator
 {

@@ -277,7 +277,9 @@ public:
     return size() == 0;
   }
 
-  /// @brief Use resize to really reserve space
+  /**
+   * @brief Use resize to really reserve space
+   */
   void reserve(size_type n) noexcept
   {
     if (is_inlined())

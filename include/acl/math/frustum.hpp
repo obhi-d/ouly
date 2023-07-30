@@ -20,8 +20,10 @@ static inline auto default_coherency(std::uint32_t plane_count) noexcept
   return coherency(plane_count);
 }
 
-/// @brief Construct from a transpose(view*projection) matrix
-/// @param mat transpose(View*Projection) or transpose(Proj)*transpose(View) matrix
+/**
+ * @brief Construct from a transpose(view*projection) matrix
+ * @param mat transpose(View*Projection) or transpose(Proj)*transpose(View) matrix
+ */
 template <typename scalar_t>
 static inline frustum_t<scalar_t> make_frustum(mat4_t<scalar_t> const& m) noexcept
 {
@@ -43,7 +45,9 @@ static inline frustum_t<scalar_t> make_frustum(mat4_t<scalar_t> const& m) noexce
   return ft;
 }
 
-/// @brief Construct from a transpose(view*projection) matrix
+/**
+ * @brief Construct from a transpose(view*projection) matrix
+ */
 template <typename scalar_t>
 static inline frustum_t<scalar_t> make_frustum(plane_t<scalar_t> const* planes, uint32_t size) noexcept
 {

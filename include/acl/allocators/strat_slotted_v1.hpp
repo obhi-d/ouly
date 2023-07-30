@@ -7,15 +7,17 @@
 namespace acl::strat
 {
 
-/// @brief This strategy employes an immediate cache of memory of dynamic size
-///   Blocks are allocated from cache, if free blocks are available in cache
-///   Cache size grows as new fixed granulairty memory blocks are freed.
-///   Cache is not linear in memory, rather a linked list of free cache blocks per slot
-///   is maitained (which has some additional overhead)
-///   The memory is tightly packed as compared to slotted_v0.
-///   The bucket granularity is fixed, and the expectation is allocation is based
-///   on a multiple of this unit size.
-///   The certain number of bucket slots are made avialable based on max_bucket
+/**
+ * @brief This strategy employes an immediate cache of memory of dynamic size
+ *   Blocks are allocated from cache, if free blocks are available in cache
+ *   Cache size grows as new fixed granulairty memory blocks are freed.
+ *   Cache is not linear in memory, rather a linked list of free cache blocks per slot
+ *   is maitained (which has some additional overhead)
+ *   The memory is tightly packed as compared to slotted_v0.
+ *   The bucket granularity is fixed, and the expectation is allocation is based
+ *   on a multiple of this unit size.
+ *   The certain number of bucket slots are made avialable based on max_bucket
+ */
 template <typename Options = acl::options<>>
 class slotted_v1
 {

@@ -1066,7 +1066,9 @@ private:
     return (equals(std::get<I>(first), std::get<I>(second), n) && ...);
   }
 
-  /// Less
+  /**
+   * Less
+   */
   template <typename Ty>
   static bool less(Ty const* first, Ty const* second, size_type n) noexcept
   {
@@ -1100,7 +1102,9 @@ private:
   {
     return (lesseq(std::get<I>(first), std::get<I>(second), n) && ...);
   }
-  ///
+  /**
+   *
+   */
 
   friend bool operator==(soavector const& x, soavector const& y) noexcept
   {

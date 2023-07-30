@@ -1,8 +1,8 @@
 
 #pragma once
 
-#include <acl/utils/reflection_utils.hpp>
 #include <acl/utils/reflection.hpp>
+#include <acl/utils/reflection_utils.hpp>
 #include <acl/utils/type_traits.hpp>
 #include <cassert>
 #include <memory>
@@ -103,11 +103,10 @@ private:
     uint8_t size = static_cast<uint8_t>(tup_size);
     (*this)(size);
 
-    [ this, &obj ]<std::size_t... N>(std::index_sequence<N...>)
+    [this, &obj]<std::size_t... N>(std::index_sequence<N...>)
     {
       return (at<N>(obj), ...);
-    }
-    (std::make_index_sequence<std::tuple_size_v<Class>>());
+    }(std::make_index_sequence<std::tuple_size_v<Class>>());
   }
 
   template <detail::ContainerLike Class>

@@ -7,11 +7,13 @@
 namespace acl::strat
 {
 
-/// @brief  Strategy class for arena_allocator that stores a
-///         sorted list of free available slots.
-///         Binary search is used to find the best slot that fits
-///         the requested memory
-/// @todo   optimize, branchless binary
+/**
+ * @brief  Strategy class for arena_allocator that stores a
+ *         sorted list of free available slots.
+ *         Binary search is used to find the best slot that fits
+ *         the requested memory
+ * @todo   optimize, branchless binary
+ */
 template <typename Options = acl::options<>>
 class best_fit_v0
 {
@@ -258,6 +260,8 @@ protected:
   detail::free_list free_ordering;
 };
 
-/// alloc_strategy::best_fit Impl
+/**
+ * alloc_strategy::best_fit Impl
+ */
 
 } // namespace acl::strat

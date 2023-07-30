@@ -23,7 +23,7 @@ struct link
 
   template <typename Uy>
   constexpr explicit link(const link<Uy, SizeType>& i) noexcept
-  requires std::convertible_to<Uy*, Ty*>
+    requires std::convertible_to<Uy*, Ty*>
       : offset(i.offset)
   {}
 
@@ -31,7 +31,7 @@ struct link
 
   template <typename Uy>
   constexpr link& operator=(const link<Uy, SizeType>& i) noexcept
-  requires std::convertible_to<Uy*, Ty*>
+    requires std::convertible_to<Uy*, Ty*>
   {
     offset = i.offset;
     return *this;

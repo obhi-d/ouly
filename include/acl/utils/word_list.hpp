@@ -158,10 +158,12 @@ public:
   {
     return iterator(of);
   }
-  /// @brief Find the index of what in this_param
-  /// @param this_param The word list
-  /// @param what The string view whose index needs to be found
-  /// @return returns (uint32_t)-1 if not found
+  /**
+   * @brief Find the index of what in this_param
+   * @param this_param The word list
+   * @param what The string view whose index needs to be found
+   * @return returns (uint32_t)-1 if not found
+   */
   static uint32_t index_of(view this_param, view what)
   {
     iterator it(this_param);

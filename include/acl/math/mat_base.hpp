@@ -7,7 +7,9 @@
 
 namespace acl
 {
-/// @brief Create a matrix from vector mapping that can rotate the vector axis1 to axis2 when post multiplied to axis1.
+/**
+ * @brief Create a matrix from vector mapping that can rotate the vector axis1 to axis2 when post multiplied to axis1.
+ */
 template <Matrix M, typename scalar_t>
 inline M make_rotation_from_vector_mapping(vec3_t<scalar_t> const& axis1, vec3_t<scalar_t> const& axis2) noexcept
 {

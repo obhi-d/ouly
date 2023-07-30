@@ -97,13 +97,13 @@ public:
     }
 
     inline value_type& operator*()
-    requires(!std::is_const_v<ContainerTy>)
+      requires(!std::is_const_v<ContainerTy>)
     {
       return Accessor::get(owner, index);
     }
 
     inline value_type* operator->()
-    requires(!std::is_const_v<ContainerTy>)
+      requires(!std::is_const_v<ContainerTy>)
     {
       return &Accessor::get(owner, index);
     }

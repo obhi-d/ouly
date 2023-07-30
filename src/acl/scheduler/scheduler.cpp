@@ -62,7 +62,9 @@ void scheduler::busy_work(worker_id thread) noexcept
 void scheduler::run(worker_id thread)
 {
   g_worker = &workers[thread.get_index()];
-  entry_fn(thread);
+
+  entry_fn(worker_desc(thread, group_masks[thread.get_index()]));
+
   while (true)
   {
     {
@@ -219,14 +221,14 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry)
   stop               = false;
   auto start_counter = std::latch(worker_count);
 
-  entry_fn = [cust_entry = std::move(entry), &start_counter](worker_id worker)
+  entry_fn = [cust_entry = std::move(entry), &start_counter](worker_desc worker)
   {
     if (cust_entry)
       cust_entry(worker);
     start_counter.count_down();
   };
 
-  entry_fn(worker_id(0));
+  entry_fn(worker_desc(worker_id(0), group_masks[0]));
 
   for (uint32_t thread = 1; thread < worker_count; ++thread)
   {

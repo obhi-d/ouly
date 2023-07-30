@@ -130,14 +130,18 @@ public:
 
   program_args() noexcept = default;
 
-  /// @brief Parse C main command line args
+  /**
+   * @brief Parse C main command line args
+   */
   inline void parse_args(int argc, char const* const* argv) noexcept
   {
     for (int i = 0; i < argc; ++i)
       parse_arg(argv[i]);
   }
 
-  /// @brief Parse a single arg
+  /**
+   * @brief Parse a single arg
+   */
   inline void parse_arg(string_type asv) noexcept
   {
     if (asv == "--help" || asv == "-h")

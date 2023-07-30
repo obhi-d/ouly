@@ -29,19 +29,25 @@ struct allocator_traits
   using propagate_on_container_swap            = std::true_type;
 };
 
-///--------------- Basic Options ----------------
+/**
+ *--------------- Basic Options ----------------
+ */
 namespace opt
 {
 
-/// @brief Option to provide member pointer
-/// @tparam M
+/**
+ * @brief Option to provide member pointer
+ * @tparam M
+ */
 template <auto M>
 struct member;
 
-/// @brief Specialization that provided class_type
-/// @tparam T class_type for the member
-/// @tparam M member_type for the member
-/// @tparam MPtr Pointer to member
+/**
+ * @brief Specialization that provided class_type
+ * @tparam T class_type for the member
+ * @tparam M member_type for the member
+ * @tparam MPtr Pointer to member
+ */
 template <typename T, typename M, M T::*MPtr>
 struct member<MPtr>
 {
@@ -60,42 +66,54 @@ struct member<MPtr>
   }
 };
 
-/// @brief Option to control underlying pool size
+/**
+ * @brief Option to control underlying pool size
+ */
 template <uint32_t PoolSize = 4096>
 struct pool_size
 {
   static constexpr uint32_t pool_size_v = PoolSize;
 };
 
-/// @brief Option to control the pool size of index maps used by container
+/**
+ * @brief Option to control the pool size of index maps used by container
+ */
 template <uint32_t PoolSize = 4096>
 struct index_pool_size
 {
   static constexpr uint32_t index_pool_size_v = PoolSize;
 };
 
-/// @brief Self index pool size controls the pool size for back references
+/**
+ * @brief Self index pool size controls the pool size for back references
+ */
 template <uint32_t PoolSize = 4096>
 struct self_index_pool_size
 {
   static constexpr uint32_t self_index_pool_size_v = PoolSize;
 };
 
-/// @brief Key index pool size controls the pool size for key indexes in tables
+/**
+ * @brief Key index pool size controls the pool size for key indexes in tables
+ */
 template <uint32_t PoolSize = 4096>
 struct keys_index_pool_size
 {
   static constexpr uint32_t keys_index_pool_size_v = PoolSize;
 };
 
-/// @brief Null value, only applicable to constexpr types
+/**
+ * @brief Null value, only applicable to constexpr types
+ */
 template <auto NullValue>
 struct null_value
 {
   static constexpr auto null_v = NullValue;
 };
 
-/// @brief Indexes will have this as their size type
+/**
+ * @brief Indexes will have this as their size type
+ */
 template <typename T = uint32_t>
 struct basic_size_type
 {
@@ -149,8 +167,10 @@ struct disable_pool_tracking
 
 } // namespace opt
 
-///------------------------------------------------
-/// @brief Class type to string_view name of the class
+/**
+ *------------------------------------------------
+ * @brief Class type to string_view name of the class
+ */
 template <typename T>
 constexpr std::string_view type_name()
 {

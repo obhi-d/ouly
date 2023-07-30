@@ -10,7 +10,9 @@ inline mat4_t<scalar_t> make_identity_mat4() noexcept
   return mat4_t<scalar_t>();
 }
 
-/// @brief Returns maximum scaling
+/**
+ * @brief Returns maximum scaling
+ */
 template <typename scalar_t>
 inline scalar_t max_scale(mat4_t<scalar_t> const& m) noexcept
 {
@@ -23,21 +25,27 @@ inline bool equals(mat4_t<scalar_t> const& a, mat4_t<scalar_t> const& b) noexcep
   return equals(a[0], b[0]) && equals(a[1], b[1]) && equals(a[2], b[2]) && equals(a[3], b[3]);
 }
 
-/// @brief Full matrix multiplication
+/**
+ * @brief Full matrix multiplication
+ */
 template <typename scalar_t>
 inline mat4_t<scalar_t> operator*(mat4_t<scalar_t> const& m1, mat4_t<scalar_t> const& m2) noexcept
 {
   return vml::mul_mat4(m1.v, m2.v);
 }
 
-/// @brief Full matrix multiplication
+/**
+ * @brief Full matrix multiplication
+ */
 template <typename scalar_t>
 inline vec3a_t<scalar_t> operator*(vec3a_t<scalar_t> const& m1, mat4_t<scalar_t> const& m2) noexcept
 {
   return vml::mul_transform(m1.v, m2.v);
 }
 
-/// @brief Full matrix multiplication
+/**
+ * @brief Full matrix multiplication
+ */
 template <typename scalar_t>
 inline vec4_t<scalar_t> operator*(vec4_t<scalar_t> const& m1, mat4_t<scalar_t> const& m2) noexcept
 {
@@ -196,7 +204,9 @@ inline mat4_t<scalar_t> transpose(mat4_t<scalar_t> const& m) noexcept
   return vml::transpose(m.v);
 }
 
-/// @brief Matrix full inverse computation
+/**
+ * @brief Matrix full inverse computation
+ */
 template <typename scalar_t>
 inline mat4_t<scalar_t> inverse(mat4_t<scalar_t> const& m) noexcept
 {

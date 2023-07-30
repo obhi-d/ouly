@@ -97,7 +97,9 @@ public:
     coro.resume();
   }
 
-  /// @brief Returns result after waiting for the task to finish, blocks the current thread until work is done
+  /**
+   * @brief Returns result after waiting for the task to finish, blocks the current thread until work is done
+   */
   R sync_wait_result() noexcept
   {
     blocking_event event;
@@ -107,8 +109,10 @@ public:
       return coro.promise().result();
   }
 
-  /// @brief Returns result after waiting for the task to finish, with a non-blocking event, that tries to do work when
-  /// this coro is not available
+  /**
+   * @brief Returns result after waiting for the task to finish, with a non-blocking event, that tries to do work when
+   * this coro is not available
+   */
   R sync_wait_result(worker_id worker, scheduler& s) noexcept
   {
     busywork_event event;
@@ -130,10 +134,12 @@ concept CoroutineTask = requires(T a) {
   } -> std::same_as<void*>;
 };
 
-/// @brief Use a coroutine task to defer execute a task, inital state is suspended. Coroutine is only resumed manually
-/// and mostly by a scheduler. This task allows waiting on another task and be suspended during execution from any
-/// thread. This task can only be waited from a single wait point.
-/// @tparam R
+/**
+ * @brief Use a coroutine task to defer execute a task, inital state is suspended. Coroutine is only resumed manually
+ * and mostly by a scheduler. This task allows waiting on another task and be suspended during execution from any
+ * thread. This task can only be waited from a single wait point.
+ * @tparam R
+ */
 template <typename R>
 struct co_task : public detail::co_task<R, detail::promise_type<co_task, R>>
 {
@@ -148,10 +154,12 @@ struct co_task : public detail::co_task<R, detail::promise_type<co_task, R>>
     return *this;
   }
 };
-/// @brief Use a sequence task to immediately executed. The expectation is you will co_await this task on another task,
-/// which will result in suspension of execution. This task allows waiting on another task and be suspended during
-/// execution from any thread. This task can only be waited from a single wait point.
-/// @tparam R
+/**
+ * @brief Use a sequence task to immediately executed. The expectation is you will co_await this task on another task,
+ * which will result in suspension of execution. This task allows waiting on another task and be suspended during
+ * execution from any thread. This task can only be waited from a single wait point.
+ * @tparam R
+ */
 template <typename R>
 struct co_sequence : public detail::co_task<R, detail::sequence_promise<co_sequence, R>>
 {

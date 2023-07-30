@@ -7,10 +7,12 @@
 namespace acl
 { // namespace detail
 
-/// @brief This class stores a list of reusable links, and allows for vector allocating objects
-///        on a seperate container based on the links.
-/// @tparam Ty
-/// @tparam SizeType
+/**
+ * @brief This class stores a list of reusable links, and allows for vector allocating objects
+ *        on a seperate container based on the links.
+ * @tparam Ty
+ * @tparam SizeType
+ */
 template <typename Ty = void, typename SizeType = uint32_t>
 class basic_link_registry
 {

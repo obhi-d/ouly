@@ -76,19 +76,19 @@ private:
   struct tnode_it
   {
     void set()
-    requires(!std::is_const_v<Container>)
+      requires(!std::is_const_v<Container>)
     {
       Accessor::set_flag(*ref);
     }
 
     void set(bool b)
-    requires(!std::is_const_v<Container>)
+      requires(!std::is_const_v<Container>)
     {
       Accessor::set_flag(*ref, b);
     }
 
     void unset()
-    requires(!std::is_const_v<Container>)
+      requires(!std::is_const_v<Container>)
     {
       Accessor::unset_flag(*ref);
     }
@@ -99,19 +99,19 @@ private:
     }
 
     void set_parent(std::uint32_t par)
-    requires(!std::is_const_v<Container>)
+      requires(!std::is_const_v<Container>)
     {
       Accessor::links(*ref).parent = par;
     }
 
     void set_left(std::uint32_t left)
-    requires(!std::is_const_v<Container>)
+      requires(!std::is_const_v<Container>)
     {
       Accessor::links(*ref).left = left;
     }
 
     void set_right(std::uint32_t right)
-    requires(!std::is_const_v<Container>)
+      requires(!std::is_const_v<Container>)
     {
       Accessor::links(*ref).right = right;
     }

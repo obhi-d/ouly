@@ -51,11 +51,13 @@ struct name_map
 
 } // namespace opt
 
-/// @brief Store data as name value pairs, value can be any blob of data
-///
-/// @remark Data is stored as a blob, names are stored seperately if required for lookup
-///         Data can also be retrieved by index.
-///         There is no restriction on the data type that is supported (POD or non-POD both are supported).
+/**
+ * @brief Store data as name value pairs, value can be any blob of data
+ *
+ * @remark Data is stored as a blob, names are stored seperately if required for lookup
+ *         Data can also be retrieved by index.
+ *         There is no restriction on the data type that is supported (POD or non-POD both are supported).
+ */
 template <typename Options = acl::options<>>
 class blackboard : public detail::custom_allocator_t<Options>
 {
@@ -152,7 +154,9 @@ public:
     }
   }
 
-  ///
+  /**
+   *
+   */
   template <InventoryDataType T, typename... Args>
   auto emplace(key_type name, Args&&... args) noexcept -> link
   {

@@ -4,8 +4,8 @@
 //
 #pragma once
 
-#include <acl/utils/reflection_utils.hpp>
 #include <acl/utils/reflection.hpp>
+#include <acl/utils/reflection_utils.hpp>
 #include <acl/utils/type_traits.hpp>
 #include <cassert>
 #include <memory>
@@ -131,11 +131,10 @@ private:
   {
     // Invalid type is unexpected
     get().begin_array();
-    [ this, &obj ]<std::size_t... N>(std::index_sequence<N...>)
+    [this, &obj]<std::size_t... N>(std::index_sequence<N...>)
     {
       return (at<N>(obj), ...);
-    }
-    (std::make_index_sequence<std::tuple_size_v<Class>>());
+    }(std::make_index_sequence<std::tuple_size_v<Class>>());
     get().end_array();
   }
 

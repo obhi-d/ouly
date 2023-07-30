@@ -30,7 +30,9 @@ inline auto make_transform(mat4_t<scalar_t> const& m) noexcept
   return transform_t<scalar_t>(make_quaternion(r), m[3], scale);
 }
 
-/// @brief Returns maximum scaling
+/**
+ * @brief Returns maximum scaling
+ */
 template <ScalarType scalar_t>
 inline bool equals(transform_t<scalar_t> const& a, transform_t<scalar_t> const& b) noexcept
 {
