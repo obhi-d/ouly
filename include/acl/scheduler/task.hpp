@@ -122,6 +122,14 @@ public:
       return coro.promise().result();
   }
 
+protected:
+  inline handle release() noexcept
+  {
+    auto h = coro;
+    coro   = nullptr;
+    return h;
+  }
+
 private:
   handle coro = {};
 };
@@ -146,7 +154,7 @@ struct co_task : public detail::co_task<R, detail::promise_type<co_task, R>>
   using super  = detail::co_task<R, detail::promise_type<co_task, R>>;
   using handle = super::handle;
   co_task(handle h) : super(h) {}
-  co_task(co_task&& other) noexcept : super(std::move<super>(other)) {}
+  co_task(co_task&& other) noexcept : super(other.release()) {}
   inline co_task& operator=(co_task const&) = delete;
   inline co_task& operator=(co_task&& other) noexcept
   {

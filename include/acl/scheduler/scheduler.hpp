@@ -79,6 +79,69 @@ public:
            current);
   }
 
+  template <CoroutineTask C>
+  inline void submit_to(C const& task_obj, worker_id to, worker_id current) noexcept
+  {
+    task_data data;
+    data.reserved_0 = detail::work_type_coroutine;
+    data.reserved_1 = static_cast<uint8_t>(default_workgroup_id.get_index());
+    submit_to(detail::work_item(reinterpret_cast<task_delegate>(task_obj.address()), data), to, current);
+  }
+
+  inline void submit_to(task* task_obj, task_data data, worker_id to, worker_id current) noexcept
+  {
+    data.reserved_0 = detail::work_type_task_functor;
+    data.reserved_1 = static_cast<uint8_t>(default_workgroup_id.get_index());
+    submit_to(detail::work_item(reinterpret_cast<task_delegate>(task_obj), data), to, current);
+  }
+
+  inline void submit_to(task_delegate task_obj, task_data data, worker_id to, worker_id current) noexcept
+  {
+    data.reserved_0 = detail::work_type_free_functor;
+    data.reserved_1 = static_cast<uint8_t>(default_workgroup_id.get_index());
+    submit_to(detail::work_item(task_obj, data), to, current);
+  }
+
+  template <auto M, typename Class>
+  inline void submit_to(Class& ctx, worker_id to, worker_id current) noexcept
+  {
+    task_data data;
+    data.context    = reinterpret_cast<task_context*>(&ctx);
+    data.reserved_0 = detail::work_type_free_functor;
+    data.reserved_1 = static_cast<uint8_t>(default_workgroup_id.get_index());
+
+    submit_to(detail::work_item(
+                [](task_data cctx, worker_context const& wid)
+                {
+                  std::invoke(M, *reinterpret_cast<Class*>(cctx.context), std::cref(wid));
+                },
+                data),
+              to, current);
+  }
+
+  template <auto M, typename Class>
+  inline void submit_to(Class& ctx, uint32_t additional_data, worker_id to, worker_id current) noexcept
+  {
+    task_data data;
+    data.context    = reinterpret_cast<task_context*>(&ctx);
+    data.uint_data  = additional_data;
+    data.reserved_0 = detail::work_type_free_functor;
+    data.reserved_1 = static_cast<uint8_t>(default_workgroup_id.get_index());
+
+    submit_to(detail::work_item(
+                [](task_data cctx, worker_context const& wid)
+                {
+                  std::invoke(M, *reinterpret_cast<Class*>(cctx.context), std::cref(wid), cctx.uint_data);
+                },
+                data),
+              to, current);
+  }
+
+  /**
+   * @brief Submit a work for execution in the exclusive worker thread
+   */
+  ACL_API void submit_to(detail::work_item work, worker_id to, worker_id current);
+
   /**
    * @brief Submit a work for execution
    */

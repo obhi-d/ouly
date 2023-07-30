@@ -159,3 +159,72 @@ TEST_CASE("scheduler: Test co_sequence")
   REQUIRE(result == continue_string);
   scheduler.end_execution();
 }
+
+acl::co_task<void> work_on(std::vector<uint32_t>& id, std::mutex& lck, uint32_t worker)
+{
+  auto lock = std::scoped_lock(lck);
+  id.push_back(worker);
+  co_return;
+}
+
+TEST_CASE("scheduler: Test submit_to")
+{
+  acl::scheduler scheduler;
+  auto           wg_default = acl::workgroup_id(0);
+  auto           wg_game    = acl::workgroup_id(1);
+  auto           wg_log     = acl::workgroup_id(2);
+  auto           wg_render  = acl::workgroup_id(3);
+  auto           wg_stream  = acl::workgroup_id(4);
+
+  scheduler.create_group(wg_default, "default", 0, 32);
+  scheduler.create_group(wg_game, "game", 0, 16);
+  scheduler.create_group(wg_log, "log", 16, 1);
+  scheduler.create_group(wg_render, "render", 12, 4);
+  scheduler.create_group(wg_stream, "stream", 17, 2);
+
+  std::atomic_int default_ = 0;
+  std::atomic_int game_    = 0;
+  std::atomic_int log_     = 0;
+  std::atomic_int render_  = 0;
+  std::atomic_int stream_  = 0;
+
+  scheduler.begin_execution(
+    [&](acl::worker_desc desc)
+    {
+      if (desc.belongs_to(wg_default))
+        default_++;
+      if (desc.belongs_to(wg_game))
+        game_++;
+      if (desc.belongs_to(wg_log))
+        log_++;
+      if (desc.belongs_to(wg_render))
+        render_++;
+      if (desc.belongs_to(wg_stream))
+        stream_++;
+    });
+
+  REQUIRE(default_.load() == 32);
+  REQUIRE(game_.load() == 16);
+  REQUIRE(log_.load() == 1);
+  REQUIRE(render_.load() == 4);
+  REQUIRE(stream_.load() == 2);
+
+  std::vector<acl::co_task<void>> tasks;
+  std::vector<uint32_t>           collection;
+  std::mutex                      lock;
+  for (uint32_t i = 0, end = scheduler.get_worker_count(); i < end; ++i)
+  {
+    tasks.emplace_back(work_on(collection, lock, i));
+    scheduler.submit_to(tasks[i], acl::worker_id(i), acl::main_worker_id);
+  }
+
+  for (uint32_t i = 0, end = scheduler.get_worker_count(); i < end; ++i)
+    tasks[i].sync_wait_result();
+
+  std::ranges::sort(collection);
+  for (uint32_t i = 0, end = scheduler.get_worker_count(); i < end; ++i)
+  {
+    REQUIRE(i < collection.size());
+    REQUIRE(collection[i] == i);
+  }
+}

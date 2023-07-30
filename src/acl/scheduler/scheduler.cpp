@@ -128,6 +128,14 @@ detail::work_item scheduler::get_work(worker_id thread) noexcept
     }
   }
 
+  // Exclusive
+  {
+    auto& work_list = worker.exlusive_items;
+    auto  lck       = std::scoped_lock(work_list.first);
+    if (!work_list.second.empty())
+      return work_list.second.pop_front_unsafe();
+  }
+
   return {};
 }
 
@@ -288,6 +296,22 @@ void scheduler::end_execution()
     threads[thread - 1].join();
   }
   threads.clear();
+}
+
+void scheduler::submit_to(detail::work_item work, worker_id to, worker_id current)
+{
+  if (to == current)
+    do_work(current, work);
+  else
+  {
+    {
+      auto& worker = workers[to.get_index()];
+      auto  lck    = std::scoped_lock(worker.exlusive_items.first);
+      worker.exlusive_items.second.emplace_back(std::move(work));
+    }
+    if (!wake_status[to.get_index()].exchange(true))
+      wake_events[to.get_index()].notify();
+  }
 }
 
 void scheduler::submit(detail::work_item work, worker_id current)

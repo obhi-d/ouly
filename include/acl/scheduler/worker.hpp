@@ -119,6 +119,8 @@ struct worker
   uint32_t push_offset         = 0;
   // Thread from which this worker should steal work
   uint32_t stealing_source;
+  // Worker specific item
+  global_work_queue exlusive_items;
   // worker id
   worker_id id;
   // quit event

@@ -2,6 +2,7 @@
 #pragma once
 
 #include <acl/utils/nullable_optional.hpp>
+#include <compare>
 #include <cstdint>
 #include <limits>
 
@@ -37,6 +38,8 @@ public:
    */
   static worker_id const& get() noexcept;
 
+  inline auto operator<=>(worker_id const&) const noexcept = default;
+
 private:
   uint32_t index = 0;
 };
@@ -68,6 +71,8 @@ public:
     return index != std::numeric_limits<uint32_t>::max();
   }
 
+  inline auto operator<=>(workgroup_id const&) const noexcept = default;
+
 private:
   uint32_t index = 0;
 };
@@ -82,7 +87,7 @@ class worker_context
 {
 public:
   worker_context(scheduler& s, worker_id id, workgroup_id group, uint32_t mask, uint32_t offset) noexcept
-      : owner(s), index(id), group_id(group), group_mask(mask), group_offset(offset)
+      : owner(&s), index(id), group_id(group), group_mask(mask), group_offset(offset)
   {}
 
   /**
@@ -103,7 +108,7 @@ public:
 
   scheduler& get_scheduler() const
   {
-    return owner;
+    return *owner;
   }
 
   workgroup_id get_workgroup() const noexcept
@@ -121,8 +126,10 @@ public:
    */
   static worker_context const& get(workgroup_id group) noexcept;
 
+  inline auto operator<=>(worker_context const&) const noexcept = default;
+
 private:
-  scheduler&   owner;
+  scheduler*   owner = nullptr;
   worker_id    index;
   workgroup_id group_id;
   uint32_t     group_mask   = 0;
@@ -148,7 +155,12 @@ public:
     return group_mask & (1u << group.get_index());
   }
 
+  inline auto operator<=>(worker_desc const&) const noexcept = default;
+
 private:
+  uint32_t friend_worker_count = 0;
+  uint32_t friend_worker_start = std::numeric_limits<uint32_t>::max();
+
   worker_id index;
   uint32_t  group_mask = 0;
 };
