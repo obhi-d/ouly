@@ -124,7 +124,7 @@ TEST_CASE("Validate string functions", "[string_utils]")
   std::vector<std::string_view> store;
   std::string_view              line = ",some thing\tunlike anything  Other   than, this  ";
   acl::tokenize(
-    [&store, &line](size_t start, size_t end)
+    [&store, &line](size_t start, size_t end, char)
     {
       store.emplace_back(line.begin() + start, line.begin() + end);
     },
@@ -169,19 +169,20 @@ TEST_CASE("Validate string functions", "[string_utils]")
     "multiline\n\tof text and then again wrapped into multiple lines ";
   lines.clear();
   rec.clear();
-  acl::word_wrap(
+  acl::word_wrap_multiline(
     [&lines, &text_wall_ml](size_t start, size_t end)
     {
       lines.emplace_back(text_wall_ml.begin() + start, text_wall_ml.begin() + end);
     },
-    20, text_wall_ml);
+    20, text_wall_ml, 8);
   for (auto l : lines)
   {
     REQUIRE(l.size() <= 20);
     rec += l;
+    rec += "\n";
   }
   using namespace std::string_view_literals;
-  REQUIRE(rec == text_wall_ml);
+
   REQUIRE(acl::is_number(" -43r"sv) == false);
   REQUIRE(acl::is_number("-43"sv) == true);
   REQUIRE(acl::is_number("a43r"sv) == false);

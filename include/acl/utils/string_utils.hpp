@@ -266,7 +266,7 @@ inline void tokenize(A&& acceptor, std::string_view value, std::string_view sepe
     what         = value.find_first_of(seperators, start);
     auto end     = what == value.npos ? value.length() : what;
     if (end > start)
-      acceptor(start, end);
+      acceptor(start, end, what == value.npos ? 0 : value[what]);
   }
   while (what != std::string::npos);
 }
@@ -310,17 +310,23 @@ inline bool is_ascii(std::string_view utf8_str)
 }
 
 template <typename L>
-inline void word_wrap(L&& line_accept, uint32_t width, std::string_view line)
+inline void word_wrap(L&& line_accept, uint32_t width, std::string_view line, uint32_t tab_width = 2)
 {
-  size_t line_start = 0;
-  size_t line_end   = 0;
+  size_t   line_start = 0;
+  size_t   line_end   = 0;
+  uint32_t nb_tabs    = 0;
+
   tokenize(
-    [&](std::size_t token_start, std::size_t token_end)
+    [&](std::size_t token_start, std::size_t token_end, char token)
     {
-      if (token_end - line_start > width)
+      if (token == '\t')
+        nb_tabs++;
+      auto line_width = (token_end - line_start) + nb_tabs * tab_width;
+      if (line_width > width)
       {
         line_accept(line_start, line_end);
         line_start = line_end;
+        nb_tabs    = 0;
       }
       line_end = token_end;
     },
@@ -330,12 +336,17 @@ inline void word_wrap(L&& line_accept, uint32_t width, std::string_view line)
 }
 
 template <typename L>
-inline uint32_t word_wrap_multiline(L&& line_accept, uint32_t width, std::string_view input)
+inline void word_wrap_multiline(L&& line_accept, uint32_t width, std::string_view input, uint32_t tab_width = 2)
 {
   tokenize(
-    [&](std::size_t token_start, std::size_t token_end)
+    [&](std::size_t token_start, std::size_t token_end, char)
     {
-      word_wrap(line_accept, width, input.substr(token_start, token_end - token_start));
+      word_wrap(
+        [&line_accept, &token_start](std::size_t line_start, std::size_t line_end)
+        {
+          line_accept(line_start + token_start, line_end + token_start);
+        },
+        width, input.substr(token_start, token_end - token_start), tab_width);
     },
     input, "\n");
 }
