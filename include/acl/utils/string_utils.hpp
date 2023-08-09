@@ -322,7 +322,7 @@ inline void word_wrap(L&& line_accept, uint32_t width, std::string_view line, ui
       if (token == '\t')
         nb_tabs++;
       auto line_width = (token_end - line_start) + nb_tabs * tab_width;
-      if (line_width > width)
+      if (line_width >= width)
       {
         line_accept(line_start, line_end);
         line_start = line_end;

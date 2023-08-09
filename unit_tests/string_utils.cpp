@@ -160,10 +160,10 @@ TEST_CASE("Validate string functions", "[string_utils]")
   std::string rec;
   for (auto l : lines)
   {
-    REQUIRE(l.size() <= 32);
+    CHECK(l.size() <= 32);
     rec += l;
   }
-  REQUIRE(rec == text_wall);
+  CHECK(rec == text_wall);
   std::string_view text_wall_ml =
     "a long wall of text made of steel\nthat will be in time\trecorded\n and then\n\tthat will be\t\n split into\t "
     "multiline\n\tof text and then again wrapped into multiple lines ";
@@ -183,8 +183,8 @@ TEST_CASE("Validate string functions", "[string_utils]")
   }
   using namespace std::string_view_literals;
 
-  REQUIRE(acl::is_number(" -43r"sv) == false);
-  REQUIRE(acl::is_number("-43"sv) == true);
-  REQUIRE(acl::is_number("a43r"sv) == false);
-  REQUIRE(acl::is_number("43"sv) == true);
+  CHECK(acl::is_number(" -43r"sv) == false);
+  CHECK(acl::is_number("-43"sv) == true);
+  CHECK(acl::is_number("a43r"sv) == false);
+  CHECK(acl::is_number("43"sv) == true);
 }
