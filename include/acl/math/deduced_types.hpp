@@ -28,6 +28,7 @@ using sphere          = sphere_t<float>;
 using bounds_info     = bounds_info_t<float>;
 using bounding_volume = bounding_volume_t<float>;
 using transform       = transform_t<float>;
+using fixed_frustum   = fixed_frustum_t<float>;
 using frustum         = frustum_t<float>;
 using color           = color_t<float>;
 using rgba8           = color_t<uint8_t>;
@@ -55,6 +56,7 @@ using sphere_d          = sphere_t<double>;
 using bounds_info_d     = bounds_info_t<double>;
 using bounding_volume_d = bounding_volume_t<double>;
 using transform_d       = transform_t<double>;
+using fixed_frustum_d   = fixed_frustum_t<double>;
 using frustum_d         = frustum_t<double>;
 using extends_d         = extends_t<double>;
 

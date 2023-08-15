@@ -711,6 +711,36 @@ struct frustum_t
   acl::small_vector<plane_t<scalar_t>, 6> planes;
 };
 
+template <typename scalar_t>
+struct fixed_frustum_t
+{
+  // common frustums will have these planes
+  static constexpr uint32_t k_near              = 0;
+  static constexpr uint32_t k_far               = 1;
+  static constexpr uint32_t k_left              = 2;
+  static constexpr uint32_t k_right             = 3;
+  static constexpr uint32_t k_top               = 4;
+  static constexpr uint32_t k_bottom            = 5;
+  static constexpr uint32_t k_fixed_plane_count = 6;
+
+  inline auto& operator[](int i) noexcept
+  {
+    return planes[i];
+  }
+
+  inline auto const& operator[](int i) const noexcept
+  {
+    return planes[i];
+  }
+
+  inline auto size() const noexcept
+  {
+    return planes.size();
+  }
+
+  std::array<plane_t<scalar_t>, 6> planes;
+};
+
 //
 
 // template <typename T>

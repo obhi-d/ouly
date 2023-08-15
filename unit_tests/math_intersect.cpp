@@ -8,7 +8,7 @@ TEMPLATE_TEST_CASE("Intersect: Validate intersect::bounding_volume_frustum_coher
   // define a custom prism
   acl::mat4_t<TestType>    m = acl::make_orthographic_projection<TestType>(-50.0f, 50.0f, -45.0f, 45.0f, 1.0f, 1000.0f);
   acl::frustum_t<TestType> frustum_orig = acl::make_frustum(acl::transpose(m));
-  auto                     planes       = acl::get_planes(frustum_orig);
+  auto                     planes       = frustum_orig.planes;
   std::array<acl::plane_t<TestType>, 8> custom_planes;
   std::memcpy(custom_planes.data(), planes.data(), planes.size() * sizeof(acl::plane_t<TestType>));
 
@@ -63,8 +63,12 @@ TEMPLATE_TEST_CASE("Intersect: Validate intersect::bounding_volume_frustum", "[i
   // define a custom prism
 
   acl::mat4_t<TestType>    m = acl::make_orthographic_projection<TestType>(-50.0f, 50.0f, -45.0f, 45.0f, 1.0f, 1000.0f);
-  acl::frustum_t<TestType> frustum_orig = acl::make_frustum(acl::transpose(m));
-  auto                     planes       = acl::get_planes(frustum_orig);
+  acl::frustum_t<TestType> frustum_orig       = acl::make_frustum(acl::transpose(m));
+  auto                     fixed_frustum_orig = acl::make_fixed_frustum(acl::transpose(m));
+  auto                     planes             = frustum_orig.planes;
+  for (uint32_t i = 0; i < 6; ++i)
+    CHECK(fixed_frustum_orig.planes[i] == frustum_orig.planes[i]);
+
   std::array<acl::plane_t<TestType>, 8> custom_planes;
   std::memcpy(custom_planes.data(), planes.data(), planes.size() * sizeof(acl::plane_t<TestType>));
 
@@ -105,9 +109,9 @@ TEMPLATE_TEST_CASE("Intersect: Validate intersect::bounding_sphere_frustum", "[i
                    float, double)
 {
   // define a custom prism
-  auto m            = acl::make_orthographic_projection<TestType>(-50.0f, 50.0f, -45.0f, 45.0f, 1.0f, 1000.0f);
-  auto frustum_orig = acl::make_frustum<TestType>(acl::transpose(m));
-  auto planes       = acl::get_planes(frustum_orig);
+  auto        m            = acl::make_orthographic_projection<TestType>(-50.0f, 50.0f, -45.0f, 45.0f, 1.0f, 1000.0f);
+  auto        frustum_orig = acl::make_frustum<TestType>(acl::transpose(m));
+  auto const& planes       = frustum_orig.planes;
 
   std::array<acl::plane_t<TestType>, 8> custom_planes;
   std::memcpy(custom_planes.data(), planes.data(), planes.size() * sizeof(acl::plane_t<TestType>));
