@@ -5,6 +5,9 @@
 namespace acl
 {
 
+namespace opt
+{}
+
 struct linear_arena_allocator_tag
 {};
 
@@ -18,18 +21,10 @@ public:
   using size_type            = typename underlying_allocator::size_type;
   using address              = typename underlying_allocator::address;
 
-  enum : size_type
-  {
-    k_minimum_size = static_cast<size_type>(64)
-  };
+  static constexpr size_type k_minimum_size = 64;
 
-  template <typename... Args>
-  explicit linear_arena_allocator(size_type i_arena_size, Args&&... i_args)
-      : k_arena_size(i_arena_size), current_arena(0)
-  {
-    // Initializing the cursor is important for the
-    // allocate loop to work.
-  }
+  linear_arena_allocator() noexcept = default;
+  explicit linear_arena_allocator(size_type i_arena_size) : k_arena_size(i_arena_size) {}
 
   linear_arena_allocator(linear_arena_allocator const&) = delete;
 
@@ -227,9 +222,8 @@ private:
   }
 
   acl::vector<arena> arenas;
-  size_type          current_arena;
-
-  const size_type k_arena_size;
+  size_type          current_arena = 0;
+  const size_type    k_arena_size  = 4 * 1024 * 1024;
 
 public:
 };

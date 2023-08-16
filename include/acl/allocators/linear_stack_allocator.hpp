@@ -46,13 +46,8 @@ public:
     linear_stack_allocator& ref;
   };
 
-  template <typename... Args>
-  explicit linear_stack_allocator(size_type i_arena_size, Args&&... i_args) noexcept
-      : k_arena_size(i_arena_size), current_arena(0)
-  {
-    // Initializing the cursor is important for the
-    // allocate loop to work.
-  }
+  linear_stack_allocator() noexcept = default;
+  explicit linear_stack_allocator(size_type i_arena_size) noexcept : k_arena_size(i_arena_size) {}
 
   linear_stack_allocator(linear_stack_allocator const&) = delete;
 
@@ -246,8 +241,7 @@ private:
 
   podvector<arena, underlying_allocator> arenas;
   size_type                              current_arena = 0;
-
-  const size_type k_arena_size;
+  const size_type                        k_arena_size  = 1024 * 1024;
 
 public:
 };
