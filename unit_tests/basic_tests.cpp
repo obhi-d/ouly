@@ -7,6 +7,7 @@
 #include <acl/utils/export.hxx>
 #include <acl/utils/intrusive_ptr.hpp>
 #include <acl/utils/komihash.hpp>
+#include <acl/utils/link.hpp>
 #include <acl/utils/tagged_ptr.hpp>
 #include <acl/utils/wyhash.hpp>
 #include <catch2/catch_all.hpp>
@@ -266,4 +267,33 @@ TEST_CASE("Validate Hash: komihash", "[hash]")
   k64s(s.c_str(), s.length());
 
   REQUIRE(k64s() != 0);
+}
+
+TEST_CASE("Test link", "[link]")
+{
+  struct base
+  {};
+  struct derived : base
+  {};
+  struct unrelated
+  {};
+
+  acl::link<base, uint32_t, 4>      first;
+  acl::link<derived, uint32_t, 4>   second;
+  acl::link<unrelated, uint32_t, 4> third;
+
+  second = first;
+  first  = second;
+  static_assert(std::is_assignable_v<acl::link<base, uint32_t, 4>, acl::link<derived, uint32_t, 4>>,
+                "Type should be assignable");
+  static_assert(std::is_assignable_v<acl::link<base, uint32_t, 4>, acl::link<derived, uint32_t, 4>>,
+                "Type should be assignable");
+  static_assert(!std::is_assignable_v<acl::link<unrelated, uint32_t, 4>, acl::link<base, uint32_t, 4>>,
+                "Type should not be assignable");
+  static_assert(!std::is_assignable_v<acl::link<unrelated, uint32_t, 4>, acl::link<derived, uint32_t, 4>>,
+                "Type should not be assignable");
+  static_assert(!std::is_assignable_v<acl::link<base, uint32_t, 4>, acl::link<unrelated, uint32_t, 4>>,
+                "Type should not be assignable");
+  static_assert(!std::is_assignable_v<acl::link<derived, uint32_t, 4>, acl::link<unrelated, uint32_t, 4>>,
+                "Type should not be assignable");
 }

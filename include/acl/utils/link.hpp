@@ -22,16 +22,16 @@ struct link
   constexpr explicit link(size_type i) noexcept : offset(i) {}
 
   template <typename Uy>
-  constexpr explicit link(const link<Uy, SizeType>& i) noexcept
-    requires std::convertible_to<Uy*, Ty*>
+  constexpr explicit link(const link<Uy, SizeType, N>& i) noexcept
+    requires std::convertible_to<Uy*, Ty*> || std::derived_from<Ty, Uy>
       : offset(i.offset)
   {}
 
   constexpr link& operator=(const link& i) noexcept = default;
 
   template <typename Uy>
-  constexpr link& operator=(const link<Uy, SizeType>& i) noexcept
-    requires std::convertible_to<Uy*, Ty*>
+  constexpr link& operator=(const link<Uy, SizeType, N>& i) noexcept
+    requires std::convertible_to<Uy*, Ty*> || std::derived_from<Ty, Uy>
   {
     offset = i.offset;
     return *this;
