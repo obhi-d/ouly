@@ -226,7 +226,8 @@ TEST_CASE("Validate error_codes", "[error_code]")
 
 TEST_CASE("Validate Hash: wyhash", "[hash]")
 {
-  std::string   s = "A long string whose hash we are about to find out !";
+  constexpr std::string_view cs = "A long string whose hash we are about to find out !";
+  std::string                s{cs};
   acl::wyhash32 wyh32;
 
   auto value32 = wyh32(s.c_str(), s.length());
@@ -234,6 +235,9 @@ TEST_CASE("Validate Hash: wyhash", "[hash]")
 
   auto new_value32 = wyh32(s.c_str(), s.length());
   REQUIRE(value32 != new_value32);
+
+  constexpr auto constval = acl::wyhash32::make(cs.data(), cs.size());
+  REQUIRE(value32 == constval);
 
   REQUIRE(wyh32() == new_value32);
 
@@ -246,6 +250,8 @@ TEST_CASE("Validate Hash: wyhash", "[hash]")
   REQUIRE(value64 != new_value64);
 
   REQUIRE(wyh64() == new_value64);
+
+
 }
 
 TEST_CASE("Validate Hash: komihash", "[hash]")

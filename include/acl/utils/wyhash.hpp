@@ -2,11 +2,12 @@
 #include "detail/wyhash.h"
 #define wyhash_final_version_3
 #include "detail/wyhash32.h"
+#include "detail/wyhash32.hpp"
 #include <compare>
 #include <cstdint>
 
 namespace acl
-{
+{    
 
 class wyhash32
 {
@@ -22,6 +23,12 @@ public:
   inline auto operator()(void const* key, std::size_t len) noexcept
   {
     return (value = ::wyhash32(key, len, value));
+  }
+    
+  template <cwyhash32::CharType T>
+  static inline consteval auto make(T const* const key, std::size_t len, std::uint32_t seed = 1337) noexcept
+  {
+    return cwyhash32::wyhash32(key, len, seed);
   }
 
   template <typename T>
