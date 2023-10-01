@@ -200,7 +200,7 @@ struct ACL_EMPTY_BASES default_allocator
   static constexpr auto align = detail::min_alignment_v<Options>;
 
   template <typename Alignment = alignment<align>>
-  inline static address allocate(size_type i_sz, Alignment i_alignment = {})
+  [[nodiscard]] inline static address allocate(size_type i_sz, Alignment i_alignment = {})
   {
     [[maybe_unused]] auto measure = statistics::report_allocate(i_sz);
 
@@ -209,7 +209,7 @@ struct ACL_EMPTY_BASES default_allocator
   }
 
   template <typename Alignment = alignment<align>>
-  inline static address zero_allocate(size_type i_sz, Alignment i_alignment = {})
+  [[nodiscard]] inline static address zero_allocate(size_type i_sz, Alignment i_alignment = {})
   {
     [[maybe_unused]] auto measure = statistics::report_allocate(i_sz);
     return tracker::when_allocate(

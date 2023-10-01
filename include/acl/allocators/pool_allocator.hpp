@@ -140,7 +140,7 @@ public:
     return underlying_allocator::null();
   }
 
-  inline address allocate(size_type i_size, size_type i_alignment = 0)
+  [[nodiscard]] inline address allocate(size_type i_size, size_type i_alignment = 0)
   {
     auto fixup = i_alignment - 1;
     if (i_alignment && ((k_atom_size < i_alignment) || (k_atom_size & fixup)))

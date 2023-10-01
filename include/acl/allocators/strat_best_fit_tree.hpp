@@ -87,7 +87,7 @@ public:
   using tree_type       = detail::rbtree<blk_tree_node_accessor, 1>;
   using allocate_result = optional_addr;
 
-  inline auto try_allocate(bank_data& bank, size_type size)
+  [[nodiscard]] inline auto try_allocate(bank_data& bank, size_type size)
   {
     auto blk = tree.lower_bound(bank.blocks, size);
     return optional_addr((bank.blocks[block_link(blk)].size < size) ? 0 : blk);

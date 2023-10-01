@@ -53,7 +53,7 @@ struct allocator_wrapper : public detail::allocator_common<T>, public UA
   allocator_wrapper(allocator_wrapper<U, UA>&& other) : UA(std::move((UA&)other))
   {}
 
-  inline pointer allocate(size_type cnt) const
+  [[nodiscard]] inline pointer allocate(size_type cnt) const
   {
     pointer ret = reinterpret_cast<pointer>(UA::allocate(static_cast<size_type>(sizeof(T) * cnt), alignarg<T>));
     return ret;
@@ -107,7 +107,7 @@ struct allocator_ref : public detail::allocator_common<T>
     return *this;
   }
 
-  inline pointer allocate(size_type cnt) const
+  [[nodiscard]] inline pointer allocate(size_type cnt) const
   {
     ACL_ASSERT(ref_);
     pointer ret = reinterpret_cast<pointer>(ref_->allocate(static_cast<size_type>(sizeof(T) * cnt), alignarg<T>));
@@ -142,7 +142,7 @@ public:
   /**
    * \thread_safe
    */
-  inline void* do_allocate(std::size_t bytes, std::size_t alignment) override
+  [[nodiscard]] inline void* do_allocate(std::size_t bytes, std::size_t alignment) override
   {
     return impl_->allocate(bytes, alignment);
   }
@@ -186,7 +186,7 @@ public:
   /**
    * \thread_safe
    */
-  inline void* do_allocate(std::size_t bytes, std::size_t alignment) override
+  [[nodiscard]] inline void* do_allocate(std::size_t bytes, std::size_t alignment) override
   {
     return impl_.allocate(bytes, alignment);
   }

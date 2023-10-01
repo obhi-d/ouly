@@ -38,7 +38,7 @@ public:
   best_fit_v0& operator=(best_fit_v0 const&)     = default;
   best_fit_v0& operator=(best_fit_v0&&) noexcept = default;
 
-  inline optional_addr try_allocate(bank_data& bank, size_type size)
+  [[nodiscard]] inline optional_addr try_allocate(bank_data& bank, size_type size)
   {
     if (free_ordering.size() == 0 || bank.blocks[block_link(free_ordering.back())].size < size)
       return optional_addr();

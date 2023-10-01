@@ -54,7 +54,7 @@ public:
   using allocate_result_v = detail::variant_result<std::variant<std::monostate, fallback_allocate_result, bucket_idx>>;
   using allocate_result   = allocate_result_v;
 
-  inline allocate_result try_allocate(bank_data& bank, size_type size)
+  [[nodiscard]] inline allocate_result try_allocate(bank_data& bank, size_type size)
   {
     if (size < max_size_)
     {

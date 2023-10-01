@@ -49,7 +49,7 @@ public:
   best_fit_v2& operator=(best_fit_v2 const&)     = default;
   best_fit_v2& operator=(best_fit_v2&&) noexcept = default;
 
-  inline optional_addr try_allocate(bank_data& bank, size_type size) noexcept
+  [[nodiscard]] inline optional_addr try_allocate(bank_data& bank, size_type size) noexcept
   {
     if (sizes.empty() || sizes.back() < size)
       return nullptr;

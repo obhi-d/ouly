@@ -81,12 +81,12 @@ public:
     return underlying_allocator::null();
   }
 
-  scoped_rewind get_auto_rewind_point()
+  [[nodiscard]] scoped_rewind get_auto_rewind_point()
   {
     return scoped_rewind(*this);
   }
 
-  rewind_point get_rewind_point() const
+  [[nodiscard]] rewind_point get_rewind_point() const
   {
     rewind_point m;
     m.arena = current_arena;
@@ -98,7 +98,7 @@ public:
   }
 
   template <typename Alignment = alignment<>>
-  address allocate(size_type i_size, Alignment i_alignment = {})
+  [[nodiscard]] address allocate(size_type i_size, Alignment i_alignment = {})
   {
 
     auto measure = statistics::report_allocate(i_size);
@@ -152,7 +152,7 @@ public:
   }
 
   template <typename Alignment = alignment<>>
-  address zero_allocate(size_type i_size, Alignment i_alignment = {})
+  [[nodiscard]] address zero_allocate(size_type i_size, Alignment i_alignment = {})
   {
     auto z = allocate(i_size, i_alignment);
     std::memset(z, 0, i_size);

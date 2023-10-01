@@ -11,6 +11,8 @@ namespace acl
 template <std::size_t N>
 struct string_literal
 {
+  static constexpr std::size_t length = N - 1;
+
   constexpr string_literal(const char (&str)[N])
   {
     std::copy_n(str, N, value);
