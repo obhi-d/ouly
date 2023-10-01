@@ -93,6 +93,8 @@ public:
       write_bool(obj);
     else if constexpr (detail::IntegerLike<Class>)
       write_integer(obj);
+    else if constexpr (detail::EnumLike<Class>)
+      write_enum(obj);
     else if constexpr (detail::FloatLike<Class>)
       write_float(obj);
     else if constexpr (detail::PointerLike<Class>)
@@ -237,6 +239,12 @@ private:
   void write_integer(Class const& obj) noexcept
   {
     get().as_uint64(obj);
+  }
+    
+  template <detail::EnumLike Class>
+  void write_enum(Class const& obj) noexcept
+  {
+    get().as_uint64(static_cast<uint64_t>(obj));
   }
 
   template <detail::FloatLike Class>

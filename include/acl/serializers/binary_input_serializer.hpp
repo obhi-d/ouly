@@ -72,6 +72,8 @@ public:
       return read_bool(obj);
     else if constexpr (detail::IntegerLike<Class>)
       return read_integer(obj);
+    else if constexpr (detail::EnumLike<Class>)
+      return read_enum(obj);
     else if constexpr (detail::FloatLike<Class>)
       return read_float(obj);
     else if constexpr (detail::PointerLike<Class>)
@@ -270,7 +272,21 @@ private:
     else
     {
       bool result = get().read(&obj, sizeof(obj));
-      obj         = detail::byteswap(obj);
+      obj = detail::byteswap(obj);
+      return result;
+    }
+  }
+
+  template <detail::EnumLike Class>
+  bool read_enum(Class& obj) noexcept
+  {
+    using type = std::underlying_type_t<Class>;
+    if constexpr (has_fast_path)
+      return get().read(&obj, sizeof(obj));
+    else
+    {
+      bool result = get().read(&obj, sizeof(obj));
+      obj = static_cast<Class>(detail::byteswap(static_cast<type>(obj)));
       return result;
     }
   }

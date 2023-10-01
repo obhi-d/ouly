@@ -60,6 +60,8 @@ public:
       write_bool(obj);
     else if constexpr (detail::IntegerLike<Class>)
       write_integer(obj);
+    else if constexpr (detail::EnumLike<Class>)
+      write_enum(obj);
     else if constexpr (detail::FloatLike<Class>)
       write_float(obj);
     else if constexpr (detail::PointerLike<Class>)
@@ -183,6 +185,20 @@ private:
     {
       obj = detail::byteswap(obj);
       get().write(&obj, sizeof(obj));
+    }
+  }
+
+  template <detail::EnumLike Class>
+  void write_enum(Class obj) noexcept
+  {
+    using type = std::underlying_type_t<Class>;
+    if constexpr (has_fast_path)
+      get().write(&obj, sizeof(obj));
+    else
+    {
+      auto data = static_cast<type>(obj);
+      data      = detail::byteswap(data);
+      get().write(&data, sizeof(data));
     }
   }
 

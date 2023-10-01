@@ -119,21 +119,30 @@ private:
   std::reference_wrapper<json const> value;
 };
 
+enum class EnumTest
+{
+  value0 = 323,
+  value1 = 43535,
+  value3 = 64533
+};
+
 struct ReflTestFriend
 {
   int a = 0;
   int b = 0;
+  EnumTest et = EnumTest::value0;
 };
 
 template <>
 auto acl::reflect<ReflTestFriend>() noexcept
 {
-  return acl::bind(acl::bind<"a", &ReflTestFriend::a>(), acl::bind<"b", &ReflTestFriend::b>());
+  return acl::bind(acl::bind<"a", &ReflTestFriend::a>(), acl::bind<"b", &ReflTestFriend::b>(),
+                   acl::bind<"et", &ReflTestFriend::et>());
 }
 
 TEST_CASE("input_serializer: Test valid stream in with reflect outside")
 {
-  json j = "{ \"a\": 100, \"b\": 200 }"_json;
+  json j = "{ \"a\": 100, \"b\": 200, \"et\": 64533 }"_json;
 
   InputData input;
   input.root      = j;
@@ -146,6 +155,7 @@ TEST_CASE("input_serializer: Test valid stream in with reflect outside")
 
   REQUIRE(myStruct.a == 100);
   REQUIRE(myStruct.b == 200);
+  REQUIRE(myStruct.et == EnumTest::value3);
 }
 
 TEST_CASE("input_serializer: Test partial stream in with reflect outside")

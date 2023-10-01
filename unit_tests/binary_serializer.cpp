@@ -44,10 +44,19 @@ public:
   std::reference_wrapper<FileData> owner;
 };
 
+enum class EnumTest
+{
+  value0 = 323,
+  value1 = 43535,
+  value3 = 64533,
+  none = 0
+};
+
 struct ReflTestFriend
 {
   int a = rand();
   int b = rand();
+  EnumTest et = EnumTest::none;
 
   inline auto operator<=>(ReflTestFriend const&) const noexcept = default;
 };
@@ -55,7 +64,8 @@ struct ReflTestFriend
 template <>
 auto acl::reflect<ReflTestFriend>() noexcept
 {
-  return acl::bind(acl::bind<"a", &ReflTestFriend::a>(), acl::bind<"b", &ReflTestFriend::b>());
+  return acl::bind(acl::bind<"a", &ReflTestFriend::a>(), acl::bind<"b", &ReflTestFriend::b>(),
+                   acl::bind<"et", &ReflTestFriend::et>());
 }
 
 struct little_endian
@@ -71,6 +81,7 @@ struct big_endian
 TEMPLATE_TEST_CASE("serializer: Test valid stream with reflect outside", "[serializer]", big_endian, little_endian)
 {
   ReflTestFriend obj;
+  obj.et = EnumTest::value1;
 
   FileData data;
   auto     serializer = Serializer(data);
@@ -81,6 +92,7 @@ TEMPLATE_TEST_CASE("serializer: Test valid stream with reflect outside", "[seria
   in(read);
   REQUIRE(read.a == obj.a);
   REQUIRE(read.b == obj.b);
+  REQUIRE(read.et == obj.et);
 
   in(read);
   REQUIRE(data.ec != acl::serializer_error::none);

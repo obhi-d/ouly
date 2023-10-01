@@ -85,10 +85,18 @@ private:
   std::string val_;
 };
 
+enum class EnumTest
+{
+  value0 = 323,
+  value1 = 43535,
+  value3 = 64533
+};
+
 struct ReflTestFriend
 {
-  int a = 0;
-  int b = 0;
+  int      a  = 0;
+  int      b  = 0;
+  EnumTest et = EnumTest::value0;
 
   inline auto operator<=>(ReflTestFriend const&) const noexcept = default;
 };
@@ -96,7 +104,8 @@ struct ReflTestFriend
 template <>
 auto acl::reflect<ReflTestFriend>() noexcept
 {
-  return acl::bind(acl::bind<"a", &ReflTestFriend::a>(), acl::bind<"b", &ReflTestFriend::b>());
+  return acl::bind(acl::bind<"a", &ReflTestFriend::a>(), acl::bind<"b", &ReflTestFriend::b>(),
+                   acl::bind<"et", &ReflTestFriend::et>());
 }
 
 TEST_CASE("output_serializer: Basic test")
@@ -104,12 +113,13 @@ TEST_CASE("output_serializer: Basic test")
   ReflTestFriend example;
   example.a = 4121;
   example.b = 534;
+  example.et = EnumTest::value1;
 
   Serializer                         instance;
   acl::output_serializer<Serializer> ser(instance);
   ser(example);
 
-  REQUIRE(instance.get() == R"({ "a": 4121, "b": 534 })");
+  REQUIRE(instance.get() == R"({ "a": 4121, "b": 534, "et": 43535 })");
 }
 
 TEST_CASE("output_serializer: Basic test with internal decl")

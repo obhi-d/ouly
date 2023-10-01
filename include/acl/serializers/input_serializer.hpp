@@ -104,6 +104,8 @@ public:
       return read_bool(obj);
     else if constexpr (detail::IntegerLike<Class>)
       return read_integer(obj);
+    else if constexpr (detail::EnumLike<Class>)
+      return read_enum(obj);
     else if constexpr (detail::FloatLike<Class>)
       return read_float(obj);
     else if constexpr (detail::PointerLike<Class>)
@@ -398,6 +400,22 @@ private:
     else
     {
       get().error("uint64", make_error_code(serializer_error::failed_to_parse_value));
+      return false;
+    }
+  }
+    
+  template <detail::EnumLike Class>
+  bool read_enum(Class& obj) noexcept
+  {
+    auto value = get().as_uint64();
+    if (value)
+    {
+      obj = static_cast<Class>(*value);
+      return true;
+    }
+    else
+    {
+      get().error("enum", make_error_code(serializer_error::failed_to_parse_value));
       return false;
     }
   }

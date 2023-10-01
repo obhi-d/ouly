@@ -189,6 +189,9 @@ concept UnsignedIntLike =
 template <typename T>
 concept IntegerLike = SignedIntLike<T> || UnsignedIntLike<T>;
 
+template <typename T>
+concept EnumLike = std::is_enum_v<T>;
+
 // Float
 template <typename T>
 concept FloatLike = std::is_floating_point_v<remove_cref<T>>;
