@@ -175,11 +175,11 @@ struct co_sequence : public detail::co_task<R, detail::sequence_promise<co_seque
   using super::co_task;
   using handle = super::handle;
   co_sequence(handle h) : super(h) {}
-  co_sequence(co_sequence&& other) noexcept : super(std::move<super>(other)) {}
+  co_sequence(co_sequence&& other) noexcept : super(std::move<super>((super&&)other)) {}
   inline co_sequence& operator=(co_sequence const&) = delete;
   inline co_sequence& operator=(co_sequence&& other) noexcept
   {
-    (super&)(*this) = std::move<super>(other);
+    (super&)(*this) = std::move<super>((super&&)other);
     return *this;
   }
 };
