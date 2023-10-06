@@ -92,6 +92,7 @@ enum class EnumTest
   value3 = 64533
 };
 
+
 struct ReflTestFriend
 {
   int      a  = 0;
@@ -110,6 +111,7 @@ auto acl::reflect<ReflTestFriend>() noexcept
 
 TEST_CASE("output_serializer: Basic test")
 {
+
   ReflTestFriend example;
   example.a = 4121;
   example.b = 534;
@@ -147,7 +149,7 @@ TEST_CASE("output_serializer: Basic test with internal decl")
   acl::output_serializer<Serializer> ser(instance);
   ser(example);
 
-  REQUIRE(instance.get() == R"({ "first": { "a": 4121, "b": 534 }, "second": "String Value" })");
+  REQUIRE(instance.get() == R"({ "first": { "a": 4121, "b": 534, "et": 323 }, "second": "String Value" })");
 }
 
 TEST_CASE("output_serializer: Test tuple")
