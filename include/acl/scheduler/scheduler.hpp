@@ -246,4 +246,11 @@ private:
   std::atomic_bool                             stop                 = false;
 };
 
+
+template <typename... Args>
+void async(worker_context const& current, Args&&... args)
+{
+  current.get_scheduler().submit(std::forward<Args>(args)..., current.get_worker());
+}
+
 } // namespace acl

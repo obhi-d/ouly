@@ -113,7 +113,7 @@ TEST_CASE("scheduler: Test co_task")
   auto task        = continue_string();
   auto string_task = create_string(task);
 
-  scheduler.submit(task, acl::default_workgroup_id, acl::main_worker_id);
+  acl::async(acl::worker_context::get(acl::default_workgroup_id) , task, acl::default_workgroup_id);
   scheduler.submit(string_task, acl::default_workgroup_id, acl::main_worker_id);
 
   std::string        continue_string = "basic";
