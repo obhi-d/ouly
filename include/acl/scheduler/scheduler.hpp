@@ -218,8 +218,6 @@ public:
   ACL_API void take_ownership() noexcept;
   ACL_API void busy_work(worker_id) noexcept;
 
-  ACL_API void print_logs();
-  
 private:
   void              finish_pending_tasks() noexcept;
   inline void       do_work(worker_id, detail::work_item const&) noexcept;

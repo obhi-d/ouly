@@ -109,24 +109,6 @@ struct local_queue
   std::array<work_item, max_local_work_item> queue;
 };
 
-enum class logg
-{
-  local_push,
-  queue_push,
-  execute_local_task,
-  execute_queue_task,
-  force_execute_local_task,
-  force_execute_queue_task,
-  force_execute_ex_task,
-};
-
-struct logv
-{
-  logg type;
-  uint32_t value;
-  uint32_t to;
-};
-
 struct worker
 {
   // Contexts
@@ -143,10 +125,6 @@ struct worker
   worker_id id;
   // quit event
   std::atomic_bool quitting = false;
-
-  mutable std::vector<logv> logs;
-
-  worker() noexcept { logs.reserve(1000000); }
 };
 
 } // namespace detail

@@ -73,7 +73,6 @@ void scheduler::run(worker_id thread)
       {
         do_work(thread, lw);
         lw.delegate_fn = nullptr;
-        g_worker->logs.push_back(detail::logv{.type=detail::logg::execute_local_task, .value=lw.data.uint_data, .to=0});
       }
     }
 
@@ -113,11 +112,7 @@ detail::work_item scheduler::get_work(worker_id thread) noexcept
     auto& work_list = global_work[thread.get_index()];
     auto  lck       = std::scoped_lock(work_list.first);
     if (!work_list.second.empty())
-    {
-      auto us = work_list.second.pop_front_unsafe();
-      worker.logs.push_back(detail::logv{.type=detail::logg::force_execute_queue_task, .value=us.data.uint_data, .to=thread.get_index()});
-      return us;
-    }
+      return work_list.second.pop_front_unsafe();
   }
 
   {
@@ -129,11 +124,7 @@ detail::work_item scheduler::get_work(worker_id thread) noexcept
       auto&    work_list  = global_work[steal_from];
       auto     lck        = std::scoped_lock(work_list.first);
       if (!work_list.second.empty())
-      {
-        auto us = work_list.second.pop_front_unsafe();
-        worker.logs.push_back(detail::logv{.type=detail::logg::force_execute_queue_task, .value=us.data.uint_data, .to=steal_from});
-        return us;
-      }
+        return work_list.second.pop_front_unsafe();
     }
   }
 
@@ -142,11 +133,7 @@ detail::work_item scheduler::get_work(worker_id thread) noexcept
     auto& work_list = worker.exlusive_items;
     auto  lck       = std::scoped_lock(work_list.first);
     if (!work_list.second.empty())
-    {
-      auto us = work_list.second.pop_front_unsafe();
-      worker.logs.push_back(detail::logv{.type=detail::logg::force_execute_ex_task, .value=us.data.uint_data, .to=thread.get_index()});
-      return us;
-    }
+      return work_list.second.pop_front_unsafe();
   }
 
   return {};
@@ -164,11 +151,7 @@ detail::work_item scheduler::try_get_work(worker_id thread) noexcept
     {
       auto lck = std::scoped_lock(std::adopt_lock, work_list.first);
       if (!work_list.second.empty())
-      {
-        auto us = work_list.second.pop_front_unsafe();
-        worker.logs.push_back(detail::logv{.type=detail::logg::execute_queue_task, .value=us.data.uint_data, .to=thread.get_index()});
-        return us;
-      }
+        return work_list.second.pop_front_unsafe();
     }
   }
 
@@ -183,11 +166,7 @@ detail::work_item scheduler::try_get_work(worker_id thread) noexcept
       {
         auto lck = std::scoped_lock(std::adopt_lock, work_list.first);
         if (!work_list.second.empty())
-        {
-          auto us = work_list.second.pop_front_unsafe();
-          worker.logs.push_back(detail::logv{.type=detail::logg::execute_queue_task, .value=us.data.uint_data, .to=steal_from});
-          return us;
-        }
+          return work_list.second.pop_front_unsafe();
       }
     }
   }
@@ -339,8 +318,6 @@ void scheduler::submit(detail::work_item work, worker_id current)
 {
   auto& wg     = workgroups[work.data.reserved_1];
   auto& worker = workers[current.get_index()];
-  auto note = work.data.uint_data;
-
 
   for (uint32_t i = wg.start_thread_idx; i != wg.end_thread_idx; ++i)
   {
@@ -349,7 +326,6 @@ void scheduler::submit(detail::work_item work, worker_id current)
     {
       local_work[i] = std::move(work);
       wake_events[i].notify();
-      worker.logs.push_back(detail::logv{.type = detail::logg::local_push, .value = note, .to = i});
       return;
     }
   }
@@ -357,7 +333,6 @@ void scheduler::submit(detail::work_item work, worker_id current)
   {
 
     auto mask = wg.thread_count - 1;
-
     for (uint32_t start = worker.push_offset, end = worker.push_offset + wg.thread_count; start != end; ++start)
     {
       uint32_t q = wg.start_thread_idx + (start & mask);
@@ -367,7 +342,6 @@ void scheduler::submit(detail::work_item work, worker_id current)
         global_work[q].first.unlock();
         if (!wake_status[q].exchange(true))
           wake_events[q].notify();
-        worker.logs.push_back(detail::logv{.type = detail::logg::queue_push, .value = note, .to = q});
         return;
       }
     }
@@ -411,41 +385,4 @@ workgroup_id scheduler::find_group(std::string const& name)
                                              : static_cast<uint32_t>(std::distance(workgroups.begin(), it)));
 }
 
-void scheduler::print_logs()
-{
-  for(uint32_t i = 0; i < worker_count; ++i)
-  {
-    auto const& wk = workers[i];
-    for(auto const& log : wk.logs)
-    {
-      switch (log.type)
-      {
-      case detail::logg::local_push:
-        printf("\nlocal_task: %d [%d]", log.value, log.to);
-        break;
-      case detail::logg::queue_push:
-        printf("\nqueue_push: %d [%d]", log.value, log.to);
-        break;
-      case detail::logg::execute_local_task:
-        printf("\nexecute_local_task: %d [%d]", log.value, log.to);
-        break;
-      case detail::logg::execute_queue_task:
-        printf("\nexecute_queue_task: %d [%d]", log.value, log.to);
-        break;
-      case detail::logg::force_execute_local_task:
-        printf("\nforce_execute_local_task: %d [%d]", log.value, log.to);
-        break;
-      case detail::logg::force_execute_queue_task:
-        printf("\nforce_execute_queue_task: %d [%d]", log.value, log.to);
-        break;
-      case detail::logg::force_execute_ex_task:
-        printf("\nforce_execute_ex_task: %d [%d]", log.value, log.to);
-        break;
-      
-      default:
-        break;
-      }
-    }
-  }
-}
 } // namespace acl

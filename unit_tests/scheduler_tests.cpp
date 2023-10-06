@@ -59,7 +59,7 @@ TEST_CASE("scheduler: Construction")
   scheduler.end_execution();
 
   auto sum = instance.sum();
-  // REQUIRE(sum == 1024);
+  REQUIRE(sum == 1024);
 
   scheduler.begin_execution();
   executor instance2;
@@ -67,14 +67,6 @@ TEST_CASE("scheduler: Construction")
     acl::async<&executor::execute2>(acl::worker_context::get(acl::default_workgroup_id), &instance2, i,
                                    acl::workgroup_id(i % 2));
   scheduler.end_execution();
-
-  if (instance2.sum() != 1023 * 512)
-  {
-    auto missing = instance2.get_missing(1024);
-    scheduler.print_logs();
-    for(auto m : missing)
-      printf("\nmissing: %d", m);
-  }
 
   REQUIRE(instance2.sum() == 1023 * 512);
 }
