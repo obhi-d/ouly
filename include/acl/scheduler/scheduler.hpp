@@ -45,10 +45,10 @@ public:
   }
 
   template <auto M, typename Class>
-  inline void submit(Class& ctx, workgroup_id submit_group, worker_id current) noexcept
+  inline void submit(Class* ctx, workgroup_id submit_group, worker_id current) noexcept
   {
     task_data data;
-    data.context    = reinterpret_cast<task_context*>(&ctx);
+    data.context    = reinterpret_cast<task_context*>(ctx);
     data.reserved_0 = detail::work_type_free_functor;
     data.reserved_1 = static_cast<uint8_t>(submit_group.get_index());
 
@@ -62,10 +62,10 @@ public:
   }
 
   template <auto M, typename Class>
-  inline void submit(Class& ctx, uint32_t additional_data, workgroup_id submit_group, worker_id current) noexcept
+  inline void submit(Class* ctx, uint32_t additional_data, workgroup_id submit_group, worker_id current) noexcept
   {
     task_data data;
-    data.context    = reinterpret_cast<task_context*>(&ctx);
+    data.context    = reinterpret_cast<task_context*>(ctx);
     data.uint_data  = additional_data;
     data.reserved_0 = detail::work_type_free_functor;
     data.reserved_1 = static_cast<uint8_t>(submit_group.get_index());
@@ -246,11 +246,21 @@ private:
   std::atomic_bool                             stop                 = false;
 };
 
-
 template <typename... Args>
 void async(worker_context const& current, Args&&... args)
 {
   current.get_scheduler().submit(std::forward<Args>(args)..., current.get_worker());
 }
 
+template <auto M, typename Class>
+void async(worker_context const& current, Class* obj, workgroup_id submit_group)
+{
+  current.get_scheduler().submit<M>(obj, submit_group, current.get_worker());
+}
+
+template <auto M, typename Class>
+void async(worker_context const& current, Class* obj, uint32_t data, workgroup_id submit_group)
+{
+  current.get_scheduler().submit<M>(obj, data, submit_group, current.get_worker());
+}
 } // namespace acl

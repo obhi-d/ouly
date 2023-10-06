@@ -10,15 +10,19 @@ TEST_CASE("scheduler: Construction")
   scheduler.create_group(acl::workgroup_id(0), "default", 0, 16);
   scheduler.create_group(acl::workgroup_id(1), "io", 16, 2);
 
-  scheduler.begin_execution();
 
   struct executor
   {
-    std::array<uint32_t, 1024> executed = {0};
+    std::array<uint32_t, 18> executed = {0};
 
     void execute(acl::worker_context const& id)
     {
       executed[id.get_worker().get_index()]++;
+    }
+
+    void execute2(acl::worker_context const& id, uint32_t n)
+    {
+      executed[id.get_worker().get_index()] += n;
     }
 
     uint32_t sum() const
@@ -28,13 +32,22 @@ TEST_CASE("scheduler: Construction")
     }
   };
 
+  scheduler.begin_execution();
   executor instance;
-  for (uint32_t i = 0; i < instance.executed.size(); ++i)
-    scheduler.submit<&executor::execute>(instance, acl::workgroup_id(i % 1), acl::main_worker_id);
-
+  for (uint32_t i = 0; i < 1024; ++i)
+    acl::async<&executor::execute>(acl::worker_context::get(acl::default_workgroup_id), &instance, acl::workgroup_id(i % 2));
   scheduler.end_execution();
 
   REQUIRE(instance.sum() == 1024);
+
+  scheduler.begin_execution();
+  executor instance2;
+  for (uint32_t i = 0; i < 1024; ++i)
+    acl::async<&executor::execute2>(acl::worker_context::get(acl::default_workgroup_id), &instance2, i,
+                                   acl::workgroup_id(i % 2));
+  scheduler.end_execution();
+
+  REQUIRE(instance2.sum() == 1023 * 512);
 }
 
 TEST_CASE("scheduler: Simplest ParallelFor")
@@ -113,7 +126,7 @@ TEST_CASE("scheduler: Test co_task")
   auto task        = continue_string();
   auto string_task = create_string(task);
 
-  acl::async(acl::worker_context::get(acl::default_workgroup_id) , task, acl::default_workgroup_id);
+  acl::async(acl::worker_context::get(acl::default_workgroup_id), task, acl::default_workgroup_id);
   scheduler.submit(string_task, acl::default_workgroup_id, acl::main_worker_id);
 
   std::string        continue_string = "basic";
