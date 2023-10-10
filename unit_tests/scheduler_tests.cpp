@@ -23,6 +23,7 @@ TEST_CASE("scheduler: Construction")
 
     void execute2(acl::worker_context const& id, uint32_t n)
     {
+      id.get_scheduler();
       accumulate[id.get_worker().get_index()].push_back(n);
     }
 

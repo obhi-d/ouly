@@ -98,6 +98,7 @@ inline bool scheduler::work(worker_id thread) noexcept
     if (!wrk.delegate_fn)
       return false;
   }
+  assert(&workers[thread.get_index()].contexts[wrk.data.reserved_1].get().get_scheduler() == this);
   do_work(thread, wrk);
   return true;
 }
@@ -120,7 +121,7 @@ detail::work_item scheduler::get_work(worker_id thread) noexcept
     // read head
     for (uint32_t steal_src = 0; steal_src != worker.friend_worker_count; ++steal_src)
     {
-      uint32_t steal_from = (worker.stealing_source++) % worker.friend_worker_count;
+      uint32_t steal_from = worker.friend_worker_start + ((worker.stealing_source++) % worker.friend_worker_count);
       auto&    work_list  = global_work[steal_from];
       auto     lck        = std::scoped_lock(work_list.first);
       if (!work_list.second.empty())
@@ -160,7 +161,7 @@ detail::work_item scheduler::try_get_work(worker_id thread) noexcept
     // read head
     for (uint32_t steal_src = 0; steal_src != worker.friend_worker_count; ++steal_src)
     {
-      uint32_t steal_from = (worker.stealing_source++) % worker.friend_worker_count;
+      uint32_t steal_from = worker.friend_worker_start + ((worker.stealing_source++) % worker.friend_worker_count);
       auto&    work_list  = global_work[steal_from];
       if (work_list.first.try_lock())
       {
@@ -336,6 +337,7 @@ void scheduler::submit(detail::work_item work, worker_id current)
     for (uint32_t start = worker.push_offset, end = worker.push_offset + wg.thread_count; start != end; ++start)
     {
       uint32_t q = wg.start_thread_idx + (start & mask);
+      assert(&workers[q].contexts[work.data.reserved_1].get().get_scheduler() == this);
       if (global_work[q].first.try_lock())
       {
         global_work[q].second.emplace_back(std::move(work));

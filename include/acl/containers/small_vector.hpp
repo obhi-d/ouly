@@ -548,7 +548,8 @@ private:
     auto data_ptr = resize_no_fill(sz);
     if (sz > size_)
     {
-      std::uninitialized_fill_n(data_ptr + size_, sz - size_, t);
+      if constexpr (std::is_constructible_v<Ty, tail>)
+        std::uninitialized_fill_n(data_ptr + size_, sz - size_, t);
     }
     size_ = sz;
   }

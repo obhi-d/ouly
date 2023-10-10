@@ -2,6 +2,7 @@
 #pragma once
 
 #include <acl/utils/nullable_optional.hpp>
+#include <cassert>
 #include <compare>
 #include <cstdint>
 #include <limits>
@@ -108,6 +109,7 @@ public:
 
   scheduler& get_scheduler() const
   {
+    assert(owner);
     return *owner;
   }
 
