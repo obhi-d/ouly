@@ -99,3 +99,13 @@ std::string to_lstring(I i)
 {
   return "a_very_long_string_to_avoid_soo" + std::to_string(i);
 }
+
+uint32_t xorshift32(uint32_t seed)
+{
+  /* Algorithm "xor" from p. 4 of Marsaglia, "Xorshift RNGs" */
+  uint32_t x = seed;
+  x ^= x << 13;
+  x ^= x >> 17;
+  x ^= x << 5;
+  return x;
+}

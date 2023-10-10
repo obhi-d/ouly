@@ -1,6 +1,8 @@
 
+#include "test_common.hpp"
 #include <acl/allocators/default_allocator.hpp>
 #include <acl/allocators/std_allocator_wrapper.hpp>
+#include <acl/containers/index_map.hpp>
 #include <acl/containers/packed_table.hpp>
 #include <acl/containers/sparse_table.hpp>
 #include <acl/utils/error_codes.hpp>
@@ -228,7 +230,7 @@ TEST_CASE("Validate Hash: wyhash", "[hash]")
 {
   constexpr std::string_view cs = "A long string whose hash we are about to find out !";
   std::string                s{cs};
-  acl::wyhash32 wyh32;
+  acl::wyhash32              wyh32;
 
   auto value32 = wyh32(s.c_str(), s.length());
   REQUIRE(value32 != 0);
@@ -250,8 +252,6 @@ TEST_CASE("Validate Hash: wyhash", "[hash]")
   REQUIRE(value64 != new_value64);
 
   REQUIRE(wyh64() == new_value64);
-
-
 }
 
 TEST_CASE("Validate Hash: komihash", "[hash]")
@@ -302,4 +302,99 @@ TEST_CASE("Test link", "[link]")
                 "Type should not be assignable");
   static_assert(!std::is_assignable_v<acl::link<derived, uint32_t, 4>, acl::link<unrelated, uint32_t, 4>>,
                 "Type should not be assignable");
+}
+
+TEST_CASE("Test index_map", "[index_map]")
+{
+  acl::index_map<uint32_t, 5> map;
+
+  REQUIRE(map.empty() == true);
+  map[24] = 5;
+  REQUIRE(map.size() == 1);
+  REQUIRE(map[24] == 5);
+  map[25] = 25;
+  REQUIRE(map[24] == 5);
+  REQUIRE(map[25] == 25);
+  REQUIRE(map.base_offset() == 24);
+  map[15] = 15;
+  REQUIRE(map[24] == 5);
+  REQUIRE(map[25] == 25);
+  REQUIRE(map[15] == 15);
+  REQUIRE(map.size() == 11);
+  REQUIRE(map.base_offset() == 15);
+  map[40] = 40;
+  REQUIRE(map[24] == 5);
+  REQUIRE(map[25] == 25);
+  REQUIRE(map[15] == 15);
+  REQUIRE(map[40] == 40);
+  REQUIRE(map.size() == 26);
+  REQUIRE(map.base_offset() == 15);
+  map[31] = 31;
+  REQUIRE(map[24] == 5);
+  REQUIRE(map[25] == 25);
+  REQUIRE(map[15] == 15);
+  REQUIRE(map[40] == 40);
+  REQUIRE(map[31] == 31);
+  REQUIRE(map.base_offset() == 15);
+  map[41] = 41;
+  REQUIRE(map[24] == 5);
+  REQUIRE(map[25] == 25);
+  REQUIRE(map[15] == 15);
+  REQUIRE(map[40] == 40);
+  REQUIRE(map[31] == 31);
+  REQUIRE(map[41] == 41);
+  REQUIRE(map.base_offset() == 15);
+  map[2] = 2;
+  REQUIRE(map[2] == 2);
+  REQUIRE(map[15] == 15);
+  REQUIRE(map[24] == 5);
+  REQUIRE(map[25] == 25);
+  REQUIRE(map[31] == 31);
+  REQUIRE(map[40] == 40);
+  REQUIRE(map[41] == 41);
+  REQUIRE(map.base_offset() == 0);
+  REQUIRE(map.empty() == false);
+
+  auto     data = std::array{2, 15, 5, 25, 31, 40, 41};
+  uint32_t it   = 0;
+  for (auto& i : map)
+  {
+    if (i != map.null)
+    {
+      REQUIRE(i == data[it++]);
+    }
+  }
+
+  for (auto r = map.rbegin(); r != map.rend(); ++r)
+  {
+    if (*r != map.null)
+    {
+      REQUIRE(*r == data[--it]);
+    }
+  }
+}
+
+TEST_CASE("Test index_map fuzz test", "[index_map]")
+{
+  acl::index_map<uint32_t, 64> map;
+  std::vector<uint32_t>        full_map;
+
+  uint32_t fixed_seed = Catch::rngSeed();
+
+  auto seed = xorshift32(fixed_seed);
+  auto end  = seed % 100;
+  full_map.resize(100, 99999);
+  for (uint32_t i = 0; i < end; ++i)
+  {
+    auto idx      = (seed = xorshift32(seed)) % 100;
+    full_map[idx] = map[idx] = ((seed = xorshift32(seed)) % 1000);
+  }
+
+  for (uint32_t i = 0; i < end; ++i)
+  {
+    if (full_map[i] == 99999)
+      REQUIRE(map[i] == map.null);
+    else
+      REQUIRE(map[i] == full_map[i]);
+  }
 }
