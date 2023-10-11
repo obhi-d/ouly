@@ -20,8 +20,8 @@ struct pod
 template <>
 struct acl::default_options<std::string>
 {
-  static constexpr std::uint32_t pool_size       = 2;
-  static constexpr std::uint32_t index_pool_size = 2;
+  static constexpr std::uint32_t pool_size_v       = 2;
+  static constexpr std::uint32_t index_pool_size_v = 2;
 };
 
 namespace helper

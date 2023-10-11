@@ -120,6 +120,12 @@ struct basic_size_type
   using size_type = T;
 };
 
+template <typename T = void>
+struct basic_link_type
+{
+  using link_type = T;
+};
+
 struct assume_pod
 {
   static constexpr bool assume_pod_v = true;
@@ -163,6 +169,13 @@ struct zero_out_memory
 struct disable_pool_tracking
 {
   static constexpr bool disable_pool_tracking_v = true;
+};
+
+// custom vector
+template <typename T>
+struct custom_vector
+{
+  using custom_vector_t = T;
 };
 
 } // namespace opt
@@ -306,6 +319,9 @@ concept HasZeroMemoryAttrib = Traits::zero_out_memory_v;
 template <typename Traits>
 concept HasDisablePoolTrackingAttrib = Traits::disble_pool_tracking_v;
 
+template <typename Traits>
+concept HasLinkType = requires { typename Traits::link_type; };
+
 template <typename V, typename R>
 concept OptionalValueLike = requires(V v) {
   {*v } -> std::convertible_to<R>;
@@ -344,6 +360,25 @@ struct is_static
 
 template <typename underlying_allocator_tag>
 constexpr static bool is_static_v = is_static<underlying_allocator_tag>::value;
+
+template <typename T, bool>
+struct link_value;
+
+template <typename T>
+struct link_value<T, true>
+{
+    using type = typename T::link_type;
+};
+
+template <typename T>
+struct link_value<T, false>
+{
+    using type = void;
+};
+
+template <typename T>
+using link_value_t = typename link_value<T, HasLinkType<T>>::type;
+
 
 template <typename ua_t, class = std::void_t<>>
 struct tag

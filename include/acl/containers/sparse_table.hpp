@@ -55,7 +55,7 @@ private:
                                                                default_index_pool_size>::self_index_pool_size_v;
     static constexpr bool     use_sparse_index_v = true;
     static constexpr uint32_t null_v             = 0;
-    static constexpr bool     zero_out_memory    = true;
+    static constexpr bool     zero_out_memory_v  = true;
   };
 
   template <typename TrTy>

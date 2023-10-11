@@ -9,9 +9,9 @@ namespace acl
 template <typename Ty>
 struct default_link_container_traits
 {
-  using size_type                      = uint32_t;
-  static constexpr bool     use_sparse = true;
-  static constexpr uint32_t pool_size  = 1024;
+  using size_type                        = uint32_t;
+  static constexpr bool     use_sparse_v = true;
+  static constexpr uint32_t pool_size_v  = 1024;
 };
 
 /**

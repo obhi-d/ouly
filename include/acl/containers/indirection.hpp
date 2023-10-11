@@ -30,6 +30,11 @@ public:
     return links_[i];
   }
 
+  inline size_type get_if(size_type i) const noexcept
+  {
+    return i < links_.size() ? links_[i] : Traits::null_v;
+  }
+
   inline size_type size() const
   {
     return static_cast<size_type>(links_.size());
@@ -57,7 +62,7 @@ public:
   inline size_type& ensure_at(size_type i) noexcept
   {
     if (i >= links_.size())
-      links_.resize(i + 1);
+      links_.resize(i + 1, Traits::null_v);
     return links_[i];
   }
 
@@ -100,11 +105,11 @@ protected:
   struct index_traits
   {
     using size_type = uint32_t;
-    static constexpr uint32_t pool_size =
+    static constexpr uint32_t pool_size_v =
       std::conditional_t<detail::HasIndexPoolSize<Traits>, Traits, default_index_pool_size>::index_pool_size;
-    static constexpr uint32_t null_v      = Traits::null_v;
-    static constexpr bool     no_fill     = true;
-    static constexpr bool     zero_memory = true;
+    static constexpr uint32_t null_v            = Traits::null_v;
+    static constexpr bool     no_fill_v         = true;
+    static constexpr bool     zero_out_memory_v = true;
   };
 
 public:
@@ -152,6 +157,11 @@ public:
   inline bool contains(size_type i) const
   {
     return links_.contains(i);
+  }
+
+  inline size_type get_if(size_type i) const noexcept
+  {
+    return i < links_.size() ? links_[i] : Traits::null_v;
   }
 
   inline bool contains_valid(size_type i) const

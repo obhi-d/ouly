@@ -831,4 +831,32 @@ private:
   size_type                    length_ = 0;
 };
 
+namespace detail
+{
+
+template <typename T>
+concept HasCustomVector = requires {
+  typename T::custom_vector_t;
+  typename T::custom_vector_t::value_type;
+  typename T::custom_vector_t::reference;
+  typename T::custom_vector_t::const_reference;
+  typename T::custom_vector_t::pointer;
+  typename T::custom_vector_t::const_pointer;
+};
+
+template <typename Opt, typename V>
+struct custom_vector_type
+{
+  using type =
+    std::conditional_t<HasUseSparseAttrib<Opt>, sparse_vector<V, Opt>, vector<V, detail::custom_allocator_t<Opt>>>;
+};
+
+template <HasCustomVector Opt>
+struct custom_vector_type<Opt, typename Opt::custom_vector_t::value_type>
+{
+  using type = Opt::custom_vector_t;
+};
+
+} // namespace detail
+
 } // namespace acl

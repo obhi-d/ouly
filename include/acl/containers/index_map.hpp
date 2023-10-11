@@ -1,7 +1,8 @@
 #pragma once
+#include <acl/containers/small_vector.hpp>
 #include <cstdint>
 #include <limits>
-#include <acl/containers/small_vector.hpp>
+#include <vector>
 
 namespace acl
 {
@@ -15,6 +16,21 @@ namespace acl
 template <typename T = uint32_t, T OffsetLimit = 16>
 class index_map
 {
+  static constexpr T MinOffset = std::max<T>(OffsetLimit, 1);
+
+  struct with_offset_limit
+  {
+    acl::small_vector<T, MinOffset> indices_;
+    T                               min_offset_ = null;
+  };
+
+  struct without_offset_limit
+  {
+    std::vector<T> indices_;
+  };
+
+  using index_list = std::conditional_t<OffsetLimit == 0, without_offset_limit, with_offset_limit>;
+
 public:
   using size_type          = T;
   static constexpr T limit = OffsetLimit;
@@ -22,122 +38,139 @@ public:
 
   T& operator[](T idx) noexcept
   {
-    if (min_offset_ > idx)
+    if constexpr (OffsetLimit > 0)
     {
-      if (indices_.empty())
-        min_offset_ = idx;
-      else
+      if (data_.min_offset_ > idx)
       {
-        T to_min_offset = 0;
-        if (indices_.size() < limit)
-          to_min_offset = idx;
-        min_offset_ = shift(to_min_offset);
+        if (data_.indices_.empty())
+          data_.min_offset_ = idx;
+        else
+        {
+          T to_min_offset = 0;
+          if (data_.indices_.size() < limit)
+            to_min_offset = idx;
+          data_.min_offset_ = shift(to_min_offset);
+        }
       }
+      idx = idx - data_.min_offset_;
     }
-
-    idx = idx - min_offset_;
-    if (idx >= indices_.size())
-      indices_.resize(idx + 1, null);
-    return indices_[idx];
+    if (idx >= data_.indices_.size())
+      data_.indices_.resize(idx + 1, null);
+    return data_.indices_[idx];
   }
 
   bool contains(T idx) const noexcept
   {
-    return ((idx - min_offset_) < indices_.size());
+    if constexpr (OffsetLimit > 0)
+      return ((idx - data_.min_offset_) < data_.indices_.size());
+    else
+      return idx < data_.indices_.size();
   }
 
   T find(T idx) const noexcept
   {
-    idx = idx - min_offset_;
-    return idx < indices_.size() ? indices_[idx] : null;
+    if constexpr (OffsetLimit > 0)
+      idx = idx - data_.min_offset_;
+    return idx < data_.indices_.size() ? data_.indices_[idx] : null;
   }
 
   T operator[](T idx) const noexcept
   {
-    idx = idx - min_offset_;
-    return indices_[idx];
+    idx = idx - data_.min_offset_;
+    return data_.indices_[idx];
+  }
+
+  T get_if(T idx) const noexcept
+  {
+    idx = idx - data_.min_offset_;
+    return idx < data_.indices_.size() ? data_.indices_[idx] : null;
   }
 
   void clear()
   {
-    min_offset_ = null;
-    indices_.clear();
+    if constexpr (OffsetLimit > 0)
+      data_.min_offset_ = null;
+    data_.indices_.clear();
   }
 
   /** @brief This value must be substracted from the index value while doing a query */
-  auto base_offset() const noexcept
+  T base_offset() const noexcept
   {
-    return min_offset_;
+    if constexpr (OffsetLimit > 0)
+      return data_.min_offset_;
+    return 0;
   }
 
   bool empty() const noexcept
   {
-    return indices_.empty();
+    return data_.indices_.empty();
   }
 
   auto size() const noexcept
   {
-    return indices_.size();
+    return data_.indices_.size();
   }
 
   auto begin() noexcept
   {
-    return indices_.begin();
+    return data_.indices_.begin();
   }
 
   auto end() noexcept
   {
-    return indices_.end();
+    return data_.indices_.end();
   }
 
   auto begin() const noexcept
   {
-    return indices_.begin();
+    return data_.indices_.begin();
   }
 
   auto end() const noexcept
   {
-    return indices_.end();
+    return data_.indices_.end();
   }
 
   auto rbegin() noexcept
   {
-    return indices_.rbegin();
+    return data_.indices_.rbegin();
   }
 
   auto rend() noexcept
   {
-    return indices_.rend();
+    return data_.indices_.rend();
   }
 
   auto rbegin() const noexcept
   {
-    return indices_.rbegin();
+    return data_.indices_.rbegin();
   }
 
   auto rend() const noexcept
   {
-    return indices_.rend();
+    return data_.indices_.rend();
   }
 
 private:
   inline T shift(T offset)
   {
-    T    amount   = min_offset_ - offset;
-    auto cur_size = indices_.size();
-    indices_.resize(indices_.size() + amount, null);
-    if (cur_size)
+    if constexpr (OffsetLimit > 0)
     {
-      for (int64_t i = (int64_t)(cur_size - 1); i >= 0; --i)
+      T    amount   = data_.min_offset_ - offset;
+      auto cur_size = data_.indices_.size();
+      data_.indices_.resize(data_.indices_.size() + amount, null);
+      if (cur_size)
       {
-        indices_[amount + (T)i] = indices_[(T)i];
-        indices_[(T)i]          = null;
+        for (int64_t i = (int64_t)(cur_size - 1); i >= 0; --i)
+        {
+          data_.indices_[amount + (T)i] = data_.indices_[(T)i];
+          data_.indices_[(T)i]          = null;
+        }
       }
     }
     return offset;
   }
 
-  acl::small_vector<T, OffsetLimit> indices_;
-  T                                 min_offset_ = null;
+  index_list data_;
 };
 } // namespace acl

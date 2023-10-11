@@ -122,7 +122,8 @@ struct optional_ref
 {
   using type               = std::remove_reference_t<T>;
   constexpr optional_ref() = default;
-  constexpr optional_ref(type& iv) noexcept : value(&iv) {}
+  constexpr explicit optional_ref(type& iv) noexcept : value(&iv) {}
+  constexpr explicit optional_ref(type* iv) noexcept : value(iv) {}
 
   inline constexpr operator bool() const noexcept
   {

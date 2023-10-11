@@ -309,82 +309,82 @@ struct rand_device
 
 struct traits_1
 {
-  static constexpr bool use_sparse                = false;
-  using offset                                    = acl::opt::member<&data::self>;
-  static constexpr uint32_t pool_size             = 128;
-  static constexpr uint32_t self_index_pool_size  = 128;
-  static constexpr uint32_t keys_index_pool_size  = 128;
-  static constexpr bool     self_use_sparse_index = false;
-  static constexpr bool     keys_use_sparse_index = false;
-  using size_type                                 = uint32_t;
+  static constexpr bool use_sparse_v                = false;
+  using offset                                      = acl::opt::member<&data::self>;
+  static constexpr uint32_t pool_size_v             = 128;
+  static constexpr uint32_t self_index_pool_size_v  = 128;
+  static constexpr uint32_t keys_index_pool_size_v  = 128;
+  static constexpr bool     self_use_sparse_index_v = false;
+  static constexpr bool     keys_use_sparse_index_v = false;
+  using size_type                                   = uint32_t;
 };
 
 struct traits_2
 {
-  static constexpr bool use_sparse                = true;
-  using offset                                    = acl::opt::member<&data::self>;
-  static constexpr uint32_t pool_size             = 128;
-  static constexpr uint32_t self_index_pool_size  = 128;
-  static constexpr uint32_t keys_index_pool_size  = 128;
-  static constexpr bool     self_use_sparse_index = false;
-  static constexpr bool     keys_use_sparse_index = false;
-  using size_type                                 = uint32_t;
+  static constexpr bool use_sparse_v                = true;
+  using offset                                      = acl::opt::member<&data::self>;
+  static constexpr uint32_t pool_size_v             = 128;
+  static constexpr uint32_t self_index_pool_size_v  = 128;
+  static constexpr uint32_t keys_index_pool_size_v  = 128;
+  static constexpr bool     self_use_sparse_index_v = false;
+  static constexpr bool     keys_use_sparse_index_v = false;
+  using size_type                                   = uint32_t;
 };
 
 struct traits_3
 {
-  static constexpr bool     use_sparse            = true;
-  static constexpr uint32_t pool_size             = 128;
-  static constexpr uint32_t self_index_pool_size  = 128;
-  static constexpr uint32_t keys_index_pool_size  = 128;
-  static constexpr bool     self_use_sparse_index = false;
-  static constexpr bool     keys_use_sparse_index = false;
-  using size_type                                 = uint32_t;
+  static constexpr bool     use_sparse_v            = true;
+  static constexpr uint32_t pool_size_v             = 128;
+  static constexpr uint32_t self_index_pool_size_v  = 128;
+  static constexpr uint32_t keys_index_pool_size_v  = 128;
+  static constexpr bool     self_use_sparse_index_v = false;
+  static constexpr bool     keys_use_sparse_index_v = false;
+  using size_type                                   = uint32_t;
 };
 
 struct traits_4
 {
-  static constexpr bool use_sparse                = true;
-  using offset                                    = acl::opt::member<&data::self>;
-  static constexpr uint32_t pool_size             = 128;
-  static constexpr uint32_t self_index_pool_size  = 128;
-  static constexpr uint32_t keys_index_pool_size  = 128;
-  static constexpr bool     self_use_sparse_index = false;
-  static constexpr bool     keys_use_sparse_index = true;
-  using size_type                                 = uint32_t;
+  static constexpr bool use_sparse_v                = true;
+  using offset                                      = acl::opt::member<&data::self>;
+  static constexpr uint32_t pool_size_v             = 128;
+  static constexpr uint32_t self_index_pool_size_v  = 128;
+  static constexpr uint32_t keys_index_pool_size_v  = 128;
+  static constexpr bool     self_use_sparse_index_v = false;
+  static constexpr bool     keys_use_sparse_index_v = true;
+  using size_type                                   = uint32_t;
 };
 
 struct traits_5
 {
-  static constexpr bool     use_sparse            = true;
-  static constexpr uint32_t pool_size             = 128;
-  static constexpr uint32_t self_index_pool_size  = 128;
-  static constexpr uint32_t keys_index_pool_size  = 128;
-  static constexpr bool     self_use_sparse_index = true;
-  static constexpr bool     keys_use_sparse_index = false;
-  using size_type                                 = uint32_t;
+  static constexpr bool     use_sparse_v            = true;
+  static constexpr uint32_t pool_size_v             = 128;
+  static constexpr uint32_t self_index_pool_size_v  = 128;
+  static constexpr uint32_t keys_index_pool_size_v  = 128;
+  static constexpr bool     self_use_sparse_index_v = true;
+  static constexpr bool     keys_use_sparse_index_v = false;
+  using size_type                                   = uint32_t;
 };
 
 struct traits_6
 {
-  static constexpr bool     use_sparse            = true;
-  static constexpr uint32_t pool_size             = 128;
-  static constexpr uint32_t self_index_pool_size  = 128;
-  static constexpr uint32_t keys_index_pool_size  = 128;
-  static constexpr bool     self_use_sparse_index = false;
-  static constexpr bool     keys_use_sparse_index = true;
-  using size_type                                 = uint32_t;
+  static constexpr bool     use_sparse_v            = true;
+  static constexpr uint32_t pool_size_v             = 128;
+  static constexpr uint32_t self_index_pool_size_v  = 128;
+  static constexpr uint32_t keys_index_pool_size_v  = 128;
+  static constexpr bool     self_use_sparse_index_v = false;
+  static constexpr bool     keys_use_sparse_index_v = true;
+  using size_type                                   = uint32_t;
 };
 
 struct traits_7
 {
-  static constexpr bool     use_sparse            = true;
-  static constexpr uint32_t pool_size             = 128;
-  static constexpr uint32_t self_index_pool_size  = 128;
-  static constexpr uint32_t keys_index_pool_size  = 128;
-  static constexpr bool     self_use_sparse_index = true;
-  static constexpr bool     keys_use_sparse_index = true;
-  using size_type                                 = uint32_t;
+  static constexpr bool     use_sparse_v            = true;
+  static constexpr uint32_t pool_size_v             = 128;
+  static constexpr uint32_t self_index_pool_size_v  = 128;
+  static constexpr uint32_t keys_index_pool_size_v  = 128;
+  static constexpr bool     self_use_sparse_index_v = true;
+  static constexpr bool     keys_use_sparse_index_v = true;
+  using size_type                                   = uint32_t;
 };
 
 TEMPLATE_TEST_CASE("Validate packed_table", "[packed_table.all]", traits_1, traits_2, traits_3, traits_4, traits_5,

@@ -1,5 +1,6 @@
 #include "test_common.hpp"
 #include <acl/containers/link_container.hpp>
+#include <acl/containers/rlink_registry.hpp>
 #include <catch2/catch_all.hpp>
 #include <iostream>
 #include <string>
@@ -7,14 +8,14 @@
 
 struct link_traits_1
 {
-  static constexpr uint32_t pool_size  = 2;
-  static constexpr bool     use_sparse = false;
+  static constexpr uint32_t pool_size_v  = 2;
+  static constexpr bool     use_sparse_v = false;
 };
 
 struct link_traits_2
 {
-  static constexpr uint32_t pool_size  = 2;
-  static constexpr bool     use_sparse = true;
+  static constexpr uint32_t pool_size_v  = 2;
+  static constexpr bool     use_sparse_v = true;
 };
 
 TEST_CASE("link_container: Validate", "[link_container][void]")
@@ -165,7 +166,7 @@ TEST_CASE("rlink_registry: random test", "[rlink_registry][nontrivial]")
     [&](uint32_t index)
     {
       auto test = clink(index, string_reg.get_revision(index));
-      auto it = std::ranges::find(deleted_ones, test);
+      auto it   = std::ranges::find(deleted_ones, test);
       REQUIRE(std::ranges::find(clink_goes_my_bones, test) != clink_goes_my_bones.end());
       REQUIRE(it == deleted_ones.end());
     });
