@@ -398,15 +398,16 @@ public:
   }
 
 private:
-  template <detail::IsVoidOrRLink<link> ulink>
-  static auto* sfind(auto& cont, ulink lnk) noexcept
+  template <typename T, detail::IsVoidOrRLink<link> ulink>
+  static auto sfind(T& cont, ulink lnk) noexcept
+    -> std::conditional_t<std::is_const_v<T>, value_type const*, value_type*>
   {
     auto idx = lnk.as_index();
     if (cont.keys_.contains(idx))
     {
       if constexpr (has_backref)
       {
-        auto& val = cont.values_[keys_.get(idx)];
+        auto& val = cont.values_[cont.keys_.get(idx)];
         if (cont.self_.get(val) == lnk.value())
           return &val;
       }
@@ -414,7 +415,7 @@ private:
       {
         auto val_idx = cont.keys_.get(idx);
         if (cont.self_.get(val_idx) == lnk.value())
-          return &values_[val_idx];
+          return &cont.values_[val_idx];
       }
     }
     return {};

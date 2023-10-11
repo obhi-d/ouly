@@ -136,6 +136,12 @@ struct optional_ref
     return *value;
   }
 
+  inline constexpr type& get() const noexcept
+  {
+    ACL_ASSERT(value);
+    return *value;
+  }
+
   inline constexpr type* operator->() const noexcept
   {
     return value;
@@ -187,6 +193,11 @@ struct optional_val
   }
 
   inline constexpr vtype operator*() const noexcept
+  {
+    return value;
+  }
+
+  inline constexpr vtype get() const noexcept
   {
     return value;
   }
