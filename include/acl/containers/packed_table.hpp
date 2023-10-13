@@ -460,6 +460,11 @@ private:
     return item_at_idx(detail::index_val(keys_.get(l)));
   }
 
+  inline const_reference item_at(size_type l) const noexcept
+  {
+    return item_at_idx(detail::index_val(keys_.get(l)));
+  }
+
   inline reference item_at_idx(size_type item_id) noexcept
   {
     return values_[item_id];

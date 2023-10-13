@@ -73,6 +73,11 @@ TEST_CASE("rlink_object_table: Validate", "[rlink_object_table][nontrivial]")
   it = names.find(entity8);
   REQUIRE(it.has_value() == true);
   REQUIRE(it.get() == "Entity9");
+
+  [&](auto const& lookup) {
+    REQUIRE(lookup.at(entity8) == "Entity9");
+    REQUIRE(lookup[entity8] == "Entity9");
+  }(names);
 }
 
 TEST_CASE("rlink_object_table: fuzz", "[rlink_object_table][nontrivial]")
