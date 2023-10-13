@@ -72,6 +72,24 @@ TEST_CASE("scheduler: Construction")
   REQUIRE(instance2.sum() == 1023 * 512);
 }
 
+TEST_CASE("scheduler: Range ParallelFor")
+{
+  acl::scheduler scheduler;
+  scheduler.create_group(acl::workgroup_id(0), "default", 0, 16);
+  scheduler.create_group(acl::workgroup_id(1), "io", 16, 2);
+
+  scheduler.begin_execution();
+  std::atomic_int value;
+  for (uint32_t i = 0; i < 1024; ++i)
+    acl::parallel_for(
+      [&value](int a, int b, acl::worker_context const& wc)
+      {
+        value.fetch_add(b - a);
+      },
+      acl::integer_range(0, 2048), 1, acl::default_workgroup_id);
+  scheduler.end_execution();
+}
+
 TEST_CASE("scheduler: Simplest ParallelFor")
 {
   acl::scheduler scheduler;
