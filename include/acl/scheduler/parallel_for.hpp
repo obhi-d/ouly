@@ -14,8 +14,7 @@ namespace detail
 template <typename L, typename It>
 concept RangeExcuter = requires(L l, It range, worker_context const& wc) { l(range, range, wc); };
 template <typename I>
-concept HasSize = requires(I s) {
-  typename I::difference_type;
+concept HasIteratorDiff = requires(I s) {
   {
     s.size()
   } -> std::integral;
@@ -33,7 +32,7 @@ concept HasIteratorTraits = requires() {
 template <typename T>
 struct it_size_type;
 
-template <HasSize T>
+template <HasIteratorDiff T>
 struct it_size_type<T>
 {  
   inline static uint32_t size(T const& range) noexcept
