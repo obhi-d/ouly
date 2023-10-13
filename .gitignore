@@ -29,6 +29,9 @@ CMakeLists.txt.user
 *.a
 *.lib
 
+# PDB
+*.pdb
+
 # Executables
 *.exe
 *.out
