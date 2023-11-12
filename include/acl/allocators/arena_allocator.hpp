@@ -214,6 +214,7 @@ public:
 
   inline arena_allocator() noexcept
   {
+    ibank.strat.init(*this);
     if constexpr (!has_memory_mgr)
       add_arena(detail::k_null_sz<uhandle>, arena_size, true);
   }
