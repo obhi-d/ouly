@@ -14,18 +14,13 @@
 
 %code requires
 {
-#include "macroexpr_impl.hpp"
+#include "macroxpr_impl.hpp"
 #include <acl/dsl/macroxpr.hpp>
-
-
-#ifndef YY_NULLPTR
-#  define YY_NULLPTR nullptr
-#endif
-#define YY_DECL template <typename ReTy> ReTy macroexpr::lex(void* yyscanner)
+#define YY_DECL acl::macroxpr_parser::symbol_type macroxpr_lex(acl::macroxpr& xpr, void* yyscanner)
 
 }
 
-%define api.location.type {acl::macroxpr::location}
+%define api.location.type {acl::macroxpr::location_type}
 %param { acl::macroxpr& xpr }
 %lex-param { void* SCANNER_PARAM  }
 %locations
@@ -41,8 +36,8 @@ YY_DECL;
 
 %token END 0 "end of file"
 	
-%token IDENTIFIER
-%token NUMBER
+%token <std::string_view> IDENTIFIER
+%token <int> NUMBER
 %token DEFINED
 %token LOGICAL_AND
 %token LOGICAL_OR
@@ -58,25 +53,34 @@ YY_DECL;
 %token BITWISE_XOR
 %token MINUS
 %token NOT
+%token ADD
+%token SUB
+%token MUL
+%token DIV
+%token LBRACKET
+%token RBRACKET
+%token QUESTION
+%token COLON
 
 %start expr
+%type <int> expr term factor
 
 %%
 
-expr:    expr '+' term { $$ = $1 + $3; }
-	     | expr '-' term { $$ = $1 - $3; }
+expr:    expr ADD term { $$ = $1 + $3; }
+	     | expr SUB term { $$ = $1 - $3; }
 			 | term { $$ = $1; }
     ;
 
-term: term '*' factor { $$ = $1 * $3; }
-    | term '/' factor { $$ = $1 / $3; }
+term: term MUL factor { $$ = $1 * $3; }
+    | term DIV factor { $$ = $1 / $3; }
     | factor { $$ = $1; }
     ;
 
-factor: '(' expr ')' { $$ = $2; }
+factor: LBRACKET expr RBRACKET { $$ = $2; }
       | NUMBER { $$ = $1; }
       | IDENTIFIER { $$ = xpr.lookup($1); }
-      | expr '?' expr ':' expr { $$ = ($1) ? ($3) : ($5); }
+      | expr QUESTION expr COLON expr { $$ = ($1) ? ($3) : ($5); }
       | DEFINED IDENTIFIER { $$ = xpr.defined($2); }
       | expr LOGICAL_AND expr { $$ = $1 && $3; }
       | expr LOGICAL_OR expr { $$ = $1 || $3; }
@@ -105,13 +109,13 @@ void macroxpr_parser::error(const macroxpr_parser::location_type& loc, const std
     xpr.error(msg);
 }
 
-void macroxpr::parse(std::string_view content) noexcept
+bool macroxpr::evaluate(std::string_view content) 
 {
-	contents    = content;
-	begin_scan();
+	content_  = content;
+	cursor_   = location_type();
 	macroxpr_parser parser(*this);
 	parser.parse();
-	end_scan();	
+	return result_ != 0;
 }
 
 }
