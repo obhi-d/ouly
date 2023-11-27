@@ -48,29 +48,6 @@ if (ACL_GENERATE_SCLI_PARSER)
 		    "${ACL_SOURCE_BUILD_DIR}/acl/dsl/scli.l"
 		    "${ACL_SOURCE_BUILD_DIR}/acl/dsl/parse_impl.cpp"
     )
-
-    add_custom_command( 
-      OUTPUT 
-		    "${ACL_SOURCE_BUILD_DIR}/acl/dsl/macroxpr_impl.cpp" 
-		
-	     COMMAND ${CMAKE_COMMAND} -E echo "Generating macroxpr_impl.cpp"
-	     COMMAND ${ACL_BISON_EXE} -o "${ACL_SOURCE_BUILD_DIR}/acl/dsl/macroxpr_impl.cpp" "${ACL_SOURCE_BUILD_DIR}/acl/dsl/macroxpr.yy"
-
-	     DEPENDS 
-		    "${ACL_SOURCE_BUILD_DIR}/acl/dsl/macroxpr.yy"
-     )
-
-    add_custom_command( 
-	    OUTPUT 
-		    "${ACL_SOURCE_BUILD_DIR}/acl/dsl/macroxpr_impl_lex.cpp" 
-	
-       COMMAND ${CMAKE_COMMAND} -E echo "Generating macroxpr_impl_lex.cpp"	
-       COMMAND ${ACL_FLEX_EXE} -o "${ACL_SOURCE_BUILD_DIR}/acl/dsl/macroxpr_impl_lex.cpp" -L "${ACL_SOURCE_BUILD_DIR}/acl/dsl/macroxpr.l"
-
-	     DEPENDS 
-		    "${ACL_SOURCE_BUILD_DIR}/acl/dsl/macroxpr.l"
-		    "${ACL_SOURCE_BUILD_DIR}/acl/dsl/macroxpr_impl.cpp"
-    )
 endif()
 
 ##
@@ -80,8 +57,7 @@ message("Target name: ${ACL_TARGET_NAME}")
 
 add_library( ${ACL_TARGET_NAME} 
       
-    "${ACL_SOURCE_BUILD_DIR}/acl/dsl/macroxpr_impl_lex.cpp" 
-    "${ACL_SOURCE_BUILD_DIR}/acl/dsl/macroxpr_impl.cpp" 
+    "${ACL_SOURCE_BUILD_DIR}/acl/dsl/microexpr.cpp" 
     "${ACL_SOURCE_BUILD_DIR}/acl/dsl/lexer_impl.cpp" 
     "${ACL_SOURCE_BUILD_DIR}/acl/dsl/parse_impl.cpp" 
     "${ACL_SOURCE_BUILD_DIR}/acl/dsl/scli.cpp"

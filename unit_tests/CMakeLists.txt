@@ -87,7 +87,7 @@ add_unit_test(NAME pool_allocator FILES "pool_allocator.cpp" )
 add_unit_test(NAME linear_allocator FILES "linear_allocator.cpp" )
 add_unit_test(NAME scli_tests FILES "scli_tests.cpp")
 add_unit_test(NAME scheduler FILES "scheduler_tests.cpp")
-add_unit_test(NAME macroxpr FILES "macroxpr_tests.cpp")
+add_unit_test(NAME microexpr FILES "microexpr_tests.cpp")
 add_unit_test(NAME math_all FILES "math_common.cpp"
                                   "math_euler_angles.cpp"
                                   "math_frustum.cpp"
