@@ -23,7 +23,7 @@ otherwise it is assumed to be a text region segment.
 
 This is just text
 
--- cmds : script_name --
+-- code : script_name --
 
 this_is a command;
 
@@ -118,9 +118,9 @@ struct myCommand
   //
   void exit(scli) noexcept {}
 
-  static auto bind() noexcept
+  constexpr static auto reflect() noexcept
   {
-    return std::array{ param("myStuff", &myCommand::myStuff ), param("myEnum", &myCommand::myEnum, {"A", 0}, {"B", 1} ) };
+    return acl::bind(acl::bind<"myStuff", &myCommand::myStuff>(), acl::bind<"myEnum", &myCommand::myEnum>());
   }
 };
 

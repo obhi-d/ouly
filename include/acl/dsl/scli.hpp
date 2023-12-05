@@ -22,15 +22,32 @@ using cmd_execute = bool (*)(scli&);
 using cmd_enter   = bool (*)(scli&);
 using cmd_exit    = void (*)(scli&);
 struct param_context;
+using text_content = std::variant<std::string_view, std::string>;
 
 using inner_param_context = param_context* (*)(scli&, int param_pos, std::string_view param_name);
 
 struct cmd_state;
 
-struct param_context
+struct base_context
 {
-  virtual ~param_context() noexcept = default;
+  virtual ~base_context() noexcept = default;
+};
 
+struct region_context : base_context
+{
+  inline virtual bool enter_region(scli&, int id)
+  {
+    return true;
+  }
+
+  inline virtual bool enter_region(scli&, std::string_view id, text_content&& content)
+  {
+    return true;
+  }
+};
+
+struct param_context : base_context
+{
   inline virtual std::pair<param_context*, cmd_state*> enter_param_context(scli&, int, std::string_view,
                                                                            cmd_state* cstate)
   {
@@ -73,9 +90,6 @@ struct cmd_context : param_context
   inline virtual void add_sub_command(std::string_view name, std::unique_ptr<cmd_context> cmd) {}
 };
 
-using text_content = std::variant<std::string_view, std::string>;
-
-using region_context                      = cmd_context;
 using stack_allocator                     = linear_stack_allocator<>;
 static constexpr uint32_t scli_stack_size = 2048;
 
@@ -152,14 +166,13 @@ public:
 
   struct shared_state
   {
-    void*                                         user_ctx = nullptr;
-    context&                                      ctx;
-    std::vector<std::string>                      include_paths;
-    def_imported_string_map                       imports;
-    error_handler_lambda                          error_handler;
-    import_handler_lambda                         import_handler;
-    stack_allocator                               allocator;
-    std::unordered_map<std::string, text_content> texts;
+    void*                    user_ctx = nullptr;
+    context&                 ctx;
+    std::vector<std::string> include_paths;
+    def_imported_string_map  imports;
+    error_handler_lambda     error_handler;
+    import_handler_lambda    import_handler;
+    stack_allocator          allocator;
 
     inline shared_state(context& cctx) : ctx(cctx), allocator(scli_stack_size)
     {
@@ -354,6 +367,19 @@ concept CommandType = requires(C c) {
   {
     c.name()
   } -> std::same_as<std::string_view>;
+};
+
+template <typename Type, typename CodeEnum>
+concept RegionHandler = requires(acl::scli& s, CodeEnum codeid, std::string_view txtid, text_content&& content) {
+  typename Type::type;
+
+  {
+    Type::enter(s, codeid)
+  } -> std::same_as<bool>;
+
+  {
+    Type::enter(s, txtid, std::move(content))
+  } -> std::same_as<bool>;
 };
 
 // Subclasses
@@ -1024,6 +1050,21 @@ struct cmd_group_proxy : cmd_proxy<CmdClass, cmd_group>
   }
 };
 
+template <typename RegionEnum, detail::RegionHandler<RegionEnum> RegClass>
+struct reg_proxy : region_context
+{
+  using region_enum_t = RegionEnum;
+  bool enter_region(scli& s, int id) override
+  {
+    return RegClass::enter(s, (region_enum_t)id);
+  }
+
+  bool enter_region(scli& s, std::string_view id, text_content&& content) override
+  {
+    return RegClass::enter(s, id, std::move(content));
+  }
+};
+
 template <string_literal Name, typename Type>
 struct command
 {
@@ -1035,13 +1076,22 @@ struct command
   constexpr command() noexcept = default;
 };
 
-template <string_literal Name>
+template <typename Type>
 struct region
 {
-  inline static constexpr std::string_view name() noexcept
+  using type = Type;
+
+  inline static bool enter(scli& s, std::string_view id)
   {
-    return (std::string_view)Name;
+    return type::enter(s, id);
   }
+
+  inline static bool enter(scli& s, std::string_view id, text_content&& content)
+  {
+    return type::enter(
+      s, id, content.index() == 0 ? std::string_view(std::get<0>(content)) : std::string_view(std::get<1>(content)));
+  }
+
   constexpr region() noexcept = default;
 };
 
@@ -1049,6 +1099,9 @@ struct region
 
 template <string_literal Name, typename CmdType>
 constexpr auto cmd = detail::command<Name, CmdType>();
+
+template <typename RegType>
+constexpr auto reg = detail::region<RegType>();
 
 class scli::builder
 {
@@ -1059,6 +1112,13 @@ public:
     auto dc     = std::make_unique<detail::cmd_group>();
     current_ctx = dc.get();
     region_map.emplace(name, std::move(dc));
+    return *this;
+  }
+
+  template <detail::RegionHandler R>
+  inline scli::builder& operator*(R other) noexcept
+  {
+    region_ctx = std::make_unique<detail::reg_proxy<R>>();
     return *this;
   }
 
@@ -1093,6 +1153,7 @@ private:
   cmd_context*                                                       current_ctx;
   std::vector<cmd_context*>                                          stack;
   std::unordered_map<std::string_view, std::unique_ptr<cmd_context>> region_map;
+  std::unique_ptr<region_context>                                    region_ctx;
 };
 
 using scli_source = scli::location;

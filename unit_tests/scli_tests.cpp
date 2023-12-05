@@ -55,7 +55,7 @@ TEST_CASE("Test builder", "[scli][builder]")
   builder
 	  [ "root" ]
 	    - acl::cmd<"*", echo>
-        - acl::cmd<"hi", say_hi>
+      - acl::cmd<"hi", say_hi>
       ;
 
   // clang-format on
@@ -104,6 +104,29 @@ struct classic_cmd
     ctx.indent--;
     ctx.value += std::string(ctx.indent, ' ');
     ctx.value += "}\n";
+  }
+};
+
+struct region_handler
+{
+  static bool enter(acl::scli& s, std::string_view id)
+  {
+    auto& ctx = s.get<user_context>();
+    ctx.value += "-- code: ";
+    ctx.value += id;
+    ctx.value += "\n";
+    return true;
+  }
+
+  static bool enter(acl::scli& s, std::string_view id, std::string_view content)
+  {
+    auto& ctx = s.get<user_context>();
+    ctx.value += "-- text: ";
+    ctx.value += id;
+    ctx.value += "\n";
+    ctx.value += content;
+    ctx.value += "\n";
+    return true;
   }
 };
 
@@ -244,6 +267,51 @@ mid: or, feed
         ;
   // clang-format on
 
+  auto         ctx = builder.build();
+  user_context uc;
+  acl::scli::parse(*ctx.get(), uc, "memory", input, {},
+                   [&uc](acl::scli::location const&, std::string_view error, std::string_view context)
+                   {
+                     uc.errors++;
+                   });
+
+  REQUIRE(uc.errors == 0);
+  REQUIRE(diff(uc.value, expected_output) == false);
+}
+
+TEST_CASE("Test region entry points", "[scli][classic]")
+{
+
+  acl::scli::builder builder;
+
+  std::string_view input = R"(
+-- code : region1 --
+first command;
+-- text : region2 --
+this is a long line 
+of text that is not
+a series of cmds.
+-- code : region3 --
+second command;
+-- code : region4 --
+third command;
+-- glsl : region5 --
+glsl code
+-- hlsl : region6 --
+hsls code
+)";
+
+  std::string_view expected_output = R"(
+  )";
+
+  // clang-format off
+  builder
+  [ "root" ]
+    * acl::reg<region_handler>
+    - acl::cmd<"first", classic_cmd>
+    - acl::cmd<"second", classic_cmd>
+    - acl::cmd<"third", classic_cmd>;
+  // clang-format on
   auto         ctx = builder.build();
   user_context uc;
   acl::scli::parse(*ctx.get(), uc, "memory", input, {},

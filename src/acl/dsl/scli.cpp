@@ -9,6 +9,11 @@ class scli::context : public detail::cmd_group
 {
 public:
   friend class scli;
+
+  scli::context(std::unique_ptr<region_context> h) noexcept : region_ctx(std::move(h)) {}
+
+private:
+  std::unique_ptr<region_context> region_ctx;
 };
 
 struct classic_param_context_impl : param_context
@@ -66,7 +71,7 @@ param_context* detail::classic_param_context::get_instance()
 
 std::shared_ptr<scli::context> scli::builder::build()
 {
-  auto r         = std::make_shared<scli::context>();
+  auto r         = std::make_shared<scli::context>(std::move(region_ctx));
   r->sub_objects = std::move(region_map);
   return r;
 }
@@ -206,11 +211,14 @@ void scli::enter_region(std::string_view reg)
 {
   region_id       = reg;
   current_cmd_ctx = sstate.ctx.get_context(*this, reg);
+  if (!reg.empty() && sstate.ctx.region_ctx)
+    sstate.ctx.region_ctx->enter_region(*this, reg);
 }
 
 void scli::enter_text_region(std::string_view name, text_content&& content)
 {
-  sstate.texts.emplace(name, std::move(content));
+  if (sstate.ctx.region_ctx)
+    sstate.ctx.region_ctx->enter_region(*this, name, std::move(content));
 }
 
 void scli::import_script(text_content&& tc)
