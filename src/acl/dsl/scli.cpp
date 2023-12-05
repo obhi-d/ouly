@@ -214,14 +214,14 @@ void scli::enter_region(std::string_view reg)
 {
   current_cmd_ctx = sstate.ctx.get_context(*this, region_id);
   if (current_cmd_ctx)
-    current_cmd_ctx->enter_region(*this, reg);
+    current_cmd_ctx->enter_region(*this, region_id, reg);
 }
 
 void scli::enter_text_region(std::string_view name, text_content&& content)
 {
   current_cmd_ctx = sstate.ctx.get_context(*this, region_id);
   if (current_cmd_ctx)
-    current_cmd_ctx->enter_region(*this, name, std::move(content));
+    current_cmd_ctx->enter_region(*this, region_id, name, std::move(content));
 }
 
 void scli::import_script(text_content&& tc)

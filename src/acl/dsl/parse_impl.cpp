@@ -1188,7 +1188,6 @@ namespace acl {
 #line 101 "/home/obhi/Code/acl/src/acl/dsl/scli.yy"
 
 /*============================================================================*/
-
 namespace acl
 {
 
@@ -1207,7 +1206,8 @@ void scli::parse(std::string_view src_name, std::string_view content) noexcept
 	source_name = src_name;
 	contents    = content;
 	begin_scan();
-	enter_region("root");
+	set_current_reg_id("root");
+	enter_region("");
 	scli_parser parser(*this);
 	parser.parse();
 	end_scan();	

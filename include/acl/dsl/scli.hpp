@@ -24,6 +24,11 @@ using cmd_exit    = void (*)(scli&);
 struct param_context;
 using text_content = std::variant<std::string_view, std::string>;
 
+inline std::string_view view(text_content const& tc) 
+{
+  return tc.index() == 0 ? std::string_view(std::get<0>(tc)) : std::string_view(std::get<1>(tc));
+}
+
 using inner_param_context = param_context* (*)(scli&, int param_pos, std::string_view param_name);
 
 struct cmd_state;
@@ -62,9 +67,9 @@ struct cmd_context : param_context
     return true;
   }
 
-  inline virtual void enter_region(scli&, std::string_view id) {}
+  inline virtual void enter_region(scli&, std::string_view id, std::string_view name) {}
 
-  inline virtual void enter_region(scli&, std::string_view id, text_content&& content) {}
+  inline virtual void enter_region(scli&, std::string_view id, std::string_view name, text_content&& content) {}
 
   inline virtual bool is_text_context() const noexcept
   {
@@ -368,14 +373,14 @@ concept CommandType = requires(C c) {
 template <typename Type>
 concept CodeRegionHandler = requires(acl::scli& s) {
   {
-    Type::enter(s, std::declval<std::string_view>())
+    Type::enter(s, std::declval<std::string_view>(), std::declval<std::string_view>())
   } -> std::same_as<void>;
 };
 
 template <typename Type>
 concept TextRegionHandler = requires(acl::scli& s) {
   {
-    Type::enter(s, std::declval<std::string_view>(), std::move(std::declval<text_content>()))
+    Type::enter(s, std::declval<std::string_view>(), std::declval<std::string_view>(), std::move(std::declval<text_content>()))
   } -> std::same_as<void>;
 };
 
@@ -1055,9 +1060,9 @@ struct reg_proxy;
 template <detail::CodeRegionHandler RegClass, typename Base>
 struct reg_proxy<RegClass, Base> : Base
 {
-  void enter_region(scli& s, std::string_view id) override
+  void enter_region(scli& s, std::string_view id, std::string_view name) override
   {
-    RegClass::enter(s, id);
+    RegClass::enter(s, id, name);
   }
 
   inline virtual bool is_text_context() const noexcept override
@@ -1070,9 +1075,9 @@ template <detail::TextRegionHandler RegClass, typename Base>
 struct reg_proxy<RegClass, Base> : Base
 {
   using txt_region_t = void;
-  void enter_region(scli& s, std::string_view id, text_content&& content) override
+  void enter_region(scli& s, std::string_view id, std::string_view name, text_content&& content) override
   {
-    RegClass::enter(s, id, std::move(content));
+    RegClass::enter(s, id, name, std::move(content));
   }
 
   inline virtual bool is_text_context() const noexcept override

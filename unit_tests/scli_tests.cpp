@@ -11,7 +11,7 @@ struct user_context
 
 struct default_reg_handler
 {
-  static void enter(acl::scli&, std::string_view id) noexcept {}
+  static void enter(acl::scli&, std::string_view id, std::string_view name) noexcept {}
 };
 
 TEST_CASE("Test builder", "[scli][builder]")
@@ -263,21 +263,24 @@ mid: or, feed
 
 struct region_handler
 {
-  static void enter(acl::scli& s, std::string_view id)
+  static void enter(acl::scli& s, std::string_view id, std::string_view name)
   {
     auto& ctx = s.get<user_context>();
     ctx.value += "-- code: ";
-    ctx.value += id;
+    ctx.value += name;
     ctx.value += "\n";
   }
+};
 
-  static void enter(acl::scli& s, std::string_view id, std::string_view content)
+struct text_region_handler
+{
+  static void enter(acl::scli& s, std::string_view id, std::string_view name, acl::text_content&& content)
   {
     auto& ctx = s.get<user_context>();
     ctx.value += "-- text: ";
-    ctx.value += id;
+    ctx.value += name;
     ctx.value += "\n";
-    ctx.value += content;
+    ctx.value += acl::view(content);
     ctx.value += "\n";
   }
 };
@@ -304,8 +307,7 @@ glsl code
 hsls code
 )";
 
-  std::string_view expected_output = R"(
-  )";
+  std::string_view expected_output = "-- code: \n-- code: region1\nfirst: command\n-- text: region2\n\nthis is a long line \nof text that is not\na series of cmds.\n\n-- code: region3\nsecond: command\n-- code: region4\nthird: command\n-- text: region5\n\nglsl code\n\n-- text: region6\n\nhsls code\n\n";
 
   // clang-format off
   builder
@@ -314,9 +316,9 @@ hsls code
     - acl::cmd<"first", classic_cmd>
     - acl::cmd<"second", classic_cmd>
     - acl::cmd<"third", classic_cmd>
-  + acl::reg<"glsl", region_handler> 
-  + acl::reg<"hlsl", region_handler>
-  + acl::reg<"text", region_handler>;
+  + acl::reg<"glsl", text_region_handler> 
+  + acl::reg<"hlsl", text_region_handler>
+  + acl::reg<"text", text_region_handler>;
 
   // clang-format on
   auto         ctx = builder.build();
@@ -328,5 +330,5 @@ hsls code
                    });
 
   REQUIRE(uc.errors == 0);
-  REQUIRE(diff(uc.value, expected_output) == false);
+  REQUIRE(uc.value == expected_output);
 }

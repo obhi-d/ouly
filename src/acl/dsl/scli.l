@@ -37,9 +37,9 @@ STRCH   [a-zA-Z0-9\._@*/\\]
 ^"--"        {
 	BEGIN(STATE_REGION); 
 
-	scli.make_text(); 
+	auto content = scli.make_text(); 
 	scli.skip_len(2);
-	return acl::scli_parser::make_TEXT_CONTENTS(std::move(scli.make_text()), scli.source); 
+	return acl::scli_parser::make_TEXT_CONTENTS(std::move(content), scli.source); 
 }
 
 <<EOF>>  {
@@ -130,7 +130,6 @@ STRCH   [a-zA-Z0-9\._@*/\\]
 .	scli.put(1);
 
 }
-
 
 <STATE_SINGLE_LINE_COMMENT>{
 [^\n]+		scli.skip_len(yyleng); 

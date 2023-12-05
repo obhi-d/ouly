@@ -1039,9 +1039,9 @@ YY_RULE_SETUP
 {
 	BEGIN(STATE_REGION); 
 
-	scli.make_text(); 
+	auto content = scli.make_text(); 
 	scli.skip_len(2);
-	return acl::scli_parser::make_TEXT_CONTENTS(std::move(scli.make_text()), scli.source); 
+	return acl::scli_parser::make_TEXT_CONTENTS(std::move(content), scli.source); 
 }
 	YY_BREAK
 case YY_STATE_EOF(STATE_TEXT):
@@ -1177,6 +1177,7 @@ case 30:
 YY_RULE_SETUP
 { 				
 				auto id = scli.make_token();
+				scli.set_current_reg_id(id);
 				scli.skip_len(yyleng);
 				if (scli.is_code_region(id))
 				{
@@ -1185,8 +1186,7 @@ YY_RULE_SETUP
 				else 
 				{
 					BEGIN(STATE_REGION_TEXT);
-					scli.set_current_reg_id(id);
-			    }
+			  }
 			}
 	YY_BREAK
 
