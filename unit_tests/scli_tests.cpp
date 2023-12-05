@@ -58,7 +58,7 @@ TEST_CASE("Test builder", "[scli][builder]")
 
   // clang-format off
   builder
-	  - acl::reg<"root", default_reg_handler> 
+	  + acl::reg<"root", default_reg_handler> 
 	    - acl::cmd<"*", echo>
       - acl::cmd<"hi", say_hi>
       ;
@@ -155,7 +155,7 @@ g1: g2p1 = "20.4"
 
   // clang-format off
   builder
-	  - acl::reg<"root", default_reg_handler> 
+	  + acl::reg<"root", default_reg_handler> 
 	    - acl::cmd<"c1", classic_cmd>
         - acl::cmd<"c2", classic_cmd>
         - acl::cmd<"c3", classic_cmd>
@@ -231,7 +231,7 @@ mid: or, feed
 
   // clang-format off
   builder
-  - acl::reg<"root", default_reg_handler> 
+  + acl::reg<"root", default_reg_handler> 
   - acl::cmd<"first", classic_cmd>
   - acl::cmd<"second", classic_cmd>
   + acl::cmd<"third", classic_cmd>
@@ -309,12 +309,14 @@ hsls code
 
   // clang-format off
   builder
-  - acl::reg<"root", region_handler> 
+  + acl::reg<"root", region_handler> 
+  + acl::reg<"code", region_handler> 
     - acl::cmd<"first", classic_cmd>
     - acl::cmd<"second", classic_cmd>
     - acl::cmd<"third", classic_cmd>
-  - acl::reg<"glsl", region_handler> 
-  - acl::reg<"hlsl", region_handler>; 
+  + acl::reg<"glsl", region_handler> 
+  + acl::reg<"hlsl", region_handler>
+  + acl::reg<"text", region_handler>;
 
   // clang-format on
   auto         ctx = builder.build();

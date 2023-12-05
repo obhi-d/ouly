@@ -9,6 +9,7 @@ class scli::context : public detail::cmd_group
 {
 public:
   friend class scli;
+
 private:
 };
 
@@ -211,15 +212,14 @@ void scli::exit_param_scope()
 
 void scli::enter_region(std::string_view reg)
 {
-  region_id       = reg;
-  current_cmd_ctx = sstate.ctx.get_context(*this, reg);
+  current_cmd_ctx = sstate.ctx.get_context(*this, region_id);
   if (current_cmd_ctx)
     current_cmd_ctx->enter_region(*this, reg);
 }
 
 void scli::enter_text_region(std::string_view name, text_content&& content)
 {
-  current_cmd_ctx = sstate.ctx.get_context(*this, name);
+  current_cmd_ctx = sstate.ctx.get_context(*this, region_id);
   if (current_cmd_ctx)
     current_cmd_ctx->enter_region(*this, name, std::move(content));
 }

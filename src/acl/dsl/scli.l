@@ -99,6 +99,7 @@ STRCH   [a-zA-Z0-9\._@*/\\]
 {REGND}		scli.put(yyleng);
 {BLANK}*":"	{ 				
 				auto id = scli.make_token();
+				scli.set_current_reg_id(id);
 				scli.skip_len(yyleng);
 				if (scli.is_code_region(id))
 				{
@@ -107,8 +108,7 @@ STRCH   [a-zA-Z0-9\._@*/\\]
 				else 
 				{
 					BEGIN(STATE_REGION_TEXT);
-					scli.set_current_reg_id(id);
-			    }
+			  }
 			}
 }
 
