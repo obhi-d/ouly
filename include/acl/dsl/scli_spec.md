@@ -114,15 +114,32 @@ struct myCommand
   bool execute(scli&) noexcept 
   {}
   // called before entering a block
-  bool enter(scli) noexcept {}
+  bool enter(scli&) noexcept {}
   //
-  void exit(scli) noexcept {}
+  void exit(scli&) noexcept {}
 
   constexpr static auto reflect() noexcept
   {
     return acl::bind(acl::bind<"myStuff", &myCommand::myStuff>(), acl::bind<"myEnum", &myCommand::myEnum>());
   }
 };
+
+struct myRegionHandler
+{
+  enum region_id_t
+  {
+    code_reg
+  };
+  // called when entering a region
+  bool enter(scli&, region_id_t t) noexcept {}
+};
+
+struct myTextHandler
+{  
+  // called when entering a region
+  bool enter(scli&, std::string_view name, text_content&&) noexcept {}
+};
+
 
  ```
 
@@ -131,8 +148,8 @@ struct myCommand
  ```c++
 
  scli::builder registry;
- registry.
-   region("my-region")
+ registry
+   [acl::reg<"root", myRegionHandler>]
      - acl::cmd<"my-command", myCommand>
      - acl::cmd<"my-command2", myCommand2>
      + acl::cmd<"my-command-block", myCommandBlock>

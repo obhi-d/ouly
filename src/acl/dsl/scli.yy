@@ -118,9 +118,8 @@ void scli::parse(std::string_view src_name, std::string_view content) noexcept
 {
 	source_name = src_name;
 	contents    = content;
-	enter_region("");
 	begin_scan();
-	init_root_context();
+	enter_region("root");
 	scli_parser parser(*this);
 	parser.parse();
 	end_scan();	

@@ -100,7 +100,7 @@ STRCH   [a-zA-Z0-9\._@*/\\]
 {BLANK}*":"	{ 				
 				auto id = scli.make_token();
 				scli.skip_len(yyleng);
-				if (id == "code")
+				if (scli.is_code_region(id))
 				{
 					BEGIN(STATE_REGION_CODE); 
 				}

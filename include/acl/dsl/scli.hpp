@@ -33,19 +33,6 @@ struct base_context
   virtual ~base_context() noexcept = default;
 };
 
-struct region_context : base_context
-{
-  inline virtual bool enter_region(scli&, int id)
-  {
-    return true;
-  }
-
-  inline virtual bool enter_region(scli&, std::string_view id, text_content&& content)
-  {
-    return true;
-  }
-};
-
 struct param_context : base_context
 {
   inline virtual std::pair<param_context*, cmd_state*> enter_param_context(scli&, int, std::string_view,
@@ -74,6 +61,19 @@ struct cmd_context : param_context
   {
     return true;
   }
+  
+  inline virtual void enter_region(scli&, std::string_view id)
+  {
+  }
+
+  inline virtual void enter_region(scli&, std::string_view id, text_content&& content)
+  {
+  }
+
+  inline virtual bool is_text_context() const noexcept 
+  {
+    return false;
+  }
 
   inline virtual bool enter(scli&, cmd_state*)
   {
@@ -82,7 +82,7 @@ struct cmd_context : param_context
 
   inline virtual void exit(scli&, cmd_state*) {}
 
-  inline virtual cmd_context* get_context(scli&, std::string_view cmd_name)
+  inline virtual cmd_context* get_context(scli const&, std::string_view cmd_name)
   {
     return nullptr;
   }
@@ -253,8 +253,7 @@ public:
   void enter_text_region(std::string_view, text_content&&);
   void import_script(text_content&&);
   void destroy_comamnd_state();
-  void init_root_context();
-
+  
   static std::string_view default_import_handler(shared_state&, std::string_view) noexcept;
 
   /**
@@ -271,10 +270,12 @@ public:
   text_content            make_text() noexcept;
   void                    set_current_reg_id(std::string_view name) noexcept;
   void                    error(scli::location const&, std::string_view error, std::string_view context);
+  bool                    is_code_region(std::string_view) const noexcept;
   std::string_view        get_file_name() const noexcept
   {
     return source_name;
   }
+  
 
   void* get_scanner() const noexcept
   {
@@ -369,19 +370,23 @@ concept CommandType = requires(C c) {
   } -> std::same_as<std::string_view>;
 };
 
-template <typename Type, typename CodeEnum>
-concept RegionHandler = requires(acl::scli& s, CodeEnum codeid, std::string_view txtid, text_content&& content) {
-  typename Type::type;
-
+template <typename Type>
+concept CodeRegionHandler = requires(acl::scli& s) 
+{
   {
-    Type::enter(s, codeid)
-  } -> std::same_as<bool>;
-
-  {
-    Type::enter(s, txtid, std::move(content))
-  } -> std::same_as<bool>;
+    Type::enter(s, std::declval<std::string_view>())
+  } -> std::same_as<void>;
 };
 
+template <typename Type>
+concept TextRegionHandler = requires(acl::scli& s) 
+{
+  {
+    Type::enter(s, std::declval<std::string_view>(), std::move(std::declval<text_content>()))
+  } -> std::same_as<void>;
+};
+
+template <typename Type> concept RegionHandler = CodeRegionHandler<Type> || TextRegionHandler<Type>;
 // Subclasses
 struct classic_param_context
 {
@@ -922,7 +927,7 @@ struct cmd_group : cmd_context
       sub_objects[name] = std::move(cmd);
   }
 
-  cmd_context* get_context(scli&, std::string_view cmd_name) override
+  cmd_context* get_context(scli const&, std::string_view cmd_name) override
   {
     auto it = sub_objects.find(cmd_name);
     if (it != sub_objects.end())
@@ -1050,18 +1055,35 @@ struct cmd_group_proxy : cmd_proxy<CmdClass, cmd_group>
   }
 };
 
-template <typename RegionEnum, detail::RegionHandler<RegionEnum> RegClass>
-struct reg_proxy : region_context
+template <typename T>
+struct reg_proxy;
+
+template <detail::CodeRegionHandler RegClass>
+struct reg_proxy<RegClass> : cmd_context
 {
-  using region_enum_t = RegionEnum;
-  bool enter_region(scli& s, int id) override
+  void enter_region(scli& s, std::string_view id) override
   {
-    return RegClass::enter(s, (region_enum_t)id);
+    RegClass::enter(s, id);
   }
 
-  bool enter_region(scli& s, std::string_view id, text_content&& content) override
+  inline virtual bool is_text_context() const noexcept override
   {
-    return RegClass::enter(s, id, std::move(content));
+    return false;
+  }
+};
+
+template <detail::TextRegionHandler RegClass>
+struct reg_proxy<RegClass> : cmd_context
+{
+  using txt_region_t = void;
+  void enter_region(scli& s, std::string_view id, text_content&& content) override
+  {
+    RegClass::enter(s, id, std::move(content));
+  }
+
+  inline virtual bool is_text_context() const noexcept override
+  {
+    return true;
   }
 };
 
@@ -1076,22 +1098,22 @@ struct command
   constexpr command() noexcept = default;
 };
 
-template <typename Type>
+template <typename C>
+concept RegionType = requires(C c) {
+  typename C::region_handler_type;
+  {
+    c.name()
+  } -> std::same_as<std::string_view>;
+};
+
+template <string_literal Name, RegionHandler Type>
 struct region
 {
-  using type = Type;
-
-  inline static bool enter(scli& s, std::string_view id)
+  using region_handler_type = Type;
+  inline static constexpr std::string_view name() noexcept
   {
-    return type::enter(s, id);
+    return (std::string_view)Name;
   }
-
-  inline static bool enter(scli& s, std::string_view id, text_content&& content)
-  {
-    return type::enter(
-      s, id, content.index() == 0 ? std::string_view(std::get<0>(content)) : std::string_view(std::get<1>(content)));
-  }
-
   constexpr region() noexcept = default;
 };
 
@@ -1100,25 +1122,20 @@ struct region
 template <string_literal Name, typename CmdType>
 constexpr auto cmd = detail::command<Name, CmdType>();
 
-template <typename RegType>
-constexpr auto reg = detail::region<RegType>();
+template <string_literal Name, typename RegType>
+constexpr auto reg = detail::region<Name, RegType>();
 
 class scli::builder
 {
 public:
-  inline scli::builder& operator[](std::string_view name) noexcept
+  
+  template <detail::RegionType R>
+  inline scli::builder& operator-(R other) noexcept
   {
     stack.clear();
-    auto dc     = std::make_unique<detail::cmd_group>();
+    auto dc     = std::make_unique<detail::reg_proxy<typename R::region_handler_type>>();
     current_ctx = dc.get();
-    region_map.emplace(name, std::move(dc));
-    return *this;
-  }
-
-  template <detail::RegionHandler R>
-  inline scli::builder& operator*(R other) noexcept
-  {
-    region_ctx = std::make_unique<detail::reg_proxy<R>>();
+    region_map.emplace(other.name(), std::move(dc));
     return *this;
   }
 
@@ -1153,7 +1170,6 @@ private:
   cmd_context*                                                       current_ctx;
   std::vector<cmd_context*>                                          stack;
   std::unordered_map<std::string_view, std::unique_ptr<cmd_context>> region_map;
-  std::unique_ptr<region_context>                                    region_ctx;
 };
 
 using scli_source = scli::location;

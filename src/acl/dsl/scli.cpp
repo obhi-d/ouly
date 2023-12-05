@@ -9,11 +9,7 @@ class scli::context : public detail::cmd_group
 {
 public:
   friend class scli;
-
-  scli::context(std::unique_ptr<region_context> h) noexcept : region_ctx(std::move(h)) {}
-
 private:
-  std::unique_ptr<region_context> region_ctx;
 };
 
 struct classic_param_context_impl : param_context
@@ -71,9 +67,15 @@ param_context* detail::classic_param_context::get_instance()
 
 std::shared_ptr<scli::context> scli::builder::build()
 {
-  auto r         = std::make_shared<scli::context>(std::move(region_ctx));
+  auto r         = std::make_shared<scli::context>();
   r->sub_objects = std::move(region_map);
   return r;
+}
+
+bool scli::is_code_region(std::string_view reg) const noexcept
+{
+  auto ctx = sstate.ctx.get_context(*this, reg);
+  return ctx && !ctx->is_text_context();
 }
 
 void scli::set_next_command(std::string_view name) noexcept
@@ -211,14 +213,15 @@ void scli::enter_region(std::string_view reg)
 {
   region_id       = reg;
   current_cmd_ctx = sstate.ctx.get_context(*this, reg);
-  if (!reg.empty() && sstate.ctx.region_ctx)
-    sstate.ctx.region_ctx->enter_region(*this, reg);
+  if (current_cmd_ctx)
+    current_cmd_ctx->enter_region(*this, reg);
 }
 
 void scli::enter_text_region(std::string_view name, text_content&& content)
 {
-  if (sstate.ctx.region_ctx)
-    sstate.ctx.region_ctx->enter_region(*this, name, std::move(content));
+  current_cmd_ctx = sstate.ctx.get_context(*this, name);
+  if (current_cmd_ctx)
+    current_cmd_ctx->enter_region(*this, name, std::move(content));
 }
 
 void scli::import_script(text_content&& tc)
@@ -346,11 +349,6 @@ std::string_view scli::default_import_handler(shared_state& sstate, std::string_
 
   auto r = sstate.imports.emplace(file, std::move(buffer));
   return r.first->second;
-}
-
-void scli::init_root_context()
-{
-  enter_region("root");
 }
 
 } // namespace acl

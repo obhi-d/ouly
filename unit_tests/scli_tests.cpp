@@ -9,6 +9,11 @@ struct user_context
   int         errors = 0;
 };
 
+struct default_reg_handler
+{
+  static void enter(acl::scli&, std::string_view id) noexcept {}
+};
+
 TEST_CASE("Test builder", "[scli][builder]")
 {
   struct echo
@@ -53,7 +58,7 @@ TEST_CASE("Test builder", "[scli][builder]")
 
   // clang-format off
   builder
-	  [ "root" ]
+	  - acl::reg<"root", default_reg_handler> 
 	    - acl::cmd<"*", echo>
       - acl::cmd<"hi", say_hi>
       ;
@@ -107,29 +112,6 @@ struct classic_cmd
   }
 };
 
-struct region_handler
-{
-  static bool enter(acl::scli& s, std::string_view id)
-  {
-    auto& ctx = s.get<user_context>();
-    ctx.value += "-- code: ";
-    ctx.value += id;
-    ctx.value += "\n";
-    return true;
-  }
-
-  static bool enter(acl::scli& s, std::string_view id, std::string_view content)
-  {
-    auto& ctx = s.get<user_context>();
-    ctx.value += "-- text: ";
-    ctx.value += id;
-    ctx.value += "\n";
-    ctx.value += content;
-    ctx.value += "\n";
-    return true;
-  }
-};
-
 std::string_view trim(std::string_view str, std::string_view whitespace = " \t\n\r")
 {
   const auto str_begin = str.find_first_not_of(whitespace);
@@ -173,7 +155,7 @@ g1: g2p1 = "20.4"
 
   // clang-format off
   builder
-	  [ "root" ]
+	  - acl::reg<"root", default_reg_handler> 
 	    - acl::cmd<"c1", classic_cmd>
         - acl::cmd<"c2", classic_cmd>
         - acl::cmd<"c3", classic_cmd>
@@ -249,7 +231,7 @@ mid: or, feed
 
   // clang-format off
   builder
-  [ "root" ]
+  - acl::reg<"root", default_reg_handler> 
   - acl::cmd<"first", classic_cmd>
   - acl::cmd<"second", classic_cmd>
   + acl::cmd<"third", classic_cmd>
@@ -279,6 +261,27 @@ mid: or, feed
   REQUIRE(diff(uc.value, expected_output) == false);
 }
 
+struct region_handler
+{
+  static void enter(acl::scli& s, std::string_view id)
+  {
+    auto& ctx = s.get<user_context>();
+    ctx.value += "-- code: ";
+    ctx.value += id;
+    ctx.value += "\n";
+  }
+
+  static void enter(acl::scli& s, std::string_view id, std::string_view content)
+  {
+    auto& ctx = s.get<user_context>();
+    ctx.value += "-- text: ";
+    ctx.value += id;
+    ctx.value += "\n";
+    ctx.value += content;
+    ctx.value += "\n";
+  }
+};
+
 TEST_CASE("Test region entry points", "[scli][classic]")
 {
 
@@ -306,11 +309,13 @@ hsls code
 
   // clang-format off
   builder
-  [ "root" ]
-    * acl::reg<region_handler>
+  - acl::reg<"root", region_handler> 
     - acl::cmd<"first", classic_cmd>
     - acl::cmd<"second", classic_cmd>
-    - acl::cmd<"third", classic_cmd>;
+    - acl::cmd<"third", classic_cmd>
+  - acl::reg<"glsl", region_handler> 
+  - acl::reg<"hlsl", region_handler>; 
+
   // clang-format on
   auto         ctx = builder.build();
   user_context uc;
