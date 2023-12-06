@@ -61,7 +61,7 @@ TEST_CASE("Test builder", "[scli][builder]")
 	  + acl::reg<"root", default_reg_handler> 
 	    - acl::cmd<"*", echo>
       - acl::cmd<"hi", say_hi>
-      ;
+      - acl::endl;
 
   // clang-format on
   auto         ctx = builder.build();
@@ -157,17 +157,18 @@ g1: g2p1 = "20.4"
   builder
 	  + acl::reg<"root", default_reg_handler> 
 	    - acl::cmd<"c1", classic_cmd>
-        - acl::cmd<"c2", classic_cmd>
-        - acl::cmd<"c3", classic_cmd>
-        + acl::cmd<"g1", classic_cmd>
-            - acl::cmd<"c2.1", classic_cmd>
-            - acl::cmd<"c2.2", classic_cmd>
-            - acl::cmd<"c2.3", classic_cmd>
-            - acl::endl
-        + acl::cmd<"g2", classic_cmd>
-            - acl::cmd<"c3.1", classic_cmd>
-            - acl::cmd<"c3.2", classic_cmd>
-            - acl::endl;
+      - acl::cmd<"c2", classic_cmd>
+      - acl::cmd<"c3", classic_cmd>
+      + acl::cmd<"g1", classic_cmd>
+          - acl::cmd<"c2.1", classic_cmd>
+          - acl::cmd<"c2.2", classic_cmd>
+          - acl::cmd<"c2.3", classic_cmd>
+          - acl::endl
+      + acl::cmd<"g2", classic_cmd>
+          - acl::cmd<"c3.1", classic_cmd>
+          - acl::cmd<"c3.2", classic_cmd>
+          - acl::endl
+      - acl::endl;
       ;
   // clang-format on
 
@@ -232,20 +233,21 @@ mid: or, feed
   // clang-format off
   builder
   + acl::reg<"root", default_reg_handler> 
-  - acl::cmd<"first", classic_cmd>
-  - acl::cmd<"second", classic_cmd>
-  + acl::cmd<"third", classic_cmd>
+    - acl::cmd<"first", classic_cmd>
+    - acl::cmd<"second", classic_cmd>
+    + acl::cmd<"third", classic_cmd>
       + acl::cmd<"sky-wrath", classic_cmd>
-          - acl::cmd<"ursa", classic_cmd>
-          - acl::cmd<"bara", classic_cmd>
-          + acl::cmd<"into", classic_cmd>
-              - acl::cmd<"found", classic_cmd>
-              - acl::endl
-          - acl::cmd<"eventually", classic_cmd>
+        - acl::cmd<"ursa", classic_cmd>
+        - acl::cmd<"bara", classic_cmd>
+        + acl::cmd<"into", classic_cmd>
+          - acl::cmd<"found", classic_cmd>
           - acl::endl
+        - acl::cmd<"eventually", classic_cmd>
+        - acl::endl
       - acl::cmd<"we", classic_cmd>
       - acl::endl
-  - acl::cmd<"mid", classic_cmd>
+    - acl::cmd<"mid", classic_cmd>
+    - acl::endl
         ;
   // clang-format on
 
@@ -307,19 +309,24 @@ glsl code
 hsls code
 )";
 
-  std::string_view expected_output = "-- code: \n-- code: region1\nfirst: command\n-- text: region2\n\nthis is a long line \nof text that is not\na series of cmds.\n\n-- code: region3\nsecond: command\n-- code: region4\nthird: command\n-- text: region5\n\nglsl code\n\n-- text: region6\n\nhsls code\n\n";
+  std::string_view expected_output =
+    "-- code: \n-- code: region1\nfirst: command\n-- text: region2\n\nthis is a long line \nof text that is not\na "
+    "series of cmds.\n\n-- code: region3\nsecond: command\n-- code: region4\nthird: command\n-- text: region5\n\nglsl "
+    "code\n\n-- text: region6\n\nhsls code\n\n";
 
   // clang-format off
   builder
   + acl::reg<"root", region_handler> 
+    - acl::endl
   + acl::reg<"code", region_handler> 
     - acl::cmd<"first", classic_cmd>
     - acl::cmd<"second", classic_cmd>
     - acl::cmd<"third", classic_cmd>
+    - acl::endl
   + acl::reg<"glsl", text_region_handler> 
-  + acl::reg<"hlsl", text_region_handler>
-  + acl::reg<"text", text_region_handler>;
-
+    - acl::endl
+  - acl::alias<"hlsl", "glsl">
+  - acl::alias<"text", "glsl">;
   // clang-format on
   auto         ctx = builder.build();
   user_context uc;
@@ -331,4 +338,87 @@ hsls code
 
   REQUIRE(uc.errors == 0);
   REQUIRE(uc.value == expected_output);
+}
+
+TEST_CASE("Test alias", "[scli][classic]")
+{
+
+  acl::scli::builder builder;
+
+  std::string_view input = R"(
+-- code : region1 --
+first 1
+{
+  sec 2;
+}
+third 3
+{
+  fourth 4;
+}
+)";
+
+  std::string_view expected_output = R"(-- code: 
+-- code: region1
+first: 1
+{
+ sec: 2
+}
+third: 3
+{
+ fourth: 4
+}
+)";
+
+  // clang-format off
+  builder
+  + acl::reg<"root", region_handler> 
+    - acl::endl
+  + acl::reg<"code", region_handler> 
+    + acl::cmd<"first", classic_cmd>
+      - acl::cmd<"sec", classic_cmd>
+      - acl::endl
+    + acl::cmd<"third", classic_cmd>
+      - acl::alias<"fourth", "code.first.sec">
+      - acl::endl
+    - acl::endl;
+  // clang-format on
+
+  auto         ctx = builder.build();
+  user_context uc;
+  acl::scli::parse(*ctx.get(), uc, "memory", input, {},
+                   [&uc](acl::scli::location const&, std::string_view error, std::string_view context)
+                   {
+                     uc.errors++;
+                   });
+
+  REQUIRE(uc.errors == 0);
+  REQUIRE(uc.value == expected_output);
+}
+
+TEST_CASE("Cover empty API", "[scli][classic]")
+{
+  acl::scli::builder builder;
+  auto               ctx = builder.build();
+  user_context       uc;
+  acl::scli::parse(
+    *ctx.get(), uc, "memory", "", {},
+    [&uc](acl::scli::location const&, std::string_view error, std::string_view context)
+    {
+      uc.errors++;
+    },
+    {},
+    [](acl::scli& scli)
+    {
+      acl::cmd_context cmd_ctx;
+      cmd_ctx.construct(scli);
+      cmd_ctx.destroy(scli, nullptr);
+      cmd_ctx.execute(scli, nullptr);
+      cmd_ctx.enter_region(scli, "", "");
+      cmd_ctx.enter_region(scli, "", "", std::string_view());
+      REQUIRE(cmd_ctx.is_text_context() == false);
+      cmd_ctx.enter(scli, nullptr);
+      cmd_ctx.exit(scli, nullptr);
+      cmd_ctx.add_sub_command("", nullptr);
+      REQUIRE(cmd_ctx.get_sub_command("") == nullptr);
+    });
 }

@@ -24,7 +24,7 @@ using cmd_exit    = void (*)(scli&);
 struct param_context;
 using text_content = std::variant<std::string_view, std::string>;
 
-inline std::string_view view(text_content const& tc) 
+inline std::string_view view(text_content const& tc)
 {
   return tc.index() == 0 ? std::string_view(std::get<0>(tc)) : std::string_view(std::get<1>(tc));
 }
@@ -33,7 +33,7 @@ using inner_param_context = param_context* (*)(scli&, int param_pos, std::string
 
 struct cmd_state;
 
-struct base_context
+struct base_context : public std::enable_shared_from_this<base_context>
 {
   virtual ~base_context() noexcept = default;
 };
@@ -88,7 +88,11 @@ struct cmd_context : param_context
     return nullptr;
   }
 
-  inline virtual void add_sub_command(std::string_view name, std::unique_ptr<cmd_context> cmd) {}
+  inline virtual void         add_sub_command(std::string_view name, std::shared_ptr<cmd_context> cmd) {}
+  inline virtual cmd_context* get_sub_command(std::string_view name)
+  {
+    return nullptr;
+  }
 };
 
 using stack_allocator                     = linear_stack_allocator<>;
@@ -189,10 +193,10 @@ public:
   /**
    * @par API
    */
-  template <typename UserContext>
+  template <typename UserContext, typename L = std::false_type>
   inline static void parse(context& c, UserContext& uc, std::string_view src_name, std::string_view content,
                            std::vector<std::string> include_paths = {}, error_handler_lambda ehl = {},
-                           import_handler_lambda ihl = {}) noexcept
+                           import_handler_lambda ihl = {}, L&& pre_parse_cbk = {}) noexcept
   {
     shared_state ss(c);
     ss.user_ctx = &uc;
@@ -201,7 +205,10 @@ public:
     if (ihl)
       ss.import_handler = ihl;
     ss.include_paths = std::move(include_paths);
-    scli(ss).parse(src_name, content);
+    auto scli_inst   = scli(ss);
+    if constexpr (!std::is_same_v<L, std::false_type>)
+      pre_parse_cbk(scli_inst);
+    scli_inst.parse(src_name, content);
   }
 
   template <typename UserContext>
@@ -380,7 +387,8 @@ concept CodeRegionHandler = requires(acl::scli& s) {
 template <typename Type>
 concept TextRegionHandler = requires(acl::scli& s) {
   {
-    Type::enter(s, std::declval<std::string_view>(), std::declval<std::string_view>(), std::move(std::declval<text_content>()))
+    Type::enter(s, std::declval<std::string_view>(), std::declval<std::string_view>(),
+                std::move(std::declval<text_content>()))
   } -> std::same_as<void>;
 };
 
@@ -918,12 +926,22 @@ inline param_context* param_context_impl<Class>::get_instance()
 
 struct cmd_group : cmd_context
 {
-  void add_sub_command(std::string_view name, std::unique_ptr<cmd_context> cmd) override
+  void add_sub_command(std::string_view name, std::shared_ptr<cmd_context> cmd) override
   {
     if (name == "*")
       default_executer = std::move(cmd);
     else
+
       sub_objects[name] = std::move(cmd);
+  }
+  inline cmd_context* get_sub_command(std::string_view name) override
+  {
+    if (name == "*")
+      return default_executer.get();
+    auto it = sub_objects.find(name);
+    if (it != sub_objects.end())
+      return it->second.get();
+    return nullptr;
   }
 
   cmd_context* get_context(scli const&, std::string_view cmd_name) override
@@ -934,8 +952,8 @@ struct cmd_group : cmd_context
     return default_executer.get();
   }
 
-  std::unique_ptr<cmd_context>                                       default_executer;
-  std::unordered_map<std::string_view, std::unique_ptr<cmd_context>> sub_objects;
+  std::shared_ptr<cmd_context>                                       default_executer;
+  std::unordered_map<std::string_view, std::shared_ptr<cmd_context>> sub_objects;
 };
 
 template <typename CmdClass>
@@ -1105,6 +1123,20 @@ concept RegionType = requires(C c) {
   } -> std::same_as<std::string_view>;
 };
 
+template <typename C>
+concept CommandOrRegionType = CommandType<C> || RegionType<C>;
+
+template <typename C>
+concept AliasType = requires(C c) {
+  typename C::is_alias;
+  {
+    c.name()
+  } -> std::same_as<std::string_view>;
+  {
+    c.source()
+  } -> std::same_as<std::string_view>;
+};
+
 template <string_literal Name, RegionHandler Type>
 struct region
 {
@@ -1116,6 +1148,22 @@ struct region
   constexpr region() noexcept = default;
 };
 
+template <string_literal Name, string_literal Source>
+struct alias
+{
+  using is_alias = void;
+  inline static constexpr std::string_view name() noexcept
+  {
+    return (std::string_view)Name;
+  }
+  inline static constexpr std::string_view source() noexcept
+  {
+    return (std::string_view)Source;
+  }
+
+  constexpr alias() noexcept = default;
+};
+
 } // namespace detail
 
 template <string_literal Name, typename CmdType>
@@ -1124,31 +1172,62 @@ constexpr auto cmd = detail::command<Name, CmdType>();
 template <string_literal Name, typename RegType>
 constexpr auto reg = detail::region<Name, RegType>();
 
+template <string_literal Name, string_literal Source>
+constexpr auto alias = detail::alias<Name, Source>();
+
 class scli::builder
 {
 public:
-  template <detail::RegionType R>
-  inline scli::builder& operator+(R other) noexcept
+  scli::builder() noexcept
   {
-    stack.clear();
-    auto dc     = std::make_unique<detail::reg_proxy<typename R::region_handler_type, detail::cmd_group>>();
-    current_ctx = dc.get();
-    region_map.emplace(other.name(), std::move(dc));
+    stack.push_back(&region_map);
+    current_ctx = &region_map;
+  }
+
+  template <detail::AliasType C>
+  scli::builder& operator-(C other) noexcept
+  {
+    std::string_view src   = other.source();
+    cmd_context*     start = &region_map;
+    while (!src.empty() && start)
+    {
+      auto id  = src;
+      auto pos = src.find_first_of('.');
+      if (pos != src.npos)
+      {
+        id  = src.substr(0, pos);
+        src = src.substr(pos + 1);
+      }
+      else
+        src = {};
+
+      start = start->get_sub_command(id);
+    }
+    if (start && current_ctx)
+      current_ctx->add_sub_command(other.name(), std::static_pointer_cast<cmd_context>(start->shared_from_this()));
     return *this;
   }
 
   template <detail::CommandType C>
   scli::builder& operator-(C other) noexcept
   {
-    current_ctx->add_sub_command(other.name(), std::make_unique<detail::cmd_proxy<typename C::command_type>>());
+    current_ctx->add_sub_command(other.name(), std::make_shared<detail::cmd_proxy<typename C::command_type>>());
     return *this;
   }
 
-  template <detail::CommandType C>
+  template <detail::CommandOrRegionType C>
   scli::builder& operator+(C other) noexcept
   {
-    auto proxy = std::make_unique<detail::cmd_group_proxy<typename C::command_type>>();
-    auto cmd   = proxy.get();
+    std::shared_ptr<cmd_context> proxy;
+    if constexpr (detail::CommandType<C>)
+    {
+      proxy = std::make_shared<detail::cmd_group_proxy<typename C::command_type>>();
+    }
+    else
+    {
+      proxy = std::make_shared<detail::reg_proxy<typename C::region_handler_type, detail::cmd_group>>();
+    }
+    auto cmd = proxy.get();
     current_ctx->add_sub_command(other.name(), std::move(proxy));
     stack.emplace_back(current_ctx);
     current_ctx = cmd;
@@ -1165,9 +1244,9 @@ public:
   std::shared_ptr<scli::context> build();
 
 private:
-  cmd_context*                                                       current_ctx;
-  std::vector<cmd_context*>                                          stack;
-  std::unordered_map<std::string_view, std::unique_ptr<cmd_context>> region_map;
+  cmd_context*              current_ctx;
+  std::vector<cmd_context*> stack;
+  detail::cmd_group         region_map;
 };
 
 using scli_source = scli::location;

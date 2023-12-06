@@ -69,7 +69,7 @@ param_context* detail::classic_param_context::get_instance()
 std::shared_ptr<scli::context> scli::builder::build()
 {
   auto r         = std::make_shared<scli::context>();
-  r->sub_objects = std::move(region_map);
+  r->sub_objects = std::move(region_map.sub_objects);
   return r;
 }
 
