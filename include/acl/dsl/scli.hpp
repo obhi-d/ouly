@@ -1234,6 +1234,16 @@ public:
     return *this;
   }
 
+  template <detail::RegionType C>
+  scli::builder& operator-(C other) noexcept
+  {
+    std::shared_ptr<cmd_context> proxy;
+    proxy    = std::make_shared<detail::reg_proxy<typename C::region_handler_type, detail::cmd_group>>();
+    auto cmd = proxy.get();
+    current_ctx->add_sub_command(other.name(), std::move(proxy));
+    return *this;
+  }
+
   inline scli::builder& operator-(acl::endl_type) noexcept
   {
     current_ctx = stack.back();

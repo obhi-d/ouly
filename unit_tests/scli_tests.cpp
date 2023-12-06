@@ -323,8 +323,7 @@ hsls code
     - acl::cmd<"second", classic_cmd>
     - acl::cmd<"third", classic_cmd>
     - acl::endl
-  + acl::reg<"glsl", text_region_handler> 
-    - acl::endl
+  - acl::reg<"glsl", text_region_handler> 
   - acl::alias<"hlsl", "glsl">
   - acl::alias<"text", "glsl">;
   // clang-format on
