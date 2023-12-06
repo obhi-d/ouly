@@ -1178,7 +1178,7 @@ constexpr auto alias = detail::alias<Name, Source>();
 class scli::builder
 {
 public:
-  scli::builder() noexcept
+  builder() noexcept
   {
     stack.push_back(&region_map);
     current_ctx = &region_map;
