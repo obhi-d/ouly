@@ -47,6 +47,16 @@ bool default_parameter::as_bool(bool default_value) const noexcept
   return default_value;
 }
 
+std::string_view default_parameter::as_sv(std::string_view default_value) const noexcept
+{
+  return default_value;
+}
+
+std::string default_parameter::as_string(std::string_view default_value) const noexcept
+{
+  return std::string(default_value);
+}
+
 parameter const* default_parameter::at(uint32_t i) const noexcept
 {
   return this;
@@ -90,6 +100,16 @@ bool parameter_value::as_bool(bool default_value) const noexcept
     return false;
   else
     return default_value;
+}
+
+std::string_view parameter_value::as_sv(std::string_view default_value) const noexcept
+{
+  return param_value;
+}
+
+std::string parameter_value::as_string(std::string_view default_value) const noexcept
+{
+  return param_value;
 }
 
 parameter const* parameter_value::at(uint32_t i) const noexcept
@@ -160,12 +180,19 @@ parameter const* parameter_list::find(std::string_view name) const noexcept
   return default_parameter::get_instance();
 }
 
-std::string parameter_list::to_string() const noexcept
+std::string_view parameter_list::as_sv(std::string_view default_value) const noexcept
 {
-  return to_string(true);
+  return default_value;
 }
 
-std::string parameter_list::to_string(bool wt) const noexcept
+std::string parameter_list::as_string(std::string_view default_value) const noexcept
+{
+  std::string value;
+  to_string(value, false);
+  return value;
+}
+
+std::string parameter_list::to_string() const noexcept
 {
   std::string value;
   if (!name().empty())
@@ -174,6 +201,12 @@ std::string parameter_list::to_string(bool wt) const noexcept
     value += " = ";
   }
 
+  to_string(value, true);
+  return value;
+}
+
+void parameter_list::to_string(std::string& value, bool wt) const noexcept
+{
   if (wt)
     value += "[ ";
   bool first = true;
@@ -186,12 +219,13 @@ std::string parameter_list::to_string(bool wt) const noexcept
   }
   if (wt)
     value += " ]";
-  return value;
 }
 
 std::string parameter_main::to_string() const noexcept
 {
-  return parameter_list::to_string(false);
+  std::string value;
+  parameter_list::to_string(value, false);
+  return value;
 }
 
 } // namespace acl

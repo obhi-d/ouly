@@ -90,6 +90,7 @@ parameter_value : '"' .* '"' | ([a-zA-Z0-9\._@*/\\]|'-')* | '[' parameters ']'
  Interperter works by utilizing a command registry. A command registry consists of command definition class metadata.
  A command definition is done using a custom class.
 
+ 
  ```c++
 
  
@@ -143,18 +144,41 @@ struct myTextHandler
 
  ```
 
+ Members within the custom class, when reflected, will always be filled by the current position of the parameter if the parameter within the command line is not named.
+ For example if your command context looks like this:
+ ```c++
+ struct command
+ {
+   int number;
+   bool execute(scli&) noexcept 
+   {}
+
+   constexpr static auto reflect() noexcept
+   { 
+     return acl::bind(acl::bind<"number", &myCommand::number>());
+   }
+ }
+ ```
+
+ `number` here will be automatically assigned 100, when you call the command like so:
+
+ ```
+  command 100;
+ ```
+
  ### Building Registry
 
  ```c++
 
  scli::builder registry;
  registry
-   [acl::reg<"root", myRegionHandler>]
+   + acl::reg<"root", myRegionHandler>
      - acl::cmd<"my-command", myCommand>
      - acl::cmd<"my-command2", myCommand2>
      + acl::cmd<"my-command-block", myCommandBlock>
        - acl::cmd<"my-command", myCommand>
        - acl::endl
      - ...
+     - acl::endl
  ```
 

@@ -421,3 +421,215 @@ TEST_CASE("Cover empty API", "[scli][classic]")
       REQUIRE(cmd_ctx.get_sub_command("") == nullptr);
     });
 }
+
+struct value_user_context
+{
+  uint64_t    uint64_v     = {};
+  int64_t     int64_v      = {};
+  uint32_t    uint32_v     = {};
+  int32_t     int32_v      = {};
+  float       float_v      = {};
+  double      double_v     = {};
+  bool        boolean      = {};
+  std::string string_value = {};
+  std::string sview        = {};
+};
+
+struct uint64_cmd
+{
+  uint64_t value = {};
+
+  bool execute(acl::scli& s)
+  {
+    auto& ctx    = s.get<value_user_context>();
+    ctx.uint64_v = value;
+    return true;
+  }
+
+  static auto reflect() noexcept
+  {
+    return acl::bind(acl::bind<"value", &uint64_cmd::value>());
+  }
+};
+
+struct int64_cmd
+{
+  int64_t value = {};
+
+  bool execute(acl::scli& s)
+  {
+    auto& ctx   = s.get<value_user_context>();
+    ctx.int64_v = value;
+    return true;
+  }
+
+  static auto reflect() noexcept
+  {
+    return acl::bind(acl::bind<"value", &int64_cmd::value>());
+  }
+};
+
+struct uint32_cmd
+{
+  uint32_t value = {};
+
+  bool execute(acl::scli& s)
+  {
+    auto& ctx    = s.get<value_user_context>();
+    ctx.uint32_v = value;
+    return true;
+  }
+
+  static auto reflect() noexcept
+  {
+    return acl::bind(acl::bind<"value", &uint32_cmd::value>());
+  }
+};
+
+struct int32_cmd
+{
+  int32_t value = {};
+
+  bool execute(acl::scli& s)
+  {
+    auto& ctx   = s.get<value_user_context>();
+    ctx.int32_v = value;
+    return true;
+  }
+
+  static auto reflect() noexcept
+  {
+    return acl::bind(acl::bind<"value", &int32_cmd::value>());
+  }
+};
+
+struct float_cmd
+{
+  float value = {};
+
+  bool execute(acl::scli& s)
+  {
+    auto& ctx   = s.get<value_user_context>();
+    ctx.float_v = value;
+    return true;
+  }
+
+  static auto reflect() noexcept
+  {
+    return acl::bind(acl::bind<"value", &float_cmd::value>());
+  }
+};
+
+struct double_cmd
+{
+  double value = {};
+
+  bool execute(acl::scli& s)
+  {
+    auto& ctx    = s.get<value_user_context>();
+    ctx.double_v = value;
+    return true;
+  }
+
+  static auto reflect() noexcept
+  {
+    return acl::bind(acl::bind<"value", &double_cmd::value>());
+  }
+};
+
+struct bool_cmd
+{
+  bool value = {};
+
+  bool execute(acl::scli& s)
+  {
+    auto& ctx   = s.get<value_user_context>();
+    ctx.boolean = value;
+    return true;
+  }
+
+  static auto reflect() noexcept
+  {
+    return acl::bind(acl::bind<"value", &bool_cmd::value>());
+  }
+};
+
+struct string_cmd
+{
+  std::string value = {};
+
+  bool execute(acl::scli& s)
+  {
+    auto& ctx        = s.get<value_user_context>();
+    ctx.string_value = value;
+    return true;
+  }
+
+  static auto reflect() noexcept
+  {
+    return acl::bind(acl::bind<"value", &string_cmd::value>());
+  }
+};
+
+struct string_view_cmd
+{
+  std::string_view value = {};
+
+  bool execute(acl::scli& s)
+  {
+    auto& ctx = s.get<value_user_context>();
+    ctx.sview = value;
+    return true;
+  }
+
+  static auto reflect() noexcept
+  {
+    return acl::bind(acl::bind<"value", &string_view_cmd::value>());
+  }
+};
+
+TEST_CASE("Cover types", "[scli][classic]")
+{
+  std::string_view input = R"(
+   uint64 1002;
+   int64 -153;
+   uint32 1002;
+   int32 -13;
+   float 10.0;
+   double -21.0;
+   boolean true;
+   string "string";   
+   string_view "view";   
+)";
+
+  acl::scli::builder builder;
+
+  // clang-format off
+  builder
+	  + acl::reg<"root", default_reg_handler> 
+	    - acl::cmd<"uint64", uint64_cmd>
+      - acl::cmd<"int64", int64_cmd>
+      - acl::cmd<"uint32", uint32_cmd>
+      - acl::cmd<"int32", int32_cmd>
+      - acl::cmd<"float", float_cmd>
+      - acl::cmd<"double", double_cmd>
+      - acl::cmd<"boolean", bool_cmd>
+      - acl::cmd<"string", string_cmd>
+      - acl::cmd<"string_view", string_view_cmd>
+      - acl::endl;
+  // clang-format on
+  auto               ctx = builder.build();
+  value_user_context uc;
+  acl::scli::parse(*ctx.get(), uc, "memory", input, {},
+                   [&uc](acl::scli::location const&, std::string_view error, std::string_view context) {});
+
+  REQUIRE(uc.uint64_v == 1002);
+  REQUIRE(uc.int64_v == -153);
+  REQUIRE(uc.uint32_v == 1002);
+  REQUIRE(uc.int32_v == -13);
+  REQUIRE(uc.float_v == 10.0f);
+  REQUIRE(uc.double_v == -21.0f);
+  REQUIRE(uc.boolean == true);
+  REQUIRE(uc.string_value == "string");
+  REQUIRE(uc.sview == "view");
+}

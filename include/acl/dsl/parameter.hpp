@@ -21,11 +21,13 @@ public:
     return param_name;
   }
 
-  virtual int64_t  as_int64(int64_t default_value) const noexcept   = 0;
-  virtual uint64_t as_uint64(uint64_t default_value) const noexcept = 0;
-  virtual float    as_float(float default_value) const noexcept     = 0;
-  virtual double   as_double(double default_value) const noexcept   = 0;
-  virtual bool     as_bool(bool default_value) const noexcept       = 0;
+  virtual int64_t          as_int64(int64_t default_value) const noexcept           = 0;
+  virtual uint64_t         as_uint64(uint64_t default_value) const noexcept         = 0;
+  virtual float            as_float(float default_value) const noexcept             = 0;
+  virtual double           as_double(double default_value) const noexcept           = 0;
+  virtual bool             as_bool(bool default_value) const noexcept               = 0;
+  virtual std::string_view as_sv(std::string_view default_value) const noexcept     = 0;
+  virtual std::string      as_string(std::string_view default_value) const noexcept = 0;
   /**
    * @brief Find a parameter by parameter position
    * @note This function will never return nullptr, it is safe to call any function over the pointer returned
@@ -56,6 +58,9 @@ public:
   float            as_float(float default_value) const noexcept final;
   double           as_double(double default_value) const noexcept final;
   bool             as_bool(bool default_value) const noexcept final;
+  std::string_view as_sv(std::string_view default_value) const noexcept final;
+  std::string      as_string(std::string_view default_value) const noexcept final;
+
   parameter const* at(uint32_t i) const noexcept final;
   parameter const* find(std::string_view name) const noexcept final;
 
@@ -69,11 +74,13 @@ public:
   inline parameter_value(std::string_view name, std::string_view value) noexcept : parameter(name), param_value(value)
   {}
 
-  int64_t  as_int64(int64_t default_value) const noexcept final;
-  uint64_t as_uint64(uint64_t default_value) const noexcept final;
-  float    as_float(float default_value) const noexcept final;
-  double   as_double(double default_value) const noexcept final;
-  bool     as_bool(bool default_value) const noexcept final;
+  int64_t          as_int64(int64_t default_value) const noexcept final;
+  uint64_t         as_uint64(uint64_t default_value) const noexcept final;
+  float            as_float(float default_value) const noexcept final;
+  double           as_double(double default_value) const noexcept final;
+  bool             as_bool(bool default_value) const noexcept final;
+  std::string_view as_sv(std::string_view default_value) const noexcept final;
+  std::string      as_string(std::string_view default_value) const noexcept final;
 
   parameter const* at(uint32_t i) const noexcept final;
   parameter const* find(std::string_view name) const noexcept final;
@@ -102,11 +109,13 @@ public:
   parameter_list() noexcept = default;
   inline parameter_list(std::string_view name) noexcept : parameter(name) {}
 
-  int64_t  as_int64(int64_t default_value) const noexcept final;
-  uint64_t as_uint64(uint64_t default_value) const noexcept final;
-  float    as_float(float default_value) const noexcept final;
-  double   as_double(double default_value) const noexcept final;
-  bool     as_bool(bool default_value) const noexcept final;
+  int64_t          as_int64(int64_t default_value) const noexcept final;
+  uint64_t         as_uint64(uint64_t default_value) const noexcept final;
+  float            as_float(float default_value) const noexcept final;
+  double           as_double(double default_value) const noexcept final;
+  bool             as_bool(bool default_value) const noexcept final;
+  std::string_view as_sv(std::string_view default_value) const noexcept final;
+  std::string      as_string(std::string_view default_value) const noexcept final;
 
   parameter const* at(uint32_t i) const noexcept final;
   parameter const* find(std::string_view name) const noexcept final;
@@ -151,7 +160,7 @@ public:
   }
 
 protected:
-  std::string to_string(bool with_braces) const noexcept;
+  void to_string(std::string& v, bool with_braces) const noexcept;
 
 private:
   std::string_view param_name;
