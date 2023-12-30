@@ -152,7 +152,7 @@ template <typename R>
 struct co_task : public detail::co_task<R, detail::promise_type<co_task, R>>
 {
   using super  = detail::co_task<R, detail::promise_type<co_task, R>>;
-  using handle = super::handle;
+  using handle = typename super::handle;
   co_task(handle h) : super(h) {}
   co_task(co_task&& other) noexcept : super(other.release()) {}
   inline co_task& operator=(co_task const&) = delete;
@@ -172,8 +172,8 @@ template <typename R>
 struct co_sequence : public detail::co_task<R, detail::sequence_promise<co_sequence, R>>
 {
   using super = detail::co_task<R, detail::sequence_promise<co_sequence, R>>;
-  using super::co_task;
-  using handle = super::handle;
+  using typename super::co_task;
+  using handle = typename super::handle;
   co_sequence(handle h) : super(h) {}
   co_sequence(co_sequence&& other) noexcept : super(std::move<super>((super&&)other)) {}
   inline co_sequence& operator=(co_sequence const&) = delete;
