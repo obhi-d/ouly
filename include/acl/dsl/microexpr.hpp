@@ -17,7 +17,7 @@ namespace acl
  * @brief Class is a macro expression evaluator that evaluates boolean macro expressions to true or false.
  * All valid macro expressions are supported.
  * @example
- *     defined(DEFINE_A) && !defined(DEFINE_B)
+ *     $(DEFINE_A) && !$(DEFINE_B)
  * A macro context lambda is used to communicate between the evaluator and expression, the context will store
  * information regarding what macros are defined and what values are set.
  *
