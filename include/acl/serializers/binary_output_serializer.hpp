@@ -280,4 +280,28 @@ private:
   }
 };
 
+namespace detail
+{
+struct empty_output_streamer
+{
+  void write(std::byte* data, size_t s) {}
+};
+
+template <typename T>
+inline void out_stream_validate(T& t)
+{
+  empty_output_streamer streamer;
+  auto                  ser = binary_output_serializer(streamer);
+  ser(t);
+}
+
+} // namespace detail
+
+template <typename T>
+concept OutStreamable = requires(T t) {
+  {
+    detail::out_stream_validate(t)
+  } -> std::same_as<void>;
+};
+
 } // namespace acl

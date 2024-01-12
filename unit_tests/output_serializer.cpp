@@ -1,6 +1,7 @@
 
 #include "acl/serializers/output_serializer.hpp"
 #include "acl/containers/array_types.hpp"
+#include "acl/serializers/binary_serializer.hpp"
 #include <catch2/catch_all.hpp>
 #include <compare>
 #include <map>
@@ -92,7 +93,6 @@ enum class EnumTest
   value3 = 64533
 };
 
-
 struct ReflTestFriend
 {
   int      a  = 0;
@@ -113,8 +113,8 @@ TEST_CASE("output_serializer: Basic test")
 {
 
   ReflTestFriend example;
-  example.a = 4121;
-  example.b = 534;
+  example.a  = 4121;
+  example.b  = 534;
   example.et = EnumTest::value1;
 
   Serializer                         instance;
@@ -166,7 +166,10 @@ TEST_CASE("output_serializer: Test tuple")
 TEST_CASE("output_serializer: String map")
 {
   std::unordered_map<std::string, std::string> example = {
-    {"everything", "is"}, {"supposed", "to"}, {"work", "just fine"}};
+    {"everything",        "is"},
+    {  "supposed",        "to"},
+    {      "work", "just fine"}
+  };
 
   Serializer                         instance;
   acl::output_serializer<Serializer> ser(instance);
@@ -417,3 +420,5 @@ TEST_CASE("output_serializer: OutputSerializableClass")
   REQUIRE(j[1] == 5454);
   REQUIRE(j[2] == 323);
 }
+
+static_assert(acl::Streamable<CustomClass>, "Is not streamble");

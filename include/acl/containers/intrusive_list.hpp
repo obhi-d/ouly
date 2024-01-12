@@ -13,13 +13,13 @@ namespace acl
 
 struct slist_hook
 {
-  void* next = nullptr;
+  void* pnext_ = nullptr;
 };
 
 struct list_hook
 {
-  void* next = nullptr;
-  void* prev = nullptr;
+  void* pnext_ = nullptr;
+  void* pprev_ = nullptr;
 };
 
 namespace detail
@@ -47,24 +47,24 @@ struct intrusive_list_type_traits<M>
 
   inline static Ty* next(Ty const& t) noexcept
   {
-    return reinterpret_cast<Ty*>(hook(t).next);
+    return reinterpret_cast<Ty*>(hook(t).pnext_);
   }
 
   inline static void next(Ty& t, Ty* next) noexcept
   {
-    hook(t).next = next;
+    hook(t).pnext_ = next;
   }
 
   inline static Ty* prev(Ty const& t) noexcept
     requires(is_dlist)
   {
-    return reinterpret_cast<Ty*>(hook(t).prev);
+    return reinterpret_cast<Ty*>(hook(t).pprev_);
   }
 
   inline static void prev(Ty& t, Ty* next) noexcept
     requires(is_dlist)
   {
-    hook(t).prev = next;
+    hook(t).pprev_ = next;
   }
 };
 

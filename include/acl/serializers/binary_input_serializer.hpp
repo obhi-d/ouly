@@ -272,7 +272,7 @@ private:
     else
     {
       bool result = get().read(&obj, sizeof(obj));
-      obj = detail::byteswap(obj);
+      obj         = detail::byteswap(obj);
       return result;
     }
   }
@@ -286,7 +286,7 @@ private:
     else
     {
       bool result = get().read(&obj, sizeof(obj));
-      obj = static_cast<Class>(detail::byteswap(static_cast<type>(obj)));
+      obj         = static_cast<Class>(detail::byteswap(static_cast<type>(obj)));
       return result;
     }
   }
@@ -412,6 +412,40 @@ private:
     else
       return false;
   }
+};
+
+namespace detail
+{
+struct empty_input_streamer
+{
+  bool read(std::byte* data, size_t s)
+  {
+    return true;
+  }
+
+  void error(std::string_view, std::error_code) {}
+
+  bool failed()
+  {
+    return false;
+  }
+};
+
+template <typename T>
+inline void in_stream_validate(T& t)
+{
+  empty_input_streamer streamer;
+  auto                 ser = binary_input_serializer(streamer);
+  ser(t);
+}
+
+} // namespace detail
+
+template <typename T>
+concept InStreamable = requires(T t) {
+  {
+    detail::in_stream_validate(t)
+  } -> std::same_as<void>;
 };
 
 } // namespace acl
