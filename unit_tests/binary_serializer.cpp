@@ -49,13 +49,13 @@ enum class EnumTest
   value0 = 323,
   value1 = 43535,
   value3 = 64533,
-  none = 0
+  none   = 0
 };
 
 struct ReflTestFriend
 {
-  int a = rand();
-  int b = rand();
+  int      a  = rand();
+  int      b  = rand();
   EnumTest et = EnumTest::none;
 
   inline auto operator<=>(ReflTestFriend const&) const noexcept = default;
@@ -252,10 +252,10 @@ TEMPLATE_TEST_CASE("serializer: StringMapLike ", "[serializer][map]", big_endian
   using type      = std::unordered_map<std::string, pair_type>;
 
   type write = {
-    {"first", pair_type(100, "first_result")},
-    {"second", pair_type(353, "second_res")},
-    {"another", pair_type(3, "three")},
-    {"moon", pair_type(663, "coed")},
+    {  "first", pair_type(100, "first_result")},
+    { "second", pair_type(353,   "second_res")},
+    {"another",   pair_type(3,        "three")},
+    {   "moon", pair_type(663,         "coed")},
   };
 
   type read;
@@ -280,10 +280,10 @@ TEMPLATE_TEST_CASE("serializer: ArrayLike", "[serializer][map]", big_endian, lit
   using type      = std::unordered_map<int, pair_type>;
 
   type write = {
-    {52, pair_type(100, "first_result")},
-    {434, pair_type(353, "second_res")},
-    {12, pair_type(3, "three")},
-    {54, pair_type(663, "coed")},
+    { 52, pair_type(100, "first_result")},
+    {434, pair_type(353,   "second_res")},
+    { 12,   pair_type(3,        "three")},
+    { 54, pair_type(663,         "coed")},
   };
 
   type read;
@@ -446,18 +446,9 @@ std::string acl::to_string<TransformSV>(TransformSV const& r)
 }
 
 template <>
-TransformSV& acl::from_string<TransformSV>(TransformSV& r, std::string_view sv)
+void acl::from_string<TransformSV>(TransformSV& r, std::string_view sv)
 {
   std::from_chars(sv.data(), sv.data() + sv.length(), r.id);
-  return r;
-}
-
-template <>
-TransformSV acl::from_string<TransformSV>(std::string_view sv)
-{
-  TransformSV r;
-  std::from_chars(sv.data(), sv.data() + sv.length(), r.id);
-  return r;
 }
 
 TEMPLATE_TEST_CASE("serializer: TransformFromString", "[serializer][string]", big_endian, little_endian)

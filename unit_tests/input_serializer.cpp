@@ -47,7 +47,8 @@ public:
   }
 
   template <typename L>
-  requires(acl::function_traits<L>::arity == 2) bool for_each(L&& lambda) const noexcept
+    requires(acl::function_traits<L>::arity == 2)
+  bool for_each(L&& lambda) const noexcept
   {
     ACL_ASSERT(value.get().is_object());
     for (auto const& [key, value] : value.get().items())
@@ -59,7 +60,8 @@ public:
   }
 
   template <typename L>
-  requires(acl::function_traits<L>::arity == 1) bool for_each(L&& lambda) const noexcept
+    requires(acl::function_traits<L>::arity == 1)
+  bool for_each(L&& lambda) const noexcept
   {
     for (auto const& value : value.get())
     {
@@ -128,8 +130,8 @@ enum class EnumTest
 
 struct ReflTestFriend
 {
-  int a = 0;
-  int b = 0;
+  int      a  = 0;
+  int      b  = 0;
   EnumTest et = EnumTest::value0;
 };
 
@@ -643,18 +645,9 @@ struct TransformSV
 };
 
 template <>
-TransformSV& acl::from_string<TransformSV>(TransformSV& r, std::string_view sv)
+void acl::from_string<TransformSV>(TransformSV& r, std::string_view sv)
 {
   std::from_chars(sv.data(), sv.data() + sv.length(), r.id);
-  return r;
-}
-
-template <>
-TransformSV acl::from_string<TransformSV>(std::string_view sv)
-{
-  TransformSV r;
-  std::from_chars(sv.data(), sv.data() + sv.length(), r.id);
-  return r;
 }
 
 TEST_CASE("input_serializer: TransformFromString")

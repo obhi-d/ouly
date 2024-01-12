@@ -19,11 +19,7 @@ concept ClassWithReflect = requires { C::reflect(); };
 
 // String transforms
 template <typename T>
-T& from_string(T& ref, std::string_view) = delete;
-
-// String transforms
-template <typename T>
-T from_string(std::string_view) = delete;
+void from_string(T& ref, std::string_view) = delete;
 
 template <typename T>
 std::string to_string(T const& ref) = delete;
@@ -224,10 +220,7 @@ template <typename T>
 concept TransformFromString = requires(T ref) {
   {
     acl::from_string(ref, std::string_view())
-  } -> std::same_as<T&>;
-  {
-    acl::from_string<T>(std::string_view())
-  } -> std::same_as<T>;
+  } -> std::same_as<void>;
 };
 
 template <typename T>

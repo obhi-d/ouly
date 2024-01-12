@@ -425,7 +425,7 @@ struct SerializableClass
 {
   std::string str;
 
-  static auto reflect() noexcept
+  static inline constexpr auto reflect() noexcept
   {
     return acl::bind(acl::bind<"first", &SerializableClass::str>());
   }
