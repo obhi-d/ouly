@@ -287,21 +287,15 @@ struct empty_output_streamer
   void write(std::byte* data, size_t s) {}
 };
 
-template <typename T>
-inline void out_stream_validate(T& t)
-{
-  empty_output_streamer streamer;
-  auto                  ser = binary_output_serializer(streamer);
-  ser(t);
-}
-
 } // namespace detail
 
-template <typename T>
-concept OutStreamable = requires(T t) {
-  {
-    detail::out_stream_validate(t)
-  } -> std::same_as<void>;
-};
+template <typename Class>
+concept OutputSerializable =
+  detail::BoundClass<Class> || detail::OutputSerializableClass<Class, detail::empty_output_streamer> ||
+  detail::TupleLike<Class> || detail::ContainerLike<Class> || detail::VariantLike<Class> ||
+  detail::CastableToStringView<Class> || detail::CastableToString<Class> || detail::TransformToStringView<Class> ||
+  detail::TransformToString<Class> || detail::StringLike<Class> || detail::BoolLike<Class> ||
+  detail::IntegerLike<Class> || detail::EnumLike<Class> || detail::FloatLike<Class> || detail::PointerLike<Class> ||
+  detail::OptionalLike<Class> || detail::MonostateLike<Class>;
 
 } // namespace acl

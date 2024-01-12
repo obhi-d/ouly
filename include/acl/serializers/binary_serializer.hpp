@@ -8,5 +8,5 @@ namespace acl
 {
 
 template <typename T>
-concept Streamable = acl::InStreamable<T> && acl::OutStreamable<T>;
+concept Serializable = acl::OutputSerializable<T> && acl::InputSerializable<T>;
 }

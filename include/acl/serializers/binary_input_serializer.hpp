@@ -431,21 +431,14 @@ struct empty_input_streamer
   }
 };
 
-template <typename T>
-inline void in_stream_validate(T& t)
-{
-  empty_input_streamer streamer;
-  auto                 ser = binary_input_serializer(streamer);
-  ser(t);
-}
-
 } // namespace detail
 
-template <typename T>
-concept InStreamable = requires(T t) {
-  {
-    detail::in_stream_validate(t)
-  } -> std::same_as<void>;
-};
+template <typename Class>
+concept InputSerializable =
+  detail::BoundClass<Class> || detail::InputSerializableClass<Class, detail::empty_input_streamer> ||
+  detail::TupleLike<Class> || detail::ContainerLike<Class> || detail::VariantLike<Class> ||
+  detail::ConstructedFromStringView<Class> || detail::TransformFromString<Class> || detail::BoolLike<Class> ||
+  detail::IntegerLike<Class> || detail::EnumLike<Class> || detail::FloatLike<Class> || detail::PointerLike<Class> ||
+  detail::OptionalLike<Class> || detail::MonostateLike<Class>;
 
 } // namespace acl

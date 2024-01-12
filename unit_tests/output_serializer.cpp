@@ -421,4 +421,20 @@ TEST_CASE("output_serializer: OutputSerializableClass")
   REQUIRE(j[2] == 323);
 }
 
-static_assert(acl::Streamable<CustomClass>, "Is not streamble");
+struct SerializableClass
+{
+  std::string str;
+
+  static auto reflect() noexcept
+  {
+    return acl::bind(acl::bind<"first", &SerializableClass::str>());
+  }
+};
+
+struct UnserializableClass
+{
+  std::string str;
+};
+
+static_assert(acl::Serializable<SerializableClass>, "Is not streamble");
+static_assert(!acl::Serializable<UnserializableClass>, "Is streamble");
