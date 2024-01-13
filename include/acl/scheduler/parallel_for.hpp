@@ -2,6 +2,7 @@
 #pragma once
 
 #include "scheduler.hpp"
+#include <acl/utils/integer_range.hpp>
 #include <acl/utils/type_traits.hpp>
 #include <iterator>
 #include <latch>
@@ -34,7 +35,7 @@ struct it_size_type;
 
 template <HasIteratorDiff T>
 struct it_size_type<T>
-{  
+{
   inline static uint32_t size(T const& range) noexcept
   {
     return static_cast<uint32_t>(range.size());
@@ -53,34 +54,6 @@ struct it_size_type<T>
 };
 
 } // namespace detail
-
-template <typename I>
-class integer_range
-{
-public:
-  using difference_type           = I;
-  inline integer_range() noexcept = default;
-  inline integer_range(I vbegin, I vend) noexcept : begin_(vbegin), end_(vend) {}
-
-  inline I begin() const noexcept
-  {
-    return begin_;
-  }
-
-  inline I end() const noexcept
-  {
-    return end_;
-  }
-
-  inline I size() const noexcept
-  {
-    return end_ - begin_;
-  }
-
-private:
-  I begin_ = {};
-  I end_   = {};
-};
 
 template <typename L, typename FwIt>
 void parallel_for(L&& lambda, FwIt range, uint32_t granularity, worker_context const& this_context)
