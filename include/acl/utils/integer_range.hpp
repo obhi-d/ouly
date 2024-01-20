@@ -12,6 +12,16 @@ public:
   inline integer_range() noexcept = default;
   inline integer_range(I vbegin, I vend) noexcept : begin_(vbegin), end_(vend) {}
 
+  inline void begin(I v) noexcept
+  {
+    begin_ = v;
+  }
+
+  inline void end(I v) noexcept
+  {
+    end_ = v;
+  }
+
   inline I begin() const noexcept
   {
     return begin_;

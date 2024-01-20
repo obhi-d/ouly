@@ -4,6 +4,7 @@
 #include <cassert>
 #include <compare>
 #include <concepts>
+#include <memory>
 
 namespace acl
 {
@@ -20,7 +21,7 @@ concept ReferenceCounted = requires(T* a) {
                            };
 // clang-format on
 
-template <typename T>
+template <typename T, typename Del = std::default_delete<T>>
 class intrusive_ptr
 {
 public:
@@ -68,7 +69,8 @@ public:
   {
     if (self_ != nullptr && intrusive_count_sub(self_) == 1)
     {
-      delete self_;
+      Del d;
+      d(self_);
     }
     self_ = other;
     if (self_)
