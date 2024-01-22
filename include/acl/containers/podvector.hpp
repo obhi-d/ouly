@@ -301,12 +301,13 @@ public:
 
   // modifiers:
   template <class... Args>
-  void emplace_back(Args&&... args) noexcept
+  Ty& emplace_back(Args&&... args) noexcept
   {
     if (capacity_ < size_ + 1)
       unchecked_reserve(size_ + std::max<size_type>(size_ >> 1, 1));
-    data_[size_++] = Ty(std::forward<Args>(args)...);
+    return (data_[size_++] = Ty(std::forward<Args>(args)...));
   }
+
   void push_back(const Ty& x) noexcept
   {
     if (capacity_ < size_ + 1)

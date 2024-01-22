@@ -360,14 +360,16 @@ public:
 
   // modifiers:
   template <class... Args>
-  void emplace_back(Args&&... args) noexcept
+  Ty& emplace_back(Args&&... args) noexcept
   {
     auto sz = size();
     if (capacity() <= sz)
       unchecked_reserve_in_heap(sz + std::max<size_type>(sz >> 1, 1));
 
-    size_ = sz + 1;
-    std::construct_at(get_data() + sz, std::forward<Args>(args)...);
+    size_    = sz + 1;
+    auto ptr = get_data() + sz;
+    std::construct_at(ptr, std::forward<Args>(args)...);
+    return *ptr;
   }
 
   void push_back(const Ty& x) noexcept
