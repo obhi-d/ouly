@@ -30,26 +30,10 @@ public:
 
   inline microexpr(macro_context&& ctx) noexcept : ctx_(std::move(ctx)) {}
 
-  bool evaluate(std::string_view expr);
+  bool evaluate(std::string_view expr) const;
 
 private:
-  inline char get() const noexcept
-  {
-    return content_[read_];
-  }
-
-  std::string_view read_token() noexcept;
-
-  void    skip_white() noexcept;
-  int64_t conditional();
-  int64_t comparison();
-  int64_t binary();
-  int64_t unary();
-
-private:
-  macro_context    ctx_;
-  std::string_view content_;
-  uint32_t         read_ = 0;
+  macro_context ctx_;
 };
 
 } // namespace acl

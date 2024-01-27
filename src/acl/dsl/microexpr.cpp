@@ -3,21 +3,42 @@
 
 namespace acl
 {
-bool microexpr::evaluate(std::string_view expr)
+struct microexpr_state
 {
-  content_ = expr;
-  read_    = 0;
-  return conditional() != 0;
+  microexpr::macro_context const& ctx_;
+  std::string_view                content_;
+  uint32_t                        read_ = 0;
+
+  microexpr_state(microexpr::macro_context const& c, std::string_view txt) noexcept : ctx_(c), content_(txt) {}
+
+  inline char get() const noexcept
+  {
+    return content_[read_];
+  }
+
+  std::string_view read_token() noexcept;
+
+  void    skip_white() noexcept;
+  int64_t conditional();
+  int64_t comparison();
+  int64_t binary();
+  int64_t unary();
+};
+
+bool microexpr::evaluate(std::string_view expr) const
+{
+  auto state = microexpr_state(ctx_, expr);
+  return state.conditional() != 0;
 }
 
-void microexpr::skip_white() noexcept
+void microexpr_state::skip_white() noexcept
 {
   auto n = content_.find_first_not_of(" \t\r\n", read_);
   if (n != content_.npos)
     read_ = (uint32_t)n;
 }
 
-int64_t microexpr::conditional()
+int64_t microexpr_state::conditional()
 {
   int64_t left = comparison();
   skip_white();
@@ -33,7 +54,7 @@ int64_t microexpr::conditional()
   return left ? op_a : op_b;
 }
 
-int64_t microexpr::comparison()
+int64_t microexpr_state::comparison()
 {
   int64_t left = binary();
   skip_white();
@@ -80,7 +101,7 @@ int64_t microexpr::comparison()
   }
 }
 
-int64_t microexpr::binary()
+int64_t microexpr_state::binary()
 {
   int64_t left = unary();
   while (true)
@@ -150,7 +171,7 @@ int64_t microexpr::binary()
   }
 }
 
-std::string_view microexpr::read_token() noexcept
+std::string_view microexpr_state::read_token() noexcept
 {
   std::string_view ret;
   uint32_t         t = read_;
@@ -160,7 +181,7 @@ std::string_view microexpr::read_token() noexcept
   return content_.substr(read_, t - read_);
 }
 
-int64_t microexpr::unary()
+int64_t microexpr_state::unary()
 {
   skip_white();
   if (read_ < content_.length())
