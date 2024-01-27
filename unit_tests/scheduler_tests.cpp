@@ -10,10 +10,9 @@ TEST_CASE("scheduler: Construction")
   scheduler.create_group(acl::workgroup_id(0), "default", 0, 16);
   scheduler.create_group(acl::workgroup_id(1), "io", 16, 2);
 
-
   struct executor
   {
-    std::array<uint32_t, 18> executed = {0};
+    std::array<uint32_t, 18>              executed = {0};
     std::array<std::vector<uint32_t>, 18> accumulate;
 
     void execute(acl::worker_context const& id)
@@ -30,7 +29,7 @@ TEST_CASE("scheduler: Construction")
     uint32_t sum() const
     {
       uint32_t result = std::accumulate(executed.begin(), executed.end(), 0);
-      for(auto const& r : accumulate)
+      for (auto const& r : accumulate)
         result += std::accumulate(r.begin(), r.end(), 0);
       return result;
     }
@@ -40,9 +39,9 @@ TEST_CASE("scheduler: Construction")
       std::vector<uint32_t> result;
       result.resize(max, 0);
       std::iota(result.begin(), result.end(), 0);
-      for(auto const& r : accumulate)
+      for (auto const& r : accumulate)
       {
-        for(auto v : r)
+        for (auto v : r)
         {
           auto r = std::find(result.begin(), result.end(), v);
           if (r != result.end())
@@ -56,7 +55,8 @@ TEST_CASE("scheduler: Construction")
   scheduler.begin_execution();
   executor instance;
   for (uint32_t i = 0; i < 1024; ++i)
-    acl::async<&executor::execute>(acl::worker_context::get(acl::default_workgroup_id), &instance, acl::workgroup_id(i % 2));
+    acl::async<&executor::execute>(acl::worker_context::get(acl::default_workgroup_id), &instance,
+                                   acl::workgroup_id(i % 2));
   scheduler.end_execution();
 
   auto sum = instance.sum();
@@ -66,7 +66,7 @@ TEST_CASE("scheduler: Construction")
   executor instance2;
   for (uint32_t i = 0; i < 1024; ++i)
     acl::async<&executor::execute2>(acl::worker_context::get(acl::default_workgroup_id), &instance2, i,
-                                   acl::workgroup_id(i % 2));
+                                    acl::workgroup_id(i % 2));
   scheduler.end_execution();
 
   REQUIRE(instance2.sum() == 1023 * 512);
@@ -77,6 +77,9 @@ TEST_CASE("scheduler: Range ParallelFor")
   acl::scheduler scheduler;
   scheduler.create_group(acl::workgroup_id(0), "default", 0, 16);
   scheduler.create_group(acl::workgroup_id(1), "io", 16, 2);
+
+  auto zero = acl::integer_range(0, 0);
+  REQUIRE(zero.empty());
 
   scheduler.begin_execution();
   std::atomic_int value;
@@ -112,10 +115,10 @@ TEST_CASE("scheduler: Simplest ParallelFor")
     [&parallel_sum](int a, acl::worker_context const& c)
     {
       auto id = acl::worker_id::get();
-      REQUIRE(id.get_index() < 16);
+      assert(id.get_index() < 16);
       auto ctx = acl::worker_context::get(acl::default_workgroup_id);
-      REQUIRE(ctx.get_worker().get_index() < 16);
-      REQUIRE(ctx.get_group_offset() < 16);
+      assert(ctx.get_worker().get_index() < 16);
+      assert(ctx.get_group_offset() < 16);
       parallel_sum += a;
     },
     std::span(list.begin(), list.end()), 2, acl::default_workgroup_id);

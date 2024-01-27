@@ -37,6 +37,11 @@ public:
     return end_ - begin_;
   }
 
+  inline bool empty() const noexcept
+  {
+    return begin_ == end_;
+  }
+
 private:
   I begin_ = {};
   I end_   = {};
