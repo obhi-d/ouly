@@ -123,9 +123,15 @@ public:
   }
 
   template <InventoryDataType T>
-  T const& at(key_type name) const noexcept
+  T const& get(key_type name) const noexcept
   {
-    return const_cast<blackboard&>(*this).at<T>(name);
+    return const_cast<blackboard&>(*this).get<T>(name);
+  }
+
+  template <InventoryDataType T>
+  T const* get_if(key_type name) const noexcept
+  {
+    return const_cast<blackboard&>(*this).get_if<T>(name);
   }
 
   template <InventoryDataType T>
@@ -135,7 +141,7 @@ public:
   }
 
   template <InventoryDataType T>
-  T& at(key_type name) noexcept
+  T& get(key_type name) noexcept
   {
     auto it = lookup.find(name);
     ACL_ASSERT(it != lookup.end());
@@ -152,6 +158,15 @@ public:
       auto& idx = offsets[index.value()];
       return *std::launder(reinterpret_cast<T*>(idx.data));
     }
+  }
+
+  template <InventoryDataType T>
+  T* get_if(key_type name) noexcept
+  {
+    auto it = lookup.find(name);
+    if (it == lookup.end())
+      return nullptr;
+    return &at<T>(it->second);
   }
 
   /**

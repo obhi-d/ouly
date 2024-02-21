@@ -314,6 +314,15 @@ public:
   }
 
   /**
+   * @brief Find an object associated with a link, provided a default value to return if it is not found
+   */
+  template <detail::IsVoidOrRLink<link> ulink>
+  value_type find(ulink lnk, value_type def) const noexcept
+  {
+    return sfind(*this, lnk, def);
+  }
+
+  /**
    * @brief Drop unused pages
    */
   inline void shrink_to_fit() noexcept
@@ -420,6 +429,30 @@ private:
     }
     return {};
   }
+
+
+  template <typename T, detail::IsVoidOrRLink<link> ulink>
+  static auto sfind(T& cont, ulink lnk, value_type def) noexcept -> value_type
+  {
+    auto idx = lnk.as_index();
+    if (cont.keys_.contains(idx))
+    {
+      if constexpr (has_backref)
+      {
+        auto& val = cont.values_[cont.keys_.get(idx)];
+        if (cont.self_.get(val) == lnk.value())
+          return val;
+      }
+      else
+      {
+        auto val_idx = cont.keys_.get(idx);
+        if (cont.self_.get(val_idx) == lnk.value())
+          return cont.values_[val_idx];
+      }
+    }
+    return def;
+  }
+
 
   template <detail::IsVoidOrRLink<link> ulink>
   inline void validate(ulink l) const noexcept

@@ -22,14 +22,17 @@ TEST_CASE("blackboard: push_back", "[blackboard][push_back]")
   REQUIRE(board.at<std::string>(str_index2) == "number 3");
   REQUIRE(board.at<std::string>(str_index3) == "number 4");
 
-  REQUIRE(board.at<std::uint32_t>("param1") == 50);
-  REQUIRE(board.at<std::uint32_t>("param5") == 100);
-  REQUIRE(board.at<std::uint32_t>("param7") == 150);
+  REQUIRE(*board.get_if<std::uint32_t>("param1") == 50);
+  REQUIRE(board.get_if<std::uint32_t>("none") == nullptr);
 
-  REQUIRE(board.at<std::string>("param2") == "number 1");
-  REQUIRE(board.at<std::string>("param3") == "number 2");
-  REQUIRE(board.at<std::string>("param4") == "number 3");
-  REQUIRE(board.at<std::string>("param6") == "number 4");
+  REQUIRE(board.get<std::uint32_t>("param1") == 50);
+  REQUIRE(board.get<std::uint32_t>("param5") == 100);
+  REQUIRE(board.get<std::uint32_t>("param7") == 150);
+
+  REQUIRE(board.get<std::string>("param2") == "number 1");
+  REQUIRE(board.get<std::string>("param3") == "number 2");
+  REQUIRE(board.get<std::string>("param4") == "number 3");
+  REQUIRE(board.get<std::string>("param6") == "number 4");
 
   REQUIRE(board.contains("param1"));
   REQUIRE(board.contains("param2"));
@@ -42,18 +45,18 @@ TEST_CASE("blackboard: push_back", "[blackboard][push_back]")
   board.emplace<std::uint32_t>("param1", 300);
   board.emplace<std::uint32_t>("param5", 1500);
 
-  REQUIRE(board.at<std::uint32_t>("param1") == 300);
-  REQUIRE(board.at<std::uint32_t>("param5") == 1500);
+  REQUIRE(board.get<std::uint32_t>("param1") == 300);
+  REQUIRE(board.get<std::uint32_t>("param5") == 1500);
 
   board.erase("param1");
   board.erase("param4");
 
-  REQUIRE(board.at<std::uint32_t>("param5") == 1500);
-  REQUIRE(board.at<std::uint32_t>("param7") == 150);
+  REQUIRE(board.get<std::uint32_t>("param5") == 1500);
+  REQUIRE(board.get<std::uint32_t>("param7") == 150);
 
-  REQUIRE(board.at<std::string>("param2") == "number 1");
-  REQUIRE(board.at<std::string>("param3") == "number 2");
-  REQUIRE(board.at<std::string>("param6") == "number 4");
+  REQUIRE(board.get<std::string>("param2") == "number 1");
+  REQUIRE(board.get<std::string>("param3") == "number 2");
+  REQUIRE(board.get<std::string>("param6") == "number 4");
 
   REQUIRE(board.contains("param2"));
   REQUIRE(board.contains("param3"));
