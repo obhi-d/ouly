@@ -12,6 +12,8 @@
 #include <span>
 #include <string_view>
 #include <type_traits>
+#include <typeindex>
+#include <typeinfo>
 #include <unordered_map>
 
 namespace acl
@@ -19,18 +21,28 @@ namespace acl
 template <typename T>
 concept InventoryDataType = std::is_trivial_v<T> || std::is_move_constructible_v<T>;
 
+struct blackboard_offset
+{
+  using dtor = void (*)(void*);
+
+  void* data       = nullptr;
+  dtor  destructor = nullptr;
+};
+
 template <typename T>
 concept HashMap = requires {
   typename T::name_map_type;
-  requires std::same_as<typename T::name_map_type::mapped_type, acl::vlink>;
+  requires std::same_as<typename T::name_map_type::mapped_type, blackboard_offset>;
   typename T::name_map_type::key_type;
 };
+
 namespace detail
 {
+
 template <typename H>
 struct name_index_map
 {
-  using type = std::unordered_map<std::string, vlink>;
+  using type = std::unordered_map<std::string, blackboard_offset>;
 };
 
 template <HashMap H>
@@ -42,17 +54,29 @@ struct name_index_map<H>
 
 namespace opt
 {
-// lookup option
-template <typename N>
+template <HashMap H>
 struct name_map
 {
-  using name_map_type = N;
+  using name_map_type = H;
+};
+
+// lookup option
+template <template <typename K, typename V> class H>
+struct name_map<H<std::type_index, blackboard_offset>>
+{
+  using name_map_type = H<std::type_index, blackboard_offset>;
+};
+
+template <template <typename V> class H>
+struct name_map<H<blackboard_offset>>
+{
+  using name_map_type = H<blackboard_offset>;
 };
 
 } // namespace opt
 
 /**
- * @brief Store data as name value pairs, value can be any blob of data
+ * @brief Store data as name value pairs, value can be any blob of data, has no free memory management
  *
  * @remark Data is stored as a blob, names are stored seperately if required for lookup
  *         Data can also be retrieved by index.
@@ -63,29 +87,20 @@ class blackboard : public detail::custom_allocator_t<Options>
 {
   using dtor = bool (*)(void*);
 
-  struct atom_t
-  {
-    void* data;
-    dtor  dtor_fn;
-  };
-
   using options                                    = Options;
   static constexpr std::size_t total_atoms_in_page = detail::pool_size_v<options>;
   using allocator                                  = detail::custom_allocator_t<options>;
   using base_type                                  = allocator;
   using name_index_map                             = typename detail::name_index_map<options>::type;
 
-  static constexpr std::uint64_t inlined_mask_v = 0x8000000000000000;
-  static constexpr std::uint64_t deleted_mask_v = 0x4000000000000000;
-
 public:
-  using link           = vlink;
+  using link           = void*;
+  using clink          = void const*;
   using key_type       = typename name_index_map::key_type;
   using iterator       = typename name_index_map::iterator;
   using const_iterator = typename name_index_map::const_iterator;
 
-  template <typename T>
-  static constexpr bool is_inlined = (sizeof(T) <= sizeof(atom_t)) && std::is_trivial_v<T>;
+  static constexpr bool is_type_indexed = std::is_same_v<key_type, std::type_index>;
 
   inline blackboard() noexcept {}
   inline blackboard(allocator&& alloc) noexcept : base_type(std::move<allocator>(alloc)) {}
@@ -104,136 +119,144 @@ public:
     std::for_each(lookup.begin(), lookup.end(),
                   [this](auto& el)
                   {
-                    if (!el.second.has_mask(inlined_mask_v | deleted_mask_v))
+                    if (el.second.destructor)
                     {
-                      auto& atom = offsets[el.second.value()];
-                      atom.dtor_fn(atom.data);
+                      el.second.destructor(el.second.data);
+                      el.second.destructor = nullptr;
                     }
                   });
-    std::for_each(managed_data.begin(), managed_data.end(),
-                  [this](auto entry)
-                  {
-                    acl::deallocate(*this, entry, total_atoms_in_page * sizeof(atom_t), 16);
-                  });
-
-    lookup.clear();
-    managed_data.clear();
-    offsets.clear();
-    availabile_atoms = 0;
-  }
-
-  template <InventoryDataType T>
-  T const& get(key_type name) const noexcept
-  {
-    return const_cast<blackboard&>(*this).get<T>(name);
-  }
-
-  template <InventoryDataType T>
-  T const* get_if(key_type name) const noexcept
-  {
-    return const_cast<blackboard&>(*this).get_if<T>(name);
-  }
-
-  template <InventoryDataType T>
-  T const& at(link index) const noexcept
-  {
-    return const_cast<blackboard&>(*this).at<T>(index);
-  }
-
-  template <InventoryDataType T>
-  T& get(key_type name) noexcept
-  {
-    auto it = lookup.find(name);
-    ACL_ASSERT(it != lookup.end());
-    return at<T>(it->second);
-  }
-
-  template <InventoryDataType T>
-  T& at(vlink index) noexcept
-  {
-    if constexpr (is_inlined<T>)
-      return *reinterpret_cast<T*>(&offsets[index.unmasked()]);
-    else
+    auto h = head;
+    while (h)
     {
-      auto& idx = offsets[index.value()];
-      return *std::launder(reinterpret_cast<T*>(idx.data));
+      auto n = h->pnext;
+      acl::deallocate(*this, h, h->size + sizeof(arena));
+      h = n;
     }
+    lookup.clear();
+    head    = nullptr;
+    current = nullptr;
   }
 
   template <InventoryDataType T>
-  T* get_if(key_type name) noexcept
+  T const& get() const noexcept
+    requires(is_type_indexed)
   {
-    auto it = lookup.find(name);
+    return const_cast<blackboard&>(*this).get<T>(std::type_index(typeid(T)));
+  }
+
+  template <InventoryDataType T>
+  T const& get(key_type v) const noexcept
+  {
+    return const_cast<blackboard&>(*this).get<T>(v);
+  }
+
+  template <InventoryDataType T>
+  T const* get_if() const noexcept
+    requires(is_type_indexed)
+  {
+    return const_cast<blackboard&>(*this).get_if<T>(std::type_index(typeid(T)));
+  }
+
+  template <InventoryDataType T>
+  T const* get_if(key_type v) const noexcept
+  {
+    return const_cast<blackboard&>(*this).get_if<T>(v);
+  }
+
+  template <InventoryDataType T>
+  static constexpr T const& at(clink index) noexcept
+  {
+    return *reinterpret_cast<T const*>(index);
+  }
+
+  template <InventoryDataType T>
+  static constexpr T& at(link index) noexcept
+  {
+    return *reinterpret_cast<T*>(index);
+  }
+
+  template <InventoryDataType T>
+  T& get(key_type k) noexcept
+  {
+    auto it = lookup.find(k);
+    ACL_ASSERT(it != lookup.end());
+    return *reinterpret_cast<T*>(it->second.data);
+  }
+
+  template <InventoryDataType T>
+  T* get_if(key_type k) noexcept
+  {
+    auto it = lookup.find(k);
     if (it == lookup.end())
       return nullptr;
-    return &at<T>(it->second);
+    return reinterpret_cast<T*>(it->second.data);
   }
 
   /**
    *
    */
   template <InventoryDataType T, typename... Args>
-  auto emplace(key_type name, Args&&... args) noexcept -> link
+  auto emplace(Args&&... args) noexcept -> link
+    requires(is_type_indexed)
   {
-    auto existing = lookup.find(name);
-    if (existing != lookup.end())
-    {
-      auto& lookup_ent = existing->second;
-      lookup_ent.unmask();
-      if constexpr (is_inlined<T>)
-      {
-        std::construct_at(reinterpret_cast<T*>(&offsets[lookup_ent.unmasked()]), std::forward<Args>(args)...);
-        lookup_ent.mask(inlined_mask_v);
-      }
-      else
-      {
-        auto& atom = offsets[lookup_ent.value()];
-        if constexpr (acl::detail::debug)
-        {
-          ACL_ASSERT(atom.dtor_fn == reinterpret_cast<dtor>(&destroy_at<T>));
-        }
-
-        T* data = reinterpret_cast<T*>(atom.data);
-        atom.dtor_fn(atom.data);
-        std::construct_at(data, std::forward<Args>(args)...);
-      }
-      return lookup_ent;
-    }
-    else
-    {
-      if constexpr (is_inlined<T>)
-      {
-        auto& entry = make_offset_entry();
-        std::construct_at(reinterpret_cast<T*>(std::addressof(entry)), std::forward<Args>(args)...);
-      }
-      else
-      {
-        atom_t atom = ensure<T>();
-        std::construct_at(reinterpret_cast<T*>(atom.data), std::forward<Args>(args)...);
-        make_offset_entry() = atom;
-      }
-
-      auto index   = is_inlined<T> ? vlink((offsets.size() - 1) | inlined_mask_v) : vlink(offsets.size() - 1);
-      lookup[name] = index;
-      return index;
-    }
+    return emplace(std::type_index(typeid(T)), std::forward<Args>(args)...);
   }
 
-  void erase(key_type name) noexcept
+  template <InventoryDataType T, typename... Args>
+  auto emplace(key_type k, Args&&... args) noexcept -> link
   {
-    auto it = lookup.find(name);
+    auto& lookup_ent = lookup[k];
+    if (lookup_ent.destructor && lookup_ent.data)
+      lookup_ent.destructor(lookup_ent.data);
+    if (!lookup_ent.data)
+      lookup_ent.data = allocate_space(sizeof(T), alignof(T));
+
+    std::construct_at(reinterpret_cast<T*>(lookup_ent.data), std::forward<Args>(args)...);
+    lookup_ent.destructor = std::is_trivially_destructible_v<T> ? &do_nothing : &destroy_at<T>;
+    return lookup_ent.data;
+  }
+
+  template <InventoryDataType T>
+  void erase() noexcept
+    requires(is_type_indexed)
+  {
+    erase(std::type_index(typeid(T)));
+  }
+
+  void erase(key_type index) noexcept
+  {
+    auto it = lookup.find(index);
     if (it != lookup.end())
-      erase(it->second);
+    {
+      auto& lookup_ent = it->second;
+      if (lookup_ent.destructor && lookup_ent.data)
+        lookup_ent.destructor(lookup_ent.data);
+      lookup_ent.destructor = nullptr;
+    }
   }
 
-  bool contains(key_type name) const noexcept
+  template <InventoryDataType T>
+  void contains() const noexcept
+    requires(is_type_indexed)
   {
-    auto it = lookup.find(name);
-    return (it != lookup.end() && !it->second.has_mask(deleted_mask_v));
+    contains(std::type_index(typeid(T)));
+  }
+
+  bool contains(key_type index) const noexcept
+  {
+    auto it = lookup.find(index);
+    return it != lookup.end() && it->second.destructor != nullptr;
   }
 
 private:
   static void do_nothing(void*) {}
+
+  struct arena
+  {
+    arena*   pnext     = nullptr;
+    uint32_t size      = 0;
+    uint32_t remaining = 0;
+  };
 
   template <typename T>
   static void destroy_at(void* s)
@@ -241,52 +264,35 @@ private:
     reinterpret_cast<T*>(s)->~T();
   }
 
-  void erase(vlink& id) noexcept
+  void* allocate_space(size_t size, size_t alignment)
   {
-    auto& atom = offsets[id.unmasked()];
-    if (!id.has_mask(inlined_mask_v))
+    size_t req = (size + (alignment - 1));
+    if (!current || current->remaining < req)
     {
-      atom.dtor_fn(atom.data);
-      atom.dtor_fn = reinterpret_cast<dtor>(&do_nothing);
+      size_t page_size   = std::max(total_atoms_in_page, req);
+      auto   new_current = acl::allocate<arena>(*this, sizeof(arena) + page_size);
+      if (current)
+        current->pnext = new_current;
+      new_current->pnext     = nullptr;
+      new_current->size      = page_size;
+      new_current->remaining = page_size - req;
+      current                = new_current;
+      if (!head)
+        head = current;
+      void* ptr = new_current + 1;
+      return std::align(alignment, size, ptr, req);
     }
-    id.mask(deleted_mask_v);
-  }
-
-  constexpr inline auto& make_offset_entry()
-  {
-    offsets.emplace_back();
-    return offsets.back();
-  }
-
-  static constexpr inline auto atom_count(auto size)
-  {
-    return ((size + sizeof(atom_t) - 1) / sizeof(atom_t));
-  }
-
-  template <typename T>
-  inline atom_t ensure() noexcept
-  {
-    constexpr auto atoms_req       = atom_count(sizeof(T) + (alignof(T) - 1));
-    auto           num_total_atoms = total_atoms_in_page;
-    if (availabile_atoms < atoms_req)
+    else
     {
-      static_assert(total_atoms_in_page >= atoms_req, "T is too big, increaase pool size");
-      constexpr auto page_size = std::max(total_atoms_in_page, atoms_req);
-      availabile_atoms = num_total_atoms = page_size;
-      managed_data.emplace_back(acl::allocate<atom_t>(*this, sizeof(atom_t) * page_size, 16));
+
+      void* ptr = reinterpret_cast<std::byte*>(current + 1) + (current->size - current->remaining);
+      current->remaining -= req;
+      return std::align(alignment, size, ptr, req);
     }
-    void* ret = managed_data.back() + (num_total_atoms - availabile_atoms);
-    availabile_atoms -= atoms_req;
-    std::size_t size = sizeof(T) + (alignof(T) - 1);
-    return atom_t{.data    = std::align(alignof(T), sizeof(T), ret, size),
-                  .dtor_fn = reinterpret_cast<dtor>(&destroy_at<T>)};
   }
 
-  using index_list = podvector<atom_t, acl::options<opt::basic_size_type<std::size_t>>>;
-
-  podvector<atom_t*> managed_data;
-  index_list         offsets;
-  name_index_map     lookup;
-  std::size_t        availabile_atoms = 0;
+  arena*         head    = nullptr;
+  arena*         current = nullptr;
+  name_index_map lookup;
 };
 } // namespace acl
