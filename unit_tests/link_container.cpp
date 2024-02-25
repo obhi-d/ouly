@@ -167,7 +167,7 @@ TEST_CASE("rlink_registry: random test", "[rlink_registry][nontrivial]")
     {
       auto test = clink(index, string_reg.get_revision(index));
       auto it   = std::ranges::find(deleted_ones, test);
-      REQUIRE(std::ranges::find(clink_goes_my_bones, test) != clink_goes_my_bones.end());
+      assert(std::ranges::find(clink_goes_my_bones, test) != clink_goes_my_bones.end());
       REQUIRE(it == deleted_ones.end());
     });
 

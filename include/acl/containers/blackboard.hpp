@@ -55,22 +55,22 @@ struct name_index_map<H>
 namespace opt
 {
 template <HashMap H>
-struct name_map
+struct name_val_map
 {
   using name_map_type = H;
 };
 
 // lookup option
 template <template <typename K, typename V> class H>
-struct name_map<H<std::type_index, blackboard_offset>>
+struct map
 {
-  using name_map_type = H<std::type_index, blackboard_offset>;
+  using name_map_type = typename H<std::type_index, blackboard_offset>::type;
 };
 
 template <template <typename V> class H>
-struct name_map<H<blackboard_offset>>
+struct name_map
 {
-  using name_map_type = H<blackboard_offset>;
+  using name_map_type = typename H<blackboard_offset>::type;
 };
 
 } // namespace opt

@@ -90,12 +90,6 @@ int main(int argc, char* argv[])
   bench_arena<acl::strat::best_fit_v2<acl::opt::bsearch_min0>>(size, "bf-v2-min0");
   bench_arena<acl::strat::best_fit_v2<acl::opt::bsearch_min1>>(size, "bf-v2-min1");
   bench_arena<acl::strat::best_fit_v2<acl::opt::bsearch_min2>>(size, "bf-v2-min2");
-  bench_arena<acl::strat::slotted_v0<>>(size, "slot-v0");
-  bench_arena<acl::strat::slotted_v1<>>(size, "slot-v1");
-  bench_arena<acl::strat::slotted_v2<>>(size, "slot-v2");
-  bench_arena<acl::strat::slotted_v0<acl::opt::fallback_start<acl::strat::best_fit_tree<uint32_t>>>>(size, "slot-v0-t");
-  bench_arena<acl::strat::slotted_v1<acl::opt::fallback_start<acl::strat::best_fit_tree<uint32_t>>>>(size, "slot-v1-t");
-  bench_arena<acl::strat::slotted_v2<acl::opt::fallback_start<acl::strat::best_fit_tree<uint32_t>>>>(size, "slot-v2-t");
 
   return 0;
 }

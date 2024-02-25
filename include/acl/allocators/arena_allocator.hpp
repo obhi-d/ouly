@@ -13,9 +13,6 @@
 #include "strat_best_fit_v2.hpp"
 #include "strat_greedy_v0.hpp"
 #include "strat_greedy_v1.hpp"
-#include "strat_slotted_v0.hpp"
-#include "strat_slotted_v1.hpp"
-#include "strat_slotted_v2.hpp"
 
 namespace acl
 {

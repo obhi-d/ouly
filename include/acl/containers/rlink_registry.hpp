@@ -40,14 +40,16 @@ public:
 
     auto ret = free_.back();
     free_.pop_back();
-    return ret;
+    sorted = false;
+    return link(ret, revisions_[ret]);
   }
 
   inline void erase(link l)
   {
     l = l.revise();
     revisions_[l.as_index()]++;
-    free_.emplace_back(l);
+    free_.emplace_back(l.as_index());
+    sorted = false;
   }
 
   inline bool is_valid(link l) const noexcept
@@ -68,14 +70,24 @@ public:
   template <typename Lambda>
   inline void for_each_index(Lambda&& l)
   {
+    if (!sorted)
+    {
+      sort_free();
+    }
     for_each_(std::forward<Lambda>(l), free_, max_size_);
   }
 
   template <typename Lambda>
   inline void for_each_index(Lambda&& l) const
   {
-    auto copy = free_;
-    for_each_(std::forward<Lambda>(l), copy, max_size_);
+    if (sorted)
+      for_each_(std::forward<Lambda>(l), free_, max_size_);
+    else
+    {
+      auto copy = free_;
+      std::ranges::sort(copy);
+      for_each_(std::forward<Lambda>(l), copy, max_size_);
+    }
   }
 
   inline uint32_t max_size() const
@@ -83,23 +95,29 @@ public:
     return max_size_;
   }
 
+  void sort_free()
+  {
+    std::ranges::sort(free_);
+    sorted = true;
+  }
+
 private:
   template <typename Lambda>
-  static inline void for_each_(Lambda&& l, vector<link>& copy, uint32_t max_size)
+  static inline void for_each_(Lambda&& l, auto const& copy, uint32_t max_size)
   {
-    std::ranges::sort(copy);
     for (uint32_t i = 1, fi = 0; i < max_size; ++i)
     {
-      if (fi < copy.size() && copy[fi].as_index() == i)
+      if (fi < copy.size() && copy[fi] == i)
         fi++;
       else
         l(i);
     }
   }
 
-  vector<link>          free_;
+  vector<size_type>     free_;
   vector<revision_type> revisions_;
   uint32_t              max_size_ = 1;
+  bool                  sorted    = false;
 };
 
 template <typename Ty = void>

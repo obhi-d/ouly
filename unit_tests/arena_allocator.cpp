@@ -183,13 +183,7 @@ TEMPLATE_TEST_CASE("Validate arena_allocator", "[arena_allocator.strat]",
     (acl::strat::greedy_v1<>),
     (acl::strat::greedy_v0<>),
     (acl::strat::best_fit_tree<>),
-    (acl::strat::best_fit_v0<>),
-    (acl::strat::slotted_v0<>),
-    (acl::strat::slotted_v1<>),
-    (acl::strat::slotted_v2<>),
-    (acl::strat::slotted_v0<acl::opt::fallback_start<acl::strat::best_fit_tree<>>>),
-    (acl::strat::slotted_v1<acl::opt::fallback_start<acl::strat::best_fit_tree<>>>),
-    (acl::strat::slotted_v2<acl::opt::fallback_start<acl::strat::best_fit_tree<>>>)
+    (acl::strat::best_fit_v0<>)
                    // clang-format on
 )
 {
@@ -209,13 +203,7 @@ TEMPLATE_TEST_CASE("Validate arena_allocator : 1542249547 init bug", "[arena_all
     (acl::strat::greedy_v1<>),
     (acl::strat::greedy_v0<>),
     (acl::strat::best_fit_tree<>),
-    (acl::strat::best_fit_v0<>),
-    (acl::strat::slotted_v0<>),
-    (acl::strat::slotted_v1<>),
-    (acl::strat::slotted_v2<>),
-    (acl::strat::slotted_v0<acl::opt::fallback_start<acl::strat::best_fit_tree<>>>),
-    (acl::strat::slotted_v1<acl::opt::fallback_start<acl::strat::best_fit_tree<>>>),
-    (acl::strat::slotted_v2<acl::opt::fallback_start<acl::strat::best_fit_tree<>>>)
+    (acl::strat::best_fit_v0<>)
                    // clang-format on
 )
 {
