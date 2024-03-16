@@ -12,7 +12,9 @@
 #include <acl/utils/link.hpp>
 #include <acl/utils/tagged_ptr.hpp>
 #include <acl/utils/wyhash.hpp>
+#include <acl/utils/zip_view.hpp>
 #include <catch2/catch_all.hpp>
+#include <span>
 
 #define BINARY_SEARCH_STEP                                                                                             \
   do                                                                                                                   \
@@ -396,5 +398,32 @@ TEST_CASE("Test index_map fuzz test", "[index_map]")
       REQUIRE(map[i] == map.null);
     else
       REQUIRE(map[i] == full_map[i]);
+  }
+}
+
+TEST_CASE("Test zip_view", "[zip_view]")
+{
+  std::vector<std::string> strings;
+  std::vector<int32_t>     integers;
+
+  for (int i = 0; i < 10; ++i)
+  {
+    strings.emplace_back(std::to_string(i) + "-item");
+    integers.emplace_back(i * 10);
+  }
+  int start = 0;
+  for (auto&& [val, ints] : acl::zip(strings, integers))
+  {
+    REQUIRE(val == std::to_string(start) + "-item");
+    REQUIRE(ints == start * 10);
+    start++;
+  }
+
+  start = 0;
+  for (auto&& [val, ints] : acl::zip(std::span(strings), std::span(integers)))
+  {
+    REQUIRE(val == std::to_string(start) + "-item");
+    REQUIRE(ints == start * 10);
+    start++;
   }
 }
