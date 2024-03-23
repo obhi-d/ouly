@@ -236,12 +236,12 @@ public:
   }
 
   /**
-   * @brief Construct/Replace an item in a given location, depending upon if the location was empty or not. 
+   * @brief Construct/Replace an item in a given location, depending upon if the location was empty or not.
    */
   template <detail::IsVoidOrRLink<link> ulink>
   reference replace(ulink point, value_type&& args) noexcept
-  {    
-    auto  k   = keys_.get_if(point.as_index());
+  {
+    auto k = keys_.get_if(point.as_index());
     if (k == std::numeric_limits<size_type>::max())
     {
       return emplace_at(point, std::forward<value_type>(args));
@@ -261,10 +261,10 @@ public:
    */
   template <detail::IsVoidOrRLink<link> ulink>
   reference get_ref(ulink point) noexcept
-  {    
+  {
     auto k = keys_.get_if(point.as_index());
     if (k == std::numeric_limits<size_type>::max())
-    {      
+    {
       return emplace_at(point);
     }
 
@@ -406,6 +406,16 @@ public:
     }
   }
 
+  inline reference item_at(size_type l) noexcept
+  {
+    return item_at_idx(keys_.get(l));
+  }
+
+  inline const_reference item_at(size_type l) const noexcept
+  {
+    return item_at_idx(keys_.get(l));
+  }
+
 private:
   template <typename T, detail::IsVoidOrRLink<link> ulink>
   static auto sfind(T& cont, ulink lnk) noexcept
@@ -430,7 +440,6 @@ private:
     return {};
   }
 
-
   template <typename T, detail::IsVoidOrRLink<link> ulink>
   static auto sfind(T& cont, ulink lnk, value_type def) noexcept -> value_type
   {
@@ -453,7 +462,6 @@ private:
     return def;
   }
 
-
   template <detail::IsVoidOrRLink<link> ulink>
   inline void validate(ulink l) const noexcept
   {
@@ -473,16 +481,6 @@ private:
     requires(has_backref)
   {
     return self_.get(item_at_idx(idx));
-  }
-
-  inline reference item_at(size_type l) noexcept
-  {
-    return item_at_idx(keys_.get(l));
-  }
-
-  inline const_reference item_at(size_type l) const noexcept 
-  {
-    return item_at_idx(keys_.get(l));
   }
 
   inline reference item_at_idx(size_type item_id) noexcept

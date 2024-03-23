@@ -87,11 +87,11 @@ class blackboard : public detail::custom_allocator_t<Options>
 {
   using dtor = bool (*)(void*);
 
-  using options                                    = Options;
-  static constexpr std::size_t total_atoms_in_page = detail::pool_size_v<options>;
-  using allocator                                  = detail::custom_allocator_t<options>;
-  using base_type                                  = allocator;
-  using name_index_map                             = typename detail::name_index_map<options>::type;
+  using options                             = Options;
+  static constexpr auto total_atoms_in_page = detail::pool_size_v<options>;
+  using allocator                           = detail::custom_allocator_t<options>;
+  using base_type                           = allocator;
+  using name_index_map                      = typename detail::name_index_map<options>::type;
 
 public:
   using link           = void*;
@@ -266,28 +266,27 @@ private:
 
   void* allocate_space(size_t size, size_t alignment)
   {
-    size_t req = (size + (alignment - 1));
+    uint32_t req = static_cast<uint32_t>(size + (alignment - 1));
     if (!current || current->remaining < req)
     {
-      size_t page_size   = std::max(total_atoms_in_page, req);
-      auto   new_current = acl::allocate<arena>(*this, sizeof(arena) + page_size);
+      uint32_t page_size   = std::max<uint32_t>(total_atoms_in_page, req);
+      auto     new_current = acl::allocate<arena>(*this, sizeof(arena) + page_size);
       if (current)
         current->pnext = new_current;
       new_current->pnext     = nullptr;
-      new_current->size      = page_size;
-      new_current->remaining = page_size - req;
+      new_current->size      = static_cast<uint32_t>(page_size);
+      new_current->remaining = static_cast<uint32_t>(page_size - req);
       current                = new_current;
       if (!head)
         head = current;
-      void* ptr = new_current + 1;
-      return std::align(alignment, size, ptr, req);
+      return acl::align(new_current + 1, alignment);
     }
     else
     {
 
       void* ptr = reinterpret_cast<std::byte*>(current + 1) + (current->size - current->remaining);
       current->remaining -= req;
-      return std::align(alignment, size, ptr, req);
+      return acl::align(ptr, alignment);
     }
   }
 

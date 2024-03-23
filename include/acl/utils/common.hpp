@@ -58,6 +58,12 @@ inline void aligned_free(void* ptr)
   return ACL_CUSTOM_MALLOC_NS::aligned_free(ptr);
 }
 
+inline void* align(void* ptr, size_t alignment)
+{
+  size_t off = static_cast<size_t>(reinterpret_cast<uintptr_t>(ptr) & (alignment - 1));
+  return static_cast<char*>(ptr) + off;
+}
+
 } // namespace acl
 
 #if defined(_MSC_VER)

@@ -418,6 +418,16 @@ public:
     }
   }
 
+  inline reference item_at(size_type l) noexcept
+  {
+    return item_at_idx(detail::index_val(keys_.get(l)));
+  }
+
+  inline const_reference item_at(size_type l) const noexcept
+  {
+    return item_at_idx(detail::index_val(keys_.get(l)));
+  }
+
 private:
   inline void disconnect_free(uint32_t inode)
   {
@@ -453,16 +463,6 @@ private:
     requires(has_backref)
   {
     return self_.get(item_at_idx(idx));
-  }
-
-  inline reference item_at(size_type l) noexcept
-  {
-    return item_at_idx(detail::index_val(keys_.get(l)));
-  }
-
-  inline const_reference item_at(size_type l) const noexcept
-  {
-    return item_at_idx(detail::index_val(keys_.get(l)));
   }
 
   inline reference item_at_idx(size_type item_id) noexcept
