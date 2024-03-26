@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(acl VERSION 0.0.1 LANGUAGES CXX)
+project(acl VERSION 0.0.68 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 
 option(ACL_BUILD_TESTS "Build the unit tests when BUILD_TESTING is enabled." OFF)
