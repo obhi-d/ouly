@@ -761,18 +761,18 @@ private:
     {
       auto store = items_[block];
       if constexpr (arity == 2)
-        for_each_value(store, block, item_start, pool_size, std::forward<Lambda>(lambda), Check());
+        for_each_value(store, block, item_start, pool_size, lambda, Check());
       else
-        for_each_value(store, item_start, pool_size, std::forward<Lambda>(lambda), Check());
+        for_each_value(store, item_start, pool_size, lambda, Check());
       item_start = 0;
     }
     // Final block
     if (end & pool_mod)
     {
       if constexpr (arity == 2)
-        for_each_value(items_[bend], bend, item_start, end & pool_mod, std::forward<Lambda>(lambda), Check());
+        for_each_value(items_[bend], bend, item_start, end & pool_mod, lambda, Check());
       else
-        for_each_value(items_[bend], item_start, end & pool_mod, std::forward<Lambda>(lambda), Check());
+        for_each_value(items_[bend], item_start, end & pool_mod, lambda, Check());
     }
   }
 
