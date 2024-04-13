@@ -169,19 +169,16 @@ public:
   /**
    * @brief Ensure a work-group by id and set a name
    */
-  ACL_API void create_group(workgroup_id group, std::string name, uint32_t thread_offset, uint32_t thread_count);
+  ACL_API void create_group(workgroup_id group, uint32_t thread_offset, uint32_t thread_count, uint32_t priority = 0);
   /**
-   * @brief Get the next available group.
+   * @brief Get the next available group. Group priority controls if a thread is shared between multiple groups, which
+   * group is executed first by the thread
    */
-  ACL_API workgroup_id create_group(std::string name, uint32_t thread_offset, uint32_t thread_count);
+  ACL_API workgroup_id create_group(uint32_t thread_offset, uint32_t thread_count, uint32_t priority = 0);
   /**
    * @brief Clear a group, and re-create it
    */
   ACL_API void clear_group(workgroup_id group);
-  /**
-   * @brief  Find an existing work group by name
-   */
-  ACL_API workgroup_id find_group(std::string const& name);
   /**
    * @brief Get worker count in this group
    */
@@ -208,7 +205,7 @@ public:
 
   worker_context const& get_context(worker_id worker, workgroup_id group)
   {
-    return workers[worker.get_index()].contexts[group.get_index()].get();
+    return workers[worker.get_index()].contexts[group.get_index()];
   }
 
   /**
@@ -223,27 +220,26 @@ private:
   inline void       do_work(worker_id, detail::work_item const&) noexcept;
   void              wake_up(worker_id) noexcept;
   void              run(worker_id);
-  detail::work_item try_get_work(worker_id) noexcept;
   detail::work_item get_work(worker_id) noexcept;
 
   bool work(worker_id) noexcept;
 
   scheduler_worker_entry entry_fn;
   // Work groups
-  std::array<detail::workgroup, 32> workgroups;
+  std::vector<detail::workgroup> workgroups;
   // Workers present in the scheduler
   std::unique_ptr<detail::worker[]> workers;
   // Local cache for work items, until they are pushed into global queue
   std::unique_ptr<detail::work_item[]> local_work;
   // Global work items
-  std::unique_ptr<detail::global_work_queue[]> global_work;
-  std::unique_ptr<uint32_t[]>                  group_masks;
-  std::unique_ptr<std::atomic_bool[]>          wake_status;
-  std::unique_ptr<detail::wake_event[]>        wake_events;
-  std::vector<std::thread>                     threads;
-  uint32_t                                     worker_count         = 0;
-  uint32_t                                     logical_task_divisor = 32;
-  std::atomic_bool                             stop                 = false;
+  std::unique_ptr<detail::group_range[]> group_ranges;
+  std::unique_ptr<std::atomic_bool[]>    wake_status;
+  std::unique_ptr<detail::wake_event[]>  wake_events;
+  std::vector<std::thread>               threads;
+
+  uint32_t         worker_count         = 0;
+  uint32_t         logical_task_divisor = 32;
+  std::atomic_bool stop                 = false;
 };
 
 template <typename... Args>

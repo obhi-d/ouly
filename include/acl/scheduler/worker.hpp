@@ -8,12 +8,10 @@
 #include <acl/allocators/default_allocator.hpp>
 #include <acl/containers/basic_queue.hpp>
 #include <acl/utils/tagged_ptr.hpp>
-#include <condition_variable>
 #include <cstdint>
 #include <limits>
 #include <mutex>
 #include <semaphore>
-#include <string>
 #include <tuple>
 
 namespace acl
@@ -61,25 +59,25 @@ struct work_queue_traits
   using allocator_t                     = acl::default_allocator<>;
 };
 
-using work_queue        = acl::basic_queue<work_item, work_queue_traits>;
-using global_work_queue = std::pair<std::mutex, work_queue>;
+using work_queue       = acl::basic_queue<work_item, work_queue_traits>;
+using async_work_queue = std::pair<acl::spin_lock, work_queue>;
 
 struct workgroup
 {
   // Global queues, one per thread group
-  uint32_t start_thread_idx = 0;
-  uint32_t end_thread_idx   = 0;
-  uint32_t thread_count     = 0;
+  std::unique_ptr<detail::async_work_queue[]> work_queues;
+  uint32_t                                    thread_count     = 0;
+  uint32_t                                    start_thread_idx = 0;
+  uint32_t                                    push_offset      = 0;
+  uint32_t                                    priority         = 0;
 
-  std::string name;
-
-  inline uint32_t create_group(std::string gname, uint32_t start, uint32_t count) noexcept
+  inline uint32_t create_group(uint32_t start, uint32_t count, uint32_t priority) noexcept
   {
-    start_thread_idx = start;
-    end_thread_idx   = start + count;
+    work_queues      = std::make_unique<detail::async_work_queue[]>(count);
     thread_count     = count;
-    name             = std::move(gname);
-    return end_thread_idx;
+    start_thread_idx = start;
+    this->priority   = priority;
+    return start + count;
   }
 
   workgroup() noexcept = default;
@@ -109,18 +107,24 @@ struct local_queue
   std::array<work_item, max_local_work_item> queue;
 };
 
+struct group_range
+{
+  std::array<uint8_t, max_worker_groups> priority_order;
+  uint32_t                               count = 0;
+  uint32_t                               mask  = 0;
+
+  group_range() noexcept
+  {
+    priority_order.fill(std::numeric_limits<uint8_t>::max());
+  }
+};
+
 struct worker
 {
-  // Contexts
-  std::array<worker_context_opt, max_worker_groups> contexts;
-  // This thread can steal from any of the workers in the range [friend_worker_start, friend_worker_end)
-  uint32_t friend_worker_count = 0;
-  uint32_t friend_worker_start = std::numeric_limits<uint32_t>::max();
-  uint32_t push_offset         = 0;
-  // Thread from which this worker should steal work
-  uint32_t stealing_source;
+  // Context per work group
+  std::unique_ptr<worker_context[]> contexts;
   // Worker specific item
-  global_work_queue exlusive_items;
+  async_work_queue exlusive_items;
   // worker id
   worker_id id;
   // quit event

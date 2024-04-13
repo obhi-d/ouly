@@ -7,8 +7,8 @@
 TEST_CASE("scheduler: Construction")
 {
   acl::scheduler scheduler;
-  scheduler.create_group(acl::workgroup_id(0), "default", 0, 16);
-  scheduler.create_group(acl::workgroup_id(1), "io", 16, 2);
+  scheduler.create_group(acl::workgroup_id(0), 0, 16);
+  scheduler.create_group(acl::workgroup_id(1), 16, 2);
 
   struct executor
   {
@@ -75,8 +75,8 @@ TEST_CASE("scheduler: Construction")
 TEST_CASE("scheduler: Range ParallelFor")
 {
   acl::scheduler scheduler;
-  scheduler.create_group(acl::workgroup_id(0), "default", 0, 16);
-  scheduler.create_group(acl::workgroup_id(1), "io", 16, 2);
+  scheduler.create_group(acl::workgroup_id(0), 0, 16);
+  scheduler.create_group(acl::workgroup_id(1), 16, 2);
 
   auto zero = acl::integer_range(0, 0);
   REQUIRE(zero.empty());
@@ -96,7 +96,7 @@ TEST_CASE("scheduler: Range ParallelFor")
 TEST_CASE("scheduler: Simplest ParallelFor")
 {
   acl::scheduler scheduler;
-  scheduler.create_group(acl::workgroup_id(0), "default", 0, 16);
+  scheduler.create_group(acl::workgroup_id(0), 0, 16);
 
   scheduler.begin_execution();
 
@@ -162,7 +162,7 @@ acl::co_task<std::string> create_string(acl::co_task<std::string>& tunein)
 TEST_CASE("scheduler: Test co_task")
 {
   acl::scheduler scheduler;
-  scheduler.create_group(acl::workgroup_id(0), "default", 0, 16);
+  scheduler.create_group(acl::workgroup_id(0), 0, 16);
 
   scheduler.begin_execution();
 
@@ -195,7 +195,7 @@ acl::co_sequence<std::string> create_string_seq(acl::co_task<std::string>& tunei
 TEST_CASE("scheduler: Test co_sequence")
 {
   acl::scheduler scheduler;
-  scheduler.create_group(acl::workgroup_id(0), "default", 0, 2);
+  scheduler.create_group(acl::workgroup_id(0), 0, 2);
 
   scheduler.begin_execution();
 
@@ -234,11 +234,11 @@ TEST_CASE("scheduler: Test submit_to")
   auto           wg_render  = acl::workgroup_id(3);
   auto           wg_stream  = acl::workgroup_id(4);
 
-  scheduler.create_group(wg_default, "default", 0, 32);
-  scheduler.create_group(wg_game, "game", 0, 16);
-  scheduler.create_group(wg_log, "log", 16, 1);
-  scheduler.create_group(wg_render, "render", 12, 4);
-  scheduler.create_group(wg_stream, "stream", 17, 2);
+  scheduler.create_group(wg_default, 0, 32);
+  scheduler.create_group(wg_game, 0, 16);
+  scheduler.create_group(wg_log, 16, 1);
+  scheduler.create_group(wg_render, 12, 4);
+  scheduler.create_group(wg_stream, 17, 2);
 
   std::atomic_int default_ = 0;
   std::atomic_int game_    = 0;

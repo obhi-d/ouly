@@ -12,7 +12,7 @@ thread_local detail::worker const* g_worker = nullptr;
 
 worker_context const& worker_context::get(workgroup_id group) noexcept
 {
-  return g_worker->contexts[group.get_index()].get();
+  return g_worker->contexts[group.get_index()];
 }
 
 worker_id const& worker_id::get() noexcept
@@ -34,12 +34,11 @@ inline void scheduler::do_work(worker_id thread, detail::work_item const& work) 
     std::coroutine_handle<>::from_address((void*)work.delegate_fn).resume();
     break;
   case detail::work_type_task_functor:
-    (*reinterpret_cast<task*>(work.delegate_fn))(work.data,
-                                                 workers[thread.get_index()].contexts[work.data.reserved_1].get());
+    (*reinterpret_cast<task*>(work.delegate_fn))(work.data, workers[thread.get_index()].contexts[work.data.reserved_1]);
     break;
   case detail::work_type_free_functor:
     reinterpret_cast<task_delegate>(work.delegate_fn)(work.data,
-                                                      workers[thread.get_index()].contexts[work.data.reserved_1].get());
+                                                      workers[thread.get_index()].contexts[work.data.reserved_1]);
     break;
   }
 }
@@ -63,7 +62,7 @@ void scheduler::run(worker_id thread)
 {
   g_worker = &workers[thread.get_index()];
 
-  entry_fn(worker_desc(thread, group_masks[thread.get_index()]));
+  entry_fn(worker_desc(thread, group_ranges[thread.get_index()].mask));
 
   while (true)
   {
@@ -91,86 +90,48 @@ void scheduler::run(worker_id thread)
 
 inline bool scheduler::work(worker_id thread) noexcept
 {
-  auto wrk = try_get_work(thread);
+  auto wrk = get_work(thread);
   if (!wrk.delegate_fn)
-  {
-    wrk = get_work(thread);
-    if (!wrk.delegate_fn)
-      return false;
-  }
-  assert(&workers[thread.get_index()].contexts[wrk.data.reserved_1].get().get_scheduler() == this);
+    return false;
+  assert(&workers[thread.get_index()].contexts[wrk.data.reserved_1].get_scheduler() == this);
   do_work(thread, wrk);
   return true;
 }
 
 detail::work_item scheduler::get_work(worker_id thread) noexcept
 {
-  auto& worker = workers[thread.get_index()];
+  auto const& range = group_ranges[thread.get_index()];
 
   // try to get work from own queue
-
+  for (uint32_t start = 0; start < range.count; ++start)
   {
-    auto& work_list = global_work[thread.get_index()];
-    auto  lck       = std::scoped_lock(work_list.first);
-    if (!work_list.second.empty())
-      return work_list.second.pop_front_unsafe();
-  }
-
-  {
-    // try to steal from stealing sources, first from lock free queue
-    // read head
-    for (uint32_t steal_src = 0; steal_src != worker.friend_worker_count; ++steal_src)
+    auto  group_id = range.priority_order[start];
+    auto& group    = workgroups[group_id];
+    for (uint32_t queue_idx = 0, queue_end = group.thread_count - 1; queue_idx <= queue_end; ++queue_idx)
     {
-      uint32_t steal_from = worker.friend_worker_start + ((worker.stealing_source++) % worker.friend_worker_count);
-      auto&    work_list  = global_work[steal_from];
-      auto     lck        = std::scoped_lock(work_list.first);
-      if (!work_list.second.empty())
-        return work_list.second.pop_front_unsafe();
+      auto& queue = group.work_queues[(thread.get_index() - group.start_thread_idx + queue_idx) & queue_end];
+      if (queue.first.try_lock())
+      {
+        if (!queue.second.empty())
+        {
+          auto item = queue.second.pop_front_unsafe();
+          queue.first.unlock();
+          return item;
+        }
+        queue.first.unlock();
+      }
     }
   }
 
   // Exclusive
   {
+    auto& worker    = workers[thread.get_index()];
     auto& work_list = worker.exlusive_items;
     auto  lck       = std::scoped_lock(work_list.first);
     if (!work_list.second.empty())
       return work_list.second.pop_front_unsafe();
   }
 
-  return {};
-}
-
-detail::work_item scheduler::try_get_work(worker_id thread) noexcept
-{
-  auto& worker = workers[thread.get_index()];
-
-  // try to get work from own queue
-
-  {
-    auto& work_list = global_work[thread.get_index()];
-    if (work_list.first.try_lock())
-    {
-      auto lck = std::scoped_lock(std::adopt_lock, work_list.first);
-      if (!work_list.second.empty())
-        return work_list.second.pop_front_unsafe();
-    }
-  }
-
-  {
-    // try to steal from stealing sources, first from lock free queue
-    // read head
-    for (uint32_t steal_src = 0; steal_src != worker.friend_worker_count; ++steal_src)
-    {
-      uint32_t steal_from = worker.friend_worker_start + ((worker.stealing_source++) % worker.friend_worker_count);
-      auto&    work_list  = global_work[steal_from];
-      if (work_list.first.try_lock())
-      {
-        auto lck = std::scoped_lock(std::adopt_lock, work_list.first);
-        if (!work_list.second.empty())
-          return work_list.second.pop_front_unsafe();
-      }
-    }
-  }
   return {};
 }
 
@@ -186,44 +147,48 @@ void scheduler::wake_up(worker_id thread) noexcept
 
 void scheduler::begin_execution(scheduler_worker_entry&& entry)
 {
-  local_work  = std::make_unique<detail::work_item[]>(worker_count);
-  global_work = std::make_unique<detail::global_work_queue[]>(worker_count);
-  group_masks = std::make_unique<uint32_t[]>(worker_count);
-  wake_status = std::make_unique<std::atomic_bool[]>(worker_count);
-  wake_events = std::make_unique<detail::wake_event[]>(worker_count);
-  workers     = std::make_unique<detail::worker[]>(worker_count);
+  local_work   = std::make_unique<detail::work_item[]>(worker_count);
+  workers      = std::make_unique<detail::worker[]>(worker_count);
+  group_ranges = std::make_unique<detail::group_range[]>(worker_count);
+  wake_status  = std::make_unique<std::atomic_bool[]>(worker_count);
+  wake_events  = std::make_unique<detail::wake_event[]>(worker_count);
+  workers      = std::make_unique<detail::worker[]>(worker_count);
 
   threads.reserve(worker_count - 1);
 
-  for (uint32_t group = 0; group < detail::max_worker_groups; ++group)
+  auto wgroup_count = static_cast<uint32_t>(workgroups.size());
+
+  for (uint32_t group = 0; group < wgroup_count; ++group)
   {
     auto const& g = workgroups[group];
 
-    for (uint32_t i = g.start_thread_idx; i < g.end_thread_idx; ++i)
+    for (uint32_t i = g.start_thread_idx, end = g.thread_count + i; i < end; ++i)
     {
       auto& worker = workers[i];
-      group_masks[i] |= 1u << group;
-    }
-  }
-
-  for (uint32_t group = 0; group < detail::max_worker_groups; ++group)
-  {
-    auto const& g = workgroups[group];
-
-    for (uint32_t i = g.start_thread_idx; i < g.end_thread_idx; ++i)
-    {
-      auto& worker = workers[i];
-      worker.contexts[group].emplace(*this, worker_id(i), workgroup_id(group), group_masks[i], i - g.start_thread_idx);
-      worker.friend_worker_start = std::min(g.start_thread_idx, worker.friend_worker_start);
-      worker.friend_worker_count = std::max(g.end_thread_idx, worker.friend_worker_count);
+      auto& range  = group_ranges[i];
+      range.mask |= 1u << group;
+      range.priority_order[range.count++] = static_cast<uint8_t>(group);
     }
   }
 
   for (uint32_t w = 0; w < worker_count; ++w)
   {
-    workers[w].friend_worker_count = workers[w].friend_worker_count - workers[w].friend_worker_start;
-    workers[w].stealing_source     = workers[w].friend_worker_start + (w + 1) % workers[w].friend_worker_count;
-    workers[w].id                  = worker_id(w);
+    auto& worker = workers[w];
+    worker.id    = worker_id(w);
+    auto& range  = group_ranges[w];
+
+    std::sort(range.priority_order.data(), range.priority_order.data() + range.count,
+              [&](uint8_t first, uint8_t second)
+              {
+                return workgroups[first].priority == workgroups[second].priority
+                         ? first < second
+                         : workgroups[first].priority > workgroups[second].priority;
+              });
+
+    worker.contexts = std::make_unique<worker_context[]>(wgroup_count);
+    for (uint32_t g = 0; g < wgroup_count; ++g)
+      worker.contexts[g] =
+        worker_context(*this, worker_id(w), workgroup_id(g), group_ranges[w].mask, w - workgroups[g].start_thread_idx);
     wake_status[w].store(true);
   }
 
@@ -237,7 +202,7 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry)
     start_counter.count_down();
   };
 
-  entry_fn(worker_desc(worker_id(0), group_masks[0]));
+  entry_fn(worker_desc(worker_id(0), group_ranges[0].mask));
 
   for (uint32_t thread = 1; thread < worker_count; ++thread)
   {
@@ -257,33 +222,42 @@ void scheduler::take_ownership() noexcept
 void scheduler::finish_pending_tasks() noexcept
 {
 
-  uint32_t empty_count = 0;
-  auto     checked     = std::vector<uint32_t>(worker_count);
-  std::iota(checked.begin(), checked.end(), 0);
-  auto worker = g_worker;
-  while (!checked.empty())
+  bool has_work = false;
+  do
   {
-    for (auto it = checked.begin(); it != checked.end();)
+    has_work = false;
+    for (auto& group : workgroups)
     {
-      auto w        = *it;
-      bool is_empty = true;
-      do
+      bool has_items = false;
+      for (uint32_t q = 0; q < group.thread_count; ++q)
       {
-        auto lock = std::scoped_lock(global_work[w].first);
-        is_empty  = global_work[w].second.empty();
+        auto lck = std::scoped_lock(group.work_queues[q].first);
+        has_items |= !group.work_queues[q].second.empty();
       }
-      while (0);
-      if (!is_empty)
+      if (has_items)
       {
+        for (uint32_t w = group.start_thread_idx, end = w + group.thread_count; w < end; ++w)
+          wake_up(worker_id(w));
+      }
+
+      has_work |= has_items;
+    }
+
+    for (uint32_t w = 0; w < worker_count; ++w)
+    {
+      auto& worker    = workers[w];
+      bool  has_items = false;
+      {
+        auto lck  = std::scoped_lock(worker.exlusive_items.first);
+        has_items = !worker.exlusive_items.second.empty();
+      }
+
+      has_work |= has_items;
+      if (!has_items)
         wake_up(worker_id(w));
-        it++;
-      }
-      else
-        it = checked.erase(it);
-      if (worker)
-        busy_work(worker->id);
     }
   }
+  while (has_work);
 }
 
 void scheduler::end_execution()
@@ -320,7 +294,7 @@ void scheduler::submit(detail::work_item work, worker_id current)
   auto& wg     = workgroups[work.data.reserved_1];
   auto& worker = workers[current.get_index()];
 
-  for (uint32_t i = wg.start_thread_idx; i != wg.end_thread_idx; ++i)
+  for (uint32_t i = wg.start_thread_idx, end = i + wg.thread_count; i != end; ++i)
   {
     bool sleeping = true;
     if (!wake_status[i].exchange(true))
@@ -330,18 +304,19 @@ void scheduler::submit(detail::work_item work, worker_id current)
       return;
     }
   }
+
   while (true)
   {
-
-    auto mask = wg.thread_count - 1;
-    for (uint32_t start = worker.push_offset, end = worker.push_offset + wg.thread_count; start != end; ++start)
+    wg.push_offset++;
+    for (uint32_t i = 0, end = wg.thread_count - 1; i <= end; ++i)
     {
-      uint32_t q = wg.start_thread_idx + (start & mask);
-      assert(&workers[q].contexts[work.data.reserved_1].get().get_scheduler() == this);
-      if (global_work[q].first.try_lock())
+      uint32_t q     = (wg.push_offset + i) & end;
+      auto&    queue = wg.work_queues[q];
+      if (queue.first.try_lock())
       {
-        global_work[q].second.emplace_back(std::move(work));
-        global_work[q].first.unlock();
+        queue.second.emplace_back(std::move(work));
+        queue.first.unlock();
+        q += wg.start_thread_idx;
         if (!wake_status[q].exchange(true))
           wake_events[q].notify();
         return;
@@ -350,41 +325,30 @@ void scheduler::submit(detail::work_item work, worker_id current)
   }
 }
 
-void scheduler::create_group(workgroup_id group, std::string name, uint32_t thread_offset, uint32_t thread_count)
+void scheduler::create_group(workgroup_id group, uint32_t thread_offset, uint32_t thread_count, uint32_t priority)
 {
-  assert(group.get_index() < workgroups.size());
+  if (group.get_index() >= workgroups.size())
+    workgroups.resize(group.get_index() + 1);
   thread_count = acl::next_pow2(thread_count);
   worker_count =
-    std::max(workgroups[group.get_index()].create_group(std::move(name), thread_offset, thread_count), worker_count);
+    std::max(workgroups[group.get_index()].create_group(thread_offset, thread_count, priority), worker_count);
 }
 
-workgroup_id scheduler::create_group(std::string name, uint32_t thread_offset, uint32_t thread_count)
+workgroup_id scheduler::create_group(uint32_t thread_offset, uint32_t thread_count, uint32_t priority)
 {
+  workgroups.emplace_back();
   thread_count = acl::next_pow2(thread_count);
-  for (uint32_t i = 0; i < workgroups.size(); ++i)
-  {
-    if (!workgroups[i].thread_count)
-    {
-      worker_count = std::max(workgroups[i].create_group(std::move(name), thread_offset, thread_count), worker_count);
-      return workgroup_id(i);
-    }
-  }
+  worker_count = std::max(workgroups.back().create_group(thread_offset, thread_count, priority), worker_count);
   // no empty group found
-  return workgroup_id(std::numeric_limits<uint32_t>::max());
+  return workgroup_id(static_cast<uint32_t>(workgroups.size() - 1));
 }
 
 void scheduler::clear_group(workgroup_id group)
 {
   workgroups[group.get_index()].start_thread_idx = 0;
-  workgroups[group.get_index()].end_thread_idx   = 0;
   workgroups[group.get_index()].thread_count     = 0;
-}
-
-workgroup_id scheduler::find_group(std::string const& name)
-{
-  auto it = std::ranges::find(workgroups.begin(), workgroups.end(), name, &detail::workgroup::name);
-  return workgroup_id(it == workgroups.end() ? std::numeric_limits<uint32_t>::max()
-                                             : static_cast<uint32_t>(std::distance(workgroups.begin(), it)));
+  workgroups[group.get_index()].push_offset      = 0;
+  workgroups[group.get_index()].work_queues      = nullptr;
 }
 
 } // namespace acl

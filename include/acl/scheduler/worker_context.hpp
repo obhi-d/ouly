@@ -87,6 +87,7 @@ static constexpr workgroup_id default_workgroup_id = workgroup_id(0);
 class worker_context
 {
 public:
+  worker_context() noexcept = default;
   worker_context(scheduler& s, worker_id id, workgroup_id group, uint32_t mask, uint32_t offset) noexcept
       : owner(&s), index(id), group_id(group), group_mask(mask), group_offset(offset)
   {}
