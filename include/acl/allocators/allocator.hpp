@@ -26,7 +26,7 @@ struct alignment
     return value;
   }
 
-  static inline constexpr auto log2() const noexcept
+  static inline constexpr auto log2() noexcept
   {
     auto constexpr half = value_ >> 1;
     return value_ ? 1 + alignment<half>::log2() : -1;
