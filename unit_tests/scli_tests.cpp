@@ -633,3 +633,63 @@ TEST_CASE("Cover types", "[scli][classic]")
   REQUIRE(uc.string_value == "string");
   REQUIRE(uc.sview == "view");
 }
+
+struct ignore_checker_ctx
+{
+  bool failed = false;
+};
+
+struct ignore_block
+{
+  bool enter(acl::scli&)
+  {
+    return false;
+  }
+
+  bool execute(acl::scli&, acl::parameter_list const&)
+  {
+    return true;
+  }
+};
+
+struct ignore_checker
+{
+  bool enter(acl::scli& s)
+  {
+    auto& ctx  = s.get<ignore_checker_ctx>();
+    ctx.failed = true;
+    return false;
+  }
+
+  bool execute(acl::scli& s, acl::parameter_list const&)
+  {
+    return true;
+  }
+};
+
+TEST_CASE("Ignore block check", "[scli][ignore]")
+{
+  std::string_view input = R"(
+   ignore {
+     checker;
+   };
+)";
+
+  acl::scli::builder builder;
+
+  // clang-format off
+  builder
+    + acl::reg<"root", default_reg_handler>
+      + acl::cmd<"*", ignore_block>
+        - acl::cmd<"*", ignore_checker>
+        - acl::endl
+      - acl::endl
+    - acl::endl;
+  // clang-format on
+  auto               ctx = builder.build();
+  ignore_checker_ctx uc;
+  acl::scli::parse(*ctx.get(), uc, "memory", input, {},
+                   [&uc](acl::scli::location const&, std::string_view error, std::string_view context) {});
+
+  REQUIRE(uc.failed == false);
+}

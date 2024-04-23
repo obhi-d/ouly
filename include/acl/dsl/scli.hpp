@@ -917,7 +917,8 @@ inline param_context* param_context_impl<Class>::get_instance()
   {
     []<bool flag = false>()
     {
-      static_assert(flag, "This type is not parameterized");
+      static_assert(flag,
+                    "This type is not parameterized. For unbound classes, use execute(scli, parameter_list params)");
     }
     ();
     return nullptr;
