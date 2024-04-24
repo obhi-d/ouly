@@ -693,3 +693,53 @@ TEST_CASE("Ignore block check", "[scli][ignore]")
 
   REQUIRE(uc.failed == false);
 }
+
+struct string_list_test
+{
+  struct ctx
+  {
+    std::string result;
+    bool        failed = false;
+  };
+  std::vector<std::string> value;
+
+  bool execute(acl::scli& s)
+  {
+    auto& c = s.get<ctx>();
+    for (auto const& v : value)
+      c.result += v;
+    return true;
+  }
+
+  static auto reflect() noexcept
+  {
+    return acl::bind(acl::bind<"something", &string_list_test::value>());
+  }
+};
+
+TEST_CASE("Check string list", "[scli][ignore]")
+{
+  std::string_view input = R"(
+   call something = [what, is, going, on];
+)";
+
+  acl::scli::builder builder;
+
+  // clang-format off
+  builder
+    + acl::reg<"root", default_reg_handler>
+      - acl::cmd<"call", string_list_test>
+    - acl::endl;
+  // clang-format on
+  auto                  ctx = builder.build();
+  string_list_test::ctx uc;
+  acl::scli::parse(*ctx.get(), uc, "memory", input, {},
+                   [&uc](acl::scli::location const&, std::string_view error, std::string_view context)
+                   {
+                     uc.result = error;
+                     uc.failed = true;
+                   });
+
+  REQUIRE(uc.failed == false);
+  REQUIRE(uc.result == "whatisgoingon");
+}
