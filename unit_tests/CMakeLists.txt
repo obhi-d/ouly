@@ -149,7 +149,7 @@ add_unit_test(NAME math_all_avx FILES "math_common.cpp"
                                   "math_axis_angle.cpp"
                                   "math_bounding_volume.cpp" DEFINES "-DACL_USE_AVX=1" CCARGS "-mavx")
 
-
+add_unit_test(NAME coalescing_allocator FILES "coalescing_allocator.cpp")
 add_executable(acl-bench
  "bench_arena_allocator.cpp"
  "bench_main.cpp" 

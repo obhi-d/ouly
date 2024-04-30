@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(acl VERSION 0.0.72 LANGUAGES CXX)
+project(acl VERSION 0.0.73 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 
 option(ACL_BUILD_TESTS "Build the unit tests when BUILD_TESTING is enabled." OFF)
@@ -67,6 +67,8 @@ add_library( ${ACL_TARGET_NAME}
     "${ACL_SOURCE_BUILD_DIR}/acl/scheduler/scheduler.cpp"
     "${ACL_SOURCE_BUILD_DIR}/acl/scheduler/event_types.cpp"
     "${ACL_SOURCE_BUILD_DIR}/acl/utils/string_utils.cpp"
+    "${ACL_SOURCE_BUILD_DIR}/acl/allocators/coalescing_allocator.cpp"
+    "${ACL_SOURCE_BUILD_DIR}/acl/allocators/coalescing_arena_allocator.cpp"
 )
 
 add_library(${PROJECT_NAME}::${ACL_TARGET_NAME} ALIAS ${ACL_TARGET_NAME})

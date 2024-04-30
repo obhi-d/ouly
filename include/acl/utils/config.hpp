@@ -9,6 +9,7 @@
 
 namespace acl::detail
 {
+inline static constexpr bool coalescing_allocator_large_size = false;
 #ifdef ACL_DEBUG
 inline static constexpr bool debug = true;
 #else
