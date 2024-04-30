@@ -30,73 +30,6 @@ struct is_static<default_allocator_tag>
 };
 } // namespace detail
 
-namespace detail
-{
-template <bool k_compute = false>
-struct default_alloc_statistics
-{
-  inline static int report_allocate(std::size_t)
-  {
-    return 0;
-  }
-  inline static int report_deallocate(std::size_t)
-  {
-    return 0;
-  }
-  inline static std::string print()
-  {
-    return std::string();
-  }
-};
-
-#ifdef ACL_REC_STATS
-
-using default_alloc_statistics_type =
-  detail::statistics<default_allocator_tag, acl::options<opt::compute_stats, opt::print_stats>>;
-
-ACL_EXTERN ACL_API default_alloc_statistics_type default_allocator_statistics_instance;
-
-template <>
-struct default_alloc_statistics<true>
-{
-  inline static timer_t::scoped report_allocate(std::size_t i_sz)
-  {
-    return get_instance().report_allocate(i_sz);
-  }
-  inline static timer_t::scoped report_deallocate(std::size_t i_sz)
-  {
-    return get_instance().report_deallocate(i_sz);
-  }
-  inline static default_alloc_statistics_type& get_instance()
-  {
-    return default_allocator_statistics_instance;
-  }
-  inline static std::string print()
-  {
-    return std::string();
-  }
-
-  inline bool operator==(default_alloc_statistics<true> const&) const
-  {
-    return true;
-  }
-
-  inline bool operator!=(default_alloc_statistics<true> const&) const
-  {
-    return false;
-  }
-};
-
-#endif
-} // namespace detail
-
-inline void print_final_stats()
-{
-#ifdef ACL_REC_STATS
-  detail::default_allocator_statistics_instance.print();
-#endif
-}
-
 // ----------------- Allocator Options -----------------
 namespace opt
 {
@@ -187,13 +120,11 @@ constexpr auto min_alignment_v = min_alignment<T>::value;
 
 template <typename Options = acl::options<>>
 struct ACL_EMPTY_BASES default_allocator
-    : detail::default_alloc_statistics<detail::HasComputeStats<Options>>,
-      detail::memory_tracker<default_allocator_tag, detail::debug_tracer_t<Options>, detail::HasTrackMemory<Options>>
+    : detail::memory_tracker<default_allocator_tag, detail::debug_tracer_t<Options>, detail::HasTrackMemory<Options>>
 {
-  using tag        = default_allocator_tag;
-  using address    = void*;
-  using size_type  = detail::choose_size_t<std::size_t, Options>;
-  using statistics = detail::default_alloc_statistics<detail::HasComputeStats<Options>>;
+  using tag       = default_allocator_tag;
+  using address   = void*;
+  using size_type = detail::choose_size_t<std::size_t, Options>;
   using tracker =
     detail::memory_tracker<default_allocator_tag, detail::debug_tracer_t<Options>, detail::HasTrackMemory<Options>>;
 
@@ -202,8 +133,6 @@ struct ACL_EMPTY_BASES default_allocator
   template <typename Alignment = alignment<align>>
   [[nodiscard]] inline static address allocate(size_type i_sz, Alignment i_alignment = {})
   {
-    [[maybe_unused]] auto measure = statistics::report_allocate(i_sz);
-
     return tracker::when_allocate(
       i_alignment > alignof(std::max_align_t) ? acl::aligned_alloc(i_alignment, i_sz) : acl::malloc(i_sz), i_sz);
   }
@@ -211,7 +140,6 @@ struct ACL_EMPTY_BASES default_allocator
   template <typename Alignment = alignment<align>>
   [[nodiscard]] inline static address zero_allocate(size_type i_sz, Alignment i_alignment = {})
   {
-    [[maybe_unused]] auto measure = statistics::report_allocate(i_sz);
     return tracker::when_allocate(
       i_alignment > alignof(std::max_align_t) ? acl::aligned_zmalloc(i_alignment, i_sz) : acl::zmalloc(i_sz), i_sz);
   }
@@ -219,8 +147,7 @@ struct ACL_EMPTY_BASES default_allocator
   template <typename Alignment = alignment<align>>
   inline static void deallocate(address i_addr, size_type i_sz, Alignment i_alignment = {})
   {
-    [[maybe_unused]] auto measure = statistics::report_deallocate(i_sz);
-    void*                 fixup   = tracker::when_deallocate(i_addr, i_sz);
+    void* fixup = tracker::when_deallocate(i_addr, i_sz);
     if (i_alignment > alignof(std::max_align_t))
       acl::aligned_free(fixup);
     else

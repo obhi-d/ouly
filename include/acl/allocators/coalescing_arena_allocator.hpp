@@ -150,30 +150,6 @@ using ca_arena_list    = ca_list<ca_arena>;
 struct ca_allocator_tag
 {};
 
-struct ca_defrag_stats
-{
-  std::uint32_t total_mem_move_merge = 0;
-  std::uint32_t total_arenas_removed = 0;
-
-  void report_defrag_mem_move_merge()
-  {
-    total_mem_move_merge++;
-  }
-
-  void report_defrag_arenas_removed()
-  {
-    total_arenas_removed++;
-  }
-
-  std::string print() const
-  {
-    std::stringstream ss;
-    ss << "Defrag memory move merges: " << total_mem_move_merge << "\n"
-       << "Defrag arenas removed: " << total_arenas_removed;
-    return ss.str();
-  }
-};
-
 } // namespace detail
 
 struct ca_allocation
@@ -183,9 +159,14 @@ struct ca_allocation
   arena_id             arena;
 };
 
+#ifdef ACL_REC_STATS
+using coalescing_arena_allocator_base = detail::statistics<detail::ca_allocator_tag, acl::options<opt::compute_stats>>;
+#else
+using coalescing_arena_allocator_base = detail::statistics<detail::ca_allocator_tag, acl::options<>>;
+#endif
+
 /** @brief Arena's and Allocation IDs are consequetive integers, and can be used as indexes. */
-class coalescing_arena_allocator
-    : detail::statistics<detail::ca_allocator_tag, acl::options<opt::base_stats<detail::ca_defrag_stats>>>
+class coalescing_arena_allocator : coalescing_arena_allocator_base
 {
 public:
   using size_type = allocation_size_type;
@@ -194,11 +175,33 @@ public:
   coalescing_arena_allocator(coalescing_arena_allocator const&) noexcept = default;
   coalescing_arena_allocator(coalescing_arena_allocator&&) noexcept      = default;
   coalescing_arena_allocator(size_type arena_sz) noexcept : arena_size(arena_sz) {}
+
+  /** @brief Arena size can be changed any time with this method, but it can only increase in size. */
   void set_arena_size(size_type s) noexcept
   {
     arena_size = std::max(arena_size, s);
   }
 
+  /** @return Arena size currently in use. */
+  size_type get_arena_size() const noexcept
+  {
+    return arena_size;
+  }
+
+  /** @brief Given an allocation_id return the offset in the arena it belongs to */
+  size_type get_offset(allocation_id id) const noexcept
+  {
+    return block_entries.entries_[id.id].offset;
+  }
+
+  /** @brief Given an allocation_id return the arena it belongs to */
+  arena_id get_arena(allocation_id id) const noexcept
+  {
+    return arena_id{block_entries.entries_[id.id].arena};
+  }
+  /** @brief The method `allocate` returns an allocation desc, with extra information about the allocation offset and
+   * the arena the allocation belongs to. The information need not be stored, as the alllocation_id can be used to fetch
+   * this information */
   template <CoalescingMemoryManager M, typename Alignment = acl::alignment<>, typename Dedicated = std::false_type>
   ca_allocation allocate(size_type size, M& manager, Alignment alignment = {}, Dedicated = {})
   {
@@ -222,6 +225,7 @@ public:
     return al;
   }
 
+  /** @brief Dellocate an allocation. The manager must be provided for removal of arenas. */
   template <CoalescingMemoryManager M>
   void deallocate(allocation_id id, M& manager)
   {
@@ -230,22 +234,7 @@ public:
       manager.remove(aa);
   }
 
-  void validate_integrity() const noexcept
-  {
-    size_type sz = 0;
-    ACL_ASSERT(free_ordering.size() == sizes.size());
-    for (size_t i = 1; i < sizes.size(); ++i)
-    {
-      ACL_ASSERT(sizes[i - 1] <= sizes[i]);
-    }
-    for (size_t i = 0; i < free_ordering.size(); ++i)
-    {
-      auto fn = free_ordering[i];
-      ACL_ASSERT(sz <= block_entries.entries_[fn].size);
-      ACL_ASSERT(block_entries.entries_[fn].size == sizes[i]);
-      sz = block_entries.entries_[fn].size;
-    }
-  }
+  void validate_integrity() const;
 
 private:
   std::pair<arena_id, allocation_id> add_arena(size_type size, bool empty);

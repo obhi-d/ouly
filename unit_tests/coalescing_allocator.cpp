@@ -23,7 +23,7 @@ struct alloc_mem_manager
   std::vector<arena_data_t> backup_arenas;
   std::vector<allocation>   allocs;
   std::vector<allocation>   backup_allocs;
-  uint32_t                  count = 0;
+  uint32_t                  arena_count = 0;
 
   bool drop_arena([[maybe_unused]] acl::uhandle id)
   {
@@ -47,12 +47,14 @@ struct alloc_mem_manager
       arenas.resize(id.id + 1);
 
     arenas[id.id] = std::move(arena);
+    arena_count++;
   }
 
   void remove(acl::arena_id h)
   {
     arenas[h.id].clear();
     arenas[h.id].shrink_to_fit();
+    arena_count--;
   }
 };
 
@@ -100,6 +102,32 @@ TEST_CASE("coalescing_arena_allocator all tests", "[coalescing_arena_allocator][
     }
     allocator.validate_integrity();
   }
+}
+
+TEST_CASE("coalescing_arena_allocator dedictated arena tests", "[coalescing_arena_allocator][default]")
+{
+  acl::coalescing_arena_allocator allocator;
+  constexpr uint32_t              page_size = 100;
+
+  allocator.set_arena_size(page_size);
+  REQUIRE(allocator.get_arena_size() == page_size);
+
+  allocator.set_arena_size(page_size / 2);
+  REQUIRE(allocator.get_arena_size() == page_size);
+
+  alloc_mem_manager mgr;
+  auto              block = allocator.allocate(50, mgr);
+
+  REQUIRE(block.offset == 0);
+
+  auto ded_block = allocator.allocate(10, mgr, {}, std::true_type{});
+  REQUIRE(ded_block.arena.id == 2);
+
+  REQUIRE(mgr.arena_count == 2);
+
+  allocator.deallocate(ded_block.id, mgr);
+
+  REQUIRE(mgr.arena_count == 1);
 }
 
 TEST_CASE("coalescing_allocator without memory manager", "[coalescing_allocator][default]")

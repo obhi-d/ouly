@@ -4,12 +4,4 @@
 #include <sstream>
 
 namespace acl::detail
-{
-
-#ifdef ACL_REC_STATS
-
-default_alloc_statistics_type default_allocator_statistics_instance;
-
-#endif
-
-} // namespace acl::detail
+{} // namespace acl::detail

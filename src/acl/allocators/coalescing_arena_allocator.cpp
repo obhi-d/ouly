@@ -34,10 +34,8 @@ std::uint32_t coalescing_arena_allocator::commit(size_type size, size_type const
   auto          free_idx  = std::distance((size_type const*)sizes.data(), found);
   std::uint32_t free_node = free_ordering[free_idx];
   auto&         blk       = block_entries.entries_[free_node];
-  // Marker
-  size_type     offset    = blk.offset;
-  std::uint32_t arena_num = blk.arena;
 
+  // Marker
   blk.is_free = false;
 
   auto remaining = *found - size;
@@ -276,4 +274,54 @@ void coalescing_arena_allocator::reinsert_right(size_t of, size_type size, std::
   }
 }
 
+void coalescing_arena_allocator::validate_integrity() const
+{
+  uint32_t counted_free_nodes = 0;
+  for (auto arena_it = arenas.begin(arena_entries), arena_end_it = arenas.end(arena_entries); arena_it != arena_end_it;
+       ++arena_it)
+  {
+    auto& arena           = *arena_it;
+    bool  arena_allocated = false;
+
+    for (auto blk_it = arena.blocks.begin(block_entries), blk_end_it = arena.blocks.end(block_entries);
+         blk_it != blk_end_it; ++blk_it)
+    {
+      auto& blk = *blk_it;
+      if ((blk.is_free))
+        counted_free_nodes++;
+    }
+  }
+
+  ACL_ASSERT(counted_free_nodes == total_free_nodes());
+
+  for (auto arena_it = arenas.begin(arena_entries), arena_end_it = arenas.end(arena_entries); arena_it != arena_end_it;
+       ++arena_it)
+  {
+    auto&     arena           = *arena_it;
+    bool      arena_allocated = false;
+    size_type expected_offset = 0;
+
+    for (auto blk_it = arena.blocks.begin(block_entries), blk_end_it = arena.blocks.end(block_entries);
+         blk_it != blk_end_it; ++blk_it)
+    {
+      auto& blk = *blk_it;
+      ACL_ASSERT(blk.offset == expected_offset);
+      expected_offset += blk.size;
+    }
+  }
+
+  size_type sz = 0;
+  ACL_ASSERT(free_ordering.size() == sizes.size());
+  for (size_t i = 1; i < sizes.size(); ++i)
+  {
+    ACL_ASSERT(sizes[i - 1] <= sizes[i]);
+  }
+  for (size_t i = 0; i < free_ordering.size(); ++i)
+  {
+    auto fn = free_ordering[i];
+    ACL_ASSERT(sz <= block_entries.entries_[fn].size);
+    ACL_ASSERT(block_entries.entries_[fn].size == sizes[i]);
+    sz = block_entries.entries_[fn].size;
+  }
+}
 } // namespace acl

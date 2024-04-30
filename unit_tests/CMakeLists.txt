@@ -56,6 +56,7 @@ function(add_unit_test)
       target_link_options(${target_name} PRIVATE --coverage)
     endif()
     if (unit_test_SANITIZE)
+      message("Santizers active on : ${target_name}")
       target_compile_options(${target_name} PUBLIC -fsanitize=address)
       target_link_options(${target_name} PUBLIC -fsanitize=address)
     endif()
@@ -149,7 +150,7 @@ add_unit_test(NAME math_all_avx FILES "math_common.cpp"
                                   "math_axis_angle.cpp"
                                   "math_bounding_volume.cpp" DEFINES "-DACL_USE_AVX=1" CCARGS "-mavx")
 
-add_unit_test(NAME coalescing_allocator FILES "coalescing_allocator.cpp")
+add_unit_test(NAME coalescing_allocator FILES "coalescing_allocator.cpp" SANITIZE)
 add_executable(acl-bench
  "bench_arena_allocator.cpp"
  "bench_main.cpp" 
