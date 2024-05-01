@@ -35,7 +35,8 @@ struct compute_atomic_stats
 namespace acl::detail
 {
 template <typename T>
-concept HasComputeStats = std::same_as<decltype(T::compute_stats_v), mmeory_stat_type>;
+concept HasComputeStats = T::compute_stats_v == detail::mmeory_stat_type::e_compute ||
+                          T::compute_stats_v == detail::mmeory_stat_type::e_compute_atomic;
 
 template <typename T>
 concept HasBaseStats = requires { typename T::base_stat_type; };
@@ -236,7 +237,7 @@ struct statistics_impl<tag_arg, Base, detail::mmeory_stat_type::e_compute_atomic
 };
 
 template <typename tag_arg, typename Base>
-struct statistics_impl<tag_arg, Base, detail::mmeory_stat_type::e_compute>
+struct statistics_impl<tag_arg, Base, detail::mmeory_stat_type::e_compute> : public Base
 {
 
   uint32_t arenas_allocated   = 0;
