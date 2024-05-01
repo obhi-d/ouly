@@ -159,7 +159,7 @@ struct ca_allocation
   arena_id             arena;
 };
 
-#ifdef ACL_REC_STATS
+#ifdef ACL_DEBUG
 using coalescing_arena_allocator_base = detail::statistics<detail::ca_allocator_tag, acl::options<opt::compute_stats>>;
 #else
 using coalescing_arena_allocator_base = detail::statistics<detail::ca_allocator_tag, acl::options<>>;
