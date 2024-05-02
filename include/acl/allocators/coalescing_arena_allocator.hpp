@@ -189,6 +189,12 @@ public:
   }
 
   /** @brief Given an allocation_id return the offset in the arena it belongs to */
+  size_type get_size(allocation_id id) const noexcept
+  {
+    return block_entries.entries_[id.id].size;
+  }
+
+  /** @brief Given an allocation_id return the offset in the arena it belongs to */
   size_type get_offset(allocation_id id) const noexcept
   {
     return block_entries.entries_[id.id].offset;
