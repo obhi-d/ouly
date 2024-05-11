@@ -699,28 +699,32 @@ struct string_list_test
   struct ctx
   {
     std::string result;
+    std::string what;
     bool        failed = false;
   };
   std::vector<std::string> value;
+  std::string              what;
 
   bool execute(acl::scli& s)
   {
     auto& c = s.get<ctx>();
     for (auto const& v : value)
       c.result += v;
+    c.what = what;
     return true;
   }
 
   static auto reflect() noexcept
   {
-    return acl::bind(acl::bind<"something", &string_list_test::value>());
+    return acl::bind(acl::bind<"something", &string_list_test::value>(),
+                     acl::bind<"something-else", &string_list_test::what>());
   }
 };
 
 TEST_CASE("Check string list", "[scli][ignore]")
 {
   std::string_view input = R"(
-   call something = [what, is, going, on];
+   call something = [what, is, going, on], something-else =  what;
 )";
 
   acl::scli::builder builder;
@@ -742,4 +746,5 @@ TEST_CASE("Check string list", "[scli][ignore]")
 
   REQUIRE(uc.failed == false);
   REQUIRE(uc.result == "whatisgoingon");
+  REQUIRE(uc.what == "what");
 }
