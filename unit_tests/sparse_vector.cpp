@@ -261,3 +261,28 @@ TEST_CASE("sparse_vector: unordered_merge iterator", "[sparse_vector][unordered_
 
   REQUIRE(check.empty() == true);
 }
+
+TEST_CASE("sparse_vector: fill", "[sparse_vector][fill]")
+{
+  acl::sparse_vector<int, acl::options<acl::opt::pool_size<20>>> vv;
+  for (int n = 0; n < 200; ++n)
+  {
+    std::uint32_t stop = range_rand<std::uint32_t>(10, 200);
+    vv.emplace_back(stop);
+  }
+
+  decltype(vv) other = vv;
+
+  vv.for_each(
+    [&](uint32_t idx, int const& v)
+    {
+      REQUIRE(other.at(idx) == v);
+    });
+
+  vv.fill(0xbadf00d);
+  vv.for_each(
+    [&](int const& v)
+    {
+      REQUIRE(0xbadf00d == v);
+    });
+}

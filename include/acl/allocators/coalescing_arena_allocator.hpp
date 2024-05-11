@@ -8,6 +8,7 @@
 #include <compare>
 #include <cstdint>
 #include <limits>
+#include <span>
 #include <vector>
 
 namespace acl
@@ -121,18 +122,93 @@ struct ca_accessor
 template <typename T>
 using ca_list = detail::vlist<ca_accessor<T>>;
 
-struct ca_block
+struct ca_block_entries
 {
-  allocation_size_type offset    = 0;
-  allocation_size_type size      = 0;
-  detail::list_node    order     = detail::list_node();
-  std::uint16_t        arena     = 0;
-  bool                 is_free   = false;
-  std::uint8_t         alignment = 0;
+  uint32_t                          free_idx_   = 0;
+  std::vector<detail::list_node>    ordering    = {detail::list_node()};
+  std::vector<allocation_size_type> offsets     = {0};
+  std::vector<allocation_size_type> sizes       = {0};
+  std::vector<uint16_t>             arenas      = {0};
+  std::vector<bool>                 free_marker = {false};
+
+  uint32_t push()
+  {
+    if (free_idx_)
+    {
+      auto entry = free_idx_;
+      free_idx_  = offsets[free_idx_];
+      return entry;
+    }
+    else
+    {
+      auto id = static_cast<uint32_t>(ordering.size());
+      ordering.emplace_back();
+      offsets.emplace_back();
+      sizes.emplace_back();
+      arenas.emplace_back();
+      free_marker.emplace_back();
+      return id;
+    }
+  }
+
+  uint32_t push(allocation_size_type offset, allocation_size_type size, uint16_t arena, bool is_free)
+  {
+    if (free_idx_)
+    {
+      auto entry         = free_idx_;
+      free_idx_          = offsets[free_idx_];
+      offsets[entry]     = offset;
+      sizes[entry]       = size;
+      arenas[entry]      = arena;
+      free_marker[entry] = is_free;
+      return entry;
+    }
+    else
+    {
+      auto id = static_cast<uint32_t>(offsets.size());
+      ordering.emplace_back();
+      offsets.emplace_back(offset);
+      sizes.emplace_back(size);
+      arenas.emplace_back(arena);
+      free_marker.emplace_back(is_free);
+      return id;
+    }
+  }
 };
 
-using ca_block_entries = ca_bank<ca_block>;
-using ca_block_list    = ca_list<ca_block>;
+struct ca_block_accessor
+{
+  using container  = ca_block_entries;
+  using value_type = std::uint32_t;
+
+  inline static void erase(ca_block_entries& bank, std::uint32_t node)
+  {
+    bank.offsets[node] = bank.free_idx_;
+    bank.free_idx_     = node;
+  }
+
+  inline static detail::list_node& node(ca_block_entries& bank, std::uint32_t node_id)
+  {
+    return bank.ordering[node_id];
+  }
+
+  inline static detail::list_node const& node(ca_block_entries const& bank, std::uint32_t node_id)
+  {
+    return bank.ordering[node_id];
+  }
+
+  inline static value_type const& get(ca_block_entries const& bank, std::uint32_t const& node)
+  {
+    return node;
+  }
+
+  inline static value_type& get(ca_block_entries& bank, std::uint32_t& node)
+  {
+    return node;
+  }
+};
+
+using ca_block_list = detail::vlist<ca_block_accessor>;
 
 struct ca_arena
 {
@@ -191,19 +267,19 @@ public:
   /** @brief Given an allocation_id return the offset in the arena it belongs to */
   size_type get_size(allocation_id id) const noexcept
   {
-    return block_entries.entries_[id.id].size;
+    return block_entries.sizes[id.id];
   }
 
   /** @brief Given an allocation_id return the offset in the arena it belongs to */
   size_type get_offset(allocation_id id) const noexcept
   {
-    return block_entries.entries_[id.id].offset;
+    return block_entries.offsets[id.id];
   }
 
   /** @brief Given an allocation_id return the arena it belongs to */
   arena_id get_arena(allocation_id id) const noexcept
   {
-    return arena_id{block_entries.entries_[id.id].arena};
+    return arena_id{block_entries.arenas[id.id]};
   }
   /** @brief The method `allocate` returns an allocation desc, with extra information about the allocation offset and
    * the arena the allocation belongs to. The information need not be stored, as the alllocation_id can be used to fetch
@@ -242,6 +318,21 @@ public:
 
   void validate_integrity() const;
 
+  inline std::span<allocation_size_type const> get_offsets() const noexcept
+  {
+    return block_entries.offsets;
+  }
+
+  inline std::span<allocation_size_type const> get_sizes() const noexcept
+  {
+    return block_entries.sizes;
+  }
+
+  inline std::span<uint16_t const> get_arena_indices() const noexcept
+  {
+    return block_entries.arenas;
+  }
+
 private:
   std::pair<arena_id, allocation_id> add_arena(size_type size, bool empty);
 
@@ -263,7 +354,7 @@ private:
 
   inline void add_free_arena(uint32_t block)
   {
-    sizes.push_back(block_entries.entries_[block].size);
+    sizes.push_back(block_entries.sizes[block]);
     free_ordering.push_back(block);
   }
 
@@ -314,10 +405,10 @@ private:
   {
     if (sizes.empty() || sizes.back() < size)
       return ca_allocation();
-    auto        it   = find_free(size);
-    auto        id   = commit(size, it);
-    auto const& node = block_entries.entries_[id];
-    return ca_allocation{.offset = node.offset, .id = {.id = id}, .arena = {.id = node.arena}};
+    auto it = find_free(size);
+    auto id = commit(size, it);
+    return ca_allocation{
+      .offset = block_entries.offsets[id], .id = {.id = id}, .arena = {.id = block_entries.arenas[id]}};
   }
 
   void     reinsert_left(size_t of, size_type size, std::uint32_t node) noexcept;

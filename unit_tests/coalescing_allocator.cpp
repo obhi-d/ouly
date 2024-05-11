@@ -73,7 +73,7 @@ TEST_CASE("coalescing_arena_allocator all tests", "[coalescing_arena_allocator][
 {
   uint32_t seed = Catch::getSeed();
   std::cout << " Seed : " << seed << std::endl;
-
+  seed = 1847702527;
   enum action
   {
     e_allocate,

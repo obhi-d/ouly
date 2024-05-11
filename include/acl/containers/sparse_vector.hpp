@@ -515,6 +515,15 @@ public:
     }
   }
 
+  inline void fill(value_type const& v) noexcept
+  {
+    for (auto block : items_)
+    {
+      if (block)
+        std::fill(cast(block), cast(block + pool_size), v);
+    }
+  }
+
   void shrink(size_type idx) noexcept
   {
     ACL_ASSERT(length_ > idx);
@@ -756,7 +765,7 @@ private:
     auto bend       = end >> pool_mul;
     auto item_start = start & pool_mod;
     ACL_ASSERT(bstart <= bend);
-    constexpr auto arity = function_traits<Lambda>::arity;
+    constexpr auto arity = function_traits<std::remove_reference_t<Lambda>>::arity;
     for (size_type block = bstart; block != bend; ++block)
     {
       auto store = items_[block];
@@ -797,7 +806,7 @@ private:
   inline static void for_each_value(Store* store, size_type block, size_type start, size_type end, Lambda&& lambda,
                                     Check) noexcept
   {
-    constexpr auto arity = function_traits<Lambda>::arity;
+    constexpr auto arity = function_traits<std::remove_reference_t<Lambda>>::arity;
     if (store)
     {
       for (size_type e = start; e < end; ++e)

@@ -9,14 +9,9 @@ std::pair<arena_id, allocation_id> coalescing_arena_allocator::add_arena(size_ty
   uint16_t arena_idx = static_cast<uint16_t>(arena_entries.push(detail::ca_arena()));
   auto&    arena_ref = arena_entries.entries_[arena_idx];
   arena_ref.size     = size;
-  auto  block_id     = block_entries.push(detail::ca_block());
-  auto& block_ref    = block_entries.entries_[block_id];
-  block_ref.offset   = 0;
-  block_ref.arena    = arena_idx;
-  block_ref.size     = size;
+  auto block_id      = block_entries.push(0, size, arena_idx, empty);
   if (empty)
   {
-    block_ref.is_free   = true;
     arena_ref.free_size = size;
     add_free_arena(block_id);
   }
@@ -33,19 +28,18 @@ std::uint32_t coalescing_arena_allocator::commit(size_type size, size_type const
 {
   auto          free_idx  = std::distance((size_type const*)sizes.data(), found);
   std::uint32_t free_node = free_ordering[free_idx];
-  auto&         blk       = block_entries.entries_[free_node];
 
   // Marker
-  blk.is_free = false;
+  block_entries.free_marker[free_node] = false;
 
-  auto remaining = *found - size;
-  blk.size       = size;
+  auto remaining                 = *found - size;
+  block_entries.sizes[free_node] = size;
   if (remaining > 0)
   {
-    auto& list   = arena_entries.entries_[blk.arena].blocks;
-    auto  arena  = blk.arena;
-    auto  newblk = block_entries.push(
-      detail::ca_block{.offset = blk.offset + size, .size = remaining, .order = {}, .arena = arena, .is_free = true});
+    auto  arena  = block_entries.arenas[free_node];
+    auto& list   = arena_entries.entries_[arena].blocks;
+    auto  newblk = block_entries.push(block_entries.offsets[free_node] + size, remaining, arena, true);
+
     list.insert_after(block_entries, free_node, (uint32_t)newblk);
     // reinsert the left-over size in free list
     reinsert_left(free_idx, remaining, (uint32_t)newblk);
@@ -97,9 +91,9 @@ void coalescing_arena_allocator::reinsert_left(size_t of, size_type size, std::u
 
 arena_id coalescing_arena_allocator::deallocate(allocation_id id)
 {
-  auto  node    = id.id;
-  auto& blk     = block_entries.entries_[node];
-  auto  measure = this->statistics::report_deallocate(blk.size);
+  auto const node    = id.id;
+  auto const size    = block_entries.sizes[node];
+  auto       measure = this->statistics::report_deallocate(size);
 
   enum
   {
@@ -115,25 +109,24 @@ arena_id coalescing_arena_allocator::deallocate(allocation_id id)
     e_left_and_right
   };
 
-  auto& arena     = arena_entries.entries_[blk.arena];
+  auto& arena     = arena_entries.entries_[block_entries.arenas[node]];
   auto& node_list = arena.blocks;
 
   // last index is not used
-  arena.free_size += blk.size;
-  auto size = blk.size;
+  arena.free_size += size;
 
   std::uint32_t left = 0, right = 0;
   std::uint32_t merges = 0;
-
-  if (node != node_list.front() && block_entries.entries_[blk.order.prev].is_free)
+  auto const    order  = block_entries.ordering[node];
+  if (node != node_list.front() && block_entries.free_marker[order.prev])
   {
-    left = blk.order.prev;
+    left = order.prev;
     merges |= f_left;
   }
 
-  if (node != node_list.back() && block_entries.entries_[blk.order.next].is_free)
+  if (node != node_list.back() && block_entries.free_marker[order.next])
   {
-    right = blk.order.next;
+    right = order.next;
     merges |= f_right;
   }
 
@@ -149,7 +142,7 @@ arena_id coalescing_arena_allocator::deallocate(allocation_id id)
       erase(right);
     }
 
-    std::uint16_t arena_idx = blk.arena;
+    std::uint16_t arena_idx = block_entries.arenas[node];
     arena.size              = 0;
     arena.blocks.clear(block_entries);
     arenas.erase(arena_entries, arena_idx);
@@ -160,27 +153,27 @@ arena_id coalescing_arena_allocator::deallocate(allocation_id id)
   {
   case merge_type::e_none:
     add_free(node);
-    blk.is_free = true;
+    block_entries.free_marker[node] = true;
     break;
   case merge_type::e_left:
   {
-    auto left_size = block_entries.entries_[left].size;
+    auto left_size = block_entries.sizes[left];
     grow_free_node(left, left_size + size);
     node_list.erase(block_entries, node);
   }
   break;
   case merge_type::e_right:
   {
-    auto right_size = block_entries.entries_[right].size;
+    auto right_size = block_entries.sizes[right];
     replace_and_grow(right, node, right_size + size);
     node_list.erase(block_entries, right);
-    blk.is_free = true;
+    block_entries.free_marker[node] = true;
   }
   break;
   case merge_type::e_left_and_right:
   {
-    auto left_size  = block_entries.entries_[left].size;
-    auto right_size = block_entries.entries_[right].size;
+    auto left_size  = block_entries.sizes[left];
+    auto right_size = block_entries.sizes[right];
     erase(right);
     grow_free_node(left, left_size + right_size + size);
     node_list.erase2(block_entries, node);
@@ -193,30 +186,29 @@ arena_id coalescing_arena_allocator::deallocate(allocation_id id)
 
 void coalescing_arena_allocator::add_free(std::uint32_t blkid)
 {
-  block_entries.entries_[blkid].is_free = true;
-  auto size                             = block_entries.entries_[blkid].size;
-  auto it                               = mini2_it(sizes.data(), sizes.size(), size);
+  block_entries.free_marker[blkid] = true;
+  auto size                        = block_entries.sizes[blkid];
+  auto it                          = mini2_it(sizes.data(), sizes.size(), size);
   free_ordering.emplace(free_ordering.begin() + it, blkid);
   sizes.emplace(sizes.begin() + it, size);
 }
 
 void coalescing_arena_allocator::grow_free_node(std::uint32_t block, size_type newsize)
 {
-  auto& blk = block_entries.entries_[block];
 
-  auto it = mini2_it(sizes.data(), sizes.size(), blk.size);
+  auto it = mini2_it(sizes.data(), sizes.size(), block_entries.sizes[block]);
   for (uint32_t end = static_cast<uint32_t>(free_ordering.size()); it != end && free_ordering[it] != block; ++it)
     ;
 
   ACL_ASSERT(it != static_cast<uint32_t>(free_ordering.size()));
-  blk.size = newsize;
+  block_entries.sizes[block] = newsize;
   reinsert_right(it, newsize, block);
 }
 
 void coalescing_arena_allocator::replace_and_grow(std::uint32_t block, std::uint32_t new_block, size_type new_size)
 {
-  size_type size                         = block_entries.entries_[block].size;
-  block_entries.entries_[new_block].size = new_size;
+  size_type size                 = block_entries.sizes[block];
+  block_entries.sizes[new_block] = new_size;
 
   auto it = mini2_it(sizes.data(), sizes.size(), size);
   for (uint32_t end = static_cast<uint32_t>(free_ordering.size()); it != end && free_ordering[it] != block; ++it)
@@ -228,7 +220,7 @@ void coalescing_arena_allocator::replace_and_grow(std::uint32_t block, std::uint
 
 void coalescing_arena_allocator::erase(std::uint32_t block)
 {
-  auto it = mini2_it(sizes.data(), sizes.size(), block_entries.entries_[block].size);
+  auto it = mini2_it(sizes.data(), sizes.size(), block_entries.sizes[block]);
   for (uint32_t end = static_cast<uint32_t>(free_ordering.size()); it != end && free_ordering[it] != block; ++it)
     ;
   ACL_ASSERT(it != static_cast<uint32_t>(free_ordering.size()));
@@ -286,8 +278,8 @@ void coalescing_arena_allocator::validate_integrity() const
     for (auto blk_it = arena.blocks.begin(block_entries), blk_end_it = arena.blocks.end(block_entries);
          blk_it != blk_end_it; ++blk_it)
     {
-      auto& blk = *blk_it;
-      if ((blk.is_free))
+      auto blk = *blk_it;
+      if (block_entries.free_marker[blk])
         counted_free_nodes++;
     }
   }
@@ -304,9 +296,9 @@ void coalescing_arena_allocator::validate_integrity() const
     for (auto blk_it = arena.blocks.begin(block_entries), blk_end_it = arena.blocks.end(block_entries);
          blk_it != blk_end_it; ++blk_it)
     {
-      auto& blk = *blk_it;
-      ACL_ASSERT(blk.offset == expected_offset);
-      expected_offset += blk.size;
+      auto blk = *blk_it;
+      ACL_ASSERT(block_entries.offsets[blk] == expected_offset);
+      expected_offset += block_entries.sizes[blk];
     }
   }
 
@@ -319,9 +311,9 @@ void coalescing_arena_allocator::validate_integrity() const
   for (size_t i = 0; i < free_ordering.size(); ++i)
   {
     auto fn = free_ordering[i];
-    ACL_ASSERT(sz <= block_entries.entries_[fn].size);
-    ACL_ASSERT(block_entries.entries_[fn].size == sizes[i]);
-    sz = block_entries.entries_[fn].size;
+    ACL_ASSERT(sz <= block_entries.sizes[fn]);
+    ACL_ASSERT(block_entries.sizes[fn] == sizes[i]);
+    sz = block_entries.sizes[fn];
   }
 }
 } // namespace acl
