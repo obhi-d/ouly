@@ -25,7 +25,6 @@ jobs:
       run:  |
             sudo add-apt-repository universe
             sudo apt update
-            sudo apt-get upgrade -y
             sudo apt-get install -y lcov gcc-14 g++-14
 
     - name: Configure and Build
