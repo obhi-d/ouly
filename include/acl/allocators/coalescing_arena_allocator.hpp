@@ -348,6 +348,7 @@ private:
   template <CoalescingMemoryManager M>
   void add_arena(size_type size, M& manager)
   {
+    size            = std::max(size, arena_size);
     auto [arena, _] = add_arena(size, true);
     manager.add(arena, size);
   }
