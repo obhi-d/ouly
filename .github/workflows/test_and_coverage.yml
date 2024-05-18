@@ -19,14 +19,13 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-
+    - uses: lukka/get-cmake@latest
 
     - name: Install lcov & gcc
       run:  |
-            sudo add-apt-repository universe
-            sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+            sudo add-apt-repository "deb http://archive.ubuntu.com/ubuntu/ noble main universe"
             sudo apt update
-            sudo apt-get install -y lcov gcc-14 g++-14
+            sudo apt install gcc-14 g++-14
 
     - name: Configure and Build
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
