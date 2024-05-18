@@ -770,7 +770,17 @@ private:
       x.size_ = 0;
     }
     else
-      assign_copy(x, std::false_type());
+    {
+      if constexpr (std::is_copy_assignable_v<value_type>)
+        assign_copy(x, std::false_type());
+      else
+      {
+        []<bool flag = false>()
+        {
+          static_assert(flag, "This type is not assign_moveable");
+        };
+      }
+    }
     return *this;
   }
 
