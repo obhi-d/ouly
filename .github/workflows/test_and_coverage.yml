@@ -18,13 +18,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
 
     - name: Install lcov & gcc
       run:  |
+            sudo add-apt-repository universe
             sudo apt update
-            sudo apt-get install -y lcov gcc g++
+            sudo apt-get upgrade -y
+            sudo apt-get install -y lcov gcc-14 g++-14
 
     - name: Configure and Build
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
@@ -35,8 +37,8 @@ jobs:
 
       shell: bash
       env:
-        CC: gcc
-        CXX: g++
+        CC: gcc-14
+        CXX: g++-14
         
     - name: Test
       working-directory: ${{github.workspace}}/build/unit_tests
@@ -46,7 +48,7 @@ jobs:
 
     - name: Run lcov
       working-directory: ${{github.workspace}}/build/unit_tests
-      run: lcov -c --directory ${{github.workspace}}/include --directory ${{github.workspace}}/src -d . --no-external -o lcov.info --gcov-tool /usr/bin/gcov
+      run: lcov -c --directory ${{github.workspace}}/include --directory ${{github.workspace}}/src -d . --no-external -o lcov.info --gcov-tool /usr/bin/gcov-14
 
     - name: Coverage
       uses: coverallsapp/github-action@v2
