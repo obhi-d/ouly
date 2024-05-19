@@ -748,3 +748,95 @@ TEST_CASE("Check string list", "[scli][ignore]")
   REQUIRE(uc.result == "whatisgoingon");
   REQUIRE(uc.what == "what");
 }
+
+struct ignore_block_cmd
+{
+  bool enter(acl::scli&)
+  {
+    return false;
+  }
+
+  bool execute(acl::scli&, acl::parameter_list const&)
+  {
+    return true;
+  }
+
+  void exit(acl::scli&) {}
+};
+
+struct echo_cmd
+{
+  struct ctx
+  {
+    bool set    = false;
+    bool failed = false;
+  };
+
+  bool execute(acl::scli& s, acl::parameter_list const&)
+  {
+    auto& c = s.get<ctx>();
+    c.set   = true;
+    return true;
+  }
+};
+
+struct accept_block_cmd
+{
+  bool enter(acl::scli&)
+  {
+    return true;
+  }
+
+  bool execute(acl::scli&, acl::parameter_list const&)
+  {
+    return true;
+  }
+
+  void exit(acl::scli&) {}
+};
+
+TEST_CASE("Ignore multiple blocks", "[scli][ignore]")
+{
+  std::string_view input = R"(
+   cmd1 something 
+   {
+     cmd2 other;
+     cmd3 thing;
+   }
+
+   cmd4 something_more;
+   cmd5 ignore_this too;
+   cmd6 
+   {
+     ignore me;
+   }
+   accept
+   {
+     echo;
+   } 
+   cmd7;
+   cmd8;
+)";
+
+  acl::scli::builder builder;
+  // clang-format off
+  builder
+    + acl::reg<"root", default_reg_handler>
+      + acl::cmd<"accept", accept_block_cmd>
+        - acl::cmd<"echo", echo_cmd>
+        - acl::endl
+      + acl::cmd<"*", ignore_block_cmd>
+        - acl::endl
+    - acl::endl;
+  // clang-format on
+  auto          ctx = builder.build();
+  echo_cmd::ctx uc;
+  acl::scli::parse(*ctx.get(), uc, "memory", input, {},
+                   [&uc](acl::scli::location const&, std::string_view error, std::string_view context)
+                   {
+                     uc.failed = true;
+                   });
+
+  REQUIRE(!uc.failed);
+  REQUIRE(uc.set);
+}

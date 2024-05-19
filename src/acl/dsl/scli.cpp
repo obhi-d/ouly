@@ -81,9 +81,13 @@ bool scli::is_code_region(std::string_view reg) const noexcept
 
 void scli::set_next_command(std::string_view name) noexcept
 {
+  if (skip_depth)
+    return;
+
   parameter   = {};
   param_pos   = 0;
   current_cmd = nullptr;
+
   if (current_cmd_ctx)
   {
     current_cmd = current_cmd_ctx->get_context(*this, name);
@@ -117,14 +121,16 @@ void scli::enter_command_scope()
     {
       bool entered = current_cmd->enter(*this, current_cmd_state);
 
-      cmd_ctx_stack.emplace_back(current_cmd_ctx, current_cmd_state);
-
-      current_cmd_ctx   = current_cmd;
-      current_cmd       = nullptr;
-      current_cmd_state = nullptr;
-
       if (!entered)
         skip_depth++;
+      else
+      {
+        cmd_ctx_stack.emplace_back(current_cmd_ctx, current_cmd_state);
+
+        current_cmd_ctx   = current_cmd;
+        current_cmd       = nullptr;
+        current_cmd_state = nullptr;
+      }
     }
     else
       skip_depth++;
@@ -136,7 +142,10 @@ void scli::exit_command_scope()
   if (current_cmd)
   {
     if (skip_depth)
+    {
       --skip_depth;
+      return;
+    }
     if (!skip_depth)
     {
       if (cmd_ctx_stack.empty())
@@ -158,7 +167,7 @@ void scli::set_next_param_name(std::string_view param) noexcept
 
 void scli::set_param(std::string_view value)
 {
-  if (param_ctx)
+  if (param_ctx && !skip_depth)
   {
     param_ctx->parse_param(*this, param_pos, parameter, value, current_cmd_state);
     param_pos++;
@@ -173,7 +182,7 @@ void scli::set_param(text_content&& tc)
 
 void scli::enter_param_scope()
 {
-  if (param_ctx)
+  if (param_ctx && !skip_depth)
   {
     auto [ctx, pstate] = param_ctx->enter_param_context(*this, param_pos, parameter, current_cmd_state);
     if (!ctx)
@@ -195,6 +204,8 @@ void scli::enter_param_scope()
 
 void scli::exit_param_scope()
 {
+  if (skip_depth)
+    return;
   if (param_ctx_stack.empty())
   {
     error(source, "Invalid parameter stack pop.", parameter);
@@ -315,6 +326,8 @@ int scli::read(char* data, int size) noexcept
 
 void scli::destroy_comamnd_state()
 {
+  if (skip_depth)
+    return;
   if (current_cmd)
   {
     current_cmd->destroy(*this, current_cmd_state);
