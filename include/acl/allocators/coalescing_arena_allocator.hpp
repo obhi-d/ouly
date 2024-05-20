@@ -155,8 +155,10 @@ struct ca_block_entries
   {
     if (free_idx_)
     {
-      auto entry         = free_idx_;
-      free_idx_          = offsets[free_idx_];
+      auto entry = free_idx_;
+      free_idx_  = offsets[free_idx_];
+      if constexpr (acl::detail::debug)
+        ordering[entry] = {};
       offsets[entry]     = offset;
       sizes[entry]       = size;
       arenas[entry]      = arena;
