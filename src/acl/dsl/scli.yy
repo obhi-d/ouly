@@ -43,15 +43,13 @@ YY_DECL;
 %token 
 	END 0 "end of file"
 	SEMICOLON  ";"
-	LBRACKET   "{"
-	RBRACKET   "}"
-	LSQBRACKET "["
-	RSQBRACKET "]"
+	LBRACES   "{"
+	RBRACES   "}"
 	LABRACKET  "<"
 	RABRACKET  ">"
 	COMMA      ","
-	LBRACES    "("
-	RBRACES    ")"
+	LPARENTHESES    "("
+	RPARENTHESES    ")"
 	ASSIGN     "="
 	COLON      ":"
 	IMPORT	   "import"
@@ -71,7 +69,7 @@ script:    statement
 	     | statement script      
 
 statement: commanddecl                            
-		| RBRACKET                               { scli.exit_command_scope();  scli.destroy_comamnd_state();            }
+		| RBRACES                               { scli.exit_command_scope();  scli.destroy_comamnd_state();            }
 		| REGION_ID                              { scli.enter_region(std::move($1));                                    }
 		| TEXT_REGION_ID TEXT_CONTENTS           { scli.enter_text_region(std::move($1), std::move($2));                }
 		| IMPORT STRING_LITERAL SEMICOLON        { scli.import_script(std::move($2));                                   }
@@ -82,7 +80,7 @@ commandname:   STRING         { scli.set_next_command($1); }
 commanddecl: 
            commandname SEMICOLON                     { scli.execute_command(); scli.destroy_comamnd_state(); }
 		 | commandname parameters.1.N SEMICOLON      { scli.execute_command(); scli.destroy_comamnd_state(); }
-		 | commandname parameters.1.N LBRACKET       { scli.execute_command(); scli.enter_command_scope();   }
+		 | commandname parameters.1.N LBRACES       { scli.execute_command(); scli.enter_command_scope();   }
 		 
 
 parameters.1.N:     parameter	
@@ -92,8 +90,8 @@ parameters.1.N:     parameter
 parameter: | STRING ASSIGN                     { scli.set_next_param_name($1); }
            | STRING_LITERAL                    { scli.set_param(std::move($1)); }
            | STRING                            { scli.set_param($1); }
-		   | LSQBRACKET                        { scli.enter_param_scope(); }
-		   | RSQBRACKET                        { scli.exit_param_scope(); }
+		   | LPARENTHESES                        { scli.enter_param_scope(); }
+		   | RPARENTHESES                        { scli.exit_param_scope(); }
 		   | COMMA                             
 		   ;
 

@@ -64,6 +64,27 @@
       "vendor": { "microsoft.com/VisualStudioSettings/CMake/1.0": { "hostOS": [ "Windows" ] } }
     },
     {
+      "name": "windows-gen",
+      "displayName": "Windows x64 Generate",
+      "description": "Target Windows with the Visual Studio development environment.",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+        "ASAN_ENABLED": "ON",
+        "ACL_BUILD_TESTS": "ON",
+        "ACL_GENERATE_SCLI_PARSER": "ON",
+        "ACL_BISON_EXE": "C:\\repos\\winflexbison\\win_bison.exe",
+        "ACL_FLEX_EXE": "C:\\repos\\winflexbison\\win_flex.exe"
+      },
+      "vendor": { "microsoft.com/VisualStudioSettings/CMake/1.0": { "hostOS": [ "Windows" ] } }
+    },
+    {
       "name": "windows-default",
       "displayName": "Windows x64 Debug",
       "description": "Target Windows with the Visual Studio development environment.",
@@ -107,6 +128,10 @@
     {
       "name": "windows-test",
       "configurePreset": "windows-test"
+    },
+    {
+      "name": "windows-gen",
+      "configurePreset": "windows-gen"
     },
     {
       "name": "windows-release",

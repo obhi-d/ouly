@@ -27,7 +27,7 @@ void   scli_free (void* ptr, void* yyscanner);
 
 REGND   [a-zA-Z#_$\.]+
 BLANK   [ \t\r]
-STRCH   [a-zA-Z0-9\._@*/\\]
+STRCH   [a-zA-Z0-9\._@*/\\\[\]\<\>]
 %%
 
 
@@ -70,33 +70,29 @@ STRCH   [a-zA-Z0-9\._@*/\\]
 }
 
 <INITIAL,STATE_CONTENT>{
-^--                                 BEGIN(STATE_REGION); scli.skip_len(2);
--                                   scli.put(yyleng);
-"/*"                                BEGIN(STATE_COMMENT); scli.skip_len(2);
-"//"                                BEGIN(STATE_SINGLE_LINE_COMMENT); scli.skip_len(2);
-"{"                                 scli.skip_len(1); return acl::scli_parser::make_LBRACKET(scli.source);
-"}"                                 scli.skip_len(1); return acl::scli_parser::make_RBRACKET(scli.source);
-"import"	                        scli.skip_len(yyleng); return acl::scli_parser::make_IMPORT(scli.source);
-"<"			                        scli.skip_len(1); return acl::scli_parser::make_LABRACKET(scli.source);
-">"			                        scli.skip_len(1); return acl::scli_parser::make_RABRACKET(scli.source);
-"["                                 scli.skip_len(1); return acl::scli_parser::make_LSQBRACKET(scli.source);
-"]"                                 scli.skip_len(1); return acl::scli_parser::make_RSQBRACKET(scli.source);
-","                                 scli.skip_len(1); return acl::scli_parser::make_COMMA(scli.source);
-";"                                 scli.skip_len(1); return acl::scli_parser::make_SEMICOLON(scli.source);
-"("                                 scli.skip_len(1); return acl::scli_parser::make_LBRACES(scli.source);
-")"                                 scli.skip_len(1); return acl::scli_parser::make_RBRACES(scli.source);
-"="                                 scli.skip_len(1); return acl::scli_parser::make_ASSIGN(scli.source);
-":"                                 scli.skip_len(1); return acl::scli_parser::make_COLON(scli.source);
-"\""                                scli.skip_len(1); BEGIN(STATE_STR);
-[\n]+  		  	                    scli.skip_len(yyleng); scli.source.lines((uint32_t)yyleng);
-{BLANK}+   	                        scli.skip_len(yyleng);
-{STRCH}({STRCH}|"-")*               scli.put(yyleng); return acl::scli_parser::make_STRING(scli.make_token(), scli.source);
+^--                                    BEGIN(STATE_REGION); scli.skip_len(2);
+-                                      scli.put(yyleng);
+"/*"                                   BEGIN(STATE_COMMENT); scli.skip_len(2);
+"//"                                   BEGIN(STATE_SINGLE_LINE_COMMENT); scli.skip_len(2);
+"{"                                    scli.skip_len(1); return acl::scli_parser::make_LBRACES(scli.source);
+"}"                                    scli.skip_len(1); return acl::scli_parser::make_RBRACES(scli.source);
+"import"	                             scli.skip_len(yyleng); return acl::scli_parser::make_IMPORT(scli.source);
+","                                    scli.skip_len(1); return acl::scli_parser::make_COMMA(scli.source);
+";"                                    scli.skip_len(1); return acl::scli_parser::make_SEMICOLON(scli.source);
+"("                                    scli.skip_len(1); return acl::scli_parser::make_LPARENTHESES(scli.source);
+")"                                    scli.skip_len(1); return acl::scli_parser::make_RPARENTHESES(scli.source);
+"="                                    scli.skip_len(1); return acl::scli_parser::make_ASSIGN(scli.source);
+":"                                    scli.skip_len(1); return acl::scli_parser::make_COLON(scli.source);
+"\""                                   scli.skip_len(1); BEGIN(STATE_STR);
+[\n]+  		  	                         scli.skip_len(yyleng); scli.source.lines((uint32_t)yyleng);
+{BLANK}+   	                           scli.skip_len(yyleng);
+{STRCH}({STRCH}|"-")*                  scli.put(yyleng); return acl::scli_parser::make_STRING(scli.make_token(), scli.source);
 
 }
 
 <STATE_REGION>{
 {BLANK}+   	scli.skip_len(yyleng); 
-{REGND}		scli.put(yyleng);
+{REGND}		  scli.put(yyleng);
 {BLANK}*":"	{ 				
 				auto id = scli.make_token();
 				scli.set_current_reg_id(id);

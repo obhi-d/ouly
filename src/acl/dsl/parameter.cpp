@@ -208,7 +208,7 @@ std::string parameter_list::to_string() const noexcept
 void parameter_list::to_string(std::string& value, bool wt) const noexcept
 {
   if (wt)
-    value += "[ ";
+    value += "( ";
   bool first = true;
   for (auto const& v : param_value)
   {
@@ -218,7 +218,7 @@ void parameter_list::to_string(std::string& value, bool wt) const noexcept
     first = false;
   }
   if (wt)
-    value += " ]";
+    value += " )";
 }
 
 std::string parameter_main::to_string() const noexcept

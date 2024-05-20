@@ -67,7 +67,7 @@ TEST_CASE("Test builder", "[scli][builder]")
   auto         ctx = builder.build();
   user_context uc;
   acl::scli::parse(*ctx.get(), uc, "memory", R"(   
-                    echo [first, line];
+                    echo (first, line);
                     hi hi=next;
                     echo fragments=simple;
                    )",
@@ -134,8 +134,8 @@ TEST_CASE("Test classic", "[scli][classic]")
   acl::scli::builder builder;
 
   std::string_view input = R"(
-                c1 [first, line];
-                c2 c2p1="c2p1.value" [c2p2="c2p2 value", [c2p3="c2p3 1", c2p4 = 100]];
+                c1 (first, line);
+                c2 c2p1="c2p1.value" (c2p2="c2p2 value", (c2p3="c2p3 1", c2p4 = 100));
                 g1 g2p1="20.4"
                 {
                     c2.1 c2_called;
@@ -144,8 +144,8 @@ TEST_CASE("Test classic", "[scli][classic]")
 
   std::string_view expected_output = R"(
 
-c1: [ first, line ]
-c2: c2p1 = "c2p1.value" , [ c2p2 = "c2p2 value" , [ c2p3 = "c2p3 1" , c2p4 = "100"  ] ]
+c1: ( first, line )
+c2: c2p1 = "c2p1.value" , ( c2p2 = "c2p2 value" , ( c2p3 = "c2p3 1" , c2p4 = "100"  ) )
 g1: g2p1 = "20.4" 
 {
  c2.1: c2_called
@@ -189,8 +189,8 @@ TEST_CASE("Test multi-level classic", "[scli][classic]")
   acl::scli::builder builder;
 
   std::string_view input = R"(
-                first [word, spoken];
-                second word [tested];
+                first (word, spoken);
+                second word (tested);
                 third word=tested
                 { 
                     sky-wrath mage
@@ -210,8 +210,8 @@ TEST_CASE("Test multi-level classic", "[scli][classic]")
 
   std::string_view expected_output = R"(
 
-first: [ word, spoken ]
-second: word, [ tested ]
+first: ( word, spoken )
+second: word, ( tested )
 third: word = "tested" 
 {
  sky-wrath: mage
@@ -724,7 +724,7 @@ struct string_list_test
 TEST_CASE("Check string list", "[scli][ignore]")
 {
   std::string_view input = R"(
-   call something = [what, is, going, on], something-else =  what;
+   call something = (what, is, going, on), something-else =  what;
 )";
 
   acl::scli::builder builder;

@@ -32,7 +32,7 @@
 
 
 /**
- ** \file /home/obhi/Code/acl/src/acl/dsl/parse_impl.hpp
+ ** \file C:/repos/acl/src/acl/dsl/parse_impl.hpp
  ** Define the acl::parser class.
  */
 
@@ -42,10 +42,10 @@
 // especially those whose name start with YY_ or yy_.  They are
 // private implementation details that can be changed or removed.
 
-#ifndef YY_SCLI_HOME_OBHI_CODE_ACL_SRC_ACL_DSL_PARSE_IMPL_HPP_INCLUDED
-# define YY_SCLI_HOME_OBHI_CODE_ACL_SRC_ACL_DSL_PARSE_IMPL_HPP_INCLUDED
+#ifndef YY_SCLI_C_REPOS_ACL_SRC_ACL_DSL_PARSE_IMPL_HPP_INCLUDED
+# define YY_SCLI_C_REPOS_ACL_SRC_ACL_DSL_PARSE_IMPL_HPP_INCLUDED
 // "%code requires" blocks.
-#line 16 "/home/obhi/Code/acl/src/acl/dsl/scli.yy"
+#line 16 "C:/repos/acl/src/acl/dsl/scli.yy"
 
 #include "parse_impl.hpp"
 #include <acl/dsl/scli.hpp>
@@ -57,7 +57,7 @@
 #define YY_DECL extern acl::scli_parser::symbol_type scli_lex(acl::scli& scli, void* yyscanner)
 
 
-#line 61 "/home/obhi/Code/acl/src/acl/dsl/parse_impl.hpp"
+#line 61 "C:/repos/acl/src/acl/dsl/parse_impl.hpp"
 
 # include <cassert>
 # include <cstdlib> // std::abort
@@ -204,9 +204,9 @@
 # endif /* ! defined YYDEBUG */
 #endif  /* ! defined SCLI_DEBUG */
 
-#line 7 "/home/obhi/Code/acl/src/acl/dsl/scli.yy"
+#line 7 "C:/repos/acl/src/acl/dsl/scli.yy"
 namespace acl {
-#line 210 "/home/obhi/Code/acl/src/acl/dsl/parse_impl.hpp"
+#line 210 "C:/repos/acl/src/acl/dsl/parse_impl.hpp"
 
 
 
@@ -486,23 +486,21 @@ namespace acl {
     SCLI_error = 256,              // error
     SCLI_UNDEF = 257,              // "invalid token"
     SEMICOLON = 258,               // ";"
-    LBRACKET = 259,                // "{"
-    RBRACKET = 260,                // "}"
-    LSQBRACKET = 261,              // "["
-    RSQBRACKET = 262,              // "]"
-    LABRACKET = 263,               // "<"
-    RABRACKET = 264,               // ">"
-    COMMA = 265,                   // ","
-    LBRACES = 266,                 // "("
-    RBRACES = 267,                 // ")"
-    ASSIGN = 268,                  // "="
-    COLON = 269,                   // ":"
-    IMPORT = 270,                  // "import"
-    REGION_ID = 271,               // REGION_ID
-    TEXT_REGION_ID = 272,          // TEXT_REGION_ID
-    STRING = 273,                  // STRING
-    STRING_LITERAL = 274,          // STRING_LITERAL
-    TEXT_CONTENTS = 275            // TEXT_CONTENTS
+    LBRACES = 259,                 // "{"
+    RBRACES = 260,                 // "}"
+    LABRACKET = 261,               // "<"
+    RABRACKET = 262,               // ">"
+    COMMA = 263,                   // ","
+    LPARENTHESES = 264,            // "("
+    RPARENTHESES = 265,            // ")"
+    ASSIGN = 266,                  // "="
+    COLON = 267,                   // ":"
+    IMPORT = 268,                  // "import"
+    REGION_ID = 269,               // REGION_ID
+    TEXT_REGION_ID = 270,          // TEXT_REGION_ID
+    STRING = 271,                  // STRING
+    STRING_LITERAL = 272,          // STRING_LITERAL
+    TEXT_CONTENTS = 273            // TEXT_CONTENTS
       };
       /// Backward compatibility alias (Bison 3.6).
       typedef token_kind_type yytokentype;
@@ -519,36 +517,34 @@ namespace acl {
     {
       enum symbol_kind_type
       {
-        YYNTOKENS = 21, ///< Number of tokens.
+        YYNTOKENS = 19, ///< Number of tokens.
         S_YYEMPTY = -2,
         S_YYEOF = 0,                             // "end of file"
         S_YYerror = 1,                           // error
         S_YYUNDEF = 2,                           // "invalid token"
         S_SEMICOLON = 3,                         // ";"
-        S_LBRACKET = 4,                          // "{"
-        S_RBRACKET = 5,                          // "}"
-        S_LSQBRACKET = 6,                        // "["
-        S_RSQBRACKET = 7,                        // "]"
-        S_LABRACKET = 8,                         // "<"
-        S_RABRACKET = 9,                         // ">"
-        S_COMMA = 10,                            // ","
-        S_LBRACES = 11,                          // "("
-        S_RBRACES = 12,                          // ")"
-        S_ASSIGN = 13,                           // "="
-        S_COLON = 14,                            // ":"
-        S_IMPORT = 15,                           // "import"
-        S_REGION_ID = 16,                        // REGION_ID
-        S_TEXT_REGION_ID = 17,                   // TEXT_REGION_ID
-        S_STRING = 18,                           // STRING
-        S_STRING_LITERAL = 19,                   // STRING_LITERAL
-        S_TEXT_CONTENTS = 20,                    // TEXT_CONTENTS
-        S_YYACCEPT = 21,                         // $accept
-        S_script = 22,                           // script
-        S_statement = 23,                        // statement
-        S_commandname = 24,                      // commandname
-        S_commanddecl = 25,                      // commanddecl
-        S_26_parameters_1_N = 26,                // parameters.1.N
-        S_parameter = 27                         // parameter
+        S_LBRACES = 4,                           // "{"
+        S_RBRACES = 5,                           // "}"
+        S_LABRACKET = 6,                         // "<"
+        S_RABRACKET = 7,                         // ">"
+        S_COMMA = 8,                             // ","
+        S_LPARENTHESES = 9,                      // "("
+        S_RPARENTHESES = 10,                     // ")"
+        S_ASSIGN = 11,                           // "="
+        S_COLON = 12,                            // ":"
+        S_IMPORT = 13,                           // "import"
+        S_REGION_ID = 14,                        // REGION_ID
+        S_TEXT_REGION_ID = 15,                   // TEXT_REGION_ID
+        S_STRING = 16,                           // STRING
+        S_STRING_LITERAL = 17,                   // STRING_LITERAL
+        S_TEXT_CONTENTS = 18,                    // TEXT_CONTENTS
+        S_YYACCEPT = 19,                         // $accept
+        S_script = 20,                           // script
+        S_statement = 21,                        // statement
+        S_commandname = 22,                      // commandname
+        S_commanddecl = 23,                      // commanddecl
+        S_24_parameters_1_N = 24,                // parameters.1.N
+        S_parameter = 25                         // parameter
       };
     };
 
@@ -918,61 +914,31 @@ switch (yykind)
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_LBRACKET (location_type l)
+      make_LBRACES (location_type l)
       {
-        return symbol_type (token::LBRACKET, std::move (l));
+        return symbol_type (token::LBRACES, std::move (l));
       }
 #else
       static
       symbol_type
-      make_LBRACKET (const location_type& l)
+      make_LBRACES (const location_type& l)
       {
-        return symbol_type (token::LBRACKET, l);
+        return symbol_type (token::LBRACES, l);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_RBRACKET (location_type l)
+      make_RBRACES (location_type l)
       {
-        return symbol_type (token::RBRACKET, std::move (l));
+        return symbol_type (token::RBRACES, std::move (l));
       }
 #else
       static
       symbol_type
-      make_RBRACKET (const location_type& l)
+      make_RBRACES (const location_type& l)
       {
-        return symbol_type (token::RBRACKET, l);
-      }
-#endif
-#if 201103L <= YY_CPLUSPLUS
-      static
-      symbol_type
-      make_LSQBRACKET (location_type l)
-      {
-        return symbol_type (token::LSQBRACKET, std::move (l));
-      }
-#else
-      static
-      symbol_type
-      make_LSQBRACKET (const location_type& l)
-      {
-        return symbol_type (token::LSQBRACKET, l);
-      }
-#endif
-#if 201103L <= YY_CPLUSPLUS
-      static
-      symbol_type
-      make_RSQBRACKET (location_type l)
-      {
-        return symbol_type (token::RSQBRACKET, std::move (l));
-      }
-#else
-      static
-      symbol_type
-      make_RSQBRACKET (const location_type& l)
-      {
-        return symbol_type (token::RSQBRACKET, l);
+        return symbol_type (token::RBRACES, l);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
@@ -1023,31 +989,31 @@ switch (yykind)
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_LBRACES (location_type l)
+      make_LPARENTHESES (location_type l)
       {
-        return symbol_type (token::LBRACES, std::move (l));
+        return symbol_type (token::LPARENTHESES, std::move (l));
       }
 #else
       static
       symbol_type
-      make_LBRACES (const location_type& l)
+      make_LPARENTHESES (const location_type& l)
       {
-        return symbol_type (token::LBRACES, l);
+        return symbol_type (token::LPARENTHESES, l);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_RBRACES (location_type l)
+      make_RPARENTHESES (location_type l)
       {
-        return symbol_type (token::RBRACES, std::move (l));
+        return symbol_type (token::RPARENTHESES, std::move (l));
       }
 #else
       static
       symbol_type
-      make_RBRACES (const location_type& l)
+      make_RPARENTHESES (const location_type& l)
       {
-        return symbol_type (token::RBRACES, l);
+        return symbol_type (token::RPARENTHESES, l);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
@@ -1548,10 +1514,10 @@ switch (yykind)
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     1,     2,     3,     4,
        5,     6,     7,     8,     9,    10,    11,    12,    13,    14,
-      15,    16,    17,    18,    19,    20
+      15,    16,    17,    18
     };
     // Last valid token kind.
-    const int code_max = 275;
+    const int code_max = 273;
 
     if (t <= 0)
       return symbol_kind::S_YYEOF;
@@ -1688,11 +1654,11 @@ switch (yykind)
   }
 
 
-#line 7 "/home/obhi/Code/acl/src/acl/dsl/scli.yy"
+#line 7 "C:/repos/acl/src/acl/dsl/scli.yy"
 } // acl
-#line 1694 "/home/obhi/Code/acl/src/acl/dsl/parse_impl.hpp"
+#line 1660 "C:/repos/acl/src/acl/dsl/parse_impl.hpp"
 
 
 
 
-#endif // !YY_SCLI_HOME_OBHI_CODE_ACL_SRC_ACL_DSL_PARSE_IMPL_HPP_INCLUDED
+#endif // !YY_SCLI_C_REPOS_ACL_SRC_ACL_DSL_PARSE_IMPL_HPP_INCLUDED
