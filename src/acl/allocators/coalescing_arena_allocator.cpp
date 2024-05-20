@@ -32,13 +32,15 @@ std::uint32_t coalescing_arena_allocator::commit(size_type size, size_type const
   // Marker
   block_entries.free_marker[free_node] = false;
 
-  auto remaining                 = *found - size;
+  auto  arena_id                 = block_entries.arenas[free_node];
+  auto& arena                    = arena_entries.entries_[arena_id];
+  auto  remaining                = *found - size;
   block_entries.sizes[free_node] = size;
+  arena.free_size -= size;
   if (remaining > 0)
   {
-    auto  arena  = block_entries.arenas[free_node];
-    auto& list   = arena_entries.entries_[arena].blocks;
-    auto  newblk = block_entries.push(block_entries.offsets[free_node] + size, remaining, arena, true);
+    auto& list   = arena.blocks;
+    auto  newblk = block_entries.push(block_entries.offsets[free_node] + size, remaining, arena_id, true);
 
     list.insert_after(block_entries, free_node, (uint32_t)newblk);
     // reinsert the left-over size in free list
@@ -114,7 +116,7 @@ arena_id coalescing_arena_allocator::deallocate(allocation_id id)
 
   // last index is not used
   arena.free_size += size;
-
+  assert(arena.free_size <= arena.size);
   std::uint32_t left = 0, right = 0;
   std::uint32_t merges = 0;
   auto const    order  = block_entries.ordering[node];
