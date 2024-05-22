@@ -275,4 +275,11 @@ inline void print_debug_info(std::string const& s)
 
 } // namespace detail
 
+enum class response : uint8_t
+{
+  e_ok,
+  e_cancel,
+  e_continue
+};
+
 } // namespace acl

@@ -127,6 +127,7 @@ TEST_CASE("Validate string functions", "[string_utils]")
     [&store, &line](size_t start, size_t end, char)
     {
       store.emplace_back(line.begin() + start, line.begin() + end);
+      return acl::response::e_continue;
     },
     line, " \t,");
 

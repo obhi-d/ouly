@@ -257,18 +257,23 @@ inline string_view_pair split_last(const std::string_view& name, char by = ':', 
 }
 
 template <typename A>
-inline void tokenize(A&& acceptor, std::string_view value, std::string_view seperators)
+inline response tokenize(A&& acceptor, std::string_view value, std::string_view seperators)
 {
-  size_t what = std::numeric_limits<size_t>::max();
+  response r    = response::e_ok;
+  size_t   what = std::numeric_limits<size_t>::max();
   do
   {
     size_t start = what + 1;
     what         = value.find_first_of(seperators, start);
     auto end     = what == value.npos ? value.length() : what;
     if (end > start)
-      acceptor(start, end, what == value.npos ? 0 : value[what]);
+    {
+      if ((r = acceptor(start, end, what == value.npos ? 0 : value[what])) != response::e_continue)
+        return r;
+    }
   }
   while (what != std::string::npos);
+  return r;
 }
 
 /**
@@ -317,7 +322,7 @@ inline void word_wrap(L&& line_accept, uint32_t width, std::string_view line, ui
   uint32_t nb_tabs    = 0;
 
   tokenize(
-    [&](std::size_t token_start, std::size_t token_end, char token)
+    [&](std::size_t token_start, std::size_t token_end, char token) -> response
     {
       if (token == '\t')
         nb_tabs++;
@@ -329,6 +334,7 @@ inline void word_wrap(L&& line_accept, uint32_t width, std::string_view line, ui
         nb_tabs    = 0;
       }
       line_end = token_end;
+      return response::e_continue;
     },
     line, " \t");
 
@@ -347,6 +353,7 @@ inline void word_wrap_multiline(L&& line_accept, uint32_t width, std::string_vie
           line_accept(line_start + token_start, line_end + token_start);
         },
         width, input.substr(token_start, token_end - token_start), tab_width);
+      return response::e_continue;
     },
     input, "\n");
 }
