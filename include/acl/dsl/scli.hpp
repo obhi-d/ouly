@@ -1204,6 +1204,8 @@ public:
 
       start = start->get_sub_command(id);
     }
+    if (!start)
+      start = current_ctx->get_sub_command(other.source());
     if (start && current_ctx)
       current_ctx->add_sub_command(other.name(), std::static_pointer_cast<cmd_context>(start->shared_from_this()));
     return *this;
