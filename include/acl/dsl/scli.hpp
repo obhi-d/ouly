@@ -19,8 +19,8 @@ namespace acl
 
 class scli;
 using cmd_execute = bool (*)(scli&);
-using cmd_enter   = bool (*)(scli&);
-using cmd_exit    = void (*)(scli&);
+using cmd_enter   = bool   (*)(scli&);
+using cmd_exit    = void    (*)(scli&);
 struct param_context;
 using text_content = std::variant<std::string_view, std::string>;
 
@@ -83,13 +83,13 @@ struct cmd_context : param_context
 
   inline virtual void exit(scli&, cmd_state*) {}
 
-  inline virtual cmd_context* get_context(scli const&, std::string_view cmd_name)
+  inline virtual cmd_context* get_context(scli const&, std::string_view cmd_name) const
   {
     return nullptr;
   }
 
   inline virtual void         add_sub_command(std::string_view name, std::shared_ptr<cmd_context> cmd) {}
-  inline virtual cmd_context* get_sub_command(std::string_view name)
+  inline virtual cmd_context* get_sub_command(std::string_view name) const
   {
     return nullptr;
   }
@@ -172,14 +172,14 @@ public:
   struct shared_state
   {
     void*                    user_ctx = nullptr;
-    context&                 ctx;
+    context const&           ctx;
     std::vector<std::string> include_paths;
     def_imported_string_map  imports;
     error_handler_lambda     error_handler;
     import_handler_lambda    import_handler;
     stack_allocator          allocator;
 
-    inline shared_state(context& cctx) : ctx(cctx), allocator(scli_stack_size)
+    inline shared_state(context const& cctx) : ctx(cctx), allocator(scli_stack_size)
     {
       import_handler = [this](std::string_view imp) -> std::string_view
       {
@@ -194,7 +194,7 @@ public:
    * @par API
    */
   template <typename UserContext, typename L = std::false_type>
-  inline static void parse(context& c, UserContext& uc, std::string_view src_name, std::string_view content,
+  inline static void parse(context const& c, UserContext& uc, std::string_view src_name, std::string_view content,
                            std::vector<std::string> include_paths = {}, error_handler_lambda ehl = {},
                            import_handler_lambda ihl = {}, L&& pre_parse_cbk = {}) noexcept
   {
@@ -409,8 +409,8 @@ struct param_context_impl
 template <detail::BoundClass ParamClass>
 struct param_context_impl_bc : param_context
 {
-  static constexpr uint32_t size = field_size<ParamClass>();
-  using cmd_state_offsetter      = cmd_state* (*)(cmd_state*);
+  static constexpr uint32_t              size = field_size<ParamClass>();
+  using cmd_state_offsetter                   = cmd_state* (*)(cmd_state*);
 
   struct type_erased_member_ref
   {
@@ -483,8 +483,8 @@ struct param_context_impl_bc : param_context
 template <detail::TupleLike ParamClass>
 struct param_context_impl_tl : param_context
 {
-  static constexpr auto size = std::tuple_size_v<ParamClass>;
-  using cmd_state_offsetter  = cmd_state* (*)(cmd_state*);
+  static constexpr auto                  size = std::tuple_size_v<ParamClass>;
+  using cmd_state_offsetter                   = cmd_state* (*)(cmd_state*);
 
   struct type_erased_member_ref
   {
@@ -601,9 +601,9 @@ struct param_context_impl_cl : param_context
 template <detail::VariantLike ParamClass>
 struct param_context_impl_vl : param_context
 {
-  static constexpr auto size = std::variant_size_v<ParamClass>;
-  using cmd_state_offsetter  = cmd_state* (*)(cmd_state*);
-  using cmd_state_emplace    = void (*)(cmd_state*);
+  static constexpr auto                  size = std::variant_size_v<ParamClass>;
+  using cmd_state_offsetter                   = cmd_state* (*)(cmd_state*);
+  using cmd_state_emplace                     = void         (*)(cmd_state*);
 
   struct type_erased_member_ref
   {
@@ -935,7 +935,7 @@ struct cmd_group : cmd_context
 
       sub_objects[name] = std::move(cmd);
   }
-  inline cmd_context* get_sub_command(std::string_view name) override
+  inline cmd_context* get_sub_command(std::string_view name) const override
   {
     if (name == "*")
       return default_executer.get();
@@ -945,7 +945,7 @@ struct cmd_group : cmd_context
     return nullptr;
   }
 
-  cmd_context* get_context(scli const&, std::string_view cmd_name) override
+  cmd_context* get_context(scli const&, std::string_view cmd_name) const override
   {
     auto it = sub_objects.find(cmd_name);
     if (it != sub_objects.end())
