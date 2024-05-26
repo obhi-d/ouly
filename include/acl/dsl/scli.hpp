@@ -961,7 +961,8 @@ template <typename CmdClass>
 struct classic_command
 {
   using classic_command_type = CmdClass;
-  classic_param_data data;
+  classic_param_data   data;
+  classic_command_type instance;
 
   classic_command() noexcept
   {
@@ -971,21 +972,21 @@ struct classic_command
   inline bool execute(scli& scli)
   {
     if constexpr (detail::SimpleCommand<CmdClass>)
-      return CmdClass().execute(scli, *data.current);
+      return instance.execute(scli, *data.current);
     return true;
   }
 
   inline bool enter(scli& scli)
   {
     if constexpr (detail::HasEntry<CmdClass>)
-      return CmdClass().enter(scli);
+      return instance.enter(scli);
     return true;
   }
 
   inline void exit(scli& scli)
   {
     if constexpr (detail::HasExit<CmdClass>)
-      CmdClass().exit(scli);
+      instance.exit(scli);
   }
 };
 
