@@ -281,7 +281,7 @@ public:
   bool                    is_code_region(std::string_view) const noexcept;
   std::string_view        get_file_name() const noexcept
   {
-    return source_name;
+    return source.source_name;
   }
 
   void* get_scanner() const noexcept
@@ -311,7 +311,6 @@ private:
   std::string_view command;
   std::string_view contents;
   std::string_view region_id;
-  std::string_view source_name;
   param_stack      param_ctx_stack;
   command_stack    cmd_ctx_stack;
   int              param_pos           = 0;

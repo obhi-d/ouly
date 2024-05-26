@@ -1203,7 +1203,7 @@ void scli::error(scli::location const& l, std::string_view err, std::string_view
 
 void scli::parse(std::string_view src_name, std::string_view content) noexcept
 {
-	source_name = src_name;
+	source.source_name = src_name;
 	contents    = content;
 	begin_scan();
 	set_current_reg_id("root");
