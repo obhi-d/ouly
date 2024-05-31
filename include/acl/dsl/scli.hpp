@@ -23,6 +23,18 @@ using cmd_enter   = bool   (*)(scli&);
 using cmd_exit    = void    (*)(scli&);
 struct param_context;
 using text_content = std::variant<std::string_view, std::string>;
+struct scli_position
+{
+  uint32_t    line                                             = 1;
+  uint32_t    character                                        = 1;
+  inline auto operator<=>(scli_position const&) const noexcept = default;
+
+  inline friend std::ostream& operator<<(std::ostream& yyo, scli_position const& l) noexcept
+  {
+    yyo << l.line << ':' << l.character;
+    return yyo;
+  }
+};
 
 inline std::string_view view(text_content const& tc)
 {
@@ -67,9 +79,11 @@ struct cmd_context : param_context
     return true;
   }
 
-  inline virtual void enter_region(scli&, std::string_view id, std::string_view name) {}
+  inline virtual void enter_region(scli&, scli_position position, std::string_view id, std::string_view name) {}
 
-  inline virtual void enter_region(scli&, std::string_view id, std::string_view name, text_content&& content) {}
+  inline virtual void enter_region(scli&, scli_position position, std::string_view id, std::string_view name,
+                                   text_content&& content)
+  {}
 
   inline virtual bool is_text_context() const noexcept
   {
@@ -101,18 +115,7 @@ static constexpr uint32_t scli_stack_size = 2048;
 class scli
 {
 public:
-  struct position
-  {
-    uint32_t    line                                        = 1;
-    uint32_t    character                                   = 1;
-    inline auto operator<=>(position const&) const noexcept = default;
-
-    inline friend std::ostream& operator<<(std::ostream& yyo, position const& l) noexcept
-    {
-      yyo << l.line << ':' << l.character;
-      return yyo;
-    }
-  };
+  using position = scli_position;
 
   class location
   {
@@ -151,6 +154,11 @@ public:
       else
         yyo << "<" << value << '-' << l.begin << "-" << l.end << ">";
       return yyo;
+    }
+
+    position next_line() const noexcept
+    {
+      return position{begin.line + 1, 0};
     }
 
     inline auto operator<=>(scli::location const&) const noexcept = default;
@@ -240,6 +248,15 @@ public:
     return command;
   }
 
+  inline void set_region_position(scli_position position) noexcept
+  {
+    region_position = position;
+  }
+
+  void set_current_reg_id(std::string_view name) noexcept
+  {
+    region_id = name;
+  }
   /**
    * @par API
    */
@@ -253,6 +270,7 @@ public:
   void enter_command_scope();
   void exit_command_scope();
   void set_next_param_name(std::string_view) noexcept;
+
   void set_param(std::string_view);
   void set_param(text_content&&);
   void enter_param_scope();
@@ -276,7 +294,6 @@ public:
   std::string_view        make_token() noexcept;
   void                    escape_sequence(std::string_view ss) noexcept;
   text_content            make_text() noexcept;
-  void                    set_current_reg_id(std::string_view name) noexcept;
   void                    error(scli::location const&, std::string_view error, std::string_view context);
   bool                    is_code_region(std::string_view) const noexcept;
   std::string_view        get_file_name() const noexcept
@@ -311,6 +328,7 @@ private:
   std::string_view command;
   std::string_view contents;
   std::string_view region_id;
+  scli_position    region_position;
   param_stack      param_ctx_stack;
   command_stack    cmd_ctx_stack;
   int              param_pos           = 0;
@@ -379,14 +397,14 @@ concept CommandType = requires(C c) {
 template <typename Type>
 concept CodeRegionHandler = requires(acl::scli& s) {
   {
-    Type::enter(s, std::declval<std::string_view>(), std::declval<std::string_view>())
+    Type::enter(s, std::declval<scli_position>(), std::declval<std::string_view>(), std::declval<std::string_view>())
   } -> std::same_as<void>;
 };
 
 template <typename Type>
 concept TextRegionHandler = requires(acl::scli& s) {
   {
-    Type::enter(s, std::declval<std::string_view>(), std::declval<std::string_view>(),
+    Type::enter(s, std::declval<scli_position>(), std::declval<std::string_view>(), std::declval<std::string_view>(),
                 std::move(std::declval<text_content>()))
   } -> std::same_as<void>;
 };
@@ -1079,9 +1097,9 @@ struct reg_proxy;
 template <detail::CodeRegionHandler RegClass, typename Base>
 struct reg_proxy<RegClass, Base> : Base
 {
-  void enter_region(scli& s, std::string_view id, std::string_view name) override
+  void enter_region(scli& s, scli_position position, std::string_view id, std::string_view name) override
   {
-    RegClass::enter(s, id, name);
+    RegClass::enter(s, position, id, name);
   }
 
   inline virtual bool is_text_context() const noexcept override
@@ -1094,9 +1112,10 @@ template <detail::TextRegionHandler RegClass, typename Base>
 struct reg_proxy<RegClass, Base> : Base
 {
   using txt_region_t = void;
-  void enter_region(scli& s, std::string_view id, std::string_view name, text_content&& content) override
+  void enter_region(scli& s, scli_position position, std::string_view id, std::string_view name,
+                    text_content&& content) override
   {
-    RegClass::enter(s, id, name, std::move(content));
+    RegClass::enter(s, position, id, name, std::move(content));
   }
 
   inline virtual bool is_text_context() const noexcept override

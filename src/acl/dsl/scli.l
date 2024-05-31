@@ -96,6 +96,7 @@ STRCH   [a-zA-Z0-9\._@*/\\\[\]\<\>]
 {BLANK}*":"	{ 				
 				auto id = scli.make_token();
 				scli.set_current_reg_id(id);
+				scli.set_region_position(scli.source.next_line());
 				scli.skip_len(yyleng);
 				if (scli.is_code_region(id))
 				{

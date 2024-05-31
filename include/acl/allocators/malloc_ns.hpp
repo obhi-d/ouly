@@ -15,6 +15,7 @@ inline void* malloc(std::size_t s)
 inline void* zmalloc(std::size_t s)
 {
   auto z = std::malloc(s);
+  assert(z);
   std::memset(z, 0, s);
   return z;
 }

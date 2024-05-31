@@ -225,14 +225,14 @@ void scli::enter_region(std::string_view reg)
 {
   current_cmd_ctx = sstate.ctx.get_context(*this, region_id);
   if (current_cmd_ctx)
-    current_cmd_ctx->enter_region(*this, region_id, reg);
+    current_cmd_ctx->enter_region(*this, region_position, region_id, reg);
 }
 
 void scli::enter_text_region(std::string_view name, text_content&& content)
 {
   current_cmd_ctx = sstate.ctx.get_context(*this, region_id);
   if (current_cmd_ctx)
-    current_cmd_ctx->enter_region(*this, region_id, name, std::move(content));
+    current_cmd_ctx->enter_region(*this, region_position, region_id, name, std::move(content));
 }
 
 void scli::import_script(text_content&& tc)
@@ -294,12 +294,6 @@ text_content scli::make_text() noexcept
     token.clear();
   }
   return tc;
-}
-
-// region id
-void scli::set_current_reg_id(std::string_view name) noexcept
-{
-  region_id = name;
 }
 
 std::string_view scli::get() const noexcept

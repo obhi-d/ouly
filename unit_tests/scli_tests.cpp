@@ -11,7 +11,7 @@ struct user_context
 
 struct default_reg_handler
 {
-  static void enter(acl::scli&, std::string_view id, std::string_view name) noexcept {}
+  static void enter(acl::scli&, acl::scli::position, std::string_view id, std::string_view name) noexcept {}
 };
 
 TEST_CASE("Test builder", "[scli][builder]")
@@ -265,7 +265,7 @@ mid: or, feed
 
 struct region_handler
 {
-  static void enter(acl::scli& s, std::string_view id, std::string_view name)
+  static void enter(acl::scli& s, acl::scli::position, std::string_view id, std::string_view name)
   {
     auto& ctx = s.get<user_context>();
     ctx.value += "-- code: ";
@@ -276,7 +276,8 @@ struct region_handler
 
 struct text_region_handler
 {
-  static void enter(acl::scli& s, std::string_view id, std::string_view name, acl::text_content&& content)
+  static void enter(acl::scli& s, acl::scli::position, std::string_view id, std::string_view name,
+                    acl::text_content&& content)
   {
     auto& ctx = s.get<user_context>();
     ctx.value += "-- text: ";
@@ -412,8 +413,8 @@ TEST_CASE("Cover empty API", "[scli][classic]")
       cmd_ctx.construct(scli);
       cmd_ctx.destroy(scli, nullptr);
       cmd_ctx.execute(scli, nullptr);
-      cmd_ctx.enter_region(scli, "", "");
-      cmd_ctx.enter_region(scli, "", "", std::string_view());
+      cmd_ctx.enter_region(scli, acl::scli::position(), "", "");
+      cmd_ctx.enter_region(scli, acl::scli::position(), "", "", std::string_view());
       REQUIRE(cmd_ctx.is_text_context() == false);
       cmd_ctx.enter(scli, nullptr);
       cmd_ctx.exit(scli, nullptr);
