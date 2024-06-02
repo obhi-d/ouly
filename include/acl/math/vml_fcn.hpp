@@ -48,7 +48,7 @@ inline uint32_t bit_count(std::uint32_t i) noexcept
   return (uint32_t)std::popcount(i);
 }
 
-inline std::uint32_t prev_pow2(std::uint32_t v) noexcept
+inline constexpr std::uint32_t prev_pow2(std::uint32_t v) noexcept
 {
   v--;
   v |= v >> 1;
@@ -59,7 +59,7 @@ inline std::uint32_t prev_pow2(std::uint32_t v) noexcept
   return (++v) >> 1;
 }
 
-inline std::uint32_t next_pow2(std::uint32_t v) noexcept
+inline constexpr std::uint32_t next_pow2(std::uint32_t v) noexcept
 {
   v--;
   v |= v >> 1;
@@ -70,7 +70,7 @@ inline std::uint32_t next_pow2(std::uint32_t v) noexcept
   return ++v;
 }
 
-inline bool is_pow2(std::uint32_t val) noexcept
+inline constexpr bool is_pow2(std::uint32_t val) noexcept
 {
   return (val & (val - 1)) == 0;
 }
@@ -78,7 +78,7 @@ inline bool is_pow2(std::uint32_t val) noexcept
 // inlined functions
 // wrap angle between -pi & +pi
 template <typename IntType>
-inline IntType round_up(IntType number, IntType multiple) noexcept
+inline constexpr IntType round_up(IntType number, IntType multiple) noexcept
 {
   IntType remainder = number % multiple;
   if (remainder == 0)
@@ -87,7 +87,7 @@ inline IntType round_up(IntType number, IntType multiple) noexcept
 }
 
 template <typename scalar_t>
-inline scalar_t wrap_pi(scalar_t theta) noexcept
+inline constexpr scalar_t wrap_pi(scalar_t theta) noexcept
 {
   theta += static_cast<scalar_t>(acl::k_pi_d);
   theta -= std::floor(theta * static_cast<scalar_t>(acl::k_1_by_2pi_d)) * static_cast<scalar_t>(acl::k_2pi_d);
@@ -97,14 +97,14 @@ inline scalar_t wrap_pi(scalar_t theta) noexcept
 
 // float to fixed point conversion, float must be
 // between 0-1
-inline std::uint32_t float_to_fixed(float f, std::uint32_t n) noexcept
+inline constexpr std::uint32_t float_to_fixed(float f, std::uint32_t n) noexcept
 {
   // value * maxvalue
   return static_cast<std::uint32_t>(f * ((1 << (n)) - 1));
 }
 // fixed to float, float returned is between
 // zero and one
-inline float fixed_to_float(std::uint32_t f, std::uint32_t n) noexcept
+inline constexpr float fixed_to_float(std::uint32_t f, std::uint32_t n) noexcept
 {
   // value / maxvalue
   return static_cast<float>(f) / (float)((1 << n) - 1);
@@ -112,7 +112,7 @@ inline float fixed_to_float(std::uint32_t f, std::uint32_t n) noexcept
 // fixed to fixed, fixed returned is between
 // zero and one
 
-inline std::uint32_t fixed_to_fixed(std::uint32_t f, std::uint32_t f_base, std::uint32_t req_base) noexcept
+inline constexpr std::uint32_t fixed_to_fixed(std::uint32_t f, std::uint32_t f_base, std::uint32_t req_base) noexcept
 {
   // ((max(reqb)/max(fb)) * f)
   // the trick is if reqb < fb we can straightforwardly
@@ -128,7 +128,7 @@ inline std::uint32_t fixed_to_fixed(std::uint32_t f, std::uint32_t f_base, std::
 //-- this might be required elsewhere, for now just do it
 // algorithmetically
 
-inline std::uint16_t float_to_half_i(std::uint32_t i) noexcept
+inline constexpr std::uint16_t float_to_half_i(std::uint32_t i) noexcept
 {
   // can use SSE here, but lets
   // do it naive way.
@@ -161,12 +161,12 @@ inline std::uint16_t float_to_half_i(std::uint32_t i) noexcept
   }
 }
 
-inline std::uint16_t float_to_half(float f) noexcept
+inline constexpr std::uint16_t float_to_half(float f) noexcept
 {
   return float_to_half_i(*(std::uint32_t*)&f);
 }
 
-inline std::uint32_t half_to_float_i(std::uint16_t y) noexcept
+inline constexpr std::uint32_t half_to_float_i(std::uint16_t y) noexcept
 {
   // can use SSE here, but lets
   // do it naive way.
@@ -209,7 +209,7 @@ inline std::uint32_t half_to_float_i(std::uint16_t y) noexcept
   return (s << 31) | (e << 23) | m;
 }
 
-inline float half_to_float(std::uint16_t y) noexcept
+inline constexpr float half_to_float(std::uint16_t y) noexcept
 {
   union
   {
@@ -221,19 +221,19 @@ inline float half_to_float(std::uint16_t y) noexcept
 }
 
 template <typename scalar_t>
-inline scalar_t to_radians(scalar_t value) noexcept
+inline constexpr scalar_t to_radians(scalar_t value) noexcept
 {
   return static_cast<scalar_t>(k_degrees_to_radians_factor_d) * (value);
 }
 
 template <typename scalar_t>
-inline scalar_t to_degrees(scalar_t value) noexcept
+inline constexpr scalar_t to_degrees(scalar_t value) noexcept
 {
   return static_cast<scalar_t>(k_radians_to_degrees_factor_d) * (value);
 }
 
 /* Famous fast reciprocal std::sqrt */
-inline float fast_recip_sqrt(float x) noexcept
+inline constexpr float fast_recip_sqrt(float x) noexcept
 {
   std::int32_t i;
   float        y, r;
@@ -246,7 +246,7 @@ inline float fast_recip_sqrt(float x) noexcept
 }
 
 /* sin of angle in the range of [0, pi/2]*/
-inline float sin_of_ang_between_0_to_half_pi(float a) noexcept
+inline constexpr float sin_of_ang_between_0_to_half_pi(float a) noexcept
 {
   float s, t;
   s = a * a;
@@ -266,7 +266,7 @@ inline float sin_of_ang_between_0_to_half_pi(float a) noexcept
 }
 
 /* Arc tan when x and y are positives */
-inline float arc_tan_positive_xy(float y, float x) noexcept
+inline constexpr float arc_tan_positive_xy(float y, float x) noexcept
 {
   float a, d, s, t;
   if (y > x)
