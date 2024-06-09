@@ -31,4 +31,9 @@ TEMPLATE_TEST_CASE("Validate irect", "[irect]", float, double)
   CHECK(acl::log2_next(1) == 0);
   CHECK(acl::log2_next(251) == 8);
   CHECK(acl::log2_next_positive(251) == 8);
+  auto color      = acl::rgba8(133, 21, 43, 244);
+  auto linear     = acl::linear_to_gamma(color);
+  auto back_color = acl::gamma_to_linear(linear);
+  CHECK(acl::rgba8(133, 21, 43, 244) == color);
+  CHECK(acl::rgba8(131, 20, 42, 244) == back_color);
 }

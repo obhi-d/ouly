@@ -1082,7 +1082,7 @@ inline quadvt ppow(quadvt const& a, qscalar_t<quadvt> exp) noexcept
   }
   else
   {
-    return {std::pow(a.x, exp), std::pow(a.y, exp), std::pow(a.z, exp), std::pow(a.w, exp)};
+    return {std::pow(a[0], exp), std::pow(a[1], exp), std::pow(a[2], exp), std::pow(a[3], exp)};
   }
 }
 

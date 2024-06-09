@@ -92,6 +92,9 @@ _PS256_CONST(cephes_log_q2, 0.693359375);
 
 #ifndef __AVX2__
 
+namespace acl::vml
+{
+
 union alignas(32) imm_xmm_union
 {
   v8si imm;
@@ -726,6 +729,7 @@ void sincos256_ps(v8sf x, v8sf* s, v8sf* c)
   /* update the sign */
   *s = _mm256_xor_ps(xmm1, sign_bit_sin);
   *c = _mm256_xor_ps(xmm2, sign_bit_cos);
+}
 }
 
 #endif
