@@ -630,6 +630,41 @@ public:
     return length_ == 0;
   }
 
+  class readonly_view
+  {
+  public:
+    readonly_view() noexcept = default;
+    readonly_view(value_type const* const* items_, size_type block_count_) noexcept
+        : items_(items_), block_count_(block_count_)
+    {}
+    value_type operator()(uint32_t i, value_type const& default_value) const noexcept
+    {
+      auto block = (i >> pool_mul);
+      if (block < block_count_)
+        return items_[block][i & pool_mod];
+      return default_value;
+    }
+
+    value_type operator[](uint32_t i) const noexcept
+      requires(has_null_value)
+    {
+      auto block = (i >> pool_mul);
+      if (block < block_count_)
+        return items_[block][i & pool_mod];
+
+      return options::null_v;
+    }
+
+  private:
+    value_type const* const* items_;
+    size_type                block_count_ = 0;
+  };
+
+  readonly_view view() const noexcept
+  {
+    return readonly_view(items_.data(), items_.size());
+  }
+
 private:
   inline void ensure_block(size_type block)
   {

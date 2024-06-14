@@ -35,6 +35,31 @@ TEST_CASE("sparse_vector: Validate sparse_vector emplace", "[sparse_vector][empl
   REQUIRE(v1[10].b == 220);
 }
 
+TEST_CASE("sparse_vector: Test view", "[sparse_vector][view]")
+{
+  acl::sparse_vector<pod> v1;
+  v1.emplace_at(1, 100, 120);
+  v1.emplace_at(10, 200, 220);
+  v1.emplace_at(30, 300, 320);
+
+  auto view = v1.view();
+  auto h0   = view[1];
+  REQUIRE(h0.a == 100);
+  REQUIRE(h0.b == 120);
+
+  auto h3 = view[3];
+  REQUIRE(h3.a == 0);
+  REQUIRE(h3.b == 0);
+
+  h3 = view[43];
+  REQUIRE(h3.a == 0);
+  REQUIRE(h3.b == 0);
+
+  h3 = view[30];
+  REQUIRE(h3.a == 300);
+  REQUIRE(h3.b == 320);
+}
+
 TEST_CASE("sparse_vector: Erase sparse_vector element", "[sparse_vector][erase]")
 {
   acl::sparse_vector<pod> v1;
