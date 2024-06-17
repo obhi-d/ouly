@@ -241,6 +241,11 @@ public:
     return keys_.get_if(point.as_index());
   }
 
+  auto const& keys() const noexcept
+  {
+    return keys_;
+  }
+
   /**
    * @brief Construct/Replace an item in a given location, depending upon if the location was empty or not.
    */
