@@ -236,7 +236,7 @@ public:
   }
 
   template <detail::IsVoidOrRLink<link> ulink>
-  size_type key(ulink point) noexcept
+  size_type key(ulink point) const noexcept
   {
     return keys_.get_if(point.as_index());
   }
