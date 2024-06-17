@@ -19,6 +19,7 @@ TEST_CASE("rlink_object_table: Validate", "[rlink_object_table][nontrivial]")
   auto entity2 = reg.emplace();
 
   names.emplace_at(entity1, "Entity1");
+  REQUIRE(names.key(entity1) == 0);
 
   REQUIRE(names[entity1] == "Entity1");
   REQUIRE(names.contains(entity2) == false);
@@ -74,7 +75,8 @@ TEST_CASE("rlink_object_table: Validate", "[rlink_object_table][nontrivial]")
   REQUIRE(it.has_value() == true);
   REQUIRE(it.get() == "Entity9");
 
-  [&](auto const& lookup) {
+  [&](auto const& lookup)
+  {
     REQUIRE(lookup.at(entity8) == "Entity9");
     REQUIRE(lookup[entity8] == "Entity9");
   }(names);

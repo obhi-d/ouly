@@ -235,6 +235,12 @@ public:
     return values_.back();
   }
 
+  template <detail::IsVoidOrRLink<link> ulink>
+  size_type key(ulink point) noexcept
+  {
+    return keys_.get_if(point.as_index());
+  }
+
   /**
    * @brief Construct/Replace an item in a given location, depending upon if the location was empty or not.
    */
