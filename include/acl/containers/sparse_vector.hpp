@@ -630,14 +630,14 @@ public:
     return length_ == 0;
   }
 
-  class readonly_view
+  template <typename VTy>
+  class data_view
   {
   public:
-    readonly_view() noexcept = default;
-    readonly_view(value_type const* const* items_, size_type block_count_) noexcept
-        : items_(items_), block_count_(block_count_)
-    {}
-    value_type operator()(uint32_t i, value_type const& default_value) const noexcept
+    data_view() noexcept = default;
+    data_view(VTy* const* items_, size_type block_count_) noexcept : items_(items_), block_count_(block_count_) {}
+
+    VTy& operator()(uint32_t i, VTy& default_value) const noexcept
     {
       auto block = (i >> pool_mul);
       if (block < block_count_)
@@ -645,24 +645,30 @@ public:
       return default_value;
     }
 
-    value_type operator[](uint32_t i) const noexcept
+    VTy& operator[](uint32_t i) const noexcept
       requires(has_null_value)
     {
       auto block = (i >> pool_mul);
-      if (block < block_count_)
-        return items_[block][i & pool_mod];
-
-      return options::null_v;
+      assert(block < block_count_);
+      return items_[block][i & pool_mod];
     }
 
   private:
-    value_type const* const* items_;
-    size_type                block_count_ = 0;
+    VTy* const* items_;
+    size_type   block_count_ = 0;
   };
 
-  readonly_view view() const noexcept
+  using readonly_view  = data_view<value_type const>;
+  using readwrite_view = data_view<value_type>;
+
+  auto view() const noexcept
   {
     return readonly_view(items_.data(), items_.size());
+  }
+
+  auto view() noexcept
+  {
+    return readwrite_view(items_.data(), items_.size());
   }
 
 private:
