@@ -645,8 +645,16 @@ public:
       return default_value;
     }
 
+    value_type const& operator()(uint32_t i, value_type const& default_value) const noexcept
+      requires(!std::is_const_v<VTy>)
+    {
+      auto block = (i >> pool_mul);
+      if (block < block_count_)
+        return items_[block][i & pool_mod];
+      return default_value;
+    }
+
     VTy& operator[](uint32_t i) const noexcept
-      requires(has_null_value)
     {
       auto block = (i >> pool_mul);
       assert(block < block_count_);

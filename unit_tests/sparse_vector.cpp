@@ -51,7 +51,7 @@ TEST_CASE("sparse_vector: Test view", "[sparse_vector][view]")
   REQUIRE(h3.a == 0);
   REQUIRE(h3.b == 0);
 
-  h3 = view[43];
+  h3 = view(43, pod());
   REQUIRE(h3.a == 0);
   REQUIRE(h3.b == 0);
 
