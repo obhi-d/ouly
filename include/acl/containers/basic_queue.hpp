@@ -30,9 +30,48 @@ private:
   };
 
 public:
-  basic_queue() noexcept
+  inline basic_queue() noexcept = default;
+
+  inline basic_queue(basic_queue const& other)
+    requires(std::is_copy_constructible_v<Ty>)
   {
-    add_tail();
+    copy(other);
+  }
+
+  inline basic_queue(basic_queue&& other) noexcept
+      : head_(other.head_), tail_(other.tail_), free_(other.free_), front_(other.front_), back_(other.back_)
+  {
+    other.head_  = nullptr;
+    other.tail_  = nullptr;
+    other.free_  = nullptr;
+    other.front_ = 0;
+    other.back_  = 0;
+  }
+
+  inline basic_queue& operator=(basic_queue const& other)
+    requires(std::is_copy_constructible_v<Ty>)
+  {
+    copy(other);
+    return *this;
+  }
+
+  inline basic_queue& operator=(basic_queue&& other) noexcept
+  {
+    clear();
+    free_chain(free_);
+
+    head_        = other.head_;
+    tail_        = other.tail_;
+    free_        = other.free_;
+    front_       = other.front_;
+    back_        = other.back_;
+    other.head_  = nullptr;
+    other.tail_  = nullptr;
+    other.free_  = nullptr;
+    other.front_ = 0;
+    other.back_  = 0;
+
+    return *this;
   }
 
   ~basic_queue()
@@ -44,7 +83,7 @@ public:
   template <typename... Args>
   inline auto& emplace_back(Args&&... args) noexcept
   {
-    if (back_ == pool_size)
+    if (back_ == pool_size || !tail_)
     {
       add_tail();
       back_ = 0;
@@ -66,14 +105,17 @@ public:
   {
     ACL_ASSERT(!empty());
 
-    if (front_ == pool_size)
+    Ty ret = std::move(*(Ty*)(&head_->data[front_]));
+
+    if constexpr (!std::is_trivially_destructible_v<Ty>)
+      std::destroy_at((Ty*)(&head_->data[front_]));
+
+    if (++front_ == pool_size)
     {
       remove_head();
       front_ = 0;
     }
 
-    Ty ret = std::move(*(Ty*)(&head_->data[front_]));
-    std::destroy_at((Ty*)(&head_->data[front_++]));
     return ret;
   }
 
@@ -84,18 +126,13 @@ public:
 
   void clear() noexcept
   {
-    auto block = head_;
-    auto start = front_;
-    while (block)
-    {
-      auto end = block == tail_ ? back_ : pool_size;
-      for (; start < end; ++start)
-      {
-        std::destroy_at((Ty*)(&block->data[start]));
-      }
-      start = 0;
-      block = block->next;
-    }
+    if constexpr (!std::is_trivially_destructible_v<Ty>)
+      for_each(
+        [](Ty& v)
+        {
+          std::destroy_at(&v);
+        });
+
     if (head_)
       head_->next = free_;
     free_ = head_;
@@ -103,7 +140,47 @@ public:
     front_ = back_ = 0;
   }
 
+  template <typename L>
+  void for_each(L&& l)
+  {
+    _for_each<Ty>(*this, std::forward<L>(l));
+  }
+
+  template <typename L>
+  void for_each(L&& l) const
+  {
+    _for_each<Ty const>(*this, std::forward<L>(l));
+  }
+
 private:
+  template <typename V, typename T, typename L>
+  static void _for_each(T& self, L&& l)
+  {
+    auto block = self.head_;
+    auto start = self.front_;
+    while (block)
+    {
+      auto end = block == self.tail_ ? self.back_ : pool_size;
+      for (; start < end; ++start)
+      {
+        l(*(V*)(&block->data[start]));
+      }
+      start = 0;
+      block = block->next;
+    }
+  }
+
+  void copy(basic_queue const& src)
+    requires(std::is_copy_constructible_v<Ty>)
+  {
+    clear();
+    src.for_each(
+      [this](Ty const& v)
+      {
+        emplace_back(v);
+      });
+  }
+
   void add_tail()
   {
     deque_block* db = free_;
@@ -128,6 +205,12 @@ private:
     head_   = head_->next;
     h->next = free_;
     free_   = h;
+    if (!head_)
+    {
+      tail_  = nullptr;
+      front_ = 0;
+      back_  = 0;
+    }
   }
 
   void free_chain(deque_block* start)
