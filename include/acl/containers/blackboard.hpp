@@ -30,14 +30,33 @@ struct blackboard_offset
 };
 
 template <typename T>
-concept HashMap = requires {
-  typename T::name_map_type;
-  requires std::same_as<typename T::name_map_type::mapped_type, blackboard_offset>;
-  typename T::name_map_type::key_type;
+concept BlackboardHashMap = requires(T& obj, T const& cobj) {
+  typename T::key_type;
+  std::same_as<typename T::mapped_type, blackboard_offset>;
+  typename T::iterator;
+  typename T::const_iterator;
+  {
+    obj.find(std::declval<typename T::key_type>())
+  } -> std::same_as<typename T::iterator>;
+  {
+    cobj.find(std::declval<typename T::key_type>())
+  } -> std::same_as<typename T::const_iterator>;
+
+  obj.erase(obj.find(std::declval<typename T::key_type>()));
+  {
+    obj[std::declval<typename T::key_type>()]
+  } -> std::same_as<typename T::mapped_type&>;
+  requires std::same_as<typename T::mapped_type, blackboard_offset>;
 };
 
 namespace detail
 {
+
+template <typename T>
+concept HashMapDeclTraits = requires {
+  typename T::name_map_type;
+  BlackboardHashMap<typename T::name_map_type>;
+};
 
 template <typename H>
 struct name_index_map
@@ -45,7 +64,7 @@ struct name_index_map
   using type = std::unordered_map<std::string, blackboard_offset>;
 };
 
-template <HashMap H>
+template <HashMapDeclTraits H>
 struct name_index_map<H>
 {
   using type = typename H::name_map_type;
@@ -54,19 +73,30 @@ struct name_index_map<H>
 
 namespace opt
 {
-template <HashMap H>
+/**
+ * Provide a custom blackboard hash map lookup implementation.
+ */
+template <BlackboardHashMap H>
 struct name_val_map
 {
   using name_map_type = H;
 };
 
-// lookup option
+/**
+ * This option allows blackboard to customize the <type key> by using std::type_index, you are free to provide
+ * the hash map implementation and replace std::unordered_map by your own class if it satisfies
+ *
+ */
 template <template <typename K, typename V> class H>
 struct map
 {
   using name_map_type = typename H<std::type_index, blackboard_offset>::type;
 };
 
+/**
+ * This option allows you to implement your own key type, the offset is always required to be blackboard_offset type and
+ * provided by blackboard.
+ */
 template <template <typename V> class H>
 struct name_map
 {
