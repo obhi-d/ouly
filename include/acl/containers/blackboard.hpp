@@ -194,18 +194,6 @@ public:
   }
 
   template <InventoryDataType T>
-  static constexpr T const& at(clink index) noexcept
-  {
-    return *reinterpret_cast<T const*>(index);
-  }
-
-  template <InventoryDataType T>
-  static constexpr T& at(link index) noexcept
-  {
-    return *reinterpret_cast<T*>(index);
-  }
-
-  template <InventoryDataType T>
   T& get(key_type k) noexcept
   {
     auto it = lookup.find(k);
@@ -226,14 +214,14 @@ public:
    *
    */
   template <InventoryDataType T, typename... Args>
-  auto emplace(Args&&... args) noexcept -> link
+  auto emplace(Args&&... args) noexcept -> T&
     requires(is_type_indexed)
   {
     return emplace(std::type_index(typeid(T)), std::forward<Args>(args)...);
   }
 
   template <InventoryDataType T, typename... Args>
-  auto emplace(key_type k, Args&&... args) noexcept -> link
+  auto emplace(key_type k, Args&&... args) noexcept -> T&
   {
     auto& lookup_ent = lookup[k];
     if (lookup_ent.destructor && lookup_ent.data)
@@ -243,7 +231,7 @@ public:
 
     std::construct_at(reinterpret_cast<T*>(lookup_ent.data), std::forward<Args>(args)...);
     lookup_ent.destructor = std::is_trivially_destructible_v<T> ? &do_nothing : &destroy_at<T>;
-    return lookup_ent.data;
+    return *reinterpret_cast<T*>(lookup_ent.data);
   }
 
   template <InventoryDataType T>
