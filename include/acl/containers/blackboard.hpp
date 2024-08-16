@@ -171,7 +171,14 @@ public:
   T const& get() const noexcept
     requires(is_type_indexed)
   {
-    return const_cast<blackboard&>(*this).get<T>(std::type_index(typeid(T)));
+    return get<T>(std::type_index(typeid(T)));
+  }
+
+  template <InventoryDataType T>
+  T& get() noexcept
+    requires(is_type_indexed)
+  {
+    return get<T>(std::type_index(typeid(T)));
   }
 
   template <InventoryDataType T>
@@ -181,24 +188,31 @@ public:
   }
 
   template <InventoryDataType T>
+  T& get(key_type k) noexcept
+  {
+    auto it = lookup.find(k);
+    ACL_ASSERT(it != lookup.end());
+    return *reinterpret_cast<T*>(it->second.data);
+  }
+
+  template <InventoryDataType T>
   T const* get_if() const noexcept
     requires(is_type_indexed)
   {
-    return const_cast<blackboard&>(*this).get_if<T>(std::type_index(typeid(T)));
+    return get_if<T>(std::type_index(typeid(T)));
+  }
+
+  template <InventoryDataType T>
+  T* get_if() noexcept
+    requires(is_type_indexed)
+  {
+    return get_if<T>(std::type_index(typeid(T)));
   }
 
   template <InventoryDataType T>
   T const* get_if(key_type v) const noexcept
   {
     return const_cast<blackboard&>(*this).get_if<T>(v);
-  }
-
-  template <InventoryDataType T>
-  T& get(key_type k) noexcept
-  {
-    auto it = lookup.find(k);
-    ACL_ASSERT(it != lookup.end());
-    return *reinterpret_cast<T*>(it->second.data);
   }
 
   template <InventoryDataType T>
