@@ -87,20 +87,20 @@ struct name_val_map
  * the hash map implementation and replace std::unordered_map by your own class if it satisfies
  *
  */
-template <template <typename K, typename V> class H>
+template <template <typename K, typename V> typename H>
 struct map
 {
-  using name_map_type = typename H<std::type_index, blackboard_offset>::type;
+  using name_map_type = H<std::type_index, blackboard_offset>;
 };
 
 /**
  * This option allows you to implement your own key type, the offset is always required to be blackboard_offset type and
  * provided by blackboard.
  */
-template <template <typename V> class H>
+template <template <typename V> typename H>
 struct name_map
 {
-  using name_map_type = typename H<blackboard_offset>::type;
+  using name_map_type = H<blackboard_offset>;
 };
 
 } // namespace opt
@@ -231,7 +231,7 @@ public:
   auto emplace(Args&&... args) noexcept -> T&
     requires(is_type_indexed)
   {
-    return emplace(std::type_index(typeid(T)), std::forward<Args>(args)...);
+    return emplace<T>(std::type_index(typeid(T)), std::forward<Args>(args)...);
   }
 
   template <InventoryDataType T, typename... Args>

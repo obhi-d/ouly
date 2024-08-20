@@ -1,12 +1,10 @@
 #include <acl/containers/blackboard.hpp>
 #include <catch2/catch_all.hpp>
 #include <string>
+#include <unordered_map>
 
 template <typename V>
-struct custom_map
-{
-  using type = std::unordered_map<std::string, V>;
-};
+using custom_map = std::unordered_map<std::string, V>;
 
 TEST_CASE("blackboard: push_back", "[blackboard][push_back]")
 {
@@ -79,6 +77,11 @@ TEST_CASE("blackboard: push_back", "[blackboard][push_back]")
   REQUIRE(board.contains("param5"));
   REQUIRE(board.contains("param6"));
   REQUIRE(!board.contains("param7"));
+
+  using typeidx_board = acl::blackboard<acl::opt::map<std::unordered_map>>;
+  typeidx_board board2;
+  board2.emplace<std::pair<int, int>>(10, 10);
+  REQUIRE(board2.get<std::pair<int, int>>() == std::pair<int, int>(10, 10));
 
   // check decl
   acl::blackboard<acl::options<acl::opt::name_map<custom_map>>> map;
