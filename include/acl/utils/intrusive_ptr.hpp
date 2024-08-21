@@ -5,6 +5,7 @@
 #include <compare>
 #include <concepts>
 #include <memory>
+#include <type_traits>
 
 namespace acl
 {
@@ -29,6 +30,26 @@ public:
 
   inline constexpr intrusive_ptr() noexcept = default;
   inline constexpr intrusive_ptr(std::nullptr_t) noexcept {}
+
+  template <typename D>
+  inline explicit constexpr intrusive_ptr(D* self) noexcept
+    requires(std::is_base_of_v<T, D>)
+      : self_(self)
+  {
+    static_assert(ReferenceCounted<T>, "Type must be reference counted.");
+    if (self_ != nullptr)
+      intrusive_count_add(self_);
+  }
+
+  template <typename D, typename Del2>
+  inline constexpr intrusive_ptr(acl::intrusive_ptr<D, Del2> self) noexcept
+    requires(std::is_base_of_v<T, D>)
+      : self_(self.get())
+  {
+    static_assert(ReferenceCounted<T>, "Type must be reference counted.");
+    self.release();
+  }
+
   inline explicit constexpr intrusive_ptr(T* self) noexcept : self_(self)
   {
     static_assert(ReferenceCounted<T>, "Type must be reference counted.");
@@ -41,16 +62,34 @@ public:
     rhs.self_ = nullptr;
   }
 
+  template <typename D, typename Del2>
+  inline constexpr intrusive_ptr& operator=(intrusive_ptr<D, Del2> const& rhs) noexcept
+    requires(std::is_base_of_v<T, D>)
+  {
+    reset(rhs.self_);
+    return *this;
+  }
+
   inline constexpr intrusive_ptr& operator=(intrusive_ptr const& rhs) noexcept
   {
     reset(rhs.self_);
     return *this;
   }
+
   inline constexpr intrusive_ptr& operator=(T* rhs) noexcept
   {
     reset(rhs);
     return *this;
   }
+
+  template <typename D>
+  inline constexpr intrusive_ptr& operator=(D* rhs) noexcept
+    requires(std::is_base_of_v<T, D>)
+  {
+    reset(rhs);
+    return *this;
+  }
+
   inline constexpr intrusive_ptr& operator=(intrusive_ptr&& rhs) noexcept
   {
     reset();
