@@ -32,7 +32,7 @@ struct blackboard_offset
 template <typename T>
 concept BlackboardHashMap = requires(T& obj, T const& cobj) {
   typename T::key_type;
-  std::same_as<typename T::mapped_type, blackboard_offset>;
+  requires std::same_as<typename T::mapped_type, blackboard_offset>;
   typename T::iterator;
   typename T::const_iterator;
   {
@@ -55,7 +55,7 @@ namespace detail
 template <typename T>
 concept HashMapDeclTraits = requires {
   typename T::name_map_type;
-  BlackboardHashMap<typename T::name_map_type>;
+  requires BlackboardHashMap<typename T::name_map_type>;
 };
 
 template <typename H>

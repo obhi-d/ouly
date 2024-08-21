@@ -137,10 +137,11 @@ TEST_CASE("Validate smart pointer", "[intrusive_ptr]")
   // Static cast
   acl::intrusive_ptr<myBase> base  = acl::static_pointer_cast<myBase>(ptr);
   acl::intrusive_ptr<myBase> base2 = ptr;
-  CHECK(ptr.use_count() == 2);
+  CHECK(ptr.use_count() == 3);
 
   base.reset();
   ptr.reset();
+  base2.reset();
 
   CHECK(check == -1);
 }
