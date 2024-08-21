@@ -15,10 +15,10 @@ namespace acl
  * @brief Contents are packed in vector or sparse vector
  * @tparam Ty Type of object
  * @tparam Options Controls the parameters for class instantiation
- *   At a minimum expected options must include:
+ *   Valid options:
  *         - use_sparse : bool - true to use sparse vector
  *         - pool_size : integer - Pool size of the sparse vector when sparse vector is used to store data
- *         - offset : typename - acl::offset<&type::offset> self backref member
+ *         - self_index : typename acl::opt::self_index<&type::offset> self backref member
  *         - self_index_pool_size : integer - when offset is missing, indicates the pool size of self references if
  *         they use sparse vector
  *         - keys_index_pool_size : integer - indicates the pool size of keys if they use sparse vector
@@ -46,7 +46,7 @@ public:
   using allocator_type  = detail::custom_allocator_t<Options>;
 
 private:
-  static constexpr bool has_backref = detail::HasBackrefValue<options>;
+  static constexpr bool has_self_index = detail::HasSelfIndexValue<options>;
 
   using this_type     = packed_table<value_type, options>;
   using storage       = detail::aligned_storage<sizeof(value_type), alignof(value_type)>;
@@ -77,10 +77,10 @@ private:
   struct self_index_traits : self_index_traits_base
   {};
 
-  template <detail::HasBackrefValue TrTy>
+  template <detail::HasSelfIndexValue TrTy>
   struct self_index_traits<TrTy> : self_index_traits_base
   {
-    using offset = typename TrTy::offset;
+    using self_index = typename TrTy::self_index;
   };
 
   struct key_index_traits
@@ -95,7 +95,7 @@ private:
     static constexpr bool     zero_out_memory_v = true;
   };
 
-  using self_index = detail::backref_type<self_index_traits<options>>;
+  using self_index = detail::self_index_type<self_index_traits<options>>;
   using key_index  = detail::indirection_type<key_index_traits>;
 
 public:
@@ -242,7 +242,7 @@ public:
       keys_.push_back(key);
     }
 
-    if constexpr (has_backref)
+    if constexpr (has_self_index)
     {
       self_.get(values_.back()) = l;
     }
@@ -269,7 +269,7 @@ public:
     if (k)
       disconnect_free(k);
     k = key;
-    if constexpr (has_backref)
+    if constexpr (has_self_index)
     {
       self_.get(values_.back()) = point.value();
     }
@@ -288,7 +288,7 @@ public:
     auto  k   = keys_.get(point.as_index());
     auto& val = values_[k];
     val       = std::move(args);
-    if constexpr (has_backref)
+    if constexpr (has_self_index)
     {
       self_.get(val) = point.value();
     }
@@ -311,7 +311,7 @@ public:
    * @remarks Only available if backref is available
    */
   void erase(value_type const& obj) noexcept
-    requires(has_backref)
+    requires(has_self_index)
   {
     erase_at(link(self_.get(obj)));
   }
@@ -454,13 +454,13 @@ private:
   }
 
   inline auto get_ref_at_idx(size_type idx) const noexcept
-    requires(!has_backref)
+    requires(!has_self_index)
   {
     return self_.get(idx);
   }
 
   inline auto get_ref_at_idx(size_type idx) const noexcept
-    requires(has_backref)
+    requires(has_self_index)
   {
     return self_.get(item_at_idx(idx));
   }
@@ -486,7 +486,7 @@ private:
     if (&back != &lb)
     {
 
-      if constexpr (has_backref)
+      if constexpr (has_self_index)
         keys_.get(detail::index_val(self_.get(back))) = item_id;
       else
         keys_.get(detail::index_val(self_.best_erase(item_id))) = item_id;
@@ -504,7 +504,7 @@ private:
     }
     else
     {
-      if constexpr (!has_backref)
+      if constexpr (!has_self_index)
         self_.pop_back();
     }
 

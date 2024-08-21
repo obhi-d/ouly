@@ -193,26 +193,26 @@ template <typename Traits>
 class back_indirection
 {
 protected:
-  using size_type = detail::choose_size_t<uint32_t, Traits>;
-  using backref   = typename Traits::offset;
+  using size_type  = detail::choose_size_t<uint32_t, Traits>;
+  using self_index = typename Traits::self_index;
 
 public:
   template <typename T>
   inline size_type& get(T& i) noexcept
   {
-    return backref::get(i);
+    return self_index::get(i);
   }
 
   template <typename T>
   inline size_type get(T& i) const noexcept
   {
-    return backref::get(i);
+    return self_index::get(i);
   }
 
   template <typename T>
   inline size_type& ensure_at(T& i) noexcept
   {
-    return backref::get(i);
+    return self_index::get(i);
   }
 
   template <typename T>
@@ -231,8 +231,8 @@ using indirection_type = std::conditional_t<HasUseSparseIndexAttrib<Traits>, det
                                             detail::vector_indirection<Traits>>;
 
 template <typename Traits>
-using backref_type =
-  std::conditional_t<HasBackrefValue<Traits>, detail::back_indirection<Traits>, indirection_type<Traits>>;
+using self_index_type =
+  std::conditional_t<HasSelfIndexValue<Traits>, detail::back_indirection<Traits>, indirection_type<Traits>>;
 
 } // namespace detail
 

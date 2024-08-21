@@ -197,10 +197,8 @@ struct selfref
 };
 
 template <>
-struct acl::default_options<selfref>
-{
-  using offset = acl::opt::member<&selfref::self>;
-};
+struct acl::default_options<selfref> : public acl::opt::self_index_member<&selfref::self>
+{};
 
 TEST_CASE("packed_table: Test selfref", "[packed_table][backref]")
 {
@@ -310,7 +308,7 @@ struct rand_device
 struct traits_1
 {
   static constexpr bool use_sparse_v                = false;
-  using offset                                      = acl::opt::member<&data::self>;
+  using self_index                                  = acl::opt::member<&data::self>;
   static constexpr uint32_t pool_size_v             = 128;
   static constexpr uint32_t self_index_pool_size_v  = 128;
   static constexpr uint32_t keys_index_pool_size_v  = 128;
@@ -322,7 +320,7 @@ struct traits_1
 struct traits_2
 {
   static constexpr bool use_sparse_v                = true;
-  using offset                                      = acl::opt::member<&data::self>;
+  using self_index                                  = acl::opt::member<&data::self>;
   static constexpr uint32_t pool_size_v             = 128;
   static constexpr uint32_t self_index_pool_size_v  = 128;
   static constexpr uint32_t keys_index_pool_size_v  = 128;
@@ -345,7 +343,7 @@ struct traits_3
 struct traits_4
 {
   static constexpr bool use_sparse_v                = true;
-  using offset                                      = acl::opt::member<&data::self>;
+  using self_index                                  = acl::opt::member<&data::self>;
   static constexpr uint32_t pool_size_v             = 128;
   static constexpr uint32_t self_index_pool_size_v  = 128;
   static constexpr uint32_t keys_index_pool_size_v  = 128;

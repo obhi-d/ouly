@@ -51,7 +51,7 @@ private:
   static constexpr bool has_pod            = detail::HasTrivialAttrib<options>;
   static constexpr bool has_pool_tracking  = !detail::HasDisablePoolTrackingAttrib<options>;
   static constexpr bool has_trivial_copy   = std::is_trivially_copyable_v<Ty> || has_pod;
-  static constexpr bool has_backref        = detail::HasBackrefValue<Options>;
+  static constexpr bool has_self_index        = detail::HasSelfIndexValue<Options>;
 
   static constexpr auto pool_mul       = detail::log2(detail::pool_size_v<Options>);
   static constexpr auto pool_size      = static_cast<size_type>(1) << pool_mul;

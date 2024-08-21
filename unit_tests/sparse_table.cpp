@@ -119,10 +119,8 @@ struct selfref_2
 };
 
 template <>
-struct acl::default_options<selfref_2>
-{
-  using offset = acl::opt::member<&selfref_2::self>;
-};
+struct acl::default_options<selfref_2> : public acl::opt::self_index_member<&selfref_2::self>
+{};
 
 TEST_CASE("sparse_table: Test selfref", "[sparse_table][backref]")
 {

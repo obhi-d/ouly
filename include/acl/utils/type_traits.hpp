@@ -53,7 +53,7 @@ struct member<MPtr>
 {
   using class_type  = T;
   using member_type = M;
-  using offset      = opt::member<MPtr>;
+  using self_index  = opt::member<MPtr>;
 
   inline static member_type& get(class_type& to) noexcept
   {
@@ -119,6 +119,13 @@ struct basic_size_type
 {
   using size_type = T;
 };
+
+/**
+ * @brief This option is used to indicated the projected member of a class to be used to store its own index in a sparse
+ * or packed container. This will allow the container to do its book keeping for item deletion and addition.
+ */
+template <auto M>
+using self_index_member = member<M>;
 
 template <typename T = void>
 struct basic_link_type
@@ -287,7 +294,7 @@ concept HasKeysIndexPoolSize = requires {
 };
 
 template <typename Traits>
-concept HasBackrefValue = requires { typename Traits::offset; };
+concept HasSelfIndexValue = requires { typename Traits::self_index; };
 
 template <typename Traits>
 concept HasSizeType = requires { typename Traits::size_type; };

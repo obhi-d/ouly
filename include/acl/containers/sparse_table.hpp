@@ -15,7 +15,7 @@ namespace acl
  * @tparam allocator_type Underlying allocator_type
  * @tparam Options At minimum the options must define:
  *          - pool_size Power of 2, count of elements in a single chunk/page/pool
- *          - [optional] using offset = acl::offset<Member>; Indicates the member to self pointer
+ *          - [optional] using self_index = typename acl::opt::self_index<&type::offset> for self pointer
  *          - [optional] self_index_pool_size Pool size for self indices if offset is missing
  */
 template <typename Ty, typename Options = acl::default_options<Ty>>
@@ -36,12 +36,12 @@ public:
   static_assert(sizeof(Ty) >= sizeof(size_type), "Type must big enough to hold a link");
 
 private:
-  static constexpr auto pool_mul    = detail::log2(detail::pool_size_v<Options>);
-  static constexpr auto pool_size   = static_cast<size_type>(1) << pool_mul;
-  static constexpr auto pool_mod    = pool_size - 1;
-  static constexpr bool has_backref = detail::HasBackrefValue<Options>;
-  using this_type                   = sparse_table<Ty, Options>;
-  using storage                     = value_type;
+  static constexpr auto pool_mul       = detail::log2(detail::pool_size_v<Options>);
+  static constexpr auto pool_size      = static_cast<size_type>(1) << pool_mul;
+  static constexpr auto pool_mod       = pool_size - 1;
+  static constexpr bool has_self_index = detail::HasSelfIndexValue<Options>;
+  using this_type                      = sparse_table<Ty, Options>;
+  using storage                        = value_type;
 
   struct default_index_pool_size
   {
@@ -62,13 +62,13 @@ private:
   struct self_index_traits : self_index_traits_base
   {};
 
-  template <detail::HasBackrefValue TrTy>
+  template <detail::HasSelfIndexValue TrTy>
   struct self_index_traits<TrTy> : self_index_traits_base
   {
-    using offset = typename TrTy::offset;
+    using self_index = typename TrTy::self_index;
   };
 
-  using self_index = detail::backref_type<self_index_traits<Options>>;
+  using self_index = detail::self_index_type<self_index_traits<Options>>;
 
 public:
   inline sparse_table() noexcept {}
@@ -125,7 +125,7 @@ public:
       auto ref = other.get_ref_at_idx(first);
       if (is_valid_ref(ref))
         std::construct_at(&dst, src);
-      if constexpr (has_backref)
+      if constexpr (has_self_index)
         set_ref_at_idx(first, ref);
     }
     self_      = other.self_;
@@ -280,7 +280,7 @@ public:
    * @remarks Only available if backref is available
    */
   void erase(value_type const& obj) noexcept
-    requires(has_backref)
+    requires(has_self_index)
   {
     erase_at(self_.get(obj));
   }
@@ -347,7 +347,7 @@ public:
     auto idx = detail::index_val(l.value());
     if (idx < extend_)
     {
-      if constexpr (has_backref)
+      if constexpr (has_self_index)
       {
         value_type& val = item_at_idx(idx);
         if (self_.get(val) == l)
@@ -384,25 +384,25 @@ private:
   }
 
   inline auto get_ref_at_idx(size_type idx) const noexcept
-    requires(!has_backref)
+    requires(!has_self_index)
   {
     return self_.get(idx);
   }
 
   inline auto get_ref_at_idx(size_type idx) const noexcept
-    requires(has_backref)
+    requires(has_self_index)
   {
     return self_.get(item_at_idx(idx));
   }
 
   inline auto set_ref_at_idx(size_type idx, size_type lnk) noexcept
-    requires(!has_backref)
+    requires(!has_self_index)
   {
     return self_.ensure_at(idx) = lnk;
   }
 
   inline auto set_ref_at_idx(size_type idx, size_type lnk) noexcept
-    requires(has_backref)
+    requires(has_self_index)
   {
     return self_.get(item_at_idx(idx)) = lnk;
   }
@@ -435,7 +435,7 @@ private:
 
     auto newlnk = detail::revise_invalidate(l);
 
-    if constexpr (has_backref)
+    if constexpr (has_self_index)
       self_.get(item) = free_slot_;
     else
       set_ref_at_idx(lnk, free_slot_);
