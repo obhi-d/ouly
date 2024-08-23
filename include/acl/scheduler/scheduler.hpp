@@ -104,7 +104,7 @@ public:
   inline void submit_to(task_delegate task_obj, TaskContext* data, worker_id to, worker_id current) noexcept
   {
     submit_to(
-      detail::work_item(task_obj, task_data(reinterpret_cast<TaskContext*>(data), detail::work_type_free_functor,
+      detail::work_item(task_obj, task_data(reinterpret_cast<task_context*>(data), detail::work_type_free_functor,
                                             static_cast<uint8_t>(default_workgroup_id.get_index()))),
       to, current);
   }
