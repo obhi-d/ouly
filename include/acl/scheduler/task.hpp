@@ -15,7 +15,8 @@ struct task_data
 {
   union
   {
-    task_context* context = nullptr;
+    task_context*       context = nullptr;
+    task_context const* c_context;
     struct
     {
       uint32_t uint_data_0;
@@ -28,8 +29,15 @@ struct task_data
   uint8_t  reserved_1; // this data is reserved space, and should not be used
 
   task_data() noexcept = default;
+  task_data(uint8_t res_0, uint8_t res_1) noexcept : reserved_0(res_0), reserved_1(res_1) {}
   task_data(task_context* context, uint8_t res_0, uint8_t res_1) noexcept
       : context(context), reserved_0(res_0), reserved_1(res_1)
+  {}
+  task_data(task_context const* context, uint8_t res_0, uint8_t res_1) noexcept
+      : c_context(context), reserved_0(res_0), reserved_1(res_1)
+  {}
+  task_data(task_context const* context, uint32_t uint_data, uint8_t res_0, uint8_t res_1) noexcept
+      : c_context(context), uint_data(uint_data), reserved_0(res_0), reserved_1(res_1)
   {}
 };
 
