@@ -44,6 +44,13 @@ public:
     submit(detail::work_item(task_obj, data), current);
   }
 
+  inline void submit(task_delegate task_obj, task_context* data, workgroup_id submit_group, worker_id current) noexcept
+  {
+    submit(detail::work_item(
+             task_obj, task_data(data, detail::work_type_free_functor, static_cast<uint8_t>(submit_group.get_index()))),
+           current);
+  }
+
   template <auto M, typename Class>
   inline void submit(Class* ctx, workgroup_id submit_group, worker_id current) noexcept
   {

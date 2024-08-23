@@ -26,6 +26,11 @@ struct task_data
   uint16_t ushort_data = 0;
   uint8_t  reserved_0; // this data is reserved space, and should not be used
   uint8_t  reserved_1; // this data is reserved space, and should not be used
+
+  task_data() noexcept = default;
+  task_data(task_context* context, uint8_t res_0, uint8_t res_1) noexcept
+      : context(context), reserved_0(res_0), reserved_1(res_1)
+  {}
 };
 
 using task_delegate = void (*)(task_data, worker_context const&);
