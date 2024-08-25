@@ -46,6 +46,9 @@ struct task_data
   task_data(task_context const* context, uint32_t uint_data, uint8_t res_0, uint8_t res_1) noexcept
       : c_context(context), uint_data(uint_data), reserved_0(res_0), reserved_1(res_1)
   {}
+  task_data(task_context const* context, uint32_t uint_data, uint16_t ushort_data, uint8_t res_0, uint8_t res_1) noexcept
+      : c_context(context), uint_data(uint_data), ushort_data(ushort_data), reserved_0(res_0), reserved_1(res_1)
+  {}
 };
 
 using task_delegate = void (*)(task_data, worker_context const&);

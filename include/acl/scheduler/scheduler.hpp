@@ -46,16 +46,23 @@ public:
   template <typename TaskContext>
   inline void submit(task_delegate task_obj, TaskContext* data, workgroup_id submit_group, worker_id current) noexcept
   {
-    submit(detail::work_item(task_obj, task_data(reinterpret_cast<TaskContext*>(data), detail::work_type_free_functor,
+    submit(detail::work_item(task_obj, task_data(reinterpret_cast<task_context const*>(data), detail::work_type_free_functor,
                                                  static_cast<uint8_t>(submit_group.get_index()))),
            current);
   }
 
-
   template <typename TaskContext>
   inline void submit(task_delegate task_obj, TaskContext* data, uint32_t additional_data, workgroup_id submit_group, worker_id current) noexcept
   {
-    submit(detail::work_item(task_obj, task_data(reinterpret_cast<TaskContext*>(data), additional_data, detail::work_type_free_functor,
+    submit(detail::work_item(task_obj, task_data(reinterpret_cast<task_context const*>(data), additional_data, detail::work_type_free_functor,
+                                                 static_cast<uint8_t>(submit_group.get_index()))),
+           current);
+  }
+
+  template <typename TaskContext>
+  inline void submit(task_delegate task_obj, TaskContext* data, uint32_t data0, uint16_t data1, workgroup_id submit_group, worker_id current) noexcept
+  {
+    submit(detail::work_item(task_obj, task_data(reinterpret_cast<task_context const*>(data), data0, data1, detail::work_type_free_functor,
                                                  static_cast<uint8_t>(submit_group.get_index()))),
            current);
   }
@@ -113,17 +120,25 @@ public:
   inline void submit_to(task_delegate task_obj, TaskContext* data, worker_id to, worker_id current) noexcept
   {
     submit_to(
-      detail::work_item(task_obj, task_data(reinterpret_cast<task_context*>(data), detail::work_type_free_functor,
+      detail::work_item(task_obj, task_data(reinterpret_cast<task_context const*>(data), detail::work_type_free_functor,
                                             static_cast<uint8_t>(default_workgroup_id.get_index()))),
       to, current);
   }
-
 
   template <typename TaskContext>
   inline void submit_to(task_delegate task_obj, TaskContext* data, uint32_t additional_index, worker_id to, worker_id current) noexcept
   {
     submit_to(
-      detail::work_item(task_obj, task_data(reinterpret_cast<task_context*>(data), additional_index, detail::work_type_free_functor,
+      detail::work_item(task_obj, task_data(reinterpret_cast<task_context const*>(data), additional_index, detail::work_type_free_functor,
+                                            static_cast<uint8_t>(default_workgroup_id.get_index()))),
+      to, current);
+  }
+
+  template <typename TaskContext>
+  inline void submit_to(task_delegate task_obj, TaskContext* data, uint32_t additional_index, uint16_t ushort_data, worker_id to, worker_id current) noexcept
+  {
+    submit_to(
+      detail::work_item(task_obj, task_data(reinterpret_cast<task_context const*>(data), additional_index, ushort_data, detail::work_type_free_functor,
                                             static_cast<uint8_t>(default_workgroup_id.get_index()))),
       to, current);
   }
