@@ -51,6 +51,15 @@ public:
            current);
   }
 
+
+  template <typename TaskContext>
+  inline void submit(task_delegate task_obj, TaskContext* data, uint32_t additional_data, workgroup_id submit_group, worker_id current) noexcept
+  {
+    submit(detail::work_item(task_obj, task_data(reinterpret_cast<TaskContext*>(data), additional_data, detail::work_type_free_functor,
+                                                 static_cast<uint8_t>(submit_group.get_index()))),
+           current);
+  }
+
   template <auto M, typename Class>
   inline void submit(Class* ctx, workgroup_id submit_group, worker_id current) noexcept
   {
@@ -108,6 +117,17 @@ public:
                                             static_cast<uint8_t>(default_workgroup_id.get_index()))),
       to, current);
   }
+
+
+  template <typename TaskContext>
+  inline void submit_to(task_delegate task_obj, TaskContext* data, uint32_t additional_index, worker_id to, worker_id current) noexcept
+  {
+    submit_to(
+      detail::work_item(task_obj, task_data(reinterpret_cast<task_context*>(data), additional_index, detail::work_type_free_functor,
+                                            static_cast<uint8_t>(default_workgroup_id.get_index()))),
+      to, current);
+  }
+
   template <auto M, typename Class>
   inline void submit_to(Class& ctx, worker_id to, worker_id current) noexcept
   {
