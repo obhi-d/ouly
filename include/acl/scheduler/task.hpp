@@ -35,7 +35,7 @@ struct task_data
   task_data(T* context) noexcept : context(reinterpret_cast<task_context*>(context))
   {}
   template <typename T>
-  task_data(T const* context) noexcept : c_context(reinterpret_cast<task_context const*>(c_context))
+  task_data(T const* context) noexcept : c_context(reinterpret_cast<task_context const*>(context))
   {}
   task_data(task_context* context, uint8_t res_0, uint8_t res_1) noexcept
       : context(context), reserved_0(res_0), reserved_1(res_1)
