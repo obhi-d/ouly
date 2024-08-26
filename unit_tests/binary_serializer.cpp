@@ -354,6 +354,26 @@ TEMPLATE_TEST_CASE("serializer: ArrayLike", "[serializer][array]", big_endian, l
   REQUIRE(data.ec != acl::serializer_error::none);
 }
 
+TEMPLATE_TEST_CASE("serializer: ArrayLike with Fastpath", "[serializer][array]", big_endian, little_endian)
+{
+  FileData data;
+  auto     serializer = Serializer(data);
+  auto     out        = acl::binary_output_serializer<Serializer, TestType::value>(serializer);
+  auto     in         = acl::binary_input_serializer<Serializer, TestType::value>(serializer);
+
+  using type = std::vector<int>;
+  type write = {19, 99, 2, 19, 44, 21333696};
+  type read;
+
+  out(write);
+  in(read);
+
+  REQUIRE(read == write);
+
+  in(read);
+  REQUIRE(data.ec != acl::serializer_error::none);
+}
+
 TEMPLATE_TEST_CASE("serializer: VariantLike", "[serializer][variant]", big_endian, little_endian)
 {
   FileData data;

@@ -98,7 +98,7 @@ private:
   bool read_bound_class(Class& obj) noexcept
   {
     uint32_t h = 0;
-    (*this)(h);
+             (*this)(h);
     if (h != type_hash<Class>())
     {
       get().error(type_name<Class>(), make_error_code(serializer_error::invalid_key));
@@ -126,7 +126,7 @@ private:
   bool read_serializable(Class& obj) noexcept
   {
     uint32_t h = 0;
-    (*this)(h);
+             (*this)(h);
     if (h != type_hash<Class>())
     {
       get().error(type_name<Class>(), make_error_code(serializer_error::invalid_key));
@@ -143,7 +143,7 @@ private:
     constexpr auto tup_size = std::tuple_size_v<Class>;
     static_assert(tup_size < 256, "Tuple is too big, please customize the serailization!");
     uint8_t size = 0;
-    (*this)(size);
+            (*this)(size);
     if (size != tup_size)
     {
       get().error(type_name<Class>(), make_error_code(serializer_error::invalid_tuple_size));
@@ -159,7 +159,7 @@ private:
   bool read_container(Class& obj) noexcept
   {
     uint32_t h = 0;
-    (*this)(h);
+             (*this)(h);
     if (h != type_hash<Class>())
     {
       get().error(type_name<Class>(), make_error_code(serializer_error::invalid_key));
@@ -167,13 +167,14 @@ private:
     }
 
     uint32_t count = 0;
-    (*this)(count);
+             (*this)(count);
 
     detail::reserve(obj, count);
     if constexpr (!detail::HasEmplaceFn<Class, detail::array_value_type<Class>>)
       detail::resize(obj, count);
     if constexpr (detail::LinearArrayLike<Class, Serializer> && has_fast_path)
     {
+      detail::resize(obj, count);
       return get().read(obj.data(), sizeof(typename Class::value_type) * count);
     }
     else
@@ -204,7 +205,7 @@ private:
   bool read_variant(Class& obj) noexcept
   {
     uint8_t index = 0;
-    (*this)(index);
+            (*this)(index);
     if (index >= std::variant_size_v<Class>)
     {
       get().error(type_name<Class>(), make_error_code(serializer_error::variant_invalid_index));

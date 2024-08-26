@@ -287,7 +287,7 @@ concept ConstructedFromString = requires { T(std::string()); } && (!OptionalLike
 template <typename Class>
 concept HasReserve = requires(Class obj) { obj.reserve(std::size_t()); };
 template <typename Class>
-concept HasResize = requires(Class obj) { obj.resize(std::size_t()); };
+concept HasResize = requires(Class obj) { obj.resize(std::uint32_t()); };
 
 template <typename Class>
 concept HasSize = requires(Class obj) {
