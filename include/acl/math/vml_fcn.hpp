@@ -128,93 +128,110 @@ inline constexpr std::uint32_t fixed_to_fixed(std::uint32_t f, std::uint32_t f_b
 //-- this might be required elsewhere, for now just do it
 // algorithmetically
 
-inline constexpr std::uint16_t float_to_half_i(std::uint32_t i) noexcept
+inline constexpr uint16_t float_to_half_i(uint32_t tmpu) noexcept
 {
-  // can use SSE here, but lets
-  // do it naive way.
-  int s = (i >> 16) & 0x00008000;
-  int e = ((i >> 23) & 0x000000ff) - (127 - 15);
-  int m = i & 0x007fffff;
-  if (e <= 0)
-  {
-    if (e < -10)
-      return 0;
-    m = (m | 0x00800000) >> (1 - e);
+  // 1 : 8 : 23
+  uint16_t sign = static_cast<uint16_t>((tmpu & 0x80000000) >> 31);
+  uint16_t exponent = static_cast<uint16_t>((tmpu & 0x7F800000) >> 23);
+  uint32_t significand = tmpu & 0x7FFFFF;
 
-    return s | (m >> 13);
-  }
-  else if (e == 0xff - (127 - 15))
+         //     NCNN_LOGE("%d %d %d", sign, exponent, significand);
+
+         // 1 : 5 : 10
+  uint16_t fp16;
+  if (exponent == 0)
   {
-    if (m == 0) // Inf
-      return s | 0x7c00;
-    else // NAN
-    {
-      m >>= 13;
-      return s | 0x7c00 | m | (m == 0);
-    }
+    // zero or denormal, always underflow
+    fp16 = (sign << 15) | (0x00 << 10) | 0x00;
+  }
+  else if (exponent == 0xFF)
+  {
+    // infinity or NaN
+    fp16 = (sign << 15) | (0x1F << 10) | (significand ? 0x200 : 0x00);
   }
   else
   {
-    if (e > 30) // Overflow
-      return s | 0x7c00;
-    return s | (e << 10) | (m >> 13);
-  }
-}
-
-inline constexpr std::uint16_t float_to_half(float f) noexcept
-{
-  return float_to_half_i(*(std::uint32_t*)&f);
-}
-
-inline constexpr std::uint32_t half_to_float_i(std::uint16_t y) noexcept
-{
-  // can use SSE here, but lets
-  // do it naive way.
-  int s = (y >> 15) & 0x00000001;
-  int e = (y >> 10) & 0x0000001f;
-  int m = y & 0x000003ff;
-
-  if (e == 0)
-  {
-    if (m == 0) // Plus or minus zero
+    // normalized
+    short newexp = exponent + (-127 + 15);
+    if (newexp >= 31)
     {
-      return s << 31;
+      // overflow, return infinity
+      fp16 = (sign << 15) | (0x1F << 10) | 0x00;
     }
-    else // Denormalized number -- renormalize it
+    else if (newexp <= 0)
     {
-      while (!(m & 0x00000400))
-      {
-        m <<= 1;
-        e -= 1;
-      }
-
-      e += 1;
-      m &= ~0x00000400;
+      // Some normal fp32 cannot be expressed as normal fp16
+      fp16 = (sign << 15) | (0x00 << 10) | 0x00;
     }
-  }
-  else if (e == 31)
-  {
-    if (m == 0) // Inf
+    else
     {
-      return (s << 31) | 0x7f800000;
-    }
-    else // NaN
-    {
-      return (s << 31) | 0x7f800000 | (m << 13);
+      // normal fp16
+      fp16 = (sign << 15) | static_cast<uint16_t>(newexp << 10) | static_cast<uint16_t>(significand >> 13);
     }
   }
 
-  e = e + (127 - 15);
-  m = m << 13;
-  return (s << 31) | (e << 23) | m;
+  return fp16;
 }
 
-inline constexpr float half_to_float(std::uint16_t y) noexcept
+inline constexpr uint16_t float_to_half(float f) noexcept
 {
   union
   {
-    float         f;
-    std::uint32_t i;
+    float    f;
+    uint32_t i;
+  } o;
+  o.f = f;
+  return float_to_half_i(o.i);
+}
+
+inline constexpr uint32_t half_to_float_i(uint16_t value) noexcept
+{
+  uint16_t sign = (value & 0x8000) >> 15;
+  uint16_t exponent = (value & 0x7c00) >> 10;
+  uint16_t significand = value & 0x03FF;
+  uint32_t tmpu;
+  if (exponent == 0)
+  {
+    if (significand == 0)
+    {
+      // zero
+      tmpu = (sign << 31);
+    }
+    else
+    {
+      // denormal
+      exponent = 0;
+      // find non-zero bit
+      while ((significand & 0x200) == 0)
+      {
+        significand <<= 1;
+        exponent++;
+      }
+      significand <<= 1;
+      significand &= 0x3FF;
+      tmpu = (sign << 31) | ((-exponent + (-15 + 127)) << 23) | (significand << 13);
+    }
+  }
+  else if (exponent == 0x1F)
+  {
+    // infinity or NaN
+    tmpu = (sign << 31) | (0xFF << 23) | (significand << 13);
+  }
+  else
+  {
+    // normalized
+    tmpu = (sign << 31) | ((exponent + (-15 + 127)) << 23) | (significand << 13);
+  }
+
+  return tmpu;
+}
+
+inline constexpr float half_to_float(uint16_t y) noexcept
+{
+  union
+  {
+    float    f;
+    uint32_t i;
   } o;
   o.i = half_to_float_i(y);
   return o.f;
