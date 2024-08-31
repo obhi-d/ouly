@@ -329,7 +329,7 @@ void scheduler::create_group(workgroup_id group, uint32_t thread_offset, uint32_
 {
   if (group.get_index() >= workgroups.size())
     workgroups.resize(group.get_index() + 1);
-  thread_count = acl::next_pow2(thread_count);
+  // thread_count = acl::next_pow2(thread_count);
   worker_count =
     std::max(workgroups[group.get_index()].create_group(thread_offset, thread_count, priority), worker_count);
 }
@@ -337,7 +337,7 @@ void scheduler::create_group(workgroup_id group, uint32_t thread_offset, uint32_
 workgroup_id scheduler::create_group(uint32_t thread_offset, uint32_t thread_count, uint32_t priority)
 {
   workgroups.emplace_back();
-  thread_count = acl::next_pow2(thread_count);
+  // thread_count = acl::next_pow2(thread_count);
   worker_count = std::max(workgroups.back().create_group(thread_offset, thread_count, priority), worker_count);
   // no empty group found
   return workgroup_id(static_cast<uint32_t>(workgroups.size() - 1));
