@@ -198,6 +198,7 @@ void scli::enter_param_scope()
       parent_param_ctx  = param_ctx;
       param_ctx         = ctx;
       param_pos         = 0;
+      parameter         = {};
     }
   }
 }

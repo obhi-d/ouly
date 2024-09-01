@@ -10,7 +10,7 @@
 
 namespace acl
 {
-
+class parameter_list;
 class parameter
 {
 public:
@@ -22,13 +22,13 @@ public:
     return param_name;
   }
 
-  virtual int64_t          as_int64(int64_t default_value) const noexcept           = 0;
-  virtual uint64_t         as_uint64(uint64_t default_value) const noexcept         = 0;
-  virtual float            as_float(float default_value) const noexcept             = 0;
-  virtual double           as_double(double default_value) const noexcept           = 0;
-  virtual bool             as_bool(bool default_value) const noexcept               = 0;
-  virtual std::string_view as_sv(std::string_view default_value) const noexcept     = 0;
-  virtual std::string      as_string(std::string_view default_value) const noexcept = 0;
+  virtual int64_t          as_int64(int64_t default_value = {}) const noexcept           = 0;
+  virtual uint64_t         as_uint64(uint64_t default_value = {}) const noexcept         = 0;
+  virtual float            as_float(float default_value = {}) const noexcept             = 0;
+  virtual double           as_double(double default_value = {}) const noexcept           = 0;
+  virtual bool             as_bool(bool default_value = {}) const noexcept               = 0;
+  virtual std::string_view as_sv(std::string_view default_value = {}) const noexcept     = 0;
+  virtual std::string      as_string(std::string_view default_value = {}) const noexcept = 0;
   /**
    * @brief Find a parameter by parameter position
    * @note This function will never return nullptr, it is safe to call any function over the pointer returned
@@ -123,11 +123,6 @@ public:
 
   std::string to_string() const noexcept override;
 
-  inline std::string_view name() const noexcept
-  {
-    return param_name;
-  }
-
   inline auto const& value() const noexcept
   {
     return param_value;
@@ -164,8 +159,7 @@ protected:
   void to_string(std::string& v, bool with_braces) const noexcept;
 
 private:
-  std::string_view param_name;
-  list             param_value;
+  list param_value;
 };
 
 class parameter_main : public parameter_list

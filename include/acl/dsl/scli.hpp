@@ -349,9 +349,16 @@ concept AutoCommand = requires(C c, scli& s) {
 };
 
 template <typename C>
-concept SimpleCommand = requires(C c, scli& s, parameter_list params) {
+concept ParameterizedExecutor = requires(C c, scli& s, parameter_list params) {
   {
     c.execute(s, params)
+  } -> std::same_as<bool>;
+};
+
+template <typename C>
+concept NonParameterizedExecutor = requires(C c, scli& s) {
+  {
+    c.execute(s)
   } -> std::same_as<bool>;
 };
 
@@ -362,6 +369,15 @@ concept ClassicCommand = requires(C c, scli& s, parameter_list params) {
   } -> std::same_as<bool>;
 
   typename C::classic_command_type;
+};
+
+template <typename C>
+concept BoundCommand = requires(C c, scli& s, parameter_list params) {
+  {
+    c.execute(s)
+  } -> std::same_as<bool>;
+
+  typename C::bound_class;
 };
 
 template <typename C>
@@ -423,10 +439,11 @@ struct param_context_impl
   static param_context* get_instance();
 };
 
-template <detail::BoundClass ParamClass>
+template <detail::BoundCommand ParamClass>
 struct param_context_impl_bc : param_context
 {
-  static constexpr uint32_t              size = field_size<ParamClass>();
+  using bound_class                           = typename ParamClass::bound_class;
+  static constexpr uint32_t              size = field_size<bound_class>();
   using cmd_state_offsetter                   = cmd_state* (*)(cmd_state*);
 
   struct type_erased_member_ref
@@ -440,7 +457,7 @@ struct param_context_impl_bc : param_context
 
   param_context_impl_bc() noexcept
   {
-    for_each_field<ParamClass>(
+    for_each_field<bound_class>(
       [this]<typename Decl>(Decl const& decl, auto ii) noexcept
       {
         using value_t            = typename Decl::MemTy;
@@ -448,12 +465,12 @@ struct param_context_impl_bc : param_context
         members[ii].internal_ctx = param_context_impl<value_t>::get_instance();
         members[ii].offset       = [](cmd_state* state) -> cmd_state*
         {
-          return reinterpret_cast<cmd_state*>(Decl::offset(*reinterpret_cast<ParamClass*>(state)));
+          return reinterpret_cast<cmd_state*>(Decl::offset(reinterpret_cast<ParamClass*>(state)->instance));
         };
       });
   }
 
-  std::pair<param_context*, cmd_state*> enter_param_context(scli&, int param_pos, std::string_view param_name,
+  std::pair<param_context*, cmd_state*> enter_param_context(scli& s, int param_pos, std::string_view param_name,
                                                             cmd_state* cstate) override
   {
     if (!param_name.empty())
@@ -471,7 +488,20 @@ struct param_context_impl_bc : param_context
       auto& m = members[param_pos];
       return std::pair<param_context*, cmd_state*>{m.internal_ctx, m.offset(cstate)};
     }
+
+    if constexpr (ParamClass::should_parse_data)
+      return classic_param_context::get_instance()->enter_param_context(
+        s, param_pos, param_name, reinterpret_cast<cmd_state*>(&reinterpret_cast<ParamClass*>(cstate)->data));
     return {nullptr, cstate};
+  }
+
+  void exit_param_context(scli& scli_inst, int param_pos, cmd_state* pstate, cmd_state* cstate) override
+  {
+    if constexpr (ParamClass::should_parse_data)
+    {
+      if (!reinterpret_cast<ParamClass*>(cstate)->data.stack.empty())
+        return classic_param_context::get_instance()->exit_param_context(scli_inst, param_pos, pstate, cstate);
+    }
   }
 
   void parse_param(scli&, std::string_view value, cmd_state*) override {}
@@ -493,7 +523,12 @@ struct param_context_impl_bc : param_context
     {
       auto& m = members[param_pos];
       m.internal_ctx->parse_param(scli, value, m.offset(cstate));
+      return;
     }
+
+    if constexpr (ParamClass::should_parse_data)
+      classic_param_context::get_instance()->parse_param(
+        scli, param_pos, param_name, value, reinterpret_cast<cmd_state*>(&reinterpret_cast<ParamClass*>(cstate)->data));
   }
 };
 
@@ -865,7 +900,7 @@ inline param_context* param_context_impl<Class>::get_instance()
   {
     return detail::classic_param_context::get_instance();
   }
-  else if constexpr (detail::BoundClass<Class>)
+  else if constexpr (detail::BoundCommand<Class>)
   {
     static param_context_impl_bc<Class> context;
     return &context;
@@ -988,9 +1023,72 @@ struct classic_command
 
   inline bool execute(scli& scli)
   {
-    if constexpr (detail::SimpleCommand<CmdClass>)
+    if constexpr (detail::ParameterizedExecutor<CmdClass>)
       return instance.execute(scli, *data.current);
     return true;
+  }
+
+  inline bool enter(scli& scli)
+  {
+    if constexpr (detail::HasEntry<CmdClass>)
+      return instance.enter(scli);
+    return true;
+  }
+
+  inline void exit(scli& scli)
+  {
+    if constexpr (detail::HasExit<CmdClass>)
+      instance.exit(scli);
+  }
+};
+
+template <typename T>
+struct bound_command;
+
+template <detail::ParameterizedExecutor CmdClass>
+struct bound_command<CmdClass>
+{
+  classic_param_data data;
+  CmdClass           instance;
+  using bound_class                       = CmdClass;
+  static constexpr bool should_parse_data = true;
+
+  bound_command() noexcept
+  {
+    data.current = &data.main;
+  }
+
+  inline bool execute(scli& scli)
+  {
+    return instance.execute(scli, *data.current);
+  }
+
+  inline bool enter(scli& scli)
+  {
+    if constexpr (detail::HasEntry<CmdClass>)
+      return instance.enter(scli);
+    return true;
+  }
+
+  inline void exit(scli& scli)
+  {
+    if constexpr (detail::HasExit<CmdClass>)
+      instance.exit(scli);
+  }
+};
+
+template <detail::NonParameterizedExecutor CmdClass>
+struct bound_command<CmdClass>
+{
+  CmdClass instance;
+  using bound_class                       = CmdClass;
+  static constexpr bool should_parse_data = false;
+
+  bound_command() noexcept = default;
+
+  inline bool execute(scli& scli)
+  {
+    return instance.execute(scli);
   }
 
   inline bool enter(scli& scli)
@@ -1127,7 +1225,7 @@ struct reg_proxy<RegClass, Base> : Base
 template <string_literal Name, typename Type>
 struct command
 {
-  using command_type = std::conditional_t<detail::SimpleCommand<Type>, classic_command<Type>, Type>;
+  using command_type = std::conditional_t<detail::BoundClass<Type>, bound_command<Type>, classic_command<Type>>;
   inline static constexpr std::string_view name() noexcept
   {
     return (std::string_view)Name;

@@ -841,3 +841,58 @@ TEST_CASE("Ignore multiple blocks", "[scli][ignore]")
   REQUIRE(!uc.failed);
   REQUIRE(uc.set);
 }
+
+TEST_CASE("Test bound class with param executor", "[scli][binding]")
+{
+  std::string_view input = R"(
+   call name = test value = auto search = (this, value, (is, searched));
+  )";
+
+  struct call_acceptor
+  {
+    std::string name;
+    std::string value;
+
+    static auto reflect() noexcept
+    {
+      return acl::bind(acl::bind<"name", &call_acceptor::name>(), acl::bind<"value", &call_acceptor::value>());
+    }
+
+    bool execute(acl::scli& scli, acl::parameter_list const& params)
+    {
+      if (name != "test")
+        return false;
+      if (value != "auto")
+        return false;
+      auto param = params.find("search");
+      if (!param)
+        return false;
+      if (param->at(0)->as_string() != "this")
+        return false;
+      if (param->at(1)->as_string() != "value")
+        return false;
+      if (param->at(2)->at(0)->as_string() != "is")
+        return false;
+      if (param->at(2)->at(1)->as_string() != "searched")
+        return false;
+      return true;
+    }
+  };
+
+  acl::scli::builder builder;
+  // clang-format off
+  builder
+    + acl::reg<"root", default_reg_handler>
+      - acl::cmd<"call", call_acceptor>
+    - acl::endl;
+  // clang-format on
+  auto          ctx = builder.build();
+  echo_cmd::ctx uc;
+  acl::scli::parse(*ctx.get(), uc, "memory", input, {},
+                   [&uc](acl::scli::location const&, std::string_view error, std::string_view context)
+                   {
+                     uc.failed = true;
+                   });
+
+  REQUIRE(!uc.failed);
+}
