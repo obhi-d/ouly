@@ -144,7 +144,7 @@ struct final_task_traits
   static constexpr uint32_t parallel_execution_threshold = parallel_execution_threshold_t<Traits>::value;
 };
 
-uint32_t get_work_count(uint32_t batches_per_wk, uint32_t wk_count, uint32_t tk_count)
+inline constexpr uint32_t get_work_count(uint32_t batches_per_wk, uint32_t wk_count, uint32_t tk_count)
 {
   uint32_t batch_count = wk_count * batches_per_wk;
   return (tk_count + batch_count - 1) / batch_count;
