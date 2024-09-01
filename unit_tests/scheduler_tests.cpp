@@ -89,7 +89,7 @@ TEST_CASE("scheduler: Range ParallelFor")
       {
         value.fetch_add(b - a);
       },
-      acl::integer_range(0, 2048), 1, acl::default_workgroup_id);
+      acl::integer_range(0, 2048), acl::default_workgroup_id);
   scheduler.end_execution();
 }
 
@@ -121,7 +121,7 @@ TEST_CASE("scheduler: Simplest ParallelFor")
       assert(ctx.get_group_offset() < 16);
       parallel_sum += a;
     },
-    std::span(list.begin(), list.end()), 2, acl::default_workgroup_id);
+    std::span(list.begin(), list.end()), acl::default_workgroup_id);
 
   REQUIRE(parallel_sum.load() == sum);
 
@@ -132,7 +132,7 @@ TEST_CASE("scheduler: Simplest ParallelFor")
       for (auto it = start; it != end; ++it)
         parallel_sum += *it;
     },
-    std::span(list.begin(), list.end()), 2, acl::default_workgroup_id);
+    std::span(list.begin(), list.end()), acl::default_workgroup_id);
 
   REQUIRE(parallel_sum.load() == sum);
 

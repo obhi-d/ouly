@@ -10,8 +10,29 @@
 
 namespace acl
 {
+
+struct default_task_traits
+{
+  /**
+   * Relevant for ranged executers, this value determines the number of batches dispatched per worker on average. Higher
+   * value means the individual task batches are smaller.
+   */
+  static constexpr uint32_t batches_per_worker = 4;
+  /**
+   * This value is used as the minimum task count that will fire the parallel executer, if the task count is less than
+   * this value, a for loop is executed instead.
+   */
+  static constexpr uint32_t parallel_execution_threshold = 16;
+  /**
+   * This value, if set to non-zero, would override the `batches_per_worker` value and instead be used as the batch size
+   * for the tasks.
+   */
+  static constexpr uint32_t fixed_batch_size = 0;
+};
+
 namespace detail
 {
+
 template <typename L, typename It>
 concept RangeExcuter = requires(L l, It range, worker_context const& wc) { l(range, range, wc); };
 template <typename I>
@@ -53,15 +74,92 @@ struct it_size_type<T>
   }
 };
 
+// Concept to check if a type has 'fixed_batch_size'
+template <typename T>
+concept HasFixedBatchSize = requires {
+  {
+    T::fixed_batch_size
+  } -> std::convertible_to<uint32_t>;
+};
+
+// Concept to check if a type has 'batches_per_worker'
+template <typename T>
+concept HasBatchesPerWorker = requires {
+  {
+    T::batches_per_worker
+  } -> std::convertible_to<uint32_t>;
+};
+
+// Concept to check if a type has 'parallel_execution_threshold'
+template <typename T>
+concept HasParallelExecutionThreshold = requires {
+  {
+    T::parallel_execution_threshold
+  } -> std::convertible_to<uint32_t>;
+};
+
+template <typename T>
+struct fixed_batch_size_t
+{
+  static constexpr uint32_t value = default_task_traits::fixed_batch_size;
+};
+
+template <HasFixedBatchSize T>
+struct fixed_batch_size_t<T>
+{
+  static constexpr uint32_t value = T::fixed_batch_size;
+};
+
+template <typename T>
+struct batches_per_worker_t
+{
+  static constexpr uint32_t value = default_task_traits::batches_per_worker;
+};
+
+template <HasBatchesPerWorker T>
+struct batches_per_worker_t<T>
+{
+  static constexpr uint32_t value = T::batches_per_worker;
+};
+
+template <typename T>
+struct parallel_execution_threshold_t
+{
+  static constexpr uint32_t value = default_task_traits::parallel_execution_threshold;
+};
+
+template <HasParallelExecutionThreshold T>
+struct parallel_execution_threshold_t<T>
+{
+  static constexpr uint32_t value = T::parallel_execution_threshold;
+};
+
+template <typename Traits>
+struct final_task_traits
+{
+  static constexpr uint32_t fixed_batch_size = fixed_batch_size_t<Traits>::value;
+
+  static constexpr uint32_t batches_per_worker = batches_per_worker_t<Traits>::value;
+
+  static constexpr uint32_t parallel_execution_threshold = parallel_execution_threshold_t<Traits>::value;
+};
+
+uint32_t get_work_count(uint32_t batches_per_wk, uint32_t wk_count, uint32_t tk_count)
+{
+  uint32_t batch_count = wk_count * batches_per_wk;
+  return (tk_count + batch_count - 1) / batch_count;
+}
+
 } // namespace detail
 
-template <typename L, typename FwIt>
-void parallel_for(L&& lambda, FwIt range, uint32_t granularity, worker_context const& this_context)
+template <typename L, typename FwIt, typename TaskTr = default_task_traits>
+void parallel_for(L&& lambda, FwIt range, worker_context const& this_context, TaskTr = {})
 {
   using iterator_t                 = decltype(std::begin(range));
   constexpr bool is_range_executor = detail::RangeExcuter<L, iterator_t>;
   using it_helper                  = detail::it_size_type<FwIt>;
   using size_type                  = uint32_t; // Range is limited
+  using traits                     = detail::final_task_traits<TaskTr>;
 
   struct parallel_for_executer : public task
   {
@@ -87,14 +185,21 @@ void parallel_for(L&& lambda, FwIt range, uint32_t granularity, worker_context c
     L&         lambda_instance;
   };
 
-  auto&           s     = this_context.get_scheduler();
-  size_type       count = it_helper::size(range);
-  const size_type task_count =
-    is_range_executor ? static_cast<size_type>(s.get_logical_divisor(this_context.get_workgroup()) * granularity)
-                      : count;
+  auto&     s     = this_context.get_scheduler();
+  size_type count = it_helper::size(range);
 
-  const size_type fixed = is_range_executor ? ((count + task_count - 1) / task_count) : 1;
-  if (!task_count)
+  constexpr uint32_t min_batches_per_worker = 1;
+  const size_type    work_count =
+    is_range_executor
+         ? (traits::fixed_batch_size ? (count + traits::fixed_batch_size - 1) / traits::fixed_batch_size
+                                     : detail::get_work_count(std::max(min_batches_per_worker, traits::batches_per_worker),
+                                                              s.get_worker_count(this_context.get_workgroup()), count))
+         : count;
+  const size_type fixed =
+    is_range_executor ? (traits::fixed_batch_size ? traits::fixed_batch_size : ((count + work_count - 1) / work_count))
+                      : 1;
+
+  if (count <= traits::parallel_execution_threshold || work_count <= 1)
   {
     if constexpr (is_range_executor)
       lambda(std::begin(range), std::end(range), this_context);
@@ -106,9 +211,9 @@ void parallel_for(L&& lambda, FwIt range, uint32_t granularity, worker_context c
   }
   else
   {
-    auto      executer = parallel_for_executer(lambda, std::begin(range), task_count);
+    auto      executer = parallel_for_executer(lambda, std::begin(range), work_count);
     size_type begin    = 0;
-    for (size_type i = 1; i < task_count; ++i)
+    for (size_type i = 1; i < work_count; ++i)
     {
       task_data range;
       range.uint_data_0 = begin;
@@ -129,22 +234,22 @@ void parallel_for(L&& lambda, FwIt range, uint32_t granularity, worker_context c
   }
 }
 
-template <typename L, typename FwIt>
-void parallel_for(L&& lambda, FwIt range, uint32_t granularity, worker_id current, workgroup_id workgroup, scheduler& s)
+template <typename L, typename FwIt, typename TaskTraits = default_task_traits>
+void parallel_for(L&& lambda, FwIt range, worker_id current, workgroup_id workgroup, scheduler& s, TaskTraits tt = {})
 {
   auto const& this_context = s.get_context(current, workgroup);
   // Assert this context belongs to the work group selected for submission
   assert(
     this_context.belongs_to(workgroup) &&
     "Current worker does not belong to the work group for 'parallel_for' submission and thus cannot execute the task.");
-  parallel_for(std::forward<L>(lambda), range, granularity, this_context);
+  parallel_for(std::forward<L>(lambda), range, this_context, tt);
 }
 
-template <typename L, typename FwIt>
-void parallel_for(L&& lambda, FwIt range, uint32_t granularity, workgroup_id workgroup)
+template <typename L, typename FwIt, typename TaskTraits = default_task_traits>
+void parallel_for(L&& lambda, FwIt range, workgroup_id workgroup, TaskTraits tt = default_task_traits{})
 {
   auto const& this_context = worker_context::get(workgroup);
-  parallel_for(std::forward<L>(lambda), range, granularity, this_context);
+  parallel_for(std::forward<L>(lambda), range, this_context, tt);
 }
 
 } // namespace acl
