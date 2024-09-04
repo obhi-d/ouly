@@ -115,7 +115,7 @@ inline vec3a_t<scalar_t> operator*(vec3a_t<scalar_t> const& v, quat_t<scalar_t> 
 }
 
 template <ScalarType scalar_t>
-inline extends_t<scalar_t> operator*(extends_t<scalar_t> const& v, quat_t<scalar_t> const& rot) noexcept
+inline extends3d_t<scalar_t> operator*(extends3d_t<scalar_t> const& v, quat_t<scalar_t> const& rot) noexcept
 {
   return vml::mul_extends_quat(v.v, rot.v);
 }

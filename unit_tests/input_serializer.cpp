@@ -1,6 +1,6 @@
 
-#include "acl/serializers/input_serializer.hpp"
 #include "acl/containers/array_types.hpp"
+#include "acl/serializers/input_serializer.hpp"
 #include <catch2/catch_all.hpp>
 #include <charconv>
 #include <nlohmann/json.hpp>
@@ -23,7 +23,7 @@ public:
 
   bool failed() const noexcept
   {
-    return false;
+    return owner.get().ec != acl::serializer_error::none;
   }
 
   bool is_object() const noexcept
@@ -153,7 +153,7 @@ TEST_CASE("input_serializer: Test valid stream in with reflect outside")
 
   ReflTestFriend myStruct;
 
-  ser(myStruct);
+  ser >> myStruct;
 
   REQUIRE(myStruct.a == 100);
   REQUIRE(myStruct.b == 200);
@@ -171,7 +171,7 @@ TEST_CASE("input_serializer: Test partial stream in with reflect outside")
 
   ReflTestFriend myStruct;
 
-  ser(myStruct);
+  ser >> myStruct;
 
   REQUIRE(myStruct.a == 100);
   REQUIRE(myStruct.b == 0);
@@ -188,7 +188,7 @@ TEST_CASE("input_serializer: Test fail stream in with reflect outside")
 
   ReflTestFriend myStruct;
 
-  ser(myStruct);
+  ser >> myStruct;
 
   REQUIRE(input.ec == acl::serializer_error::failed_to_parse_value);
   REQUIRE(myStruct.a == 0);
@@ -226,7 +226,7 @@ TEST_CASE("input_serializer: Test valid stream in with reflect member")
 
   ReflTestClass myStruct;
 
-  ser(myStruct);
+  ser >> myStruct;
 
   REQUIRE(myStruct.get_a() == 100);
   REQUIRE(myStruct.get_b() == 200);
@@ -254,7 +254,7 @@ TEST_CASE("input_serializer: Test 1 level scoped class")
 
   ReflTestMember myStruct;
 
-  ser(myStruct);
+  ser >> myStruct;
 
   REQUIRE(myStruct.first.get_a() == 100);
   REQUIRE(myStruct.first.get_b() == 200);
@@ -273,7 +273,7 @@ TEST_CASE("input_serializer: Test partial 1 level scoped class")
 
   ReflTestMember myStruct;
 
-  ser(myStruct);
+  ser >> myStruct;
 
   REQUIRE(myStruct.first.get_a() == 100);
   REQUIRE(myStruct.first.get_b() == 200);
@@ -303,7 +303,7 @@ TEST_CASE("input_serializer: Test 2 level scoped class")
 
   ReflTestClass2 myStruct;
 
-  ser(myStruct);
+  ser >> myStruct;
 
   REQUIRE(myStruct.first.first.get_a() == 100);
   REQUIRE(myStruct.first.first.get_b() == 200);
@@ -323,7 +323,7 @@ TEST_CASE("input_serializer: Test pair")
 
   std::pair<ReflTestMember, std::string> myStruct;
 
-  ser(myStruct);
+  ser >> myStruct;
 
   REQUIRE(myStruct.first.first.get_a() == 100);
   REQUIRE(myStruct.first.first.get_b() == 200);
@@ -343,7 +343,7 @@ TEST_CASE("input_serializer: TupleLike ")
 
   std::tuple<ReflTestMember, std::string, int, bool> myStruct = {};
 
-  ser(myStruct);
+  ser >> myStruct;
 
   REQUIRE(std::get<0>(myStruct).first.get_a() == 100);
   REQUIRE(std::get<0>(myStruct).first.get_b() == 200);
@@ -365,7 +365,7 @@ TEST_CASE("input_serializer: Invalid TupleLike ")
 
   std::tuple<ReflTestMember, std::string, int, bool> myStruct = {};
 
-  ser(myStruct);
+  ser >> myStruct;
 
   REQUIRE(input.ec == acl::serializer_error::invalid_type);
 }
@@ -383,7 +383,7 @@ TEST_CASE("input_serializer: StringMapLike ")
 
   type myMap = {};
 
-  ser(myMap);
+  ser >> myMap;
 
   REQUIRE(myMap["first"] == pair_type(100, "100"));
   REQUIRE(myMap["second"] == pair_type(300, "300"));
@@ -403,7 +403,7 @@ TEST_CASE("input_serializer: StringMapLike Invalid ")
 
   type myMap = {};
 
-  ser(myMap);
+  ser >> myMap;
 
   REQUIRE(input.ec == acl::serializer_error::failed_streaming_map);
   REQUIRE(myMap.empty());
@@ -422,7 +422,7 @@ TEST_CASE("input_serializer: StringMapLike Invalid  Subelement")
 
   type myMap = {};
 
-  ser(myMap);
+  ser >> myMap;
 
   REQUIRE(input.ec == acl::serializer_error::invalid_type);
   REQUIRE(myMap.empty());
@@ -441,7 +441,7 @@ TEST_CASE("input_serializer: ArrayLike")
 
   type myMap = {};
 
-  ser(myMap);
+  ser >> myMap;
 
   REQUIRE(myMap[11] == pair_type(100, "100"));
   REQUIRE(myMap[13] == pair_type(300, "300"));
@@ -458,7 +458,7 @@ TEST_CASE("input_serializer: ArrayLike (no emplace)")
   auto serializer = Serializer(input);
   auto ser        = acl::input_serializer<Serializer>(serializer);
 
-  ser(myArray);
+  ser >> myArray;
 
   REQUIRE(myArray.size() == 4);
   REQUIRE(myArray[0] == 11);
@@ -477,7 +477,7 @@ TEST_CASE("input_serializer: ArrayLike Invalid ")
   auto serializer = Serializer(input);
   auto ser        = acl::input_serializer<Serializer>(serializer);
 
-  ser(myArray);
+  ser >> myArray;
 
   REQUIRE(myArray.empty());
   REQUIRE(input.ec == acl::serializer_error::invalid_type);
@@ -493,7 +493,7 @@ TEST_CASE("input_serializer: ArrayLike (no emplace) Invalid Subelement ")
   auto serializer = Serializer(input);
   auto ser        = acl::input_serializer<Serializer>(serializer);
 
-  ser(myArray);
+  ser >> myArray;
 
   REQUIRE(myArray.empty());
   REQUIRE(input.ec == acl::serializer_error::failed_streaming_array);
@@ -512,7 +512,7 @@ TEST_CASE("input_serializer: ArrayLike Invalid Subelement ")
 
   type myMap = {};
 
-  ser(myMap);
+  ser >> myMap;
 
   REQUIRE(myMap.empty());
   REQUIRE(input.ec == acl::serializer_error::failed_streaming_array);
@@ -529,7 +529,7 @@ TEST_CASE("input_serializer: VariantLike ")
   auto serializer = Serializer(input);
   auto ser        = acl::input_serializer<Serializer>(serializer);
 
-  ser(variantList);
+  ser >> variantList;
 
   REQUIRE(variantList.size() == 4);
   REQUIRE(std::holds_alternative<int>(variantList[0]));
@@ -553,7 +553,7 @@ TEST_CASE("input_serializer: VariantLike Invalid")
   auto serializer = Serializer(input);
   auto ser        = acl::input_serializer<Serializer>(serializer);
 
-  ser(variant);
+  ser >> variant;
 
   REQUIRE(variant.index() == 0);
   REQUIRE(input.ec == acl::serializer_error::variant_index_is_not_int);
@@ -570,7 +570,7 @@ TEST_CASE("input_serializer: VariantLike Invalid Type")
   auto serializer = Serializer(input);
   auto ser        = acl::input_serializer<Serializer>(serializer);
 
-  ser(variant);
+  ser >> variant;
 
   REQUIRE(variant.index() == 0);
   REQUIRE(input.ec == acl::serializer_error::invalid_type);
@@ -587,7 +587,7 @@ TEST_CASE("input_serializer: VariantLike Invalid Size")
   auto serializer = Serializer(input);
   auto ser        = acl::input_serializer<Serializer>(serializer);
 
-  ser(variant);
+  ser >> variant;
 
   REQUIRE(variant.index() == 0);
   REQUIRE(input.ec == acl::serializer_error::variant_invalid_format);
@@ -613,7 +613,7 @@ TEST_CASE("input_serializer: ConstructedFromStringView")
   auto serializer = Serializer(input);
   auto ser        = acl::input_serializer<Serializer>(serializer);
 
-  ser(myArray);
+  ser >> myArray;
 
   REQUIRE(myArray.size() == 4);
   REQUIRE(myArray[0].id == 11);
@@ -632,7 +632,7 @@ TEST_CASE("input_serializer: ConstructedFromStringView Invalid")
   auto serializer = Serializer(input);
   auto ser        = acl::input_serializer<Serializer>(serializer);
 
-  ser(myArray);
+  ser >> myArray;
 
   REQUIRE(myArray.empty());
   REQUIRE(input.ec == acl::serializer_error::failed_streaming_array);
@@ -660,7 +660,7 @@ TEST_CASE("input_serializer: TransformFromString")
   auto serializer = Serializer(input);
   auto ser        = acl::input_serializer<Serializer>(serializer);
 
-  ser(myArray);
+  ser >> myArray;
 
   REQUIRE(myArray.size() == 4);
   REQUIRE(myArray[0].id == 11);
@@ -679,7 +679,7 @@ TEST_CASE("input_serializer: TransformFromString Invalid")
   auto serializer = Serializer(input);
   auto ser        = acl::input_serializer<Serializer>(serializer);
 
-  ser(myArray);
+  ser >> myArray;
 
   REQUIRE(myArray.size() == 0);
   REQUIRE(input.ec == acl::serializer_error::failed_streaming_array);
@@ -695,7 +695,7 @@ TEST_CASE("input_serializer: BoolLike")
   auto serializer = Serializer(input);
   auto ser        = acl::input_serializer<Serializer>(serializer);
 
-  ser(myArray);
+  ser >> myArray;
 
   REQUIRE(myArray.size() == 4);
   REQUIRE(myArray[0] == false);
@@ -714,7 +714,7 @@ TEST_CASE("input_serializer: BoolLike Invaild")
   auto serializer = Serializer(input);
   auto ser        = acl::input_serializer<Serializer>(serializer);
 
-  ser(myArray);
+  ser >> myArray;
 
   REQUIRE(input.ec == acl::serializer_error::failed_streaming_array);
 }
@@ -729,7 +729,7 @@ TEST_CASE("input_serializer: SignedIntLike")
   auto serializer = Serializer(input);
   auto ser        = acl::input_serializer<Serializer>(serializer);
 
-  ser(myArray);
+  ser >> myArray;
 
   REQUIRE(myArray[0] == -40);
   REQUIRE(myArray[1] == -10);
@@ -747,7 +747,7 @@ TEST_CASE("input_serializer: SignedIntLike Invalid")
   auto serializer = Serializer(input);
   auto ser        = acl::input_serializer<Serializer>(serializer);
 
-  ser(myArray);
+  ser >> myArray;
 
   REQUIRE(input.ec == acl::serializer_error::failed_streaming_array);
 }
@@ -762,7 +762,7 @@ TEST_CASE("input_serializer: UnsignedIntLike")
   auto serializer = Serializer(input);
   auto ser        = acl::input_serializer<Serializer>(serializer);
 
-  ser(myArray);
+  ser >> myArray;
 
   REQUIRE(myArray[0] == 40);
   REQUIRE(myArray[1] == 10);
@@ -780,7 +780,7 @@ TEST_CASE("input_serializer: UnsignedIntLike Invalid")
   auto serializer = Serializer(input);
   auto ser        = acl::input_serializer<Serializer>(serializer);
 
-  ser(myArray);
+  ser >> myArray;
 
   REQUIRE(input.ec == acl::serializer_error::failed_streaming_array);
 }
@@ -795,7 +795,7 @@ TEST_CASE("input_serializer: FloatLike")
   auto serializer = Serializer(input);
   auto ser        = acl::input_serializer<Serializer>(serializer);
 
-  ser(myArray);
+  ser >> myArray;
 
   REQUIRE(myArray[0] == Catch::Approx(434.442f));
   REQUIRE(myArray[1] == Catch::Approx(757.10f));
@@ -813,7 +813,7 @@ TEST_CASE("input_serializer: FloatLike Invalid")
   auto serializer = Serializer(input);
   auto ser        = acl::input_serializer<Serializer>(serializer);
 
-  ser(myArray);
+  ser >> myArray;
 
   REQUIRE(input.ec == acl::serializer_error::failed_streaming_array);
 }
@@ -840,7 +840,7 @@ TEST_CASE("input_serializer: PointerLike")
   auto serializer = Serializer(input);
   auto ser        = acl::input_serializer<Serializer>(serializer);
 
-  ser(pvalue);
+  ser >> pvalue;
 
   REQUIRE(pvalue.a);
   REQUIRE(pvalue.b);
@@ -874,7 +874,7 @@ TEST_CASE("input_serializer: PointerLike Null")
   auto serializer = Serializer(input);
   auto ser        = acl::input_serializer<Serializer>(serializer);
 
-  ser(pvalue);
+  ser >> pvalue;
 
   REQUIRE(!pvalue.a);
   REQUIRE(!pvalue.b);
@@ -902,7 +902,7 @@ TEST_CASE("input_serializer: OptionalLike")
   auto serializer = Serializer(input);
   auto ser        = acl::input_serializer<Serializer>(serializer);
 
-  ser(pvalue);
+  ser >> pvalue;
 
   REQUIRE(pvalue.a);
   REQUIRE(!pvalue.b);
@@ -937,7 +937,7 @@ TEST_CASE("input_serializer: InputSerializableClass")
   auto serializer = Serializer(input);
   auto ser        = acl::input_serializer<Serializer>(serializer);
 
-  ser(integers);
+  ser >> integers;
 
   REQUIRE(integers.size() == 3);
   REQUIRE(integers[0].get() == 34);

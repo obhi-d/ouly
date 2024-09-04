@@ -66,7 +66,14 @@ public:
   inline output_serializer(Serializer& ser) noexcept : ser_(ser) {}
 
   template <typename Class>
-  inline void operator()(Class const& obj) noexcept
+  inline auto& operator<<(Class& obj)
+  {
+    write(obj);
+    return *this;
+  }
+
+  template <typename Class>
+  inline void write(Class const& obj) noexcept
   {
     // Ensure ordering with multiple matches
     if constexpr (detail::BoundClass<Class>)
@@ -154,7 +161,7 @@ private:
       if (comma)
         get().next();
       get().key(key);
-      (*this)(value);
+      write(value);
       comma = true;
     }
 
@@ -171,7 +178,7 @@ private:
     {
       if (comma)
         get().next();
-      (*this)(value);
+      write(value);
       comma = true;
     }
     get().end_array();
@@ -182,12 +189,12 @@ private:
   {
     // Invalid type is unexpected
     get().begin_array();
-    (*this)(obj.index());
+    write(obj.index());
     get().next();
     std::visit(
       [this](auto const& arg)
       {
-        (*this)(arg);
+        write(arg);
       },
       obj);
     get().end_array();
@@ -240,7 +247,7 @@ private:
   {
     get().as_uint64(obj);
   }
-    
+
   template <detail::EnumLike Class>
   void write_enum(Class const& obj) noexcept
   {
@@ -263,7 +270,7 @@ private:
   void write_pointer(Class const& obj) noexcept
   {
     if (obj)
-      (*this)(*obj);
+      write(*obj);
     else
       get().as_null();
   }
@@ -272,7 +279,7 @@ private:
   void write_optional(Class const& obj) noexcept
   {
     if (obj)
-      (*this)(*obj);
+      write(*obj);
     else
       get().as_null();
   }
@@ -290,7 +297,7 @@ public:
     if constexpr (I != 0)
       get().next();
     get().key(decl.key());
-    (*this)(decl.value(obj));
+    write(decl.value(obj));
   }
 
 private:
@@ -309,7 +316,7 @@ private:
   {
     if constexpr (N != 0)
       get().next();
-    (*this)(std::get<N>(obj));
+    write(std::get<N>(obj));
   }
 };
 

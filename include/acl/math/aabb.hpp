@@ -43,15 +43,27 @@ inline vec3a_t<scalar_t> corner(aabb_t<scalar_t> const& box, unsigned int i) noe
 }
 
 template <typename scalar_t>
-inline aabb_t<scalar_t> operator+(aabb_t<scalar_t> const& b, vec3a_t<scalar_t> const& point) noexcept
+inline aabb_t<scalar_t> union_of(aabb_t<scalar_t> const& b, vec3a_t<scalar_t> const& point) noexcept
 {
   return {vec3a_t<scalar_t>(vml::min(b.v[0], point.v)), vec3a_t<scalar_t>(vml::max(b.v[1], point.v))};
 }
 
 template <typename scalar_t>
-inline aabb_t<scalar_t> operator+(aabb_t<scalar_t> const& box, aabb_t<scalar_t> const& other) noexcept
+inline aabb_t<scalar_t> union_of(aabb_t<scalar_t> const& box, aabb_t<scalar_t> const& other) noexcept
 {
   return {vml::min(box.v[0], other.v[0]), vml::max(box.v[1], other.v[1])};
+}
+
+template <typename scalar_t>
+inline aabb_t<scalar_t> operator+(aabb_t<scalar_t> const& b, vec3a_t<scalar_t> const& point) noexcept
+{
+  return union_of(b, point);
+}
+
+template <typename scalar_t>
+inline aabb_t<scalar_t> operator+(aabb_t<scalar_t> const& box, aabb_t<scalar_t> const& other) noexcept
+{
+  return union_of(box, other);
 }
 
 template <typename scalar_t>

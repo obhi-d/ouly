@@ -51,8 +51,21 @@ public:
   inline binary_input_serializer(Serializer& ser) noexcept : ser_(ser) {}
 
   template <typename Class>
-  inline bool operator()(Class& obj) noexcept
+  inline auto& operator>>(Class& obj)
   {
+    if (!ser_.get().failed())
+    {
+      if (!read(obj) && !ser_.get().failed())
+        ser_.get().error(type_name<Class>(), make_error_code(serializer_error::failed_to_parse_value));
+    }
+    return *this;
+  }
+
+  template <typename Class>
+  inline bool read(Class& obj) noexcept
+  {
+    if (ser_.get().failed())
+      return false;
     // Ensure ordering with multiple matches
     if constexpr (detail::BoundClass<Class>)
       return read_bound_class(obj);
@@ -98,7 +111,7 @@ private:
   bool read_bound_class(Class& obj) noexcept
   {
     uint32_t h = 0;
-             (*this)(h);
+    read(h);
     if (h != type_hash<Class>())
     {
       get().error(type_name<Class>(), make_error_code(serializer_error::invalid_key));
@@ -111,7 +124,7 @@ private:
       {
         using value_t = typename Decl::MemTy;
         value_t load;
-        if ((*this)(load))
+        if (read(load))
         {
           decl.value(obj, std::move(load));
           return;
@@ -126,7 +139,7 @@ private:
   bool read_serializable(Class& obj) noexcept
   {
     uint32_t h = 0;
-             (*this)(h);
+    read(h);
     if (h != type_hash<Class>())
     {
       get().error(type_name<Class>(), make_error_code(serializer_error::invalid_key));
@@ -143,7 +156,7 @@ private:
     constexpr auto tup_size = std::tuple_size_v<Class>;
     static_assert(tup_size < 256, "Tuple is too big, please customize the serailization!");
     uint8_t size = 0;
-            (*this)(size);
+    read(size);
     if (size != tup_size)
     {
       get().error(type_name<Class>(), make_error_code(serializer_error::invalid_tuple_size));
@@ -159,7 +172,7 @@ private:
   bool read_container(Class& obj) noexcept
   {
     uint32_t h = 0;
-             (*this)(h);
+    read(h);
     if (h != type_hash<Class>())
     {
       get().error(type_name<Class>(), make_error_code(serializer_error::invalid_key));
@@ -167,7 +180,7 @@ private:
     }
 
     uint32_t count = 0;
-             (*this)(count);
+    read(count);
 
     detail::reserve(obj, count);
     if constexpr (!detail::HasEmplaceFn<Class, detail::array_value_type<Class>>)
@@ -182,7 +195,7 @@ private:
       for (uint32_t index = 0; index < count; ++index)
       {
         detail::array_value_type<Class> stream_val;
-        if (!(*this)(stream_val))
+        if (!read(stream_val))
         {
           get().error(type_name<Class>(), make_error_code(serializer_error::corrupt_array_item));
           return false;
@@ -205,7 +218,7 @@ private:
   bool read_variant(Class& obj) noexcept
   {
     uint8_t index = 0;
-            (*this)(index);
+    read(index);
     if (index >= std::variant_size_v<Class>)
     {
       get().error(type_name<Class>(), make_error_code(serializer_error::variant_invalid_index));
@@ -217,7 +230,7 @@ private:
       {
         using type = std::variant_alternative_t<I, Class>;
         type load;
-        if ((*this)(load))
+        if (read(load))
         {
           obj = std::move(load);
           return true;
@@ -332,7 +345,7 @@ private:
           obj = std::make_shared<pvalue_type>();
         else
           obj = Class(new detail::pointer_class_type<Class>());
-        return (*this)(*obj);
+        return read(*obj);
       }
       else
         obj = nullptr;
@@ -350,7 +363,7 @@ private:
       if (!is_null)
       {
         obj.emplace();
-        return (*this)(*obj);
+        return read(*obj);
       }
       else
         obj.reset();
@@ -380,7 +393,7 @@ private:
   {
     std::optional<std::string> result;
     uint32_t                   length = 0;
-    if (!(*this)(length))
+    if (!read(length))
     {
       get().error("string", make_error_code(serializer_error::corrupt_string_length));
     }
@@ -400,7 +413,7 @@ private:
   bool at(Class& obj) noexcept
   {
     using type = detail::remove_cref<std::tuple_element_t<N, Class>>;
-    return (*this)(const_cast<type&>(std::get<N>(obj)));
+    return read(const_cast<type&>(std::get<N>(obj)));
   }
 
   template <std::size_t const I, typename Class, typename L>

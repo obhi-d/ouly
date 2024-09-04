@@ -86,15 +86,14 @@ TEMPLATE_TEST_CASE("serializer: Test valid stream with reflect outside", "[seria
   FileData data;
   auto     serializer = Serializer(data);
   auto     out        = acl::binary_output_serializer<Serializer, TestType::value>(serializer);
-  out(obj);
+  out << obj;
   auto           in = acl::binary_input_serializer<Serializer, TestType::value>(serializer);
   ReflTestFriend read;
-  in(read);
+  in >> read;
   REQUIRE(read.a == obj.a);
   REQUIRE(read.b == obj.b);
   REQUIRE(read.et == obj.et);
-
-  in(read);
+  in >> read;
   REQUIRE(data.ec != acl::serializer_error::none);
 }
 
@@ -127,13 +126,13 @@ TEMPLATE_TEST_CASE("serializer: Test valid stream with reflect member", "[serial
   FileData data;
   auto     serializer = Serializer(data);
   auto     out        = acl::binary_output_serializer<Serializer, TestType::value>(serializer);
-  out(obj);
+  out << obj;
   auto          in = acl::binary_input_serializer<Serializer, TestType::value>(serializer);
   ReflTestClass read;
-  in(read);
+  in >> read;
   REQUIRE(read == obj);
 
-  in(read);
+  in >> read;
   REQUIRE(data.ec != acl::serializer_error::none);
 }
 
@@ -156,14 +155,14 @@ TEMPLATE_TEST_CASE("serializer: Test compound object", "[serializer][compound]",
   FileData       data;
   auto           serializer = Serializer(data);
   auto           out        = acl::binary_output_serializer<Serializer, TestType::value>(serializer);
-  out(test);
+  out << test;
   auto           in = acl::binary_input_serializer<Serializer, TestType::value>(serializer);
   ReflTestMember read;
-  in(read);
+  in >> read;
 
   REQUIRE(read == test);
 
-  in(read);
+  in >> read;
   REQUIRE(data.ec != acl::serializer_error::none);
 }
 
@@ -193,13 +192,13 @@ TEMPLATE_TEST_CASE("serializer: Test compound object with simple member", "[seri
   auto     serializer = Serializer(data);
   auto     out        = acl::binary_output_serializer<Serializer, TestType::value>(serializer);
   auto     in         = acl::binary_input_serializer<Serializer, TestType::value>(serializer);
-  out(test);
+  out << test;
   ReflTestClass2 read;
-  in(read);
+  in >> read;
 
   REQUIRE(read == test);
 
-  in(read);
+  in >> read;
   REQUIRE(data.ec != acl::serializer_error::none);
 }
 
@@ -212,12 +211,12 @@ TEMPLATE_TEST_CASE("serializer: Test pair", "[serializer][pair]", big_endian, li
 
   std::pair<ReflTestMember, std::string> write = {ReflTestMember(), "a random string"}, read;
 
-  out(write);
-  in(read);
+  out << write;
+  in >> read;
 
   REQUIRE(read == write);
 
-  in(read);
+  in >> read;
   REQUIRE(data.ec != acl::serializer_error::none);
 }
 
@@ -232,12 +231,12 @@ TEMPLATE_TEST_CASE("serializer: TupleLike ", "[serializer][tuple]", big_endian, 
   type write = type(ReflTestMember(), "random string", 4200, true);
   type read;
 
-  out(write);
-  in(read);
+  out << write;
+  in >> read;
 
   REQUIRE(read == write);
 
-  in(read);
+  in >> read;
   REQUIRE(data.ec != acl::serializer_error::none);
 }
 
@@ -260,12 +259,12 @@ TEMPLATE_TEST_CASE("serializer: StringMapLike ", "[serializer][map]", big_endian
 
   type read;
 
-  out(write);
-  in(read);
+  out << write;
+  in >> read;
 
   REQUIRE(read == write);
 
-  in(read);
+  in >> read;
   REQUIRE(data.ec != acl::serializer_error::none);
 }
 
@@ -288,12 +287,12 @@ TEMPLATE_TEST_CASE("serializer: ArrayLike", "[serializer][map]", big_endian, lit
 
   type read;
 
-  out(write);
-  in(read);
+  out << write;
+  in >> read;
 
   REQUIRE(read == write);
 
-  in(read);
+  in >> read;
   REQUIRE(data.ec != acl::serializer_error::none);
 }
 
@@ -308,12 +307,12 @@ TEMPLATE_TEST_CASE("serializer: LinearArrayLike", "[serializer][array]", big_end
   type write = {43, 34, 2344, 3432, 34};
   type read;
 
-  out(write);
-  in(read);
+  out << write;
+  in >> read;
 
   REQUIRE(read == write);
 
-  in(read);
+  in >> read;
   REQUIRE(data.ec != acl::serializer_error::none);
 }
 
@@ -328,8 +327,8 @@ TEMPLATE_TEST_CASE("serializer: Invalid LinearArrayLike", "[serializer][array]",
   type                write = {43, 34, 2344, 3432, 34};
   std::array<int, 10> read;
 
-  out(write);
-  in(read);
+  out << write;
+  in >> read;
 
   REQUIRE(data.ec != acl::serializer_error::none);
 }
@@ -345,12 +344,12 @@ TEMPLATE_TEST_CASE("serializer: ArrayLike", "[serializer][array]", big_endian, l
   type write = {"var{43}", "var{false}", "var{34}", "some string", "", "var{true}"};
   type read;
 
-  out(write);
-  in(read);
+  out << write;
+  in >> read;
 
   REQUIRE(read == write);
 
-  in(read);
+  in >> read;
   REQUIRE(data.ec != acl::serializer_error::none);
 }
 
@@ -365,12 +364,12 @@ TEMPLATE_TEST_CASE("serializer: ArrayLike with Fastpath", "[serializer][array]",
   type write = {19, 99, 2, 19, 44, 21333696};
   type read;
 
-  out(write);
-  in(read);
+  out << write;
+  in >> read;
 
   REQUIRE(read == write);
 
-  in(read);
+  in >> read;
   REQUIRE(data.ec != acl::serializer_error::none);
 }
 
@@ -386,12 +385,12 @@ TEMPLATE_TEST_CASE("serializer: VariantLike", "[serializer][variant]", big_endia
   type write = {var{43}, var{false}, var{34}, var{"some string"}, var{5543}, var{true}};
   type read;
 
-  out(write);
-  in(read);
+  out << write;
+  in >> read;
 
   REQUIRE(read == write);
 
-  in(read);
+  in >> read;
   REQUIRE(data.ec != acl::serializer_error::none);
 }
 
@@ -407,8 +406,8 @@ TEMPLATE_TEST_CASE("serializer: Invalid VariantLike ", "[serializer][variant]", 
   type             write = {var{43}, var{false}, var{34}, var{"some string"}, var{5543}, var{true}};
   std::vector<int> read;
 
-  out(write);
-  in(read);
+  out << write;
+  in >> read;
 
   REQUIRE(data.ec != acl::serializer_error::none);
 }
@@ -441,12 +440,12 @@ TEMPLATE_TEST_CASE("serializer: ConstructedFromStringView", "[serializer][string
   type write = {"10", "11", "12", "13"};
   type read;
 
-  out(write);
-  in(read);
+  out << write;
+  in >> read;
 
   REQUIRE(read == write);
 
-  in(read);
+  in >> read;
   REQUIRE(data.ec != acl::serializer_error::none);
 }
 
@@ -482,12 +481,12 @@ TEMPLATE_TEST_CASE("serializer: TransformFromString", "[serializer][string]", bi
   type write = {TransformSV(11), TransformSV(100), TransformSV(13), TransformSV(300)};
   type read;
 
-  out(write);
-  in(read);
+  out << write;
+  in >> read;
 
   REQUIRE(read == write);
 
-  in(read);
+  in >> read;
   REQUIRE(data.ec != acl::serializer_error::none);
 }
 
@@ -502,12 +501,12 @@ TEMPLATE_TEST_CASE("serializer: BoolLike", "[serializer][bool]", big_endian, lit
   type write = {true, false, false, true};
   type read;
 
-  out(write);
-  in(read);
+  out << write;
+  in >> read;
 
   REQUIRE(read == write);
 
-  in(read);
+  in >> read;
   REQUIRE(data.ec != acl::serializer_error::none);
 }
 
@@ -522,8 +521,8 @@ TEMPLATE_TEST_CASE("serializer: BoolLike Invalid", "[serializer][bool]", big_end
   type             write = {true, false, false, true};
   std::vector<int> read;
 
-  out(write);
-  in(read);
+  out << write;
+  in >> read;
 
   REQUIRE(data.ec != acl::serializer_error::none);
 }
@@ -539,12 +538,12 @@ TEMPLATE_TEST_CASE("serializer: SignedIntLike", "[serializer][int]", big_endian,
   type write = {-434, 2, 65, -53};
   type read;
 
-  out(write);
-  in(read);
+  out << write;
+  in >> read;
 
   REQUIRE(read == write);
 
-  in(read);
+  in >> read;
   REQUIRE(data.ec != acl::serializer_error::none);
 }
 
@@ -559,8 +558,8 @@ TEMPLATE_TEST_CASE("serializer: SignedIntLike Invalid", "[serializer][int]", big
   type                write = {-434, 2, 65, -53};
   std::array<bool, 4> read;
 
-  out(write);
-  in(read);
+  out << write;
+  in >> read;
 
   REQUIRE(data.ec != acl::serializer_error::none);
 }
@@ -576,15 +575,15 @@ TEMPLATE_TEST_CASE("serializer: FloatLike", "[serializer][float]", big_endian, l
   type write = {434.442f, 757.10f, 10.745f, 424.40f};
   type read  = {};
 
-  out(write);
-  in(read);
+  out << write;
+  in >> read;
 
   REQUIRE(read[0] == Catch::Approx(434.442f));
   REQUIRE(read[1] == Catch::Approx(757.10f));
   REQUIRE(read[2] == Catch::Approx(10.745f));
   REQUIRE(read[3] == Catch::Approx(424.40f));
 
-  in(read);
+  in >> read;
   REQUIRE(data.ec != acl::serializer_error::none);
 }
 
@@ -616,8 +615,8 @@ TEMPLATE_TEST_CASE("serializer: PointerLike", "[serializer][pointer]", big_endia
   write.b = std::make_unique<std::string>("unique");
   write.c = new std::string("new");
 
-  out(write);
-  in(read);
+  out << write;
+  in >> read;
 
   REQUIRE(read.a);
   REQUIRE(read.b);
@@ -654,8 +653,8 @@ TEMPLATE_TEST_CASE("serializer: NullPointerLike", "[serializer][pointer]", big_e
   type write;
   type read;
 
-  out(write);
-  in(read);
+  out << write;
+  in >> read;
 
   REQUIRE(!read.a);
   REQUIRE(!read.b);
@@ -686,8 +685,8 @@ TEMPLATE_TEST_CASE("serializer: OptionalLike", "[serializer][optional]", big_end
   write.a = "something";
   type read;
 
-  out(write);
-  in(read);
+  out << write;
+  in >> read;
 
   REQUIRE(read.a);
   REQUIRE(!read.b);
@@ -732,8 +731,8 @@ TEMPLATE_TEST_CASE("serializer: SerializableClass", "[serializer][optional]", bi
 
   type read;
 
-  out(write);
-  in(read);
+  out << write;
+  in >> read;
 
   REQUIRE(read.size() == 3);
   REQUIRE(read[0].get() == 10);

@@ -53,7 +53,7 @@ inline vec4_t<scalar_t> operator*(vec4_t<scalar_t> const& m1, mat4_t<scalar_t> c
 }
 
 template <typename scalar_t>
-inline extends_t<scalar_t> operator*(extends_t<scalar_t> const& v, mat4_t<scalar_t> const& m) noexcept
+inline extends3d_t<scalar_t> operator*(extends3d_t<scalar_t> const& v, mat4_t<scalar_t> const& m) noexcept
 {
   return vml::mul_extends_mat4(v.v, m.v);
 }

@@ -1,7 +1,7 @@
 
-#include "acl/serializers/output_serializer.hpp"
 #include "acl/containers/array_types.hpp"
 #include "acl/serializers/binary_serializer.hpp"
+#include "acl/serializers/output_serializer.hpp"
 #include <catch2/catch_all.hpp>
 #include <compare>
 #include <map>
@@ -117,9 +117,9 @@ TEST_CASE("output_serializer: Basic test")
   example.b  = 534;
   example.et = EnumTest::value1;
 
-  Serializer                         instance;
-  acl::output_serializer<Serializer> ser(instance);
-  ser(example);
+  Serializer instance;
+  auto       ser = acl::output_serializer<Serializer>(instance);
+  ser << example;
 
   REQUIRE(instance.get() == R"({ "a": 4121, "b": 534, "et": 43535 })");
 }
@@ -145,9 +145,9 @@ TEST_CASE("output_serializer: Basic test with internal decl")
   example.first.b = 534;
   example.second  = "String Value";
 
-  Serializer                         instance;
-  acl::output_serializer<Serializer> ser(instance);
-  ser(example);
+  Serializer instance;
+  auto       ser = acl::output_serializer<Serializer>(instance);
+  ser << example;
 
   REQUIRE(instance.get() == R"({ "first": { "a": 4121, "b": 534, "et": 323 }, "second": "String Value" })");
 }
@@ -156,9 +156,9 @@ TEST_CASE("output_serializer: Test tuple")
 {
   std::tuple<int, std::string, int, bool> example = {10, "everything", 343, false};
 
-  Serializer                         instance;
-  acl::output_serializer<Serializer> ser(instance);
-  ser(example);
+  Serializer instance;
+  auto       ser = acl::output_serializer<Serializer>(instance);
+  ser << example;
 
   REQUIRE(instance.get() == R"([ 10, "everything", 343, false ])");
 }
@@ -171,9 +171,9 @@ TEST_CASE("output_serializer: String map")
     {      "work", "just fine"}
   };
 
-  Serializer                         instance;
-  acl::output_serializer<Serializer> ser(instance);
-  ser(example);
+  Serializer instance;
+  auto       ser = acl::output_serializer<Serializer>(instance);
+  ser << example;
 
   json j = json::parse(instance.get());
   REQUIRE(j["everything"] == "is");
@@ -185,9 +185,9 @@ TEST_CASE("output_serializer: ArrayLike")
 {
   std::vector<int> example = {2, 3, 5, 8, 13};
 
-  Serializer                         instance;
-  acl::output_serializer<Serializer> ser(instance);
-  ser(example);
+  Serializer instance;
+  auto       ser = acl::output_serializer<Serializer>(instance);
+  ser << example;
 
   json j = json::parse(instance.get());
   REQUIRE(j.size() == 5);
@@ -200,9 +200,9 @@ TEST_CASE("output_serializer: VariantLike")
 
   std::vector<std::variant<int, std::string, bool>> example = {2, "string", false, 8, "moo"};
 
-  Serializer                         instance;
-  acl::output_serializer<Serializer> ser(instance);
-  ser(example);
+  Serializer instance;
+  auto       ser = acl::output_serializer<Serializer>(instance);
+  ser << example;
 
   json j = json::parse(instance.get());
   REQUIRE(j.size() == 5);
@@ -234,9 +234,9 @@ TEST_CASE("output_serializer: CastableToStringView")
 
   auto example = ReflEx("reflex output");
 
-  Serializer                         instance;
-  acl::output_serializer<Serializer> ser(instance);
-  ser(example);
+  Serializer instance;
+  auto       ser = acl::output_serializer<Serializer>(instance);
+  ser << example;
 
   REQUIRE(instance.get() == R"("reflex output")");
 }
@@ -262,9 +262,9 @@ TEST_CASE("output_serializer: CastableToString")
 
   auto example = ReflEx("reflex output");
 
-  Serializer                         instance;
-  acl::output_serializer<Serializer> ser(instance);
-  ser(example);
+  Serializer instance;
+  auto       ser = acl::output_serializer<Serializer>(instance);
+  ser << example;
 
   REQUIRE(instance.get() == R"("reflex output")");
 }
@@ -285,9 +285,9 @@ TEST_CASE("output_serializer: TransformToString")
   ReflexToStr example;
   example.value = 455232;
 
-  Serializer                         instance;
-  acl::output_serializer<Serializer> ser(instance);
-  ser(example);
+  Serializer instance;
+  auto       ser = acl::output_serializer<Serializer>(instance);
+  ser << example;
 
   REQUIRE(instance.get() == R"("455232")");
 }
@@ -314,9 +314,9 @@ TEST_CASE("output_serializer: TransformToStringView")
 {
   auto example = ReflexToSV("reflex output");
 
-  Serializer                         instance;
-  acl::output_serializer<Serializer> ser(instance);
-  ser(example);
+  Serializer instance;
+  auto       ser = acl::output_serializer<Serializer>(instance);
+  ser << example;
 
   REQUIRE(instance.get() == R"("reflex output")");
 }
@@ -337,10 +337,10 @@ TEST_CASE("output_serializer: PointerLike")
     }
   };
 
-  ReflEx                             example;
-  Serializer                         instance;
-  acl::output_serializer<Serializer> ser(instance);
-  ser(example);
+  ReflEx     example;
+  Serializer instance;
+  auto       ser = acl::output_serializer<Serializer>(instance);
+  ser << example;
 
   json j = json::parse(instance.get());
   REQUIRE(j["first"] == "first");
@@ -362,10 +362,10 @@ TEST_CASE("output_serializer: OptionalLike")
     }
   };
 
-  ReflEx                             example;
-  Serializer                         instance;
-  acl::output_serializer<Serializer> ser(instance);
-  ser(example);
+  ReflEx     example;
+  Serializer instance;
+  auto       ser = acl::output_serializer<Serializer>(instance);
+  ser << example;
 
   json j = json::parse(instance.get());
   REQUIRE(j["first"] == "first");
@@ -376,9 +376,9 @@ TEST_CASE("output_serializer: VariantLike Monostate")
 {
   std::variant<std::monostate, int, std::string, bool> example;
 
-  Serializer                         instance;
-  acl::output_serializer<Serializer> ser(instance);
-  ser(example);
+  Serializer instance;
+  auto       ser = acl::output_serializer<Serializer>(instance);
+  ser << example;
 
   json j = json::parse(instance.get());
   REQUIRE(j.at(0) == 0);
@@ -408,10 +408,10 @@ private:
 
 TEST_CASE("output_serializer: OutputSerializableClass")
 {
-  std::vector<CustomClass>           integers = {CustomClass(31), CustomClass(5454), CustomClass(323)};
-  Serializer                         instance;
-  acl::output_serializer<Serializer> ser(instance);
-  ser(integers);
+  std::vector<CustomClass> integers = {CustomClass(31), CustomClass(5454), CustomClass(323)};
+  Serializer               instance;
+  auto                     ser = acl::output_serializer<Serializer>(instance);
+  ser << integers;
 
   json j = json::parse(instance.get());
   REQUIRE(j.is_array());

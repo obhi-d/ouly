@@ -48,7 +48,7 @@ inline result_t test_intersection(bounding_volume_t<scalar_t> const& vol1,
   if (vml::hadd(vml::negate_w(vml::mul(d, d))) > 0.0f)
     return result_t::k_outside;
   else
-    return (greater_any(abs(extends_t<scalar_t>(vml::clear_w(d))), vol1.half_extends + vol2.half_extends))
+    return (greater_any(abs(extends3d_t<scalar_t>(vml::clear_w(d))), vol1.half_extends + vol2.half_extends))
              ? result_t::k_outside
              : result_t::k_intersecting;
 }

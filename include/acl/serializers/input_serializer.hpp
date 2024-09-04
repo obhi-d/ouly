@@ -81,8 +81,21 @@ public:
   inline input_serializer(Serializer& ser) noexcept : ser_(ser) {}
 
   template <typename Class>
-  inline bool operator()(Class& obj) noexcept
+  inline auto& operator>>(Class& obj)
   {
+    if (!ser_.get().failed())
+    {
+      if (!read(obj) && !ser_.get().failed())
+        ser_.get().error(type_name<Class>(), make_error_code(serializer_error::failed_to_parse_value));
+    }
+    return *this;
+  }
+
+  template <typename Class>
+  inline bool read(Class& obj) noexcept
+  {
+    if (ser_.get().failed())
+      return false;
     // Ensure ordering with multiple matches
     if constexpr (detail::BoundClass<Class>)
       return read_bound_class(obj);
@@ -139,7 +152,7 @@ private:
 
         using value_t = typename Decl::MemTy;
         value_t load;
-        if (input_serializer(*key_val)(load))
+        if (input_serializer(*key_val).read(load))
         {
           decl.value(obj, std::move(load));
           return;
@@ -193,7 +206,7 @@ private:
       {
         mapped_type stream_val;
 
-        if (input_serializer(value)(stream_val))
+        if (input_serializer(value).read(stream_val))
         {
           detail::emplace(obj, key_type{key}, std::move(stream_val));
           return true;
@@ -221,7 +234,7 @@ private:
         [this, &obj](Serializer value)
         {
           detail::array_value_type<Class> stream_val;
-          bool                            result = input_serializer(value)(stream_val);
+          bool                            result = input_serializer(value).read(stream_val);
           if (result)
           {
             detail::emplace(obj, std::move(stream_val));
@@ -240,7 +253,7 @@ private:
             [&obj, &index](Serializer value)
             {
               detail::array_value_type<Class> stream_val;
-              bool                            result = input_serializer(value)(stream_val);
+              bool                            result = input_serializer(value).read(stream_val);
               if (result)
               {
                 obj[index++] = std::move(stream_val);
@@ -298,7 +311,7 @@ private:
       {
         using type = std::variant_alternative_t<I, Class>;
         type load;
-        if (input_serializer(value)(load))
+        if (input_serializer(value).read(load))
         {
           obj = std::move(load);
           return true;
@@ -403,7 +416,7 @@ private:
       return false;
     }
   }
-    
+
   template <detail::EnumLike Class>
   bool read_enum(Class& obj) noexcept
   {
@@ -447,7 +460,7 @@ private:
         obj = std::make_shared<pvalue_type>();
       else
         obj = Class(new detail::pointer_class_type<Class>());
-      return (*this)(*obj);
+      return read(*obj);
     }
     obj = nullptr;
     return true;
@@ -459,7 +472,7 @@ private:
     if (!get().is_null())
     {
       obj.emplace();
-      return (*this)(*obj);
+      return read(*obj);
     }
     else
       obj.reset();
@@ -490,7 +503,7 @@ private:
     if (ser)
     {
       using type = detail::remove_cref<std::tuple_element_t<N, Class>>;
-      return input_serializer(*ser)(const_cast<type&>(std::get<N>(obj)));
+      return input_serializer(*ser).read(const_cast<type&>(std::get<N>(obj)));
     }
     return true;
   }

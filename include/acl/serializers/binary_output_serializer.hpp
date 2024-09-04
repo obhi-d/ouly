@@ -33,7 +33,14 @@ public:
   inline binary_output_serializer(Serializer& ser) noexcept : ser_(ser) {}
 
   template <typename Class>
-  inline void operator()(Class const& obj) noexcept
+  inline auto& operator<<(Class& obj)
+  {
+    write(obj);
+    return *this;
+  }
+
+  template <typename Class>
+  inline void write(Class const& obj) noexcept
   {
     // Ensure ordering with multiple matches
     if constexpr (detail::BoundClass<Class>)
@@ -85,7 +92,7 @@ private:
   void write_bound_class(Class const& obj) noexcept
   {
     constexpr uint32_t h = type_hash<Class>();
-    (*this)(h);
+    write(h);
     for_each_field(*this, obj);
   }
 
@@ -93,7 +100,7 @@ private:
   void write_serializable(Class& obj) noexcept
   {
     constexpr uint32_t h = type_hash<Class>();
-    (*this)(h);
+    write(h);
     get() << obj;
   }
 
@@ -103,7 +110,7 @@ private:
     constexpr auto tup_size = std::tuple_size_v<Class>;
     static_assert(tup_size < 256, "Tuple is too big, please customize the serailization!");
     uint8_t size = static_cast<uint8_t>(tup_size);
-    (*this)(size);
+    write(size);
 
     [this, &obj]<std::size_t... N>(std::index_sequence<N...>)
     {
@@ -115,10 +122,10 @@ private:
   void write_container(Class const& obj) noexcept
   {
     constexpr uint32_t h = type_hash<Class>();
-    (*this)(h);
+    write(h);
     // Invalid type is unexpected
     uint32_t count = static_cast<uint32_t>(obj.size());
-    (*this)(count);
+    write(count);
     if constexpr (detail::LinearArrayLike<Class, Serializer> && has_fast_path)
     {
       return get().write(obj.data(), sizeof(typename Class::value_type) * count);
@@ -127,7 +134,7 @@ private:
     {
       for (auto const& value : obj)
       {
-        (*this)(value);
+        write(value);
       }
     }
   }
@@ -137,11 +144,11 @@ private:
   {
     // Invalid type is unexpected
     auto idx = static_cast<uint8_t>(obj.index());
-    (*this)(idx);
+    write(idx);
     std::visit(
       [this](auto const& arg)
       {
-        (*this)(arg);
+        write(arg);
       },
       obj);
   }
@@ -230,18 +237,18 @@ private:
   void write_pointer(Class const& obj) noexcept
   {
     bool is_null = !(bool)(obj);
-    (*this)(is_null);
+    write(is_null);
     if (obj)
-      (*this)(*obj);
+      write(*obj);
   }
 
   template <detail::OptionalLike Class>
   void write_optional(Class const& obj) noexcept
   {
     bool is_null = !(bool)obj;
-    (*this)(is_null);
+    write(is_null);
     if (obj)
-      (*this)(*obj);
+      write(*obj);
   }
 
   template <detail::MonostateLike Class>
@@ -252,14 +259,14 @@ public:
   template <typename Class, typename Decl, std::size_t I>
   inline void operator()(Class const& obj, Decl const& decl, std::integral_constant<std::size_t, I>) noexcept
   {
-    (*this)(decl.value(obj));
+    write(decl.value(obj));
   }
 
 private:
   inline void write_string(std::string_view sv)
   {
     uint32_t length = static_cast<uint32_t>(sv.length());
-    (*this)(length);
+    write(length);
     get().write(sv.data(), length);
   }
 
@@ -276,7 +283,7 @@ private:
   template <std::size_t N, typename Class>
   void at(Class const& obj) noexcept
   {
-    (*this)(std::get<N>(obj));
+    write(std::get<N>(obj));
   }
 };
 

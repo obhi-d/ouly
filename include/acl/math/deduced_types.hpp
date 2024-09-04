@@ -6,7 +6,6 @@
 namespace acl
 {
 
-using real            = float;
 using vec2            = vec2_t<float>;
 using vec3            = vec3_t<float>;
 using vec3a           = vec3a_t<float>;
@@ -20,8 +19,11 @@ using mat4            = mat4_t<float>;
 using mat3            = mat3_t<float>;
 using rect            = rect_t<float>;
 using aabb            = aabb_t<float>;
+using uvec2           = vec2_t<uint32_t>;
+using uvec3           = vec3_t<uint32_t>;
 using ivec2           = vec2_t<int>;
 using ivec3           = vec3_t<int>;
+using ivec3a          = vec3a_t<int>;
 using ivec4           = vec4_t<int>;
 using irect           = rect_t<int>;
 using sphere          = sphere_t<float>;
@@ -32,42 +34,40 @@ using fixed_frustum   = fixed_frustum_t<float>;
 using frustum         = frustum_t<float>;
 using color           = color_t<float>;
 using rgba8           = color_t<uint8_t>;
-using extends         = extends_t<float>;
+using extends3d       = extends3d_t<float>;
 
-using real_d            = double;
-using vec2_d            = vec2_t<double>;
-using vec3_d            = vec3_t<double>;
-using vec3a_d           = vec3a_t<double>;
-using vec4_d            = vec4_t<double>;
-using plane_d           = plane_t<double>;
-using quat_d            = quat_t<double>;
-using axis_angle_d      = axis_angle_t<double>;
-using polar_coord_d     = polar_coord_t<double>;
-using euler_angles_d    = euler_angles_t<double>;
-using mat4_d            = mat4_t<double>;
-using mat3_d            = mat3_t<double>;
-using rect_d            = rect_t<double>;
-using aabb_d            = aabb_t<double>;
-using ivec2_d           = vec2_t<double>;
-using ivec3_d           = vec3_t<double>;
-using ivec4_d           = vec4_t<double>;
-using irect_d           = rect_t<double>;
-using sphere_d          = sphere_t<double>;
-using bounds_info_d     = bounds_info_t<double>;
-using bounding_volume_d = bounding_volume_t<double>;
-using transform_d       = transform_t<double>;
-using fixed_frustum_d   = fixed_frustum_t<double>;
-using frustum_d         = frustum_t<double>;
-using extends_d         = extends_t<double>;
+#ifdef ACL_DOUBLE_PRECISION
+using real = float;
+#else
+using real = double;
+#endif
 
-using vec2_i  = vec2_t<int>;
-using vec3_i  = vec3_t<int>;
-using vec3a_i = vec3a_t<int>;
-using vec4_i  = vec4_t<int>;
+using f64vec2            = vec2_t<double>;
+using f64vec3            = vec3_t<double>;
+using f64vec3a           = vec3a_t<double>;
+using f64vec4            = vec4_t<double>;
+using f64plane           = plane_t<double>;
+using f64quat            = quat_t<double>;
+using f64axis_angle      = axis_angle_t<double>;
+using f64polar_coord     = polar_coord_t<double>;
+using f64euler_angles    = euler_angles_t<double>;
+using f64mat4            = mat4_t<double>;
+using f64mat3            = mat3_t<double>;
+using f64rect            = rect_t<double>;
+using f64aabb            = aabb_t<double>;
+using f64sphere          = sphere_t<double>;
+using f64bounds_info     = bounds_info_t<double>;
+using f64bounding_volume = bounding_volume_t<double>;
+using f64transform       = transform_t<double>;
+using f64fixed_frustum   = fixed_frustum_t<double>;
+using f64frustum         = frustum_t<double>;
+using f64extends3d       = extends3d_t<double>;
 
-using vec2_s  = vec2_t<int16_t>;
-using vec3_s  = vec3_t<int16_t>;
-using vec3a_s = vec3a_t<int16_t>;
-using vec4_s  = vec4_t<int16_t>;
+using u16vec2  = vec2_t<int16_t>;
+using u16vec3  = vec3_t<int16_t>;
+using u16vec3a = vec3a_t<int16_t>;
+using u16vec4  = vec4_t<int16_t>;
 
+using u16extends2d = extends2d_t<uint16_t>;
+using u16rect      = rect_t<int16_t>;
 } // namespace acl

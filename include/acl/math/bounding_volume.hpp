@@ -138,7 +138,7 @@ inline auto operator*(bounding_volume_t<scalar_t> const& bv, transform_t<scalar_
 template <typename scalar_t>
 inline bounding_volume_t<scalar_t> make_bounding_volume(vec3a_t<scalar_t> const* points, uint32_t count) noexcept
 {
-  auto box = aabb_t<scalar_t>(points[0], extends_t<scalar_t>());
+  auto box = aabb_t<scalar_t>(points[0], extends3d_t<scalar_t>());
   for (std::uint32_t i = 1; i < count; i++)
     box = box + points[i];
   return make_bounding_volume(center(box), half_size(box));

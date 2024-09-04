@@ -14,13 +14,13 @@ namespace acl
 #ifdef ACL_USE_SSE2
 static constexpr bool has_sse = true;
 #else
-static constexpr bool has_sse   = false;
+static constexpr bool has_sse = false;
 #endif
 
 #ifdef ACL_USE_SSE3
 static constexpr bool has_sse3 = true;
 #else
-static constexpr bool has_sse3  = false;
+static constexpr bool has_sse3 = false;
 #endif
 
 #ifdef ACL_USE_SSE41
@@ -32,13 +32,13 @@ static constexpr bool has_sse41 = false;
 #ifdef ACL_USE_AVX
 static constexpr bool has_avx = true;
 #else
-static constexpr bool has_avx   = false;
+static constexpr bool has_avx = false;
 #endif
 
 #ifdef ACL_USE_FMA
 static constexpr bool has_fma = true;
 #else
-static constexpr bool has_fma   = false;
+static constexpr bool has_fma = false;
 #endif
 
 struct vec4_tag
@@ -232,6 +232,12 @@ struct quad_t
   inline quad_t& operator/=(scalar_t s) noexcept;
 };
 
+/**
+ * @par 2D Coordinate System
+ *
+ * For 2D we use Yup, which means top is more than bottom when positive.
+ *
+ */
 template <typename scalar_t>
 struct vec2_t
 {
@@ -252,6 +258,11 @@ struct vec2_t
     {
       scalar_t theta;
       scalar_t phi;
+    };
+    struct
+    {
+      scalar_t dx;
+      scalar_t dy;
     };
   };
 
@@ -318,6 +329,12 @@ struct vec3_t
       scalar_t pitch;
       scalar_t yaw;
       scalar_t roll;
+    };
+    struct
+    {
+      scalar_t dx;
+      scalar_t dy;
+      scalar_t dz;
     };
   };
 
@@ -387,7 +404,9 @@ using euler_angles_t = vec3_t<scalar_t>;
 template <typename scalar_t>
 using color_t = quad_t<scalar_t, color_tag>;
 template <typename scalar_t>
-using extends_t = quad_t<scalar_t, extends_tag>;
+using extends3d_t = quad_t<scalar_t, extends_tag>;
+template <typename scalar_t>
+using extends2d_t = vec2_t<scalar_t>;
 
 template <typename scalar_t>
 struct rect_t
@@ -439,6 +458,13 @@ struct rect_t
     r = other.r;
     return *this;
   }
+
+  inline rect_t& operator+=(rect_t const& s) noexcept;
+  inline rect_t& operator+=(vec2_t<scalar_t> const& s) noexcept;
+  inline rect_t& operator-=(vec2_t<scalar_t> const& s) noexcept;
+
+  inline rect_t& operator*=(scalar_t s) noexcept;
+  inline rect_t& operator/=(scalar_t s) noexcept;
 };
 
 template <typename scalar_t>
@@ -638,10 +664,10 @@ struct bounding_volume_t
   //! center wrt some coordinate system
   sphere_t<scalar_t> spherical_vol;
   //! half half_extends dx/2, dy/2, dz/2
-  extends_t<scalar_t> half_extends;
+  extends3d_t<scalar_t> half_extends;
 
   bounding_volume_t() noexcept = default;
-  bounding_volume_t(sphere_t<scalar_t> const& sphere, extends_t<scalar_t> const& halfextends) noexcept
+  bounding_volume_t(sphere_t<scalar_t> const& sphere, extends3d_t<scalar_t> const& halfextends) noexcept
       : spherical_vol(sphere), half_extends(halfextends)
   {}
   inline constexpr bounding_volume_t(acl::noinit) noexcept
