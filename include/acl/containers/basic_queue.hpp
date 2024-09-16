@@ -20,13 +20,12 @@ private:
   static constexpr auto pool_mul  = detail::log2(detail::pool_size_v<Options>);
   static constexpr auto pool_size = static_cast<size_type>(1) << pool_mul;
   static constexpr auto pool_mod  = pool_size - 1;
-  using storage                   = detail::aligned_storage<sizeof(value_type), alignof(value_type)>;
   static constexpr bool has_pod   = detail::HasTrivialAttrib<Options>;
 
   struct deque_block
   {
-    std::array<storage, pool_size> data;
-    deque_block*                   next = nullptr;
+    std::array<value_type, pool_size> data;
+    deque_block*                      next = nullptr;
   };
 
 public:

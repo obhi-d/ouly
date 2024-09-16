@@ -4,60 +4,50 @@
 #include "event_types.hpp"
 #include "promise_type.hpp"
 #include "worker_context.hpp"
+#include <tuple>
 
 namespace acl
 {
 class scheduler;
 class worker_context;
-struct task_context
-{};
+constexpr uint32_t max_task_data_size = 20;
 
-struct task_data
+class task_data
 {
-  union
+public:
+  inline task_data() noexcept = default;
+
+  template <typename T, typename... Args>
+    requires(sizeof(std::tuple<T, Args...>) <= (max_task_data_size))
+  inline task_data(workgroup_id id, T arg0, Args... args) noexcept : wg_id(id)
   {
-    task_context*       context = nullptr;
-    task_context const* c_context;
-    struct
-    {
-      uint32_t uint_data_0;
-      uint32_t uint_data_1;
-    };
-  };
-  uint32_t uint_data   = 0;
-  uint16_t ushort_data = 0;
-  uint8_t  reserved_0; // this data is reserved space, and should not be used
-  uint8_t  reserved_1; // this data is reserved space, and should not be used
+    if constexpr (sizeof...(Args) == 0)
+      reinterpret_cast<T&>(*this) = arg0;
+    else
+      reinterpret_cast<std::tuple<T, Args...>&>(*this) = std::make_tuple(arg0, args...);
+  }
 
-  task_data() noexcept = default;
-  task_data(uint8_t res_0, uint8_t res_1) noexcept : reserved_0(res_0), reserved_1(res_1) {}
-  template <typename T>
-  task_data(T* context) noexcept : context(reinterpret_cast<task_context*>(context))
-  {}
-  template <typename T>
-  task_data(T const* context) noexcept : c_context(reinterpret_cast<task_context const*>(context))
-  {}
-  task_data(task_context* context, uint8_t res_0, uint8_t res_1) noexcept
-      : context(context), reserved_0(res_0), reserved_1(res_1)
-  {}
-  task_data(task_context const* context, uint8_t res_0, uint8_t res_1) noexcept
-      : c_context(context), reserved_0(res_0), reserved_1(res_1)
-  {}
-  task_data(task_context const* context, uint32_t uint_data, uint8_t res_0, uint8_t res_1) noexcept
-      : c_context(context), uint_data(uint_data), reserved_0(res_0), reserved_1(res_1)
-  {}
-  task_data(task_context const* context, uint32_t uint_data, uint16_t ushort_data, uint8_t res_0, uint8_t res_1) noexcept
-      : c_context(context), uint_data(uint_data), ushort_data(ushort_data), reserved_0(res_0), reserved_1(res_1)
-  {}
+  template <typename T, typename... Args>
+  inline auto const& get() const noexcept
+  {
+    if constexpr (sizeof...(Args) == 0)
+      return reinterpret_cast<T const&>(*this);
+    else
+      return reinterpret_cast<std::tuple<T, Args...> const&>(*this);
+  }
+
+  decltype(auto) get_workgroup_id() const noexcept
+  {
+    return wg_id.get_index();
+  }
+
+private:
+  // valid task data types
+  alignas(alignof(std::max_align_t)) uint8_t data[max_task_data_size];
+  workgroup_id wg_id;
 };
 
-using task_delegate = void (*)(task_data, worker_context const&);
-
-struct task
-{
-  virtual ~task() noexcept                                  = default;
-  virtual void operator()(task_data, worker_context const&) = 0;
-};
+using task_delegate = void (*)(task_data const&, worker_context const&);
 
 namespace detail
 {

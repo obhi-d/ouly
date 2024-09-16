@@ -22,162 +22,82 @@ public:
   ACL_API ~scheduler() noexcept;
 
   template <CoroutineTask C>
-  inline void submit(C const& task_obj, workgroup_id submit_group, worker_id current) noexcept
+  inline void submit(worker_id src, workgroup_id dst, C const& task_obj) noexcept
   {
-    submit(detail::work_item(reinterpret_cast<task_delegate>(task_obj.address()),
-                             task_data(detail::work_type_coroutine, static_cast<uint8_t>(submit_group.get_index()))),
-           current);
-  }
-
-  inline void submit(task* task_obj, task_data data, workgroup_id submit_group, worker_id current) noexcept
-  {
-    data.reserved_0 = detail::work_type_task_functor;
-    data.reserved_1 = static_cast<uint8_t>(submit_group.get_index());
-    submit(detail::work_item(reinterpret_cast<task_delegate>(task_obj), data), current);
-  }
-
-  inline void submit(task_delegate task_obj, task_data data, workgroup_id submit_group, worker_id current) noexcept
-  {
-    data.reserved_0 = detail::work_type_free_functor;
-    data.reserved_1 = static_cast<uint8_t>(submit_group.get_index());
-    submit(detail::work_item(task_obj, data), current);
-  }
-
-  template <typename TaskContext>
-  inline void submit(task_delegate task_obj, TaskContext* data, workgroup_id submit_group, worker_id current) noexcept
-  {
-    submit(detail::work_item(task_obj, task_data(reinterpret_cast<task_context const*>(data), detail::work_type_free_functor,
-                                                 static_cast<uint8_t>(submit_group.get_index()))),
-           current);
-  }
-
-  template <typename TaskContext>
-  inline void submit(task_delegate task_obj, TaskContext* data, uint32_t additional_data, workgroup_id submit_group, worker_id current) noexcept
-  {
-    submit(detail::work_item(task_obj, task_data(reinterpret_cast<task_context const*>(data), additional_data, detail::work_type_free_functor,
-                                                 static_cast<uint8_t>(submit_group.get_index()))),
-           current);
-  }
-
-  template <typename TaskContext>
-  inline void submit(task_delegate task_obj, TaskContext* data, uint32_t data0, uint16_t data1, workgroup_id submit_group, worker_id current) noexcept
-  {
-    submit(detail::work_item(task_obj, task_data(reinterpret_cast<task_context const*>(data), data0, data1, detail::work_type_free_functor,
-                                                 static_cast<uint8_t>(submit_group.get_index()))),
-           current);
-  }
-
-  template <auto M, typename Class>
-  inline void submit(Class* ctx, workgroup_id submit_group, worker_id current) noexcept
-  {
-    submit(detail::work_item(
-             [](task_data cctx, worker_context const& wid)
+    submit(src, dst,
+           detail::work_item(
+             [](task_data const& data, worker_context const&)
              {
-               std::invoke(M, *reinterpret_cast<Class*>(cctx.context), std::cref(wid));
+               std::coroutine_handle<>::from_address(data.get<void*>()).resume();
              },
-             task_data(reinterpret_cast<task_context*>(ctx), detail::work_type_free_functor,
-                       static_cast<uint8_t>(submit_group.get_index()))),
-           current);
+             task_data(dst, task_obj.address())));
   }
 
-  template <auto M, typename Class>
-  inline void submit(Class* ctx, uint32_t additional_data, workgroup_id submit_group, worker_id current) noexcept
+  template <typename... Args>
+  inline void submit(worker_id src, workgroup_id dst, task_delegate task_obj, Args... data) noexcept
   {
-    submit(detail::work_item(
-             [](task_data cctx, worker_context const& wid)
+    submit(src, dst, detail::work_item(task_obj, task_data(dst, data...)));
+  }
+
+  template <auto M, typename Class, typename... Args>
+  inline void submit(worker_id src, workgroup_id dst, Class* ctx, Args... data) noexcept
+  {
+    submit(src, dst,
+           detail::work_item(
+             [](task_data const& data, worker_context const& wid)
              {
-               std::invoke(M, *reinterpret_cast<Class*>(cctx.context), std::cref(wid), cctx.uint_data);
+               auto const& tup = data.get<Class*, Args...>();
+               if constexpr (sizeof...(Args) == 0)
+                 std::invoke(M, tup, std::cref(wid));
+               else
+                 std::invoke(M, std::get<0>(tup), std::cref(wid), std::get<Args>(tup)...);
              },
-             task_data(reinterpret_cast<task_context*>(ctx), additional_data, detail::work_type_free_functor,
-                       static_cast<uint8_t>(submit_group.get_index()))),
-           current);
+             task_data(dst, ctx, data...)));
   }
 
   template <CoroutineTask C>
-  inline void submit_to(C const& task_obj, worker_id to, worker_id current) noexcept
+  inline void submit(worker_id src, worker_id dst, workgroup_id group, C const& task_obj) noexcept
   {
-    submit_to(
-      detail::work_item(reinterpret_cast<task_delegate>(task_obj.address()),
-                        task_data(detail::work_type_coroutine, static_cast<uint8_t>(default_workgroup_id.get_index()))),
-      to, current);
+    submit(src, dst,
+           detail::work_item(
+             [](task_data const& data, worker_context const&)
+             {
+               std::coroutine_handle<>::from_address(data.get<void*>()).resume();
+             },
+             task_data(group, task_obj.address())));
   }
 
-  inline void submit_to(task* task_obj, task_data data, worker_id to, worker_id current) noexcept
+  template <typename... Args>
+  inline void submit(worker_id src, worker_id dst, workgroup_id group, task_delegate task_obj, Args... data) noexcept
   {
-    data.reserved_0 = detail::work_type_task_functor;
-    data.reserved_1 = static_cast<uint8_t>(default_workgroup_id.get_index());
-    submit_to(detail::work_item(reinterpret_cast<task_delegate>(task_obj), data), to, current);
+    submit(src, dst, detail::work_item(task_obj, task_data(group, data...)));
   }
 
-  inline void submit_to(task_delegate task_obj, task_data data, worker_id to, worker_id current) noexcept
+  template <auto M, typename Class, typename... Args>
+  inline void submit(worker_id src, worker_id dst, workgroup_id group, Class* ctx, Args... data) noexcept
   {
-    data.reserved_0 = detail::work_type_free_functor;
-    data.reserved_1 = static_cast<uint8_t>(default_workgroup_id.get_index());
-    submit_to(detail::work_item(task_obj, data), to, current);
-  }
-
-  template <typename TaskContext>
-  inline void submit_to(task_delegate task_obj, TaskContext* data, worker_id to, worker_id current) noexcept
-  {
-    submit_to(
-      detail::work_item(task_obj, task_data(reinterpret_cast<task_context const*>(data), detail::work_type_free_functor,
-                                            static_cast<uint8_t>(default_workgroup_id.get_index()))),
-      to, current);
-  }
-
-  template <typename TaskContext>
-  inline void submit_to(task_delegate task_obj, TaskContext* data, uint32_t additional_index, worker_id to, worker_id current) noexcept
-  {
-    submit_to(
-      detail::work_item(task_obj, task_data(reinterpret_cast<task_context const*>(data), additional_index, detail::work_type_free_functor,
-                                            static_cast<uint8_t>(default_workgroup_id.get_index()))),
-      to, current);
-  }
-
-  template <typename TaskContext>
-  inline void submit_to(task_delegate task_obj, TaskContext* data, uint32_t additional_index, uint16_t ushort_data, worker_id to, worker_id current) noexcept
-  {
-    submit_to(
-      detail::work_item(task_obj, task_data(reinterpret_cast<task_context const*>(data), additional_index, ushort_data, detail::work_type_free_functor,
-                                            static_cast<uint8_t>(default_workgroup_id.get_index()))),
-      to, current);
-  }
-
-  template <auto M, typename Class>
-  inline void submit_to(Class& ctx, worker_id to, worker_id current) noexcept
-  {
-    submit_to(detail::work_item(
-                [](task_data cctx, worker_context const& wid)
-                {
-                  std::invoke(M, *reinterpret_cast<Class*>(cctx.context), std::cref(wid));
-                },
-                task_data(reinterpret_cast<task_context*>(&ctx), detail::work_type_free_functor,
-                          static_cast<uint8_t>(default_workgroup_id.get_index()))),
-              to, current);
-  }
-
-  template <auto M, typename Class>
-  inline void submit_to(Class& ctx, uint32_t additional_data, worker_id to, worker_id current) noexcept
-  {
-    submit_to(detail::work_item(
-                [](task_data cctx, worker_context const& wid)
-                {
-                  std::invoke(M, *reinterpret_cast<Class*>(cctx.context), std::cref(wid), cctx.uint_data);
-                },
-                task_data(reinterpret_cast<task_context*>(&ctx), additional_data, detail::work_type_free_functor,
-                          static_cast<uint8_t>(default_workgroup_id.get_index()))),
-              to, current);
+    submit(src, dst,
+           detail::work_item(
+             [](task_data const& data, worker_context const& wid)
+             {
+               auto const& tup = data.get<Class*, Args...>();
+               if constexpr (sizeof...(Args) == 0)
+                 std::invoke(M, tup, std::cref(wid));
+               else
+                 std::invoke(M, std::get<0>(tup), std::cref(wid), std::get<Args>(tup)...);
+             },
+             task_data(group, ctx, data...)));
   }
 
   /**
    * @brief Submit a work for execution in the exclusive worker thread
    */
-  ACL_API void submit_to(detail::work_item work, worker_id to, worker_id current);
+  ACL_API void submit(worker_id src, worker_id dst, detail::work_item const& work);
 
   /**
    * @brief Submit a work for execution
    */
-  ACL_API void submit(detail::work_item work, worker_id current);
+  ACL_API void submit(worker_id src, workgroup_id dst, detail::work_item const& work);
 
   /**
    * @brief Begin scheduler execution, group creation is frozen after this call.
@@ -275,20 +195,27 @@ private:
 };
 
 template <typename... Args>
-void async(worker_context const& current, Args&&... args)
+void async(worker_context const& current, workgroup_id submit_group, Args&&... args)
 {
-  current.get_scheduler().submit(std::forward<Args>(args)..., current.get_worker());
+  current.get_scheduler().submit(current.get_worker(), submit_group, std::forward<Args>(args)...);
 }
 
-template <auto M, typename Class>
-void async(worker_context const& current, Class* obj, workgroup_id submit_group)
+template <auto M, typename Class, typename... Args>
+void async(worker_context const& current, workgroup_id submit_group, Class* obj, Args... data)
 {
-  current.get_scheduler().submit<M>(obj, submit_group, current.get_worker());
+  current.get_scheduler().submit<M>(current.get_worker(), submit_group, obj, data...);
 }
 
-template <auto M, typename Class>
-void async(worker_context const& current, Class* obj, uint32_t data, workgroup_id submit_group)
+template <typename... Args>
+void async(worker_context const& current, worker_id dst, workgroup_id submit_group, Args&&... args)
 {
-  current.get_scheduler().submit<M>(obj, data, submit_group, current.get_worker());
+  current.get_scheduler().submit(current.get_worker(), dst, submit_group, std::forward<Args>(args)...);
 }
+
+template <auto M, typename Class, typename... Args>
+void async(worker_context const& current, worker_id dst, workgroup_id submit_group, Class* obj, Args... data)
+{
+  current.get_scheduler().submit<M>(current.get_worker(), dst, submit_group, obj, data...);
+}
+
 } // namespace acl

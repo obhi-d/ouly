@@ -19,11 +19,9 @@ namespace acl
 
 namespace detail
 {
-static constexpr uint8_t  work_type_coroutine    = 0;
-static constexpr uint8_t  work_type_task_functor = 1;
-static constexpr uint8_t  work_type_free_functor = 2;
-static constexpr uint32_t max_worker_groups      = 32;
-static constexpr uint32_t max_local_work_item    = 32; // 2 cache lines
+
+static constexpr uint32_t max_worker_groups   = 32;
+static constexpr uint32_t max_local_work_item = 32; // 2 cache lines
 
 struct work_item
 {
@@ -36,11 +34,20 @@ struct work_item
   }
 
   inline work_item() noexcept = default;
-  inline work_item(task_delegate tfn, task_data tdata) : delegate_fn(tfn), data(tdata) {}
+  inline work_item(task_delegate tfn, task_data const& tdata) : delegate_fn(tfn), data(tdata) {}
 
   inline work_item(work_item&& other) noexcept : delegate_fn(other.delegate_fn), data(other.data) {}
 
   inline work_item& operator=(work_item&& other) noexcept
+  {
+    delegate_fn = other.delegate_fn;
+    data        = other.data;
+    return *this;
+  }
+
+  inline work_item(work_item const& other) noexcept : delegate_fn(other.delegate_fn), data(other.data) {}
+
+  inline work_item& operator=(work_item const& other) noexcept
   {
     delegate_fn = other.delegate_fn;
     data        = other.data;

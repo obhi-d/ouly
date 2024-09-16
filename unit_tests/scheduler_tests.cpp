@@ -55,8 +55,8 @@ TEST_CASE("scheduler: Construction")
   scheduler.begin_execution();
   executor instance;
   for (uint32_t i = 0; i < 1024; ++i)
-    acl::async<&executor::execute>(acl::worker_context::get(acl::default_workgroup_id), &instance,
-                                   acl::workgroup_id(i % 2));
+    acl::async<&executor::execute>(acl::worker_context::get(acl::default_workgroup_id), acl::workgroup_id(i % 2),
+                                   &instance);
   scheduler.end_execution();
 
   auto sum = instance.sum();
@@ -65,8 +65,8 @@ TEST_CASE("scheduler: Construction")
   scheduler.begin_execution();
   executor instance2;
   for (uint32_t i = 0; i < 1024; ++i)
-    acl::async<&executor::execute2>(acl::worker_context::get(acl::default_workgroup_id), &instance2, i,
-                                    acl::workgroup_id(i % 2));
+    acl::async<&executor::execute2>(acl::worker_context::get(acl::default_workgroup_id), acl::workgroup_id(i % 2),
+                                    &instance2, i);
   scheduler.end_execution();
 
   REQUIRE(instance2.sum() == 1023 * 512);
@@ -169,8 +169,8 @@ TEST_CASE("scheduler: Test co_task")
   auto task        = continue_string();
   auto string_task = create_string(task);
 
-  acl::async(acl::worker_context::get(acl::default_workgroup_id), task, acl::default_workgroup_id);
-  scheduler.submit(string_task, acl::default_workgroup_id, acl::main_worker_id);
+  acl::async(acl::worker_context::get(acl::default_workgroup_id), acl::default_workgroup_id, task);
+  scheduler.submit(acl::main_worker_id, acl::default_workgroup_id, string_task);
 
   std::string        continue_string = "basic";
   constexpr uint32_t nb_elements     = 1000;
@@ -204,7 +204,7 @@ TEST_CASE("scheduler: Test co_sequence")
 
   acl::co_sequence<std::string> move_string_task = std::move(string_task);
 
-  scheduler.submit(task, acl::default_workgroup_id, acl::main_worker_id);
+  scheduler.submit(acl::main_worker_id, acl::default_workgroup_id, task);
 
   std::string        continue_string = "basic";
   constexpr uint32_t nb_elements     = 1000;
@@ -273,7 +273,7 @@ TEST_CASE("scheduler: Test submit_to")
   for (uint32_t i = 0, end = scheduler.get_worker_count(); i < end; ++i)
   {
     tasks.emplace_back(work_on(collection, lock, i));
-    scheduler.submit_to(tasks[i], acl::worker_id(i), acl::main_worker_id);
+    scheduler.submit(acl::main_worker_id, acl::worker_id(i), acl::default_workgroup_id, tasks[i]);
   }
 
   for (uint32_t i = 0, end = scheduler.get_worker_count(); i < end; ++i)

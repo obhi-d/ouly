@@ -28,19 +28,7 @@ scheduler::~scheduler() noexcept
 
 inline void scheduler::do_work(worker_id thread, detail::work_item const& work) noexcept
 {
-  switch (work.data.reserved_0)
-  {
-  case detail::work_type_coroutine:
-    std::coroutine_handle<>::from_address((void*)work.delegate_fn).resume();
-    break;
-  case detail::work_type_task_functor:
-    (*reinterpret_cast<task*>(work.delegate_fn))(work.data, workers[thread.get_index()].contexts[work.data.reserved_1]);
-    break;
-  case detail::work_type_free_functor:
-    reinterpret_cast<task_delegate>(work.delegate_fn)(work.data,
-                                                      workers[thread.get_index()].contexts[work.data.reserved_1]);
-    break;
-  }
+  work.delegate_fn(work.data, workers[thread.get_index()].contexts[work.data.get_workgroup_id()]);
 }
 
 void scheduler::busy_work(worker_id thread) noexcept
@@ -93,7 +81,7 @@ inline bool scheduler::work(worker_id thread) noexcept
   auto wrk = get_work(thread);
   if (!wrk.delegate_fn)
     return false;
-  assert(&workers[thread.get_index()].contexts[wrk.data.reserved_1].get_scheduler() == this);
+  assert(&workers[thread.get_index()].contexts[wrk.data.get_workgroup_id()].get_scheduler() == this);
   do_work(thread, wrk);
   return true;
 }
@@ -273,33 +261,33 @@ void scheduler::end_execution()
   threads.clear();
 }
 
-void scheduler::submit_to(detail::work_item work, worker_id to, worker_id current)
+void scheduler::submit(worker_id src, worker_id dst, detail::work_item const& work)
 {
-  if (to == current)
-    do_work(current, work);
+  if (src == dst)
+    do_work(src, work);
   else
   {
     {
-      auto& worker = workers[to.get_index()];
+      auto& worker = workers[dst.get_index()];
       auto  lck    = std::scoped_lock(worker.exlusive_items.first);
       worker.exlusive_items.second.emplace_back(std::move(work));
     }
-    if (!wake_status[to.get_index()].exchange(true))
-      wake_events[to.get_index()].notify();
+    if (!wake_status[dst.get_index()].exchange(true))
+      wake_events[dst.get_index()].notify();
   }
 }
 
-void scheduler::submit(detail::work_item work, worker_id current)
+void scheduler::submit(worker_id src, workgroup_id dst, detail::work_item const& work)
 {
-  auto& wg     = workgroups[work.data.reserved_1];
-  auto& worker = workers[current.get_index()];
+  auto& wg     = workgroups[dst.get_index()];
+  auto& worker = workers[src.get_index()];
 
   for (uint32_t i = wg.start_thread_idx, end = i + wg.thread_count; i != end; ++i)
   {
     bool sleeping = true;
     if (!wake_status[i].exchange(true))
     {
-      local_work[i] = std::move(work);
+      local_work[i] = work;
       wake_events[i].notify();
       return;
     }

@@ -161,23 +161,24 @@ void parallel_for(L&& lambda, FwIt range, worker_context const& this_context, Ta
   using size_type                  = uint32_t; // Range is limited
   using traits                     = detail::final_task_traits<TaskTr>;
 
-  struct parallel_for_executer : public task
+  struct parallel_for_executer
   {
     parallel_for_executer(L& lambda, iterator_t f, size_type task_count) noexcept
         : lambda_instance(lambda), first(f), counter(static_cast<ptrdiff_t>(task_count))
     {}
 
-    void operator()(task_data data, worker_context const& wc) override
+    static void execute(task_data const& data, worker_context const& wc)
     {
+      auto [instance, start, end] = data.get<parallel_for_executer*, size_type, size_type>();
       if constexpr (detail::RangeExcuter<L, iterator_t>)
       {
-        lambda_instance(first + data.uint_data_0, first + data.uint_data_1, wc);
+        instance->lambda_instance(instance->first + start, instance->first + end, wc);
       }
       else
       {
-        lambda_instance(*(first + data.uint_data_0), wc);
+        instance->lambda_instance(*(instance->first + start), wc);
       }
-      counter.count_down();
+      instance->counter.count_down();
     }
 
     iterator_t first;
@@ -195,7 +196,8 @@ void parallel_for(L&& lambda, FwIt range, worker_context const& this_context, Ta
                                      : detail::get_work_count(std::max(min_batches_per_worker, traits::batches_per_worker),
                                                               s.get_worker_count(this_context.get_workgroup()), count))
          : count;
-  const size_type fixed =
+
+  const size_type fixed_batch_size =
     is_range_executor ? (traits::fixed_batch_size ? traits::fixed_batch_size : ((count + work_count - 1) / work_count))
                       : 1;
 
@@ -211,28 +213,45 @@ void parallel_for(L&& lambda, FwIt range, worker_context const& this_context, Ta
   }
   else
   {
-    auto      executer = parallel_for_executer(lambda, std::begin(range), work_count);
+    auto      executer = parallel_for_executer(lambda, std::begin(range), work_count - 1);
     size_type begin    = 0;
     for (size_type i = 1; i < work_count; ++i)
     {
-      task_data range;
-      range.uint_data_0 = begin;
-      range.uint_data_1 = std::min(begin + fixed, count);
-      s.submit(&executer, range, this_context.get_workgroup(), this_context.get_worker());
-      begin = range.uint_data_1;
+      auto next = std::min(begin + fixed_batch_size, count);
+      s.submit(this_context.get_worker(), this_context.get_workgroup(), &parallel_for_executer::execute, &executer,
+               begin, next);
+      begin = next;
     }
 
     // Work before wait
     {
-      task_data range;
-      range.uint_data_0 = begin;
-      range.uint_data_1 = std::min(begin + fixed, count);
-      executer(range, this_context);
+      auto next = std::min(begin + fixed_batch_size, count);
+      if constexpr (is_range_executor)
+        lambda(std::begin(range) + begin, std::begin(range) + next, this_context);
+      else
+      {
+        for (auto it = std::begin(range) + begin, end = std::begin(range) + next; it != end; ++it)
+          lambda(*it, this_context);
+      }
     }
 
     executer.counter.wait();
   }
 }
+
+/**
+ *
+ * Call this method with either of these lambda functions:
+ * ```cpp
+ *   lambda(It begin, It end, acl::worker_context const& context);
+ *   lambda(Ty& value_type, acl::worker_context const& context);
+ * ```
+ * Depending upon the passed function parameter type, either a batch executor, or a single instance executer will be
+ * called.
+ *
+ * Use TaskTraits to modify the behavior of the execution. Check @class default_task_traits
+ *
+ */
 
 template <typename L, typename FwIt, typename TaskTraits = default_task_traits>
 void parallel_for(L&& lambda, FwIt range, worker_id current, workgroup_id workgroup, scheduler& s, TaskTraits tt = {})
