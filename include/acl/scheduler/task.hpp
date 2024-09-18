@@ -4,6 +4,7 @@
 #include "event_types.hpp"
 #include "promise_type.hpp"
 #include "worker_context.hpp"
+#include <cstddef>
 #include <tuple>
 
 namespace acl
