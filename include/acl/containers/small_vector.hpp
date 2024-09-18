@@ -45,9 +45,6 @@ public:
 
 private:
   using options                                         = Options;
-  static constexpr bool HasNullMethod                   = detail::HasNullMethod<options, value_type>;
-  static constexpr bool HasNullValue                    = detail::HasNullValue<options, value_type>;
-  static constexpr bool HasNullConstruct                = detail::HasNullConstruct<options, value_type>;
   static constexpr bool has_zero_memory                 = detail::HasZeroMemoryAttrib<options>;
   static constexpr bool has_no_fill                     = detail::HasNoFillAttrib<options>;
   static constexpr bool has_pod                         = detail::HasTrivialAttrib<options>;
@@ -824,15 +821,47 @@ private:
 
   constexpr void swap(small_vector& x, std::false_type) noexcept
   {
-    static_assert(std::is_trivially_copyable_v<Ty>);
-    std::swap(x.data_store_.ldata_, data_store_.ldata_);
+    if constexpr (std::is_trivially_copyable_v<Ty>)
+    {
+      std::swap(x.data_store_.ldata_, data_store_.ldata_);
+    }
+    else
+    {
+      if (x.is_inlined() || is_inlined())
+      {
+        auto tmp = std::move(*this);
+        *this    = std::move(x);
+        x        = std::move(tmp);
+      }
+      else
+      {
+        std::swap(x.data_store_.hdata_.pdata_, data_store_.hdata_.pdata_);
+        std::swap(x.data_store_.hdata_.capacity_, data_store_.hdata_.capacity_);
+      }
+    }
     std::swap(size_, x.size_);
   }
 
   constexpr void swap(small_vector& x, std::true_type) noexcept
   {
-    static_assert(std::is_trivially_copyable_v<Ty>);
-    std::swap(x.data_store_.ldata_, data_store_.ldata_);
+    if constexpr (std::is_trivially_copyable_v<Ty>)
+    {
+      std::swap(x.data_store_.ldata_, data_store_.ldata_);
+    }
+    else
+    {
+      if (x.is_inlined() || is_inlined())
+      {
+        auto tmp = std::move(*this);
+        *this    = std::move(x);
+        x        = std::move(tmp);
+      }
+      else
+      {
+        std::swap(x.data_store_.hdata_.pdata_, data_store_.hdata_.pdata_);
+        std::swap(x.data_store_.hdata_.capacity_, data_store_.hdata_.capacity_);
+      }
+    }
     std::swap(size_, x.size_);
     std::swap<allocator_type>(this, x);
   }

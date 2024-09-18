@@ -22,10 +22,13 @@ private:
   static constexpr auto pool_mod  = pool_size - 1;
   static constexpr bool has_pod   = detail::HasTrivialAttrib<Options>;
 
+  static constexpr size_t alignment = alignof(Ty) > alignof(Ty*) ? alignof(Ty) : alignof(Ty*);
+  using storage                     = detail::aligned_storage<sizeof(value_type), alignment>;
+
   struct deque_block
   {
-    std::array<value_type, pool_size> data;
-    deque_block*                      next = nullptr;
+    alignas(alignment) std::array<storage, pool_size> data;
+    deque_block* next = nullptr;
   };
 
 public:
