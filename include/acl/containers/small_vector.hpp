@@ -789,9 +789,9 @@ private:
     clear();
 
     allocator_type::operator=(std::move(static_cast<allocator_type&>(x)));
+    size_ = x.size_;
     if (x.is_inlined())
     {
-      size_ = x.size_;
       if constexpr (has_pod || std::is_trivially_copyable_v<Ty>)
         std::memcpy(data(), x.data(), x.size() * sizeof(storage));
       else
@@ -824,6 +824,7 @@ private:
     if constexpr (std::is_trivially_copyable_v<Ty>)
     {
       std::swap(x.data_store_.ldata_, data_store_.ldata_);
+      std::swap(size_, x.size_);
     }
     else
     {
@@ -837,9 +838,9 @@ private:
       {
         std::swap(x.data_store_.hdata_.pdata_, data_store_.hdata_.pdata_);
         std::swap(x.data_store_.hdata_.capacity_, data_store_.hdata_.capacity_);
+        std::swap(size_, x.size_);
       }
     }
-    std::swap(size_, x.size_);
   }
 
   constexpr void swap(small_vector& x, std::true_type) noexcept
@@ -847,6 +848,8 @@ private:
     if constexpr (std::is_trivially_copyable_v<Ty>)
     {
       std::swap(x.data_store_.ldata_, data_store_.ldata_);
+      std::swap(size_, x.size_);
+      std::swap<allocator_type>(this, x);
     }
     else
     {
@@ -860,10 +863,10 @@ private:
       {
         std::swap(x.data_store_.hdata_.pdata_, data_store_.hdata_.pdata_);
         std::swap(x.data_store_.hdata_.capacity_, data_store_.hdata_.capacity_);
+        std::swap(size_, x.size_);
+        std::swap<allocator_type>(this, x);
       }
     }
-    std::swap(size_, x.size_);
-    std::swap<allocator_type>(this, x);
   }
 
   constexpr friend void swap(small_vector& lhs, small_vector& rhs) noexcept
