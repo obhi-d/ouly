@@ -301,6 +301,18 @@ struct member_function<M>
 
 namespace detail
 {
+
+template <typename F, typename... Args>
+concept Callable = requires(F f, Args&&... args) {
+  {
+    f(std::forward<Args>(args)...)
+  };
+};
+
+// Concept to check if a type is a free function pointer
+template <typename F, typename Ret, typename... Args>
+concept FunctionPointer = std::is_pointer_v<F> && std::is_function_v<std::remove_pointer_t<F>>;
+
 // clang-format off
 template <typename Traits, typename U>
 concept HasNullValue = requires(U t) {

@@ -450,6 +450,7 @@ public:
   {
     return a * b;
   }
+  int def = 0;
 };
 
 TEST_CASE("Test free function delegate", "[delegate]")
@@ -461,13 +462,22 @@ TEST_CASE("Test free function delegate", "[delegate]")
 
 TEST_CASE("Test lambda delegate", "[delegate]")
 {
-  auto lambda = [](int a, int b)
+  MyClass obj;
+  auto    lambda = [&obj](int a, int b)
   {
-    return a * b;
+    return a * b + obj.def;
   };
+
   auto del = acl::delegate<int(int, int)>(lambda);
   REQUIRE(static_cast<bool>(del) == true);
   REQUIRE(del(3, 4) == 12); // Ensure the lambda is correctly called
+
+  // copy constructor
+  auto copy = del;
+  del       = copy;
+
+  obj.def = 10;
+  REQUIRE(copy(3, 4) == 22); // Ensure the lambda is correctly called
 }
 
 TEST_CASE("Test member function delegate", "[delegate]")

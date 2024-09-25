@@ -78,6 +78,7 @@ public:
 
   // Constructor for free functions or lambda objects
   template <typename F>
+    requires(!std::is_same_v<basic_delegate<SmallSize, Ret(Args...)>, std::decay_t<F>>)
   basic_delegate(F&& func)
   {
     using DecayedF = std::decay_t<F>;
@@ -120,6 +121,24 @@ public:
       std::memcpy(buffer, other.buffer, SmallSize);
       invoker       = other.invoker;
       other.invoker = nullptr;
+    }
+    return *this;
+  }
+
+  // Move constructor
+  basic_delegate(basic_delegate const& other) noexcept
+  {
+    std::memcpy(buffer, other.buffer, SmallSize);
+    invoker = other.invoker;
+  }
+
+  // Move assignment operator
+  basic_delegate& operator=(basic_delegate const& other) noexcept
+  {
+    if (this != &other)
+    {
+      std::memcpy(buffer, other.buffer, SmallSize);
+      invoker = other.invoker;
     }
     return *this;
   }
