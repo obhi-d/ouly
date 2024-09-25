@@ -2,6 +2,7 @@
 
 #include <acl/utils/type_name.hpp>
 #include <cstdint>
+#include <functional>
 #include <tuple>
 #include <type_traits>
 
@@ -213,7 +214,8 @@ template <typename R, typename... Args>
 struct function_traits<R (*)(Args...)>
 {
   static constexpr std::size_t arity = sizeof...(Args);
-  using result_type                  = R;
+  using return_type                  = R;
+  using args                         = std::tuple<Args...>;
   template <std::size_t Index>
   using arg_type                           = typename std::tuple_element_t<Index, std::tuple<Args...>>;
   constexpr static bool is_free_function   = true;
@@ -227,7 +229,8 @@ struct function_traits<R (C::*)(Args...)>
 {
   static constexpr std::size_t arity = sizeof...(Args);
   using class_type                   = C;
-  using result_type                  = R;
+  using return_type                  = R;
+  using args                         = std::tuple<Args...>;
   template <std::size_t Index>
   using arg_type                           = typename std::tuple_element_t<Index, std::tuple<Args...>>;
   constexpr static bool is_free_function   = false;
@@ -240,7 +243,8 @@ template <typename R, typename C, typename... Args>
 struct function_traits<R (C::*)(Args...) const>
 {
   static constexpr std::size_t arity = sizeof...(Args);
-  using result_type                  = R;
+  using return_type                  = R;
+  using args                         = std::tuple<Args...>;
   template <std::size_t Index>
   using arg_type                           = typename std::tuple_element_t<Index, std::tuple<Args...>>;
   constexpr static bool is_free_function   = false;
@@ -252,6 +256,48 @@ struct function_traits<R (C::*)(Args...) const>
 template <typename T>
 struct function_traits : public function_traits<decltype(&T::operator())>
 {};
+
+// Trait to extract class_type and function_type from a member function pointer
+template <auto>
+struct member_function;
+
+template <typename C, typename Ret, typename... Args, Ret (C::*M)(Args...)>
+struct member_function<M>
+{
+  using class_type         = C;
+  using function_type      = Ret      (C::*)(Args...);
+  using free_function_type = Ret (*)(Args...);
+  using return_type        = Ret;
+  using args               = std::tuple<Args...>;
+  template <std::size_t Index>
+  using arg_type = typename std::tuple_element_t<Index, std::tuple<Args...>>;
+
+  static inline auto invoke(C& instance, Args&&... args)
+  {
+    return std::invoke(M, instance, std::forward<Args>(args)...);
+  }
+
+  constexpr static bool is_member_function_traits = true;
+};
+
+template <typename C, typename Ret, typename... Args, Ret (C::*M)(Args...) const>
+struct member_function<M>
+{
+  using class_type         = const C;
+  using function_type      = Ret      (C::*)(Args...) const;
+  using free_function_type = Ret (*)(Args...);
+  using return_type        = Ret;
+  using args               = std::tuple<Args...>;
+  template <std::size_t Index>
+  using arg_type = typename std::tuple_element_t<Index, std::tuple<Args...>>;
+
+  static inline auto invoke(C const& instance, Args&&... args)
+  {
+    return std::invoke(M, instance, std::forward<Args>(args)...);
+  }
+
+  constexpr static bool is_member_function_traits = true;
+};
 
 namespace detail
 {

@@ -5,6 +5,7 @@
 #include <acl/containers/index_map.hpp>
 #include <acl/containers/packed_table.hpp>
 #include <acl/containers/sparse_table.hpp>
+#include <acl/utils/delegate.hpp>
 #include <acl/utils/error_codes.hpp>
 #include <acl/utils/export.hxx>
 #include <acl/utils/intrusive_ptr.hpp>
@@ -428,4 +429,86 @@ TEST_CASE("Test zip_view", "[zip_view]")
     REQUIRE(ints == start * 10);
     start++;
   }
+}
+
+// Free function for testing
+int free_function(int a, int b)
+{
+  return a + b;
+}
+
+// A class with member functions for testing
+class MyClass
+{
+public:
+  int add(int a, int b) const
+  {
+    return a + b;
+  }
+
+  int multiply(int a, int b)
+  {
+    return a * b;
+  }
+};
+
+TEST_CASE("Test free function delegate", "[delegate]")
+{
+  auto del = acl::basic_delegate(free_function);
+  REQUIRE(static_cast<bool>(del) == true); // Ensure the delegate was initialized correctly
+  REQUIRE(del(3, 4) == 7);                 // Check that it correctly calls the free function
+}
+
+TEST_CASE("Test lambda delegate", "[delegate]")
+{
+  auto lambda = [](int a, int b)
+  {
+    return a * b;
+  };
+  auto del = acl::delegate<int(int, int)>(lambda);
+  REQUIRE(static_cast<bool>(del) == true);
+  REQUIRE(del(3, 4) == 12); // Ensure the lambda is correctly called
+}
+
+TEST_CASE("Test member function delegate", "[delegate]")
+{
+  MyClass obj;
+
+  SECTION("Test non-const member function")
+  {
+    auto del = acl::delegate<int(int, int)>(obj, acl::member_function<&MyClass::multiply>());
+    REQUIRE(static_cast<bool>(del) == true);
+    REQUIRE(del(3, 4) == 12); // Test non-const member function invocation
+  }
+
+  SECTION("Test const member function")
+  {
+    auto del = acl::delegate<int(int, int)>(obj, acl::member_function<&MyClass::add>());
+    REQUIRE(static_cast<bool>(del) == true);
+    REQUIRE(del(3, 4) == 7); // Test const member function invocation
+  }
+}
+
+TEST_CASE("Test move semantics", "[delegate]")
+{
+  auto lambda = [](int a, int b)
+  {
+    return a * b;
+  };
+  acl::delegate<int(int, int)> del(lambda);
+
+  // Move the delegate to another instance
+  acl::delegate<int(int, int)> moved = std::move(del);
+
+  REQUIRE(static_cast<bool>(moved) == true);
+  REQUIRE(moved(5, 6) == 30); // Ensure the moved delegate still works
+
+  // The original delegate should now be empty
+  REQUIRE(static_cast<bool>(del) == false);
+}
+
+TEST_CASE("Test empty delegate behavior", "[delegate]")
+{
+  acl::delegate<int(int, int)> del;
+  REQUIRE(static_cast<bool>(del) == false); // Delegate should be empty initially
 }
