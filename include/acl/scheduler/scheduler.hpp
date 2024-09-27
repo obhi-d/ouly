@@ -22,34 +22,34 @@ public:
   ACL_API ~scheduler() noexcept;
 
   template <CoroutineTask C>
-  inline void submit(worker_id src, workgroup_id dst, C const& task_obj) noexcept
+  inline void submit(worker_id src, workgroup_id group, C const& task_obj) noexcept
   {
-    submit(src, dst,
+    submit(src, group,
            detail::work_item::bind(
              [address = task_obj.address()](worker_context const&)
              {
                std::coroutine_handle<>::from_address(address).resume();
              },
-             dst));
+             group));
   }
 
   template <typename Lambda>
     requires(detail::Callable<Lambda, acl::worker_context const&>)
-  inline void submit(worker_id src, workgroup_id dst, Lambda&& data) noexcept
+  inline void submit(worker_id src, workgroup_id group, Lambda&& data) noexcept
   {
-    submit(src, dst, detail::work_item::bind(data, dst));
+    submit(src, group, detail::work_item::bind(data, group));
   }
 
   template <auto M, typename Class>
-  inline void submit(worker_id src, workgroup_id dst, Class& ctx) noexcept
+  inline void submit(worker_id src, workgroup_id group, Class& ctx) noexcept
   {
-    submit(src, dst, detail::work_item::bind<M>(ctx, dst));
+    submit(src, group, detail::work_item::bind<M>(ctx, group));
   }
 
   template <auto M>
-  inline void submit(worker_id src, workgroup_id dst) noexcept
+  inline void submit(worker_id src, workgroup_id group) noexcept
   {
-    submit(src, dst, detail::work_item::bind<M>(dst));
+    submit(src, group, detail::work_item::bind<M>(group));
   }
 
   template <CoroutineTask C>
@@ -64,10 +64,23 @@ public:
              group));
   }
 
-  template <auto M, typename Class, typename... Args>
+  template <typename Lambda>
+    requires(detail::Callable<Lambda, acl::worker_context const&>)
+  inline void submit(worker_id src, worker_id dst, workgroup_id group, Lambda&& data) noexcept
+  {
+    submit(src, dst, detail::work_item::bind(data, group));
+  }
+
+  template <auto M, typename Class>
   inline void submit(worker_id src, worker_id dst, workgroup_id group, Class& ctx) noexcept
   {
     submit(src, dst, detail::work_item::bind<M>(ctx, group));
+  }
+
+  template <auto M>
+  inline void submit(worker_id src, worker_id dst, workgroup_id group) noexcept
+  {
+    submit(src, dst, detail::work_item::bind<M>(group));
   }
 
   /**
