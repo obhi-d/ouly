@@ -23,42 +23,7 @@ namespace detail
 static constexpr uint32_t max_worker_groups   = 32;
 static constexpr uint32_t max_local_work_item = 32; // 2 cache lines
 
-struct work_item
-{
-  task_delegate delegate_fn = nullptr; // or a coro
-  task_data     data;
-
-  inline explicit operator bool() noexcept
-  {
-    return delegate_fn != nullptr;
-  }
-
-  inline work_item() noexcept = default;
-  inline work_item(task_delegate tfn, task_data const& tdata) : delegate_fn(tfn), data(tdata) {}
-
-  inline work_item(work_item&& other) noexcept : delegate_fn(other.delegate_fn), data(other.data) {}
-
-  inline work_item& operator=(work_item&& other) noexcept
-  {
-    delegate_fn = other.delegate_fn;
-    data        = other.data;
-    return *this;
-  }
-
-  inline work_item(work_item const& other) noexcept : delegate_fn(other.delegate_fn), data(other.data) {}
-
-  inline work_item& operator=(work_item const& other) noexcept
-  {
-    delegate_fn = other.delegate_fn;
-    data        = other.data;
-    return *this;
-  }
-
-  auto unpack() const noexcept
-  {
-    return std::make_tuple((void*)delegate_fn, data);
-  }
-};
+using work_item = task_delegate;
 
 struct work_queue_traits
 {

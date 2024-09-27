@@ -4,6 +4,7 @@
 #include "event_types.hpp"
 #include "promise_type.hpp"
 #include "worker_context.hpp"
+#include <acl/utils/delegate.hpp>
 #include <cstddef>
 #include <tuple>
 
@@ -13,42 +14,7 @@ class scheduler;
 class worker_context;
 constexpr uint32_t max_task_data_size = 20;
 
-class task_data
-{
-public:
-  inline task_data() noexcept = default;
-
-  template <typename T, typename... Args>
-    requires(sizeof(std::tuple<T, Args...>) <= (max_task_data_size))
-  inline task_data(workgroup_id id, T arg0, Args... args) noexcept : wg_id(id)
-  {
-    if constexpr (sizeof...(Args) == 0)
-      reinterpret_cast<T&>(*this) = arg0;
-    else
-      reinterpret_cast<std::tuple<T, Args...>&>(*this) = std::make_tuple(arg0, args...);
-  }
-
-  template <typename T, typename... Args>
-  inline auto const& get() const noexcept
-  {
-    if constexpr (sizeof...(Args) == 0)
-      return reinterpret_cast<T const&>(*this);
-    else
-      return reinterpret_cast<std::tuple<T, Args...> const&>(*this);
-  }
-
-  decltype(auto) get_workgroup_id() const noexcept
-  {
-    return wg_id.get_index();
-  }
-
-private:
-  // valid task data types
-  alignas(alignof(std::max_align_t)) uint8_t data[max_task_data_size];
-  workgroup_id wg_id;
-};
-
-using task_delegate = void (*)(task_data const&, worker_context const&);
+using task_delegate = acl::basic_delegate<24, void(worker_context const&)>;
 
 namespace detail
 {

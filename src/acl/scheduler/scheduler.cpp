@@ -26,19 +26,19 @@ scheduler::~scheduler() noexcept
     end_execution();
 }
 
-inline void scheduler::do_work(worker_id thread, detail::work_item const& work) noexcept
+inline void scheduler::do_work(worker_id thread, detail::work_item& work) noexcept
 {
-  work.delegate_fn(work.data, workers[thread.get_index()].contexts[work.data.get_workgroup_id()]);
+  work(workers[thread.get_index()].contexts[work.get_compressed_data<acl::workgroup_id>().get_index()]);
 }
 
 void scheduler::busy_work(worker_id thread) noexcept
 {
   {
     auto& lw = local_work[thread.get_index()];
-    if (lw.delegate_fn)
+    if (lw)
     {
       do_work(thread, lw);
-      lw.delegate_fn = nullptr;
+      lw = nullptr;
       return;
     }
   }
@@ -56,10 +56,10 @@ void scheduler::run(worker_id thread)
   {
     {
       auto& lw = local_work[thread.get_index()];
-      if (lw.delegate_fn)
+      if (lw)
       {
         do_work(thread, lw);
-        lw.delegate_fn = nullptr;
+        lw = nullptr;
       }
     }
 
@@ -79,9 +79,10 @@ void scheduler::run(worker_id thread)
 inline bool scheduler::work(worker_id thread) noexcept
 {
   auto wrk = get_work(thread);
-  if (!wrk.delegate_fn)
+  if (!wrk)
     return false;
-  assert(&workers[thread.get_index()].contexts[wrk.data.get_workgroup_id()].get_scheduler() == this);
+  assert(&workers[thread.get_index()].contexts[wrk.get_compressed_data<workgroup_id>().get_index()].get_scheduler() ==
+         this);
   do_work(thread, wrk);
   return true;
 }
@@ -261,7 +262,7 @@ void scheduler::end_execution()
   threads.clear();
 }
 
-void scheduler::submit(worker_id src, worker_id dst, detail::work_item const& work)
+void scheduler::submit(worker_id src, worker_id dst, detail::work_item work)
 {
   if (src == dst)
     do_work(src, work);
@@ -277,7 +278,7 @@ void scheduler::submit(worker_id src, worker_id dst, detail::work_item const& wo
   }
 }
 
-void scheduler::submit(worker_id src, workgroup_id dst, detail::work_item const& work)
+void scheduler::submit(worker_id src, workgroup_id dst, detail::work_item work)
 {
   auto& wg     = workgroups[dst.get_index()];
   auto& worker = workers[src.get_index()];

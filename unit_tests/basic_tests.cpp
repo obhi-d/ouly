@@ -453,9 +453,14 @@ public:
   int def = 0;
 };
 
+using test_delegate_t = acl::delegate<int(int, int)>;
 TEST_CASE("Test free function delegate", "[delegate]")
 {
-  auto del = acl::basic_delegate(free_function);
+  auto del = test_delegate_t::bind<free_function>();
+  REQUIRE(static_cast<bool>(del) == true); // Ensure the delegate was initialized correctly
+  REQUIRE(del(3, 4) == 7);                 // Check that it correctly calls the free function
+
+  del = test_delegate_t::bind(free_function);
   REQUIRE(static_cast<bool>(del) == true); // Ensure the delegate was initialized correctly
   REQUIRE(del(3, 4) == 7);                 // Check that it correctly calls the free function
 }
@@ -468,7 +473,7 @@ TEST_CASE("Test lambda delegate", "[delegate]")
     return a * b + obj.def;
   };
 
-  auto del = acl::delegate<int(int, int)>(lambda);
+  auto del = test_delegate_t::bind(lambda);
   REQUIRE(static_cast<bool>(del) == true);
   REQUIRE(del(3, 4) == 12); // Ensure the lambda is correctly called
 
@@ -486,14 +491,14 @@ TEST_CASE("Test member function delegate", "[delegate]")
 
   SECTION("Test non-const member function")
   {
-    auto del = acl::delegate<int(int, int)>(obj, acl::member_function<&MyClass::multiply>());
+    auto del = test_delegate_t::bind<&MyClass::multiply>(obj);
     REQUIRE(static_cast<bool>(del) == true);
     REQUIRE(del(3, 4) == 12); // Test non-const member function invocation
   }
 
   SECTION("Test const member function")
   {
-    auto del = acl::delegate<int(int, int)>(obj, acl::member_function<&MyClass::add>());
+    auto del = test_delegate_t::bind<&MyClass::add>(obj);
     REQUIRE(static_cast<bool>(del) == true);
     REQUIRE(del(3, 4) == 7); // Test const member function invocation
   }
@@ -505,7 +510,7 @@ TEST_CASE("Test move semantics", "[delegate]")
   {
     return a * b;
   };
-  acl::delegate<int(int, int)> del(lambda);
+  auto del = test_delegate_t::bind(lambda);
 
   // Move the delegate to another instance
   acl::delegate<int(int, int)> moved = std::move(del);

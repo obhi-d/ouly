@@ -56,7 +56,7 @@ TEST_CASE("scheduler: Construction")
   executor instance;
   for (uint32_t i = 0; i < 1024; ++i)
     acl::async<&executor::execute>(acl::worker_context::get(acl::default_workgroup_id), acl::workgroup_id(i % 2),
-                                   &instance);
+                                   instance);
   scheduler.end_execution();
 
   auto sum = instance.sum();
@@ -65,8 +65,11 @@ TEST_CASE("scheduler: Construction")
   scheduler.begin_execution();
   executor instance2;
   for (uint32_t i = 0; i < 1024; ++i)
-    acl::async<&executor::execute2>(acl::worker_context::get(acl::default_workgroup_id), acl::workgroup_id(i % 2),
-                                    &instance2, i);
+    acl::async(acl::worker_context::get(acl::default_workgroup_id), acl::workgroup_id(i % 2),
+               [&instance2, i](acl::worker_context const& ctx)
+               {
+                 instance2.execute2(ctx, i);
+               });
   scheduler.end_execution();
 
   REQUIRE(instance2.sum() == 1023 * 512);

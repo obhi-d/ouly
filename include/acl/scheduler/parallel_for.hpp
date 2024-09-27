@@ -161,25 +161,11 @@ void parallel_for(L&& lambda, FwIt range, worker_context const& this_context, Ta
   using size_type                  = uint32_t; // Range is limited
   using traits                     = detail::final_task_traits<TaskTr>;
 
-  struct parallel_for_executer
+  struct parallel_for_data
   {
-    parallel_for_executer(L& lambda, iterator_t f, size_type task_count) noexcept
+    parallel_for_data(L& lambda, iterator_t f, size_type task_count) noexcept
         : lambda_instance(lambda), first(f), counter(static_cast<ptrdiff_t>(task_count))
     {}
-
-    static void execute(task_data const& data, worker_context const& wc)
-    {
-      auto [instance, start, end] = data.get<parallel_for_executer*, size_type, size_type>();
-      if constexpr (detail::RangeExcuter<L, iterator_t>)
-      {
-        instance->lambda_instance(instance->first + start, instance->first + end, wc);
-      }
-      else
-      {
-        instance->lambda_instance(*(instance->first + start), wc);
-      }
-      instance->counter.count_down();
-    }
 
     iterator_t first;
     std::latch counter;
@@ -213,13 +199,25 @@ void parallel_for(L&& lambda, FwIt range, worker_context const& this_context, Ta
   }
   else
   {
-    auto      executer = parallel_for_executer(lambda, std::begin(range), work_count - 1);
-    size_type begin    = 0;
+    auto pfor_data = parallel_for_data(lambda, std::begin(range), work_count - 1);
+
+    size_type begin = 0;
     for (size_type i = 1; i < work_count; ++i)
     {
       auto next = std::min(begin + fixed_batch_size, count);
-      s.submit(this_context.get_worker(), this_context.get_workgroup(), &parallel_for_executer::execute, &executer,
-               begin, next);
+      s.submit(this_context.get_worker(), this_context.get_workgroup(),
+               [instance = &pfor_data, start = begin, end = next](worker_context const& wc)
+               {
+                 if constexpr (detail::RangeExcuter<L, iterator_t>)
+                 {
+                   instance->lambda_instance(instance->first + start, instance->first + end, wc);
+                 }
+                 else
+                 {
+                   instance->lambda_instance(*(instance->first + start), wc);
+                 }
+                 instance->counter.count_down();
+               });
       begin = next;
     }
 
@@ -235,7 +233,7 @@ void parallel_for(L&& lambda, FwIt range, worker_context const& this_context, Ta
       }
     }
 
-    executer.counter.wait();
+    pfor_data.counter.wait();
   }
 }
 

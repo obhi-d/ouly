@@ -259,7 +259,10 @@ struct function_traits : public function_traits<decltype(&T::operator())>
 
 // Trait to extract class_type and function_type from a member function pointer
 template <auto>
-struct member_function;
+struct member_function
+{
+  constexpr static bool is_member_function_traits = false;
+};
 
 template <typename C, typename Ret, typename... Args, Ret (C::*M)(Args...)>
 struct member_function<M>
@@ -310,8 +313,8 @@ concept Callable = requires(F f, Args&&... args) {
 };
 
 // Concept to check if a type is a free function pointer
-template <typename F, typename Ret, typename... Args>
-concept FunctionPointer = std::is_pointer_v<F> && std::is_function_v<std::remove_pointer_t<F>>;
+template <typename F, typename... Args>
+concept Function = std::is_function_v<std::remove_pointer_t<F>>;
 
 // clang-format off
 template <typename Traits, typename U>

@@ -25,79 +25,60 @@ public:
   inline void submit(worker_id src, workgroup_id dst, C const& task_obj) noexcept
   {
     submit(src, dst,
-           detail::work_item(
-             [](task_data const& data, worker_context const&)
+           detail::work_item::bind(
+             [address = task_obj.address()](worker_context const&)
              {
-               std::coroutine_handle<>::from_address(data.get<void*>()).resume();
+               std::coroutine_handle<>::from_address(address).resume();
              },
-             task_data(dst, task_obj.address())));
+             dst));
   }
 
-  template <typename... Args>
-  inline void submit(worker_id src, workgroup_id dst, task_delegate task_obj, Args... data) noexcept
+  template <typename Lambda>
+    requires(detail::Callable<Lambda, acl::worker_context const&>)
+  inline void submit(worker_id src, workgroup_id dst, Lambda&& data) noexcept
   {
-    submit(src, dst, detail::work_item(task_obj, task_data(dst, data...)));
+    submit(src, dst, detail::work_item::bind(data, dst));
   }
 
-  template <auto M, typename Class, typename... Args>
-  inline void submit(worker_id src, workgroup_id dst, Class* ctx, Args... data) noexcept
+  template <auto M, typename Class>
+  inline void submit(worker_id src, workgroup_id dst, Class& ctx) noexcept
   {
-    submit(src, dst,
-           detail::work_item(
-             [](task_data const& data, worker_context const& wid)
-             {
-               auto const& tup = data.get<Class*, Args...>();
-               if constexpr (sizeof...(Args) == 0)
-                 std::invoke(M, tup, std::cref(wid));
-               else
-                 std::invoke(M, std::get<0>(tup), std::cref(wid), std::get<Args>(tup)...);
-             },
-             task_data(dst, ctx, data...)));
+    submit(src, dst, detail::work_item::bind<M>(ctx, dst));
+  }
+
+  template <auto M>
+  inline void submit(worker_id src, workgroup_id dst) noexcept
+  {
+    submit(src, dst, detail::work_item::bind<M>(dst));
   }
 
   template <CoroutineTask C>
   inline void submit(worker_id src, worker_id dst, workgroup_id group, C const& task_obj) noexcept
   {
     submit(src, dst,
-           detail::work_item(
-             [](task_data const& data, worker_context const&)
+           detail::work_item::bind(
+             [address = task_obj.address()](worker_context const&)
              {
-               std::coroutine_handle<>::from_address(data.get<void*>()).resume();
+               std::coroutine_handle<>::from_address(address).resume();
              },
-             task_data(group, task_obj.address())));
-  }
-
-  template <typename... Args>
-  inline void submit(worker_id src, worker_id dst, workgroup_id group, task_delegate task_obj, Args... data) noexcept
-  {
-    submit(src, dst, detail::work_item(task_obj, task_data(group, data...)));
+             group));
   }
 
   template <auto M, typename Class, typename... Args>
-  inline void submit(worker_id src, worker_id dst, workgroup_id group, Class* ctx, Args... data) noexcept
+  inline void submit(worker_id src, worker_id dst, workgroup_id group, Class& ctx) noexcept
   {
-    submit(src, dst,
-           detail::work_item(
-             [](task_data const& data, worker_context const& wid)
-             {
-               auto const& tup = data.get<Class*, Args...>();
-               if constexpr (sizeof...(Args) == 0)
-                 std::invoke(M, tup, std::cref(wid));
-               else
-                 std::invoke(M, std::get<0>(tup), std::cref(wid), std::get<Args>(tup)...);
-             },
-             task_data(group, ctx, data...)));
+    submit(src, dst, detail::work_item::bind<M>(ctx, group));
   }
 
   /**
    * @brief Submit a work for execution in the exclusive worker thread
    */
-  ACL_API void submit(worker_id src, worker_id dst, detail::work_item const& work);
+  ACL_API void submit(worker_id src, worker_id dst, detail::work_item work);
 
   /**
    * @brief Submit a work for execution
    */
-  ACL_API void submit(worker_id src, workgroup_id dst, detail::work_item const& work);
+  ACL_API void submit(worker_id src, workgroup_id dst, detail::work_item work);
 
   /**
    * @brief Begin scheduler execution, group creation is frozen after this call.
@@ -169,7 +150,7 @@ public:
 
 private:
   void              finish_pending_tasks() noexcept;
-  inline void       do_work(worker_id, detail::work_item const&) noexcept;
+  inline void       do_work(worker_id, detail::work_item&) noexcept;
   void              wake_up(worker_id) noexcept;
   void              run(worker_id);
   detail::work_item get_work(worker_id) noexcept;
@@ -200,10 +181,10 @@ void async(worker_context const& current, workgroup_id submit_group, Args&&... a
   current.get_scheduler().submit(current.get_worker(), submit_group, std::forward<Args>(args)...);
 }
 
-template <auto M, typename Class, typename... Args>
-void async(worker_context const& current, workgroup_id submit_group, Class* obj, Args... data)
+template <auto M, typename... Args>
+void async(worker_context const& current, workgroup_id submit_group, Args&&... args)
 {
-  current.get_scheduler().submit<M>(current.get_worker(), submit_group, obj, data...);
+  current.get_scheduler().submit<M>(current.get_worker(), submit_group, std::forward<Args>(args)...);
 }
 
 template <typename... Args>
@@ -212,10 +193,10 @@ void async(worker_context const& current, worker_id dst, workgroup_id submit_gro
   current.get_scheduler().submit(current.get_worker(), dst, submit_group, std::forward<Args>(args)...);
 }
 
-template <auto M, typename Class, typename... Args>
-void async(worker_context const& current, worker_id dst, workgroup_id submit_group, Class* obj, Args... data)
+template <auto M, typename... Args>
+void async(worker_context const& current, worker_id dst, workgroup_id submit_group, Args&&... args)
 {
-  current.get_scheduler().submit<M>(current.get_worker(), dst, submit_group, obj, data...);
+  current.get_scheduler().submit<M>(current.get_worker(), dst, submit_group, std::forward<Args>(args)...);
 }
 
 } // namespace acl
