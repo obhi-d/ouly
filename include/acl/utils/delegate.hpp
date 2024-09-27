@@ -3,6 +3,7 @@
 
 #include <acl/utils/type_traits.hpp>
 #include <cstdint>
+#include <cstring>
 #include <type_traits>
 
 /**
