@@ -1,7 +1,7 @@
 
 project(acl_general_tests)
 
-set(CMAKE_UNITY_BUILD ON)
+set(CMAKE_UNITY_BUILD OFF)
 include(FetchContent)
 
 

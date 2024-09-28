@@ -23,16 +23,18 @@ class basic_delegate;
 template <size_t SmallSize, typename Ret, typename... Args>
 class basic_delegate<SmallSize, Ret(Args...)>
 {
+
   using delegate_fn               = Ret (*)(basic_delegate&, Args&&...);
-  delegate_fn             invoker = nullptr;
+  static constexpr size_t BufferSize = sizeof(void*) + SmallSize;
 
   // Small object optimization buffer
-  alignas(std::max_align_t) uint8_t buffer[SmallSize];
+
+  alignas(std::max_align_t) uint8_t buffer[BufferSize];
 
   template <typename P>
   struct compressed_pair
   {
-    static constexpr size_t SmallFunctorSize = SmallSize - sizeof(P);
+    static constexpr size_t SmallFunctorSize = BufferSize - sizeof(P);
     alignas(std::max_align_t) uint8_t functor[SmallFunctorSize];
     alignas(alignof(P)) uint8_t data[sizeof(P)];
   };
@@ -42,7 +44,7 @@ class basic_delegate<SmallSize, Ret(Args...)>
   static Ret invoke_free_function_by_pointer(basic_delegate& d, Args&&... args)
   {
     // Retrieve the stored function and cast it back to its original type
-    auto& func = *reinterpret_cast<F*>(d.buffer);
+    auto& func = *reinterpret_cast<F*>(d.buffer + sizeof(void*));
     return func(std::forward<Args>(args)...);
   }
 
@@ -61,7 +63,7 @@ class basic_delegate<SmallSize, Ret(Args...)>
     using C = typename M::class_type;
     using F = typename M::function_type;
 
-    auto data = *reinterpret_cast<C**>(d.buffer);
+    auto data = *reinterpret_cast<C**>(d.buffer + sizeof(void*));
     return M::invoke(*data, std::forward<Args>(args)...);
   }
 
@@ -69,7 +71,7 @@ class basic_delegate<SmallSize, Ret(Args...)>
   template <typename F>
   static Ret invoke_lambda(basic_delegate& d, Args&&... args)
   {
-    auto& func = *reinterpret_cast<F*>(d.buffer);
+    auto& func = *reinterpret_cast<F*>(d.buffer + sizeof(void*));
     return func(std::forward<Args>(args)...);
   }
 
@@ -78,7 +80,7 @@ class basic_delegate<SmallSize, Ret(Args...)>
   static Ret invoke_free_function_by_pointer(basic_delegate& d, Args&&... args)
   {
     // Retrieve the stored function and cast it back to its original type
-    auto& func = *reinterpret_cast<F*>(reinterpret_cast<compressed_pair<P>*>(d.buffer)->functor);
+    auto& func = *reinterpret_cast<F*>(reinterpret_cast<compressed_pair<P>*>(d.buffer)->functor + sizeof(delegate_fn));
 
     return func(std::forward<Args>(args)...);
   }
@@ -90,7 +92,7 @@ class basic_delegate<SmallSize, Ret(Args...)>
     using C = typename M::class_type;
     using F = typename M::function_type;
 
-    auto data = *reinterpret_cast<C**>(reinterpret_cast<compressed_pair<P>*>(d.buffer)->functor);
+    auto data = *reinterpret_cast<C**>(reinterpret_cast<compressed_pair<P>*>(d.buffer)->functor + sizeof(delegate_fn));
     return M::invoke(*data, std::forward<Args>(args)...);
   }
 
@@ -98,8 +100,58 @@ class basic_delegate<SmallSize, Ret(Args...)>
   template <typename F, typename P>
   static Ret invoke_lambda(basic_delegate& d, Args&&... args)
   {
-    auto& func = *reinterpret_cast<F*>(reinterpret_cast<compressed_pair<P>*>(d.buffer)->functor);
+    auto& func = *reinterpret_cast<F*>(reinterpret_cast<compressed_pair<P>*>(d.buffer)->functor + sizeof(delegate_fn));
     return func(std::forward<Args>(args)...);
+  }
+
+  void construct(delegate_fn fn)
+  {
+    *(delegate_fn*)(buffer) = fn;
+  }
+
+  template <typename F>
+  void construct(delegate_fn fn, F&& arg)
+  {
+    using DecayedF = std::decay_t<F>;
+    static_assert(sizeof(DecayedF) <= SmallSize, "Function/Lamda object too large for inline storage.");
+    static_assert(std::is_trivially_destructible_v<DecayedF> && std::is_trivially_copyable_v<DecayedF>,
+                  "Capture type should be trivially copyable and destructible");
+
+    *(delegate_fn*)(buffer) = fn;
+    new (buffer + sizeof(delegate_fn)) DecayedF(std::forward<F>(arg));
+  }
+
+  template <typename P>
+  void compressed_construct(delegate_fn fn, P&& p)
+  {
+    using DecayedP = std::decay_t<P>;
+    using CompressedPair = compressed_pair<DecayedP>;
+    static_assert(sizeof(CompressedPair) <= BufferSize,
+                  "Function/Lamda object too large for inline storage.");
+    static_assert(std::is_trivially_destructible_v<DecayedP> && std::is_trivially_copyable_v<DecayedP>,
+                  "Capture/Parameter type should be trivially copyable and destructible");
+
+    auto pair = reinterpret_cast<compressed_pair<P>*>(buffer);
+    *(delegate_fn*)(pair->functor) = fn;
+    new (pair->data) DecayedP(std::forward<P>(p));
+  }
+
+  template <typename F, typename P>
+  void compressed_construct(delegate_fn fn, F&& arg, P&& p)
+  {
+    using DecayedF = std::decay_t<F>;
+    using DecayedP = std::decay_t<P>;
+    using CompressedPair = compressed_pair<DecayedP>;
+    static_assert(sizeof(CompressedPair) <= BufferSize && CompressedPair::SmallFunctorSize >= (sizeof(delegate_fn)+sizeof(DecayedF)),
+                  "Function/Lamda object too large for inline storage.");
+    static_assert(std::is_trivially_destructible_v<DecayedF> && std::is_trivially_copyable_v<DecayedF> &&
+                    std::is_trivially_destructible_v<DecayedP> && std::is_trivially_copyable_v<DecayedP>,
+                  "Capture/Parameter type should be trivially copyable and destructible");
+
+    auto pair = reinterpret_cast<compressed_pair<P>*>(buffer);
+    *(delegate_fn*)(pair->functor) = fn;
+    new (pair->functor + sizeof(delegate_fn)) DecayedF(std::forward<F>(arg));
+    new (pair->data) DecayedP(std::forward<P>(p));
   }
 
 public:
@@ -109,9 +161,8 @@ public:
   // Move constructor
   basic_delegate(basic_delegate&& other) noexcept
   {
-    std::memcpy(buffer, other.buffer, SmallSize);
-    invoker       = other.invoker;
-    other.invoker = nullptr;
+    std::memcpy(buffer, other.buffer, BufferSize);
+    *(delegate_fn*)other.buffer = nullptr;
   }
 
   /** Bind method for a functor or lambda like object */
@@ -119,16 +170,11 @@ public:
   inline static basic_delegate bind(F&& func)
   {
     using DecayedF = std::decay_t<F>;
-    static_assert(sizeof(DecayedF) <= SmallSize, "Function/Lamda object too large for inline storage.");
-    static_assert(std::is_trivially_destructible_v<DecayedF> && std::is_trivially_copyable_v<DecayedF>,
-                  "Capture type should be trivially copyable and destructible");
-
     basic_delegate r;
-    new (r.buffer) DecayedF(std::forward<F>(func));
     if constexpr (std::is_function_v<DecayedF>)
-      r.invoker = &invoke_free_function_by_pointer<DecayedF>;
+      r.construct(&invoke_free_function_by_pointer<DecayedF>, std::forward<F>(func));
     else
-      r.invoker = &invoke_lambda<DecayedF>;
+      r.construct(&invoke_lambda<DecayedF>, std::forward<F>(func));
     return r;
   }
 
@@ -138,27 +184,16 @@ public:
    * alignment requirements.
    */
   template <typename F, typename P>
-  inline static basic_delegate bind(F&& func, P&& arg)
+  inline static basic_delegate bind(F&& func, P&& p)
   {
     using DecayedF = std::decay_t<F>;
     using DecayedP = std::decay_t<P>;
-    static_assert(sizeof(DecayedF) <= 20, "DecayedF is large");
-    static_assert(sizeof(DecayedP) <= 4, "DecayedP is large");
-    using CompressedPair = compressed_pair<DecayedP>;
-    static_assert(sizeof(CompressedPair) <= SmallSize && CompressedPair::SmallFunctorSize >= sizeof(DecayedF),
-                  "Function/Lamda object too large for inline storage.");
-    static_assert(std::is_trivially_destructible_v<DecayedF> && std::is_trivially_copyable_v<DecayedF> &&
-                    std::is_trivially_destructible_v<DecayedP> && std::is_trivially_copyable_v<DecayedP>,
-                  "Capture/Parameter type should be trivially copyable and destructible");
 
     basic_delegate r;
-    auto           pair = reinterpret_cast<CompressedPair*>(r.buffer);
-    new (pair->functor) DecayedF(std::forward<F>(func));
-    new (pair->data) DecayedP(arg);
     if constexpr (std::is_function_v<DecayedF>)
-      r.invoker = &invoke_free_function_by_pointer<DecayedF, DecayedP>;
+      r.compressed_construct(&invoke_free_function_by_pointer<DecayedF, DecayedP>, std::forward<F>(func), std::forward<P>(p));
     else
-      r.invoker = &invoke_lambda<DecayedF, DecayedP>;
+      r.compressed_construct(&invoke_lambda<DecayedF, DecayedP>, std::forward<F>(func), std::forward<P>(p));
     return r;
   }
 
@@ -170,9 +205,7 @@ public:
     using F = typename acl::member_function<M>::function_type;
 
     basic_delegate r;
-    static_assert(sizeof(C*) <= SmallSize, "Member function object too large for inline storage.");
-    *reinterpret_cast<C**>(r.buffer) = &instance;
-    r.invoker                        = &invoke_member_function<acl::member_function<M>>;
+    r.construct(&invoke_member_function<acl::member_function<M>>, &instance);
     return r;
   }
 
@@ -181,21 +214,12 @@ public:
    * SmallBuffer along with its alignment requirements.
    */
   template <auto M, typename P>
-  inline static basic_delegate bind(typename acl::member_function<M>::class_type& instance, P&& arg)
+  inline static basic_delegate bind(typename acl::member_function<M>::class_type& instance, P&& p)
   {
     using C              = typename acl::member_function<M>::class_type;
     using F              = typename acl::member_function<M>::function_type;
-    using DecayedP       = std::decay_t<P>;
-    using CompressedPair = compressed_pair<DecayedP>;
     basic_delegate r;
-    static_assert(sizeof(CompressedPair) <= SmallSize && CompressedPair::SmallFunctorSize >= sizeof(C*),
-                  "Function/Lamda object too large for inline storage.");
-    static_assert(std::is_trivially_destructible_v<DecayedP> && std::is_trivially_copyable_v<DecayedP>,
-                  "Capture/Parameter type should be trivially copyable and destructible");
-    auto pair                             = reinterpret_cast<CompressedPair*>(r.buffer);
-    *reinterpret_cast<C**>(pair->functor) = &instance;
-    new (pair->data) DecayedP(arg);
-    r.invoker = &invoke_member_function<acl::member_function<M>, DecayedP>;
+    r.compressed_construct(&invoke_member_function<acl::member_function<M>>, &instance, std::forward<P>(p));
     return r;
   }
 
@@ -204,7 +228,7 @@ public:
   inline static basic_delegate bind()
   {
     basic_delegate r;
-    r.invoker = &invoke_free_function_by_binding<F>;
+    r.construct(&invoke_free_function_by_binding<F>);
     return r;
   }
 
@@ -217,14 +241,9 @@ public:
   inline static basic_delegate bind(P&& arg)
   {
     using DecayedP       = std::decay_t<P>;
-    using CompressedPair = compressed_pair<DecayedP>;
     basic_delegate r;
-    static_assert(sizeof(CompressedPair) <= SmallSize, "Function/Lamda object too large for inline storage.");
-    static_assert(std::is_trivially_destructible_v<DecayedP> && std::is_trivially_copyable_v<DecayedP>,
-                  "Capture/Parameter type should be trivially copyable and destructible");
-    auto pair = reinterpret_cast<CompressedPair*>(r.buffer);
-    new (pair->data) DecayedP(arg);
-    r.invoker = &invoke_free_function_by_binding<F>;
+
+    r.compressed_construct(&invoke_free_function_by_binding<F>, std::forward<P>(arg));
     return r;
   }
 
@@ -233,9 +252,8 @@ public:
   {
     if (this != &other)
     {
-      std::memcpy(buffer, other.buffer, SmallSize);
-      invoker       = other.invoker;
-      other.invoker = nullptr;
+      std::memcpy(buffer, other.buffer, BufferSize);
+      *(delegate_fn*)other.buffer = nullptr;
     }
     return *this;
   }
@@ -252,8 +270,7 @@ public:
   // Move constructor
   basic_delegate(basic_delegate const& other) noexcept
   {
-    std::memcpy(buffer, other.buffer, SmallSize);
-    invoker = other.invoker;
+    std::memcpy(buffer, other.buffer, BufferSize);
   }
 
   // Move assignment operator
@@ -261,28 +278,27 @@ public:
   {
     if (this != &other)
     {
-      std::memcpy(buffer, other.buffer, SmallSize);
-      invoker = other.invoker;
+      std::memcpy(buffer, other.buffer, BufferSize);
     }
     return *this;
   }
 
   inline explicit operator bool() const noexcept
   {
-    return invoker != nullptr;
+    return (*(delegate_fn*)buffer) != nullptr;
   }
 
-  inline basic_delegate& operator=(nullptr_t) noexcept
+  inline basic_delegate& operator=(std::nullptr_t) noexcept
   {
-    invoker = nullptr;
+    (*(delegate_fn*)buffer) = nullptr;
     return *this;
   }
 
   // Invocation operator
   Ret operator()(Args... args)
   {
-    assert(invoker);
-    return invoker(*this, std::forward<Args>(args)...);
+    assert(*(delegate_fn*)buffer);
+    return ((*(delegate_fn*)buffer))(*this, std::forward<Args>(args)...);
   }
 };
 
