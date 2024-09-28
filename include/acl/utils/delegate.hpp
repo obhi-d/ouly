@@ -2,6 +2,8 @@
 #pragma once
 
 #include <acl/utils/type_traits.hpp>
+#include <acl/utils/tuple.hpp>
+
 #include <cstdint>
 #include <cstring>
 #include <type_traits>
@@ -24,7 +26,7 @@ template <size_t SmallSize, typename Ret, typename... Args>
 class basic_delegate<SmallSize, Ret(Args...)>
 {
 
-  using delegate_fn               = Ret (*)(basic_delegate&, Args&&...);
+  using delegate_fn               = Ret (*)(basic_delegate&, Args...);
   static constexpr size_t BufferSize = sizeof(void*) + SmallSize;
 
   // Small object optimization buffer
@@ -41,16 +43,16 @@ class basic_delegate<SmallSize, Ret(Args...)>
 
   // Helper to call free functions
   template <typename F>
-  static Ret invoke_free_function_by_pointer(basic_delegate& d, Args&&... args)
+  static Ret invoke_free_function_by_pointer(basic_delegate& d, Args... args)
   {
     // Retrieve the stored function and cast it back to its original type
-    auto& func = *reinterpret_cast<F*>(d.buffer + sizeof(void*));
+    auto& func = *reinterpret_cast<F*>(d.buffer + sizeof(delegate_fn));
     return func(std::forward<Args>(args)...);
   }
 
   // Helper to call free functions
   template <auto F>
-  static Ret invoke_free_function_by_binding(basic_delegate& d, Args&&... args)
+  static Ret invoke_free_function_by_binding(basic_delegate& d, Args... args)
   {
     // Retrieve the stored function and cast it back to its original type
     return F(std::forward<Args>(args)...);
@@ -58,26 +60,26 @@ class basic_delegate<SmallSize, Ret(Args...)>
 
   // Helper to call member functions
   template <typename M>
-  static Ret invoke_member_function(basic_delegate& d, Args&&... args)
+  static Ret invoke_member_function(basic_delegate& d, Args... args)
   {
     using C = typename M::class_type;
     using F = typename M::function_type;
 
-    auto data = *reinterpret_cast<C**>(d.buffer + sizeof(void*));
+    auto data = *reinterpret_cast<C**>(d.buffer + sizeof(delegate_fn));
     return M::invoke(*data, std::forward<Args>(args)...);
   }
 
   // Helper to call lambdas or functors
   template <typename F>
-  static Ret invoke_lambda(basic_delegate& d, Args&&... args)
+  static Ret invoke_lambda(basic_delegate& d, Args... args)
   {
-    auto& func = *reinterpret_cast<F*>(d.buffer + sizeof(void*));
+    auto& func = *reinterpret_cast<F*>(d.buffer + sizeof(delegate_fn));
     return func(std::forward<Args>(args)...);
   }
 
   // Helper to call free functions
   template <typename F, typename P>
-  static Ret invoke_free_function_by_pointer(basic_delegate& d, Args&&... args)
+  static Ret p_invoke_free_function_by_pointer(basic_delegate& d, Args... args)
   {
     // Retrieve the stored function and cast it back to its original type
     auto& func = *reinterpret_cast<F*>(reinterpret_cast<compressed_pair<P>*>(d.buffer)->functor + sizeof(delegate_fn));
@@ -87,7 +89,7 @@ class basic_delegate<SmallSize, Ret(Args...)>
 
   // Helper to call member functions
   template <typename M, typename P>
-  static Ret invoke_member_function(basic_delegate& d, Args&&... args)
+  static Ret p_invoke_member_function(basic_delegate& d, Args... args)
   {
     using C = typename M::class_type;
     using F = typename M::function_type;
@@ -98,7 +100,7 @@ class basic_delegate<SmallSize, Ret(Args...)>
 
   // Helper to call lambdas or functors
   template <typename F, typename P>
-  static Ret invoke_lambda(basic_delegate& d, Args&&... args)
+  static Ret p_invoke_lambda(basic_delegate& d, Args... args)
   {
     auto& func = *reinterpret_cast<F*>(reinterpret_cast<compressed_pair<P>*>(d.buffer)->functor + sizeof(delegate_fn));
     return func(std::forward<Args>(args)...);
@@ -122,7 +124,7 @@ class basic_delegate<SmallSize, Ret(Args...)>
   }
 
   template <typename P>
-  void compressed_construct(delegate_fn fn, P&& p)
+  void pconstruct(delegate_fn fn, P&& p)
   {
     using DecayedP = std::decay_t<P>;
     using CompressedPair = compressed_pair<DecayedP>;
@@ -137,7 +139,7 @@ class basic_delegate<SmallSize, Ret(Args...)>
   }
 
   template <typename F, typename P>
-  void compressed_construct(delegate_fn fn, F&& arg, P&& p)
+  void pconstruct(delegate_fn fn, F&& arg, P&& p)
   {
     using DecayedF = std::decay_t<F>;
     using DecayedP = std::decay_t<P>;
@@ -155,6 +157,8 @@ class basic_delegate<SmallSize, Ret(Args...)>
   }
 
 public:
+  using fnptr = delegate_fn;
+
   // Default constructor
   basic_delegate() noexcept = default;
 
@@ -172,28 +176,19 @@ public:
     using DecayedF = std::decay_t<F>;
     basic_delegate r;
     if constexpr (std::is_function_v<DecayedF>)
-      r.construct(&invoke_free_function_by_pointer<DecayedF>, std::forward<F>(func));
+    {
+      if constexpr (std::is_assignable_v<fnptr&, DecayedF>)
+        r.construct(func);
+      else
+        r.construct(&invoke_free_function_by_pointer<DecayedF>, std::forward<F>(func));
+    }
     else
-      r.construct(&invoke_lambda<DecayedF>, std::forward<F>(func));
-    return r;
-  }
-
-  /**
-   * Bind method for a compressed pair of function + some data, that is not passed to the function, but can be later
-   * obtained from the packaged function object. The compressed pair must fit within the SmallBuffer along with its
-   * alignment requirements.
-   */
-  template <typename F, typename P>
-  inline static basic_delegate bind(F&& func, P&& p)
-  {
-    using DecayedF = std::decay_t<F>;
-    using DecayedP = std::decay_t<P>;
-
-    basic_delegate r;
-    if constexpr (std::is_function_v<DecayedF>)
-      r.compressed_construct(&invoke_free_function_by_pointer<DecayedF, DecayedP>, std::forward<F>(func), std::forward<P>(p));
-    else
-      r.compressed_construct(&invoke_lambda<DecayedF, DecayedP>, std::forward<F>(func), std::forward<P>(p));
+    {
+      if constexpr (std::is_assignable_v<fnptr&, DecayedF>)
+        r.construct(func);
+      else
+        r.construct(&invoke_lambda<DecayedF>, std::forward<F>(func));
+    }
     return r;
   }
 
@@ -209,20 +204,6 @@ public:
     return r;
   }
 
-  /** Bind method for a class member and its class instance along with an extra data, that is not passed to the
-   * function, but can be later obtained from the packaged function object. The compressed pair must fit within the
-   * SmallBuffer along with its alignment requirements.
-   */
-  template <auto M, typename P>
-  inline static basic_delegate bind(typename acl::member_function<M>::class_type& instance, P&& p)
-  {
-    using C              = typename acl::member_function<M>::class_type;
-    using F              = typename acl::member_function<M>::function_type;
-    basic_delegate r;
-    r.compressed_construct(&invoke_member_function<acl::member_function<M>>, &instance, std::forward<P>(p));
-    return r;
-  }
-
   /** Bind a free function */
   template <auto F>
   inline static basic_delegate bind()
@@ -232,19 +213,92 @@ public:
     return r;
   }
 
+  template <typename L, typename F>
+  inline static basic_delegate bind(L&& func, F&& data)
+  {
+    basic_delegate r;
+    using DecayedL = std::decay_t<L>;
+    static_assert(std::is_assignable_v<fnptr&, DecayedL>, "Can only accept function pointer");
+    r.construct(func, std::forward<F>(data));
+    return r;
+  }
+
+  /**
+   * Bind method for a compressed pair of function + some data, that is not passed to the function, but can be later
+   * obtained from the packaged function object. The compressed pair must fit within the SmallBuffer along with its
+   * alignment requirements.
+   */
+  template <typename F, typename P>
+  inline static basic_delegate pbind(F&& func, P&& p)
+  {
+    using DecayedF = std::decay_t<F>;
+    using DecayedP = std::decay_t<P>;
+
+    basic_delegate r;
+    if constexpr (std::is_function_v<DecayedF>)
+    {
+      if constexpr (std::is_assignable_v<fnptr&, DecayedF>)
+        r.pconstruct(func, std::forward<P>(p));
+      else
+        r.pconstruct(&p_invoke_free_function_by_pointer<DecayedF, DecayedP>, std::forward<F>(func), std::forward<P>(p));
+    }
+    else
+    {
+      if constexpr (std::is_assignable_v<fnptr&, DecayedF>)
+        r.pconstruct(func, std::forward<P>(p));
+      else
+        r.pconstruct(&p_invoke_lambda<DecayedF, DecayedP>, std::forward<F>(func), std::forward<P>(p));
+    }
+    return r;
+  }
+
+  /** Bind method for a class member and its class instance along with an extra data, that is not passed to the
+   * function, but can be later obtained from the packaged function object. The compressed pair must fit within the
+   * SmallBuffer along with its alignment requirements.
+   */
+  template <auto M, typename P>
+  inline static basic_delegate pbind(typename acl::member_function<M>::class_type& instance, P&& p)
+  {
+    using C              = typename acl::member_function<M>::class_type;
+    using F              = typename acl::member_function<M>::function_type;
+    basic_delegate r;
+    r.pconstruct(&p_invoke_member_function<acl::member_function<M>, std::decay_t<P>>, &instance, std::forward<P>(p));
+    return r;
+  }
+
   /** Bind a free function along with an extra data, that is not passed to the
    * function, but can be later obtained from the packaged function object. The compressed pair must fit within the
    * SmallBuffer along with its alignment requirements.
    */
   template <auto F, typename P>
     requires(!acl::member_function<F>::is_member_function_traits)
-  inline static basic_delegate bind(P&& arg)
+  inline static basic_delegate pbind(P&& arg)
   {
     using DecayedP       = std::decay_t<P>;
     basic_delegate r;
 
-    r.compressed_construct(&invoke_free_function_by_binding<F>, std::forward<P>(arg));
+    r.pconstruct(&invoke_free_function_by_binding<F>, std::forward<P>(arg));
     return r;
+  }
+
+  template <typename F, typename P>
+  inline static basic_delegate pbind(fnptr fn_ptr, F&& data, P&& p)
+  {
+    basic_delegate r;
+    r.pconstruct(fn_ptr, std::forward<F>(data), std::forward<P>(p));
+    return r;
+  }
+
+  template <typename...PArgs>
+  acl::tuple<PArgs...> const& args() const noexcept
+  {
+    return *reinterpret_cast<acl::tuple<PArgs...> const*>(buffer + sizeof(delegate_fn));
+  }
+
+  template <typename...PArgs>
+  acl::tuple<PArgs...>& args() noexcept
+  {
+    return *reinterpret_cast<acl::tuple<PArgs...>*>(buffer + sizeof(delegate_fn));
   }
 
   // Move assignment operator
@@ -268,13 +322,13 @@ public:
   }
 
   // Move constructor
-  basic_delegate(basic_delegate const& other) noexcept
+  basic_delegate(basic_delegate& other) noexcept
   {
     std::memcpy(buffer, other.buffer, BufferSize);
   }
 
   // Move assignment operator
-  basic_delegate& operator=(basic_delegate const& other) noexcept
+  basic_delegate& operator=(basic_delegate& other) noexcept
   {
     if (this != &other)
     {
@@ -293,6 +347,7 @@ public:
     (*(delegate_fn*)buffer) = nullptr;
     return *this;
   }
+
 
   // Invocation operator
   Ret operator()(Args... args)

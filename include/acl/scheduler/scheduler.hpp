@@ -25,7 +25,7 @@ public:
   inline void submit(worker_id src, workgroup_id group, C const& task_obj) noexcept
   {
     submit(src, group,
-           detail::work_item::bind(
+           detail::work_item::pbind(
              [address = task_obj.address()](worker_context const&)
              {
                std::coroutine_handle<>::from_address(address).resume();
@@ -37,26 +37,32 @@ public:
     requires(detail::Callable<Lambda, acl::worker_context const&>)
   inline void submit(worker_id src, workgroup_id group, Lambda&& data) noexcept
   {
-    submit(src, group, detail::work_item::bind(data, group));
+    submit(src, group, detail::work_item::pbind(data, group));
   }
 
   template <auto M, typename Class>
   inline void submit(worker_id src, workgroup_id group, Class& ctx) noexcept
   {
-    submit(src, group, detail::work_item::bind<M>(ctx, group));
+    submit(src, group, detail::work_item::pbind<M>(ctx, group));
   }
 
   template <auto M>
   inline void submit(worker_id src, workgroup_id group) noexcept
   {
-    submit(src, group, detail::work_item::bind<M>(group));
+    submit(src, group, detail::work_item::pbind<M>(group));
+  }
+
+  template <typename...Args>
+  inline void submit(worker_id src, workgroup_id group, task_delegate::fnptr callable, Args&&...args) noexcept
+  {
+    submit(src, group, detail::work_item::pbind(callable, std::make_tuple<std::decay_t<Args>...>(std::forward<Args>(args)...), group));
   }
 
   template <CoroutineTask C>
   inline void submit(worker_id src, worker_id dst, workgroup_id group, C const& task_obj) noexcept
   {
     submit(src, dst,
-           detail::work_item::bind(
+           detail::work_item::pbind(
              [address = task_obj.address()](worker_context const&)
              {
                std::coroutine_handle<>::from_address(address).resume();
@@ -68,19 +74,25 @@ public:
     requires(detail::Callable<Lambda, acl::worker_context const&>)
   inline void submit(worker_id src, worker_id dst, workgroup_id group, Lambda&& data) noexcept
   {
-    submit(src, dst, detail::work_item::bind(data, group));
+    submit(src, dst, detail::work_item::pbind(data, group));
   }
 
   template <auto M, typename Class>
   inline void submit(worker_id src, worker_id dst, workgroup_id group, Class& ctx) noexcept
   {
-    submit(src, dst, detail::work_item::bind<M>(ctx, group));
+    submit(src, dst, detail::work_item::pbind<M>(ctx, group));
   }
 
   template <auto M>
   inline void submit(worker_id src, worker_id dst, workgroup_id group) noexcept
   {
-    submit(src, dst, detail::work_item::bind<M>(group));
+    submit(src, dst, detail::work_item::pbind<M>(group));
+  }
+
+  template <typename...Args>
+  inline void submit(worker_id src, worker_id dst, workgroup_id group, task_delegate::fnptr callable, Args&&...args) noexcept
+  {
+    submit(src, dst, detail::work_item::pbind(callable, std::make_tuple<std::decay_t<Args>...>(std::forward<Args>(args)...), group));
   }
 
   /**

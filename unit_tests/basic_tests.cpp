@@ -527,3 +527,31 @@ TEST_CASE("Test empty delegate behavior", "[delegate]")
   acl::delegate<int(int, int)> del;
   REQUIRE(static_cast<bool>(del) == false); // Delegate should be empty initially
 }
+
+TEST_CASE("Test direct delegate behavior", "[delegate]")
+{
+  auto lambda = [](test_delegate_t& data, int a, int b) -> int
+  {
+    auto [value] = data.args<int>();
+    return a + b + value;
+  };
+
+  acl::delegate<int(int, int)> del = test_delegate_t::bind(lambda, 20);
+
+  REQUIRE(static_cast<bool>(del) == true);
+  REQUIRE(del(10, 5) == 35);
+}
+
+TEST_CASE("Test tuple expand delegate behavior", "[delegate]")
+{
+  auto lambda = [](test_delegate_t& data, int a, int b) -> int
+  {
+    auto [value1, value2] = data.args<int const, int const>();
+    return a + b + value1 + value2;
+  };
+
+  acl::delegate<int(int, int)> del = test_delegate_t::bind(lambda, acl::tuple<int const, int const>{7, 13});
+
+  REQUIRE(static_cast<bool>(del) == true);
+  REQUIRE(del(10, 5) == 35);
+}
