@@ -169,6 +169,33 @@ public:
     *(delegate_fn*)other.buffer = nullptr;
   }
 
+  // Move assignment operator
+  basic_delegate& operator=(basic_delegate&& other) noexcept
+  {
+    if (this != &other)
+    {
+      std::memcpy(buffer, other.buffer, BufferSize);
+      *(delegate_fn*)other.buffer = nullptr;
+    }
+    return *this;
+  }
+
+  // Move constructor
+  basic_delegate(basic_delegate const& other) noexcept
+  {
+    std::memcpy(buffer, other.buffer, BufferSize);
+  }
+
+  // Move assignment operator
+  basic_delegate& operator=(basic_delegate const& other) noexcept
+  {
+    if (this != &other)
+    {
+      std::memcpy(buffer, other.buffer, BufferSize);
+    }
+    return *this;
+  }
+
   /** Bind method for a functor or lambda like object */
   template <typename F>
   inline static basic_delegate bind(F&& func)
@@ -301,17 +328,6 @@ public:
     return *reinterpret_cast<acl::tuple<PArgs...>*>(buffer + sizeof(delegate_fn));
   }
 
-  // Move assignment operator
-  basic_delegate& operator=(basic_delegate&& other) noexcept
-  {
-    if (this != &other)
-    {
-      std::memcpy(buffer, other.buffer, BufferSize);
-      *(delegate_fn*)other.buffer = nullptr;
-    }
-    return *this;
-  }
-
   /** Get compressed pair's data */
   template <typename P>
   P const& get_compressed_data() const
@@ -319,22 +335,6 @@ public:
     using CompressedPair = compressed_pair<P>;
     auto pair            = reinterpret_cast<CompressedPair const*>(buffer);
     return *reinterpret_cast<P const*>(pair->data);
-  }
-
-  // Move constructor
-  basic_delegate(basic_delegate& other) noexcept
-  {
-    std::memcpy(buffer, other.buffer, BufferSize);
-  }
-
-  // Move assignment operator
-  basic_delegate& operator=(basic_delegate& other) noexcept
-  {
-    if (this != &other)
-    {
-      std::memcpy(buffer, other.buffer, BufferSize);
-    }
-    return *this;
   }
 
   inline explicit operator bool() const noexcept
