@@ -556,7 +556,12 @@ private:
     size_ = sz;
   }
 
-  constexpr inline Ty* get_data() const
+  constexpr inline Ty const* get_data() const
+  {
+    return is_inlined() ? data_store_.ldata_.data()->template as<Ty>() : data_store_.hdata_.pdata_->template as<Ty>();
+  }
+
+  constexpr inline Ty* get_data()
   {
     return is_inlined() ? data_store_.ldata_.data()->template as<Ty>() : data_store_.hdata_.pdata_->template as<Ty>();
   }

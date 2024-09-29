@@ -2,7 +2,6 @@
 
 #include "podvector.hpp"
 #include <acl/containers/indirection.hpp>
-#include <acl/utils/link.hpp>
 #include <acl/utils/type_traits.hpp>
 #include <acl/utils/utils.hpp>
 #include <memory>
@@ -30,18 +29,19 @@ public:
   using pointer         = Ty*;
   using const_pointer   = Ty const*;
   using size_type       = detail::choose_size_t<uint32_t, Options>;
-  using link            = acl::link<value_type, size_type>;
+  using link            = size_type;
   using allocator_type  = detail::custom_allocator_t<Options>;
 
   static_assert(sizeof(Ty) >= sizeof(size_type), "Type must big enough to hold a link");
 
 private:
-  static constexpr auto pool_mul       = detail::log2(detail::pool_size_v<Options>);
-  static constexpr auto pool_size      = static_cast<size_type>(1) << pool_mul;
-  static constexpr auto pool_mod       = pool_size - 1;
-  static constexpr bool has_self_index = detail::HasSelfIndexValue<Options>;
-  using this_type                      = sparse_table<Ty, Options>;
-  using storage                        = value_type;
+  static constexpr auto      pool_mul       = detail::log2(detail::pool_size_v<Options>);
+  static constexpr auto      pool_size      = static_cast<size_type>(1) << pool_mul;
+  static constexpr auto      pool_mod       = pool_size - 1;
+  static constexpr bool      has_self_index = detail::HasSelfIndexValue<Options>;
+  static constexpr size_type null_v         = 0;
+  using this_type                           = sparse_table<Ty, Options>;
+  using storage                             = value_type;
 
   struct default_index_pool_size
   {
@@ -52,7 +52,7 @@ private:
   {
     using size_type                              = uint32_t;
     static constexpr uint32_t pool_size_v        = std::conditional_t<detail::HasSelfIndexPoolSize<Options>, Options,
-                                                               default_index_pool_size>::self_index_pool_size_v;
+                                                                      default_index_pool_size>::self_index_pool_size_v;
     static constexpr bool     use_sparse_index_v = true;
     static constexpr uint32_t null_v             = 0;
     static constexpr bool     zero_out_memory_v  = true;
@@ -102,7 +102,7 @@ public:
     free_slot_              = other.free_slot_;
     other.length_           = 0;
     other.extend_           = 1;
-    other.free_slot_        = link::null_v;
+    other.free_slot_        = null_v;
     return *this;
   }
 
@@ -272,7 +272,7 @@ public:
   {
     if constexpr (detail::debug)
       validate(l);
-    erase_at(l.value());
+    erase_at(l);
   }
 
   /**
@@ -311,7 +311,7 @@ public:
         });
     extend_    = 1;
     length_    = 0;
-    free_slot_ = link::null_v;
+    free_slot_ = null_v;
     self_.clear();
   }
 
@@ -319,7 +319,7 @@ public:
   {
     if constexpr (detail::debug)
       validate(l);
-    return item_at(detail::index_val(l.value()));
+    return item_at(detail::index_val(l));
   }
 
   inline value_type const& at(link l) const noexcept
@@ -378,9 +378,9 @@ public:
 private:
   inline void validate(link l) const noexcept
   {
-    auto idx  = detail::index_val(l.value());
+    auto idx  = detail::index_val(l);
     auto self = get_ref_at_idx(idx);
-    ACL_ASSERT(self == l.value());
+    ACL_ASSERT(self == l);
   }
 
   inline auto get_ref_at_idx(size_type idx) const noexcept
@@ -447,7 +447,7 @@ private:
   {
     length_++;
     size_type lnk;
-    if (free_slot_ == link::null_v)
+    if (free_slot_ == null_v)
     {
       auto block = extend_ >> pool_mul;
       if (block >= items_.size())
@@ -500,7 +500,7 @@ private:
   self_index                          self_;
   size_type                           length_    = 0;
   size_type                           extend_    = 1;
-  size_type                           free_slot_ = link::null_v;
+  size_type                           free_slot_ = null_v;
 };
 
 } // namespace acl

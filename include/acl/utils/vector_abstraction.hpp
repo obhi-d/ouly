@@ -64,7 +64,8 @@ auto* get_if(V& vector, I i)
 }
 
 template <IsNormalVector V, typename I>
-auto* get_if(V& vector, I i)
+auto get_if(V& vector,
+            I  i) -> std::conditional_t<std::is_const_v<V>, typename V::value_type const*, typename V::value_type*>
 {
   if (i < vector.size())
     return &vector[i];

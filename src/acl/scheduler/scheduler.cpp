@@ -1,5 +1,4 @@
 
-#include <acl/math/vml_fcn.hpp>
 #include <acl/scheduler/scheduler.hpp>
 #include <acl/scheduler/task.hpp>
 #include <latch>

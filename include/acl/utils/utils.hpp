@@ -56,7 +56,7 @@ struct aligned_storage
   template <typename T>
   T const* as() const noexcept
   {
-    return std::launder(reinterpret_cast<T*>(data));
+    return std::launder(reinterpret_cast<T const*>(data));
   }
 };
 

@@ -3,7 +3,6 @@
 #include <acl/allocators/allocator.hpp>
 #include <acl/allocators/default_allocator.hpp>
 #include <acl/utils/config.hpp>
-#include <acl/utils/link.hpp>
 #include <acl/utils/utils.hpp>
 #include <algorithm>
 #include <cassert>
@@ -35,17 +34,11 @@ concept BlackboardHashMap = requires(T& obj, T const& cobj) {
   requires std::same_as<typename T::mapped_type, blackboard_offset>;
   typename T::iterator;
   typename T::const_iterator;
-  {
-    obj.find(std::declval<typename T::key_type>())
-  } -> std::same_as<typename T::iterator>;
-  {
-    cobj.find(std::declval<typename T::key_type>())
-  } -> std::same_as<typename T::const_iterator>;
+  { obj.find(std::declval<typename T::key_type>()) } -> std::same_as<typename T::iterator>;
+  { cobj.find(std::declval<typename T::key_type>()) } -> std::same_as<typename T::const_iterator>;
 
   obj.erase(obj.find(std::declval<typename T::key_type>()));
-  {
-    obj[std::declval<typename T::key_type>()]
-  } -> std::same_as<typename T::mapped_type&>;
+  { obj[std::declval<typename T::key_type>()] } -> std::same_as<typename T::mapped_type&>;
   requires std::same_as<typename T::mapped_type, blackboard_offset>;
 };
 

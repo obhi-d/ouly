@@ -2,8 +2,8 @@
 #pragma once
 
 #include <compare>
-#include <concepts>
 #include <cstdint>
+#include <functional>
 #include <limits>
 
 namespace acl::ecs
@@ -38,10 +38,7 @@ public:
 
   constexpr inline explicit operator size_type() const noexcept
   {
-    if constexpr (nb_revision_bits > 0)
-      return (i_ & index_mask_v);
-    else
-      return i_;
+    return value();
   }
 
   constexpr inline size_type revision() const noexcept
@@ -56,19 +53,50 @@ public:
     return basic_entity(i_ + version_inc_v);
   }
 
+  constexpr inline size_type revision() const noexcept
+    requires(nb_revision_bits <= 0)
+  {
+    return 0;
+  }
+
+  constexpr inline basic_entity revised() const noexcept
+    requires(nb_revision_bits <= 0)
+  {
+    return basic_entity(i_);
+  }
+
   constexpr inline size_type get() const noexcept
+  {
+    if constexpr (nb_revision_bits > 0)
+      return (i_ & index_mask_v);
+    else
+      return i_;
+  }
+
+  constexpr inline size_type value() const noexcept
   {
     return i_;
   }
+
+  inline auto operator<=>(basic_entity const&) const noexcept = default;
 
 private:
   size_type i_ = {};
 };
 
-template <typename T>
+template <typename T = std::true_type>
 using entity = basic_entity<T, uint32_t>;
 
-template <typename T>
-using xentity = basic_entity<T, uint32_t, 8>;
+template <typename T = std::true_type>
+using rxentity = basic_entity<T, uint32_t, 8>;
 
 } // namespace acl::ecs
+
+template <typename Ty, typename SizeType, uint32_t RevisionBits>
+struct std::hash<acl::ecs::basic_entity<Ty, SizeType, RevisionBits>>
+{
+  std::size_t operator()(acl::ecs::basic_entity<Ty, SizeType, RevisionBits> const& s) const noexcept
+  {
+    return std::hash<SizeType>{}(s.value());
+  }
+};

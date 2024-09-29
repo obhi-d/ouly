@@ -3,14 +3,12 @@
 #include <acl/allocators/default_allocator.hpp>
 #include <acl/allocators/std_allocator_wrapper.hpp>
 #include <acl/containers/index_map.hpp>
-#include <acl/containers/packed_table.hpp>
 #include <acl/containers/sparse_table.hpp>
 #include <acl/utils/delegate.hpp>
 #include <acl/utils/error_codes.hpp>
 #include <acl/utils/export.hxx>
 #include <acl/utils/intrusive_ptr.hpp>
 #include <acl/utils/komihash.hpp>
-#include <acl/utils/link.hpp>
 #include <acl/utils/tagged_ptr.hpp>
 #include <acl/utils/wyhash.hpp>
 #include <acl/utils/zip_view.hpp>
@@ -278,35 +276,6 @@ TEST_CASE("Validate Hash: komihash", "[hash]")
   k64s(s.c_str(), s.length());
 
   REQUIRE(k64s() != 0);
-}
-
-TEST_CASE("Test link", "[link]")
-{
-  struct base
-  {};
-  struct derived : base
-  {};
-  struct unrelated
-  {};
-
-  acl::link<base, uint32_t, 4>      first;
-  acl::link<derived, uint32_t, 4>   second;
-  acl::link<unrelated, uint32_t, 4> third;
-
-  second = first;
-  first  = second;
-  static_assert(std::is_assignable_v<acl::link<base, uint32_t, 4>, acl::link<derived, uint32_t, 4>>,
-                "Type should be assignable");
-  static_assert(std::is_assignable_v<acl::link<base, uint32_t, 4>, acl::link<derived, uint32_t, 4>>,
-                "Type should be assignable");
-  static_assert(!std::is_assignable_v<acl::link<unrelated, uint32_t, 4>, acl::link<base, uint32_t, 4>>,
-                "Type should not be assignable");
-  static_assert(!std::is_assignable_v<acl::link<unrelated, uint32_t, 4>, acl::link<derived, uint32_t, 4>>,
-                "Type should not be assignable");
-  static_assert(!std::is_assignable_v<acl::link<base, uint32_t, 4>, acl::link<unrelated, uint32_t, 4>>,
-                "Type should not be assignable");
-  static_assert(!std::is_assignable_v<acl::link<derived, uint32_t, 4>, acl::link<unrelated, uint32_t, 4>>,
-                "Type should not be assignable");
 }
 
 TEST_CASE("Test index_map", "[index_map]")

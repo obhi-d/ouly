@@ -70,10 +70,7 @@ add_unit_test(NAME intrusive_list FILES "intrusive_list.cpp")
 add_unit_test(NAME program_args FILES "program_args.cpp")
 add_unit_test(NAME small_vector FILES "small_vector.cpp")
 add_unit_test(NAME basic_queue FILES "basic_queue.cpp")
-add_unit_test(NAME link_container FILES "link_container.cpp" "rlink_object_table.cpp")
-add_unit_test(NAME packed_table FILES "packed_table.cpp")
-add_unit_test(NAME sparse_table FILES "sparse_table.cpp")
-add_unit_test(NAME collection FILES "collection.cpp")
+add_unit_test(NAME ecs FILES "ecs_tests.cpp")
 add_unit_test(NAME blackboard FILES "blackboard.cpp")
 add_unit_test(NAME soavector FILES "soavector.cpp")
 add_unit_test(NAME podvector FILES "podvector.cpp")
@@ -89,66 +86,6 @@ add_unit_test(NAME linear_allocator FILES "linear_allocator.cpp" )
 add_unit_test(NAME scli_tests FILES "scli_tests.cpp")
 add_unit_test(NAME scheduler FILES "scheduler_tests.cpp")
 add_unit_test(NAME microexpr FILES "microexpr_tests.cpp")
-add_unit_test(NAME math_all FILES "math_common.cpp"
-                                  "math_euler_angles.cpp"
-                                  "math_frustum.cpp"
-                                  "math_intersect.cpp"
-                                  "math_mat3.cpp"
-                                  "math_mat4.cpp"
-                                  "math_plane.cpp"
-                                  "math_quad.cpp"
-                                  "math_quat.cpp"
-                                  "math_transform.cpp"
-                                  "math_vec.cpp"
-                                  "math_aabb.cpp"
-                                  "math_axis_angle.cpp"
-                                  "math_bounding_volume.cpp")
-
-add_unit_test(NAME math_all_sse2 FILES "math_common.cpp"
-                                  "math_euler_angles.cpp"
-                                  "math_frustum.cpp"
-                                  "math_intersect.cpp"
-                                  "math_mat3.cpp"
-                                  "math_mat4.cpp"
-                                  "math_plane.cpp"
-                                  "math_quad.cpp"
-                                  "math_quat.cpp"
-                                  "math_transform.cpp"
-                                  "math_vec.cpp"
-                                  "math_aabb.cpp"
-                                  "math_axis_angle.cpp"
-                                  "math_bounding_volume.cpp" DEFINES "-DACL_USE_SSE2=1")
-
-add_unit_test(NAME math_all_sse3 FILES "math_common.cpp"
-                                  "math_euler_angles.cpp"
-                                  "math_frustum.cpp"
-                                  "math_intersect.cpp"
-                                  "math_mat3.cpp"
-                                  "math_mat4.cpp"
-                                  "math_plane.cpp"
-                                  "math_quad.cpp"
-                                  "math_quat.cpp"
-                                  "math_transform.cpp"
-                                  "math_vec.cpp"
-                                  "math_aabb.cpp"
-                                  "math_axis_angle.cpp"
-                                  "math_bounding_volume.cpp" DEFINES "-DACL_USE_SSE3=1" CCARGS "-msse3")
-
-add_unit_test(NAME math_all_avx FILES "math_common.cpp"
-                                  "math_euler_angles.cpp"
-                                  "math_frustum.cpp"
-                                  "math_intersect.cpp"
-                                  "math_mat3.cpp"
-                                  "math_mat4.cpp"
-                                  "math_plane.cpp"
-                                  "math_quad.cpp"
-                                  "math_quat.cpp"
-                                  "math_transform.cpp"
-                                  "math_vec.cpp"
-                                  "math_aabb.cpp"
-                                  "math_axis_angle.cpp"
-                                  "math_bounding_volume.cpp" DEFINES "-DACL_USE_AVX=1" CCARGS "-mavx")
-
 add_unit_test(NAME coalescing_allocator FILES "coalescing_allocator.cpp" SANITIZE)
 add_executable(acl-bench
  "bench_arena_allocator.cpp"

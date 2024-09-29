@@ -186,7 +186,11 @@ public:
     else
     {
       auto copy = free_;
-      std::ranges::sort(copy);
+      std::ranges::sort(copy,
+                        [](size_type first, size_type second)
+                        {
+                          return type(first).get() < type(second).get();
+                        });
       for_each_(std::forward<Lambda>(l), copy, max_size_.load());
     }
   }
@@ -198,7 +202,11 @@ public:
 
   void sort_free()
   {
-    std::ranges::sort(free_);
+    std::ranges::sort(free_,
+                      [](size_type first, size_type second)
+                      {
+                        return type(first).get() < type(second).get();
+                      });
     sorted = true;
   }
 
@@ -216,7 +224,7 @@ private:
   {
     for (size_type i = 1, fi = 0; i < max_size; ++i)
     {
-      if (fi < copy.size() && copy[fi] == i)
+      if (fi < copy.size() && type(copy[fi]).get() == i)
         fi++;
       else
         l(i);
@@ -229,10 +237,10 @@ private:
   bool                    sorted     = false;
 };
 
-template <typename T>
+template <typename T = std::true_type>
 using registry = basic_registry<entity<T>>;
 
-template <typename T>
+template <typename T = std::true_type>
 using rxregistry = basic_registry<rxentity<T>>;
 
 } // namespace acl::ecs

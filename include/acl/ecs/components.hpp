@@ -2,6 +2,7 @@
 #pragma once
 
 #include <acl/containers/indirection.hpp>
+#include <acl/ecs/entity.hpp>
 #include <acl/utils/vector_abstraction.hpp>
 
 namespace acl::ecs
@@ -18,7 +19,7 @@ namespace acl::ecs
  *  @par acl::opt::pool_size<V>
  *  Sparse vector pool size
  */
-template <typename Ty, typename EntityTy, typename Options = acl::default_options<Ty>>
+template <typename Ty, typename EntityTy = acl::ecs::entity<>, typename Options = acl::default_options<Ty>>
 class components
 {
 
@@ -26,17 +27,16 @@ class components
   static_assert(std::is_move_assignable_v<Ty>, "Type must be move assignable");
 
 public:
-  using entity     = EntityTy;
-  using options    = Options;
-  using value_type = Ty;
-  using vector_type =
-    std::conditional_t<detail::HasUseSparseAttrib<options>, sparse_vector<Ty, acl::options<options, acl::opt::no_fill>>,
-                       vector<Ty, detail::custom_allocator_t<options>>>;
+  using entity_type     = EntityTy;
+  using options         = Options;
+  using value_type      = Ty;
+  using vector_type     = std::conditional_t<detail::HasUseSparseAttrib<options>, sparse_vector<Ty, options>,
+                                             vector<Ty, detail::custom_allocator_t<options>>>;
   using reference       = typename vector_type::reference;
   using const_reference = typename vector_type::const_reference;
   using pointer         = typename vector_type::pointer;
   using const_pointer   = typename vector_type::const_pointer;
-  using size_type       = typename entity::size_type;
+  using size_type       = typename entity_type::size_type;
   using ssize_type      = std::make_signed_t<size_type>;
   using revision_type   = typename EntityTy::revision_type;
   using allocator_type  = detail::custom_allocator_t<Options>;
@@ -49,7 +49,7 @@ private:
   static constexpr bool has_direct_mapping = detail::HasDirectMapping<options>;
   static constexpr bool has_sparse_storage = detail::HasUseSparseAttrib<options>;
 
-  using this_type     = components<value_type, entity, options>;
+  using this_type     = components<value_type, entity_type, options>;
   using optional_val  = acl::detail::optional_ref<reference>;
   using optional_cval = acl::detail::optional_ref<const_reference>;
 
@@ -141,34 +141,34 @@ public:
 
   /**
    * @brief Lambda called for each element
-   * @tparam Lambda Lambda should accept A link and value_type& parameter
+   * @tparam Lambda Lambda should accept A entity and value_type& parameter
    */
   template <typename Lambda>
   void for_each(Lambda&& lambda) noexcept
   {
-    for_each_l<Lambda, value_type>(std::forward<Lambda>(lambda));
+    for_each_l<Lambda>(std::forward<Lambda>(lambda));
   }
 
   /**
    * @brief Lambda called for each element
-   * @tparam Lambda Lambda should accept A link and value_type const& parameter
+   * @tparam Lambda Lambda should accept A entity and value_type const& parameter
    */
   template <typename Lambda>
   void for_each(Lambda&& lambda) const noexcept
   {
-    for_each_l<Lambda, value_type const>(std::forward<Lambda>(lambda));
+    for_each_l<Lambda>(std::forward<Lambda>(lambda));
   }
 
   /**
    * @brief Lambda called for each element in range
-   * @tparam Lambda Lambda Lambda should accept A link and value_type& parameter
+   * @tparam Lambda Lambda Lambda should accept A entity and value_type& parameter
    * @param first first index in range. This should be between 1 and size()
    * @param last last index in range. This should be between 1 and size()
    */
   template <typename Lambda>
   void for_each(size_type first, size_type last, Lambda&& lambda) noexcept
   {
-    for_each_l<Lambda, value_type>(first, last, std::forward<Lambda>(lambda));
+    for_each_l<Lambda>(first, last, std::forward<Lambda>(lambda));
   }
 
   /**
@@ -177,7 +177,7 @@ public:
   template <typename Lambda>
   void for_each(size_type first, size_type last, Lambda&& lambda) const noexcept
   {
-    for_each_l<Lambda, value_type const>(first, last, std::forward<Lambda>(lambda));
+    for_each_l<Lambda>(first, last, std::forward<Lambda>(lambda));
   }
 
   /**
@@ -210,7 +210,7 @@ public:
    * @brief Construct an item in a given location, assuming the location was empty
    */
   template <typename... Args>
-  reference emplace_at(entity point, Args&&... args) noexcept
+  reference emplace_at(entity_type point, Args&&... args) noexcept
   {
     if constexpr (has_direct_mapping)
     {
@@ -233,7 +233,7 @@ public:
     }
   }
 
-  size_type key(entity point) const noexcept
+  size_type key(entity_type point) const noexcept
     requires(!has_direct_mapping)
   {
     return keys_.get_if(point.get());
@@ -248,7 +248,7 @@ public:
   /**
    * @brief Construct/Replace an item in a given location, depending upon if the location was empty or not.
    */
-  reference replace(entity point, value_type&& args) noexcept
+  reference replace(entity_type point, value_type&& args) noexcept
   {
     if constexpr (has_direct_mapping)
     {
@@ -275,7 +275,7 @@ public:
   /**
    * @brief Construct/Retrieve reference to an item, if the location is empty, an item is default constructed
    */
-  reference get_ref(entity point) noexcept
+  reference get_ref(entity_type point) noexcept
   {
     if constexpr (has_direct_mapping)
     {
@@ -298,7 +298,7 @@ public:
    * @brief Erase a single element.
    */
 
-  void erase(entity l) noexcept
+  void erase(entity_type l) noexcept
   {
     if constexpr (detail::debug)
       validate(l);
@@ -312,34 +312,34 @@ public:
   void erase(value_type const& obj) noexcept
     requires(has_self_index)
   {
-    erase_at(entity(self_.get(obj)));
+    erase_at(entity_type(self_.get(obj)));
   }
 
   /**
-   * @brief Find an object associated with a link
+   * @brief Find an object associated with a entity
    * @return optional value of the object
    */
 
-  optional_val find(entity lnk) noexcept
+  optional_val find(entity_type lnk) noexcept
   {
     return optional_val(sfind(*this, lnk));
   }
 
   /**
-   * @brief Find an object associated with a link
+   * @brief Find an object associated with a entity
    * @return optional value of the object
    */
 
-  optional_cval find(entity lnk) const noexcept
+  optional_cval find(entity_type lnk) const noexcept
   {
     return optional_val(sfind(*this, lnk));
   }
 
   /**
-   * @brief Find an object associated with a link, provided a default value to return if it is not found
+   * @brief Find an object associated with a entity, provided a default value to return if it is not found
    */
 
-  value_type find(entity lnk, value_type def) const noexcept
+  value_type find(entity_type lnk, value_type def) const noexcept
   {
     return sfind(*this, lnk, def);
   }
@@ -370,31 +370,31 @@ public:
     }
   }
 
-  inline reference at(entity l) noexcept
+  inline reference at(entity_type l) noexcept
   {
     if constexpr (detail::debug)
       validate(l);
     return item_at(l.get());
   }
 
-  inline const_reference at(entity l) const noexcept
+  inline const_reference at(entity_type l) const noexcept
   {
     if constexpr (detail::debug)
       validate(l);
     return item_at(l.get());
   }
 
-  inline reference operator[](entity l) noexcept
+  inline reference operator[](entity_type l) noexcept
   {
     return at(l);
   }
 
-  inline const_reference operator[](entity l) const noexcept
+  inline const_reference operator[](entity_type l) const noexcept
   {
     return at(l);
   }
 
-  inline bool contains(entity l) const noexcept
+  inline bool contains(entity_type l) const noexcept
   {
     auto idx = l.get();
     if constexpr (has_direct_mapping)
@@ -432,7 +432,7 @@ public:
     {
       for (size_type first = 0, last = size(); first < last; ++first)
       {
-        ACL_ASSERT(keys_.get(link(get_ref_at_idx(first)).get()) == first);
+        ACL_ASSERT(keys_.get(entity_type(get_ref_at_idx(first)).get()) == first);
       }
 
       for (size_type i = 0; i < keys_.size(); ++i)
@@ -461,10 +461,21 @@ public:
       return item_at_idx(keys_.get(l));
   }
 
+  inline void set_max(size_type size)
+  {
+    if constexpr (has_direct_mapping)
+    {
+      if (size)
+      {
+        detail::ensure_at(values_, size - 1);
+      }
+    }
+  }
+
 private:
   template <typename T>
-  static auto sfind(T&     cont,
-                    entity lnk) noexcept -> std::conditional_t<std::is_const_v<T>, value_type const*, value_type*>
+  static auto sfind(T&          cont,
+                    entity_type lnk) noexcept -> std::conditional_t<std::is_const_v<T>, value_type const*, value_type*>
   {
     if constexpr (has_direct_mapping)
     {
@@ -493,7 +504,7 @@ private:
   }
 
   template <typename T>
-  static auto sfind(T& cont, entity lnk, value_type def) noexcept -> value_type
+  static auto sfind(T& cont, entity_type lnk, value_type def) noexcept -> value_type
   {
     if constexpr (has_direct_mapping)
     {
@@ -521,7 +532,7 @@ private:
     }
   }
 
-  inline void validate(entity l) const noexcept
+  inline void validate(entity_type l) const noexcept
   {
     if constexpr (has_direct_mapping)
     {
@@ -564,7 +575,7 @@ private:
     return values_[item_id];
   }
 
-  inline void erase_at(entity l) noexcept
+  inline void erase_at(entity_type l) noexcept
   {
     if constexpr (has_direct_mapping)
     {
@@ -580,9 +591,9 @@ private:
       if (&back != &lb)
       {
         if constexpr (has_self_index)
-          keys_.get(link(self_.get(back)).get()) = item_id;
+          keys_.get(entity_type(self_.get(back)).get()) = item_id;
         else
-          keys_.get(link(self_.best_erase(item_id)).get()) = item_id;
+          keys_.get(entity_type(self_.best_erase(item_id)).get()) = item_id;
 
         if constexpr (acl::detail::is_tuple<value_type>::value)
         {
@@ -609,39 +620,39 @@ private:
    * @brief Lambda called for each element
    * @tparam Lambda Lambda should accept value_type& parameter
    */
-  template <typename Lambda, typename Cast>
+  template <typename Lambda>
   inline void for_each_l(Lambda&& lambda) noexcept
   {
-    for_each_l<Lambda, Cast>(0, static_cast<size_type>(values_.size()), std::forward<Lambda>(lambda));
+    for_each_l<Lambda>(0, static_cast<size_type>(values_.size()), std::forward<Lambda>(lambda));
   }
 
-  template <typename Lambda, typename Cast>
+  template <typename Lambda>
   inline void for_each_l(Lambda&& lambda) const noexcept
   {
-    for_each_l<Lambda, Cast>(0, static_cast<size_type>(values_.size()), std::forward<Lambda>(lambda));
+    for_each_l<Lambda>(0, static_cast<size_type>(values_.size()), std::forward<Lambda>(lambda));
   }
 
-  template <typename Lambda, typename Cast>
+  template <typename Lambda>
   inline void for_each_l(size_type first, size_type last, Lambda&& lambda) noexcept
   {
     constexpr auto arity = function_traits<Lambda>::arity;
     for (; first != last; ++first)
     {
       if constexpr (arity == 2)
-        lambda(link(get_ref_at_idx(first)), static_cast<Cast&>(values_[first]));
+        lambda(entity_type(get_ref_at_idx(first)), values_[first]);
       else
         lambda(values_[first]);
     }
   }
 
-  template <typename Lambda, typename Cast>
+  template <typename Lambda>
   inline void for_each_l(size_type first, size_type last, Lambda&& lambda) const noexcept
   {
     constexpr auto arity = function_traits<Lambda>::arity;
     for (; first != last; ++first)
     {
       if constexpr (arity == 2)
-        lambda(link(get_ref_at_idx(first)), static_cast<Cast&>(values_[first]));
+        lambda(entity_type(get_ref_at_idx(first)), values_[first]);
       else
         lambda(values_[first]);
     }

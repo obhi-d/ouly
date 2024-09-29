@@ -1,38 +1,37 @@
 
 #pragma once
 
-#include "podvector.hpp"
 #include <acl/allocators/default_allocator.hpp>
+#include <acl/containers/podvector.hpp>
+#include <acl/ecs/entity.hpp>
 #include <acl/utils/config.hpp>
-#include <acl/utils/link.hpp>
 #include <acl/utils/type_traits.hpp>
 #include <acl/utils/utils.hpp>
 #include <memory>
 
-namespace acl
+namespace acl::ecs
 {
 
 /**
  * @brief A collection of links, but not stored in vectors, instead managed by bitmap
- * @tparam Ty
  * @tparam Options options controlling behaviour of the container
  */
-template <typename Ty, typename Options = acl::default_options<Ty>>
+template <typename EntityTy, typename Options = acl::default_options<EntityTy>>
 class collection : public detail::custom_allocator_t<Options>
 {
 public:
-  using value_type     = Ty;
   using size_type      = detail::choose_size_t<uint32_t, Options>;
-  using link           = acl::link<value_type, size_type>;
+  using entity_type    = EntityTy;
   using allocator_type = detail::custom_allocator_t<Options>;
 
 private:
-  static constexpr auto pool_mul  = detail::log2(detail::pool_size_v<Options>);
-  static constexpr auto pool_size = static_cast<size_type>(1) << pool_mul;
-  static constexpr auto pool_mod  = pool_size - 1;
-  using this_type                 = collection<Ty, Options>;
-  using base_type                 = allocator_type;
-  using storage                   = std::uint8_t;
+  static constexpr auto pool_mul     = detail::log2(detail::pool_size_v<Options>);
+  static constexpr auto pool_size    = static_cast<size_type>(1) << pool_mul;
+  static constexpr auto pool_mod     = pool_size - 1;
+  using this_type                    = collection<EntityTy, Options>;
+  using base_type                    = allocator_type;
+  using storage                      = uint8_t;
+  static constexpr bool has_revision = std::same_as<typename EntityTy::revision_type, uint8_t> && acl::detail::debug;
 
 public:
   inline collection() noexcept {}
@@ -58,7 +57,7 @@ public:
     constexpr auto haz_page_size = sizeof(storage) * pool_size;
 
     items.resize(other.items.size());
-    if constexpr (detail::debug)
+    if constexpr (has_revision)
     {
       for (std::size_t i = 0, end = items.size() / 2; i < end; ++i)
       {
@@ -84,7 +83,7 @@ public:
   template <typename Cont, typename Lambda>
   void for_each(Cont& cont, Lambda&& lambda) noexcept
   {
-    for_each_l<Cont, Lambda, value_type>(cont, 0, range(), std::forward<Lambda>(lambda));
+    for_each_l<Cont, Lambda>(cont, 0, range(), std::forward<Lambda>(lambda));
   }
   template <typename Cont, typename Lambda>
   void for_each(Cont const& cont, Lambda&& lambda) const noexcept
@@ -95,7 +94,7 @@ public:
   template <typename Cont, typename Lambda>
   void for_each(Cont& cont, size_type first, size_type last, Lambda&& lambda) noexcept
   {
-    for_each_l<Cont, Lambda, value_type>(cont, first, last, std::forward<Lambda>(lambda));
+    for_each_l<Cont, Lambda>(cont, first, last, std::forward<Lambda>(lambda));
   }
 
   template <typename Cont, typename Lambda>
@@ -104,28 +103,28 @@ public:
     const_cast<this_type*>(this)->for_each_l(cont, first, last, std::forward<Lambda>(lambda));
   }
 
-  inline void emplace(link l) noexcept
+  inline void emplace(entity_type l) noexcept
   {
-    auto idx = detail::index_val(l.value());
+    auto idx = l.get();
     max_lnk  = std::max(idx, max_lnk);
     set_bit(idx);
-    if constexpr (detail::debug)
-      set_hazard(idx, detail::hazard_val(l.value()));
+    if constexpr (has_revision)
+      set_hazard(idx, static_cast<uint8_t>(l.revision()));
     length++;
   }
 
-  inline void erase(link l) noexcept
+  inline void erase(entity_type l) noexcept
   {
-    auto idx = detail::index_val(l.value());
-    if constexpr (detail::debug)
-      validate_hazard(idx, detail::hazard_val(l.value()));
+    auto idx = l.get();
+    if constexpr (has_revision)
+      validate_hazard(idx, static_cast<uint8_t>(l.revision()));
     unset_bit(idx);
     length--;
   }
 
-  bool contains(link l) const noexcept
+  bool contains(entity_type l) const noexcept
   {
-    return is_bit_set(detail::index_val(l.value()));
+    return is_bit_set(l.get());
   }
 
   size_type size() const noexcept
@@ -150,7 +149,7 @@ public:
       constexpr auto bit_page_size = sizeof(storage) * (pool_size >> 3);
       constexpr auto haz_page_size = sizeof(storage) * pool_size;
 
-      if constexpr (detail::debug)
+      if constexpr (has_revision)
       {
         for (size_type i = 0, end = static_cast<size_type>(items.size()) / 2; i < end; ++i)
         {
@@ -185,7 +184,7 @@ private:
 
   inline size_type bit_page(size_type p) const noexcept
   {
-    if constexpr (detail::debug)
+    if constexpr (has_revision)
       return p * 2;
     else
       return p;
@@ -193,7 +192,7 @@ private:
 
   inline size_type hazard_page(size_type p) const noexcept
   {
-    if constexpr (detail::debug)
+    if constexpr (has_revision)
       return (p * 2) + 1;
     else
       return 0xffffffff;
@@ -229,7 +228,7 @@ private:
 
       items.emplace_back(acl::allocate<storage>(*this, bit_page_size));
       std::memset(items.back(), 0, bit_page_size);
-      if constexpr (detail::debug)
+      if constexpr (has_revision)
       {
         items.emplace_back(acl::allocate<storage>(*this, haz_page_size));
         std::memset(items.back(), 0, haz_page_size);
@@ -254,15 +253,15 @@ private:
     return items[block][index];
   }
 
-  template <typename ContT, typename Lambda, typename Cast>
+  template <typename ContT, typename Lambda>
   void for_each_l(ContT& cont, size_type first, size_type last, Lambda&& lambda) noexcept
   {
     for (; first != last; ++first)
     {
       if (is_bit_set(first))
       {
-        link l{(detail::debug) ? detail::hazard_idx(first, get_hazard(first)) : first};
-        lambda(l, reinterpret_cast<Cast&>(cont.at(l)));
+        entity_type l = has_revision ? entity_type(first, get_hazard(first)) : entity_type(first);
+        lambda(l, cont.at(l));
       }
     }
   }
@@ -272,4 +271,4 @@ private:
   size_type                           max_lnk = 0;
 };
 
-} // namespace acl
+} // namespace acl::ecs
