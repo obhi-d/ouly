@@ -36,6 +36,7 @@ public:
   using size_type       = detail::choose_size_t<uint32_t, Options>;
   using allocator_type  = detail::custom_allocator_t<Options>;
   using options         = Options;
+  bool is_sparse_vector = true;
 
 private:
   using this_type = sparse_vector<value_type, Options>;
@@ -51,7 +52,7 @@ private:
   static constexpr bool has_pod            = detail::HasTrivialAttrib<options>;
   static constexpr bool has_pool_tracking  = !detail::HasDisablePoolTrackingAttrib<options>;
   static constexpr bool has_trivial_copy   = std::is_trivially_copyable_v<Ty> || has_pod;
-  static constexpr bool has_self_index        = detail::HasSelfIndexValue<Options>;
+  static constexpr bool has_self_index     = detail::HasSelfIndexValue<Options>;
 
   static constexpr auto pool_mul       = detail::log2(detail::pool_size_v<Options>);
   static constexpr auto pool_size      = static_cast<size_type>(1) << pool_mul;
@@ -611,6 +612,30 @@ public:
   {
     auto block = (idx >> pool_mul);
     return block < items_.size() && items_[block] && !is_null(cast(items_[block][idx & pool_mod]));
+  }
+
+  Ty const* get_if(size_type idx) const noexcept
+  {
+    auto block = (idx >> pool_mul);
+    return block < items_.size() && items_[block] ? &cast(items_[block][idx & pool_mod]) : nullptr;
+  }
+
+  Ty* get_if(size_type idx) noexcept
+  {
+    auto block = (idx >> pool_mul);
+    return block < items_.size() && items_[block] ? &cast(items_[block][idx & pool_mod]) : nullptr;
+  }
+
+  Ty const& get_or(size_type idx, Ty const& other) const noexcept
+  {
+    auto block = (idx >> pool_mul);
+    return block < items_.size() && items_[block] ? cast(items_[block][idx & pool_mod]) : other;
+  }
+
+  Ty& get_or(size_type idx, Ty& other) noexcept
+  {
+    auto block = (idx >> pool_mul);
+    return block < items_.size() && items_[block] ? cast(items_[block][idx & pool_mod]) : other;
   }
 
   Ty get_value(size_type idx) const noexcept

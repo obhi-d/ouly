@@ -49,7 +49,6 @@ private:
   static constexpr bool has_self_index = detail::HasSelfIndexValue<options>;
 
   using this_type     = packed_table<value_type, options>;
-  using storage       = detail::aligned_storage<sizeof(value_type), alignof(value_type)>;
   using optional_val  = acl::detail::optional_ref<reference>;
   using optional_cval = acl::detail::optional_ref<const_reference>;
 
@@ -65,7 +64,7 @@ private:
   {
     using size_type                          = uint32_t;
     static constexpr uint32_t pool_size_v    = std::conditional_t<detail::HasSelfIndexPoolSize<options>, options,
-                                                               default_index_pool_size>::self_index_pool_size_v;
+                                                                  default_index_pool_size>::self_index_pool_size_v;
     static constexpr bool use_sparse_index_v = std::conditional_t<detail::HasSelfUseSparseIndexAttrib<options>, options,
                                                                   default_index_pool_size>::self_use_sparse_index_v;
     static constexpr uint32_t null_v         = 0;
@@ -87,7 +86,7 @@ private:
   {
     using size_type                          = uint32_t;
     static constexpr uint32_t pool_size_v    = std::conditional_t<detail::HasKeysIndexPoolSize<options>, options,
-                                                               default_index_pool_size>::keys_index_pool_size_v;
+                                                                  default_index_pool_size>::keys_index_pool_size_v;
     static constexpr bool use_sparse_index_v = std::conditional_t<detail::HasKeysUseSparseIndexAttrib<options>, options,
                                                                   default_index_pool_size>::keys_use_sparse_index_v;
     static constexpr uint32_t null_v         = 0;

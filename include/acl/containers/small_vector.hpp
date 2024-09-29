@@ -461,9 +461,9 @@ public:
     if (size_ <= inline_capacity && last > inline_capacity)
     {
       // already destroyed end objects
-      std::uint32_t p = static_cast<std::uint32_t>(std::distance((Ty const*)data_store_.hdata_.pdata_, position));
+      size_t p = static_cast<size_t>(std::distance(data_store_.hdata_.pdata_->template as<Ty const>(), position));
       transfer_to_ib(size_);
-      return const_cast<iterator>((Ty*)data_store_.ldata_.data() + p);
+      return const_cast<iterator>(data_store_.ldata_[p].template as<Ty>());
     }
     else
       return const_cast<iterator>(position);
@@ -495,9 +495,9 @@ public:
     if (size_ <= inline_capacity && old_size > inline_capacity)
     {
       // already destroyed end objects
-      std::uint32_t p = static_cast<std::uint32_t>(std::distance((Ty const*)data_store_.hdata_.pdata_, first));
+      size_t p = static_cast<size_t>(std::distance(data_store_.hdata_.pdata_->template as<Ty const>(), first));
       transfer_to_ib(size_);
-      return const_cast<iterator>((Ty*)data_store_.ldata_.data() + p);
+      return const_cast<iterator>(data_store_.ldata_[p].template as<Ty>());
     }
     else
     {
@@ -532,7 +532,7 @@ private:
     {
       if (size_ > inline_capacity)
         transfer_to_ib(sz, tail_type{.tail = size_});
-      return (Ty*)data_store_.ldata_.data();
+      return data_store_.ldata_.data()->template as<Ty>();
     }
     else
     {
@@ -540,7 +540,7 @@ private:
       {
         unchecked_reserve_in_heap(sz);
       }
-      return (Ty*)data_store_.hdata_.pdata_;
+      return data_store_.hdata_.pdata_->template as<Ty>();
     }
   }
 
@@ -558,7 +558,7 @@ private:
 
   constexpr inline Ty* get_data() const
   {
-    return is_inlined() ? (Ty*)data_store_.ldata_.data() : (Ty*)data_store_.hdata_.pdata_;
+    return is_inlined() ? data_store_.ldata_.data()->template as<Ty>() : data_store_.hdata_.pdata_->template as<Ty>();
   }
 
   constexpr inline void unchecked_reserve_in_heap(size_type n)
@@ -567,7 +567,7 @@ private:
     copy.capacity_ = n;
     copy.pdata_    = acl::allocate<storage>(*this, n * sizeof(storage), alignarg<storage>);
     auto ldata     = data();
-    auto d         = (Ty*)copy.pdata_;
+    auto d         = copy.pdata_->template as<Ty>();
     if constexpr (has_pod || std::is_trivially_copyable_v<Ty>)
     {
       std::memcpy(d, ldata, size_ * sizeof(Ty));
@@ -590,7 +590,7 @@ private:
     copy.capacity_ = n;
     copy.pdata_    = acl::allocate<storage>(*this, n * sizeof(storage), alignarg<storage>);
     auto ldata     = data();
-    auto d         = (Ty*)copy.pdata_;
+    auto d         = copy.pdata_->template as<Ty>();
     if constexpr (has_pod || std::is_trivially_copyable_v<Ty>)
     {
       std::memcpy(d, ldata, at * sizeof(Ty));
@@ -626,8 +626,8 @@ private:
   constexpr inline void transfer_to_ib(size_type nb, tail last_size = tail())
   {
     heap_storage copy  = data_store_.hdata_;
-    auto         d     = (Ty*)copy.pdata_;
-    auto         ldata = (Ty*)data_store_.ldata_.data();
+    auto         d     = copy.pdata_->template as<Ty>();
+    auto         ldata = data_store_.ldata_.data()->template as<Ty>();
 
     if constexpr (has_pod || std::is_trivially_copyable_v<Ty>)
     {
@@ -653,8 +653,8 @@ private:
     heap_storage copy;
     copy.capacity_ = cap;
     copy.pdata_    = acl::allocate<storage>(*this, cap * sizeof(storage), alignarg<storage>);
-    auto d         = (Ty*)copy.pdata_;
-    auto ldata     = (Ty*)data_store_.ldata_.data();
+    auto d         = copy.pdata_->template as<Ty>();
+    auto ldata     = data_store_.ldata_.data()->template as<Ty>();
 
     if constexpr (has_pod || std::is_trivially_copyable_v<Ty>)
       std::memcpy(d, ldata, sizeof(storage) * nb);

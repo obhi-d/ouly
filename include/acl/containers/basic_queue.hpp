@@ -3,6 +3,7 @@
 #include <acl/allocators/allocator.hpp>
 #include <acl/allocators/default_allocator.hpp>
 #include <acl/utils/utils.hpp>
+#include <cstddef>
 #include <optional>
 
 namespace acl
@@ -22,7 +23,7 @@ private:
   static constexpr auto pool_mod  = pool_size - 1;
   static constexpr bool has_pod   = detail::HasTrivialAttrib<Options>;
 
-  static constexpr size_t alignment = alignof(Ty) > alignof(Ty*) ? alignof(Ty) : alignof(Ty*);
+  static constexpr size_t alignment = std::max(alignof(std::max_align_t), alignof(Ty));
   using storage                     = detail::aligned_storage<sizeof(value_type), alignment>;
 
   struct deque_block
@@ -90,7 +91,7 @@ public:
       add_tail();
       back_ = 0;
     }
-    auto ptr = (Ty*)(&tail_->data[back_++]);
+    auto ptr = tail_->data[back_++].template as<Ty>();
     std::construct_at(ptr, std::forward<Args>(args)...);
     return *ptr;
   }
@@ -107,10 +108,10 @@ public:
   {
     ACL_ASSERT(!empty());
 
-    Ty ret = std::move(*(Ty*)(&head_->data[front_]));
+    Ty ret = std::move(*head_->data[front_].template as<Ty>());
 
     if constexpr (!std::is_trivially_destructible_v<Ty>)
-      std::destroy_at((Ty*)(&head_->data[front_]));
+      std::destroy_at(head_->data[front_].template as<Ty>());
 
     if (++front_ == pool_size)
     {
@@ -165,7 +166,7 @@ private:
       auto end = block == self.tail_ ? self.back_ : pool_size;
       for (; start < end; ++start)
       {
-        l(*(V*)(&block->data[start]));
+        l(*block->data[start].template as<V>());
       }
       start = 0;
       block = block->next;

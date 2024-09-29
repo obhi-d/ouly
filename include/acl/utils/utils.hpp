@@ -1,6 +1,7 @@
 #pragma once
 #include "config.hpp"
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <limits>
 #include <string_view>
@@ -44,7 +45,19 @@ struct is_tuple<std::tuple<T...>> : std::true_type
 template <std::size_t Len, std::size_t Align>
 struct aligned_storage
 {
-  alignas(Align) std::uint8_t data[Len];
+  alignas(Align) std::byte data[Len];
+
+  template <typename T>
+  T* as() noexcept
+  {
+    return std::launder(reinterpret_cast<T*>(data));
+  }
+
+  template <typename T>
+  T const* as() const noexcept
+  {
+    return std::launder(reinterpret_cast<T*>(data));
+  }
 };
 
 template <typename... Args>

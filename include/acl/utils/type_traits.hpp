@@ -179,6 +179,11 @@ struct disable_pool_tracking
   static constexpr bool disable_pool_tracking_v = true;
 };
 
+struct use_direct_mapping
+{
+  static constexpr bool use_direct_mapping_v = true;
+};
+
 // custom vector
 template <typename T>
 struct custom_vector
@@ -268,7 +273,7 @@ template <typename C, typename Ret, typename... Args, Ret (C::*M)(Args...)>
 struct member_function<M>
 {
   using class_type         = C;
-  using function_type      = Ret      (C::*)(Args...);
+  using function_type      = Ret (C::*)(Args...);
   using free_function_type = Ret (*)(Args...);
   using return_type        = Ret;
   using args               = std::tuple<Args...>;
@@ -287,7 +292,7 @@ template <typename C, typename Ret, typename... Args, Ret (C::*M)(Args...) const
 struct member_function<M>
 {
   using class_type         = const C;
-  using function_type      = Ret      (C::*)(Args...) const;
+  using function_type      = Ret (C::*)(Args...) const;
   using free_function_type = Ret (*)(Args...);
   using return_type        = Ret;
   using args               = std::tuple<Args...>;
@@ -307,9 +312,7 @@ namespace detail
 
 template <typename F, typename... Args>
 concept Callable = requires(F f, Args&&... args) {
-  {
-    f(std::forward<Args>(args)...)
-  };
+  { f(std::forward<Args>(args)...) };
 };
 
 // Concept to check if a type is a free function pointer
@@ -356,6 +359,9 @@ concept HasKeysIndexPoolSize = requires {
 
 template <typename Traits>
 concept HasSelfIndexValue = requires { typename Traits::self_index; };
+
+template <typename Traits>
+concept HasDirectMapping = Traits::use_direct_mapping_v;;
 
 template <typename Traits>
 concept HasSizeType = requires { typename Traits::size_type; };
