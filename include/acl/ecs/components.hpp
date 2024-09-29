@@ -57,8 +57,8 @@ private:
   {
     static constexpr uint32_t self_index_pool_size_v  = 4096;
     static constexpr bool     self_use_sparse_index_v = false;
-    static constexpr uint32_t keys_index_pool_size_v  = 4096;
-    static constexpr bool     keys_use_sparse_index_v = false;
+    static constexpr uint32_t keys_index_pool_size_v  = 1024;
+    static constexpr bool     keys_use_sparse_index_v = true;
   };
 
   struct self_index_traits_base

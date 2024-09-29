@@ -7,7 +7,6 @@
 #include <acl/utils/config.hpp>
 #include <acl/utils/type_traits.hpp>
 #include <acl/utils/utils.hpp>
-#include <memory>
 
 namespace acl::ecs
 {

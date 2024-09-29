@@ -9,7 +9,7 @@
 namespace acl::ecs
 {
 
-template <typename Ty, typename SizeType = uint32_t, uint32_t RevisionBits = 0>
+template <typename Ty, typename SizeType = uint32_t, uint32_t RevisionBits = 0, SizeType NullValue = (SizeType)0>
 class basic_entity
 {
 public:
@@ -19,7 +19,7 @@ public:
     std::conditional_t<RevisionBits == 0, void, std::conditional_t<(RevisionBits > 8), uint16_t, uint8_t>>;
 
   using size_type                             = SizeType;
-  static constexpr size_type null_v           = 0;
+  static constexpr size_type null_v           = NullValue;
   static constexpr size_type nb_revision_bits = RevisionBits;
   static constexpr size_type nb_usable_bits   = (sizeof(size_type) * 8 - nb_revision_bits);
   static constexpr size_type index_mask_v     = std::numeric_limits<size_type>::max() >> nb_revision_bits;
@@ -39,6 +39,11 @@ public:
   constexpr inline explicit operator size_type() const noexcept
   {
     return value();
+  }
+
+  constexpr inline explicit operator bool() const noexcept
+  {
+    return value() != null_v;
   }
 
   constexpr inline size_type revision() const noexcept
@@ -81,7 +86,7 @@ public:
   inline auto operator<=>(basic_entity const&) const noexcept = default;
 
 private:
-  size_type i_ = {};
+  size_type i_ = null_v;
 };
 
 template <typename T = std::true_type>
