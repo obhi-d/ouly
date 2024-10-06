@@ -3,7 +3,6 @@
 #include <acl/ecs/components.hpp>
 #include <acl/ecs/registry.hpp>
 #include <catch2/catch_all.hpp>
-#include <iostream>
 #include <string>
 #include <unordered_map>
 
@@ -268,6 +267,7 @@ TEST_CASE("rlink_object_table: fuzz", "[rlink_object_table][nontrivial]")
   container reg;
 
   uint32_t fixed_seed = Catch::rngSeed();
+  // fixed_seed          = 591856913;
 
   auto seed = xorshift32(fixed_seed);
   auto end  = seed % 200;

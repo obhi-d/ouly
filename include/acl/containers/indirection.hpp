@@ -107,8 +107,8 @@ protected:
     static constexpr uint32_t pool_size_v =
       std::conditional_t<detail::HasIndexPoolSize<Traits>, Traits, default_index_pool_size>::index_pool_size;
     static constexpr uint32_t null_v            = Traits::null_v;
-    static constexpr bool     no_fill_v         = true;
-    static constexpr bool     zero_out_memory_v = true;
+    static constexpr bool     no_fill_v         = Traits::null_v == 0;
+    static constexpr bool     zero_out_memory_v = Traits::null_v == 0;
   };
 
 public:

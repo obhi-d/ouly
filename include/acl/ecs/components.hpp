@@ -45,9 +45,10 @@ public:
                 "Custom vector must have same value_type as Ty");
 
 private:
-  static constexpr bool has_self_index     = detail::HasSelfIndexValue<options>;
-  static constexpr bool has_direct_mapping = detail::HasDirectMapping<options>;
-  static constexpr bool has_sparse_storage = detail::HasUseSparseAttrib<options>;
+  static constexpr bool      has_self_index     = detail::HasSelfIndexValue<options>;
+  static constexpr bool      has_direct_mapping = detail::HasDirectMapping<options>;
+  static constexpr bool      has_sparse_storage = detail::HasUseSparseAttrib<options>;
+  static constexpr size_type tombstone          = std::numeric_limits<uint32_t>::max();
 
   using this_type     = components<value_type, entity_type, options>;
   using optional_val  = acl::detail::optional_ref<reference>;
@@ -55,10 +56,10 @@ private:
 
   struct default_index_pool_size
   {
-    static constexpr uint32_t self_index_pool_size_v  = 4096;
-    static constexpr bool     self_use_sparse_index_v = false;
-    static constexpr uint32_t keys_index_pool_size_v  = 1024;
-    static constexpr bool     keys_use_sparse_index_v = true;
+    static constexpr uint32_t self_index_pool_size_v  = 1024;
+    static constexpr bool     self_use_sparse_index_v = true;
+    static constexpr uint32_t keys_index_pool_size_v  = 4096;
+    static constexpr bool     keys_use_sparse_index_v = false;
   };
 
   struct self_index_traits_base
@@ -89,8 +90,8 @@ private:
                                                                   default_index_pool_size>::keys_index_pool_size_v;
     static constexpr bool use_sparse_index_v = std::conditional_t<detail::HasKeysUseSparseIndexAttrib<options>, options,
                                                                   default_index_pool_size>::keys_use_sparse_index_v;
-    static constexpr uint32_t null_v         = std::numeric_limits<size_type>::max();
-    static constexpr bool     assume_pod_v   = true;
+    static constexpr size_type null_v        = tombstone;
+    static constexpr bool      assume_pod_v  = true;
   };
 
   using self_index =
@@ -257,7 +258,7 @@ public:
     else
     {
       auto k = keys_.get_if(point.get());
-      if (k == std::numeric_limits<size_type>::max())
+      if (k == tombstone)
       {
         return emplace_at(point, std::forward<value_type>(args));
       }
@@ -284,7 +285,7 @@ public:
     else
     {
       auto k = keys_.get_if(point.get());
-      if (k == std::numeric_limits<size_type>::max())
+      if (k == tombstone)
       {
         return emplace_at(point);
       }
@@ -585,7 +586,7 @@ private:
     {
       auto lnk       = l.get();
       auto item_id   = keys_.get(lnk);
-      keys_.get(lnk) = std::numeric_limits<size_type>::max();
+      keys_.get(lnk) = tombstone;
       reference lb   = values_[item_id];
       reference back = values_.back();
       if (&back != &lb)

@@ -6,10 +6,11 @@
       "displayName": "Linux Debug",
       "description": "Target the Windows Subsystem for Linux (WSL) or a remote Linux system.",
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
         "ASAN_ENABLED": "ON",
         "ACL_BUILD_TESTS": "ON"
       },
@@ -23,10 +24,11 @@
       "displayName": "Linux Release",
       "description": "Target the Windows Subsystem for Linux (WSL) or a remote Linux system.",
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-        "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
         "ACL_BUILD_TESTS": "ON"
       }
     },
@@ -35,9 +37,10 @@
       "displayName": "macOS Debug",
       "description": "Target a remote macOS system with Ninja",
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}"
       },
       "vendor": {
@@ -50,14 +53,15 @@
       "displayName": "Windows x64 Test",
       "description": "Target Windows with the Visual Studio development environment.",
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "binaryDir": "${sourceDir}/build/${presetName}",
       "architecture": {
         "value": "x64",
         "strategy": "external"
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
         "ASAN_ENABLED": "ON",
         "ACL_BUILD_TESTS": "ON"
       },
@@ -68,14 +72,15 @@
       "displayName": "Windows x64 Generate",
       "description": "Target Windows with the Visual Studio development environment.",
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "binaryDir": "${sourceDir}/build/${presetName}",
       "architecture": {
         "value": "x64",
         "strategy": "external"
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
         "ASAN_ENABLED": "ON",
         "ACL_BUILD_TESTS": "ON",
         "ACL_GENERATE_SCLI_PARSER": "ON",
@@ -89,14 +94,14 @@
       "displayName": "Windows x64 Debug",
       "description": "Target Windows with the Visual Studio development environment.",
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "binaryDir": "${sourceDir}/build/${presetName}",
       "architecture": {
         "value": "x64",
         "strategy": "external"
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
         "ASAN_ENABLED": "ON"
       },
       "vendor": { "microsoft.com/VisualStudioSettings/CMake/1.0": { "hostOS": [ "Windows" ] } }
@@ -106,14 +111,15 @@
       "displayName": "Windows x64 Release",
       "description": "Target Windows with the Visual Studio development environment.",
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "binaryDir": "${sourceDir}/build/${presetName}",
       "architecture": {
         "value": "x64",
         "strategy": "external"
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-        "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
         "ASAN_ENABLED": "OFF",
         "ACL_BUILD_TESTS": "ON"
       },

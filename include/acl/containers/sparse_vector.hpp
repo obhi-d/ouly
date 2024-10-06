@@ -543,7 +543,9 @@ public:
 
     ensure_block(block);
 
-    if constexpr (!has_zero_memory && !has_no_fill)
+    if constexpr (!has_zero_memory && !has_no_fill &&
+                  !((has_pod ||
+                     (std::is_trivially_copyable_v<value_type> && std::is_trivially_constructible_v<value_type>))))
     {
       for (size_type i = length_; i < idx; ++i)
       {
@@ -609,6 +611,9 @@ public:
 
   bool contains(size_type idx) const noexcept
   {
+    if (idx >= length_)
+      return false;
+
     auto block = (idx >> pool_mul);
     return block < items_.size() && items_[block] && !is_null(cast(items_[block][idx & pool_mod]));
   }

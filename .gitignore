@@ -38,3 +38,7 @@ CMakeLists.txt.user
 *.app
 /.vs
 /out
+/build
+/install
+/.cache
+
