@@ -76,6 +76,9 @@ TEST_CASE("sparse_vector: Erase sparse_vector element", "[sparse_vector][erase]"
   v1.emplace_at(2, 1, 2);
   REQUIRE(v1[2].a == 1);
   REQUIRE(v1[2].b == 2);
+  auto index = v1.index(2);
+  REQUIRE(v1.view().contains(index) == true);
+  REQUIRE(v1.view()[index].a == 1);
 }
 
 TEST_CASE("sparse_vector: Copy sparse_vector to another", "[sparse_vector][copy]")

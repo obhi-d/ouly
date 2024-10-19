@@ -147,6 +147,12 @@ public:
     clear();
   }
 
+  struct index_t
+  {
+    size_type block;
+    size_type item;
+  };
+
   sparse_vector& operator=(sparse_vector&& other) noexcept
   {
     clear();
@@ -659,6 +665,11 @@ public:
     return length_ == 0;
   }
 
+  static constexpr index_t index(size_type i)
+  {
+    return index_t{i >> pool_mul, i & pool_mod};
+  }
+
   template <typename VTy>
   class data_view
   {
@@ -666,11 +677,22 @@ public:
     data_view() noexcept = default;
     data_view(VTy* const* items_, size_type block_count_) noexcept : items_(items_), block_count_(block_count_) {}
 
+    bool contains(index_t i) const noexcept
+    {
+      return i.block < block_count_ && items_[i.block];
+    }
+
+    VTy& operator[](index_t i) const noexcept
+    {
+      assert(contains(i));
+      return items_[i.block][i.item];
+    }
+
     VTy& operator()(uint32_t i, VTy& default_value) const noexcept
     {
       auto block = (i >> pool_mul);
       if (block < block_count_)
-        return items_[block][i & pool_mod];
+        return items_[block] ? items_[block][i & pool_mod] : default_value;
       return default_value;
     }
 
@@ -679,7 +701,7 @@ public:
     {
       auto block = (i >> pool_mul);
       if (block < block_count_)
-        return items_[block][i & pool_mod];
+        return items_[block] ? items_[block][i & pool_mod] : default_value;
       return default_value;
     }
 
