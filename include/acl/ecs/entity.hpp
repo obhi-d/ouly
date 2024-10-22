@@ -23,8 +23,19 @@ public:
   static constexpr size_type nb_revision_bits = RevisionBits;
   static constexpr size_type nb_usable_bits   = (sizeof(size_type) * 8 - nb_revision_bits);
   static constexpr size_type index_mask_v     = std::numeric_limits<size_type>::max() >> nb_revision_bits;
-  static constexpr size_type revision_mask_v  = std::numeric_limits<size_type>::max() << nb_usable_bits;
-  static constexpr size_type version_inc_v    = 1 << nb_usable_bits;
+  static constexpr size_type revision_mask_v  = []() -> size_type
+  {
+    if constexpr (nb_revision_bits > 0)
+      return std::numeric_limits<size_type>::max() << nb_usable_bits;
+    return 0;
+  }();
+  static constexpr size_type version_inc_v = []() -> size_type
+  {
+    constexpr size_type one = 1;
+    if constexpr (nb_revision_bits > 0)
+      return one << nb_usable_bits;
+    return 0;
+  }();
 
   constexpr basic_entity() noexcept                      = default;
   constexpr basic_entity(basic_entity const& i) noexcept = default;
