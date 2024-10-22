@@ -120,8 +120,6 @@ class basic_delegate<SmallSize, Ret(Args...)>
                                 DecayedF>();
     detail::typed_static_assert<
       std::is_trivially_destructible_v<DecayedF> && "Capture type should be trivially destructible", DecayedF>();
-    detail::typed_static_assert<std::is_trivially_copyable_v<DecayedF> && "Capture type should be trivially copyable",
-                                DecayedF>();
 
     *(delegate_fn*)(buffer) = fn;
     new (buffer + sizeof(delegate_fn)) DecayedF(std::forward<F>(arg));
@@ -136,8 +134,6 @@ class basic_delegate<SmallSize, Ret(Args...)>
       sizeof(CompressedPair) <= BufferSize && "Function/Lamda object too large for inline storage.", DecayedP>();
     detail::typed_static_assert<std::is_trivially_destructible_v<DecayedP>,
                                 "Parameter type should be trivially destructible", DecayedP>();
-    detail::typed_static_assert<std::is_trivially_copyable_v<DecayedP> && "Parameter type should be trivially copyable",
-                                DecayedP>();
 
     auto pair                      = reinterpret_cast<compressed_pair<P>*>(buffer);
     *(delegate_fn*)(pair->functor) = fn;
@@ -155,12 +151,8 @@ class basic_delegate<SmallSize, Ret(Args...)>
     detail::typed_static_assert<condition && "Function/Lamda object too large for inline storage.", DecayedP>();
     detail::typed_static_assert<
       std::is_trivially_destructible_v<DecayedF> && "Capture type should be trivially destructible", DecayedF>();
-    detail::typed_static_assert<std::is_trivially_copyable_v<DecayedF> && "Capture type should be trivially copyable",
-                                DecayedF>();
     detail::typed_static_assert<
       std::is_trivially_destructible_v<DecayedP> && "Parameter type should be trivially destructible", DecayedP>();
-    detail::typed_static_assert<std::is_trivially_copyable_v<DecayedP> && "Parameter type should be trivially copyable",
-                                DecayedP>();
 
     auto pair                      = reinterpret_cast<compressed_pair<P>*>(buffer);
     *(delegate_fn*)(pair->functor) = fn;
