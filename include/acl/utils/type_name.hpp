@@ -41,7 +41,7 @@ constexpr std::uint32_t type_hash()
 template <bool B, typename T>
 inline constexpr void typed_static_assert()
 {
-  static_assert(B, ACL_FUNC_NAME ": assert failed");
+  static_assert(B, "static assert failed - check below ->");
 }
 
 } // namespace acl::detail
