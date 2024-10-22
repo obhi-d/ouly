@@ -38,4 +38,10 @@ constexpr std::uint32_t type_hash()
   return fnv1a_32(type_name<T>());
 }
 
+template <bool B, typename T>
+inline constexpr void typed_static_assert()
+{
+  static_assert(B, ACL_FUNC_NAME ": assert failed");
+}
+
 } // namespace acl::detail

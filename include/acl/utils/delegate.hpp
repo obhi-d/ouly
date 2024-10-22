@@ -116,9 +116,12 @@ class basic_delegate<SmallSize, Ret(Args...)>
   void construct(delegate_fn fn, F&& arg)
   {
     using DecayedF = std::decay_t<F>;
-    static_assert(sizeof(DecayedF) <= SmallSize, "Function/Lamda object too large for inline storage.");
-    static_assert(std::is_trivially_destructible_v<DecayedF>, "Capture type should be trivially destructible");
-    static_assert(std::is_trivially_copyable_v<DecayedF>, "Capture type should be trivially copyable");
+    detail::typed_static_assert<sizeof(DecayedF) <= SmallSize && "Function/Lamda object too large for inline storage.",
+                                DecayedF>();
+    detail::typed_static_assert<
+      std::is_trivially_destructible_v<DecayedF> && "Capture type should be trivially destructible", DecayedF>();
+    detail::typed_static_assert<std::is_trivially_copyable_v<DecayedF> && "Capture type should be trivially copyable",
+                                DecayedF>();
 
     *(delegate_fn*)(buffer) = fn;
     new (buffer + sizeof(delegate_fn)) DecayedF(std::forward<F>(arg));
@@ -129,9 +132,12 @@ class basic_delegate<SmallSize, Ret(Args...)>
   {
     using DecayedP       = std::decay_t<P>;
     using CompressedPair = compressed_pair<DecayedP>;
-    static_assert(sizeof(CompressedPair) <= BufferSize, "Function/Lamda object too large for inline storage.");
-    static_assert(std::is_trivially_destructible_v<DecayedP>, "Parameter type should be trivially destructible");
-    static_assert(std::is_trivially_copyable_v<DecayedP>, "Parameter type should be trivially copyable");
+    detail::typed_static_assert<
+      sizeof(CompressedPair) <= BufferSize && "Function/Lamda object too large for inline storage.", DecayedP>();
+    detail::typed_static_assert<std::is_trivially_destructible_v<DecayedP>,
+                                "Parameter type should be trivially destructible", DecayedP>();
+    detail::typed_static_assert<std::is_trivially_copyable_v<DecayedP> && "Parameter type should be trivially copyable",
+                                DecayedP>();
 
     auto pair                      = reinterpret_cast<compressed_pair<P>*>(buffer);
     *(delegate_fn*)(pair->functor) = fn;
@@ -141,16 +147,20 @@ class basic_delegate<SmallSize, Ret(Args...)>
   template <typename F, typename P>
   void pconstruct(delegate_fn fn, F&& arg, P&& p)
   {
-    using DecayedF       = std::decay_t<F>;
-    using DecayedP       = std::decay_t<P>;
-    using CompressedPair = compressed_pair<DecayedP>;
-    static_assert(sizeof(CompressedPair) <= BufferSize &&
-                    CompressedPair::SmallFunctorSize >= (sizeof(delegate_fn) + sizeof(DecayedF)),
-                  "Function/Lamda object too large for inline storage.");
-    static_assert(std::is_trivially_destructible_v<DecayedF>, "Capture type should be trivially destructible");
-    static_assert(std::is_trivially_copyable_v<DecayedF>, "Capture type should be trivially copyable");
-    static_assert(std::is_trivially_destructible_v<DecayedP>, "Parameter type should be trivially destructible");
-    static_assert(std::is_trivially_copyable_v<DecayedP>, "Parameter type should be trivially copyable");
+    using DecayedF           = std::decay_t<F>;
+    using DecayedP           = std::decay_t<P>;
+    using CompressedPair     = compressed_pair<DecayedP>;
+    constexpr bool condition = (sizeof(CompressedPair) <= BufferSize &&
+                                CompressedPair::SmallFunctorSize >= (sizeof(delegate_fn) + sizeof(DecayedF)));
+    detail::typed_static_assert<condition && "Function/Lamda object too large for inline storage.", DecayedP>();
+    detail::typed_static_assert<
+      std::is_trivially_destructible_v<DecayedF> && "Capture type should be trivially destructible", DecayedF>();
+    detail::typed_static_assert<std::is_trivially_copyable_v<DecayedF> && "Capture type should be trivially copyable",
+                                DecayedF>();
+    detail::typed_static_assert<
+      std::is_trivially_destructible_v<DecayedP> && "Parameter type should be trivially destructible", DecayedP>();
+    detail::typed_static_assert<std::is_trivially_copyable_v<DecayedP> && "Parameter type should be trivially copyable",
+                                DecayedP>();
 
     auto pair                      = reinterpret_cast<compressed_pair<P>*>(buffer);
     *(delegate_fn*)(pair->functor) = fn;
