@@ -31,7 +31,7 @@ public:
   using options         = Options;
   using value_type      = Ty;
   using vector_type     = std::conditional_t<detail::HasUseSparseAttrib<options>, sparse_vector<Ty, options>,
-                                             vector<Ty, detail::custom_allocator_t<options>>>;
+                                         vector<Ty, detail::custom_allocator_t<options>>>;
   using reference       = typename vector_type::reference;
   using const_reference = typename vector_type::const_reference;
   using pointer         = typename vector_type::pointer;
@@ -66,7 +66,7 @@ private:
   {
     using size_type                          = detail::choose_size_t<uint32_t, Options>;
     static constexpr size_type pool_size_v   = std::conditional_t<detail::HasSelfIndexPoolSize<options>, options,
-                                                                  default_index_pool_size>::self_index_pool_size_v;
+                                                                default_index_pool_size>::self_index_pool_size_v;
     static constexpr bool use_sparse_index_v = std::conditional_t<detail::HasSelfUseSparseIndexAttrib<options>, options,
                                                                   default_index_pool_size>::self_use_sparse_index_v;
     static constexpr size_type null_v        = std::numeric_limits<size_type>::max();
@@ -87,7 +87,7 @@ private:
   {
     using size_type                          = detail::choose_size_t<uint32_t, Options>;
     static constexpr uint32_t pool_size_v    = std::conditional_t<detail::HasKeysIndexPoolSize<options>, options,
-                                                                  default_index_pool_size>::keys_index_pool_size_v;
+                                                               default_index_pool_size>::keys_index_pool_size_v;
     static constexpr bool use_sparse_index_v = std::conditional_t<detail::HasKeysUseSparseIndexAttrib<options>, options,
                                                                   default_index_pool_size>::keys_use_sparse_index_v;
     static constexpr size_type null_v        = tombstone;
@@ -333,7 +333,7 @@ public:
 
   optional_cval find(entity_type lnk) const noexcept
   {
-    return optional_val(sfind(*this, lnk));
+    return optional_cval(sfind(*this, lnk));
   }
 
   /**
@@ -475,8 +475,8 @@ public:
 
 private:
   template <typename T>
-  static auto sfind(T&          cont,
-                    entity_type lnk) noexcept -> std::conditional_t<std::is_const_v<T>, value_type const*, value_type*>
+  static auto sfind(T& cont, entity_type lnk) noexcept
+    -> std::conditional_t<std::is_const_v<T>, value_type const*, value_type*>
   {
     if constexpr (has_direct_mapping)
     {
