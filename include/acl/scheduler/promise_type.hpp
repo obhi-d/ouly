@@ -4,6 +4,7 @@
 #include "awaiters.hpp"
 #include <array>
 #include <concepts>
+#include <cstddef>
 #include <semaphore>
 
 namespace acl::detail
@@ -43,17 +44,17 @@ public:
   template <std::convertible_to<Ty> V>
   void return_value(V&& value) noexcept(std::is_nothrow_constructible_v<Ty, V&&>)
   {
-    ::new (static_cast<void*>(std::addressof(data))) Ty(std::forward<V>(value));
+    ::new (data) Ty(std::forward<V>(value));
   }
 
   Ty& result() & noexcept
   {
-    return reinterpret_cast<Ty&>(data);
+    return *reinterpret_cast<Ty*>(data);
   }
 
   rvalue_type result() &&
   {
-    return std::move(reinterpret_cast<Ty&>(data));
+    return std::move(*reinterpret_cast<Ty*>(data));
   }
 
   task_class<Ty> get_return_object() noexcept
@@ -62,7 +63,7 @@ public:
   }
 
 private:
-  alignas(alignof(Ty)) std::array<uint8_t, sizeof(Ty)> data;
+  alignas(alignof(Ty)) std::byte data[sizeof(Ty)];
 };
 
 template <template <typename R> class task_class, typename Ty>
