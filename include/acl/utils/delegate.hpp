@@ -32,7 +32,7 @@ class basic_delegate<SmallSize, Ret(Args...)>
 
   // Small object optimization buffer
 
-  alignas(std::max_align_t) std::byte buffer[BufferSize];
+  alignas(std::max_align_t) std::byte buffer[BufferSize] = {};
 
   template <typename P>
   struct compressed_pair
