@@ -55,8 +55,9 @@ public:
   template <typename... Args>
   inline void submit(worker_id src, workgroup_id group, task_delegate::fnptr callable, Args&&... args) noexcept
   {
-    submit(src, group,
-           detail::work_item::pbind(callable, acl::tuple<std::decay_t<Args>...>{std::forward<Args>(args)...}, group));
+    submit(
+      src, group,
+      detail::work_item::pbind(callable, std::make_tuple<std::decay_t<Args>...>(std::forward<Args>(args)...), group));
   }
 
   template <CoroutineTask C>
