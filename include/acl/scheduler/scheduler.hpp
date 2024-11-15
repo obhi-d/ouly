@@ -114,7 +114,7 @@ public:
    * @brief Begin scheduler execution, group creation is frozen after this call.
    * @param entry An entry function can be provided that will be executed on all worker threads upon entry.
    */
-  ACL_API void begin_execution(scheduler_worker_entry&& entry = {});
+  ACL_API void begin_execution(scheduler_worker_entry&& entry = {}, void* user_context = nullptr);
   /**
    * @brief Wait for threads to finish executing and end scheduler execution. Scheduler execution can be restarted
    * using begin_execution. Unlocks scheduler and makes it mutable.

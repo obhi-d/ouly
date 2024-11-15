@@ -37,9 +37,7 @@ template <typename L, typename It>
 concept RangeExcuter = requires(L l, It range, worker_context const& wc) { l(range, range, wc); };
 template <typename I>
 concept HasIteratorDiff = requires(I s) {
-  {
-    s.size()
-  } -> std::integral;
+  { s.size() } -> std::integral;
 };
 
 template <typename T>
@@ -77,25 +75,19 @@ struct it_size_type<T>
 // Concept to check if a type has 'fixed_batch_size'
 template <typename T>
 concept HasFixedBatchSize = requires {
-  {
-    T::fixed_batch_size
-  } -> std::convertible_to<uint32_t>;
+  { T::fixed_batch_size } -> std::convertible_to<uint32_t>;
 };
 
 // Concept to check if a type has 'batches_per_worker'
 template <typename T>
 concept HasBatchesPerWorker = requires {
-  {
-    T::batches_per_worker
-  } -> std::convertible_to<uint32_t>;
+  { T::batches_per_worker } -> std::convertible_to<uint32_t>;
 };
 
 // Concept to check if a type has 'parallel_execution_threshold'
 template <typename T>
 concept HasParallelExecutionThreshold = requires {
-  {
-    T::parallel_execution_threshold
-  } -> std::convertible_to<uint32_t>;
+  { T::parallel_execution_threshold } -> std::convertible_to<uint32_t>;
 };
 
 template <typename T>
@@ -194,7 +186,12 @@ void parallel_for(L&& lambda, FwIt range, worker_context const& this_context, Ta
     else
     {
       for (auto it = std::begin(range), end = std::end(range); it != end; ++it)
-        lambda(*it, this_context);
+      {
+        if constexpr (std::is_integral_v<std::decay_t<decltype(it)>>)
+          lambda(it, this_context);
+        else
+          lambda(*it, this_context);
+      }
     }
   }
   else
@@ -214,7 +211,10 @@ void parallel_for(L&& lambda, FwIt range, worker_context const& this_context, Ta
                  }
                  else
                  {
-                   instance->lambda_instance(*(instance->first + start), wc);
+                   if constexpr (std::is_integral_v<std::decay_t<decltype(instance->first)>>)
+                     instance->lambda_instance((instance->first + start), wc);
+                   else
+                     instance->lambda_instance(*(instance->first + start), wc);
                  }
                  instance->counter.count_down();
                });
@@ -229,7 +229,12 @@ void parallel_for(L&& lambda, FwIt range, worker_context const& this_context, Ta
       else
       {
         for (auto it = std::begin(range) + begin, end = std::begin(range) + next; it != end; ++it)
-          lambda(*it, this_context);
+        {
+          if constexpr (std::is_integral_v<std::decay_t<decltype(it)>>)
+            lambda(it, this_context);
+          else
+            lambda(*it, this_context);
+        }
       }
     }
 

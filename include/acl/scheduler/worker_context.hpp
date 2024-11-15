@@ -88,8 +88,9 @@ class worker_context
 {
 public:
   worker_context() noexcept = default;
-  worker_context(scheduler& s, worker_id id, workgroup_id group, uint32_t mask, uint32_t offset) noexcept
-      : owner(&s), index(id), group_id(group), group_mask(mask), group_offset(offset)
+  worker_context(scheduler& s, void* user_context, worker_id id, workgroup_id group, uint32_t mask,
+                 uint32_t offset) noexcept
+      : owner(&s), user_context(user_context), index(id), group_id(group), group_mask(mask), group_offset(offset)
   {}
 
   /**
@@ -124,6 +125,12 @@ public:
     return group_mask & (1u << group.get_index());
   }
 
+  template <typename T>
+  T* get_user_context() const noexcept
+  {
+    return reinterpret_cast<T*>(user_context);
+  }
+
   /**
    * @brief returns the context on the current thread for a given worker group
    */
@@ -132,7 +139,8 @@ public:
   inline auto operator<=>(worker_context const&) const noexcept = default;
 
 private:
-  scheduler*   owner = nullptr;
+  scheduler*   owner        = nullptr;
+  void*        user_context = nullptr;
   worker_id    index;
   workgroup_id group_id;
   uint32_t     group_mask   = 0;

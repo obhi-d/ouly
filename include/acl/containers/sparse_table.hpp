@@ -98,10 +98,10 @@ public:
     items_                  = std::move(other.items_);
     self_                   = std::move(other.self_);
     length_                 = other.length_;
-    extend_                 = other.extend_;
+    extents_                = other.extents_;
     free_slot_              = other.free_slot_;
     other.length_           = 0;
-    other.extend_           = 1;
+    other.extents_          = 1;
     other.free_slot_        = null_v;
     return *this;
   }
@@ -117,7 +117,7 @@ public:
     for (auto& data : items_)
       data = acl::allocate<storage>(*this, sizeof(storage) * pool_size);
 
-    for (size_type first = 1; first != other.extend_; ++first)
+    for (size_type first = 1; first != other.extents_; ++first)
     {
       auto const& src = reinterpret_cast<value_type const&>(other.item_at_idx(first));
       auto&       dst = reinterpret_cast<value_type&>(item_at_idx(first));
@@ -129,7 +129,7 @@ public:
         set_ref_at_idx(first, ref);
     }
     self_      = other.self_;
-    extend_    = other.extend_;
+    extents_   = other.extents_;
     length_    = other.length_;
     free_slot_ = other.free_slot_;
     return *this;
@@ -206,7 +206,7 @@ public:
    */
   size_type range() const noexcept
   {
-    return extend_;
+    return extents_;
   }
 
   /**
@@ -215,7 +215,7 @@ public:
    */
   size_type active_pools() const noexcept
   {
-    return extend_ >> pool_mul;
+    return extents_ >> pool_mul;
   }
 
   /**
@@ -226,12 +226,12 @@ public:
   auto get_pool(size_type i) const noexcept -> std::tuple<value_type const*, size_type>
   {
     return {reinterpret_cast<value_type const*>(items_[i]),
-            items_[i] == items_.back() ? extend_ & pool_mod : pool_size};
+            items_[i] == items_.back() ? extents_ & pool_mod : pool_size};
   }
 
   auto get_pool(size_type i) noexcept -> std::tuple<value_type*, size_type>
   {
-    return {reinterpret_cast<value_type*>(items_[i]), items_[i] == items_.back() ? extend_ & pool_mod : pool_size};
+    return {reinterpret_cast<value_type*>(items_[i]), items_[i] == items_.back() ? extents_ & pool_mod : pool_size};
   }
 
   /**
@@ -290,7 +290,7 @@ public:
    */
   void shrink_to_fit() noexcept
   {
-    auto block = (extend_ + pool_size - 1) >> pool_mul;
+    auto block = (extents_ + pool_size - 1) >> pool_mul;
     for (auto i = block, end = static_cast<size_type>(items_.size()); i < end; ++i)
       acl::deallocate(*this, items_[i], sizeof(storage) * pool_size);
     items_.resize(block);
@@ -309,7 +309,7 @@ public:
         {
           std::destroy_at(std::addressof(v));
         });
-    extend_    = 1;
+    extents_   = 1;
     length_    = 0;
     free_slot_ = null_v;
     self_.clear();
@@ -345,7 +345,7 @@ public:
   inline value_type* get_if(link l) noexcept
   {
     auto idx = detail::index_val(l.value());
-    if (idx < extend_)
+    if (idx < extents_)
     {
       if constexpr (has_self_index)
       {
@@ -367,7 +367,7 @@ public:
   {
     ACL_ASSERT(is_valid_ref(l.value()));
     auto idx = detail::index_val(l.value());
-    return idx < extend_ && (l.value() == get_ref_at_idx(idx));
+    return idx < extents_ && (l.value() == get_ref_at_idx(idx));
   }
 
   bool empty() const noexcept
@@ -449,11 +449,11 @@ private:
     size_type lnk;
     if (free_slot_ == null_v)
     {
-      auto block = extend_ >> pool_mul;
+      auto block = extents_ >> pool_mul;
       if (block >= items_.size())
         items_.emplace_back(acl::allocate<storage>(*this, sizeof(storage) * pool_size));
 
-      lnk = extend_++;
+      lnk = extents_++;
     }
     else
     {
@@ -470,7 +470,7 @@ private:
   template <typename Lambda, typename Cast>
   void for_each_l(Lambda&& lambda) noexcept
   {
-    for_each_l<Lambda, Cast>(1, extend_, std::forward<Lambda>(lambda));
+    for_each_l<Lambda, Cast>(1, extents_, std::forward<Lambda>(lambda));
   }
 
   template <typename Lambda, typename Cast>
@@ -499,7 +499,7 @@ private:
   podvector<storage*, allocator_type> items_;
   self_index                          self_;
   size_type                           length_    = 0;
-  size_type                           extend_    = 1;
+  size_type                           extents_   = 1;
   size_type                           free_slot_ = null_v;
 };
 

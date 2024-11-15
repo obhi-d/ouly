@@ -108,6 +108,11 @@ public:
       return static_cast<std::uint32_t>(pool.size() - free_pool.size());
   }
 
+  uint32_t capacity() const
+  {
+    return static_cast<uint32_t>(pool.size());
+  }
+
 private:
   vector   pool;
   freepool free_pool;

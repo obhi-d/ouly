@@ -133,7 +133,7 @@ void scheduler::wake_up(worker_id thread) noexcept
   }
 }
 
-void scheduler::begin_execution(scheduler_worker_entry&& entry)
+void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_context)
 {
   local_work   = std::make_unique<detail::work_item[]>(worker_count);
   workers      = std::make_unique<detail::worker[]>(worker_count);
@@ -175,8 +175,8 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry)
 
     worker.contexts = std::make_unique<worker_context[]>(wgroup_count);
     for (uint32_t g = 0; g < wgroup_count; ++g)
-      worker.contexts[g] =
-        worker_context(*this, worker_id(w), workgroup_id(g), group_ranges[w].mask, w - workgroups[g].start_thread_idx);
+      worker.contexts[g] = worker_context(*this, user_context, worker_id(w), workgroup_id(g), group_ranges[w].mask,
+                                          w - workgroups[g].start_thread_idx);
     wake_status[w].store(true);
   }
 
