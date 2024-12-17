@@ -81,7 +81,7 @@ TEST_CASE("Validate malloc")
   REQUIRE((reinterpret_cast<uintptr_t>(data) & 15) == 0);
   acl::detail::aligned_free(data);
 
-  data = (char*)acl::detail::aligned_zmalloc(16, 16);
+  data = (char*)acl::detail::aligned_zalloc(16, 16);
   REQUIRE((reinterpret_cast<uintptr_t>(data) & 15) == 0);
   for (int i = 0; i < 16; ++i)
     REQUIRE(data[i] == 0);

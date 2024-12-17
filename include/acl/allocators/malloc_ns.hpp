@@ -34,7 +34,7 @@ inline void* aligned_alloc(std::size_t alignment, std::size_t size)
 #endif
 }
 
-inline void* aligned_zmalloc(std::size_t alignment, std::size_t size)
+inline void* aligned_zalloc(std::size_t alignment, std::size_t size)
 {
   auto z = aligned_alloc(alignment, size);
   std::memset(z, 0, size);

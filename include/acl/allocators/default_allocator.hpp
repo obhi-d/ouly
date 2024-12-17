@@ -141,7 +141,7 @@ struct ACL_EMPTY_BASES default_allocator
   [[nodiscard]] inline static address zero_allocate(size_type i_sz, Alignment i_alignment = {})
   {
     return tracker::when_allocate(
-      i_alignment > alignof(std::max_align_t) ? acl::aligned_zmalloc(i_alignment, i_sz) : acl::zmalloc(i_sz), i_sz);
+      i_alignment > alignof(std::max_align_t) ? acl::aligned_zalloc(i_alignment, i_sz) : acl::zmalloc(i_sz), i_sz);
   }
 
   template <typename Alignment = alignment<align>>
