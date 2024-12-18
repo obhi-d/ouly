@@ -22,12 +22,12 @@ public:
 
   inline constexpr explicit operator Int() const noexcept
   {
-    return value_();
+    return value_;
   }
 
   inline constexpr explicit operator bool() const noexcept
   {
-    return value_() != null;
+    return value_ != null;
   }
 
   inline constexpr tagged_int& operator=(Int value_) noexcept
