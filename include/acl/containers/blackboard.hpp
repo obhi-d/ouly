@@ -17,8 +17,6 @@
 
 namespace acl
 {
-template <typename T>
-concept InventoryDataType = std::is_trivial_v<T> || std::is_move_constructible_v<T>;
 
 struct blackboard_offset
 {
@@ -160,27 +158,27 @@ public:
     current = nullptr;
   }
 
-  template <InventoryDataType T>
+  template <typename T>
   T const& get() const noexcept
     requires(is_type_indexed)
   {
     return get<T>(std::type_index(typeid(T)));
   }
 
-  template <InventoryDataType T>
+  template <typename T>
   T& get() noexcept
     requires(is_type_indexed)
   {
     return get<T>(std::type_index(typeid(T)));
   }
 
-  template <InventoryDataType T>
+  template <typename T>
   T const& get(key_type v) const noexcept
   {
     return const_cast<blackboard&>(*this).get<T>(v);
   }
 
-  template <InventoryDataType T>
+  template <typename T>
   T& get(key_type k) noexcept
   {
     auto it = lookup.find(k);
@@ -188,27 +186,27 @@ public:
     return *reinterpret_cast<T*>(it->second.data);
   }
 
-  template <InventoryDataType T>
+  template <typename T>
   T const* get_if() const noexcept
     requires(is_type_indexed)
   {
     return get_if<T>(std::type_index(typeid(T)));
   }
 
-  template <InventoryDataType T>
+  template <typename T>
   T* get_if() noexcept
     requires(is_type_indexed)
   {
     return get_if<T>(std::type_index(typeid(T)));
   }
 
-  template <InventoryDataType T>
+  template <typename T>
   T const* get_if(key_type v) const noexcept
   {
     return const_cast<blackboard&>(*this).get_if<T>(v);
   }
 
-  template <InventoryDataType T>
+  template <typename T>
   T* get_if(key_type k) noexcept
   {
     auto it = lookup.find(k);
@@ -220,14 +218,14 @@ public:
   /**
    *
    */
-  template <InventoryDataType T, typename... Args>
+  template <typename T, typename... Args>
   auto emplace(Args&&... args) noexcept -> T&
     requires(is_type_indexed)
   {
     return emplace<T>(std::type_index(typeid(T)), std::forward<Args>(args)...);
   }
 
-  template <InventoryDataType T, typename... Args>
+  template <typename T, typename... Args>
   auto emplace(key_type k, Args&&... args) noexcept -> T&
   {
     auto& lookup_ent = lookup[k];
@@ -241,7 +239,7 @@ public:
     return *reinterpret_cast<T*>(lookup_ent.data);
   }
 
-  template <InventoryDataType T>
+  template <typename T>
   void erase() noexcept
     requires(is_type_indexed)
   {
@@ -260,7 +258,7 @@ public:
     }
   }
 
-  template <InventoryDataType T>
+  template <typename T>
   void contains() const noexcept
     requires(is_type_indexed)
   {
