@@ -32,8 +32,8 @@
 
 
 /**
- ** \file C:/repos/acl/src/acl/dsl/parse_impl.hpp
- ** Define the acl::parser class.
+ ** \file /home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.hpp
+ ** Define the acl::yaml::parser class.
  */
 
 // C++ LALR(1) parser skeleton written by Akim Demaille.
@@ -42,22 +42,22 @@
 // especially those whose name start with YY_ or yy_.  They are
 // private implementation details that can be changed or removed.
 
-#ifndef YY_SCLI_C_REPOS_ACL_SRC_ACL_DSL_PARSE_IMPL_HPP_INCLUDED
-# define YY_SCLI_C_REPOS_ACL_SRC_ACL_DSL_PARSE_IMPL_HPP_INCLUDED
+#ifndef YY_YAML_HOME_OBHI_CODE_LXE_THIRD_PARTY_ACL_SRC_ACL_DSL_YAML_PARSER_IMPL_HPP_INCLUDED
+# define YY_YAML_HOME_OBHI_CODE_LXE_THIRD_PARTY_ACL_SRC_ACL_DSL_YAML_PARSER_IMPL_HPP_INCLUDED
 // "%code requires" blocks.
-#line 16 "C:/repos/acl/src/acl/dsl/scli.yy"
+#line 16 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
 
-#include "parse_impl.hpp"
-#include <acl/dsl/scli.hpp>
+#include "yaml_parser_impl.hpp"
+#include <acl/dsl/yaml.hpp>
 
 
 #ifndef YY_NULLPTR
 #  define YY_NULLPTR nullptr
 #endif
-#define YY_DECL extern acl::scli_parser::symbol_type scli_lex(acl::scli& scli, void* yyscanner)
+#define YY_DECL extern acl::yaml::parser::symbol_type yaml_lex(acl::yaml::istream& cyaml, void* yyscanner)
 
 
-#line 61 "C:/repos/acl/src/acl/dsl/parse_impl.hpp"
+#line 61 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.hpp"
 
 # include <cassert>
 # include <cstdlib> // std::abort
@@ -104,9 +104,9 @@
 #endif
 
 #include <typeinfo>
-#ifndef SCLI__ASSERT
+#ifndef YAML__ASSERT
 # include <cassert>
-# define SCLI__ASSERT assert
+# define YAML__ASSERT assert
 #endif
 
 
@@ -192,34 +192,34 @@
 # endif
 
 /* Debug traces.  */
-#ifndef SCLI_DEBUG
+#ifndef YAML_DEBUG
 # if defined YYDEBUG
 #if YYDEBUG
-#   define SCLI_DEBUG 1
+#   define YAML_DEBUG 1
 #  else
-#   define SCLI_DEBUG 0
+#   define YAML_DEBUG 0
 #  endif
 # else /* ! defined YYDEBUG */
-#  define SCLI_DEBUG 1
+#  define YAML_DEBUG 1
 # endif /* ! defined YYDEBUG */
-#endif  /* ! defined SCLI_DEBUG */
+#endif  /* ! defined YAML_DEBUG */
 
-#line 7 "C:/repos/acl/src/acl/dsl/scli.yy"
-namespace acl {
-#line 210 "C:/repos/acl/src/acl/dsl/parse_impl.hpp"
+#line 7 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+namespace acl { namespace yaml {
+#line 210 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.hpp"
 
 
 
 
   /// A Bison parser.
-  class scli_parser
+  class parser
   {
   public:
-#ifdef SCLI_STYPE
+#ifdef YAML_STYPE
 # ifdef __GNUC__
-#  pragma GCC message "bison: do not #define SCLI_STYPE in C++, use %define api.value.type"
+#  pragma GCC message "bison: do not #define YAML_STYPE in C++, use %define api.value.type"
 # endif
-    typedef SCLI_STYPE value_type;
+    typedef YAML_STYPE value_type;
 #else
   /// A buffer to store and retrieve objects.
   ///
@@ -243,7 +243,7 @@ namespace acl {
     value_type (YY_RVREF (T) t)
       : yytypeid_ (&typeid (T))
     {
-      SCLI__ASSERT (sizeof (T) <= size);
+      YAML__ASSERT (sizeof (T) <= size);
       new (yyas_<T> ()) T (YY_MOVE (t));
     }
 
@@ -257,7 +257,7 @@ namespace acl {
     /// Destruction, allowed only if empty.
     ~value_type () YY_NOEXCEPT
     {
-      SCLI__ASSERT (!yytypeid_);
+      YAML__ASSERT (!yytypeid_);
     }
 
 # if 201103L <= YY_CPLUSPLUS
@@ -266,8 +266,8 @@ namespace acl {
     T&
     emplace (U&&... u)
     {
-      SCLI__ASSERT (!yytypeid_);
-      SCLI__ASSERT (sizeof (T) <= size);
+      YAML__ASSERT (!yytypeid_);
+      YAML__ASSERT (sizeof (T) <= size);
       yytypeid_ = & typeid (T);
       return *new (yyas_<T> ()) T (std::forward <U>(u)...);
     }
@@ -277,8 +277,8 @@ namespace acl {
     T&
     emplace ()
     {
-      SCLI__ASSERT (!yytypeid_);
-      SCLI__ASSERT (sizeof (T) <= size);
+      YAML__ASSERT (!yytypeid_);
+      YAML__ASSERT (sizeof (T) <= size);
       yytypeid_ = & typeid (T);
       return *new (yyas_<T> ()) T ();
     }
@@ -288,8 +288,8 @@ namespace acl {
     T&
     emplace (const T& t)
     {
-      SCLI__ASSERT (!yytypeid_);
-      SCLI__ASSERT (sizeof (T) <= size);
+      YAML__ASSERT (!yytypeid_);
+      YAML__ASSERT (sizeof (T) <= size);
       yytypeid_ = & typeid (T);
       return *new (yyas_<T> ()) T (t);
     }
@@ -318,9 +318,9 @@ namespace acl {
     T&
     as () YY_NOEXCEPT
     {
-      SCLI__ASSERT (yytypeid_);
-      SCLI__ASSERT (*yytypeid_ == typeid (T));
-      SCLI__ASSERT (sizeof (T) <= size);
+      YAML__ASSERT (yytypeid_);
+      YAML__ASSERT (*yytypeid_ == typeid (T));
+      YAML__ASSERT (sizeof (T) <= size);
       return *yyas_<T> ();
     }
 
@@ -329,9 +329,9 @@ namespace acl {
     const T&
     as () const YY_NOEXCEPT
     {
-      SCLI__ASSERT (yytypeid_);
-      SCLI__ASSERT (*yytypeid_ == typeid (T));
-      SCLI__ASSERT (sizeof (T) <= size);
+      YAML__ASSERT (yytypeid_);
+      YAML__ASSERT (*yytypeid_ == typeid (T));
+      YAML__ASSERT (sizeof (T) <= size);
       return *yyas_<T> ();
     }
 
@@ -347,8 +347,8 @@ namespace acl {
     void
     swap (self_type& that) YY_NOEXCEPT
     {
-      SCLI__ASSERT (yytypeid_);
-      SCLI__ASSERT (*yytypeid_ == *that.yytypeid_);
+      YAML__ASSERT (yytypeid_);
+      YAML__ASSERT (*yytypeid_ == *that.yytypeid_);
       std::swap (as<T> (), that.as<T> ());
     }
 
@@ -425,14 +425,11 @@ namespace acl {
     /// An auxiliary type to compute the largest semantic type.
     union union_type
     {
-      // STRING_LITERAL
-      // TEXT_CONTENTS
-      char dummy1[sizeof (acl::text_content)];
-
-      // REGION_ID
-      // TEXT_REGION_ID
       // STRING
-      char dummy2[sizeof (std::string_view)];
+      // key
+      // array_value
+      // value
+      char dummy1[sizeof (acl::yaml::string_slice)];
     };
 
     /// The size of the largest semantic type.
@@ -456,7 +453,7 @@ namespace acl {
     typedef value_type semantic_type;
 
     /// Symbol locations.
-    typedef acl::scli::location location_type;
+    typedef acl::yaml::location location_type;
 
     /// Syntax errors thrown from user actions.
     struct syntax_error : std::runtime_error
@@ -481,26 +478,19 @@ namespace acl {
     {
       enum token_kind_type
       {
-        SCLI_EMPTY = -2,
+        YAML_EMPTY = -2,
     END = 0,                       // "end of file"
-    SCLI_error = 256,              // error
-    SCLI_UNDEF = 257,              // "invalid token"
-    SEMICOLON = 258,               // ";"
-    LBRACES = 259,                 // "{"
-    RBRACES = 260,                 // "}"
-    LABRACKET = 261,               // "<"
-    RABRACKET = 262,               // ">"
-    COMMA = 263,                   // ","
-    LPARENTHESES = 264,            // "("
-    RPARENTHESES = 265,            // ")"
-    ASSIGN = 266,                  // "="
-    COLON = 267,                   // ":"
-    IMPORT = 268,                  // "import"
-    REGION_ID = 269,               // REGION_ID
-    TEXT_REGION_ID = 270,          // TEXT_REGION_ID
-    STRING = 271,                  // STRING
-    STRING_LITERAL = 272,          // STRING_LITERAL
-    TEXT_CONTENTS = 273            // TEXT_CONTENTS
+    YAML_error = 256,              // error
+    YAML_UNDEF = 257,              // "invalid token"
+    STRING = 258,                  // STRING
+    COLON = 259,                   // COLON
+    DASH = 260,                    // DASH
+    INDENT = 261,                  // INDENT
+    DEDENT = 262,                  // DEDENT
+    NEWLINE = 263,                 // NEWLINE
+    LBRACKET = 264,                // LBRACKET
+    RBRACKET = 265,                // RBRACKET
+    COMMA = 266                    // COMMA
       };
       /// Backward compatibility alias (Bison 3.6).
       typedef token_kind_type yytokentype;
@@ -517,34 +507,39 @@ namespace acl {
     {
       enum symbol_kind_type
       {
-        YYNTOKENS = 19, ///< Number of tokens.
+        YYNTOKENS = 12, ///< Number of tokens.
         S_YYEMPTY = -2,
         S_YYEOF = 0,                             // "end of file"
         S_YYerror = 1,                           // error
         S_YYUNDEF = 2,                           // "invalid token"
-        S_SEMICOLON = 3,                         // ";"
-        S_LBRACES = 4,                           // "{"
-        S_RBRACES = 5,                           // "}"
-        S_LABRACKET = 6,                         // "<"
-        S_RABRACKET = 7,                         // ">"
-        S_COMMA = 8,                             // ","
-        S_LPARENTHESES = 9,                      // "("
-        S_RPARENTHESES = 10,                     // ")"
-        S_ASSIGN = 11,                           // "="
-        S_COLON = 12,                            // ":"
-        S_IMPORT = 13,                           // "import"
-        S_REGION_ID = 14,                        // REGION_ID
-        S_TEXT_REGION_ID = 15,                   // TEXT_REGION_ID
-        S_STRING = 16,                           // STRING
-        S_STRING_LITERAL = 17,                   // STRING_LITERAL
-        S_TEXT_CONTENTS = 18,                    // TEXT_CONTENTS
-        S_YYACCEPT = 19,                         // $accept
-        S_script = 20,                           // script
-        S_statement = 21,                        // statement
-        S_commandname = 22,                      // commandname
-        S_commanddecl = 23,                      // commanddecl
-        S_24_parameters_1_N = 24,                // parameters.1.N
-        S_parameter = 25                         // parameter
+        S_STRING = 3,                            // STRING
+        S_COLON = 4,                             // COLON
+        S_DASH = 5,                              // DASH
+        S_INDENT = 6,                            // INDENT
+        S_DEDENT = 7,                            // DEDENT
+        S_NEWLINE = 8,                           // NEWLINE
+        S_LBRACKET = 9,                          // LBRACKET
+        S_RBRACKET = 10,                         // RBRACKET
+        S_COMMA = 11,                            // COMMA
+        S_YYACCEPT = 12,                         // $accept
+        S_document = 13,                         // document
+        S_line = 14,                             // line
+        S_mapping = 15,                          // mapping
+        S_key = 16,                              // key
+        S_array = 17,                            // array
+        S_18_1 = 18,                             // $@1
+        S_array_values = 19,                     // array_values
+        S_array_value = 20,                      // array_value
+        S_nested_mappings = 21,                  // nested_mappings
+        S_22_2 = 22,                             // $@2
+        S_mappings = 23,                         // mappings
+        S_nested_sequence = 24,                  // nested_sequence
+        S_25_3 = 25,                             // $@3
+        S_sequence = 26,                         // sequence
+        S_sequence_item = 27,                    // sequence_item
+        S_nested_mapping_in_sequence = 28,       // nested_mapping_in_sequence
+        S_29_4 = 29,                             // $@4
+        S_value = 30                             // value
       };
     };
 
@@ -581,15 +576,11 @@ namespace acl {
       {
         switch (this->kind ())
     {
-      case symbol_kind::S_STRING_LITERAL: // STRING_LITERAL
-      case symbol_kind::S_TEXT_CONTENTS: // TEXT_CONTENTS
-        value.move< acl::text_content > (std::move (that.value));
-        break;
-
-      case symbol_kind::S_REGION_ID: // REGION_ID
-      case symbol_kind::S_TEXT_REGION_ID: // TEXT_REGION_ID
       case symbol_kind::S_STRING: // STRING
-        value.move< std::string_view > (std::move (that.value));
+      case symbol_kind::S_key: // key
+      case symbol_kind::S_array_value: // array_value
+      case symbol_kind::S_value: // value
+        value.move< acl::yaml::string_slice > (std::move (that.value));
         break;
 
       default:
@@ -616,27 +607,13 @@ namespace acl {
 #endif
 
 #if 201103L <= YY_CPLUSPLUS
-      basic_symbol (typename Base::kind_type t, acl::text_content&& v, location_type&& l)
+      basic_symbol (typename Base::kind_type t, acl::yaml::string_slice&& v, location_type&& l)
         : Base (t)
         , value (std::move (v))
         , location (std::move (l))
       {}
 #else
-      basic_symbol (typename Base::kind_type t, const acl::text_content& v, const location_type& l)
-        : Base (t)
-        , value (v)
-        , location (l)
-      {}
-#endif
-
-#if 201103L <= YY_CPLUSPLUS
-      basic_symbol (typename Base::kind_type t, std::string_view&& v, location_type&& l)
-        : Base (t)
-        , value (std::move (v))
-        , location (std::move (l))
-      {}
-#else
-      basic_symbol (typename Base::kind_type t, const std::string_view& v, const location_type& l)
+      basic_symbol (typename Base::kind_type t, const acl::yaml::string_slice& v, const location_type& l)
         : Base (t)
         , value (v)
         , location (l)
@@ -667,15 +644,11 @@ namespace acl {
         // Value type destructor.
 switch (yykind)
     {
-      case symbol_kind::S_STRING_LITERAL: // STRING_LITERAL
-      case symbol_kind::S_TEXT_CONTENTS: // TEXT_CONTENTS
-        value.template destroy< acl::text_content > ();
-        break;
-
-      case symbol_kind::S_REGION_ID: // REGION_ID
-      case symbol_kind::S_TEXT_REGION_ID: // TEXT_REGION_ID
       case symbol_kind::S_STRING: // STRING
-        value.template destroy< std::string_view > ();
+      case symbol_kind::S_key: // key
+      case symbol_kind::S_array_value: // array_value
+      case symbol_kind::S_value: // value
+        value.template destroy< acl::yaml::string_slice > ();
         break;
 
       default:
@@ -688,7 +661,7 @@ switch (yykind)
       /// The user-facing name of this symbol.
       std::string name () const YY_NOEXCEPT
       {
-        return scli_parser::symbol_name (this->kind ());
+        return parser::symbol_name (this->kind ());
       }
 
       /// Backward compatibility (Bison 3.6).
@@ -775,45 +748,34 @@ switch (yykind)
 #endif
       {
 #if !defined _MSC_VER || defined __clang__
-        SCLI__ASSERT (tok == token::END
-                   || (token::SCLI_error <= tok && tok <= token::IMPORT));
+        YAML__ASSERT (tok == token::END
+                   || (token::YAML_error <= tok && tok <= token::YAML_UNDEF)
+                   || (token::COLON <= tok && tok <= token::COMMA));
 #endif
       }
 #if 201103L <= YY_CPLUSPLUS
-      symbol_type (int tok, acl::text_content v, location_type l)
+      symbol_type (int tok, acl::yaml::string_slice v, location_type l)
         : super_type (token_kind_type (tok), std::move (v), std::move (l))
 #else
-      symbol_type (int tok, const acl::text_content& v, const location_type& l)
+      symbol_type (int tok, const acl::yaml::string_slice& v, const location_type& l)
         : super_type (token_kind_type (tok), v, l)
 #endif
       {
 #if !defined _MSC_VER || defined __clang__
-        SCLI__ASSERT ((token::STRING_LITERAL <= tok && tok <= token::TEXT_CONTENTS));
-#endif
-      }
-#if 201103L <= YY_CPLUSPLUS
-      symbol_type (int tok, std::string_view v, location_type l)
-        : super_type (token_kind_type (tok), std::move (v), std::move (l))
-#else
-      symbol_type (int tok, const std::string_view& v, const location_type& l)
-        : super_type (token_kind_type (tok), v, l)
-#endif
-      {
-#if !defined _MSC_VER || defined __clang__
-        SCLI__ASSERT ((token::REGION_ID <= tok && tok <= token::STRING));
+        YAML__ASSERT (tok == token::STRING);
 #endif
       }
     };
 
     /// Build a parser object.
-    scli_parser (acl::scli& scli_yyarg);
-    virtual ~scli_parser ();
+    parser (acl::yaml::istream& cyaml_yyarg);
+    virtual ~parser ();
 
 #if 201103L <= YY_CPLUSPLUS
     /// Non copyable.
-    scli_parser (const scli_parser&) = delete;
+    parser (const parser&) = delete;
     /// Non copyable.
-    scli_parser& operator= (const scli_parser&) = delete;
+    parser& operator= (const parser&) = delete;
 #endif
 
     /// Parse.  An alias for parse ().
@@ -824,7 +786,7 @@ switch (yykind)
     /// \returns  0 iff parsing succeeded.
     virtual int parse ();
 
-#if SCLI_DEBUG
+#if YAML_DEBUG
     /// The current debugging stream.
     std::ostream& debug_stream () const YY_ATTRIBUTE_PURE;
     /// Set the current debugging stream.
@@ -869,166 +831,46 @@ switch (yykind)
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_SCLI_error (location_type l)
+      make_YAML_error (location_type l)
       {
-        return symbol_type (token::SCLI_error, std::move (l));
+        return symbol_type (token::YAML_error, std::move (l));
       }
 #else
       static
       symbol_type
-      make_SCLI_error (const location_type& l)
+      make_YAML_error (const location_type& l)
       {
-        return symbol_type (token::SCLI_error, l);
+        return symbol_type (token::YAML_error, l);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_SCLI_UNDEF (location_type l)
+      make_YAML_UNDEF (location_type l)
       {
-        return symbol_type (token::SCLI_UNDEF, std::move (l));
+        return symbol_type (token::YAML_UNDEF, std::move (l));
       }
 #else
       static
       symbol_type
-      make_SCLI_UNDEF (const location_type& l)
+      make_YAML_UNDEF (const location_type& l)
       {
-        return symbol_type (token::SCLI_UNDEF, l);
+        return symbol_type (token::YAML_UNDEF, l);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_SEMICOLON (location_type l)
+      make_STRING (acl::yaml::string_slice v, location_type l)
       {
-        return symbol_type (token::SEMICOLON, std::move (l));
+        return symbol_type (token::STRING, std::move (v), std::move (l));
       }
 #else
       static
       symbol_type
-      make_SEMICOLON (const location_type& l)
+      make_STRING (const acl::yaml::string_slice& v, const location_type& l)
       {
-        return symbol_type (token::SEMICOLON, l);
-      }
-#endif
-#if 201103L <= YY_CPLUSPLUS
-      static
-      symbol_type
-      make_LBRACES (location_type l)
-      {
-        return symbol_type (token::LBRACES, std::move (l));
-      }
-#else
-      static
-      symbol_type
-      make_LBRACES (const location_type& l)
-      {
-        return symbol_type (token::LBRACES, l);
-      }
-#endif
-#if 201103L <= YY_CPLUSPLUS
-      static
-      symbol_type
-      make_RBRACES (location_type l)
-      {
-        return symbol_type (token::RBRACES, std::move (l));
-      }
-#else
-      static
-      symbol_type
-      make_RBRACES (const location_type& l)
-      {
-        return symbol_type (token::RBRACES, l);
-      }
-#endif
-#if 201103L <= YY_CPLUSPLUS
-      static
-      symbol_type
-      make_LABRACKET (location_type l)
-      {
-        return symbol_type (token::LABRACKET, std::move (l));
-      }
-#else
-      static
-      symbol_type
-      make_LABRACKET (const location_type& l)
-      {
-        return symbol_type (token::LABRACKET, l);
-      }
-#endif
-#if 201103L <= YY_CPLUSPLUS
-      static
-      symbol_type
-      make_RABRACKET (location_type l)
-      {
-        return symbol_type (token::RABRACKET, std::move (l));
-      }
-#else
-      static
-      symbol_type
-      make_RABRACKET (const location_type& l)
-      {
-        return symbol_type (token::RABRACKET, l);
-      }
-#endif
-#if 201103L <= YY_CPLUSPLUS
-      static
-      symbol_type
-      make_COMMA (location_type l)
-      {
-        return symbol_type (token::COMMA, std::move (l));
-      }
-#else
-      static
-      symbol_type
-      make_COMMA (const location_type& l)
-      {
-        return symbol_type (token::COMMA, l);
-      }
-#endif
-#if 201103L <= YY_CPLUSPLUS
-      static
-      symbol_type
-      make_LPARENTHESES (location_type l)
-      {
-        return symbol_type (token::LPARENTHESES, std::move (l));
-      }
-#else
-      static
-      symbol_type
-      make_LPARENTHESES (const location_type& l)
-      {
-        return symbol_type (token::LPARENTHESES, l);
-      }
-#endif
-#if 201103L <= YY_CPLUSPLUS
-      static
-      symbol_type
-      make_RPARENTHESES (location_type l)
-      {
-        return symbol_type (token::RPARENTHESES, std::move (l));
-      }
-#else
-      static
-      symbol_type
-      make_RPARENTHESES (const location_type& l)
-      {
-        return symbol_type (token::RPARENTHESES, l);
-      }
-#endif
-#if 201103L <= YY_CPLUSPLUS
-      static
-      symbol_type
-      make_ASSIGN (location_type l)
-      {
-        return symbol_type (token::ASSIGN, std::move (l));
-      }
-#else
-      static
-      symbol_type
-      make_ASSIGN (const location_type& l)
-      {
-        return symbol_type (token::ASSIGN, l);
+        return symbol_type (token::STRING, v, l);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
@@ -1049,91 +891,106 @@ switch (yykind)
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_IMPORT (location_type l)
+      make_DASH (location_type l)
       {
-        return symbol_type (token::IMPORT, std::move (l));
+        return symbol_type (token::DASH, std::move (l));
       }
 #else
       static
       symbol_type
-      make_IMPORT (const location_type& l)
+      make_DASH (const location_type& l)
       {
-        return symbol_type (token::IMPORT, l);
+        return symbol_type (token::DASH, l);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_REGION_ID (std::string_view v, location_type l)
+      make_INDENT (location_type l)
       {
-        return symbol_type (token::REGION_ID, std::move (v), std::move (l));
+        return symbol_type (token::INDENT, std::move (l));
       }
 #else
       static
       symbol_type
-      make_REGION_ID (const std::string_view& v, const location_type& l)
+      make_INDENT (const location_type& l)
       {
-        return symbol_type (token::REGION_ID, v, l);
+        return symbol_type (token::INDENT, l);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_TEXT_REGION_ID (std::string_view v, location_type l)
+      make_DEDENT (location_type l)
       {
-        return symbol_type (token::TEXT_REGION_ID, std::move (v), std::move (l));
+        return symbol_type (token::DEDENT, std::move (l));
       }
 #else
       static
       symbol_type
-      make_TEXT_REGION_ID (const std::string_view& v, const location_type& l)
+      make_DEDENT (const location_type& l)
       {
-        return symbol_type (token::TEXT_REGION_ID, v, l);
+        return symbol_type (token::DEDENT, l);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_STRING (std::string_view v, location_type l)
+      make_NEWLINE (location_type l)
       {
-        return symbol_type (token::STRING, std::move (v), std::move (l));
+        return symbol_type (token::NEWLINE, std::move (l));
       }
 #else
       static
       symbol_type
-      make_STRING (const std::string_view& v, const location_type& l)
+      make_NEWLINE (const location_type& l)
       {
-        return symbol_type (token::STRING, v, l);
+        return symbol_type (token::NEWLINE, l);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_STRING_LITERAL (acl::text_content v, location_type l)
+      make_LBRACKET (location_type l)
       {
-        return symbol_type (token::STRING_LITERAL, std::move (v), std::move (l));
+        return symbol_type (token::LBRACKET, std::move (l));
       }
 #else
       static
       symbol_type
-      make_STRING_LITERAL (const acl::text_content& v, const location_type& l)
+      make_LBRACKET (const location_type& l)
       {
-        return symbol_type (token::STRING_LITERAL, v, l);
+        return symbol_type (token::LBRACKET, l);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_TEXT_CONTENTS (acl::text_content v, location_type l)
+      make_RBRACKET (location_type l)
       {
-        return symbol_type (token::TEXT_CONTENTS, std::move (v), std::move (l));
+        return symbol_type (token::RBRACKET, std::move (l));
       }
 #else
       static
       symbol_type
-      make_TEXT_CONTENTS (const acl::text_content& v, const location_type& l)
+      make_RBRACKET (const location_type& l)
       {
-        return symbol_type (token::TEXT_CONTENTS, v, l);
+        return symbol_type (token::RBRACKET, l);
+      }
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      static
+      symbol_type
+      make_COMMA (location_type l)
+      {
+        return symbol_type (token::COMMA, std::move (l));
+      }
+#else
+      static
+      symbol_type
+      make_COMMA (const location_type& l)
+      {
+        return symbol_type (token::COMMA, l);
       }
 #endif
 
@@ -1141,7 +998,7 @@ switch (yykind)
     class context
     {
     public:
-      context (const scli_parser& yyparser, const symbol_type& yyla);
+      context (const parser& yyparser, const symbol_type& yyla);
       const symbol_type& lookahead () const YY_NOEXCEPT { return yyla_; }
       symbol_kind_type token () const YY_NOEXCEPT { return yyla_.kind (); }
       const location_type& location () const YY_NOEXCEPT { return yyla_.location; }
@@ -1152,16 +1009,16 @@ switch (yykind)
       int expected_tokens (symbol_kind_type yyarg[], int yyargn) const;
 
     private:
-      const scli_parser& yyparser_;
+      const parser& yyparser_;
       const symbol_type& yyla_;
     };
 
   private:
 #if YY_CPLUSPLUS < 201103L
     /// Non copyable.
-    scli_parser (const scli_parser&);
+    parser (const parser&);
     /// Non copyable.
-    scli_parser& operator= (const scli_parser&);
+    parser& operator= (const parser&);
 #endif
 
 
@@ -1237,9 +1094,9 @@ switch (yykind)
     static const signed char yyr2_[];
 
 
-#if SCLI_DEBUG
+#if YAML_DEBUG
     // YYRLINE[YYN] -- Source line where rule number YYN was defined.
-    static const signed char yyrline_[];
+    static const unsigned char yyrline_[];
     /// Report on the debug stream that the rule \a r is going to be reduced.
     virtual void yy_reduce_print_ (int r) const;
     /// Print the state stack on the debug stream.
@@ -1466,20 +1323,20 @@ switch (yykind)
     /// Constants.
     enum
     {
-      yylast_ = 25,     ///< Last index in yytable_.
-      yynnts_ = 7,  ///< Number of nonterminal symbols.
-      yyfinal_ = 13 ///< Termination state number.
+      yylast_ = 39,     ///< Last index in yytable_.
+      yynnts_ = 19,  ///< Number of nonterminal symbols.
+      yyfinal_ = 2 ///< Termination state number.
     };
 
 
     // User arguments.
-    acl::scli& scli;
+    acl::yaml::istream& cyaml;
 
   };
 
   inline
-  scli_parser::symbol_kind_type
-  scli_parser::yytranslate_ (int t) YY_NOEXCEPT
+  parser::symbol_kind_type
+  parser::yytranslate_ (int t) YY_NOEXCEPT
   {
     // YYTRANSLATE[TOKEN-NUM] -- Symbol number corresponding to
     // TOKEN-NUM as returned by yylex.
@@ -1513,11 +1370,10 @@ switch (yykind)
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     1,     2,     3,     4,
-       5,     6,     7,     8,     9,    10,    11,    12,    13,    14,
-      15,    16,    17,    18
+       5,     6,     7,     8,     9,    10,    11
     };
     // Last valid token kind.
-    const int code_max = 273;
+    const int code_max = 266;
 
     if (t <= 0)
       return symbol_kind::S_YYEOF;
@@ -1529,22 +1385,18 @@ switch (yykind)
 
   // basic_symbol.
   template <typename Base>
-  scli_parser::basic_symbol<Base>::basic_symbol (const basic_symbol& that)
+  parser::basic_symbol<Base>::basic_symbol (const basic_symbol& that)
     : Base (that)
     , value ()
     , location (that.location)
   {
     switch (this->kind ())
     {
-      case symbol_kind::S_STRING_LITERAL: // STRING_LITERAL
-      case symbol_kind::S_TEXT_CONTENTS: // TEXT_CONTENTS
-        value.copy< acl::text_content > (YY_MOVE (that.value));
-        break;
-
-      case symbol_kind::S_REGION_ID: // REGION_ID
-      case symbol_kind::S_TEXT_REGION_ID: // TEXT_REGION_ID
       case symbol_kind::S_STRING: // STRING
-        value.copy< std::string_view > (YY_MOVE (that.value));
+      case symbol_kind::S_key: // key
+      case symbol_kind::S_array_value: // array_value
+      case symbol_kind::S_value: // value
+        value.copy< acl::yaml::string_slice > (YY_MOVE (that.value));
         break;
 
       default:
@@ -1557,8 +1409,8 @@ switch (yykind)
 
 
   template <typename Base>
-  scli_parser::symbol_kind_type
-  scli_parser::basic_symbol<Base>::type_get () const YY_NOEXCEPT
+  parser::symbol_kind_type
+  parser::basic_symbol<Base>::type_get () const YY_NOEXCEPT
   {
     return this->kind ();
   }
@@ -1566,27 +1418,23 @@ switch (yykind)
 
   template <typename Base>
   bool
-  scli_parser::basic_symbol<Base>::empty () const YY_NOEXCEPT
+  parser::basic_symbol<Base>::empty () const YY_NOEXCEPT
   {
     return this->kind () == symbol_kind::S_YYEMPTY;
   }
 
   template <typename Base>
   void
-  scli_parser::basic_symbol<Base>::move (basic_symbol& s)
+  parser::basic_symbol<Base>::move (basic_symbol& s)
   {
     super_type::move (s);
     switch (this->kind ())
     {
-      case symbol_kind::S_STRING_LITERAL: // STRING_LITERAL
-      case symbol_kind::S_TEXT_CONTENTS: // TEXT_CONTENTS
-        value.move< acl::text_content > (YY_MOVE (s.value));
-        break;
-
-      case symbol_kind::S_REGION_ID: // REGION_ID
-      case symbol_kind::S_TEXT_REGION_ID: // TEXT_REGION_ID
       case symbol_kind::S_STRING: // STRING
-        value.move< std::string_view > (YY_MOVE (s.value));
+      case symbol_kind::S_key: // key
+      case symbol_kind::S_array_value: // array_value
+      case symbol_kind::S_value: // value
+        value.move< acl::yaml::string_slice > (YY_MOVE (s.value));
         break;
 
       default:
@@ -1598,13 +1446,13 @@ switch (yykind)
 
   // by_kind.
   inline
-  scli_parser::by_kind::by_kind () YY_NOEXCEPT
+  parser::by_kind::by_kind () YY_NOEXCEPT
     : kind_ (symbol_kind::S_YYEMPTY)
   {}
 
 #if 201103L <= YY_CPLUSPLUS
   inline
-  scli_parser::by_kind::by_kind (by_kind&& that) YY_NOEXCEPT
+  parser::by_kind::by_kind (by_kind&& that) YY_NOEXCEPT
     : kind_ (that.kind_)
   {
     that.clear ();
@@ -1612,12 +1460,12 @@ switch (yykind)
 #endif
 
   inline
-  scli_parser::by_kind::by_kind (const by_kind& that) YY_NOEXCEPT
+  parser::by_kind::by_kind (const by_kind& that) YY_NOEXCEPT
     : kind_ (that.kind_)
   {}
 
   inline
-  scli_parser::by_kind::by_kind (token_kind_type t) YY_NOEXCEPT
+  parser::by_kind::by_kind (token_kind_type t) YY_NOEXCEPT
     : kind_ (yytranslate_ (t))
   {}
 
@@ -1625,40 +1473,40 @@ switch (yykind)
 
   inline
   void
-  scli_parser::by_kind::clear () YY_NOEXCEPT
+  parser::by_kind::clear () YY_NOEXCEPT
   {
     kind_ = symbol_kind::S_YYEMPTY;
   }
 
   inline
   void
-  scli_parser::by_kind::move (by_kind& that)
+  parser::by_kind::move (by_kind& that)
   {
     kind_ = that.kind_;
     that.clear ();
   }
 
   inline
-  scli_parser::symbol_kind_type
-  scli_parser::by_kind::kind () const YY_NOEXCEPT
+  parser::symbol_kind_type
+  parser::by_kind::kind () const YY_NOEXCEPT
   {
     return kind_;
   }
 
 
   inline
-  scli_parser::symbol_kind_type
-  scli_parser::by_kind::type_get () const YY_NOEXCEPT
+  parser::symbol_kind_type
+  parser::by_kind::type_get () const YY_NOEXCEPT
   {
     return this->kind ();
   }
 
 
-#line 7 "C:/repos/acl/src/acl/dsl/scli.yy"
-} // acl
-#line 1660 "C:/repos/acl/src/acl/dsl/parse_impl.hpp"
+#line 7 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+} } // acl::yaml
+#line 1508 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.hpp"
 
 
 
 
-#endif // !YY_SCLI_C_REPOS_ACL_SRC_ACL_DSL_PARSE_IMPL_HPP_INCLUDED
+#endif // !YY_YAML_HOME_OBHI_CODE_LXE_THIRD_PARTY_ACL_SRC_ACL_DSL_YAML_PARSER_IMPL_HPP_INCLUDED

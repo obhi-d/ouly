@@ -36,20 +36,20 @@
 
 
 // Take the name prefix into account.
-#define yylex   scli_lex
+#define yylex   yaml_lex
 
 
 
-#include "parse_impl.hpp"
+#include "yaml_parser_impl.hpp"
 
 
 // Unqualified %code blocks.
-#line 38 "C:/repos/acl/src/acl/dsl/scli.yy"
+#line 38 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
 
-#define SCANNER_PARAM scli.get_scanner()
+#define SCANNER_PARAM cyaml.get_scanner()
 YY_DECL;
 
-#line 53 "C:/repos/acl/src/acl/dsl/parse_impl.cpp"
+#line 53 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
 
 
 #ifndef YY_
@@ -96,7 +96,7 @@ YY_DECL;
 
 
 // Enable debugging if requested.
-#if SCLI_DEBUG
+#if YAML_DEBUG
 
 // A pseudo ostream that takes yydebug_ into account.
 # define YYCDEBUG if (yydebug_) (*yycdebug_)
@@ -123,14 +123,14 @@ YY_DECL;
       yy_stack_print_ ();                \
   } while (false)
 
-#else // !SCLI_DEBUG
+#else // !YAML_DEBUG
 
 # define YYCDEBUG if (false) std::cerr
 # define YY_SYMBOL_PRINT(Title, Symbol)  YY_USE (Symbol)
 # define YY_REDUCE_PRINT(Rule)           static_cast<void> (0)
 # define YY_STACK_PRINT()                static_cast<void> (0)
 
-#endif // !SCLI_DEBUG
+#endif // !YAML_DEBUG
 
 #define yyerrok         (yyerrstatus_ = 0)
 #define yyclearin       (yyla.clear ())
@@ -140,25 +140,25 @@ YY_DECL;
 #define YYERROR         goto yyerrorlab
 #define YYRECOVERING()  (!!yyerrstatus_)
 
-#line 7 "C:/repos/acl/src/acl/dsl/scli.yy"
-namespace acl {
-#line 146 "C:/repos/acl/src/acl/dsl/parse_impl.cpp"
+#line 7 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+namespace acl { namespace yaml {
+#line 146 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
 
   /// Build a parser object.
-  scli_parser::scli_parser (acl::scli& scli_yyarg)
-#if SCLI_DEBUG
+  parser::parser (acl::yaml::istream& cyaml_yyarg)
+#if YAML_DEBUG
     : yydebug_ (false),
       yycdebug_ (&std::cerr),
 #else
     :
 #endif
-      scli (scli_yyarg)
+      cyaml (cyaml_yyarg)
   {}
 
-  scli_parser::~scli_parser ()
+  parser::~parser ()
   {}
 
-  scli_parser::syntax_error::~syntax_error () YY_NOEXCEPT YY_NOTHROW
+  parser::syntax_error::~syntax_error () YY_NOEXCEPT YY_NOTHROW
   {}
 
   /*---------.
@@ -168,33 +168,33 @@ namespace acl {
 
 
   // by_state.
-  scli_parser::by_state::by_state () YY_NOEXCEPT
+  parser::by_state::by_state () YY_NOEXCEPT
     : state (empty_state)
   {}
 
-  scli_parser::by_state::by_state (const by_state& that) YY_NOEXCEPT
+  parser::by_state::by_state (const by_state& that) YY_NOEXCEPT
     : state (that.state)
   {}
 
   void
-  scli_parser::by_state::clear () YY_NOEXCEPT
+  parser::by_state::clear () YY_NOEXCEPT
   {
     state = empty_state;
   }
 
   void
-  scli_parser::by_state::move (by_state& that)
+  parser::by_state::move (by_state& that)
   {
     state = that.state;
     that.clear ();
   }
 
-  scli_parser::by_state::by_state (state_type s) YY_NOEXCEPT
+  parser::by_state::by_state (state_type s) YY_NOEXCEPT
     : state (s)
   {}
 
-  scli_parser::symbol_kind_type
-  scli_parser::by_state::kind () const YY_NOEXCEPT
+  parser::symbol_kind_type
+  parser::by_state::kind () const YY_NOEXCEPT
   {
     if (state == empty_state)
       return symbol_kind::S_YYEMPTY;
@@ -202,23 +202,19 @@ namespace acl {
       return YY_CAST (symbol_kind_type, yystos_[+state]);
   }
 
-  scli_parser::stack_symbol_type::stack_symbol_type ()
+  parser::stack_symbol_type::stack_symbol_type ()
   {}
 
-  scli_parser::stack_symbol_type::stack_symbol_type (YY_RVREF (stack_symbol_type) that)
+  parser::stack_symbol_type::stack_symbol_type (YY_RVREF (stack_symbol_type) that)
     : super_type (YY_MOVE (that.state), YY_MOVE (that.location))
   {
     switch (that.kind ())
     {
-      case symbol_kind::S_STRING_LITERAL: // STRING_LITERAL
-      case symbol_kind::S_TEXT_CONTENTS: // TEXT_CONTENTS
-        value.YY_MOVE_OR_COPY< acl::text_content > (YY_MOVE (that.value));
-        break;
-
-      case symbol_kind::S_REGION_ID: // REGION_ID
-      case symbol_kind::S_TEXT_REGION_ID: // TEXT_REGION_ID
       case symbol_kind::S_STRING: // STRING
-        value.YY_MOVE_OR_COPY< std::string_view > (YY_MOVE (that.value));
+      case symbol_kind::S_key: // key
+      case symbol_kind::S_array_value: // array_value
+      case symbol_kind::S_value: // value
+        value.YY_MOVE_OR_COPY< acl::yaml::string_slice > (YY_MOVE (that.value));
         break;
 
       default:
@@ -231,20 +227,16 @@ namespace acl {
 #endif
   }
 
-  scli_parser::stack_symbol_type::stack_symbol_type (state_type s, YY_MOVE_REF (symbol_type) that)
+  parser::stack_symbol_type::stack_symbol_type (state_type s, YY_MOVE_REF (symbol_type) that)
     : super_type (s, YY_MOVE (that.location))
   {
     switch (that.kind ())
     {
-      case symbol_kind::S_STRING_LITERAL: // STRING_LITERAL
-      case symbol_kind::S_TEXT_CONTENTS: // TEXT_CONTENTS
-        value.move< acl::text_content > (YY_MOVE (that.value));
-        break;
-
-      case symbol_kind::S_REGION_ID: // REGION_ID
-      case symbol_kind::S_TEXT_REGION_ID: // TEXT_REGION_ID
       case symbol_kind::S_STRING: // STRING
-        value.move< std::string_view > (YY_MOVE (that.value));
+      case symbol_kind::S_key: // key
+      case symbol_kind::S_array_value: // array_value
+      case symbol_kind::S_value: // value
+        value.move< acl::yaml::string_slice > (YY_MOVE (that.value));
         break;
 
       default:
@@ -256,21 +248,17 @@ namespace acl {
   }
 
 #if YY_CPLUSPLUS < 201103L
-  scli_parser::stack_symbol_type&
-  scli_parser::stack_symbol_type::operator= (const stack_symbol_type& that)
+  parser::stack_symbol_type&
+  parser::stack_symbol_type::operator= (const stack_symbol_type& that)
   {
     state = that.state;
     switch (that.kind ())
     {
-      case symbol_kind::S_STRING_LITERAL: // STRING_LITERAL
-      case symbol_kind::S_TEXT_CONTENTS: // TEXT_CONTENTS
-        value.copy< acl::text_content > (that.value);
-        break;
-
-      case symbol_kind::S_REGION_ID: // REGION_ID
-      case symbol_kind::S_TEXT_REGION_ID: // TEXT_REGION_ID
       case symbol_kind::S_STRING: // STRING
-        value.copy< std::string_view > (that.value);
+      case symbol_kind::S_key: // key
+      case symbol_kind::S_array_value: // array_value
+      case symbol_kind::S_value: // value
+        value.copy< acl::yaml::string_slice > (that.value);
         break;
 
       default:
@@ -281,21 +269,17 @@ namespace acl {
     return *this;
   }
 
-  scli_parser::stack_symbol_type&
-  scli_parser::stack_symbol_type::operator= (stack_symbol_type& that)
+  parser::stack_symbol_type&
+  parser::stack_symbol_type::operator= (stack_symbol_type& that)
   {
     state = that.state;
     switch (that.kind ())
     {
-      case symbol_kind::S_STRING_LITERAL: // STRING_LITERAL
-      case symbol_kind::S_TEXT_CONTENTS: // TEXT_CONTENTS
-        value.move< acl::text_content > (that.value);
-        break;
-
-      case symbol_kind::S_REGION_ID: // REGION_ID
-      case symbol_kind::S_TEXT_REGION_ID: // TEXT_REGION_ID
       case symbol_kind::S_STRING: // STRING
-        value.move< std::string_view > (that.value);
+      case symbol_kind::S_key: // key
+      case symbol_kind::S_array_value: // array_value
+      case symbol_kind::S_value: // value
+        value.move< acl::yaml::string_slice > (that.value);
         break;
 
       default:
@@ -311,16 +295,16 @@ namespace acl {
 
   template <typename Base>
   void
-  scli_parser::yy_destroy_ (const char* yymsg, basic_symbol<Base>& yysym) const
+  parser::yy_destroy_ (const char* yymsg, basic_symbol<Base>& yysym) const
   {
     if (yymsg)
       YY_SYMBOL_PRINT (yymsg, yysym);
   }
 
-#if SCLI_DEBUG
+#if YAML_DEBUG
   template <typename Base>
   void
-  scli_parser::yy_print_ (std::ostream& yyo, const basic_symbol<Base>& yysym) const
+  parser::yy_print_ (std::ostream& yyo, const basic_symbol<Base>& yysym) const
   {
     std::ostream& yyoutput = yyo;
     YY_USE (yyoutput);
@@ -332,36 +316,14 @@ namespace acl {
         yyo << (yykind < YYNTOKENS ? "token" : "nterm")
             << ' ' << yysym.name () << " ("
             << yysym.location << ": ";
-        switch (yykind)
-    {
-      case symbol_kind::S_REGION_ID: // REGION_ID
-#line 62 "C:/repos/acl/src/acl/dsl/scli.yy"
-                 { yyoutput << yysym.value.template as < std::string_view > (); }
-#line 341 "C:/repos/acl/src/acl/dsl/parse_impl.cpp"
-        break;
-
-      case symbol_kind::S_TEXT_REGION_ID: // TEXT_REGION_ID
-#line 62 "C:/repos/acl/src/acl/dsl/scli.yy"
-                 { yyoutput << yysym.value.template as < std::string_view > (); }
-#line 347 "C:/repos/acl/src/acl/dsl/parse_impl.cpp"
-        break;
-
-      case symbol_kind::S_STRING: // STRING
-#line 62 "C:/repos/acl/src/acl/dsl/scli.yy"
-                 { yyoutput << yysym.value.template as < std::string_view > (); }
-#line 353 "C:/repos/acl/src/acl/dsl/parse_impl.cpp"
-        break;
-
-      default:
-        break;
-    }
+        YY_USE (yykind);
         yyo << ')';
       }
   }
 #endif
 
   void
-  scli_parser::yypush_ (const char* m, YY_MOVE_REF (stack_symbol_type) sym)
+  parser::yypush_ (const char* m, YY_MOVE_REF (stack_symbol_type) sym)
   {
     if (m)
       YY_SYMBOL_PRINT (m, sym);
@@ -369,7 +331,7 @@ namespace acl {
   }
 
   void
-  scli_parser::yypush_ (const char* m, state_type s, YY_MOVE_REF (symbol_type) sym)
+  parser::yypush_ (const char* m, state_type s, YY_MOVE_REF (symbol_type) sym)
   {
 #if 201103L <= YY_CPLUSPLUS
     yypush_ (m, stack_symbol_type (s, std::move (sym)));
@@ -380,40 +342,40 @@ namespace acl {
   }
 
   void
-  scli_parser::yypop_ (int n) YY_NOEXCEPT
+  parser::yypop_ (int n) YY_NOEXCEPT
   {
     yystack_.pop (n);
   }
 
-#if SCLI_DEBUG
+#if YAML_DEBUG
   std::ostream&
-  scli_parser::debug_stream () const
+  parser::debug_stream () const
   {
     return *yycdebug_;
   }
 
   void
-  scli_parser::set_debug_stream (std::ostream& o)
+  parser::set_debug_stream (std::ostream& o)
   {
     yycdebug_ = &o;
   }
 
 
-  scli_parser::debug_level_type
-  scli_parser::debug_level () const
+  parser::debug_level_type
+  parser::debug_level () const
   {
     return yydebug_;
   }
 
   void
-  scli_parser::set_debug_level (debug_level_type l)
+  parser::set_debug_level (debug_level_type l)
   {
     yydebug_ = l;
   }
-#endif // SCLI_DEBUG
+#endif // YAML_DEBUG
 
-  scli_parser::state_type
-  scli_parser::yy_lr_goto_state_ (state_type yystate, int yysym)
+  parser::state_type
+  parser::yy_lr_goto_state_ (state_type yystate, int yysym)
   {
     int yyr = yypgoto_[yysym - YYNTOKENS] + yystate;
     if (0 <= yyr && yyr <= yylast_ && yycheck_[yyr] == yystate)
@@ -423,25 +385,25 @@ namespace acl {
   }
 
   bool
-  scli_parser::yy_pact_value_is_default_ (int yyvalue) YY_NOEXCEPT
+  parser::yy_pact_value_is_default_ (int yyvalue) YY_NOEXCEPT
   {
     return yyvalue == yypact_ninf_;
   }
 
   bool
-  scli_parser::yy_table_value_is_error_ (int yyvalue) YY_NOEXCEPT
+  parser::yy_table_value_is_error_ (int yyvalue) YY_NOEXCEPT
   {
     return yyvalue == yytable_ninf_;
   }
 
   int
-  scli_parser::operator() ()
+  parser::operator() ()
   {
     return parse ();
   }
 
   int
-  scli_parser::parse ()
+  parser::parse ()
   {
     int yyn;
     /// Length of the RHS of the rule being reduced.
@@ -468,12 +430,12 @@ namespace acl {
 
 
     // User initialization code.
-#line 33 "C:/repos/acl/src/acl/dsl/scli.yy"
+#line 33 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
 {
-  yyla.location.source_name = scli.get_file_name();
+  yyla.location.source_name = cyaml.get_file_name();
 }
 
-#line 477 "C:/repos/acl/src/acl/dsl/parse_impl.cpp"
+#line 439 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
 
 
     /* Initialize the stack.  The initial state will be set in
@@ -514,7 +476,7 @@ namespace acl {
         try
 #endif // YY_EXCEPTIONS
           {
-            symbol_type yylookahead (yylex (scli, SCANNER_PARAM));
+            symbol_type yylookahead (yylex (cyaml, SCANNER_PARAM));
             yyla.move (yylookahead);
           }
 #if YY_EXCEPTIONS
@@ -588,15 +550,11 @@ namespace acl {
          when using variants.  */
       switch (yyr1_[yyn])
     {
-      case symbol_kind::S_STRING_LITERAL: // STRING_LITERAL
-      case symbol_kind::S_TEXT_CONTENTS: // TEXT_CONTENTS
-        yylhs.value.emplace< acl::text_content > ();
-        break;
-
-      case symbol_kind::S_REGION_ID: // REGION_ID
-      case symbol_kind::S_TEXT_REGION_ID: // TEXT_REGION_ID
       case symbol_kind::S_STRING: // STRING
-        yylhs.value.emplace< std::string_view > ();
+      case symbol_kind::S_key: // key
+      case symbol_kind::S_array_value: // array_value
+      case symbol_kind::S_value: // value
+        yylhs.value.emplace< acl::yaml::string_slice > ();
         break;
 
       default:
@@ -619,92 +577,154 @@ namespace acl {
         {
           switch (yyn)
             {
-  case 5: // statement: "}"
-#line 72 "C:/repos/acl/src/acl/dsl/scli.yy"
-                                                        { scli.exit_command_scope();  scli.destroy_comamnd_state();            }
-#line 626 "C:/repos/acl/src/acl/dsl/parse_impl.cpp"
+  case 7: // mapping: key COLON value
+#line 68 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+    {
+        cyaml.start_mapping(yystack_[2].value.as < acl::yaml::string_slice > ());
+        cyaml.add_mapping_value(yystack_[0].value.as < acl::yaml::string_slice > ());
+        cyaml.end_mapping();
+    }
+#line 588 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
     break;
 
-  case 6: // statement: REGION_ID
-#line 73 "C:/repos/acl/src/acl/dsl/scli.yy"
-                                                         { scli.enter_region(std::move(yystack_[0].value.as < std::string_view > ()));                                    }
-#line 632 "C:/repos/acl/src/acl/dsl/parse_impl.cpp"
+  case 8: // mapping: key COLON array
+#line 74 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+    {
+        cyaml.end_mapping();
+    }
+#line 596 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
     break;
 
-  case 7: // statement: TEXT_REGION_ID TEXT_CONTENTS
-#line 74 "C:/repos/acl/src/acl/dsl/scli.yy"
-                                                         { scli.enter_text_region(std::move(yystack_[1].value.as < std::string_view > ()), std::move(yystack_[0].value.as < acl::text_content > ()));                }
-#line 638 "C:/repos/acl/src/acl/dsl/parse_impl.cpp"
+  case 9: // mapping: key COLON NEWLINE INDENT nested_sequence DEDENT
+#line 78 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+    {
+        cyaml.end_mapping();
+    }
+#line 604 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
     break;
 
-  case 8: // statement: "import" STRING_LITERAL ";"
-#line 75 "C:/repos/acl/src/acl/dsl/scli.yy"
-                                                         { scli.import_script(std::move(yystack_[1].value.as < acl::text_content > ()));                                   }
-#line 644 "C:/repos/acl/src/acl/dsl/parse_impl.cpp"
+  case 10: // mapping: key COLON NEWLINE INDENT nested_mappings DEDENT
+#line 82 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+    {
+        cyaml.end_mapping();
+    }
+#line 612 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
     break;
 
-  case 9: // commandname: STRING
-#line 77 "C:/repos/acl/src/acl/dsl/scli.yy"
-                              { scli.set_next_command(yystack_[0].value.as < std::string_view > ()); }
-#line 650 "C:/repos/acl/src/acl/dsl/parse_impl.cpp"
+  case 11: // key: STRING
+#line 89 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+    {
+        cyaml.start_mapping(yystack_[0].value.as < acl::yaml::string_slice > ());
+        yylhs.value.as < acl::yaml::string_slice > () = yystack_[0].value.as < acl::yaml::string_slice > ();
+    }
+#line 621 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
     break;
 
-  case 10: // commandname: STRING ":"
-#line 78 "C:/repos/acl/src/acl/dsl/scli.yy"
-                              { scli.set_next_command(yystack_[1].value.as < std::string_view > ()); }
-#line 656 "C:/repos/acl/src/acl/dsl/parse_impl.cpp"
+  case 12: // $@1: %empty
+#line 96 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+    {
+        cyaml.start_sequence();
+    }
+#line 629 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
     break;
 
-  case 11: // commanddecl: commandname ";"
-#line 81 "C:/repos/acl/src/acl/dsl/scli.yy"
-                                                     { scli.execute_command(); scli.destroy_comamnd_state(); }
-#line 662 "C:/repos/acl/src/acl/dsl/parse_impl.cpp"
+  case 13: // array: $@1 LBRACKET array_values RBRACKET
+#line 100 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+    {
+        cyaml.end_sequence();
+        cyaml.end_mapping();
+    }
+#line 638 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
     break;
 
-  case 12: // commanddecl: commandname parameters.1.N ";"
-#line 82 "C:/repos/acl/src/acl/dsl/scli.yy"
-                                                             { scli.execute_command(); scli.destroy_comamnd_state(); }
-#line 668 "C:/repos/acl/src/acl/dsl/parse_impl.cpp"
+  case 14: // array_values: array_value
+#line 108 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+    {
+        cyaml.start_sequence_item();
+        cyaml.add_sequence_item(yystack_[0].value.as < acl::yaml::string_slice > ());
+        cyaml.end_sequence_item();
+    }
+#line 648 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
     break;
 
-  case 13: // commanddecl: commandname parameters.1.N "{"
-#line 83 "C:/repos/acl/src/acl/dsl/scli.yy"
-                                                            { scli.execute_command(); scli.enter_command_scope();   }
-#line 674 "C:/repos/acl/src/acl/dsl/parse_impl.cpp"
+  case 15: // array_values: array_values COMMA array_value
+#line 114 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+    {
+        cyaml.start_sequence_item();
+        cyaml.add_sequence_item(yystack_[0].value.as < acl::yaml::string_slice > ());
+        cyaml.end_sequence_item();
+    }
+#line 658 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
     break;
 
-  case 17: // parameter: STRING "="
-#line 90 "C:/repos/acl/src/acl/dsl/scli.yy"
-                                               { scli.set_next_param_name(yystack_[1].value.as < std::string_view > ()); }
-#line 680 "C:/repos/acl/src/acl/dsl/parse_impl.cpp"
+  case 16: // array_value: STRING
+#line 123 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+    {
+        yylhs.value.as < acl::yaml::string_slice > () = yystack_[0].value.as < acl::yaml::string_slice > ();
+    }
+#line 666 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
     break;
 
-  case 18: // parameter: STRING_LITERAL
-#line 91 "C:/repos/acl/src/acl/dsl/scli.yy"
-                                               { scli.set_param(std::move(yystack_[0].value.as < acl::text_content > ())); }
-#line 686 "C:/repos/acl/src/acl/dsl/parse_impl.cpp"
+  case 17: // $@2: %empty
+#line 129 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+    {
+        cyaml.start_mapping(cyaml.get_current_key());
+    }
+#line 674 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
     break;
 
-  case 19: // parameter: STRING
-#line 92 "C:/repos/acl/src/acl/dsl/scli.yy"
-                                               { scli.set_param(yystack_[0].value.as < std::string_view > ()); }
-#line 692 "C:/repos/acl/src/acl/dsl/parse_impl.cpp"
+  case 21: // $@3: %empty
+#line 141 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+    {
+        cyaml.start_sequence();
+    }
+#line 682 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
     break;
 
-  case 20: // parameter: "("
-#line 93 "C:/repos/acl/src/acl/dsl/scli.yy"
-                                                         { scli.enter_param_scope(); }
-#line 698 "C:/repos/acl/src/acl/dsl/parse_impl.cpp"
+  case 22: // nested_sequence: $@3 sequence
+#line 145 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+    {
+        cyaml.end_sequence();
+    }
+#line 690 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
     break;
 
-  case 21: // parameter: ")"
-#line 94 "C:/repos/acl/src/acl/dsl/scli.yy"
-                                                         { scli.exit_param_scope(); }
-#line 704 "C:/repos/acl/src/acl/dsl/parse_impl.cpp"
+  case 25: // sequence_item: DASH value
+#line 157 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+    {
+        cyaml.start_sequence_item();
+        cyaml.add_sequence_item(yystack_[0].value.as < acl::yaml::string_slice > ());
+        cyaml.end_sequence_item();
+    }
+#line 700 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
+    break;
+
+  case 27: // $@4: %empty
+#line 166 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+    {
+        cyaml.start_sequence_item();
+    }
+#line 708 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
+    break;
+
+  case 28: // nested_mapping_in_sequence: $@4 mappings
+#line 170 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+    {
+        cyaml.end_sequence_item();
+    }
+#line 716 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
+    break;
+
+  case 29: // value: STRING
+#line 177 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+    {
+        yylhs.value.as < acl::yaml::string_slice > () = yystack_[0].value.as < acl::yaml::string_slice > ();
+    }
+#line 724 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
     break;
 
 
-#line 708 "C:/repos/acl/src/acl/dsl/parse_impl.cpp"
+#line 728 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
 
             default:
               break;
@@ -877,7 +897,7 @@ namespace acl {
   }
 
   void
-  scli_parser::error (const syntax_error& yyexc)
+  parser::error (const syntax_error& yyexc)
   {
     error (yyexc.location, yyexc.what ());
   }
@@ -888,7 +908,7 @@ namespace acl {
      apostrophe, a comma, or backslash (other than backslash-backslash).
      YYSTR is taken from yytname.  */
   std::string
-  scli_parser::yytnamerr_ (const char *yystr)
+  parser::yytnamerr_ (const char *yystr)
   {
     if (*yystr == '"')
       {
@@ -923,21 +943,21 @@ namespace acl {
   }
 
   std::string
-  scli_parser::symbol_name (symbol_kind_type yysymbol)
+  parser::symbol_name (symbol_kind_type yysymbol)
   {
     return yytnamerr_ (yytname_[yysymbol]);
   }
 
 
 
-  // scli_parser::context.
-  scli_parser::context::context (const scli_parser& yyparser, const symbol_type& yyla)
+  // parser::context.
+  parser::context::context (const parser& yyparser, const symbol_type& yyla)
     : yyparser_ (yyparser)
     , yyla_ (yyla)
   {}
 
   int
-  scli_parser::context::expected_tokens (symbol_kind_type yyarg[], int yyargn) const
+  parser::context::expected_tokens (symbol_kind_type yyarg[], int yyargn) const
   {
     // Actual number of expected tokens
     int yycount = 0;
@@ -976,7 +996,7 @@ namespace acl {
 
 
   int
-  scli_parser::yy_syntax_error_arguments_ (const context& yyctx,
+  parser::yy_syntax_error_arguments_ (const context& yyctx,
                                                  symbol_kind_type yyarg[], int yyargn) const
   {
     /* There are many possibilities here to consider:
@@ -1016,7 +1036,7 @@ namespace acl {
 
   // Generate an error message.
   std::string
-  scli_parser::yysyntax_error_ (const context& yyctx) const
+  parser::yysyntax_error_ (const context& yyctx) const
   {
     // Its maximum.
     enum { YYARGS_MAX = 5 };
@@ -1056,105 +1076,116 @@ namespace acl {
   }
 
 
-  const signed char scli_parser::yypact_ninf_ = -16;
+  const signed char parser::yypact_ninf_ = -31;
 
-  const signed char scli_parser::yytable_ninf_ = -1;
+  const signed char parser::yytable_ninf_ = -22;
 
   const signed char
-  scli_parser::yypact_[] =
+  parser::yypact_[] =
   {
-       6,   -16,   -15,   -16,   -14,     3,    12,     6,     0,   -16,
-      15,   -16,   -16,   -16,   -16,   -16,   -16,   -16,   -16,    13,
-     -16,    -3,   -16,   -16,   -16,   -16,   -16,   -16
+     -31,     3,   -31,   -31,     1,   -31,   -31,    -6,     9,    -3,
+     -31,     8,   -31,   -31,     4,   -31,   -31,    11,   -31,    10,
+     -31,    13,    15,    16,    19,   -31,    17,    15,    20,    15,
+      21,    18,   -31,     5,   -31,   -31,    22,   -31,    15,   -31,
+      18,    23,   -31,    19,   -31,    24,   -31,   -31,   -31
   };
 
   const signed char
-  scli_parser::yydefact_[] =
+  parser::yydefact_[] =
   {
-       0,     5,     0,     6,     0,     9,     0,     2,    16,     4,
-       0,     7,    10,     1,     3,    11,    22,    20,    21,    19,
-      18,     0,    14,     8,    17,    12,    13,    15
+       2,     0,     1,    11,     0,     6,     3,     0,     0,     0,
+      29,     0,    25,     4,    12,     5,    27,     0,     8,     0,
+       7,     0,     0,    17,     0,    26,     0,    28,     0,     0,
+       0,     0,    16,     0,    14,    19,     0,    10,    18,     9,
+      22,     0,    13,     0,    20,     0,    23,    15,    24
   };
 
   const signed char
-  scli_parser::yypgoto_[] =
+  parser::yypgoto_[] =
   {
-     -16,    16,   -16,   -16,   -16,   -16,     4
+     -31,   -31,   -31,    -1,   -31,   -31,   -31,   -31,   -19,   -31,
+     -31,     0,   -31,   -31,   -31,   -30,   -31,   -31,    25
   };
 
   const signed char
-  scli_parser::yydefgoto_[] =
+  parser::yydefgoto_[] =
   {
-       0,     6,     7,     8,     9,    21,    22
+       0,     1,     6,    26,     8,    18,    19,    33,    34,    28,
+      29,    27,    30,    31,    40,     9,    21,    22,    12
   };
 
   const signed char
-  scli_parser::yytable_[] =
+  parser::yytable_[] =
   {
-      25,    26,    10,    15,    11,    16,    17,    18,    16,    17,
-      18,     1,    13,    19,    20,    12,    19,    20,    23,     2,
-       3,     4,     5,    14,    24,    27
+       7,    41,    13,     2,    10,    15,     3,    10,     4,    11,
+      45,     5,    17,    14,    16,    42,    43,    23,     3,    24,
+      25,   -21,    32,     4,    47,    35,    36,    37,    39,    38,
+      44,    46,    48,     0,     0,     0,     0,    36,     0,    20
   };
 
   const signed char
-  scli_parser::yycheck_[] =
+  parser::yycheck_[] =
   {
-       3,     4,    17,     3,    18,     8,     9,    10,     8,     9,
-      10,     5,     0,    16,    17,    12,    16,    17,     3,    13,
-      14,    15,    16,     7,    11,    21
+       1,    31,     8,     0,     3,     8,     3,     3,     5,     8,
+      40,     8,     8,     4,     6,    10,    11,     6,     3,     9,
+       7,     5,     3,     5,    43,     8,    27,     7,     7,    29,
+       8,     8,     8,    -1,    -1,    -1,    -1,    38,    -1,    14
   };
 
   const signed char
-  scli_parser::yystos_[] =
+  parser::yystos_[] =
   {
-       0,     5,    13,    14,    15,    16,    20,    21,    22,    23,
-      17,    18,    12,     0,    20,     3,     8,     9,    10,    16,
-      17,    24,    25,     3,    11,     3,     4,    25
+       0,    13,     0,     3,     5,     8,    14,    15,    16,    27,
+       3,     8,    30,     8,     4,     8,     6,     8,    17,    18,
+      30,    28,    29,     6,     9,     7,    15,    23,    21,    22,
+      24,    25,     3,    19,    20,     8,    15,     7,    23,     7,
+      26,    27,    10,    11,     8,    27,     8,    20,     8
   };
 
   const signed char
-  scli_parser::yyr1_[] =
+  parser::yyr1_[] =
   {
-       0,    19,    20,    20,    21,    21,    21,    21,    21,    22,
-      22,    23,    23,    23,    24,    24,    25,    25,    25,    25,
-      25,    25,    25
+       0,    12,    13,    13,    14,    14,    14,    15,    15,    15,
+      15,    16,    18,    17,    19,    19,    20,    22,    21,    23,
+      23,    25,    24,    26,    26,    27,    27,    29,    28,    30
   };
 
   const signed char
-  scli_parser::yyr2_[] =
+  parser::yyr2_[] =
   {
-       0,     2,     1,     2,     1,     1,     1,     2,     3,     1,
-       2,     2,     3,     3,     1,     2,     0,     2,     1,     1,
-       1,     1,     1
+       0,     2,     0,     2,     2,     2,     1,     3,     3,     6,
+       6,     1,     0,     4,     1,     3,     1,     0,     2,     2,
+       3,     0,     2,     2,     3,     2,     5,     0,     2,     1
   };
 
 
-#if SCLI_DEBUG || 1
+#if YAML_DEBUG || 1
   // YYTNAME[SYMBOL-NUM] -- String name of the symbol SYMBOL-NUM.
   // First, the terminals, then, starting at \a YYNTOKENS, nonterminals.
   const char*
-  const scli_parser::yytname_[] =
+  const parser::yytname_[] =
   {
-  "\"end of file\"", "error", "\"invalid token\"", "\";\"", "\"{\"",
-  "\"}\"", "\"<\"", "\">\"", "\",\"", "\"(\"", "\")\"", "\"=\"", "\":\"",
-  "\"import\"", "REGION_ID", "TEXT_REGION_ID", "STRING", "STRING_LITERAL",
-  "TEXT_CONTENTS", "$accept", "script", "statement", "commandname",
-  "commanddecl", "parameters.1.N", "parameter", YY_NULLPTR
+  "\"end of file\"", "error", "\"invalid token\"", "STRING", "COLON",
+  "DASH", "INDENT", "DEDENT", "NEWLINE", "LBRACKET", "RBRACKET", "COMMA",
+  "$accept", "document", "line", "mapping", "key", "array", "$@1",
+  "array_values", "array_value", "nested_mappings", "$@2", "mappings",
+  "nested_sequence", "$@3", "sequence", "sequence_item",
+  "nested_mapping_in_sequence", "$@4", "value", YY_NULLPTR
   };
 #endif
 
 
-#if SCLI_DEBUG
-  const signed char
-  scli_parser::yyrline_[] =
+#if YAML_DEBUG
+  const unsigned char
+  parser::yyrline_[] =
   {
-       0,    68,    68,    69,    71,    72,    73,    74,    75,    77,
-      78,    81,    82,    83,    86,    87,    90,    90,    91,    92,
-      93,    94,    95
+       0,    55,    55,    57,    61,    62,    63,    67,    73,    77,
+      81,    88,    96,    96,   107,   113,   122,   129,   129,   136,
+     137,   141,   141,   151,   152,   156,   162,   166,   166,   176
   };
 
   void
-  scli_parser::yy_stack_print_ () const
+  parser::yy_stack_print_ () const
   {
     *yycdebug_ << "Stack now";
     for (stack_type::const_iterator
@@ -1166,7 +1197,7 @@ namespace acl {
   }
 
   void
-  scli_parser::yy_reduce_print_ (int yyrule) const
+  parser::yy_reduce_print_ (int yyrule) const
   {
     int yylno = yyrline_[yyrule];
     int yynrhs = yyr2_[yyrule];
@@ -1178,39 +1209,32 @@ namespace acl {
       YY_SYMBOL_PRINT ("   $" << yyi + 1 << " =",
                        yystack_[(yynrhs) - (yyi + 1)]);
   }
-#endif // SCLI_DEBUG
+#endif // YAML_DEBUG
 
 
-#line 7 "C:/repos/acl/src/acl/dsl/scli.yy"
-} // acl
-#line 1187 "C:/repos/acl/src/acl/dsl/parse_impl.cpp"
+#line 7 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+} } // acl::yaml
+#line 1218 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
 
-#line 99 "C:/repos/acl/src/acl/dsl/scli.yy"
+#line 182 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+
 
 /*============================================================================*/
 namespace acl
 {
 
-void scli_parser::error(const scli_parser::location_type& loc, const std::string& msg) 
+void yaml::parser::error(const yaml::parser::location_type& loc, const std::string& msg) 
 {
-    scli.error(loc, msg, "parse");
+  cyaml.throw_error(loc, msg, "parser-error");
 }
 
-void scli::error(scli::location const& l, std::string_view err, std::string_view ctx) 
+void yaml::istream::parse(context& handler) 
 {
-  sstate.error_handler(l, err, ctx);
-}
-
-void scli::parse(std::string_view src_name, std::string_view content) noexcept
-{
-	source.source_name = src_name;
-	contents    = content;
-	begin_scan();
-	set_current_reg_id("root");
-	enter_region("");
-	scli_parser parser(*this);
-	parser.parse();
-	end_scan();	
+  this->handler_ = &handler;
+  begin_scan();
+  parser parser(*this);
+  parser.parse();
+  end_scan();	
 }
 
 }

@@ -12,213 +12,213 @@
 #endif
 
 #ifdef yy_create_buffer
-#define scli__create_buffer_ALREADY_DEFINED
+#define yaml__create_buffer_ALREADY_DEFINED
 #else
-#define yy_create_buffer scli__create_buffer
+#define yy_create_buffer yaml__create_buffer
 #endif
 
 #ifdef yy_delete_buffer
-#define scli__delete_buffer_ALREADY_DEFINED
+#define yaml__delete_buffer_ALREADY_DEFINED
 #else
-#define yy_delete_buffer scli__delete_buffer
+#define yy_delete_buffer yaml__delete_buffer
 #endif
 
 #ifdef yy_scan_buffer
-#define scli__scan_buffer_ALREADY_DEFINED
+#define yaml__scan_buffer_ALREADY_DEFINED
 #else
-#define yy_scan_buffer scli__scan_buffer
+#define yy_scan_buffer yaml__scan_buffer
 #endif
 
 #ifdef yy_scan_string
-#define scli__scan_string_ALREADY_DEFINED
+#define yaml__scan_string_ALREADY_DEFINED
 #else
-#define yy_scan_string scli__scan_string
+#define yy_scan_string yaml__scan_string
 #endif
 
 #ifdef yy_scan_bytes
-#define scli__scan_bytes_ALREADY_DEFINED
+#define yaml__scan_bytes_ALREADY_DEFINED
 #else
-#define yy_scan_bytes scli__scan_bytes
+#define yy_scan_bytes yaml__scan_bytes
 #endif
 
 #ifdef yy_init_buffer
-#define scli__init_buffer_ALREADY_DEFINED
+#define yaml__init_buffer_ALREADY_DEFINED
 #else
-#define yy_init_buffer scli__init_buffer
+#define yy_init_buffer yaml__init_buffer
 #endif
 
 #ifdef yy_flush_buffer
-#define scli__flush_buffer_ALREADY_DEFINED
+#define yaml__flush_buffer_ALREADY_DEFINED
 #else
-#define yy_flush_buffer scli__flush_buffer
+#define yy_flush_buffer yaml__flush_buffer
 #endif
 
 #ifdef yy_load_buffer_state
-#define scli__load_buffer_state_ALREADY_DEFINED
+#define yaml__load_buffer_state_ALREADY_DEFINED
 #else
-#define yy_load_buffer_state scli__load_buffer_state
+#define yy_load_buffer_state yaml__load_buffer_state
 #endif
 
 #ifdef yy_switch_to_buffer
-#define scli__switch_to_buffer_ALREADY_DEFINED
+#define yaml__switch_to_buffer_ALREADY_DEFINED
 #else
-#define yy_switch_to_buffer scli__switch_to_buffer
+#define yy_switch_to_buffer yaml__switch_to_buffer
 #endif
 
 #ifdef yypush_buffer_state
-#define scli_push_buffer_state_ALREADY_DEFINED
+#define yaml_push_buffer_state_ALREADY_DEFINED
 #else
-#define yypush_buffer_state scli_push_buffer_state
+#define yypush_buffer_state yaml_push_buffer_state
 #endif
 
 #ifdef yypop_buffer_state
-#define scli_pop_buffer_state_ALREADY_DEFINED
+#define yaml_pop_buffer_state_ALREADY_DEFINED
 #else
-#define yypop_buffer_state scli_pop_buffer_state
+#define yypop_buffer_state yaml_pop_buffer_state
 #endif
 
 #ifdef yyensure_buffer_stack
-#define scli_ensure_buffer_stack_ALREADY_DEFINED
+#define yaml_ensure_buffer_stack_ALREADY_DEFINED
 #else
-#define yyensure_buffer_stack scli_ensure_buffer_stack
+#define yyensure_buffer_stack yaml_ensure_buffer_stack
 #endif
 
 #ifdef yylex
-#define scli_lex_ALREADY_DEFINED
+#define yaml_lex_ALREADY_DEFINED
 #else
-#define yylex scli_lex
+#define yylex yaml_lex
 #endif
 
 #ifdef yyrestart
-#define scli_restart_ALREADY_DEFINED
+#define yaml_restart_ALREADY_DEFINED
 #else
-#define yyrestart scli_restart
+#define yyrestart yaml_restart
 #endif
 
 #ifdef yylex_init
-#define scli_lex_init_ALREADY_DEFINED
+#define yaml_lex_init_ALREADY_DEFINED
 #else
-#define yylex_init scli_lex_init
+#define yylex_init yaml_lex_init
 #endif
 
 #ifdef yylex_init_extra
-#define scli_lex_init_extra_ALREADY_DEFINED
+#define yaml_lex_init_extra_ALREADY_DEFINED
 #else
-#define yylex_init_extra scli_lex_init_extra
+#define yylex_init_extra yaml_lex_init_extra
 #endif
 
 #ifdef yylex_destroy
-#define scli_lex_destroy_ALREADY_DEFINED
+#define yaml_lex_destroy_ALREADY_DEFINED
 #else
-#define yylex_destroy scli_lex_destroy
+#define yylex_destroy yaml_lex_destroy
 #endif
 
 #ifdef yyget_debug
-#define scli_get_debug_ALREADY_DEFINED
+#define yaml_get_debug_ALREADY_DEFINED
 #else
-#define yyget_debug scli_get_debug
+#define yyget_debug yaml_get_debug
 #endif
 
 #ifdef yyset_debug
-#define scli_set_debug_ALREADY_DEFINED
+#define yaml_set_debug_ALREADY_DEFINED
 #else
-#define yyset_debug scli_set_debug
+#define yyset_debug yaml_set_debug
 #endif
 
 #ifdef yyget_extra
-#define scli_get_extra_ALREADY_DEFINED
+#define yaml_get_extra_ALREADY_DEFINED
 #else
-#define yyget_extra scli_get_extra
+#define yyget_extra yaml_get_extra
 #endif
 
 #ifdef yyset_extra
-#define scli_set_extra_ALREADY_DEFINED
+#define yaml_set_extra_ALREADY_DEFINED
 #else
-#define yyset_extra scli_set_extra
+#define yyset_extra yaml_set_extra
 #endif
 
 #ifdef yyget_in
-#define scli_get_in_ALREADY_DEFINED
+#define yaml_get_in_ALREADY_DEFINED
 #else
-#define yyget_in scli_get_in
+#define yyget_in yaml_get_in
 #endif
 
 #ifdef yyset_in
-#define scli_set_in_ALREADY_DEFINED
+#define yaml_set_in_ALREADY_DEFINED
 #else
-#define yyset_in scli_set_in
+#define yyset_in yaml_set_in
 #endif
 
 #ifdef yyget_out
-#define scli_get_out_ALREADY_DEFINED
+#define yaml_get_out_ALREADY_DEFINED
 #else
-#define yyget_out scli_get_out
+#define yyget_out yaml_get_out
 #endif
 
 #ifdef yyset_out
-#define scli_set_out_ALREADY_DEFINED
+#define yaml_set_out_ALREADY_DEFINED
 #else
-#define yyset_out scli_set_out
+#define yyset_out yaml_set_out
 #endif
 
 #ifdef yyget_leng
-#define scli_get_leng_ALREADY_DEFINED
+#define yaml_get_leng_ALREADY_DEFINED
 #else
-#define yyget_leng scli_get_leng
+#define yyget_leng yaml_get_leng
 #endif
 
 #ifdef yyget_text
-#define scli_get_text_ALREADY_DEFINED
+#define yaml_get_text_ALREADY_DEFINED
 #else
-#define yyget_text scli_get_text
+#define yyget_text yaml_get_text
 #endif
 
 #ifdef yyget_lineno
-#define scli_get_lineno_ALREADY_DEFINED
+#define yaml_get_lineno_ALREADY_DEFINED
 #else
-#define yyget_lineno scli_get_lineno
+#define yyget_lineno yaml_get_lineno
 #endif
 
 #ifdef yyset_lineno
-#define scli_set_lineno_ALREADY_DEFINED
+#define yaml_set_lineno_ALREADY_DEFINED
 #else
-#define yyset_lineno scli_set_lineno
+#define yyset_lineno yaml_set_lineno
 #endif
 
 #ifdef yyget_column
-#define scli_get_column_ALREADY_DEFINED
+#define yaml_get_column_ALREADY_DEFINED
 #else
-#define yyget_column scli_get_column
+#define yyget_column yaml_get_column
 #endif
 
 #ifdef yyset_column
-#define scli_set_column_ALREADY_DEFINED
+#define yaml_set_column_ALREADY_DEFINED
 #else
-#define yyset_column scli_set_column
+#define yyset_column yaml_set_column
 #endif
 
 #ifdef yywrap
-#define scli_wrap_ALREADY_DEFINED
+#define yaml_wrap_ALREADY_DEFINED
 #else
-#define yywrap scli_wrap
+#define yywrap yaml_wrap
 #endif
 
 #ifdef yyalloc
-#define scli_alloc_ALREADY_DEFINED
+#define yaml_alloc_ALREADY_DEFINED
 #else
-#define yyalloc scli_alloc
+#define yyalloc yaml_alloc
 #endif
 
 #ifdef yyrealloc
-#define scli_realloc_ALREADY_DEFINED
+#define yaml_realloc_ALREADY_DEFINED
 #else
-#define yyrealloc scli_realloc
+#define yyrealloc yaml_realloc
 #endif
 
 #ifdef yyfree
-#define scli_free_ALREADY_DEFINED
+#define yaml_free_ALREADY_DEFINED
 #else
-#define yyfree scli_free
+#define yyfree yaml_free
 #endif
 
 /* First, we deal with  platform-specific or compiler-specific issues. */
@@ -524,7 +524,7 @@ void yyfree ( void * , yyscan_t yyscanner );
 
 /* Begin user sect3 */
 
-#define scli_wrap(yyscanner) (/*CONSTCOND*/1)
+#define yaml_wrap(yyscanner) (/*CONSTCOND*/1)
 #define YY_SKIP_YYWRAP
 typedef flex_uint8_t YY_CHAR;
 
@@ -546,8 +546,8 @@ static void yynoreturn yy_fatal_error ( const char* msg , yyscan_t yyscanner );
 	yyg->yy_hold_char = *yy_cp; \
 	*yy_cp = '\0'; \
 	yyg->yy_c_buf_p = yy_cp;
-#define YY_NUM_RULES 36
-#define YY_END_OF_BUFFER 37
+#define YY_NUM_RULES 14
+#define YY_END_OF_BUFFER 15
 /* This struct is not used in this scanner,
    but its presence is necessary. */
 struct yy_trans_info
@@ -555,34 +555,29 @@ struct yy_trans_info
 	flex_int32_t yy_verify;
 	flex_int32_t yy_nxt;
 	};
-static const flex_int16_t yy_accept[78] =
+static const flex_int16_t yy_accept[26] =
     {   0,
-        0,    0,    0,    0,    0,    0,    0,    0,    0,    0,
-        0,    0,    0,    0,    0,    0,    0,    0,   37,   36,
-       22,   21,   20,   16,   17,   23,   14,    8,   23,   19,
-       15,   18,   23,   11,   12,    8,   24,   25,   26,   28,
-       27,   28,    3,   35,    3,    3,    6,    4,    6,   32,
-       34,   33,   29,   30,   22,   21,   23,    9,   10,   23,
-        7,   24,   26,   25,   27,    2,    0,    5,   32,   31,
-       29,   23,    1,   23,   23,   13,    0
+        0,    0,   15,   10,   12,    8,   13,   11,    5,   10,
+       13,    3,    4,    2,    1,   10,   12,    0,    9,   11,
+        6,    7,    2,    1,    0
     } ;
 
 static const YY_CHAR yy_ec[256] =
     {   0,
         1,    1,    1,    1,    1,    1,    1,    1,    2,    3,
-        1,    1,    2,    1,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
-        1,    2,    1,    4,    5,    5,    1,    1,    1,    6,
-        7,    8,    1,    9,   10,   11,   12,   13,   13,   13,
-       13,   13,   13,   13,   13,   13,   13,   14,   15,   13,
-       16,   13,    1,   13,   11,   11,   11,   11,   11,   11,
-       11,   11,   11,   11,   11,   11,   11,   11,   11,   11,
-       11,   11,   11,   11,   11,   11,   11,   11,   11,   11,
-       13,   17,   13,    1,   11,    1,   11,   11,   11,   11,
+        1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
+        1,    2,    1,    4,    5,    1,    1,    1,    1,    1,
+        1,    1,    1,    6,    7,    1,    1,    1,    1,    1,
+        1,    1,    1,    1,    1,    1,    1,    8,    1,    1,
+        1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
+        1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
+        1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
+        9,    1,   10,    1,    1,    1,    1,    1,    1,    1,
 
-       11,   11,   11,   11,   18,   11,   11,   11,   19,   11,
-       20,   21,   11,   22,   11,   23,   11,   11,   11,   11,
-       11,   11,   24,    1,   25,    1,    1,    1,    1,    1,
+        1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
+        1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
+        1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
@@ -599,81 +594,39 @@ static const YY_CHAR yy_ec[256] =
         1,    1,    1,    1,    1
     } ;
 
-static const YY_CHAR yy_meta[26] =
+static const YY_CHAR yy_meta[11] =
     {   0,
-        1,    1,    2,    1,    3,    1,    1,    4,    1,    5,
-        6,    5,    5,    1,    1,    1,    5,    6,    6,    6,
-        6,    6,    6,    1,    1
+        1,    2,    3,    1,    1,    1,    1,    1,    1,    1
     } ;
 
-static const flex_int16_t yy_base[88] =
+static const flex_int16_t yy_base[29] =
     {   0,
-        0,  134,   24,   46,   24,   27,   29,   30,  140,   46,
-       55,   58,    0,  132,   28,   47,  138,  137,  139,  145,
-      132,  127,  145,  145,  145,    0,  145,  145,   62,  145,
-      145,  145,  109,  145,  145,  115,   39,    0,  145,  145,
-      145,  114,  145,  145,   72,   71,  145,  145,   76,    0,
-      145,   67,    0,  145,   76,   74,    0,    0,    0,   55,
-      145,   69,  145,    0,  145,  145,   63,  145,    0,  145,
-        0,   34,  145,   30,    5,    0,  145,   83,   89,   95,
-      101,  107,  113,  116,  120,  126,  132
+        0,    9,   29,    0,   26,   30,   23,    0,    0,   24,
+       23,    0,    0,   11,   30,    0,   22,   19,   30,    0,
+       20,   19,    0,   30,   30,   19,   14,   17
     } ;
 
-static const flex_int16_t yy_def[88] =
+static const flex_int16_t yy_def[29] =
     {   0,
-       77,    1,   78,   78,   79,   79,   79,   79,   80,   80,
-       81,   81,    1,    1,   82,   82,   83,   83,   77,   77,
-       77,   77,   77,   77,   77,   84,   77,   77,   84,   77,
-       77,   77,   84,   77,   77,   77,   77,   85,   77,   77,
-       77,   77,   77,   77,   77,   77,   77,   77,   77,   86,
-       77,   77,   87,   77,   77,   77,   84,   84,   84,   84,
-       77,   77,   77,   85,   77,   77,   77,   77,   86,   77,
-       87,   84,   77,   84,   84,   84,    0,   77,   77,   77,
-       77,   77,   77,   77,   77,   77,   77
+       25,    1,   25,   26,   25,   25,   27,   28,   26,   26,
+       25,   26,   26,   25,   25,   26,   25,   27,   25,   28,
+       25,   25,   14,   25,    0,   25,   25,   25
     } ;
 
-static const flex_int16_t yy_nxt[171] =
+static const flex_int16_t yy_nxt[41] =
     {   0,
-       20,   21,   22,   23,   20,   24,   25,   26,   27,   28,
-       26,   29,   26,   30,   31,   32,   26,   33,   26,   26,
-       26,   26,   26,   34,   35,   37,   41,   76,   38,   41,
-       51,   41,   41,   42,   38,   52,   42,   39,   42,   42,
-       62,   38,   38,   38,   38,   38,   38,   37,   44,   51,
-       38,   75,   63,   74,   52,   45,   38,   44,   48,   39,
-       44,   48,   46,   38,   38,   38,   38,   38,   38,   58,
-       62,   49,   73,   59,   49,   72,   56,   55,   70,   68,
-       67,   66,   63,   20,   20,   20,   20,   20,   20,   40,
-       40,   40,   40,   40,   40,   43,   43,   43,   43,   43,
-
-       43,   47,   47,   47,   47,   47,   47,   50,   50,   50,
-       50,   50,   50,   53,   53,   53,   53,   53,   53,   57,
-       57,   57,   64,   65,   61,   64,   69,   60,   69,   56,
-       69,   69,   71,   55,   71,   71,   71,   71,   77,   54,
-       54,   36,   44,   36,   19,   77,   77,   77,   77,   77,
-       77,   77,   77,   77,   77,   77,   77,   77,   77,   77,
-       77,   77,   77,   77,   77,   77,   77,   77,   77,   77
+        4,    5,    6,    7,    8,    9,   10,   11,   12,   13,
+       14,   15,   23,   24,   18,   18,   18,   20,   20,   16,
+       22,   21,   19,   17,   22,   21,   19,   17,   25,    3,
+       25,   25,   25,   25,   25,   25,   25,   25,   25,   25
     } ;
 
-static const flex_int16_t yy_chk[171] =
+static const flex_int16_t yy_chk[41] =
     {   0,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
-        1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
-        1,    1,    1,    1,    1,    3,    5,   75,    3,    6,
-       15,    7,    8,    5,    3,   15,    6,    3,    7,    8,
-       37,    3,    3,    3,    3,    3,    3,    4,   10,   16,
-        4,   74,   37,   72,   16,   10,    4,   11,   11,    4,
-       12,   12,   10,    4,    4,    4,    4,    4,    4,   29,
-       62,   11,   67,   29,   12,   60,   56,   55,   52,   49,
-       46,   45,   62,   78,   78,   78,   78,   78,   78,   79,
-       79,   79,   79,   79,   79,   80,   80,   80,   80,   80,
-
-       80,   81,   81,   81,   81,   81,   81,   82,   82,   82,
-       82,   82,   82,   83,   83,   83,   83,   83,   83,   84,
-       84,   84,   85,   42,   36,   85,   86,   33,   86,   22,
-       86,   86,   87,   21,   87,   87,   87,   87,   19,   18,
-       17,   14,    9,    2,   77,   77,   77,   77,   77,   77,
-       77,   77,   77,   77,   77,   77,   77,   77,   77,   77,
-       77,   77,   77,   77,   77,   77,   77,   77,   77,   77
+        2,    2,   14,   14,   27,   27,   27,   28,   28,   26,
+       22,   21,   18,   17,   11,   10,    7,    5,    3,   25,
+       25,   25,   25,   25,   25,   25,   25,   25,   25,   25
     } ;
 
 /* The intent behind this definition is that it'll catch
@@ -686,30 +639,23 @@ static const flex_int16_t yy_chk[171] =
 #include <cstdint>
 #include <string>
 #include <string_view>
-#include <acl/dsl/scli.hpp>
-#include "parse_impl.hpp"
+#include <exception>
+#include <acl/dsl/yaml.hpp>
+#include "yaml_parser_impl.hpp"
 #define YY_NO_UNISTD_H
-#define YY_EXTRA_TYPE acl::scli*
+#define YY_EXTRA_TYPE acl::yaml::istream*
 #define YY_INPUT(buf,result,max_size)       \
 	result = yyextra->read(buf, max_size);	\
 	assert(result <= max_size);			    \
 	assert(buf[result] == 0);				\
 
-#define yyterminate()					   return acl::scli_parser::make_END(scli.source)
-#define YY_USER_ACTION                     scli.source.step(); scli.source.columns((uint32_t)yyleng); 
-void * scli_alloc (std::size_t bytes, void* yyscanner);
-void * scli_realloc (void* ptr, std::size_t bytes, void* yyscanner);
-void   scli_free (void* ptr, void* yyscanner);
- 
+#define yyterminate()					         return acl::yaml::parser::make_END(cyaml.get_source())
+#define YY_USER_ACTION                 cyaml.move_ahead((uint32_t)yyleng); 
+void * yaml_alloc (std::size_t bytes, void* yyscanner);
+void * yaml_realloc (void* ptr, std::size_t bytes, void* yyscanner);
+void   yaml_free (void* ptr, void* yyscanner);
+
 #define INITIAL 0
-#define STATE_REGION 1
-#define STATE_REGION_TEXT 2
-#define STATE_REGION_CODE 3
-#define STATE_TEXT 4
-#define STATE_STR 5
-#define STATE_CONTENT 6
-#define STATE_COMMENT 7
-#define STATE_SINGLE_LINE_COMMENT 8
 
 #ifndef YY_NO_UNISTD_H
 /* Special case for "unistd.h", since it is non-ANSI. We include it way
@@ -718,7 +664,7 @@ void   scli_free (void* ptr, void* yyscanner);
  */
 #include <unistd.h>
 #endif
-    
+
 #ifndef YY_EXTRA_TYPE
 #define YY_EXTRA_TYPE void *
 #endif
@@ -997,13 +943,13 @@ yy_match:
 			while ( yy_chk[yy_base[yy_current_state] + yy_c] != yy_current_state )
 				{
 				yy_current_state = (int) yy_def[yy_current_state];
-				if ( yy_current_state >= 78 )
+				if ( yy_current_state >= 26 )
 					yy_c = yy_meta[yy_c];
 				}
 			yy_current_state = yy_nxt[yy_base[yy_current_state] + yy_c];
 			++yy_cp;
 			}
-		while ( yy_current_state != 77 );
+		while ( yy_current_state != 25 );
 		yy_cp = yyg->yy_last_accepting_cpos;
 		yy_current_state = yyg->yy_last_accepting_state;
 
@@ -1024,221 +970,76 @@ do_action:	/* This label is used only to access EOF actions. */
 			goto yy_find_action;
 
 case 1:
+/* rule 1 can match eol */
 YY_RULE_SETUP
-scli.escape_sequence(scli.make_token()); scli.skip_len(1); scli.put(2); 
+; /* Skip empty lines */
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-{
-	BEGIN(STATE_REGION); 
-
-	auto content = scli.make_text(); 
-	scli.skip_len(2);
-	return acl::scli_parser::make_TEXT_CONTENTS(std::move(content), scli.source); 
-}
-	YY_BREAK
-case YY_STATE_EOF(STATE_TEXT):
-{
-	BEGIN(INITIAL); 
-	return acl::scli_parser::make_TEXT_CONTENTS(std::move(scli.make_text()), scli.source); 
-}
+{ 
+                     uint32_t current_indent = static_cast<uint32_t>(yyleng);                     
+                     if (current_indent > cyaml.peek_indent()) {
+                         cyaml.push_indent(current_indent);
+                         return acl::yaml::parser::make_INDENT(cyaml.get_source());
+                     } else if (current_indent < cyaml.peek_indent()) {
+                         cyaml.pop_indent();
+                         return acl::yaml::parser::make_DEDENT(cyaml.get_source());
+                     }
+                   }                   
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-scli.put(1);
+{ return acl::yaml::parser::make_LBRACKET(cyaml.get_source()); }
 	YY_BREAK
-
 case 4:
 YY_RULE_SETUP
-{
-	auto tok = scli.make_text();
-	scli.skip_len(1);
-	BEGIN(STATE_CONTENT);  
-	return acl::scli_parser::make_STRING_LITERAL(tok, scli.source);
-}
+{ return acl::yaml::parser::make_RBRACKET(cyaml.get_source()); }
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-{
-	scli.escape_sequence(scli.make_token());
-	scli.skip_len(1);
-	scli.put(1);
-}
+{ return acl::yaml::parser::make_COMMA(cyaml.get_source()); }                   
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-{ 
-		scli.put(1);
-}
+{ return acl::yaml::parser::make_DASH(cyaml.get_source()); }
 	YY_BREAK
-
 case 7:
 YY_RULE_SETUP
-BEGIN(STATE_REGION); scli.skip_len(2);
+{ return acl::yaml::parser::make_COLON(cyaml.get_source()); }
 	YY_BREAK
 case 8:
+/* rule 8 can match eol */
 YY_RULE_SETUP
-scli.put(yyleng);
+{ return acl::yaml::parser::make_NEWLINE(cyaml.get_source()); }
 	YY_BREAK
 case 9:
+/* rule 9 can match eol */
 YY_RULE_SETUP
-BEGIN(STATE_COMMENT); scli.skip_len(2);
+{ return acl::yaml::parser::make_STRING(cyaml.get_view(static_cast<uint32_t>(yyleng)), cyaml.get_source()); }
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-BEGIN(STATE_SINGLE_LINE_COMMENT); scli.skip_len(2);
+{ 
+                     return acl::yaml::parser::make_STRING(cyaml.get_view(static_cast<uint32_t>(yyleng)), cyaml.get_source());
+                   }
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-scli.skip_len(1); return acl::scli_parser::make_LBRACES(scli.source);
+; /* Ignore comments */
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-scli.skip_len(1); return acl::scli_parser::make_RBRACES(scli.source);
+; /* Ignore whitespace */
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-scli.skip_len(yyleng); return acl::scli_parser::make_IMPORT(scli.source);
+{ cyaml.throw_error(cyaml.location(), "Invalid character", "lexer-error"); }
 	YY_BREAK
 case 14:
-YY_RULE_SETUP
-scli.skip_len(1); return acl::scli_parser::make_COMMA(scli.source);
-	YY_BREAK
-case 15:
-YY_RULE_SETUP
-scli.skip_len(1); return acl::scli_parser::make_SEMICOLON(scli.source);
-	YY_BREAK
-case 16:
-YY_RULE_SETUP
-scli.skip_len(1); return acl::scli_parser::make_LPARENTHESES(scli.source);
-	YY_BREAK
-case 17:
-YY_RULE_SETUP
-scli.skip_len(1); return acl::scli_parser::make_RPARENTHESES(scli.source);
-	YY_BREAK
-case 18:
-YY_RULE_SETUP
-scli.skip_len(1); return acl::scli_parser::make_ASSIGN(scli.source);
-	YY_BREAK
-case 19:
-YY_RULE_SETUP
-scli.skip_len(1); return acl::scli_parser::make_COLON(scli.source);
-	YY_BREAK
-case 20:
-YY_RULE_SETUP
-scli.skip_len(1); BEGIN(STATE_STR);
-	YY_BREAK
-case 21:
-/* rule 21 can match eol */
-YY_RULE_SETUP
-scli.skip_len(yyleng); scli.source.lines((uint32_t)yyleng);
-	YY_BREAK
-case 22:
-YY_RULE_SETUP
-scli.skip_len(yyleng);
-	YY_BREAK
-case 23:
-YY_RULE_SETUP
-scli.put(yyleng); return acl::scli_parser::make_STRING(scli.make_token(), scli.source);
-	YY_BREAK
-
-case 24:
-YY_RULE_SETUP
-scli.skip_len(yyleng); 
-	YY_BREAK
-case 25:
-YY_RULE_SETUP
-scli.put(yyleng);
-	YY_BREAK
-case 26:
-YY_RULE_SETUP
-{ 				
-				auto id = scli.make_token();
-				scli.set_current_reg_id(id);
-				scli.set_region_position(scli.source.next_line());
-				scli.skip_len(yyleng);
-				if (scli.is_code_region(id))
-				{
-					BEGIN(STATE_REGION_CODE); 
-				}
-				else 
-				{
-					BEGIN(STATE_REGION_TEXT);
-			  }
-			}
-	YY_BREAK
-
-case 27:
-/* rule 27 can match eol */
-YY_RULE_SETUP
-{
-	auto value = scli.make_token();
-	value = scli.trim(value);
-	scli.skip_len(yyleng);
-	if (YY_START == STATE_REGION_CODE) {
-		BEGIN(STATE_CONTENT);
-		return acl::scli_parser::make_REGION_ID(value, scli.source);
-	} else {
-		BEGIN(STATE_TEXT);
-		return acl::scli_parser::make_TEXT_REGION_ID(value, scli.source);
-	}
-}
-	YY_BREAK
-case 28:
-YY_RULE_SETUP
-scli.put(1);
-	YY_BREAK
-
-case 29:
-YY_RULE_SETUP
-scli.skip_len(yyleng); 
-	YY_BREAK
-case 30:
-/* rule 30 can match eol */
-YY_RULE_SETUP
-scli.skip_len(1); scli.source.lines((uint32_t)1); BEGIN(STATE_CONTENT);
-	YY_BREAK
-
-case 31:
-YY_RULE_SETUP
-scli.skip_len(2);BEGIN(STATE_CONTENT);
-	YY_BREAK
-case 32:
-YY_RULE_SETUP
-scli.skip_len(yyleng); 
-	YY_BREAK
-case 33:
-YY_RULE_SETUP
-scli.skip_len(1); 
-	YY_BREAK
-case 34:
-/* rule 34 can match eol */
-YY_RULE_SETUP
-scli.skip_len(1); scli.source.lines((uint32_t)1);
-	YY_BREAK
-
-case 35:
-/* rule 35 can match eol */
-YY_RULE_SETUP
-{
-  // no error, just increase the line number
-  // @todo
-  scli.source.lines((uint32_t)yyleng);
-  scli.put(1);
-}
-	YY_BREAK
-case 36:
 YY_RULE_SETUP
 ECHO;
 	YY_BREAK
 case YY_STATE_EOF(INITIAL):
-case YY_STATE_EOF(STATE_REGION):
-case YY_STATE_EOF(STATE_REGION_TEXT):
-case YY_STATE_EOF(STATE_REGION_CODE):
-case YY_STATE_EOF(STATE_STR):
-case YY_STATE_EOF(STATE_CONTENT):
-case YY_STATE_EOF(STATE_COMMENT):
-case YY_STATE_EOF(STATE_SINGLE_LINE_COMMENT):
 	yyterminate();
 
 	case YY_END_OF_BUFFER:
@@ -1538,7 +1339,7 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 		while ( yy_chk[yy_base[yy_current_state] + yy_c] != yy_current_state )
 			{
 			yy_current_state = (int) yy_def[yy_current_state];
-			if ( yy_current_state >= 78 )
+			if ( yy_current_state >= 26 )
 				yy_c = yy_meta[yy_c];
 			}
 		yy_current_state = yy_nxt[yy_base[yy_current_state] + yy_c];
@@ -1567,11 +1368,11 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 	while ( yy_chk[yy_base[yy_current_state] + yy_c] != yy_current_state )
 		{
 		yy_current_state = (int) yy_def[yy_current_state];
-		if ( yy_current_state >= 78 )
+		if ( yy_current_state >= 26 )
 			yy_c = yy_meta[yy_c];
 		}
 	yy_current_state = yy_nxt[yy_base[yy_current_state] + yy_c];
-	yy_is_jam = (yy_current_state == 77);
+	yy_is_jam = (yy_current_state == 25);
 
 	(void)yyg;
 	return yy_is_jam ? 0 : yy_current_state;
@@ -2410,18 +2211,13 @@ void yyfree (void * ptr , yyscan_t yyscanner)
 
 #define YYTABLES_NAME "yytables"
 
-namespace acl 
+void acl::yaml::istream::begin_scan() 
 {
-
-void scli::begin_scan() noexcept
-{
-  scli_lex_init_extra(this, &scanner);
+  yaml_lex_init_extra(this, &scanner);
 }
 
-void scli::end_scan() noexcept
+void acl::yaml::istream::end_scan() 
 {
-  scli_lex_destroy(scanner);
-}
-
+  yaml_lex_destroy(scanner);
 }
 

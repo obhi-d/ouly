@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 20)
 option(ACL_BUILD_TESTS "Build the unit tests when BUILD_TESTING is enabled." OFF)
 option(ASAN_ENABLED "Build this target with AddressSanitizer" OFF)
 option(ACL_REC_STATS "No stats for allocator" OFF)
-option(ACL_GENERATE_SCLI_PARSER "Generate parsers." OFF)
+option(ACL_GENERATE_YAML_PARSER "Generate parsers." OFF)
 option(ACL_USE_SSE2 "Math library should use SSE2." OFF)
 option(ACL_USE_SSE3 "Math library should use SSE3." OFF)
 option(ACL_USE_AVX "Math library should use AVX." OFF)
@@ -25,31 +25,30 @@ set(ACL_SOURCE_BUILD_DIR          "${PROJECT_SOURCE_DIR}/src")
 
 include(GNUInstallDirs)
 
-if (ACL_GENERATE_SCLI_PARSER)
+if (ACL_GENERATE_YAML_PARSER OR (NOT EXISTS "${ACL_SOURCE_BUILD_DIR}/acl/dsl/yaml_parser_impl.cpp") OR (NOT EXISTS "${ACL_SOURCE_BUILD_DIR}/acl/dsl/yaml_lexer_impl.cpp"))
     add_custom_command( 
       OUTPUT 
-		    "${ACL_SOURCE_BUILD_DIR}/acl/dsl/parse_impl.cpp" 
+		    "${ACL_SOURCE_BUILD_DIR}/acl/dsl/yaml_parser_impl.cpp" 
 		
-	     COMMAND ${CMAKE_COMMAND} -E echo "Generating parse_impl.cpp"
-	     COMMAND ${ACL_BISON_EXE} -o "${ACL_SOURCE_BUILD_DIR}/acl/dsl/parse_impl.cpp" "${ACL_SOURCE_BUILD_DIR}/acl/dsl/scli.yy"
+	     COMMAND ${CMAKE_COMMAND} -E echo "Generating yaml_parser_impl.cpp"
+	     COMMAND ${ACL_BISON_EXE} -o "${ACL_SOURCE_BUILD_DIR}/acl/dsl/yaml_parser_impl.cpp" "${ACL_SOURCE_BUILD_DIR}/acl/dsl/yaml.yy"
 
 	     DEPENDS 
-		    "${ACL_SOURCE_BUILD_DIR}/acl/dsl/scli.yy"
+		    "${ACL_SOURCE_BUILD_DIR}/acl/dsl/yaml.yy"
      )
 
     add_custom_command( 
 	    OUTPUT 
-		    "${ACL_SOURCE_BUILD_DIR}/acl/dsl/lexer_impl.cpp" 
+		    "${ACL_SOURCE_BUILD_DIR}/acl/dsl/yaml_lexer_impl.cpp" 
 	
-       COMMAND ${CMAKE_COMMAND} -E echo "Generating lexer_impl.cpp"	
-       COMMAND ${ACL_FLEX_EXE} -o "${ACL_SOURCE_BUILD_DIR}/acl/dsl/lexer_impl.cpp" -L "${ACL_SOURCE_BUILD_DIR}/acl/dsl/scli.l"
+       COMMAND ${CMAKE_COMMAND} -E echo "Generating yaml_lexer_impl.cpp"
+       COMMAND ${ACL_FLEX_EXE} -o "${ACL_SOURCE_BUILD_DIR}/acl/dsl/yaml_lexer_impl.cpp" -L "${ACL_SOURCE_BUILD_DIR}/acl/dsl/yaml.l"
 
 	     DEPENDS 
-		    "${ACL_SOURCE_BUILD_DIR}/acl/dsl/scli.l"
-		    "${ACL_SOURCE_BUILD_DIR}/acl/dsl/parse_impl.cpp"
+		    "${ACL_SOURCE_BUILD_DIR}/acl/dsl/yaml.l"
+		    "${ACL_SOURCE_BUILD_DIR}/acl/dsl/yaml_parser_impl.cpp"
     )
 endif()
-
 ##
 ## TARGET
 ##
@@ -58,10 +57,8 @@ message("Target name: ${ACL_TARGET_NAME}")
 add_library( ${ACL_TARGET_NAME} 
       
     "${ACL_SOURCE_BUILD_DIR}/acl/dsl/microexpr.cpp" 
-    "${ACL_SOURCE_BUILD_DIR}/acl/dsl/lexer_impl.cpp" 
-    "${ACL_SOURCE_BUILD_DIR}/acl/dsl/parse_impl.cpp" 
-    "${ACL_SOURCE_BUILD_DIR}/acl/dsl/scli.cpp"
-    "${ACL_SOURCE_BUILD_DIR}/acl/dsl/parameter.cpp"
+    "${ACL_SOURCE_BUILD_DIR}/acl/dsl/yaml_lexer_impl.cpp" 
+    "${ACL_SOURCE_BUILD_DIR}/acl/dsl/yaml_parser_impl.cpp" 
     "${ACL_SOURCE_BUILD_DIR}/acl/scheduler/scheduler.cpp"
     "${ACL_SOURCE_BUILD_DIR}/acl/scheduler/event_types.cpp"
     "${ACL_SOURCE_BUILD_DIR}/acl/utils/string_utils.cpp"
