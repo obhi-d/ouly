@@ -546,8 +546,8 @@ static void yynoreturn yy_fatal_error ( const char* msg , yyscan_t yyscanner );
 	yyg->yy_hold_char = *yy_cp; \
 	*yy_cp = '\0'; \
 	yyg->yy_c_buf_p = yy_cp;
-#define YY_NUM_RULES 14
-#define YY_END_OF_BUFFER 15
+#define YY_NUM_RULES 16
+#define YY_END_OF_BUFFER 17
 /* This struct is not used in this scanner,
    but its presence is necessary. */
 struct yy_trans_info
@@ -555,11 +555,11 @@ struct yy_trans_info
 	flex_int32_t yy_verify;
 	flex_int32_t yy_nxt;
 	};
-static const flex_int16_t yy_accept[26] =
+static const flex_int16_t yy_accept[27] =
     {   0,
-        0,    0,   15,   10,   12,    8,   13,   11,    5,   10,
-       13,    3,    4,    2,    1,   10,   12,    0,    9,   11,
-        6,    7,    2,    1,    0
+       12,   12,   17,   12,   14,   10,   15,   13,    5,    8,
+        9,    7,    3,    4,    6,    2,    1,   12,   14,    0,
+       11,   13,    8,    2,    1,    0
     } ;
 
 static const YY_CHAR yy_ec[256] =
@@ -570,14 +570,14 @@ static const YY_CHAR yy_ec[256] =
         1,    2,    1,    4,    5,    1,    1,    1,    1,    1,
         1,    1,    1,    6,    7,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    8,    1,    1,
+        1,    9,    1,    1,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
-        1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
-        9,    1,   10,    1,    1,    1,    1,    1,    1,    1,
+       10,    1,   11,    1,    1,    1,    1,    1,    1,    1,
 
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
-        1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
+        1,    1,    1,   12,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
@@ -594,39 +594,42 @@ static const YY_CHAR yy_ec[256] =
         1,    1,    1,    1,    1
     } ;
 
-static const YY_CHAR yy_meta[11] =
+static const YY_CHAR yy_meta[13] =
     {   0,
-        1,    2,    3,    1,    1,    1,    1,    1,    1,    1
+        1,    2,    3,    2,    2,    1,    1,    2,    1,    1,
+        1,    1
     } ;
 
-static const flex_int16_t yy_base[29] =
+static const flex_int16_t yy_base[30] =
     {   0,
-        0,    9,   29,    0,   26,   30,   23,    0,    0,   24,
-       23,    0,    0,   11,   30,    0,   22,   19,   30,    0,
-       20,   19,    0,   30,   30,   19,   14,   17
+        0,   11,   29,    0,   26,   30,   23,    0,    0,   24,
+       30,    0,    0,    0,    0,   13,   30,    0,   23,   20,
+       30,    0,   21,    0,   30,   30,   21,   16,   19
     } ;
 
-static const flex_int16_t yy_def[29] =
+static const flex_int16_t yy_def[30] =
     {   0,
-       25,    1,   25,   26,   25,   25,   27,   28,   26,   26,
-       25,   26,   26,   25,   25,   26,   25,   27,   25,   28,
-       25,   25,   14,   25,    0,   25,   25,   25
+       26,    1,   26,   27,   26,   26,   28,   29,   27,   27,
+       26,   27,   27,   27,   27,   26,   26,   27,   26,   28,
+       26,   29,   26,   16,   26,    0,   26,   26,   26
     } ;
 
-static const flex_int16_t yy_nxt[41] =
+static const flex_int16_t yy_nxt[43] =
     {   0,
         4,    5,    6,    7,    8,    9,   10,   11,   12,   13,
-       14,   15,   23,   24,   18,   18,   18,   20,   20,   16,
-       22,   21,   19,   17,   22,   21,   19,   17,   25,    3,
-       25,   25,   25,   25,   25,   25,   25,   25,   25,   25
+       14,   15,   16,   17,   24,   25,   20,   20,   20,   22,
+       22,   18,   23,   21,   19,   23,   21,   19,   26,    3,
+       26,   26,   26,   26,   26,   26,   26,   26,   26,   26,
+       26,   26
     } ;
 
-static const flex_int16_t yy_chk[41] =
+static const flex_int16_t yy_chk[43] =
     {   0,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
-        2,    2,   14,   14,   27,   27,   27,   28,   28,   26,
-       22,   21,   18,   17,   11,   10,    7,    5,    3,   25,
-       25,   25,   25,   25,   25,   25,   25,   25,   25,   25
+        1,    1,    2,    2,   16,   16,   28,   28,   28,   29,
+       29,   27,   23,   20,   19,   10,    7,    5,    3,   26,
+       26,   26,   26,   26,   26,   26,   26,   26,   26,   26,
+       26,   26
     } ;
 
 /* The intent behind this definition is that it'll catch
@@ -647,10 +650,10 @@ static const flex_int16_t yy_chk[41] =
 #define YY_INPUT(buf,result,max_size)       \
 	result = yyextra->read(buf, max_size);	\
 	assert(result <= max_size);			    \
-	assert(buf[result] == 0);				\
+	assert(!result || buf[result] == 0);				\
 
-#define yyterminate()					         return acl::yaml::parser::make_END(cyaml.get_source())
-#define YY_USER_ACTION                 cyaml.move_ahead((uint32_t)yyleng); 
+#define yyterminate()					         return acl::yaml::parser::make_END(cyaml.location())
+#define YY_USER_ACTION                 cyaml.set_token((uint32_t)yyleng); 
 void * yaml_alloc (std::size_t bytes, void* yyscanner);
 void * yaml_realloc (void* ptr, std::size_t bytes, void* yyscanner);
 void   yaml_free (void* ptr, void* yyscanner);
@@ -664,7 +667,7 @@ void   yaml_free (void* ptr, void* yyscanner);
  */
 #include <unistd.h>
 #endif
-
+    
 #ifndef YY_EXTRA_TYPE
 #define YY_EXTRA_TYPE void *
 #endif
@@ -943,13 +946,13 @@ yy_match:
 			while ( yy_chk[yy_base[yy_current_state] + yy_c] != yy_current_state )
 				{
 				yy_current_state = (int) yy_def[yy_current_state];
-				if ( yy_current_state >= 26 )
+				if ( yy_current_state >= 27 )
 					yy_c = yy_meta[yy_c];
 				}
 			yy_current_state = yy_nxt[yy_base[yy_current_state] + yy_c];
 			++yy_cp;
 			}
-		while ( yy_current_state != 25 );
+		while ( yy_current_state != 26 );
 		yy_cp = yyg->yy_last_accepting_cpos;
 		yy_current_state = yyg->yy_last_accepting_state;
 
@@ -977,65 +980,82 @@ YY_RULE_SETUP
 case 2:
 YY_RULE_SETUP
 { 
-                     uint32_t current_indent = static_cast<uint32_t>(yyleng);                     
-                     if (current_indent > cyaml.peek_indent()) {
+                     uint16_t current_indent = static_cast<uint16_t>(yyleng);                     
+                     if (!cyaml.is_same_indent_level(current_indent)) 
+                     {
+                       if (cyaml.is_higher_indent_level(current_indent)) 
+                       {
                          cyaml.push_indent(current_indent);
-                         return acl::yaml::parser::make_INDENT(cyaml.get_source());
-                     } else if (current_indent < cyaml.peek_indent()) {
+                         return acl::yaml::parser::make_INDENT(cyaml.location());
+                       } 
+                       else if (cyaml.is_lower_indent_level(current_indent)) 
+                       {
                          cyaml.pop_indent();
-                         return acl::yaml::parser::make_DEDENT(cyaml.get_source());
+                         return acl::yaml::parser::make_DEDENT(cyaml.location());
+                       }
+
                      }
                    }                   
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-{ return acl::yaml::parser::make_LBRACKET(cyaml.get_source()); }
+{ return acl::yaml::parser::make_LBRACKET(cyaml.location()); }
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-{ return acl::yaml::parser::make_RBRACKET(cyaml.get_source()); }
+{ return acl::yaml::parser::make_RBRACKET(cyaml.location()); }
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-{ return acl::yaml::parser::make_COMMA(cyaml.get_source()); }                   
+{ return acl::yaml::parser::make_COMMA(cyaml.location()); }
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-{ return acl::yaml::parser::make_DASH(cyaml.get_source()); }
+{ return acl::yaml::parser::make_PIPE(cyaml.location()); }
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-{ return acl::yaml::parser::make_COLON(cyaml.get_source()); }
+{ return acl::yaml::parser::make_GREATER_THAN(cyaml.location()); }
 	YY_BREAK
 case 8:
-/* rule 8 can match eol */
-YY_RULE_SETUP
-{ return acl::yaml::parser::make_NEWLINE(cyaml.get_source()); }
-	YY_BREAK
-case 9:
-/* rule 9 can match eol */
-YY_RULE_SETUP
-{ return acl::yaml::parser::make_STRING(cyaml.get_view(static_cast<uint32_t>(yyleng)), cyaml.get_source()); }
-	YY_BREAK
-case 10:
 YY_RULE_SETUP
 { 
-                     return acl::yaml::parser::make_STRING(cyaml.get_view(static_cast<uint32_t>(yyleng)), cyaml.get_source());
+                     uint16_t current_indent = static_cast<uint16_t>(yyleng);
+                     cyaml.set_post_dash_indent(current_indent);
+                     return acl::yaml::parser::make_DASH(cyaml.location()); 
                    }
 	YY_BREAK
-case 11:
+case 9:
 YY_RULE_SETUP
-; /* Ignore comments */
+{ return acl::yaml::parser::make_COLON(cyaml.location()); }
+	YY_BREAK
+case 10:
+/* rule 10 can match eol */
+YY_RULE_SETUP
+{ return acl::yaml::parser::make_NEWLINE(cyaml.location()); }
+	YY_BREAK
+case 11:
+/* rule 11 can match eol */
+YY_RULE_SETUP
+{ /* quoted string */ return acl::yaml::parser::make_STRING(cyaml.get_quoted_string(), cyaml.location()); }
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-; /* Ignore whitespace */
+{ /* string */ return acl::yaml::parser::make_STRING(cyaml.get_view(), cyaml.location()); }
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-{ cyaml.throw_error(cyaml.location(), "Invalid character", "lexer-error"); }
+; /* Ignore comments */
 	YY_BREAK
 case 14:
+YY_RULE_SETUP
+; /* Ignore whitespace */
+	YY_BREAK
+case 15:
+YY_RULE_SETUP
+{ cyaml.throw_error(cyaml.location(), "Invalid character", "lexer-error"); }
+	YY_BREAK
+case 16:
 YY_RULE_SETUP
 ECHO;
 	YY_BREAK
@@ -1339,7 +1359,7 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 		while ( yy_chk[yy_base[yy_current_state] + yy_c] != yy_current_state )
 			{
 			yy_current_state = (int) yy_def[yy_current_state];
-			if ( yy_current_state >= 26 )
+			if ( yy_current_state >= 27 )
 				yy_c = yy_meta[yy_c];
 			}
 		yy_current_state = yy_nxt[yy_base[yy_current_state] + yy_c];
@@ -1368,11 +1388,11 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 	while ( yy_chk[yy_base[yy_current_state] + yy_c] != yy_current_state )
 		{
 		yy_current_state = (int) yy_def[yy_current_state];
-		if ( yy_current_state >= 26 )
+		if ( yy_current_state >= 27 )
 			yy_c = yy_meta[yy_c];
 		}
 	yy_current_state = yy_nxt[yy_base[yy_current_state] + yy_c];
-	yy_is_jam = (yy_current_state == 25);
+	yy_is_jam = (yy_current_state == 26);
 
 	(void)yyg;
 	return yy_is_jam ? 0 : yy_current_state;

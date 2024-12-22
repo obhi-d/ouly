@@ -32,7 +32,7 @@
 
 
 /**
- ** \file /home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.hpp
+ ** \file C:/repos/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.hpp
  ** Define the acl::yaml::parser class.
  */
 
@@ -42,12 +42,12 @@
 // especially those whose name start with YY_ or yy_.  They are
 // private implementation details that can be changed or removed.
 
-#ifndef YY_YAML_HOME_OBHI_CODE_LXE_THIRD_PARTY_ACL_SRC_ACL_DSL_YAML_PARSER_IMPL_HPP_INCLUDED
-# define YY_YAML_HOME_OBHI_CODE_LXE_THIRD_PARTY_ACL_SRC_ACL_DSL_YAML_PARSER_IMPL_HPP_INCLUDED
+#ifndef YY_YAML_C_REPOS_LXE_THIRD_PARTY_ACL_SRC_ACL_DSL_YAML_PARSER_IMPL_HPP_INCLUDED
+# define YY_YAML_C_REPOS_LXE_THIRD_PARTY_ACL_SRC_ACL_DSL_YAML_PARSER_IMPL_HPP_INCLUDED
 // "%code requires" blocks.
-#line 16 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+#line 15 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml.yy"
 
-#include "yaml_parser_impl.hpp"
+// #define YYDEBUG 1
 #include <acl/dsl/yaml.hpp>
 
 
@@ -57,7 +57,7 @@
 #define YY_DECL extern acl::yaml::parser::symbol_type yaml_lex(acl::yaml::istream& cyaml, void* yyscanner)
 
 
-#line 61 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.hpp"
+#line 61 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.hpp"
 
 # include <cassert>
 # include <cstdlib> // std::abort
@@ -200,13 +200,13 @@
 #   define YAML_DEBUG 0
 #  endif
 # else /* ! defined YYDEBUG */
-#  define YAML_DEBUG 1
+#  define YAML_DEBUG 0
 # endif /* ! defined YYDEBUG */
 #endif  /* ! defined YAML_DEBUG */
 
-#line 7 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+#line 7 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml.yy"
 namespace acl { namespace yaml {
-#line 210 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.hpp"
+#line 210 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.hpp"
 
 
 
@@ -428,8 +428,13 @@ namespace acl { namespace yaml {
       // STRING
       // key
       // array_value
-      // value
+      // scalar_line
       char dummy1[sizeof (acl::yaml::string_slice)];
+
+      // block_scalar
+      // block_scalar_content
+      // scalar_lines
+      char dummy2[sizeof (acl::yaml::string_slice_array)];
     };
 
     /// The size of the largest semantic type.
@@ -453,7 +458,7 @@ namespace acl { namespace yaml {
     typedef value_type semantic_type;
 
     /// Symbol locations.
-    typedef acl::yaml::location location_type;
+    typedef acl::yaml::location_type location_type;
 
     /// Syntax errors thrown from user actions.
     struct syntax_error : std::runtime_error
@@ -490,7 +495,9 @@ namespace acl { namespace yaml {
     NEWLINE = 263,                 // NEWLINE
     LBRACKET = 264,                // LBRACKET
     RBRACKET = 265,                // RBRACKET
-    COMMA = 266                    // COMMA
+    COMMA = 266,                   // COMMA
+    PIPE = 267,                    // PIPE
+    GREATER_THAN = 268             // GREATER_THAN
       };
       /// Backward compatibility alias (Bison 3.6).
       typedef token_kind_type yytokentype;
@@ -507,7 +514,7 @@ namespace acl { namespace yaml {
     {
       enum symbol_kind_type
       {
-        YYNTOKENS = 12, ///< Number of tokens.
+        YYNTOKENS = 14, ///< Number of tokens.
         S_YYEMPTY = -2,
         S_YYEOF = 0,                             // "end of file"
         S_YYerror = 1,                           // error
@@ -521,25 +528,33 @@ namespace acl { namespace yaml {
         S_LBRACKET = 9,                          // LBRACKET
         S_RBRACKET = 10,                         // RBRACKET
         S_COMMA = 11,                            // COMMA
-        S_YYACCEPT = 12,                         // $accept
-        S_document = 13,                         // document
-        S_line = 14,                             // line
-        S_mapping = 15,                          // mapping
-        S_key = 16,                              // key
-        S_array = 17,                            // array
-        S_18_1 = 18,                             // $@1
-        S_array_values = 19,                     // array_values
-        S_array_value = 20,                      // array_value
-        S_nested_mappings = 21,                  // nested_mappings
-        S_22_2 = 22,                             // $@2
-        S_mappings = 23,                         // mappings
-        S_nested_sequence = 24,                  // nested_sequence
-        S_25_3 = 25,                             // $@3
-        S_sequence = 26,                         // sequence
-        S_sequence_item = 27,                    // sequence_item
-        S_nested_mapping_in_sequence = 28,       // nested_mapping_in_sequence
-        S_29_4 = 29,                             // $@4
-        S_value = 30                             // value
+        S_PIPE = 12,                             // PIPE
+        S_GREATER_THAN = 13,                     // GREATER_THAN
+        S_YYACCEPT = 14,                         // $accept
+        S_document = 15,                         // document
+        S_end = 16,                              // end
+        S_optional_dedent = 17,                  // optional_dedent
+        S_optional_newline = 18,                 // optional_newline
+        S_line = 19,                             // line
+        S_mapping = 20,                          // mapping
+        S_key = 21,                              // key
+        S_array = 22,                            // array
+        S_23_1 = 23,                             // $@1
+        S_array_values = 24,                     // array_values
+        S_array_value = 25,                      // array_value
+        S_nested_mappings = 26,                  // nested_mappings
+        S_27_2 = 27,                             // $@2
+        S_mappings = 28,                         // mappings
+        S_nested_sequence = 29,                  // nested_sequence
+        S_30_3 = 30,                             // $@3
+        S_sequence = 31,                         // sequence
+        S_sequence_item = 32,                    // sequence_item
+        S_nested_mapping_in_sequence = 33,       // nested_mapping_in_sequence
+        S_34_4 = 34,                             // $@4
+        S_block_scalar = 35,                     // block_scalar
+        S_block_scalar_content = 36,             // block_scalar_content
+        S_scalar_lines = 37,                     // scalar_lines
+        S_scalar_line = 38                       // scalar_line
       };
     };
 
@@ -579,8 +594,14 @@ namespace acl { namespace yaml {
       case symbol_kind::S_STRING: // STRING
       case symbol_kind::S_key: // key
       case symbol_kind::S_array_value: // array_value
-      case symbol_kind::S_value: // value
+      case symbol_kind::S_scalar_line: // scalar_line
         value.move< acl::yaml::string_slice > (std::move (that.value));
+        break;
+
+      case symbol_kind::S_block_scalar: // block_scalar
+      case symbol_kind::S_block_scalar_content: // block_scalar_content
+      case symbol_kind::S_scalar_lines: // scalar_lines
+        value.move< acl::yaml::string_slice_array > (std::move (that.value));
         break;
 
       default:
@@ -620,6 +641,20 @@ namespace acl { namespace yaml {
       {}
 #endif
 
+#if 201103L <= YY_CPLUSPLUS
+      basic_symbol (typename Base::kind_type t, acl::yaml::string_slice_array&& v, location_type&& l)
+        : Base (t)
+        , value (std::move (v))
+        , location (std::move (l))
+      {}
+#else
+      basic_symbol (typename Base::kind_type t, const acl::yaml::string_slice_array& v, const location_type& l)
+        : Base (t)
+        , value (v)
+        , location (l)
+      {}
+#endif
+
       /// Destroy the symbol.
       ~basic_symbol ()
       {
@@ -647,8 +682,14 @@ switch (yykind)
       case symbol_kind::S_STRING: // STRING
       case symbol_kind::S_key: // key
       case symbol_kind::S_array_value: // array_value
-      case symbol_kind::S_value: // value
+      case symbol_kind::S_scalar_line: // scalar_line
         value.template destroy< acl::yaml::string_slice > ();
+        break;
+
+      case symbol_kind::S_block_scalar: // block_scalar
+      case symbol_kind::S_block_scalar_content: // block_scalar_content
+      case symbol_kind::S_scalar_lines: // scalar_lines
+        value.template destroy< acl::yaml::string_slice_array > ();
         break;
 
       default:
@@ -750,7 +791,7 @@ switch (yykind)
 #if !defined _MSC_VER || defined __clang__
         YAML__ASSERT (tok == token::END
                    || (token::YAML_error <= tok && tok <= token::YAML_UNDEF)
-                   || (token::COLON <= tok && tok <= token::COMMA));
+                   || (token::COLON <= tok && tok <= token::GREATER_THAN));
 #endif
       }
 #if 201103L <= YY_CPLUSPLUS
@@ -991,6 +1032,36 @@ switch (yykind)
       make_COMMA (const location_type& l)
       {
         return symbol_type (token::COMMA, l);
+      }
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      static
+      symbol_type
+      make_PIPE (location_type l)
+      {
+        return symbol_type (token::PIPE, std::move (l));
+      }
+#else
+      static
+      symbol_type
+      make_PIPE (const location_type& l)
+      {
+        return symbol_type (token::PIPE, l);
+      }
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      static
+      symbol_type
+      make_GREATER_THAN (location_type l)
+      {
+        return symbol_type (token::GREATER_THAN, std::move (l));
+      }
+#else
+      static
+      symbol_type
+      make_GREATER_THAN (const location_type& l)
+      {
+        return symbol_type (token::GREATER_THAN, l);
       }
 #endif
 
@@ -1323,9 +1394,9 @@ switch (yykind)
     /// Constants.
     enum
     {
-      yylast_ = 39,     ///< Last index in yytable_.
-      yynnts_ = 19,  ///< Number of nonterminal symbols.
-      yyfinal_ = 2 ///< Termination state number.
+      yylast_ = 45,     ///< Last index in yytable_.
+      yynnts_ = 25,  ///< Number of nonterminal symbols.
+      yyfinal_ = 4 ///< Termination state number.
     };
 
 
@@ -1370,10 +1441,10 @@ switch (yykind)
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     1,     2,     3,     4,
-       5,     6,     7,     8,     9,    10,    11
+       5,     6,     7,     8,     9,    10,    11,    12,    13
     };
     // Last valid token kind.
-    const int code_max = 266;
+    const int code_max = 268;
 
     if (t <= 0)
       return symbol_kind::S_YYEOF;
@@ -1395,8 +1466,14 @@ switch (yykind)
       case symbol_kind::S_STRING: // STRING
       case symbol_kind::S_key: // key
       case symbol_kind::S_array_value: // array_value
-      case symbol_kind::S_value: // value
+      case symbol_kind::S_scalar_line: // scalar_line
         value.copy< acl::yaml::string_slice > (YY_MOVE (that.value));
+        break;
+
+      case symbol_kind::S_block_scalar: // block_scalar
+      case symbol_kind::S_block_scalar_content: // block_scalar_content
+      case symbol_kind::S_scalar_lines: // scalar_lines
+        value.copy< acl::yaml::string_slice_array > (YY_MOVE (that.value));
         break;
 
       default:
@@ -1433,8 +1510,14 @@ switch (yykind)
       case symbol_kind::S_STRING: // STRING
       case symbol_kind::S_key: // key
       case symbol_kind::S_array_value: // array_value
-      case symbol_kind::S_value: // value
+      case symbol_kind::S_scalar_line: // scalar_line
         value.move< acl::yaml::string_slice > (YY_MOVE (s.value));
+        break;
+
+      case symbol_kind::S_block_scalar: // block_scalar
+      case symbol_kind::S_block_scalar_content: // block_scalar_content
+      case symbol_kind::S_scalar_lines: // scalar_lines
+        value.move< acl::yaml::string_slice_array > (YY_MOVE (s.value));
         break;
 
       default:
@@ -1502,11 +1585,11 @@ switch (yykind)
   }
 
 
-#line 7 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+#line 7 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml.yy"
 } } // acl::yaml
-#line 1508 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.hpp"
+#line 1591 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.hpp"
 
 
 
 
-#endif // !YY_YAML_HOME_OBHI_CODE_LXE_THIRD_PARTY_ACL_SRC_ACL_DSL_YAML_PARSER_IMPL_HPP_INCLUDED
+#endif // !YY_YAML_C_REPOS_LXE_THIRD_PARTY_ACL_SRC_ACL_DSL_YAML_PARSER_IMPL_HPP_INCLUDED

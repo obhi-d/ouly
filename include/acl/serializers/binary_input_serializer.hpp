@@ -100,8 +100,7 @@ public:
       []<bool flag = false>()
       {
         static_assert(flag, "This type is not serializable");
-      }
-      ();
+      }();
       return false;
     }
   }
@@ -183,7 +182,7 @@ private:
     read(count);
 
     detail::reserve(obj, count);
-    if constexpr (!detail::HasEmplaceFn<Class, detail::array_value_type<Class>>)
+    if constexpr (!detail::ContainerCanAppendValue<Class>)
       detail::resize(obj, count);
     if constexpr (detail::LinearArrayLike<Class, Serializer> && has_fast_path)
     {
@@ -200,7 +199,7 @@ private:
           get().error(type_name<Class>(), make_error_code(serializer_error::corrupt_array_item));
           return false;
         }
-        if constexpr (detail::HasEmplaceFn<Class, detail::array_value_type<Class>>)
+        if constexpr (detail::ContainerCanAppendValue<Class>)
         {
           detail::emplace(obj, std::move(stream_val));
         }

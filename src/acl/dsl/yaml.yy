@@ -9,12 +9,11 @@
 %define api.token.constructor
 %define api.value.type variant
 %define parse.assert
-%define parse.trace
 %define parse.error verbose
 
 %code requires
 {
-#include "yaml_parser_impl.hpp"
+// #define YYDEBUG 1
 #include <acl/dsl/yaml.hpp>
 
 
@@ -25,13 +24,12 @@
 
 }
 
-%define api.location.type {acl::yaml::location}
+%define api.location.type {acl::yaml::location_type}
 %param { acl::yaml::istream& cyaml }
 %lex-param { void* SCANNER_PARAM  }
 %locations
 %initial-action
 {
-  @$.source_name = cyaml.get_file_name();
 }
 
 %code
@@ -43,142 +41,147 @@ YY_DECL;
 %token 
 	END 0 "end of file"
 
-%token <acl::yaml::string_slice> STRING
-%token COLON DASH INDENT DEDENT NEWLINE
-%token LBRACKET RBRACKET COMMA
-%type <acl::yaml::string_slice> value
-%type <acl::yaml::string_slice> key
-%type <acl::yaml::string_slice> array_value
+%token <acl::yaml::string_slice> STRING INDENT DASH
+%token COLON NEWLINE
+%token LBRACKET RBRACKET COMMA PIPE GREATER_THAN
+%type <acl::yaml::string_slice> scalar_line
+%type <acl::yaml::string_slice_array> block_scalar block_scalar_content scalar_lines
 
 %%
 
 document:
     /* empty */
     | document line
+    | end
     ;
 
-line:
-    mapping NEWLINE
-    | sequence_item NEWLINE
+end:
+    END
+    {   cyaml.close_all_mappings(); }
+
+
+optional_newline:
+    /* empty */
     | NEWLINE
     ;
 
-mapping:
-    key COLON value
+line:
+    mapping 
+    | sequence_item 
+    | NEWLINE
+    ;
+
+indent:
+    /* empty */
     {
-        cyaml.start_mapping($1);
-        cyaml.add_mapping_value($3);
-        cyaml.end_mapping();
+        cyaml.set_indention_level(0);
     }
-    | key COLON array
+    | INDENT
     {
-        cyaml.end_mapping();
+        cyaml.set_indention_level($1);
     }
-    | key COLON NEWLINE INDENT nested_sequence DEDENT
+    ;
+
+dash_indent:
+    indent DASH
     {
-        cyaml.end_mapping();
-    }
-    | key COLON NEWLINE INDENT nested_mappings DEDENT
-    {
-        cyaml.end_mapping();
+        cyaml.add_dash_indention($2);
     }
     ;
 
 key:
-    STRING
+    indent STRING COLON 
     {
-        cyaml.start_mapping($1);
-        $$ = $1;
+        cyaml.add_new_mapping($1);
     }
+    | dash_indent STRING COLON
+    {
+        cyaml.add_new_mapped_sequence($3);
+    }
+    ;
+
+mapping:
+    key STRING optional_newline
+    {
+        cyaml.add_mapping_value($2);
+    }
+    | key block_scalar optional_newline
+    {
+        cyaml.add_mapping_value(std::move($3));
+    }
+    | key array optional_newline
+    | key
     ;
 
 array:
     {
-        cyaml.start_sequence();
-    }
+      cyaml.begin_array();
+    } 
     LBRACKET array_values RBRACKET
     {
-        cyaml.end_sequence();
-        cyaml.end_mapping();
+      cyaml.end_array();
     }
     ;
 
 array_values:
-    array_value
-    {
-        cyaml.start_sequence_item();
-        cyaml.add_sequence_item($1);
-        cyaml.end_sequence_item();
-    }
-    | array_values COMMA array_value
-    {
-        cyaml.start_sequence_item();
-        cyaml.add_sequence_item($3);
-        cyaml.end_sequence_item();
-    }
-    ;
-
-array_value:
+    /* empty */
+    |
     STRING
     {
-        $$ = $1;
+        cyaml.add_new_sequence_value($1);
     }
-    ;
-
-nested_mappings:
+    | array_values COMMA STRING
     {
-        cyaml.start_mapping(cyaml.get_current_key());
+        cyaml.add_new_sequence_value($3);
     }
-    mappings
-    ;
-
-mappings:
-    mapping NEWLINE
-    | mappings mapping NEWLINE
-    ;
-
-nested_sequence:
-    {
-        cyaml.start_sequence();
-    }
-    sequence
-    {
-        cyaml.end_sequence();
-    }
-    ;
-
-sequence:
-    sequence_item NEWLINE
-    | sequence sequence_item NEWLINE
     ;
 
 sequence_item:
-    DASH value
+    dash_indent STRING optional_newline
     {
-        cyaml.start_sequence_item();
-        cyaml.add_sequence_item($2);
-        cyaml.end_sequence_item();
+      cyaml.add_new_sequence_value($3);
     }
-    | DASH NEWLINE INDENT nested_mapping_in_sequence DEDENT
+    | dash_indent block_scalar optional_newline
+    {
+      cyaml.add_new_sequence_value(std::move($3));
+    }
+    | dash_indent array optional_newline
     ;
 
-nested_mapping_in_sequence:
+block_scalar:
+    PIPE block_scalar_content
     {
-        cyaml.start_sequence_item();
+        $$ = std::move($2);
     }
-    mappings
+    | GREATER_THAN block_scalar_content
     {
-        cyaml.end_sequence_item();
+        $$ = std::move($2);
     }
     ;
 
-value:
+block_scalar_content:
+    NEWLINE INDENT scalar_lines DEDENT
+    {
+        $$ = std::move($3);
+    }
+    ;
+
+scalar_lines:
+    scalar_line
+    {
+      $$.emplace_back($1);
+    }
+    | scalar_lines NEWLINE scalar_line
+    {
+      $$.emplace_back($3);
+    };
+
+scalar_line:
     STRING
-    {
+  {
         $$ = $1;
-    }
-    ;
-
+  }
+  ;
 %%
 
 /*============================================================================*/
@@ -195,6 +198,7 @@ void yaml::istream::parse(context& handler)
   this->handler_ = &handler;
   begin_scan();
   parser parser(*this);
+  // parser.set_debug_level(5);
   parser.parse();
   end_scan();	
 }

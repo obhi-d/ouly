@@ -197,24 +197,25 @@ template <typename T>
 concept BoolLike = std::is_same_v<remove_cref<T>, bool>;
 
 template <typename T>
-concept StringLike = NativeStringLike<T>;
+concept ContainerIsStringLike = NativeStringLike<T>;
 
 template <typename T>
 concept WStringLike = NativeWStringLike<T>;
 
 template <typename T>
-concept NativeLike = BoolLike<T> || SignedIntLike<T> || UnsignedIntLike<T> || FloatLike<T> || StringLike<T>;
+concept NativeLike = BoolLike<T> || SignedIntLike<T> || UnsignedIntLike<T> || FloatLike<T> || ContainerIsStringLike<T>;
 
 template <typename T>
-concept CastableToStringView = requires(T t) { std::string_view(t); } && (!StringLike<T>);
+concept CastableToStringView = requires(T t) { std::string_view(t); } && (!ContainerIsStringLike<T>);
 
 template <typename T>
-concept CastableToString = requires(T t) { std::string(t); } && (!CastableToStringView<T>) && (!StringLike<T>);
+concept CastableToString =
+  requires(T t) { std::string(t); } && (!CastableToStringView<T>) && (!ContainerIsStringLike<T>);
 
 template <typename T>
 concept ConvertibleToString =
-  requires(T t) { std::to_string(t); } &&
-  (!FloatLike<T> && !BoolLike<T> && !SignedIntLike<T> && !UnsignedIntLike<T> && !CastableToString<T> && !StringLike<T>);
+  requires(T t) { std::to_string(t); } && (!FloatLike<T> && !BoolLike<T> && !SignedIntLike<T> && !UnsignedIntLike<T> &&
+                                           !CastableToString<T> && !ContainerIsStringLike<T>);
 
 template <typename T>
 concept TransformFromString = requires(T ref) {
@@ -224,16 +225,16 @@ concept TransformFromString = requires(T ref) {
 template <typename T>
 concept TransformToString = requires(T ref) {
   { acl::to_string(ref) } -> std::same_as<std::string>;
-} && (!ConvertibleToString<T>) && (!StringLike<T>);
+} && (!ConvertibleToString<T>) && (!ContainerIsStringLike<T>);
 
 template <typename T>
 concept TransformToStringView = requires(T ref) {
   { acl::to_string_view(ref) } -> std::same_as<std::string_view>;
-} && (!TransformToString<T>) && (!StringLike<T>);
+} && (!TransformToString<T>) && (!ContainerIsStringLike<T>);
 
 // Array
 template <typename Class>
-concept Itereable = requires(Class obj) {
+concept ContainerIsIterable = requires(Class obj) {
   (*std::begin(obj));
   (*std::end(obj));
 };
@@ -291,10 +292,6 @@ concept HasPushBack = requires(Class obj, ValueType value) { obj.push_back(value
 template <typename Class, typename ValueType>
 concept HasEmplaceBack = requires(Class obj, ValueType value) { obj.emplace_back(value); };
 
-template <typename Class, typename ValueType>
-concept HasEmplaceFn =
-  HasEmplace<Class, ValueType> || HasEmplaceBack<Class, ValueType> || HasPushBack<Class, ValueType>;
-
 template <typename Class>
 concept HasCapacity = requires(Class const& c) {
   { c.capacity() } -> std::convertible_to<std::size_t>;
@@ -315,7 +312,7 @@ concept MapLike = requires(Class t) {
 };
 
 template <typename Class>
-concept StringMapLike = MapLike<Class> && StringLike<typename Class::key_type>;
+concept StringMapLike = MapLike<Class> && ContainerIsStringLike<typename Class::key_type>;
 
 template <HasValueType Class>
 using container_value_type = typename Class::value_type;
@@ -356,12 +353,34 @@ concept VariantLike = requires(Class o) {
 } && std::variant_size_v<Class> > 0;
 
 template <typename Class>
-concept HasArrayValueAssignable =
-  Itereable<Class> && requires(Class a, std::size_t i) { a[i++] = std::declval<array_value_type<Class>>(); };
+concept ContainerHasArrayValueAssignable =
+  ContainerIsIterable<Class> && requires(Class a, std::size_t i) { a[i++] = std::declval<array_value_type<Class>>(); };
 
 template <typename Class>
-concept ContainerLike = (HasEmplaceFn<Class, array_value_type<Class>> || HasArrayValueAssignable<Class>) &&
-                        (Itereable<Class> && !StringLike<Class>);
+concept ContainerHasEmplace = requires {
+  typename Class::value_type;
+  std::declval<Class>().emplace(std::declval<typename Class::value_type>());
+};
+
+template <typename Class>
+concept ContainerHasPushBack = requires {
+  typename Class::value_type;
+  std::declval<Class>().push_back(std::declval<typename Class::value_type>());
+};
+
+template <typename Class>
+concept ContainerHasEmplaceBack = requires {
+  typename Class::value_type;
+  std::declval<Class>().emplace_back(std::declval<typename Class::value_type>());
+};
+
+template <typename Class>
+concept ContainerCanAppendValue =
+  ContainerHasEmplace<Class> || ContainerHasEmplaceBack<Class> || ContainerHasPushBack<Class>;
+
+template <typename Class>
+concept ContainerLike = (ContainerCanAppendValue<Class> || ContainerHasArrayValueAssignable<Class>) &&
+                        (ContainerIsIterable<Class> && !ContainerIsStringLike<Class>);
 
 template <typename Class>
 concept ArrayLike = ContainerLike<Class> && (!StringMapLike<Class>);

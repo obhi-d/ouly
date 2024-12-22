@@ -4,6 +4,7 @@
 #include <cassert>
 #include <compare>
 #include <cstdint>
+#include <format>
 #include <ostream>
 #include <stdexcept>
 #include <string>
@@ -11,203 +12,97 @@
 
 namespace acl::yaml
 {
-
-struct position
+struct location_type
 {
-  uint32_t    line                                        = 1;
-  uint32_t    character                                   = 1;
-  inline auto operator<=>(position const&) const noexcept = default;
-
-  inline friend std::ostream& operator<<(std::ostream& yyo, position const& l) noexcept
+  uint32_t                    begin = 0;
+  uint32_t                    end   = 0;
+  inline friend std::ostream& operator<<(std::ostream& yyo, location_type const& l) noexcept
   {
-    yyo << l.line << ':' << l.character;
-    return yyo;
+    return yyo << l.begin << ':' << l.end;
   }
-};
-
-class location
-{
-public:
-  location() noexcept = default;
-  location(std::string_view source_name) noexcept : source_name(source_name) {}
-  inline void step() noexcept
-  {
-    begin = end;
-  }
-
-  inline void columns(std::uint32_t l) noexcept
-  {
-    end.character += l;
-  }
-
-  inline void lines(std::uint32_t l) noexcept
-  {
-    end.line += l;
-    end.character = 0;
-  }
-
-  inline operator std::string() const noexcept
-  {
-    std::string value = std::string(source_name.empty() ? "istream" : source_name);
-    value += "(" + std::to_string(begin.line) + ":" + std::to_string(begin.character) + "-" + std::to_string(end.line) +
-             ":" + std::to_string(end.character) + "): ";
-    return value;
-  }
-
-  inline friend std::ostream& operator<<(std::ostream& yyo, location const& l) noexcept
-
-  {
-    std::string value = std::string(l.source_name.empty() ? "istream" : l.source_name);
-    if (l.begin == l.end)
-      yyo << "<" << value << '-' << l.begin << ">";
-    else
-      yyo << "<" << value << '-' << l.begin << "-" << l.end << ">";
-    return yyo;
-  }
-
-  position next_line() const noexcept
-  {
-    return position{begin.line + 1, 0};
-  }
-
-  inline auto operator<=>(location const&) const noexcept = default;
-
-  std::string_view source_name;
-  position         begin;
-  position         end;
 };
 
 struct string_slice
 {
   uint32_t start = 0;
   uint32_t count = 0;
+
+  auto operator<=>(string_slice const&) const = default;
 };
+
+using string_slice_array = acl::small_vector<string_slice, 8>;
 
 class context
 {
 public:
-  virtual ~context() noexcept                            = default;
-  virtual void start_mapping(std::string_view slice)     = 0;
-  virtual void add_mapping_value(std::string_view slice) = 0;
-  virtual void end_mapping()                             = 0;
-  virtual void start_sequence()                          = 0;
-  virtual void end_sequence()                            = 0;
-  virtual void start_sequence_item()                     = 0;
-  virtual void add_sequence_item(std::string_view slice) = 0;
-  virtual void end_sequence_item()                       = 0;
+  virtual ~context() noexcept                    = default;
+  virtual void begin_object()                    = 0;
+  virtual void end_object()                      = 0;
+  virtual void begin_array()                     = 0;
+  virtual void end_array()                       = 0;
+  virtual void set_key(std::string_view slice)   = 0;
+  virtual void set_value(std::string_view slice) = 0;
 };
 
+;
 class istream
 {
 public:
-  inline void start_mapping(string_slice slice) const
+  using indent = uint32_t;
+
+  void set_idention_level(uint16_t level);
+  void set_idention_level(string_slice level);
+  void add_dash_indention(string_slice dash_level);
+
+  void add_new_mapping(string_slice key);
+  void add_new_mapped_sequence(string_slice key);
+  void add_mapping_value(string_slice value);
+  void add_mapping_value(string_slice_array value);
+  void begin_array();
+  void end_array();
+  void add_new_sequence_value(string_slice value);
+  void add_new_sequence_value(string_slice_array value);
+
+  void close_all_mappings();
+
+  inline void throw_error(location_type const& loc, std::string_view error, std::string_view context) const
   {
-    if (handler_)
-      handler_->start_mapping(get_view(slice));
+    throw std::runtime_error(std::format("[{}] token@{}: \"{}\" - {}", context, loc.begin,
+                                         contents.substr(loc.begin, loc.end - loc.begin), error));
   }
 
-  inline void add_mapping_value(string_slice slice) const
+  inline auto location() const noexcept
   {
-    if (handler_)
-      handler_->add_mapping_value(get_view(slice));
+    return location_type{current_token.start, current_token.start + current_token.count};
   }
 
-  inline void end_mapping() const
+  inline string_slice get_view() const
   {
-    if (handler_)
-      handler_->end_mapping();
+    return current_token;
   }
 
-  inline void start_sequence() const
+  inline string_slice get_quoted_string() const
   {
-    if (handler_)
-      handler_->start_sequence();
+    return {current_token.start + 1, current_token.count - 2};
   }
 
-  inline void end_sequence() const
+  inline void set_token(uint32_t length) noexcept
   {
-    if (handler_)
-      handler_->end_sequence();
-  }
-
-  inline void start_sequence_item() const
-  {
-    if (handler_)
-      handler_->start_sequence_item();
-  }
-
-  inline void add_sequence_item(string_slice slice) const
-  {
-    if (handler_)
-      handler_->add_sequence_item(get_view(slice));
-  }
-
-  inline void end_sequence_item() const
-  {
-    if (handler_)
-      handler_->end_sequence_item();
-  }
-
-  inline std::string_view get_file_name() const noexcept
-  {
-    return source_.source_name;
-  }
-
-  inline void throw_error(location const& loc, std::string_view error, std::string_view context) const
-  {
-    auto str = (std::string)loc;
-    str += '[';
-    str += context;
-    str += ']';
-    str += error;
-
-    throw std::runtime_error(str);
-  }
-
-  inline auto const& location() const noexcept
-  {
-    return source_;
-  }
-
-  inline uint32_t peek_indent() const noexcept
-  {
-    return indent_stack.empty() ? 0 : indent_stack.back();
-  }
-
-  inline void push_indent(uint32_t indent) noexcept
-  {
-    indent_stack.push_back(indent);
-  }
-
-  inline void pop_indent() noexcept
-  {
-    indent_stack.pop_back();
-  }
-
-  inline string_slice get_view(uint32_t length) const
-  {
-    return {cursor_, length};
-  }
-
-  inline void move_ahead(uint32_t length) noexcept
-  {
-    cursor_ += length;
+    current_token.start = token_cursor;
+    current_token.count = length;
+    token_cursor += length;
   }
 
   inline int read(char* istream, int siz) noexcept
   {
-    if (cursor_ >= contents_.size())
+    if (read_cursor >= contents.size())
       return 0;
 
-    siz = std::min(siz, static_cast<int>(contents_.size() - cursor_));
-    contents_.copy(istream, siz, cursor_);
-    cursor_ += siz;
+    siz = std::min(siz - 1, static_cast<int>(contents.size() - read_cursor));
+    contents.copy(istream, siz, read_cursor);
+    istream[siz] = 0;
+    read_cursor += siz;
     return siz;
-  }
-
-  inline auto const& get_source() const
-  {
-    return source_;
   }
 
   inline void* get_scanner() const noexcept
@@ -215,41 +110,42 @@ public:
     return scanner;
   }
 
-  inline void set_current_key(string_slice slice) noexcept
-  {
-    current_key_ = slice;
-  }
-
-  inline string_slice get_current_key() const noexcept
-  {
-    return current_key_;
-  }
-
   inline void set_handler(context* handler) noexcept
   {
-    handler_ = handler;
+    handler = handler;
   }
 
-  istream(std::string_view source, std::string_view content) noexcept : source_(source), contents_(content) {}
+  istream(std::string_view content) noexcept : contents(content) {}
 
-  void parse(context& handler_);
+  void parse(context& handler);
   void begin_scan();
   void end_scan();
 
 private:
   inline std::string_view get_view(string_slice slice) const noexcept
   {
-    return contents_.substr(slice.start, slice.count);
+    return contents.substr(slice.start, slice.count);
   }
 
-  void*                          scanner = nullptr;
-  acl::small_vector<uint32_t, 8> indent_stack;
+  enum class indent_type : uint8_t
+  {
+    none,
+    object,
+    array,
+  };
 
-  string_slice     current_key_;
-  uint32_t         cursor_  = 0;
-  context*         handler_ = nullptr;
-  yaml::location   source_;
-  std::string_view contents_;
+  void*  scanner              = nullptr;
+  indent current_indent_level = {};
+  indent test_indent_level    = {};
+
+  acl::small_vector<indent_type, 16> indent_stack;
+
+  string_slice     current_key;
+  string_slice     current_token;
+  uint32_t         read_cursor  = 0;
+  uint32_t         token_cursor = 0;
+  context*         handler      = nullptr;
+  std::string_view contents;
 };
 
 } // namespace acl::yaml

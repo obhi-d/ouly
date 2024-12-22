@@ -94,7 +94,7 @@ public:
       write_string_view_transformable(obj);
     else if constexpr (detail::TransformToString<Class>)
       write_string_transformable(obj);
-    else if constexpr (detail::StringLike<Class>)
+    else if constexpr (detail::ContainerIsStringLike<Class>)
       write_string(obj);
     else if constexpr (detail::BoolLike<Class>)
       write_bool(obj);
@@ -224,7 +224,7 @@ private:
     get().as_string(acl::to_string_view(obj));
   }
 
-  template <detail::StringLike Class>
+  template <detail::ContainerIsStringLike Class>
   void write_string(Class const& obj) noexcept
   {
     get().as_string(obj);
@@ -260,7 +260,7 @@ private:
     get().as_double(obj);
   }
 
-  template <detail::StringLike Class>
+  template <detail::ContainerIsStringLike Class>
   void write_float(Class const& obj) noexcept
   {
     get().as_string(obj);

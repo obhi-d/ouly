@@ -111,7 +111,7 @@ public:
       return read_string_constructed(obj);
     else if constexpr (detail::TransformFromString<Class>)
       return read_string_transformed(obj);
-    else if constexpr (detail::StringLike<Class>)
+    else if constexpr (detail::ContainerIsStringLike<Class>)
       return read_string(obj);
     else if constexpr (detail::BoolLike<Class>)
       return read_bool(obj);
@@ -132,8 +132,7 @@ public:
       []<bool flag = false>()
       {
         static_assert(flag, "This type is not serializable");
-      }
-      ();
+      }();
       return false;
     }
   }
@@ -227,7 +226,7 @@ private:
     }
 
     detail::reserve(obj, get().size());
-    if constexpr (detail::HasEmplaceFn<Class, detail::array_value_type<Class>>)
+    if constexpr (detail::ContainerCanAppendValue<Class>)
     {
       return get().for_each(
 
@@ -353,7 +352,7 @@ private:
     }
   }
 
-  template <detail::StringLike Class>
+  template <detail::ContainerIsStringLike Class>
   bool read_string(Class& obj) noexcept
   {
     auto value = get().as_string();

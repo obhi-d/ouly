@@ -57,6 +57,7 @@ message("Target name: ${ACL_TARGET_NAME}")
 add_library( ${ACL_TARGET_NAME} 
       
     "${ACL_SOURCE_BUILD_DIR}/acl/dsl/microexpr.cpp" 
+    "${ACL_SOURCE_BUILD_DIR}/acl/dsl/yaml.cpp" 
     "${ACL_SOURCE_BUILD_DIR}/acl/dsl/yaml_lexer_impl.cpp" 
     "${ACL_SOURCE_BUILD_DIR}/acl/dsl/yaml_parser_impl.cpp" 
     "${ACL_SOURCE_BUILD_DIR}/acl/scheduler/scheduler.cpp"

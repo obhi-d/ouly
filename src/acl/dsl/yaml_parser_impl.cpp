@@ -44,12 +44,12 @@
 
 
 // Unqualified %code blocks.
-#line 38 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+#line 36 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml.yy"
 
 #define SCANNER_PARAM cyaml.get_scanner()
 YY_DECL;
 
-#line 53 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
+#line 53 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
 
 
 #ifndef YY_
@@ -140,9 +140,9 @@ YY_DECL;
 #define YYERROR         goto yyerrorlab
 #define YYRECOVERING()  (!!yyerrstatus_)
 
-#line 7 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+#line 7 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml.yy"
 namespace acl { namespace yaml {
-#line 146 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
+#line 146 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
 
   /// Build a parser object.
   parser::parser (acl::yaml::istream& cyaml_yyarg)
@@ -213,8 +213,14 @@ namespace acl { namespace yaml {
       case symbol_kind::S_STRING: // STRING
       case symbol_kind::S_key: // key
       case symbol_kind::S_array_value: // array_value
-      case symbol_kind::S_value: // value
+      case symbol_kind::S_scalar_line: // scalar_line
         value.YY_MOVE_OR_COPY< acl::yaml::string_slice > (YY_MOVE (that.value));
+        break;
+
+      case symbol_kind::S_block_scalar: // block_scalar
+      case symbol_kind::S_block_scalar_content: // block_scalar_content
+      case symbol_kind::S_scalar_lines: // scalar_lines
+        value.YY_MOVE_OR_COPY< acl::yaml::string_slice_array > (YY_MOVE (that.value));
         break;
 
       default:
@@ -235,8 +241,14 @@ namespace acl { namespace yaml {
       case symbol_kind::S_STRING: // STRING
       case symbol_kind::S_key: // key
       case symbol_kind::S_array_value: // array_value
-      case symbol_kind::S_value: // value
+      case symbol_kind::S_scalar_line: // scalar_line
         value.move< acl::yaml::string_slice > (YY_MOVE (that.value));
+        break;
+
+      case symbol_kind::S_block_scalar: // block_scalar
+      case symbol_kind::S_block_scalar_content: // block_scalar_content
+      case symbol_kind::S_scalar_lines: // scalar_lines
+        value.move< acl::yaml::string_slice_array > (YY_MOVE (that.value));
         break;
 
       default:
@@ -257,8 +269,14 @@ namespace acl { namespace yaml {
       case symbol_kind::S_STRING: // STRING
       case symbol_kind::S_key: // key
       case symbol_kind::S_array_value: // array_value
-      case symbol_kind::S_value: // value
+      case symbol_kind::S_scalar_line: // scalar_line
         value.copy< acl::yaml::string_slice > (that.value);
+        break;
+
+      case symbol_kind::S_block_scalar: // block_scalar
+      case symbol_kind::S_block_scalar_content: // block_scalar_content
+      case symbol_kind::S_scalar_lines: // scalar_lines
+        value.copy< acl::yaml::string_slice_array > (that.value);
         break;
 
       default:
@@ -278,8 +296,14 @@ namespace acl { namespace yaml {
       case symbol_kind::S_STRING: // STRING
       case symbol_kind::S_key: // key
       case symbol_kind::S_array_value: // array_value
-      case symbol_kind::S_value: // value
+      case symbol_kind::S_scalar_line: // scalar_line
         value.move< acl::yaml::string_slice > (that.value);
+        break;
+
+      case symbol_kind::S_block_scalar: // block_scalar
+      case symbol_kind::S_block_scalar_content: // block_scalar_content
+      case symbol_kind::S_scalar_lines: // scalar_lines
+        value.move< acl::yaml::string_slice_array > (that.value);
         break;
 
       default:
@@ -430,12 +454,11 @@ namespace acl { namespace yaml {
 
 
     // User initialization code.
-#line 33 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+#line 32 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml.yy"
 {
-  yyla.location.source_name = cyaml.get_file_name();
 }
 
-#line 439 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
+#line 462 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
 
 
     /* Initialize the stack.  The initial state will be set in
@@ -553,8 +576,14 @@ namespace acl { namespace yaml {
       case symbol_kind::S_STRING: // STRING
       case symbol_kind::S_key: // key
       case symbol_kind::S_array_value: // array_value
-      case symbol_kind::S_value: // value
+      case symbol_kind::S_scalar_line: // scalar_line
         yylhs.value.emplace< acl::yaml::string_slice > ();
+        break;
+
+      case symbol_kind::S_block_scalar: // block_scalar
+      case symbol_kind::S_block_scalar_content: // block_scalar_content
+      case symbol_kind::S_scalar_lines: // scalar_lines
+        yylhs.value.emplace< acl::yaml::string_slice_array > ();
         break;
 
       default:
@@ -577,154 +606,210 @@ namespace acl { namespace yaml {
         {
           switch (yyn)
             {
-  case 7: // mapping: key COLON value
-#line 68 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+  case 5: // end: "end of file"
+#line 61 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+    {   cyaml.close_all_mappings(); }
+#line 613 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
+    break;
+
+  case 13: // mapping: key COLON STRING
+#line 82 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml.yy"
     {
         cyaml.start_mapping(yystack_[2].value.as < acl::yaml::string_slice > ());
         cyaml.add_mapping_value(yystack_[0].value.as < acl::yaml::string_slice > ());
         cyaml.end_mapping();
     }
-#line 588 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
+#line 623 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
     break;
 
-  case 8: // mapping: key COLON array
-#line 74 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+  case 14: // mapping: key COLON block_scalar
+#line 88 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+    {
+        cyaml.start_mapping(yystack_[2].value.as < acl::yaml::string_slice > ());
+        cyaml.add_block_scalar(std::move(yystack_[0].value.as < acl::yaml::string_slice_array > ()));
+        cyaml.end_mapping();
+    }
+#line 633 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
+    break;
+
+  case 15: // mapping: key COLON array
+#line 94 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml.yy"
     {
         cyaml.end_mapping();
     }
-#line 596 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
+#line 641 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
     break;
 
-  case 9: // mapping: key COLON NEWLINE INDENT nested_sequence DEDENT
-#line 78 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+  case 16: // mapping: key COLON NEWLINE INDENT nested_sequence optional_dedent
+#line 98 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml.yy"
     {
         cyaml.end_mapping();
     }
-#line 604 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
+#line 649 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
     break;
 
-  case 10: // mapping: key COLON NEWLINE INDENT nested_mappings DEDENT
-#line 82 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+  case 17: // mapping: key COLON NEWLINE INDENT nested_mappings optional_dedent
+#line 102 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml.yy"
     {
         cyaml.end_mapping();
     }
-#line 612 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
+#line 657 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
     break;
 
-  case 11: // key: STRING
-#line 89 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+  case 18: // key: STRING
+#line 109 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml.yy"
     {
         cyaml.start_mapping(yystack_[0].value.as < acl::yaml::string_slice > ());
         yylhs.value.as < acl::yaml::string_slice > () = yystack_[0].value.as < acl::yaml::string_slice > ();
     }
-#line 621 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
+#line 666 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
     break;
 
-  case 12: // $@1: %empty
-#line 96 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+  case 19: // $@1: %empty
+#line 116 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml.yy"
     {
         cyaml.start_sequence();
     }
-#line 629 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
+#line 674 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
     break;
 
-  case 13: // array: $@1 LBRACKET array_values RBRACKET
-#line 100 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+  case 20: // array: $@1 LBRACKET array_values RBRACKET
+#line 120 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml.yy"
     {
         cyaml.end_sequence();
         cyaml.end_mapping();
     }
-#line 638 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
+#line 683 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
     break;
 
-  case 14: // array_values: array_value
-#line 108 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+  case 21: // array_values: array_value
+#line 128 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml.yy"
     {
         cyaml.start_sequence_item();
         cyaml.add_sequence_item(yystack_[0].value.as < acl::yaml::string_slice > ());
         cyaml.end_sequence_item();
     }
-#line 648 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
+#line 693 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
     break;
 
-  case 15: // array_values: array_values COMMA array_value
-#line 114 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+  case 22: // array_values: array_values COMMA array_value
+#line 134 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml.yy"
     {
         cyaml.start_sequence_item();
         cyaml.add_sequence_item(yystack_[0].value.as < acl::yaml::string_slice > ());
         cyaml.end_sequence_item();
     }
-#line 658 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
+#line 703 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
     break;
 
-  case 16: // array_value: STRING
-#line 123 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+  case 23: // array_value: STRING
+#line 143 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml.yy"
     {
         yylhs.value.as < acl::yaml::string_slice > () = yystack_[0].value.as < acl::yaml::string_slice > ();
     }
-#line 666 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
+#line 711 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
     break;
 
-  case 17: // $@2: %empty
-#line 129 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+  case 24: // $@2: %empty
+#line 149 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml.yy"
     {
         cyaml.start_mapping(cyaml.get_current_key());
     }
-#line 674 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
+#line 719 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
     break;
 
-  case 21: // $@3: %empty
-#line 141 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+  case 28: // $@3: %empty
+#line 161 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml.yy"
     {
         cyaml.start_sequence();
     }
-#line 682 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
+#line 727 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
     break;
 
-  case 22: // nested_sequence: $@3 sequence
-#line 145 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+  case 29: // nested_sequence: $@3 sequence
+#line 165 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml.yy"
     {
         cyaml.end_sequence();
     }
-#line 690 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
+#line 735 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
     break;
 
-  case 25: // sequence_item: DASH value
-#line 157 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+  case 33: // sequence_item: DASH STRING
+#line 178 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml.yy"
     {
         cyaml.start_sequence_item();
         cyaml.add_sequence_item(yystack_[0].value.as < acl::yaml::string_slice > ());
         cyaml.end_sequence_item();
     }
-#line 700 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
+#line 745 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
     break;
 
-  case 27: // $@4: %empty
-#line 166 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+  case 34: // $@4: %empty
+#line 185 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml.yy"
     {
         cyaml.start_sequence_item();
     }
-#line 708 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
+#line 753 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
     break;
 
-  case 28: // nested_mapping_in_sequence: $@4 mappings
-#line 170 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+  case 35: // nested_mapping_in_sequence: $@4 mappings
+#line 189 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml.yy"
     {
         cyaml.end_sequence_item();
     }
-#line 716 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
+#line 761 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
     break;
 
-  case 29: // value: STRING
-#line 177 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+  case 36: // block_scalar: PIPE block_scalar_content
+#line 196 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml.yy"
     {
-        yylhs.value.as < acl::yaml::string_slice > () = yystack_[0].value.as < acl::yaml::string_slice > ();
+        yylhs.value.as < acl::yaml::string_slice_array > () = std::move(yystack_[0].value.as < acl::yaml::string_slice_array > ());
     }
-#line 724 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
+#line 769 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
+    break;
+
+  case 37: // block_scalar: GREATER_THAN block_scalar_content
+#line 200 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+    {
+        yylhs.value.as < acl::yaml::string_slice_array > () = std::move(yystack_[0].value.as < acl::yaml::string_slice_array > ());
+    }
+#line 777 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
+    break;
+
+  case 38: // block_scalar_content: NEWLINE INDENT scalar_lines DEDENT
+#line 207 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+    {
+        yylhs.value.as < acl::yaml::string_slice_array > () = std::move(yystack_[1].value.as < acl::yaml::string_slice_array > ());
+    }
+#line 785 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
+    break;
+
+  case 39: // scalar_lines: scalar_line
+#line 214 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+    {
+      yylhs.value.as < acl::yaml::string_slice_array > ().emplace_back(yystack_[0].value.as < acl::yaml::string_slice > ());
+    }
+#line 793 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
+    break;
+
+  case 40: // scalar_lines: scalar_lines NEWLINE scalar_line
+#line 218 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+    {
+      yylhs.value.as < acl::yaml::string_slice_array > ().emplace_back(yystack_[0].value.as < acl::yaml::string_slice > ());
+    }
+#line 801 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
+    break;
+
+  case 41: // scalar_line: STRING
+#line 224 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+  {
+        yylhs.value.as < acl::yaml::string_slice > () = yystack_[0].value.as < acl::yaml::string_slice > ();
+  }
+#line 809 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
     break;
 
 
-#line 728 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
+#line 813 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
 
             default:
               break;
@@ -1076,86 +1161,100 @@ namespace acl { namespace yaml {
   }
 
 
-  const signed char parser::yypact_ninf_ = -31;
+  const signed char parser::yypact_ninf_ = -37;
 
-  const signed char parser::yytable_ninf_ = -22;
+  const signed char parser::yytable_ninf_ = -29;
 
   const signed char
   parser::yypact_[] =
   {
-     -31,     3,   -31,   -31,     1,   -31,   -31,    -6,     9,    -3,
-     -31,     8,   -31,   -31,     4,   -31,   -31,    11,   -31,    10,
-     -31,    13,    15,    16,    19,   -31,    17,    15,    20,    15,
-      21,    18,   -31,     5,   -31,   -31,    22,   -31,    15,   -31,
-      18,    23,   -31,    19,   -31,    24,   -31,   -31,   -31
+       3,   -37,     1,   -37,   -37,   -37,    15,   -37,   -37,    11,
+      17,    11,   -37,    16,    19,   -37,   -37,    -1,   -37,   -37,
+     -37,    18,    19,   -37,    21,    20,    20,   -37,    22,   -37,
+     -37,    24,    25,    23,   -37,   -37,    30,   -37,    16,    19,
+      16,    29,    32,   -37,     4,   -37,   -37,    19,   -37,    29,
+      28,   -37,     9,   -37,   -37,    30,    31,   -37,   -37,    32,
+     -37,   -37,   -37
   };
 
   const signed char
   parser::yydefact_[] =
   {
-       2,     0,     1,    11,     0,     6,     3,     0,     0,     0,
-      29,     0,    25,     4,    12,     5,    27,     0,     8,     0,
-       7,     0,     0,    17,     0,    26,     0,    28,     0,     0,
-       0,     0,    16,     0,    14,    19,     0,    10,    18,     9,
-      22,     0,    13,     0,    20,     0,    23,    15,    24
+       2,     5,     0,     4,     1,    18,     0,    12,     3,     8,
+       0,     8,    33,     6,     0,     9,    10,    19,    11,     7,
+      32,     0,    35,    13,     0,     0,     0,    15,     0,    14,
+      26,     0,    24,     0,    36,    37,     0,    27,     6,     0,
+       6,     0,     0,    23,     0,    21,    17,    25,    16,    29,
+       0,    41,     0,    39,    20,     0,     0,    30,    38,     0,
+      22,    31,    40
   };
 
   const signed char
   parser::yypgoto_[] =
   {
-     -31,   -31,   -31,    -1,   -31,   -31,   -31,   -31,   -19,   -31,
-     -31,     0,   -31,   -31,   -31,   -30,   -31,   -31,    25
+     -37,   -37,   -37,   -30,    13,   -37,    -2,   -37,   -37,   -37,
+     -37,   -18,   -37,   -37,   -14,   -37,   -37,   -37,   -36,   -37,
+     -37,   -37,    12,   -37,   -19
   };
 
   const signed char
   parser::yydefgoto_[] =
   {
-       0,     1,     6,    26,     8,    18,    19,    33,    34,    28,
-      29,    27,    30,    31,    40,     9,    21,    22,    12
+       0,     2,     3,    20,    16,     8,    21,    10,    27,    28,
+      44,    45,    38,    39,    22,    40,    41,    49,    11,    13,
+      14,    29,    34,    52,    53
   };
 
   const signed char
   parser::yytable_[] =
   {
-       7,    41,    13,     2,    10,    15,     3,    10,     4,    11,
-      45,     5,    17,    14,    16,    42,    43,    23,     3,    24,
-      25,   -21,    32,     4,    47,    35,    36,    37,    39,    38,
-      44,    46,    48,     0,     0,     0,     0,    36,     0,    20
+       9,     4,    23,     1,     5,    50,     6,    24,    46,     7,
+      48,    25,    26,    56,    54,    55,    58,    59,    12,    15,
+      31,    17,     5,    19,    18,    47,    30,    32,    33,    42,
+     -28,    36,    37,    43,     6,    51,    57,    60,    35,    61,
+      62,     0,     0,     0,     0,    31
   };
 
   const signed char
   parser::yycheck_[] =
   {
-       1,    31,     8,     0,     3,     8,     3,     3,     5,     8,
-      40,     8,     8,     4,     6,    10,    11,     6,     3,     9,
-       7,     5,     3,     5,    43,     8,    27,     7,     7,    29,
-       8,     8,     8,    -1,    -1,    -1,    -1,    38,    -1,    14
+       2,     0,     3,     0,     3,    41,     5,     8,    38,     8,
+      40,    12,    13,    49,    10,    11,     7,     8,     3,     8,
+      22,     4,     3,     7,    11,    39,     8,     6,     8,     6,
+       5,     9,     8,     3,     5,     3,     8,    55,    26,     8,
+      59,    -1,    -1,    -1,    -1,    47
   };
 
   const signed char
   parser::yystos_[] =
   {
-       0,    13,     0,     3,     5,     8,    14,    15,    16,    27,
-       3,     8,    30,     8,     4,     8,     6,     8,    17,    18,
-      30,    28,    29,     6,     9,     7,    15,    23,    21,    22,
-      24,    25,     3,    19,    20,     8,    15,     7,    23,     7,
-      26,    27,    10,    11,     8,    27,     8,    20,     8
+       0,     0,    15,    16,     0,     3,     5,     8,    19,    20,
+      21,    32,     3,    33,    34,     8,    18,     4,    18,     7,
+      17,    20,    28,     3,     8,    12,    13,    22,    23,    35,
+       8,    20,     6,     8,    36,    36,     9,     8,    26,    27,
+      29,    30,     6,     3,    24,    25,    17,    28,    17,    31,
+      32,     3,    37,    38,    10,    11,    32,     8,     7,     8,
+      25,     8,    38
   };
 
   const signed char
   parser::yyr1_[] =
   {
-       0,    12,    13,    13,    14,    14,    14,    15,    15,    15,
-      15,    16,    18,    17,    19,    19,    20,    22,    21,    23,
-      23,    25,    24,    26,    26,    27,    27,    29,    28,    30
+       0,    14,    15,    15,    15,    16,    17,    17,    18,    18,
+      19,    19,    19,    20,    20,    20,    20,    20,    21,    23,
+      22,    24,    24,    25,    27,    26,    28,    28,    30,    29,
+      31,    31,    32,    32,    34,    33,    35,    35,    36,    37,
+      37,    38
   };
 
   const signed char
   parser::yyr2_[] =
   {
-       0,     2,     0,     2,     2,     2,     1,     3,     3,     6,
-       6,     1,     0,     4,     1,     3,     1,     0,     2,     2,
-       3,     0,     2,     2,     3,     2,     5,     0,     2,     1
+       0,     2,     0,     2,     1,     1,     0,     1,     0,     1,
+       2,     2,     1,     3,     3,     3,     6,     6,     1,     0,
+       4,     1,     3,     1,     0,     2,     2,     3,     0,     2,
+       2,     3,     3,     2,     0,     2,     2,     2,     4,     1,
+       3,     1
   };
 
 
@@ -1167,10 +1266,12 @@ namespace acl { namespace yaml {
   {
   "\"end of file\"", "error", "\"invalid token\"", "STRING", "COLON",
   "DASH", "INDENT", "DEDENT", "NEWLINE", "LBRACKET", "RBRACKET", "COMMA",
-  "$accept", "document", "line", "mapping", "key", "array", "$@1",
+  "PIPE", "GREATER_THAN", "$accept", "document", "end", "optional_dedent",
+  "optional_newline", "line", "mapping", "key", "array", "$@1",
   "array_values", "array_value", "nested_mappings", "$@2", "mappings",
   "nested_sequence", "$@3", "sequence", "sequence_item",
-  "nested_mapping_in_sequence", "$@4", "value", YY_NULLPTR
+  "nested_mapping_in_sequence", "$@4", "block_scalar",
+  "block_scalar_content", "scalar_lines", "scalar_line", YY_NULLPTR
   };
 #endif
 
@@ -1179,9 +1280,11 @@ namespace acl { namespace yaml {
   const unsigned char
   parser::yyrline_[] =
   {
-       0,    55,    55,    57,    61,    62,    63,    67,    73,    77,
-      81,    88,    96,    96,   107,   113,   122,   129,   129,   136,
-     137,   141,   141,   151,   152,   156,   162,   166,   166,   176
+       0,    53,    53,    55,    56,    60,    63,    65,    68,    70,
+      74,    75,    76,    81,    87,    93,    97,   101,   108,   116,
+     116,   127,   133,   142,   149,   149,   156,   157,   161,   161,
+     171,   172,   176,   177,   185,   185,   195,   199,   206,   213,
+     217,   223
   };
 
   void
@@ -1212,11 +1315,11 @@ namespace acl { namespace yaml {
 #endif // YAML_DEBUG
 
 
-#line 7 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+#line 7 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml.yy"
 } } // acl::yaml
-#line 1218 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
+#line 1321 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml_parser_impl.cpp"
 
-#line 182 "/home/obhi/code/lxe/third_party/acl/src/acl/dsl/yaml.yy"
+#line 228 "C:/repos/lxe/third_party/acl/src/acl/dsl/yaml.yy"
 
 
 /*============================================================================*/
@@ -1233,6 +1336,7 @@ void yaml::istream::parse(context& handler)
   this->handler_ = &handler;
   begin_scan();
   parser parser(*this);
+  // parser.set_debug_level(5);
   parser.parse();
   end_scan();	
 }

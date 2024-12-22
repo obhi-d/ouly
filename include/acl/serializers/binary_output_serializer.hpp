@@ -61,7 +61,7 @@ public:
       write_string_view_transformable(obj);
     else if constexpr (detail::TransformToString<Class>)
       write_string_transformable(obj);
-    else if constexpr (detail::StringLike<Class>)
+    else if constexpr (detail::ContainerIsStringLike<Class>)
       write_string(obj);
     else if constexpr (detail::BoolLike<Class>)
       write_bool(obj);
@@ -301,7 +301,7 @@ concept OutputSerializable =
   detail::BoundClass<Class> || detail::OutputSerializableClass<Class, detail::empty_output_streamer> ||
   detail::TupleLike<Class> || detail::ContainerLike<Class> || detail::VariantLike<Class> ||
   detail::CastableToStringView<Class> || detail::CastableToString<Class> || detail::TransformToStringView<Class> ||
-  detail::TransformToString<Class> || detail::StringLike<Class> || detail::BoolLike<Class> ||
+  detail::TransformToString<Class> || detail::ContainerIsStringLike<Class> || detail::BoolLike<Class> ||
   detail::IntegerLike<Class> || detail::EnumLike<Class> || detail::FloatLike<Class> || detail::PointerLike<Class> ||
   detail::OptionalLike<Class> || detail::MonostateLike<Class>;
 

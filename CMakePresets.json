@@ -62,6 +62,9 @@
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
+        "ACL_BISON_EXE": "C:\\repos\\winflexbison\\win_bison.exe",
+        "ACL_FLEX_EXE": "C:\\repos\\winflexbison\\win_flex.exe",
+        "ACL_GENERATE_YAML_PARSER": "ON",
         "ASAN_ENABLED": "ON",
         "ACL_BUILD_TESTS": "ON"
       },

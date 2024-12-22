@@ -15,10 +15,10 @@
 #define YY_INPUT(buf,result,max_size)       \
 	result = yyextra->read(buf, max_size);	\
 	assert(result <= max_size);			    \
-	assert(buf[result] == 0);				\
+	assert(!result || buf[result] == 0);				\
 
-#define yyterminate()					         return acl::yaml::parser::make_END(cyaml.get_source())
-#define YY_USER_ACTION                 cyaml.move_ahead((uint32_t)yyleng); 
+#define yyterminate()					         return acl::yaml::parser::make_END(cyaml.location())
+#define YY_USER_ACTION                 cyaml.set_token((uint32_t)yyleng); 
 void * yaml_alloc (std::size_t bytes, void* yyscanner);
 void * yaml_realloc (void* ptr, std::size_t bytes, void* yyscanner);
 void   yaml_free (void* ptr, void* yyscanner);
@@ -28,26 +28,17 @@ void   yaml_free (void* ptr, void* yyscanner);
 
 %%
 ^[ \t]*\n          ; /* Skip empty lines */
-^[ \t]+            { 
-                     uint32_t current_indent = static_cast<uint32_t>(yyleng);                     
-                     if (current_indent > cyaml.peek_indent()) {
-                         cyaml.push_indent(current_indent);
-                         return acl::yaml::parser::make_INDENT(cyaml.get_source());
-                     } else if (current_indent < cyaml.peek_indent()) {
-                         cyaml.pop_indent();
-                         return acl::yaml::parser::make_DEDENT(cyaml.get_source());
-                     }
-                   }                   
-"["                { return acl::yaml::parser::make_LBRACKET(cyaml.get_source()); }
-"]"                { return acl::yaml::parser::make_RBRACKET(cyaml.get_source()); }
-","                { return acl::yaml::parser::make_COMMA(cyaml.get_source()); }                   
-[-][ \t]+          { return acl::yaml::parser::make_DASH(cyaml.get_source()); }
-[:][ \t]+          { return acl::yaml::parser::make_COLON(cyaml.get_source()); }
-\n                 { return acl::yaml::parser::make_NEWLINE(cyaml.get_source()); }
-\"[^\"]*\"         { return acl::yaml::parser::make_STRING(cyaml.get_view(static_cast<uint32_t>(yyleng)), cyaml.get_source()); }
-[^ \t\n\":#][^ \t\n]*  { 
-                     return acl::yaml::parser::make_STRING(cyaml.get_view(static_cast<uint32_t>(yyleng)), cyaml.get_source());
-                   }
+^[ \t]+            { return acl::yaml::parser::make_INDENT(cyaml.get_view(), cyaml.location()); } 
+"["                { return acl::yaml::parser::make_LBRACKET(cyaml.location()); }
+"]"                { return acl::yaml::parser::make_RBRACKET(cyaml.location()); }
+","                { return acl::yaml::parser::make_COMMA(cyaml.location()); }
+"|"                { return acl::yaml::parser::make_PIPE(cyaml.location()); }
+">"                { return acl::yaml::parser::make_GREATER_THAN(cyaml.location()); }
+[-][ \t]*          { return acl::yaml::parser::make_DASH(cyaml.get_view(), cyaml.location()); } 
+[:]                { return acl::yaml::parser::make_COLON(cyaml.location()); }
+\n                 { return acl::yaml::parser::make_NEWLINE(cyaml.location()); }
+\"[^\"]*\"         { /* quoted string */ return acl::yaml::parser::make_STRING(cyaml.get_quoted_string(), cyaml.location()); }
+[^ \t\n\":#]*      { /* string */ return acl::yaml::parser::make_STRING(cyaml.get_view(), cyaml.location()); }
 #.*                ; /* Ignore comments */
 [ \t]+            ; /* Ignore whitespace */
 .                 { cyaml.throw_error(cyaml.location(), "Invalid character", "lexer-error"); }
