@@ -1,4 +1,4 @@
-#include <acl/dsl/yaml.hpp>
+﻿#include <acl/dsl/yaml.hpp>
 #include <acl/serializers/yaml_object.hpp>
 #include <array>
 #include <catch2/catch_all.hpp>
@@ -31,7 +31,7 @@ c: "value"
 )";
 
   TestStruct ts;
-  acl::yaml::read(ts, yaml);
+  acl::yaml::from_string(ts, yaml);
 
   REQUIRE(ts.a == 100);
   REQUIRE(ts.b == 200.0);
@@ -63,7 +63,7 @@ d:
   c: "value2"
 )";
   TestStruct2 ts;
-  acl::yaml::read(ts, yaml);
+  acl::yaml::from_string(ts, yaml);
   REQUIRE(ts.a == 100);
   REQUIRE(ts.b == 200.0);
   REQUIRE(ts.c == "value");
@@ -90,7 +90,7 @@ numbers:
   };
 
   TestStructVector ts;
-  acl::yaml::read(ts, yaml);
+  acl::yaml::from_string(ts, yaml);
 
   REQUIRE(ts.numbers.size() == 3);
   REQUIRE(ts.numbers[0] == 1);
@@ -119,7 +119,7 @@ value: 42
   // Test with value present
   {
     TestStructOptional ts;
-    acl::yaml::read(ts, yaml_present);
+    acl::yaml::from_string(ts, yaml_present);
     REQUIRE(ts.value.has_value());
     REQUIRE(ts.value.value() == 42);
   }
@@ -127,7 +127,7 @@ value: 42
   // Test with value absent
   {
     TestStructOptional ts;
-    acl::yaml::read(ts, yaml_absent);
+    acl::yaml::from_string(ts, yaml_absent);
     REQUIRE(!ts.value.has_value());
   }
 }
@@ -155,7 +155,7 @@ color: 1
   };
 
   TestStructEnum ts;
-  acl::yaml::read(ts, yaml);
+  acl::yaml::from_string(ts, yaml);
 
   REQUIRE(ts.color == Color::Green);
 }
@@ -182,7 +182,7 @@ value: null
   // Test with value present
   {
     TestStructPointer ts;
-    acl::yaml::read(ts, yaml_present);
+    acl::yaml::from_string(ts, yaml_present);
     REQUIRE(ts.value != nullptr);
     REQUIRE(*ts.value == 42);
   }
@@ -190,7 +190,7 @@ value: null
   // Test with value null
   {
     TestStructPointer ts;
-    acl::yaml::read(ts, yaml_null);
+    acl::yaml::from_string(ts, yaml_null);
     REQUIRE(ts.value == nullptr);
   }
 }
@@ -214,7 +214,7 @@ tuple:
   };
 
   TestStructTuple ts;
-  acl::yaml::read(ts, yaml);
+  acl::yaml::from_string(ts, yaml);
 
   REQUIRE(std::get<0>(ts.tuple) == 1);
   REQUIRE(std::get<1>(ts.tuple) == "string");
@@ -243,7 +243,7 @@ map:
   };
 
   TestStructMap ts;
-  acl::yaml::read(ts, yaml);
+  acl::yaml::from_string(ts, yaml);
 
   REQUIRE(ts.map.size() == 3);
   REQUIRE(ts.map["key1"] == 1);
@@ -270,7 +270,30 @@ array:
   };
 
   TestStructArray ts;
-  acl::yaml::read(ts, yaml);
+  acl::yaml::from_string(ts, yaml);
+
+  REQUIRE(ts.array[0] == 10);
+  REQUIRE(ts.array[1] == 20);
+  REQUIRE(ts.array[2] == 30);
+}
+
+TEST_CASE("yaml_object: Test read compact array ")
+{
+  std::string yaml = R"(
+array: [10, 20, 30]
+)";
+
+  struct TestStructArray
+  {
+    std::array<int, 3>    array;
+    static constexpr auto reflect() noexcept
+    {
+      return acl::bind(acl::bind<"array", &TestStructArray::array>());
+    }
+  };
+
+  TestStructArray ts;
+  acl::yaml::from_string(ts, yaml);
 
   REQUIRE(ts.array[0] == 10);
   REQUIRE(ts.array[1] == 20);
@@ -295,7 +318,7 @@ flag2: false
   };
 
   TestStructBool ts;
-  acl::yaml::read(ts, yaml);
+  acl::yaml::from_string(ts, yaml);
 
   REQUIRE(ts.flag1 == true);
   REQUIRE(ts.flag2 == false);
@@ -328,15 +351,314 @@ var:
 
   {
     TestStructVariant ts;
-    acl::yaml::read(ts, yaml_int);
+    acl::yaml::from_string(ts, yaml_int);
     REQUIRE(std::holds_alternative<int>(ts.var));
     REQUIRE(std::get<int>(ts.var) == 42);
   }
 
   {
     TestStructVariant ts;
-    acl::yaml::read(ts, yaml_string);
+    acl::yaml::from_string(ts, yaml_string);
     REQUIRE(std::holds_alternative<std::string>(ts.var));
     REQUIRE(std::get<std::string>(ts.var) == "hello");
   }
+}
+
+TEST_CASE("yaml_object: Test read invalid YAML")
+{
+  std::string yaml = R"(
+a: 100
+b: [1, 2, 3
+c: "value
+)";
+
+  struct TestStructInvalid
+  {
+    int              a;
+    std::vector<int> b;
+    std::string      c;
+
+    static constexpr auto reflect() noexcept
+    {
+      return acl::bind(acl::bind<"a", &TestStructInvalid::a>(), acl::bind<"b", &TestStructInvalid::b>(),
+                       acl::bind<"c", &TestStructInvalid::c>());
+    }
+  };
+
+  TestStructInvalid ts;
+  REQUIRE_THROWS_AS(acl::yaml::from_string(ts, yaml), std::runtime_error);
+}
+
+TEST_CASE("yaml_object: Test read with incorrect indentation")
+{
+  std::string yaml = R"(
+a: 100
+  b: 200
+c: "value"
+)";
+
+  struct TestStructIndent
+  {
+    int         a;
+    int         b;
+    std::string c;
+
+    static constexpr auto reflect() noexcept
+    {
+      return acl::bind(acl::bind<"a", &TestStructIndent::a>(), acl::bind<"b", &TestStructIndent::b>(),
+                       acl::bind<"c", &TestStructIndent::c>());
+    }
+  };
+
+  TestStructIndent ts;
+  REQUIRE_THROWS_AS(acl::yaml::from_string(ts, yaml), std::runtime_error);
+}
+
+TEST_CASE("yaml_object: Test read complex nested structure")
+{
+  std::string yaml = R"(
+root:
+  child1:
+    grandchild:
+      - item1
+      - item2
+  child2:
+    key1: value1
+    key2: value2
+)";
+
+  struct TestStructComplex
+  {
+    struct Child1
+    {
+      std::vector<std::string> grandchild;
+
+      static constexpr auto reflect() noexcept
+      {
+        return acl::bind(acl::bind<"grandchild", &Child1::grandchild>());
+      }
+    };
+
+    std::map<std::string, std::string> child2;
+    Child1                             child1;
+
+    static constexpr auto reflect() noexcept
+    {
+      return acl::bind(acl::bind<"child1", &TestStructComplex::child1>(),
+                       acl::bind<"child2", &TestStructComplex::child2>());
+    }
+  };
+
+  struct Root
+  {
+    TestStructComplex root;
+
+    static constexpr auto reflect() noexcept
+    {
+      return acl::bind(acl::bind<"root", &Root::root>());
+    }
+  };
+
+  Root ts;
+  acl::yaml::from_string(ts, yaml);
+
+  REQUIRE(ts.root.child1.grandchild.size() == 2);
+  REQUIRE(ts.root.child1.grandchild[0] == "item1");
+  REQUIRE(ts.root.child1.grandchild[1] == "item2");
+  REQUIRE(ts.root.child2["key1"] == "value1");
+  REQUIRE(ts.root.child2["key2"] == "value2");
+}
+
+TEST_CASE("yaml_object: Test read block scalar literals")
+{
+  std::string yaml = R"(
+literal_block: |
+  This is a block of text
+  that spans multiple lines.
+
+folded_block: >
+  This is another block
+  that folds newlines
+  into spaces.
+)";
+
+  struct TestStructBlockScalar
+  {
+    std::string literal_block;
+    std::string folded_block;
+
+    static constexpr auto reflect() noexcept
+    {
+      return acl::bind(acl::bind<"literal_block", &TestStructBlockScalar::literal_block>(),
+                       acl::bind<"folded_block", &TestStructBlockScalar::folded_block>());
+    }
+  };
+
+  TestStructBlockScalar ts;
+  acl::yaml::from_string(ts, yaml);
+
+  REQUIRE(ts.literal_block == "This is a block of text\nthat spans multiple lines.\n");
+  REQUIRE(ts.folded_block == "This is another block that folds newlines into spaces.\n");
+}
+
+TEST_CASE("yaml_object: Test read with unexpected token")
+{
+  std::string yaml = R"(
+list:
+  - 1
+  - 2
+  - x3
+)";
+
+  struct TestStructUnexpectedToken
+  {
+    std::vector<int> list;
+
+    static constexpr auto reflect() noexcept
+    {
+      return acl::bind(acl::bind<"list", &TestStructUnexpectedToken::list>());
+    }
+  };
+
+  TestStructUnexpectedToken ts;
+  REQUIRE_THROWS_AS(acl::yaml::from_string(ts, yaml), std::runtime_error);
+}
+
+TEST_CASE("yaml_object: Test read with missing key")
+{
+  std::string yaml = R"(
+a: 100
+c: "value"
+)";
+
+  struct TestStructMissingKey
+  {
+    int         a;
+    int         b; // Missing in YAML
+    std::string c;
+
+    static constexpr auto reflect() noexcept
+    {
+      return acl::bind(acl::bind<"a", &TestStructMissingKey::a>(), acl::bind<"b", &TestStructMissingKey::b>(),
+                       acl::bind<"c", &TestStructMissingKey::c>());
+    }
+  };
+
+  TestStructMissingKey ts;
+  acl::yaml::from_string(ts, yaml);
+
+  REQUIRE(ts.a == 100);
+  REQUIRE(ts.b == 0); // Default-initialized
+  REQUIRE(ts.c == "value");
+}
+
+TEST_CASE("yaml_object: Test read with extra fields")
+{
+  std::string yaml = R"(
+a: 100
+b: 200
+c: "value"
+extra_field: "should be ignored"
+)";
+
+  struct TestStructExtraField
+  {
+    int         a;
+    int         b;
+    std::string c;
+
+    static constexpr auto reflect() noexcept
+    {
+      return acl::bind(acl::bind<"a", &TestStructExtraField::a>(), acl::bind<"b", &TestStructExtraField::b>(),
+                       acl::bind<"c", &TestStructExtraField::c>());
+    }
+  };
+
+  TestStructExtraField ts;
+  acl::yaml::from_string(ts, yaml);
+
+  REQUIRE(ts.a == 100);
+  REQUIRE(ts.b == 200);
+  REQUIRE(ts.c == "value");
+}
+
+TEST_CASE("yaml_object: Test read of unexpected type")
+{
+  std::string yaml = R"(
+number: "not_a_number"
+)";
+
+  struct TestStructUnexpectedType
+  {
+    int number;
+
+    static constexpr auto reflect() noexcept
+    {
+      return acl::bind(acl::bind<"number", &TestStructUnexpectedType::number>());
+    }
+  };
+
+  TestStructUnexpectedType ts;
+  REQUIRE_THROWS_AS(acl::yaml::from_string(ts, yaml), std::runtime_error);
+}
+
+TEST_CASE("yaml_object: Test read recursive structures")
+{
+  std::string yaml = R"(
+node:
+  value: 1
+  next:
+    value: 2
+    next:
+      value: 3
+)";
+
+  struct Node
+  {
+    int                   value;
+    std::unique_ptr<Node> next;
+
+    static constexpr auto reflect() noexcept
+    {
+      return acl::bind(acl::bind<"value", &Node::value>(), acl::bind<"next", &Node::next>());
+    }
+  };
+
+  struct TestStructRecursive
+  {
+    Node node;
+
+    static constexpr auto reflect() noexcept
+    {
+      return acl::bind(acl::bind<"node", &TestStructRecursive::node>());
+    }
+  };
+
+  TestStructRecursive ts;
+  acl::yaml::from_string(ts, yaml);
+
+  REQUIRE(ts.node.value == 1);
+  REQUIRE(ts.node.next->value == 2);
+  REQUIRE(ts.node.next->next->value == 3);
+  REQUIRE(ts.node.next->next->next == nullptr);
+}
+
+TEST_CASE("yaml_object: Test read with incorrect type casting")
+{
+  std::string yaml = R"(
+value: "string_instead_of_int"
+)";
+
+  struct TestStructTypeCast
+  {
+    int value;
+
+    static constexpr auto reflect() noexcept
+    {
+      return acl::bind(acl::bind<"value", &TestStructTypeCast::value>());
+    }
+  };
+
+  TestStructTypeCast ts;
+  REQUIRE_THROWS_AS(acl::yaml::from_string(ts, yaml), std::runtime_error);
 }

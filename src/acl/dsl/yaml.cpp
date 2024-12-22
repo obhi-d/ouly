@@ -132,7 +132,7 @@ istream::token istream::next_token()
       current_pos_++;
       return token{token_type::key, slice};
     }
-    if (c == '\n')
+    else if (((c == ',' || std::isspace(c)) && state_ == parse_state::in_compact_mapping) || c == '\n')
       break;
     current_pos_++;
   }
@@ -150,11 +150,31 @@ void istream::process_token(token tok)
 
   switch (tok.type)
   {
+  case token_type::lbracket:
+    if (state_ == parse_state::none || state_ == parse_state::in_value)
+    {
+      state_ = parse_state::in_compact_mapping;
+    }
+    break;
+
+  case token_type::comma:
+    if (state_ != parse_state::in_compact_mapping)
+      throw_error(tok, "Unexpected ','");
+    break;
+
+  case token_type::rbracket:
+    if (state_ != parse_state::in_compact_mapping)
+      throw_error(tok, "Unexpected ']'");
+    state_ = parse_state::none;
+    break;
+
   case token_type::indent:
     handle_indent(static_cast<int16_t>(tok.content.count));
     break;
 
   case token_type::key:
+    if (state_ == parse_state::in_compact_mapping)
+      throw_error(tok, "Unexpected key, ']' expected");
     handle_key(tok.content);
     break;
 
@@ -196,6 +216,7 @@ void istream::handle_indent(int16_t new_indent)
 
 void istream::handle_key(string_slice key)
 {
+
   handle_indent(indent_level_);
 
   ctx_->begin_key(get_view(key));
@@ -207,6 +228,13 @@ void istream::handle_value(string_slice value)
 {
   if (!value.count)
     return;
+
+  if (state_ == parse_state::in_compact_mapping)
+  {
+    ctx_->begin_array();
+    indent_stack_.emplace_back(indent_level_, container_type::array);
+  }
+
   ctx_->set_value(get_view(value));
   close_last_context();
   state_ = parse_state::none;

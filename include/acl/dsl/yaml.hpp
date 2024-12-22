@@ -70,6 +70,7 @@ private:
     in_key,
     in_value,
     in_block_scalar,
+    in_compact_mapping,
     in_array
   };
 
@@ -96,13 +97,13 @@ private:
   void  process_token(token tok);
   // Context management
   void handle_indent(int16_t new_indent);
-  void append_indent(int16_t new_indent);
   void handle_key(string_slice key);
   void handle_value(string_slice value);
   void handle_dash(int16_t extra_indent);
   void handle_block_scalar(token_type type);
   void collect_block_scalar();
   void close_context(int16_t new_indent);
+  void append_indent(int16_t new_indent);
 
   // Utility functions
   std::string_view get_view(string_slice slice) const
@@ -155,6 +156,12 @@ private:
   void close_last_context();
 
 private:
+  inline void throw_error(token token, std::string_view error) const
+  {
+    throw std::runtime_error(
+      std::format("parse-error @{} : (around {}) - {}", token.content.start, get_view(token.content), error));
+  }
+
   struct indent_entry
   {
     int16_t        indent;

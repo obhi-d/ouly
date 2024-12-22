@@ -435,7 +435,7 @@ private:
 namespace yaml
 {
 template <typename Class>
-void read(Class& obj, std::string_view data)
+void from_string(Class& obj, std::string_view data)
 {
   auto state   = detail::parser_state(data);
   auto context = detail::context<Class&>(obj, state, nullptr);
