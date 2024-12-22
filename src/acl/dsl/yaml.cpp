@@ -22,34 +22,40 @@ void istream::parse(context& ctx)
   }
 }
 
-std::optional<istream::token> istream::next_token()
+istream::token istream::next_token()
 {
-  skip_whitespace();
-  if (current_pos_ >= content_.length())
-    return std::nullopt;
 
   // Start of line - check indentation
   if (at_line_start_)
   {
     at_line_start_ = false;
     auto indent    = count_indent();
+    if (peek(1) == '\n')
+      return token{token_type::newline, indent};
     if (indent.count > 0)
       return token{token_type::indent, indent};
   }
+  else
+  {
+    skip_whitespace();
+  }
+
+  if (current_pos_ >= content_.length())
+    return token{
+      token_type::eof, {current_pos_, 0}
+    };
 
   char c = content_[current_pos_];
   switch (c)
   {
   case '-':
   {
-    if (peek(1) == ' ')
-    {
-      current_pos_ += 2;
-      return token{
-        token_type::dash, {current_pos_ - 2, 1}
-      };
-    }
-    break;
+    current_pos_++;
+    auto indent = count_indent();
+    auto tok    = token{
+      token_type::dash, {current_pos_, 1 + indent.count}
+    };
+    return tok;
   }
   case '|':
   {
@@ -65,12 +71,52 @@ std::optional<istream::token> istream::next_token()
       token_type::gt, {current_pos_ - 1, 1}
     };
   }
+  case '[':
+  {
+    current_pos_++;
+    return token{
+      token_type::lbracket, {current_pos_ - 1, 1}
+    };
+  }
+  case ']':
+  {
+    current_pos_++;
+    return token{
+      token_type::rbracket, {current_pos_ - 1, 1}
+    };
+  }
+  case ',':
+  {
+    current_pos_++;
+    return token{
+      token_type::comma, {current_pos_ - 1, 1}
+    };
+  }
   case '\n':
   {
     current_pos_++;
     at_line_start_ = true;
     return token{
       token_type::newline, {current_pos_ - 1, 1}
+    };
+  }
+  case '"':
+  {
+    // Quoted string
+    auto start = current_pos_;
+    current_pos_++;
+    while (current_pos_ < content_.length())
+    {
+      c = content_[current_pos_];
+      if (c == '"')
+      {
+        current_pos_++;
+        break;
+      }
+      current_pos_++;
+    }
+    return token{
+      token_type::value, {start + 1, static_cast<uint32_t>(current_pos_ - start - 2)}
     };
   }
   }
@@ -80,10 +126,10 @@ std::optional<istream::token> istream::next_token()
   while (current_pos_ < content_.length())
   {
     c = content_[current_pos_];
-    if (c == ':' && peek(1) == ' ')
+    if (c == ':' && std::isspace(peek(1)))
     {
       auto slice = string_slice{start, static_cast<uint32_t>(current_pos_ - start)};
-      current_pos_ += 2;
+      current_pos_++;
       return token{token_type::key, slice};
     }
     if (c == '\n')
@@ -97,32 +143,32 @@ std::optional<istream::token> istream::next_token()
   };
 }
 
-void istream::process_token(const std::optional<token>& tok)
+void istream::process_token(token tok)
 {
   if (!tok)
     return;
 
-  switch (tok->type)
+  switch (tok.type)
   {
   case token_type::indent:
-    handle_indent(static_cast<int>(tok->content.count));
+    handle_indent(static_cast<int16_t>(tok.content.count));
     break;
 
   case token_type::key:
-    handle_key(tok->content);
+    handle_key(tok.content);
     break;
 
   case token_type::value:
-    handle_value(tok->content);
+    handle_value(tok.content);
     break;
 
   case token_type::dash:
-    handle_dash();
+    handle_dash(static_cast<int16_t>(tok.content.count));
     break;
 
   case token_type::pipe:
   case token_type::gt:
-    handle_block_scalar(tok->type);
+    handle_block_scalar(tok.type);
     break;
 
   case token_type::newline:
@@ -134,7 +180,12 @@ void istream::process_token(const std::optional<token>& tok)
   }
 }
 
-void istream::handle_indent(int32_t new_indent)
+void istream::append_indent(int16_t new_indent)
+{
+  indent_level_ += new_indent;
+}
+
+void istream::handle_indent(int16_t new_indent)
 {
   if (new_indent < indent_level_)
   {
@@ -147,13 +198,8 @@ void istream::handle_key(string_slice key)
 {
   handle_indent(indent_level_);
 
-  if (state_ != parse_state::in_key)
-  {
-    ctx_->begin_object();
-    indent_stack_.push_back({indent_level_, container_type::object});
-  }
-
-  ctx_->set_key(get_view(key));
+  ctx_->begin_key(get_view(key));
+  indent_stack_.emplace_back(indent_level_, container_type::object);
   state_ = parse_state::in_value;
 }
 
@@ -162,15 +208,17 @@ void istream::handle_value(string_slice value)
   if (!value.count)
     return;
   ctx_->set_value(get_view(value));
+  close_last_context();
   state_ = parse_state::none;
 }
 
-void istream::handle_dash()
+void istream::handle_dash(int16_t extra_indent)
 {
   if (state_ != parse_state::in_array)
   {
     ctx_->begin_array();
-    indent_stack_.push_back({indent_level_, container_type::array});
+    indent_level_ += extra_indent;
+    indent_stack_.emplace_back(indent_level_, container_type::array);
     state_ = parse_state::in_array;
   }
 }
@@ -202,25 +250,44 @@ void istream::collect_block_scalar()
       result += get_view(block_lines_[i]);
     }
     ctx_->set_value(result);
+    close_last_context();
     block_lines_.clear();
     state_ = parse_state::none;
   }
 }
 
-void istream::close_context(int32_t new_indent)
+void istream::close_context(int16_t new_indent)
 {
   while (!indent_stack_.empty() && indent_stack_.back().indent > new_indent)
   {
-    auto& current = indent_stack_.back();
+    auto current = indent_stack_.back();
     if (current.type == container_type::array)
     {
       ctx_->end_array();
     }
     else
     {
-      ctx_->end_object();
+      ctx_->end_key();
     }
     indent_stack_.pop_back();
   }
 }
+
+void istream::close_last_context()
+{
+  if (!indent_stack_.empty())
+  {
+    auto current = indent_stack_.back();
+    if (current.type == container_type::array)
+    {
+      ctx_->end_array();
+    }
+    else
+    {
+      ctx_->end_key();
+    }
+    indent_stack_.pop_back();
+  }
+}
+
 } // namespace acl::yaml

@@ -27,11 +27,10 @@ class context
 {
 public:
   virtual ~context() noexcept                    = default;
-  virtual void begin_object()                    = 0;
-  virtual void end_object()                      = 0;
   virtual void begin_array()                     = 0;
   virtual void end_array()                       = 0;
-  virtual void set_key(std::string_view slice)   = 0;
+  virtual void begin_key(std::string_view slice) = 0;
+  virtual void end_key()                         = 0;
   virtual void set_value(std::string_view slice) = 0;
 };
 
@@ -51,42 +50,59 @@ public:
 private:
   enum class token_type : uint8_t
   {
-    indent,  // Whitespace at start of line
-    key,     // Key followed by colon
-    value,   // Simple scalar value
-    dash,    // Array item marker
-    pipe,    // | for literal block scalar
-    gt,      // > for folded block scalar
-    newline, // Line ending
-    eof      // End of input
+    indent,   // Whitespace at start of line
+    key,      // Key followed by colon
+    value,    // Simple scalar value
+    dash,     // Array item marker
+    pipe,     // | for literal block scalar
+    gt,       // > for folded block scalar
+    newline,  // Line ending
+    lbracket, // [
+    rbracket, // ]
+    comma,    // ,
+    eof       // End of input
   };
 
   enum class parse_state : uint8_t
   {
     none,
+    in_object,
     in_key,
     in_value,
     in_block_scalar,
     in_array
   };
 
+  enum class container_type : uint8_t
+  {
+    none,
+    array,
+    object
+  };
+
   struct token
   {
-    token_type   type;
+    token_type   type = token_type::eof;
     string_slice content;
+
+    inline operator bool() const noexcept
+    {
+      return type != token_type::eof;
+    }
   };
 
   // Token processing
-  std::optional<token> next_token();
-  void                 process_token(const std::optional<token>& tok);
+  token next_token();
+  void  process_token(token tok);
   // Context management
-  void handle_indent(int32_t new_indent);
+  void handle_indent(int16_t new_indent);
+  void append_indent(int16_t new_indent);
   void handle_key(string_slice key);
   void handle_value(string_slice value);
-  void handle_dash();
+  void handle_dash(int16_t extra_indent);
   void handle_block_scalar(token_type type);
   void collect_block_scalar();
-  void close_context(int32_t new_indent);
+  void close_context(int16_t new_indent);
 
   // Utility functions
   std::string_view get_view(string_slice slice) const
@@ -127,24 +143,30 @@ private:
     return {start, static_cast<uint32_t>(current_pos_ - start)};
   }
 
-private:
-  enum class container_type
+  container_type pop_indent()
   {
-    object,
-    array
-  };
+    if (indent_stack_.empty())
+      return container_type::none;
+    auto top = indent_stack_.back();
+    indent_stack_.pop_back();
+    return top.type;
+  }
+
+  void close_last_context();
+
+private:
   struct indent_entry
   {
-    int32_t        indent;
+    int16_t        indent;
     container_type type;
   };
 
   std::string_view content_;
   context*         ctx_           = nullptr;
   parse_state      state_         = parse_state::none;
-  token_type       block_style_   = token_type::eof;
-  int32_t          indent_level_  = 0;
   uint32_t         current_pos_   = 0;
+  int16_t          indent_level_  = 0;
+  token_type       block_style_   = token_type::eof;
   bool             at_line_start_ = true;
 
   small_vector<indent_entry, 8> indent_stack_;

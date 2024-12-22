@@ -47,6 +47,7 @@ public:
     void* cursor  = allocator.allocate(sizeof(Context), alignof(Context));
     auto  context = std::construct_at(reinterpret_cast<Context*>(cursor), std::forward<Args>(args)...);
     stream.set_handler(context);
+    context->setup_proxy();
     return context;
   }
 
@@ -98,7 +99,7 @@ public:
     return obj_;
   }
 
-  void set_key(std::string_view key) override
+  void begin_key(std::string_view key) override
   {
     key_ = key;
     if constexpr (detail::BoundClass<class_type>)
@@ -109,19 +110,9 @@ public:
     {
       read_variant(key);
     }
-    else if constexpr (detail::PointerLike<class_type>)
-    {
-      return read_pointer(key);
-    }
-    else if constexpr (detail::OptionalLike<class_type>)
-    {
-      return read_optional(key);
-    }
   }
 
-  void begin_object() override {}
-
-  void end_object() override
+  void end_key() override
   {
     if (pop_fn_)
     {
@@ -146,6 +137,18 @@ public:
     if (pop_fn_)
     {
       pop_fn_(this);
+    }
+  }
+
+  void setup_proxy()
+  {
+    if constexpr (detail::PointerLike<class_type>)
+    {
+      return read_pointer();
+    }
+    else if constexpr (detail::OptionalLike<class_type>)
+    {
+      return read_optional();
     }
   }
 
@@ -211,7 +214,7 @@ public:
     obj_ = static_cast<class_type>(value);
   }
 
-  void read_pointer(std::string_view key)
+  void read_pointer()
   {
     using class_type  = detail::remove_cref<class_type>;
     using pvalue_type = detail::pointer_class_type<class_type>;
@@ -244,7 +247,7 @@ public:
     };
   }
 
-  void read_optional(std::string_view key)
+  void read_optional()
   {
     using pvalue_type = typename class_type::value_type;
     if (!obj_)
