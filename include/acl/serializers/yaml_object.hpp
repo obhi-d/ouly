@@ -17,11 +17,12 @@ struct context_base : public acl::yaml::context
 {
   using pop_fn = void (*)(context_base*);
 
-  parser_state& parser_state_;
-  context_base* parent_  = nullptr;
-  pop_fn        pop_fn_  = nullptr;
-  uint32_t      xvalue_  = 0;
-  bool          is_null_ = false;
+  parser_state&    parser_state_;
+  context_base*    parent_  = nullptr;
+  pop_fn           pop_fn_  = nullptr;
+  uint32_t         xvalue_  = 0;
+  std::string_view key_     = {};
+  bool             is_null_ = false;
 
   context_base(parser_state& parser_state, context_base* parent) noexcept : parser_state_(parser_state), parent_(parent)
   {}
@@ -97,8 +98,9 @@ public:
     return obj_;
   }
 
-  void start_mapping(std::string_view key) override
+  void set_key(std::string_view key) override
   {
+    key_ = key;
     if constexpr (detail::BoundClass<class_type>)
     {
       read_bound_class(key);
@@ -117,12 +119,9 @@ public:
     }
   }
 
-  void add_mapping_value(std::string_view slice) override
-  {
-    set_value(slice);
-  }
+  void begin_object() override {}
 
-  void end_mapping() override
+  void end_object() override
   {
     if (pop_fn_)
     {
@@ -130,7 +129,7 @@ public:
     }
   }
 
-  void start_sequence_item() override
+  void begin_array() override
   {
     if constexpr (detail::ContainerLike<class_type>)
     {
@@ -142,12 +141,7 @@ public:
     }
   }
 
-  void add_sequence_item(std::string_view slice) override
-  {
-    set_value(slice);
-  }
-
-  void end_sequence_item() override
+  void end_array() override
   {
     if (pop_fn_)
     {
@@ -155,7 +149,7 @@ public:
     }
   }
 
-  void set_value(std::string_view slice)
+  void set_value(std::string_view slice) override
   {
     if (slice == "null")
     {
