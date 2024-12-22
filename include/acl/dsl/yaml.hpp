@@ -12,15 +12,6 @@
 
 namespace acl::yaml
 {
-struct location_type
-{
-  uint32_t                    begin = 0;
-  uint32_t                    end   = 0;
-  inline friend std::ostream& operator<<(std::ostream& yyo, location_type const& l) noexcept
-  {
-    return yyo << l.begin << ':' << l.end;
-  }
-};
 
 struct string_slice
 {
@@ -44,108 +35,119 @@ public:
   virtual void set_value(std::string_view slice) = 0;
 };
 
-;
 class istream
 {
 public:
-  using indent = uint32_t;
+  inline explicit istream(std::string_view content) : content_(content) {}
 
-  void set_idention_level(uint16_t level);
-  void set_idention_level(string_slice level);
-  void add_dash_indention(string_slice dash_level);
+  // Main parse function that processes the YAML content
+  void parse(context& ctx);
 
-  void add_new_mapping(string_slice key);
-  void add_new_mapped_sequence(string_slice key);
-  void add_mapping_value(string_slice value);
-  void add_mapping_value(string_slice_array value);
-  void begin_array();
-  void end_array();
-  void add_new_sequence_value(string_slice value);
-  void add_new_sequence_value(string_slice_array value);
-
-  void close_all_mappings();
-
-  inline void throw_error(location_type const& loc, std::string_view error, std::string_view context) const
+  void set_handler(context* ctx)
   {
-    throw std::runtime_error(std::format("[{}] token@{}: \"{}\" - {}", context, loc.begin,
-                                         contents.substr(loc.begin, loc.end - loc.begin), error));
+    ctx_ = ctx;
   }
-
-  inline auto location() const noexcept
-  {
-    return location_type{current_token.start, current_token.start + current_token.count};
-  }
-
-  inline string_slice get_view() const
-  {
-    return current_token;
-  }
-
-  inline string_slice get_quoted_string() const
-  {
-    return {current_token.start + 1, current_token.count - 2};
-  }
-
-  inline void set_token(uint32_t length) noexcept
-  {
-    current_token.start = token_cursor;
-    current_token.count = length;
-    token_cursor += length;
-  }
-
-  inline int read(char* istream, int siz) noexcept
-  {
-    if (read_cursor >= contents.size())
-      return 0;
-
-    siz = std::min(siz - 1, static_cast<int>(contents.size() - read_cursor));
-    contents.copy(istream, siz, read_cursor);
-    istream[siz] = 0;
-    read_cursor += siz;
-    return siz;
-  }
-
-  inline void* get_scanner() const noexcept
-  {
-    return scanner;
-  }
-
-  inline void set_handler(context* handler) noexcept
-  {
-    handler = handler;
-  }
-
-  istream(std::string_view content) noexcept : contents(content) {}
-
-  void parse(context& handler);
-  void begin_scan();
-  void end_scan();
 
 private:
-  inline std::string_view get_view(string_slice slice) const noexcept
+  enum class token_type : uint8_t
   {
-    return contents.substr(slice.start, slice.count);
-  }
-
-  enum class indent_type : uint8_t
-  {
-    none,
-    object,
-    array,
+    indent,  // Whitespace at start of line
+    key,     // Key followed by colon
+    value,   // Simple scalar value
+    dash,    // Array item marker
+    pipe,    // | for literal block scalar
+    gt,      // > for folded block scalar
+    newline, // Line ending
+    eof      // End of input
   };
 
-  void*  scanner              = nullptr;
-  indent current_indent_level = {};
-  indent test_indent_level    = {};
+  enum class parse_state : uint8_t
+  {
+    none,
+    in_key,
+    in_value,
+    in_block_scalar,
+    in_array
+  };
 
-  acl::small_vector<indent_type, 16> indent_stack;
+  struct token
+  {
+    token_type   type;
+    string_slice content;
+  };
 
-  string_slice     current_key;
-  string_slice     current_token;
-  uint32_t         read_cursor  = 0;
-  uint32_t         token_cursor = 0;
-  context*         handler      = nullptr;
-  std::string_view contents;
+  // Token processing
+  std::optional<token> next_token();
+  void                 process_token(const std::optional<token>& tok);
+  // Context management
+  void handle_indent(int32_t new_indent);
+  void handle_key(string_slice key);
+  void handle_value(string_slice value);
+  void handle_dash();
+  void handle_block_scalar(token_type type);
+  void collect_block_scalar();
+  void close_context(int32_t new_indent);
+
+  // Utility functions
+  std::string_view get_view(string_slice slice) const
+  {
+    return content_.substr(slice.start, slice.count);
+  }
+
+  string_slice count_indent()
+  {
+    auto start = current_pos_;
+    while (current_pos_ < content_.length() && (content_[current_pos_] == ' ' || content_[current_pos_] == '\t'))
+    {
+      current_pos_++;
+    }
+    return {start, static_cast<uint32_t>(current_pos_ - start)};
+  }
+
+  void skip_whitespace()
+  {
+    while (current_pos_ < content_.length() && (content_[current_pos_] == ' ' || content_[current_pos_] == '\t'))
+    {
+      current_pos_++;
+    }
+  }
+
+  char peek(uint32_t offset) const
+  {
+    return (current_pos_ + offset < content_.length()) ? content_[current_pos_ + offset] : '\0';
+  }
+
+  string_slice get_current_line()
+  {
+    auto start = current_pos_;
+    while (current_pos_ < content_.length() && content_[current_pos_] != '\n')
+    {
+      current_pos_++;
+    }
+    return {start, static_cast<uint32_t>(current_pos_ - start)};
+  }
+
+private:
+  enum class container_type
+  {
+    object,
+    array
+  };
+  struct indent_entry
+  {
+    int32_t        indent;
+    container_type type;
+  };
+
+  std::string_view content_;
+  context*         ctx_           = nullptr;
+  parse_state      state_         = parse_state::none;
+  token_type       block_style_   = token_type::eof;
+  int32_t          indent_level_  = 0;
+  uint32_t         current_pos_   = 0;
+  bool             at_line_start_ = true;
+
+  small_vector<indent_entry, 8> indent_stack_;
+  small_vector<string_slice, 8> block_lines_;
 };
-
 } // namespace acl::yaml
