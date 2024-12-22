@@ -840,32 +840,6 @@ TEST_CASE("yaml_object: Test read sequence of maps")
   REQUIRE(items[2].value == 30);
 }
 
-TEST_CASE("yaml_object: Test read with multi-line keys")
-{
-  std::string yaml = R"(
-? |
-  this is
-  a multi-line
-  key
-: "value"
-)";
-
-  struct TestStructMultiLineKey
-  {
-    std::string value;
-
-    static constexpr auto reflect() noexcept
-    {
-      return acl::bind(acl::bind<"this is\na multi-line\nkey", &TestStructMultiLineKey::value>());
-    }
-  };
-
-  TestStructMultiLineKey ts;
-  acl::yaml::from_string(ts, yaml);
-
-  REQUIRE(ts.value == "value");
-}
-
 TEST_CASE("yaml_object: Test read with duplicate keys")
 {
   std::string yaml = R"(

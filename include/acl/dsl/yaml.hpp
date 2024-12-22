@@ -103,7 +103,6 @@ private:
   void handle_block_scalar(token_type type);
   void collect_block_scalar();
   void close_context(uint16_t new_indent);
-  void append_indent(uint16_t new_indent);
 
   // Utility functions
   std::string_view get_view(string_slice slice) const

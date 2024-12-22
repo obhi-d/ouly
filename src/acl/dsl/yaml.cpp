@@ -33,8 +33,7 @@ istream::token istream::next_token()
     auto indent      = count_indent();
     if (peek(1) == '\n')
       return token{token_type::newline, indent};
-    if (indent.count > 0)
-      return token{token_type::indent, indent};
+    return token{token_type::indent, indent};
   }
   else
   {
@@ -204,20 +203,15 @@ void istream::process_token(token tok)
   }
 }
 
-void istream::append_indent(uint16_t new_indent)
-{
-  indent_level_ += new_indent;
-}
-
 void istream::handle_indent(uint16_t new_indent)
 {
+  if (new_indent < indent_level_)
+    close_context(new_indent);
   indent_level_ = new_indent;
 }
 
 void istream::handle_key(string_slice key)
 {
-  close_context(indent_level_);
-
   ctx_->begin_key(get_view(key));
   indent_stack_.emplace_back(indent_level_, container_type::object);
   state_ = parse_state::in_value;
@@ -251,7 +245,6 @@ void istream::handle_value(string_slice value)
 void istream::handle_dash(uint16_t extra_indent)
 {
   indent_level_ += extra_indent;
-  close_context(indent_level_);
   ctx_->begin_array();
   indent_stack_.emplace_back(indent_level_, container_type::array);
   state_ = parse_state::in_array;

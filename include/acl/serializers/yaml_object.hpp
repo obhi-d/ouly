@@ -334,7 +334,7 @@ public:
       {
         auto object = static_cast<context<type>*>(mapping);
         auto parent = static_cast<context<Class>*>(object->parent_);
-        parent->get().emplace<I>(std::move(object->get()));
+        parent->get().template emplace<type>(std::move(object->get()));
         parent->parser_state_.pop(object, parent);
       };
     }
