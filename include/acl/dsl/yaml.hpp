@@ -80,13 +80,13 @@ private:
   std::optional<token> next_token();
   void                 process_token(const std::optional<token>& tok);
   // Context management
-  void handle_indent(uint32_t new_indent);
+  void handle_indent(int32_t new_indent);
   void handle_key(string_slice key);
   void handle_value(string_slice value);
   void handle_dash();
   void handle_block_scalar(token_type type);
   void collect_block_scalar();
-  void close_context(uint32_t new_indent);
+  void close_context(int32_t new_indent);
 
   // Utility functions
   std::string_view get_view(string_slice slice) const
@@ -135,7 +135,7 @@ private:
   };
   struct indent_entry
   {
-    uint32_t       indent;
+    int32_t        indent;
     container_type type;
   };
 
@@ -143,7 +143,7 @@ private:
   context*         ctx_           = nullptr;
   parse_state      state_         = parse_state::none;
   token_type       block_style_   = token_type::eof;
-  uint32_t         indent_level_  = 0;
+  int32_t          indent_level_  = 0;
   uint32_t         current_pos_   = 0;
   bool             at_line_start_ = true;
 

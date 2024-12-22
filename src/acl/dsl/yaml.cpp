@@ -18,7 +18,7 @@ void istream::parse(context& ctx)
   // Close any open structures
   while (!indent_stack_.empty())
   {
-    close_context(0);
+    close_context(-1);
   }
 }
 
@@ -105,7 +105,7 @@ void istream::process_token(const std::optional<token>& tok)
   switch (tok->type)
   {
   case token_type::indent:
-    handle_indent(tok->content.count);
+    handle_indent(static_cast<int>(tok->content.count));
     break;
 
   case token_type::key:
@@ -134,7 +134,7 @@ void istream::process_token(const std::optional<token>& tok)
   }
 }
 
-void istream::handle_indent(uint32_t new_indent)
+void istream::handle_indent(int32_t new_indent)
 {
   if (new_indent < indent_level_)
   {
@@ -207,7 +207,7 @@ void istream::collect_block_scalar()
   }
 }
 
-void istream::close_context(uint32_t new_indent)
+void istream::close_context(int32_t new_indent)
 {
   while (!indent_stack_.empty() && indent_stack_.back().indent > new_indent)
   {
