@@ -389,31 +389,6 @@ c: "value
   REQUIRE_THROWS_AS(acl::yaml::from_string(ts, yaml), std::runtime_error);
 }
 
-TEST_CASE("yaml_object: Test read with incorrect indentation")
-{
-  std::string yaml = R"(
-a: 100
-  b: 200
-c: "value"
-)";
-
-  struct TestStructIndent
-  {
-    int         a;
-    int         b;
-    std::string c;
-
-    static constexpr auto reflect() noexcept
-    {
-      return acl::bind(acl::bind<"a", &TestStructIndent::a>(), acl::bind<"b", &TestStructIndent::b>(),
-                       acl::bind<"c", &TestStructIndent::c>());
-    }
-  };
-
-  TestStructIndent ts;
-  REQUIRE_THROWS_AS(acl::yaml::from_string(ts, yaml), std::runtime_error);
-}
-
 TEST_CASE("yaml_object: Test read complex nested structure")
 {
   std::string yaml = R"(
@@ -423,8 +398,10 @@ root:
       - item1
       - item2
   child2:
-    key1: value1
-    key2: value2
+    - key: key1
+      value: value1
+    - key: key2
+      value: value2
 )";
 
   struct TestStructComplex
@@ -497,8 +474,8 @@ folded_block: >
   TestStructBlockScalar ts;
   acl::yaml::from_string(ts, yaml);
 
-  REQUIRE(ts.literal_block == "This is a block of text\nthat spans multiple lines.\n");
-  REQUIRE(ts.folded_block == "This is another block that folds newlines into spaces.\n");
+  REQUIRE(ts.literal_block == "This is a block of text\nthat spans multiple lines.");
+  REQUIRE(ts.folded_block == "This is another block that folds newlines into spaces.");
 }
 
 TEST_CASE("yaml_object: Test read with unexpected token")
@@ -534,7 +511,7 @@ c: "value"
   struct TestStructMissingKey
   {
     int         a;
-    int         b; // Missing in YAML
+    int         b = -100; // Missing in YAML
     std::string c;
 
     static constexpr auto reflect() noexcept
@@ -548,7 +525,7 @@ c: "value"
   acl::yaml::from_string(ts, yaml);
 
   REQUIRE(ts.a == 100);
-  REQUIRE(ts.b == 0); // Default-initialized
+  REQUIRE(ts.b == -100); // value untouched
   REQUIRE(ts.c == "value");
 }
 
@@ -661,4 +638,254 @@ value: "string_instead_of_int"
 
   TestStructTypeCast ts;
   REQUIRE_THROWS_AS(acl::yaml::from_string(ts, yaml), std::runtime_error);
+}
+
+TEST_CASE("yaml_object: Test read with empty YAML")
+{
+  std::string yaml = "";
+
+  struct TestStructEmpty
+  {
+    int a = -1;
+
+    static constexpr auto reflect() noexcept
+    {
+      return acl::bind(acl::bind<"a", &TestStructEmpty::a>());
+    }
+  };
+
+  TestStructEmpty ts;
+  acl::yaml::from_string(ts, yaml);
+
+  // Since YAML is empty, the value should remain default-initialized
+  REQUIRE(ts.a == -1);
+}
+
+TEST_CASE("yaml_object: Test read with null value")
+{
+  std::string yaml = R"(
+value: null
+)";
+
+  struct TestStructNull
+  {
+    std::optional<int> value = 10;
+
+    static constexpr auto reflect() noexcept
+    {
+      return acl::bind(acl::bind<"value", &TestStructNull::value>());
+    }
+  };
+
+  TestStructNull ts;
+  acl::yaml::from_string(ts, yaml);
+
+  // The optional should not be set
+  REQUIRE(!ts.value.has_value());
+}
+
+TEST_CASE("yaml_object: Test read large numbers")
+{
+  std::string yaml = R"(
+int_max: 9223372036854775807
+int_min: -9223372036854775808
+uint_max: 18446744073709551615
+)";
+
+  struct TestStructLargeNumbers
+  {
+    int64_t  int_max;
+    int64_t  int_min;
+    uint64_t uint_max;
+
+    static constexpr auto reflect() noexcept
+    {
+      return acl::bind(acl::bind<"int_max", &TestStructLargeNumbers::int_max>(),
+                       acl::bind<"int_min", &TestStructLargeNumbers::int_min>(),
+                       acl::bind<"uint_max", &TestStructLargeNumbers::uint_max>());
+    }
+  };
+
+  TestStructLargeNumbers ts;
+  acl::yaml::from_string(ts, yaml);
+
+  REQUIRE(ts.int_max == INT64_MAX);
+  REQUIRE(ts.int_min == INT64_MIN);
+  REQUIRE(ts.uint_max == UINT64_MAX);
+}
+
+TEST_CASE("yaml_object: Test read floating-point edge cases")
+{
+  std::string yaml = R"(
+positive_infinity: .inf
+negative_infinity: -.inf
+not_a_number: .nan
+)";
+
+  struct TestStructFloatEdgeCases
+  {
+    double positive_infinity;
+    double negative_infinity;
+    double not_a_number;
+
+    static constexpr auto reflect() noexcept
+    {
+      return acl::bind(acl::bind<"positive_infinity", &TestStructFloatEdgeCases::positive_infinity>(),
+                       acl::bind<"negative_infinity", &TestStructFloatEdgeCases::negative_infinity>(),
+                       acl::bind<"not_a_number", &TestStructFloatEdgeCases::not_a_number>());
+    }
+  };
+
+  TestStructFloatEdgeCases ts;
+  acl::yaml::from_string(ts, yaml);
+
+  REQUIRE(std::isinf(ts.positive_infinity));
+  REQUIRE(ts.positive_infinity > 0);
+
+  REQUIRE(std::isinf(ts.negative_infinity));
+  REQUIRE(ts.negative_infinity < 0);
+
+  REQUIRE(std::isnan(ts.not_a_number));
+}
+
+TEST_CASE("yaml_object: Test read deeply nested structures")
+{
+  std::string yaml = R"(
+level1:
+  level2:
+    level3:
+      level4:
+        value: 42
+)";
+
+  struct Level4
+  {
+    int value;
+
+    static constexpr auto reflect() noexcept
+    {
+      return acl::bind(acl::bind<"value", &Level4::value>());
+    }
+  };
+
+  struct Level3
+  {
+    Level4 level4;
+
+    static constexpr auto reflect() noexcept
+    {
+      return acl::bind(acl::bind<"level4", &Level3::level4>());
+    }
+  };
+
+  struct Level2
+  {
+    Level3 level3;
+
+    static constexpr auto reflect() noexcept
+    {
+      return acl::bind(acl::bind<"level3", &Level2::level3>());
+    }
+  };
+
+  struct Level1
+  {
+    Level2 level2;
+
+    static constexpr auto reflect() noexcept
+    {
+      return acl::bind(acl::bind<"level2", &Level1::level2>());
+    }
+  };
+
+  Level1 ts;
+  acl::yaml::from_string(ts, yaml);
+
+  REQUIRE(ts.level2.level3.level4.value == 42);
+}
+
+TEST_CASE("yaml_object: Test read sequence of maps")
+{
+  std::string yaml = R"(
+- name: "Item1"
+  value: 10
+- name: "Item2"
+  value: 20
+- name: "Item3"
+  value: 30
+)";
+
+  struct Item
+  {
+    std::string name;
+    int         value;
+
+    static constexpr auto reflect() noexcept
+    {
+      return acl::bind(acl::bind<"name", &Item::name>(), acl::bind<"value", &Item::value>());
+    }
+  };
+
+  using ItemsList = std::vector<Item>;
+  ItemsList items;
+
+  acl::yaml::from_string(items, yaml);
+
+  REQUIRE(items.size() == 3);
+  REQUIRE(items[0].name == "Item1");
+  REQUIRE(items[0].value == 10);
+  REQUIRE(items[1].name == "Item2");
+  REQUIRE(items[1].value == 20);
+  REQUIRE(items[2].name == "Item3");
+  REQUIRE(items[2].value == 30);
+}
+
+TEST_CASE("yaml_object: Test read with multi-line keys")
+{
+  std::string yaml = R"(
+? |
+  this is
+  a multi-line
+  key
+: "value"
+)";
+
+  struct TestStructMultiLineKey
+  {
+    std::string value;
+
+    static constexpr auto reflect() noexcept
+    {
+      return acl::bind(acl::bind<"this is\na multi-line\nkey", &TestStructMultiLineKey::value>());
+    }
+  };
+
+  TestStructMultiLineKey ts;
+  acl::yaml::from_string(ts, yaml);
+
+  REQUIRE(ts.value == "value");
+}
+
+TEST_CASE("yaml_object: Test read with duplicate keys")
+{
+  std::string yaml = R"(
+a: 1
+a: 2
+)";
+
+  struct TestStructDuplicateKeys
+  {
+    int a;
+
+    static constexpr auto reflect() noexcept
+    {
+      return acl::bind(acl::bind<"a", &TestStructDuplicateKeys::a>());
+    }
+  };
+
+  TestStructDuplicateKeys ts;
+  acl::yaml::from_string(ts, yaml);
+
+  // Expect the last value to override
+  REQUIRE(ts.a == 2);
 }

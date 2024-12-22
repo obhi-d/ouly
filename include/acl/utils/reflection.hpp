@@ -575,6 +575,14 @@ void for_each_field(Fn&& fn) noexcept
   }(std::make_index_sequence<detail::tuple_size<ClassType>>(), detail::reflect_<ClassType>());
 }
 
+template <typename Class, std::size_t I>
+constexpr auto field_at() noexcept
+{
+  using ClassType = std::remove_const_t<Class>;
+  static_assert(detail::tuple_size<ClassType> > 0, "Invalid tuple size");
+  return std::get<I>(detail::reflect_<ClassType>());
+}
+
 template <typename ClassType>
 constexpr uint32_t field_size() noexcept
 {

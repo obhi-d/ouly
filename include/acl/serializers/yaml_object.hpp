@@ -36,9 +36,12 @@ class parser_state
 public:
   parser_state(std::string_view content) noexcept : stream(content) {}
 
-  void parse(context_base& handler)
+  template <typename C>
+  void parse(C& handler)
   {
-    stream.parse(handler);
+    stream.set_handler(&handler);
+    handler.setup_proxy();
+    stream.parse();
   }
 
   template <typename Context, typename... Args>
@@ -191,26 +194,43 @@ public:
     obj_ = slice == "true"sv || slice == "True"sv;
   }
 
+  void error_check(std::from_chars_result result)
+  {
+    if (result.ec != std::errc())
+    {
+      throw std::runtime_error("Failed to parse value");
+    }
+  }
+
   void read_integer(std::string_view slice)
   {
-    if (slice.starts_with("0x"))
-      std::from_chars(slice.data(), slice.data() + slice.size(), obj_, 16);
+    using namespace std::string_view_literals;
+    if (slice.starts_with("0x"sv))
+      error_check(std::from_chars(slice.data(), slice.data() + slice.size(), obj_, 16));
     else
-      std::from_chars(slice.data(), slice.data() + slice.size(), obj_, 10);
+      error_check(std::from_chars(slice.data(), slice.data() + slice.size(), obj_, 10));
   }
 
   void read_float(std::string_view slice)
   {
-    std::from_chars(slice.data(), slice.data() + slice.size(), obj_);
+    using namespace std::string_view_literals;
+    if (slice == ".nan"sv || slice == "nan"sv)
+      obj_ = std::numeric_limits<class_type>::quiet_NaN();
+    else if (slice == ".inf"sv || slice == "inf"sv)
+      obj_ = std::numeric_limits<class_type>::infinity();
+    else if (slice == "-.inf"sv || slice == "-inf"sv)
+      obj_ = -std::numeric_limits<class_type>::infinity();
+    else
+      error_check(std::from_chars(slice.data(), slice.data() + slice.size(), obj_));
   }
 
   void read_enum(std::string_view slice)
   {
     std::underlying_type_t<class_type> value;
     if (slice.starts_with("0x"))
-      std::from_chars(slice.data(), slice.data() + slice.size(), value, 16);
+      error_check(std::from_chars(slice.data(), slice.data() + slice.size(), value, 16));
     else
-      std::from_chars(slice.data(), slice.data() + slice.size(), value, 10);
+      error_check(std::from_chars(slice.data(), slice.data() + slice.size(), value, 10));
     obj_ = static_cast<class_type>(value);
   }
 

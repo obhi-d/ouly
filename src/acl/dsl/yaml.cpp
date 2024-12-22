@@ -3,9 +3,8 @@
 
 namespace acl::yaml
 {
-void istream::parse(context& ctx)
+void istream::parse()
 {
-  ctx_          = &ctx;
   state_        = parse_state::none;
   indent_level_ = 0;
   current_pos_  = 0;
@@ -18,7 +17,7 @@ void istream::parse(context& ctx)
   // Close any open structures
   while (!indent_stack_.empty())
   {
-    close_context(-1);
+    close_context(0);
   }
 }
 
@@ -26,10 +25,12 @@ istream::token istream::next_token()
 {
 
   // Start of line - check indentation
+
   if (at_line_start_)
   {
-    at_line_start_ = false;
-    auto indent    = count_indent();
+    at_line_start_   = false;
+    can_be_sequence_ = true;
+    auto indent      = count_indent();
     if (peek(1) == '\n')
       return token{token_type::newline, indent};
     if (indent.count > 0)
@@ -49,14 +50,16 @@ istream::token istream::next_token()
   switch (c)
   {
   case '-':
-  {
-    current_pos_++;
-    auto indent = count_indent();
-    auto tok    = token{
-      token_type::dash, {current_pos_, 1 + indent.count}
-    };
-    return tok;
-  }
+    if (can_be_sequence_ && std::isspace(peek(1)))
+    {
+      current_pos_++;
+      auto indent = count_indent();
+      auto tok    = token{
+        token_type::dash, {current_pos_, 1 + indent.count}
+      };
+      return tok;
+    }
+    break;
   case '|':
   {
     current_pos_++;
@@ -121,6 +124,7 @@ istream::token istream::next_token()
   }
   }
 
+  can_be_sequence_ = false;
   // Handle key or value
   auto start = current_pos_;
   while (current_pos_ < content_.length())
@@ -169,7 +173,7 @@ void istream::process_token(token tok)
     break;
 
   case token_type::indent:
-    handle_indent(static_cast<int16_t>(tok.content.count));
+    handle_indent(static_cast<uint16_t>(tok.content.count));
     break;
 
   case token_type::key:
@@ -183,7 +187,7 @@ void istream::process_token(token tok)
     break;
 
   case token_type::dash:
-    handle_dash(static_cast<int16_t>(tok.content.count));
+    handle_dash(static_cast<uint16_t>(tok.content.count));
     break;
 
   case token_type::pipe:
@@ -200,24 +204,19 @@ void istream::process_token(token tok)
   }
 }
 
-void istream::append_indent(int16_t new_indent)
+void istream::append_indent(uint16_t new_indent)
 {
   indent_level_ += new_indent;
 }
 
-void istream::handle_indent(int16_t new_indent)
+void istream::handle_indent(uint16_t new_indent)
 {
-  if (new_indent < indent_level_)
-  {
-    close_context(new_indent);
-  }
   indent_level_ = new_indent;
 }
 
 void istream::handle_key(string_slice key)
 {
-
-  handle_indent(indent_level_);
+  close_context(indent_level_);
 
   ctx_->begin_key(get_view(key));
   indent_stack_.emplace_back(indent_level_, container_type::object);
@@ -237,18 +236,25 @@ void istream::handle_value(string_slice value)
 
   ctx_->set_value(get_view(value));
   close_last_context();
-  state_ = parse_state::none;
+
+  if (state_ != parse_state::in_compact_mapping)
+    state_ = parse_state::none;
 }
 
-void istream::handle_dash(int16_t extra_indent)
+//
+//  arr:
+//    - key: x
+//         - g: a
+//    - key: a
+//         - g: a
+
+void istream::handle_dash(uint16_t extra_indent)
 {
-  if (state_ != parse_state::in_array)
-  {
-    ctx_->begin_array();
-    indent_level_ += extra_indent;
-    indent_stack_.emplace_back(indent_level_, container_type::array);
-    state_ = parse_state::in_array;
-  }
+  indent_level_ += extra_indent;
+  close_context(indent_level_);
+  ctx_->begin_array();
+  indent_stack_.emplace_back(indent_level_, container_type::array);
+  state_ = parse_state::in_array;
 }
 
 void istream::handle_block_scalar(token_type type)
@@ -260,8 +266,9 @@ void istream::handle_block_scalar(token_type type)
 
 void istream::collect_block_scalar()
 {
-  auto line = get_current_line();
-  if (line.count && line.count > indent_level_)
+  auto indent = count_indent();
+  auto line   = get_current_line();
+  if (line.count && line.count > indent.count)
   {
     block_lines_.push_back(line);
   }
@@ -284,9 +291,9 @@ void istream::collect_block_scalar()
   }
 }
 
-void istream::close_context(int16_t new_indent)
+void istream::close_context(uint16_t new_indent)
 {
-  while (!indent_stack_.empty() && indent_stack_.back().indent > new_indent)
+  while (!indent_stack_.empty() && indent_stack_.back().indent >= new_indent)
   {
     auto current = indent_stack_.back();
     if (current.type == container_type::array)
