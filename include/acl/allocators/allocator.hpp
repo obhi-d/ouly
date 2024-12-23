@@ -19,18 +19,18 @@ namespace acl
 template <std::size_t value_ = 0>
 struct alignment
 {
-  static constexpr auto value = value_;
-  inline constexpr alignment() noexcept {}
-  inline constexpr operator std::size_t() const noexcept
-  {
-    return value;
-  }
+	static constexpr auto value = value_;
+	inline constexpr alignment() noexcept {}
+	inline constexpr operator std::size_t() const noexcept
+	{
+		return value;
+	}
 
-  static inline constexpr auto log2() noexcept
-  {
-    auto constexpr half = value_ >> 1;
-    return value_ ? 1 + alignment<half>::log2() : -1;
-  }
+	static inline constexpr auto log2() noexcept
+	{
+		auto constexpr half = value_ >> 1;
+		return value_ ? 1 + alignment<half>::log2() : -1;
+	}
 };
 
 /** @brief constexpr value of alignment for a given type using alignof */
@@ -45,7 +45,7 @@ constexpr auto alignarg = alignment<alignof(T)>();
 template <typename Ty, typename Allocator, typename Alignment = alignment<alignof(Ty)>>
 [[nodiscard]] Ty* allocate(Allocator& allocator, typename Allocator::size_type size_in_bytes, Alignment alignment = {})
 {
-  return reinterpret_cast<Ty*>(allocator.allocate(size_in_bytes, alignment));
+	return reinterpret_cast<Ty*>(allocator.allocate(size_in_bytes, alignment));
 }
 
 /**
@@ -56,14 +56,14 @@ template <typename Ty, typename Allocator, typename Alignment = alignment<aligno
 template <typename Ty, typename Allocator, typename Alignment = alignment<alignof(Ty)>>
 [[nodiscard]] Ty* zallocate(Allocator& allocator, typename Allocator::size_type size_in_bytes, Alignment alignment = {})
 {
-  return reinterpret_cast<Ty*>(allocator.zero_allocate(size_in_bytes, alignment));
+	return reinterpret_cast<Ty*>(allocator.zero_allocate(size_in_bytes, alignment));
 }
 
 /** @brief Deallocates memory allocated by allocate or zallocate */
 template <typename Ty, typename Allocator, typename Alignment = alignment<alignof(Ty)>>
 void deallocate(Allocator& allocator, Ty* data, typename Allocator::size_type size_in_bytes, Alignment alignment = {})
 {
-  allocator.deallocate(data, size_in_bytes, alignment);
+	allocator.deallocate(data, size_in_bytes, alignment);
 }
 
 /**
@@ -74,9 +74,9 @@ void deallocate(Allocator& allocator, Ty* data, typename Allocator::size_type si
  */
 template <typename Ty, typename Allocator, typename Alignment = alignment<alignof(Ty)>>
 [[nodiscard]] Ty* allocate(Allocator const& allocator, typename Allocator::size_type size_in_bytes,
-                           Alignment alignment = {})
+													 Alignment alignment = {})
 {
-  return reinterpret_cast<Ty*>(allocator.allocate(size_in_bytes, alignment));
+	return reinterpret_cast<Ty*>(allocator.allocate(size_in_bytes, alignment));
 }
 
 /**
@@ -87,9 +87,9 @@ template <typename Ty, typename Allocator, typename Alignment = alignment<aligno
  */
 template <typename Ty, typename Allocator, typename Alignment = alignment<alignof(Ty)>>
 [[nodiscard]] Ty* zallocate(Allocator const& allocator, typename Allocator::size_type size_in_bytes,
-                            Alignment alignment = {})
+														Alignment alignment = {})
 {
-  return reinterpret_cast<Ty*>(allocator.zero_allocate(size_in_bytes, alignment));
+	return reinterpret_cast<Ty*>(allocator.zero_allocate(size_in_bytes, alignment));
 }
 
 /**
@@ -97,9 +97,9 @@ template <typename Ty, typename Allocator, typename Alignment = alignment<aligno
  * default_allocator */
 template <typename Ty, typename Allocator, typename Alignment = alignment<alignof(Ty)>>
 void deallocate(Allocator const& allocator, Ty* data, typename Allocator::size_type size_in_bytes,
-                Alignment alignment = {})
+								Alignment alignment = {})
 {
-  allocator.deallocate(data, size_in_bytes, alignment);
+	allocator.deallocate(data, size_in_bytes, alignment);
 }
 
 } // namespace acl

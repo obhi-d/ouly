@@ -30,13 +30,13 @@ std::string_view to_string_view(T const& ref) = delete;
 template <ClassWithReflect Class>
 auto reflect() noexcept
 {
-  return Class::reflect();
+	return Class::reflect();
 }
 
 template <typename Class = void>
 auto reflect() noexcept
 {
-  return std::tuple<>();
+	return std::tuple<>();
 }
 
 namespace detail
@@ -48,8 +48,8 @@ struct member_ptr_type;
 template <typename T, typename M, M T::*P>
 struct member_ptr_type<P>
 {
-  using class_t  = std::decay_t<T>;
-  using member_t = std::decay_t<M>;
+	using class_t	 = std::decay_t<T>;
+	using member_t = std::decay_t<M>;
 };
 
 template <auto>
@@ -58,9 +58,9 @@ struct member_getter_type;
 template <typename T, typename R, R (T::*MF)() const>
 struct member_getter_type<MF>
 {
-  using class_t  = std::decay_t<T>;
-  using return_t = R;
-  using value_t  = std::decay_t<R>;
+	using class_t	 = std::decay_t<T>;
+	using return_t = R;
+	using value_t	 = std::decay_t<R>;
 };
 
 template <auto>
@@ -69,9 +69,9 @@ struct member_setter_type;
 template <typename T, typename R, void (T::*MF)(R)>
 struct member_setter_type<MF>
 {
-  using class_t  = std::decay_t<T>;
-  using return_t = R;
-  using value_t  = std::decay_t<R>;
+	using class_t	 = std::decay_t<T>;
+	using return_t = R;
+	using value_t	 = std::decay_t<R>;
 };
 
 template <auto>
@@ -82,17 +82,17 @@ struct getter_by_value_type;
 template <typename T, typename R, R (*F)(T const&)>
 struct free_getter_type<F>
 {
-  using class_t  = std::decay_t<T>;
-  using return_t = R;
-  using value_t  = std::decay_t<R>;
+	using class_t	 = std::decay_t<T>;
+	using return_t = R;
+	using value_t	 = std::decay_t<R>;
 };
 
 template <typename T, typename R, R (*F)(T)>
 struct getter_by_value_type<F>
 {
-  using class_t  = std::decay_t<T>;
-  using return_t = R;
-  using value_t  = std::decay_t<R>;
+	using class_t	 = std::decay_t<T>;
+	using return_t = R;
+	using value_t	 = std::decay_t<R>;
 };
 
 template <auto>
@@ -101,9 +101,9 @@ struct free_setter_type;
 template <typename T, typename R, void (*F)(T&, R)>
 struct free_setter_type<F>
 {
-  using class_t  = std::decay_t<T>;
-  using return_t = R;
-  using value_t  = std::decay_t<R>;
+	using class_t	 = std::decay_t<T>;
+	using return_t = R;
+	using value_t	 = std::decay_t<R>;
 };
 
 // Concepts
@@ -126,32 +126,32 @@ concept OutputSerializableClass = requires(Class const& o, Serializer s) { s << 
 
 template <auto MPtr>
 concept IsMemberPtr = requires {
-  typename member_ptr_type<MPtr>::class_t;
-  typename member_ptr_type<MPtr>::member_t;
+	typename member_ptr_type<MPtr>::class_t;
+	typename member_ptr_type<MPtr>::member_t;
 };
 
 template <auto Getter, auto Setter>
 concept IsMemberGetterSetter = requires {
-  typename member_getter_type<Getter>::return_t;
-  typename member_getter_type<Getter>::class_t;
-  typename member_setter_type<Setter>::return_t;
-  typename member_setter_type<Setter>::class_t;
+	typename member_getter_type<Getter>::return_t;
+	typename member_getter_type<Getter>::class_t;
+	typename member_setter_type<Setter>::return_t;
+	typename member_setter_type<Setter>::class_t;
 };
 
 template <auto Getter, auto Setter>
 concept IsFreeGetterSetter = requires {
-  typename free_getter_type<Getter>::return_t;
-  typename free_getter_type<Getter>::class_t;
-  typename free_setter_type<Setter>::return_t;
-  typename free_setter_type<Setter>::class_t;
+	typename free_getter_type<Getter>::return_t;
+	typename free_getter_type<Getter>::class_t;
+	typename free_setter_type<Setter>::return_t;
+	typename free_setter_type<Setter>::class_t;
 };
 
 template <auto Getter, auto Setter>
 concept IsFreeGetterByValSetter = requires {
-  typename getter_by_value_type<Getter>::return_t;
-  typename getter_by_value_type<Getter>::class_t;
-  typename free_setter_type<Setter>::return_t;
-  typename free_setter_type<Setter>::class_t;
+	typename getter_by_value_type<Getter>::return_t;
+	typename getter_by_value_type<Getter>::class_t;
+	typename free_setter_type<Setter>::return_t;
+	typename free_setter_type<Setter>::class_t;
 };
 
 template <typename T>
@@ -160,27 +160,26 @@ using remove_cref = std::remove_const_t<std::remove_reference_t<T>>;
 // Strings
 template <typename T>
 concept NativeStringLike =
-  std::is_same_v<std::string, remove_cref<T>> || std::is_same_v<std::string_view, remove_cref<T>> ||
-  std::is_same_v<std::string, remove_cref<T>> || std::is_same_v<char*, T> ||
-  std::is_same_v<char const*, remove_cref<T>>;
+ std::is_same_v<std::string, remove_cref<T>> || std::is_same_v<std::string_view, remove_cref<T>> ||
+ std::is_same_v<std::string, remove_cref<T>> || std::is_same_v<char*, T> || std::is_same_v<char const*, remove_cref<T>>;
 
 template <typename T>
 concept NativeWStringLike =
-  std::is_same_v<std::wstring, remove_cref<T>> || std::is_same_v<std::wstring_view, remove_cref<T>> ||
-  std::is_same_v<std::wstring, remove_cref<T>> || std::is_same_v<wchar_t*, T> ||
-  std::is_same_v<wchar_t const*, remove_cref<T>>;
+ std::is_same_v<std::wstring, remove_cref<T>> || std::is_same_v<std::wstring_view, remove_cref<T>> ||
+ std::is_same_v<std::wstring, remove_cref<T>> || std::is_same_v<wchar_t*, T> ||
+ std::is_same_v<wchar_t const*, remove_cref<T>>;
 
 // String type check
 
 template <typename T>
 concept SignedIntLike =
-  std::is_signed_v<remove_cref<T>> && (std::is_integral_v<remove_cref<T>> || std::is_enum_v<remove_cref<T>>) &&
-  (!std::is_same_v<remove_cref<T>, bool>);
+ std::is_signed_v<remove_cref<T>> && (std::is_integral_v<remove_cref<T>> || std::is_enum_v<remove_cref<T>>) &&
+ (!std::is_same_v<remove_cref<T>, bool>);
 
 template <typename T>
 concept UnsignedIntLike =
-  std::is_unsigned_v<remove_cref<T>> && (std::is_integral_v<remove_cref<T>> || std::is_enum_v<remove_cref<T>>) &&
-  (!std::is_same_v<remove_cref<T>, bool>);
+ std::is_unsigned_v<remove_cref<T>> && (std::is_integral_v<remove_cref<T>> || std::is_enum_v<remove_cref<T>>) &&
+ (!std::is_same_v<remove_cref<T>, bool>);
 
 template <typename T>
 concept IntegerLike = SignedIntLike<T> || UnsignedIntLike<T>;
@@ -210,33 +209,33 @@ concept CastableToStringView = requires(T t) { std::string_view(t); } && (!Conta
 
 template <typename T>
 concept CastableToString =
-  requires(T t) { std::string(t); } && (!CastableToStringView<T>) && (!ContainerIsStringLike<T>);
+ requires(T t) { std::string(t); } && (!CastableToStringView<T>) && (!ContainerIsStringLike<T>);
 
 template <typename T>
 concept ConvertibleToString =
-  requires(T t) { std::to_string(t); } && (!FloatLike<T> && !BoolLike<T> && !SignedIntLike<T> && !UnsignedIntLike<T> &&
-                                           !CastableToString<T> && !ContainerIsStringLike<T>);
+ requires(T t) { std::to_string(t); } && (!FloatLike<T> && !BoolLike<T> && !SignedIntLike<T> && !UnsignedIntLike<T> &&
+																					!CastableToString<T> && !ContainerIsStringLike<T>);
 
 template <typename T>
 concept TransformFromString = requires(T ref) {
-  { acl::from_string(ref, std::string_view()) } -> std::same_as<void>;
+	{ acl::from_string(ref, std::string_view()) } -> std::same_as<void>;
 };
 
 template <typename T>
 concept TransformToString = requires(T ref) {
-  { acl::to_string(ref) } -> std::same_as<std::string>;
+	{ acl::to_string(ref) } -> std::same_as<std::string>;
 } && (!ConvertibleToString<T>) && (!ContainerIsStringLike<T>);
 
 template <typename T>
 concept TransformToStringView = requires(T ref) {
-  { acl::to_string_view(ref) } -> std::same_as<std::string_view>;
+	{ acl::to_string_view(ref) } -> std::same_as<std::string_view>;
 } && (!TransformToString<T>) && (!ContainerIsStringLike<T>);
 
 // Array
 template <typename Class>
 concept ContainerIsIterable = requires(Class obj) {
-  (*std::begin(obj));
-  (*std::end(obj));
+	(*std::begin(obj));
+	(*std::end(obj));
 };
 
 template <typename Class>
@@ -248,23 +247,23 @@ concept HasValueType = requires(Class obj) { typename Class::value_type; };
 // Map
 template <typename Class>
 concept ValuePairList = requires(Class obj) {
-  (*std::begin(obj)).first;
-  (*std::begin(obj)).second;
-  (*std::end(obj)).first;
-  (*std::end(obj)).second;
+	(*std::begin(obj)).first;
+	(*std::begin(obj)).second;
+	(*std::end(obj)).first;
+	(*std::end(obj)).second;
 };
 
 // Optional
 template <typename Class>
 concept OptionalLike = requires(Class o) {
-  typename Class::value_type;
-  o.emplace(std::declval<typename Class::value_type>());
-  o.has_value();
-  (bool)o;
-  { o.has_value() } -> std::same_as<bool>;
-  o.reset();
-  { (*o) } -> std::same_as<std::add_lvalue_reference_t<typename Class::value_type>>;
-  { o.operator->() } -> std::same_as<typename Class::value_type*>;
+	typename Class::value_type;
+	o.emplace(std::declval<typename Class::value_type>());
+	o.has_value();
+	(bool)o;
+	{ o.has_value() } -> std::same_as<bool>;
+	o.reset();
+	{ (*o) } -> std::same_as<std::add_lvalue_reference_t<typename Class::value_type>>;
+	{ o.operator->() } -> std::same_as<typename Class::value_type*>;
 };
 
 template <typename T>
@@ -280,7 +279,7 @@ concept HasResize = requires(Class obj) { obj.resize(std::uint32_t()); };
 
 template <typename Class>
 concept HasSize = requires(Class obj) {
-  { obj.size() } -> std::convertible_to<std::size_t>;
+	{ obj.size() } -> std::convertible_to<std::size_t>;
 };
 
 template <typename Class, typename ValueType>
@@ -294,21 +293,21 @@ concept HasEmplaceBack = requires(Class obj, ValueType value) { obj.emplace_back
 
 template <typename Class>
 concept HasCapacity = requires(Class const& c) {
-  { c.capacity() } -> std::convertible_to<std::size_t>;
+	{ c.capacity() } -> std::convertible_to<std::size_t>;
 };
 
 template <typename Class>
-concept CanConstructFromString = detail::TransformFromString<Class> || detail::ConstructedFromStringView<Class> ||
-                                 detail::ConstructedFromString<Class>;
+concept CanConstructFromString =
+ detail::TransformFromString<Class> || detail::ConstructedFromStringView<Class> || detail::ConstructedFromString<Class>;
 
 template <typename Class>
 concept MapLike = requires(Class t) {
-  typename Class::key_type;
-  typename Class::mapped_type;
-  typename Class::value_type;
-  { t.begin() } -> std::same_as<typename Class::iterator>;
-  { t.end() } -> std::same_as<typename Class::iterator>;
-  { t.find(typename Class::key_type{}) } -> std::same_as<typename Class::iterator>;
+	typename Class::key_type;
+	typename Class::mapped_type;
+	typename Class::value_type;
+	{ t.begin() } -> std::same_as<typename Class::iterator>;
+	{ t.end() } -> std::same_as<typename Class::iterator>;
+	{ t.find(typename Class::key_type{}) } -> std::same_as<typename Class::iterator>;
 };
 
 template <typename Class>
@@ -326,16 +325,16 @@ using container_value_type = typename Class::value_type;
 // Pointers
 template <typename Class>
 concept IsSmartPointer = requires(Class o) {
-  typename Class::element_type;
-  (bool)o;
-  { (*o) } -> std::same_as<std::add_lvalue_reference_t<typename Class::element_type>>;
-  { o.operator->() } -> std::same_as<typename Class::element_type*>;
+	typename Class::element_type;
+	(bool)o;
+	{ (*o) } -> std::same_as<std::add_lvalue_reference_t<typename Class::element_type>>;
+	{ o.operator->() } -> std::same_as<typename Class::element_type*>;
 };
 
 template <typename Class>
 concept IsBasicPointer =
-  std::is_pointer_v<Class> && (!std::is_same_v<char*, Class> && !std::is_same_v<char const*, Class>) &&
-  (!std::is_same_v<wchar_t*, Class> && !std::is_same_v<wchar_t const*, Class>);
+ std::is_pointer_v<Class> && (!std::is_same_v<char*, Class> && !std::is_same_v<char const*, Class>) &&
+ (!std::is_same_v<wchar_t*, Class> && !std::is_same_v<wchar_t const*, Class>);
 
 template <typename Class>
 concept PointerLike = IsBasicPointer<Class> || IsSmartPointer<Class>;
@@ -343,10 +342,10 @@ concept PointerLike = IsBasicPointer<Class> || IsSmartPointer<Class>;
 template <typename T>
 constexpr auto get_pointer_class_type()
 {
-  if constexpr (IsBasicPointer<T>)
-    return std::decay_t<std::remove_pointer_t<remove_cref<T>>>();
-  else if constexpr (IsSmartPointer<T>)
-    return std::decay_t<remove_cref<typename T::element_type>>();
+	if constexpr (IsBasicPointer<T>)
+		return std::decay_t<std::remove_pointer_t<remove_cref<T>>>();
+	else if constexpr (IsSmartPointer<T>)
+		return std::decay_t<remove_cref<typename T::element_type>>();
 }
 
 template <typename T>
@@ -355,38 +354,38 @@ using pointer_class_type = decltype(get_pointer_class_type<T>());
 // Variant
 template <typename Class>
 concept VariantLike = requires(Class o) {
-  { o.index() } -> std::same_as<std::size_t>;
+	{ o.index() } -> std::same_as<std::size_t>;
 } && std::variant_size_v<Class> > 0;
 
 template <typename Class>
 concept ContainerHasArrayValueAssignable =
-  ContainerIsIterable<Class> && requires(Class a, std::size_t i) { a[i++] = std::declval<array_value_type<Class>>(); };
+ ContainerIsIterable<Class> && requires(Class a, std::size_t i) { a[i++] = std::declval<array_value_type<Class>>(); };
 
 template <typename Class>
 concept ContainerHasEmplace = requires {
-  typename Class::value_type;
-  std::declval<Class>().emplace(std::declval<typename Class::value_type>());
+	typename Class::value_type;
+	std::declval<Class>().emplace(std::declval<typename Class::value_type>());
 };
 
 template <typename Class>
 concept ContainerHasPushBack = requires {
-  typename Class::value_type;
-  std::declval<Class>().push_back(std::declval<typename Class::value_type>());
+	typename Class::value_type;
+	std::declval<Class>().push_back(std::declval<typename Class::value_type>());
 };
 
 template <typename Class>
 concept ContainerHasEmplaceBack = requires {
-  typename Class::value_type;
-  std::declval<Class>().emplace_back(std::declval<typename Class::value_type>());
+	typename Class::value_type;
+	std::declval<Class>().emplace_back(std::declval<typename Class::value_type>());
 };
 
 template <typename Class>
 concept ContainerCanAppendValue =
-  ContainerHasEmplace<Class> || ContainerHasEmplaceBack<Class> || ContainerHasPushBack<Class>;
+ ContainerHasEmplace<Class> || ContainerHasEmplaceBack<Class> || ContainerHasPushBack<Class>;
 
 template <typename Class>
 concept ContainerLike = (ContainerCanAppendValue<Class> || ContainerHasArrayValueAssignable<Class>) &&
-                        (ContainerIsIterable<Class> && !ContainerIsStringLike<Class>);
+												(ContainerIsIterable<Class> && !ContainerIsStringLike<Class>);
 
 template <typename Class>
 concept ArrayLike = ContainerLike<Class> && (!MapLike<Class>);
@@ -394,36 +393,32 @@ concept ArrayLike = ContainerLike<Class> && (!MapLike<Class>);
 // Tuple
 template <class T, std::size_t N>
 concept HasTupleElement = requires(T t) {
-  typename std::tuple_element_t<N, std::remove_const_t<T>>;
-  { get<N>(t) } -> std::convertible_to<std::tuple_element_t<N, T> const&>;
+	typename std::tuple_element_t<N, std::remove_const_t<T>>;
+	{ get<N>(t) } -> std::convertible_to<std::tuple_element_t<N, T> const&>;
 };
 template <typename Class>
 concept TupleLike = (!ArrayLike<Class>) && requires(Class t) {
-  typename std::tuple_size<Class>::type;
-  []<std::size_t... N>(std::index_sequence<N...>)
-  {
-    return (HasTupleElement<Class, N> && ...);
-  }(std::make_index_sequence<std::tuple_size_v<Class>>());
+	typename std::tuple_size<Class>::type;
+	[]<std::size_t... N>(std::index_sequence<N...>)
+	{
+		return (HasTupleElement<Class, N> && ...);
+	}(std::make_index_sequence<std::tuple_size_v<Class>>());
 };
 
 template <typename Class>
 concept MonostateLike = std::same_as<Class, std::monostate>;
 
-// clang-format off
 template <typename Class, typename Serializer>
-concept LinearArrayLike =  requires(Class c) 
-                           {
-                               typename Class::value_type;
-                               c.data();
-                               { c.size() } -> std::convertible_to<std::size_t>;
-                           } && 
-                           std::is_standard_layout_v<typename Class::value_type> &&  
-                           std::is_trivially_copyable_v<typename Class::value_type> &&
-                           std::has_unique_object_representations_v<typename Class::value_type> && 
-                           !BoundClass<typename Class::value_type> &&
-                           !OutputSerializableClass<typename Class::value_type, Serializer> &&
-                           !InputSerializableClass<typename Class::value_type, Serializer>;
-// clang-format on
+concept LinearArrayLike =
+ requires(Class c) {
+	 typename Class::value_type;
+	 c.data();
+	 { c.size() } -> std::convertible_to<std::size_t>;
+ } && std::is_standard_layout_v<typename Class::value_type> &&
+ std::is_trivially_copyable_v<typename Class::value_type> &&
+ std::has_unique_object_representations_v<typename Class::value_type> && !BoundClass<typename Class::value_type> &&
+ !OutputSerializableClass<typename Class::value_type, Serializer> &&
+ !InputSerializableClass<typename Class::value_type, Serializer>;
 
 // @remarks
 // Highly borrowed from
@@ -432,87 +427,87 @@ template <string_literal Name, typename Class, typename M>
 class decl_base
 {
 public:
-  using ClassTy = std::decay_t<Class>;
-  using MemTy   = std::decay_t<M>;
+	using ClassTy = std::decay_t<Class>;
+	using MemTy		= std::decay_t<M>;
 
-  inline static constexpr std::uint32_t key_hash() noexcept
-  {
-    return Name.hash();
-  }
+	inline static constexpr std::uint32_t key_hash() noexcept
+	{
+		return Name.hash();
+	}
 
-  inline static constexpr std::string_view key() noexcept
-  {
-    return (std::string_view)Name;
-  }
+	inline static constexpr std::string_view key() noexcept
+	{
+		return (std::string_view)Name;
+	}
 };
 
 template <string_literal Name, typename Class, typename MPtr, auto Ptr>
 class decl_member_ptr : public decl_base<Name, Class, MPtr>
 {
 public:
-  using super = decl_base<Name, Class, MPtr>;
-  using M     = typename super::MemTy;
+	using super = decl_base<Name, Class, MPtr>;
+	using M			= typename super::MemTy;
 
-  inline static void value(Class& obj, M const& value) noexcept
-  {
-    obj.*Ptr = value;
-  }
+	inline static void value(Class& obj, M const& value) noexcept
+	{
+		obj.*Ptr = value;
+	}
 
-  inline static void value(Class& obj, M&& value) noexcept
-  {
-    obj.*Ptr = std::move(value);
-  }
+	inline static void value(Class& obj, M&& value) noexcept
+	{
+		obj.*Ptr = std::move(value);
+	}
 
-  inline static M const& value(Class const& obj) noexcept
-  {
-    return (obj.*Ptr);
-  }
+	inline static M const& value(Class const& obj) noexcept
+	{
+		return (obj.*Ptr);
+	}
 
-  inline static M const* offset(Class const& obj) noexcept
-  {
-    return &(obj.*Ptr);
-  }
+	inline static M const* offset(Class const& obj) noexcept
+	{
+		return &(obj.*Ptr);
+	}
 
-  inline static M* offset(Class& obj) noexcept
-  {
-    return &(obj.*Ptr);
-  }
+	inline static M* offset(Class& obj) noexcept
+	{
+		return &(obj.*Ptr);
+	}
 };
 
 template <string_literal Name, typename Class, typename RetTy, auto Getter, auto Setter>
 class decl_get_set : public decl_base<Name, Class, RetTy>
 {
 public:
-  using super = decl_base<Name, Class, RetTy>;
-  using M     = typename super::MemTy;
+	using super = decl_base<Name, Class, RetTy>;
+	using M			= typename super::MemTy;
 
-  inline static void value(Class& obj, M&& value) noexcept
-  {
-    (obj.*Setter)(std::move(value));
-  }
+	inline static void value(Class& obj, M&& value) noexcept
+	{
+		(obj.*Setter)(std::move(value));
+	}
 
-  inline static auto value(Class const& obj) noexcept
-  {
-    return ((obj.*Getter)());
-  }
+	inline static auto value(Class const& obj) noexcept
+	{
+		return ((obj.*Getter)());
+	}
 };
 
 template <string_literal Name, typename Class, typename RetTy, auto Getter, auto Setter>
 class decl_free_get_set : public decl_base<Name, Class, RetTy>
 {
 public:
-  using super = decl_base<Name, Class, RetTy>;
-  using M     = typename super::MemTy;
+	using super = decl_base<Name, Class, RetTy>;
+	using M			= typename super::MemTy;
 
-  inline static void value(Class& obj, M const& value) noexcept
-  {
-    (*Setter)(obj, value);
-  }
+	inline static void value(Class& obj, M const& value) noexcept
+	{
+		(*Setter)(obj, value);
+	}
 
-  inline static auto value(Class const& obj) noexcept
-  {
-    return (*Getter)(obj);
-  }
+	inline static auto value(Class const& obj) noexcept
+	{
+		return (*Getter)(obj);
+	}
 };
 
 // using ClassTy = std::decay_t<Class>;
@@ -527,24 +522,24 @@ public:
 
 template <typename T>
 concept DeclBase = requires {
-  typename T::ClassTy;
-  typename T::MemTy;
-  { T::key() } -> std::same_as<std::string_view>;
+	typename T::ClassTy;
+	typename T::MemTy;
+	{ T::key() } -> std::same_as<std::string_view>;
 };
 
 template <typename Class>
 auto const reflect_() noexcept
 {
-  return acl::reflect<Class>();
+	return acl::reflect<Class>();
 }
 
 template <std::integral T>
 constexpr T byteswap(T value) noexcept
 {
-  static_assert(std::has_unique_object_representations_v<T>, "T may not have padding bits");
-  auto value_representation = std::bit_cast<std::array<std::byte, sizeof(T)>>(value);
-  std::ranges::reverse(value_representation);
-  return std::bit_cast<T>(value_representation);
+	static_assert(std::has_unique_object_representations_v<T>, "T may not have padding bits");
+	auto value_representation = std::bit_cast<std::array<std::byte, sizeof(T)>>(value);
+	std::ranges::reverse(value_representation);
+	return std::bit_cast<T>(value_representation);
 }
 
 } // namespace detail
@@ -557,12 +552,12 @@ constexpr T byteswap(T value) noexcept
 template <typename Class, typename Fn>
 void for_each_field(Fn&& fn, Class& obj) noexcept
 {
-  using ClassType = std::remove_const_t<Class>;
-  static_assert(detail::tuple_size<ClassType> > 0, "Invalid tuple size");
-  return [&]<std::size_t... I>(std::index_sequence<I...>, auto tup)
-  {
-    (fn(obj, std::get<I>(tup), std::integral_constant<std::size_t, I>()), ...);
-  }(std::make_index_sequence<detail::tuple_size<ClassType>>(), detail::reflect_<ClassType>());
+	using ClassType = std::remove_const_t<Class>;
+	static_assert(detail::tuple_size<ClassType> > 0, "Invalid tuple size");
+	return [&]<std::size_t... I>(std::index_sequence<I...>, auto tup)
+	{
+		(fn(obj, std::get<I>(tup), std::integral_constant<std::size_t, I>()), ...);
+	}(std::make_index_sequence<detail::tuple_size<ClassType>>(), detail::reflect_<ClassType>());
 }
 
 /**
@@ -573,26 +568,26 @@ void for_each_field(Fn&& fn, Class& obj) noexcept
 template <typename Class, typename Fn>
 void for_each_field(Fn&& fn) noexcept
 {
-  using ClassType = std::remove_const_t<Class>;
-  static_assert(detail::tuple_size<ClassType> > 0, "Invalid tuple size");
-  return [&]<std::size_t... I>(std::index_sequence<I...>, auto tup)
-  {
-    (fn(std::get<I>(tup), std::integral_constant<std::size_t, I>()), ...);
-  }(std::make_index_sequence<detail::tuple_size<ClassType>>(), detail::reflect_<ClassType>());
+	using ClassType = std::remove_const_t<Class>;
+	static_assert(detail::tuple_size<ClassType> > 0, "Invalid tuple size");
+	return [&]<std::size_t... I>(std::index_sequence<I...>, auto tup)
+	{
+		(fn(std::get<I>(tup), std::integral_constant<std::size_t, I>()), ...);
+	}(std::make_index_sequence<detail::tuple_size<ClassType>>(), detail::reflect_<ClassType>());
 }
 
 template <typename Class, std::size_t I>
 constexpr auto field_at() noexcept
 {
-  using ClassType = std::remove_const_t<Class>;
-  static_assert(detail::tuple_size<ClassType> > 0, "Invalid tuple size");
-  return std::get<I>(detail::reflect_<ClassType>());
+	using ClassType = std::remove_const_t<Class>;
+	static_assert(detail::tuple_size<ClassType> > 0, "Invalid tuple size");
+	return std::get<I>(detail::reflect_<ClassType>());
 }
 
 template <typename ClassType>
 constexpr uint32_t field_size() noexcept
 {
-  return detail::tuple_size<ClassType>;
+	return detail::tuple_size<ClassType>;
 }
 
 /**
@@ -602,40 +597,40 @@ constexpr uint32_t field_size() noexcept
 
 template <string_literal Name, auto MPtr>
 constexpr auto bind() noexcept
-  requires(detail::IsMemberPtr<MPtr>)
+	requires(detail::IsMemberPtr<MPtr>)
 {
-  return detail::decl_member_ptr<Name, typename detail::member_ptr_type<MPtr>::class_t,
-                                 typename detail::member_ptr_type<MPtr>::member_t, MPtr>();
+	return detail::decl_member_ptr<Name, typename detail::member_ptr_type<MPtr>::class_t,
+																 typename detail::member_ptr_type<MPtr>::member_t, MPtr>();
 }
 
 template <string_literal Name, auto Getter, auto Setter>
 constexpr auto bind() noexcept
-  requires(detail::IsMemberGetterSetter<Getter, Setter>)
+	requires(detail::IsMemberGetterSetter<Getter, Setter>)
 {
-  return detail::decl_get_set<Name, typename detail::member_getter_type<Getter>::class_t,
-                              typename detail::member_getter_type<Getter>::return_t, Getter, Setter>();
+	return detail::decl_get_set<Name, typename detail::member_getter_type<Getter>::class_t,
+															typename detail::member_getter_type<Getter>::return_t, Getter, Setter>();
 }
 
 template <string_literal Name, auto Getter, auto Setter>
 constexpr auto bind() noexcept
-  requires(detail::IsFreeGetterSetter<Getter, Setter>)
+	requires(detail::IsFreeGetterSetter<Getter, Setter>)
 {
-  return detail::decl_free_get_set<Name, typename detail::free_getter_type<Getter>::class_t,
-                                   typename detail::free_getter_type<Getter>::return_t, Getter, Setter>();
+	return detail::decl_free_get_set<Name, typename detail::free_getter_type<Getter>::class_t,
+																	 typename detail::free_getter_type<Getter>::return_t, Getter, Setter>();
 }
 
 template <string_literal Name, auto Getter, auto Setter>
 constexpr auto bind() noexcept
-  requires(detail::IsFreeGetterByValSetter<Getter, Setter>)
+	requires(detail::IsFreeGetterByValSetter<Getter, Setter>)
 {
-  return detail::decl_free_get_set<Name, typename detail::getter_by_value_type<Getter>::class_t,
-                                   typename detail::getter_by_value_type<Getter>::return_t, Getter, Setter>();
+	return detail::decl_free_get_set<Name, typename detail::getter_by_value_type<Getter>::class_t,
+																	 typename detail::getter_by_value_type<Getter>::return_t, Getter, Setter>();
 }
 
 template <detail::DeclBase... Args>
 constexpr auto bind(Args&&... args) noexcept
 {
-  return std::make_tuple(std::forward<Args>(args)...);
+	return std::make_tuple(std::forward<Args>(args)...);
 }
 
 } // namespace acl

@@ -31,15 +31,15 @@ inline static constexpr bool debug = false;
 #include <cstdlib>
 #define ACL_STRINGIFY_LINE(x) #x
 #define ACL_ASSERT_IMPL(file, line, expression)                                                                        \
-  do                                                                                                                   \
-  {                                                                                                                    \
-    if (!(expression))                                                                                                 \
-    {                                                                                                                  \
-      std::printf("failed: @" file ":" ACL_STRINGIFY_LINE(line) " expression: " #expression);                          \
-      std::abort();                                                                                                    \
-    }                                                                                                                  \
-  }                                                                                                                    \
-  while (0)
+	do                                                                                                                   \
+	{                                                                                                                    \
+		if (!(expression))                                                                                                 \
+		{                                                                                                                  \
+			std::printf("failed: @" file ":" ACL_STRINGIFY_LINE(line) " expression: " #expression);                          \
+			std::abort();                                                                                                    \
+		}                                                                                                                  \
+	}                                                                                                                    \
+	while (0)
 
 #define ACL_ASSERT(expression) ACL_ASSERT_IMPL(__FILE__, __LINE__, expression)
 #endif
