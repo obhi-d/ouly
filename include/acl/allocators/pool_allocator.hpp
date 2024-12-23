@@ -140,33 +140,35 @@ public:
 		return underlying_allocator::null();
 	}
 
-	[[nodiscard]] inline address allocate(size_type i_size, size_type i_alignment = 0)
+	template <typename Alignment = alignment<>>
+	[[nodiscard]] inline address allocate(size_type size_value, Alignment alignment = {})
 	{
-		auto fixup = i_alignment - 1;
-		if (i_alignment && ((k_atom_size < i_alignment) || (k_atom_size & fixup)))
-			i_size += i_alignment + 4;
+		constexpr auto alignment_value = (size_t)alignment;
+		auto					 fixup					 = alignment_value - 1;
+		if (alignment_value && ((k_atom_size < alignment_value) || (k_atom_size & fixup)))
+			size_value += alignment_value + 4;
 
-		size_type i_count = (i_size + k_atom_size - 1) / k_atom_size;
+		size_type i_count = (size_value + k_atom_size - 1) / k_atom_size;
 
 		if constexpr (detail::HasComputeStats<Options>)
 		{
-			if (i_alignment && ((k_atom_size < i_alignment) || (k_atom_size & fixup)))
+			if (alignment_value && ((k_atom_size < alignment_value) || (k_atom_size & fixup)))
 			{
 				// Account for the missing atoms
-				auto			real_size = i_size - i_alignment - 4;
+				auto			real_size = size_value - alignment_value - 4;
 				size_type count			= (real_size + k_atom_size - 1) / k_atom_size;
 				this->statistics::pad_atoms(static_cast<std::uint32_t>(i_count - count));
 			}
 		}
 
 		if (i_count > k_atom_count)
-			return underlying_allocator::allocate(i_size, i_alignment);
+			return underlying_allocator::allocate(size_value, alignment);
 
 		address ret_value;
-		auto		measure = statistics::report_allocate(i_size);
+		auto		measure = statistics::report_allocate(size_value);
 		ret_value				= (i_count == 1) ? ((!solo) ? consume(1) : consume()) : consume(i_count);
 
-		if (i_alignment && ((k_atom_size < i_alignment) || (k_atom_size & fixup)))
+		if (alignment_value && ((k_atom_size < alignment_value) || (k_atom_size & fixup)))
 		{
 			auto pointer = reinterpret_cast<std::uintptr_t>(ret_value);
 			auto ret		 = ((pointer + 4 + static_cast<std::uintptr_t>(fixup)) & ~static_cast<std::uintptr_t>(fixup));
@@ -177,35 +179,37 @@ public:
 			return ret_value;
 	}
 
-	inline void deallocate(address i_ptr, size_type i_size, size_type i_alignment = 0)
+	template <typename Alignment = alignment<>>
+	inline void deallocate(address i_ptr, size_type size_value, Alignment alignment = {})
 	{
-		auto		fixup		 = i_alignment - 1;
-		address orig_ptr = i_ptr;
-		if (i_alignment && ((k_atom_size < i_alignment) || (k_atom_size & fixup)))
+		constexpr auto alignment_value = (size_t)alignment;
+		auto					 fixup					 = alignment_value - 1;
+		address				 orig_ptr				 = i_ptr;
+		if (alignment_value && ((k_atom_size < alignment_value) || (k_atom_size & fixup)))
 		{
-			i_size += i_alignment + 4;
+			size_value += alignment_value + 4;
 			std::uint32_t off_by = *(reinterpret_cast<std::uint32_t*>(i_ptr) - 1);
 			i_ptr								 = reinterpret_cast<address>(reinterpret_cast<std::uint8_t*>(i_ptr) - off_by);
 		}
 
-		size_type i_count = (i_size + k_atom_size - 1) / k_atom_size;
+		size_type i_count = (size_value + k_atom_size - 1) / k_atom_size;
 
 		if constexpr (detail::HasComputeStats<Options>)
 		{
-			if (i_alignment && ((k_atom_size < i_alignment) || (k_atom_size & fixup)))
+			if (alignment_value && ((k_atom_size < alignment_value) || (k_atom_size & fixup)))
 			{
 				// Account for the missing atoms
-				auto			real_size = i_size - i_alignment - 4;
+				auto			real_size = size_value - alignment_value - 4;
 				size_type count			= (real_size + k_atom_size - 1) / k_atom_size;
 				this->statistics::unpad_atoms(static_cast<std::uint32_t>(i_count - count));
 			}
 		}
 
 		if (i_count > k_atom_count)
-			underlying_allocator::deallocate(orig_ptr, i_size, i_alignment);
+			underlying_allocator::deallocate(orig_ptr, size_value, alignment);
 		else
 		{
-			auto measure = statistics::report_deallocate(i_size);
+			auto measure = statistics::report_deallocate(size_value);
 			if (i_count == 1)
 				release(i_ptr);
 			else
@@ -390,9 +394,9 @@ public:
 	{
 		size_type size = k_atom_count * k_atom_size;
 		linked_arenas.for_each(
-		 [=](address i_value, size_type i_size)
+		 [=](address i_value, size_type size_value)
 		 {
-			 underlying_allocator::deallocate(i_value, i_size);
+			 underlying_allocator::deallocate(i_value, size_value);
 		 },
 		 size);
 	}
@@ -539,7 +543,7 @@ private:
 		std::uint32_t count = 0;
 		arena_linker	a_first(linked_arenas);
 		a_first.for_each(
-		 [&](address i_value, size_type i_size)
+		 [&](address i_value, size_type size_value)
 		 {
 			 count++;
 		 },

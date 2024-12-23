@@ -5,6 +5,7 @@
 #include <acl/allocators/std_allocator_wrapper.hpp>
 #include <acl/utils/common.hpp>
 #include <acl/utils/type_traits.hpp>
+#include <new>
 
 namespace acl
 {
@@ -131,27 +132,30 @@ struct ACL_EMPTY_BASES default_allocator
 	static constexpr auto align = detail::min_alignment_v<Options>;
 
 	template <typename Alignment = alignment<align>>
-	[[nodiscard]] inline static address allocate(size_type i_sz, Alignment i_alignment = {})
+	[[nodiscard]] inline static address allocate(size_type size, Alignment alignment = {})
 	{
-		return tracker::when_allocate(
-		 i_alignment > alignof(std::max_align_t) ? acl::aligned_alloc(i_alignment, i_sz) : acl::malloc(i_sz), i_sz);
-	}
-
-	template <typename Alignment = alignment<align>>
-	[[nodiscard]] inline static address zero_allocate(size_type i_sz, Alignment i_alignment = {})
-	{
-		return tracker::when_allocate(
-		 i_alignment > alignof(std::max_align_t) ? acl::aligned_zalloc(i_alignment, i_sz) : acl::zmalloc(i_sz), i_sz);
-	}
-
-	template <typename Alignment = alignment<align>>
-	inline static void deallocate(address i_addr, size_type i_sz, Alignment i_alignment = {})
-	{
-		void* fixup = tracker::when_deallocate(i_addr, i_sz);
-		if (i_alignment > alignof(std::max_align_t))
-			acl::aligned_free(fixup);
+		if constexpr (alignment)
+			return tracker::when_allocate(::operator new(size, std::align_val_t{(std::size_t)alignment}), size);
 		else
-			acl::free(fixup);
+			return tracker::when_allocate(::operator new(size), size);
+	}
+
+	template <typename Alignment = alignment<align>>
+	[[nodiscard]] inline static address zero_allocate(size_type size, Alignment alignment = {})
+	{
+		void* ptr = allocate(size, alignment);
+		std::memset(ptr, 0, size);
+		return ptr;
+	}
+
+	template <typename Alignment = alignment<align>>
+	inline static void deallocate(address addr, size_type size, Alignment alignment = {})
+	{
+		void* fixup = tracker::when_deallocate(addr, size);
+		if constexpr (alignment)
+			::operator delete(fixup, std::align_val_t{(std::size_t)alignment});
+		else
+			::operator delete(fixup);
 	}
 
 	static constexpr void* null()

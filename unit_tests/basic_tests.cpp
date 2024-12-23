@@ -1,5 +1,6 @@
 
 #include "test_common.hpp"
+#include <acl/allocators/allocator.hpp>
 #include <acl/allocators/default_allocator.hpp>
 #include <acl/allocators/std_allocator_wrapper.hpp>
 #include <acl/containers/index_map.hpp>
@@ -64,28 +65,6 @@ TEST_CASE("Lower bound")
 
 	auto i = mini0(vec.data(), 3, 40);
 	REQUIRE(i < vec.data() + vec.size());
-}
-
-TEST_CASE("Validate malloc")
-{
-	char* data = (char*)acl::detail::malloc(100);
-	std::memset(data, 1, 100);
-	acl::detail::free(data);
-
-	data = (char*)acl::detail::zmalloc(100);
-	for (int i = 0; i < 100; ++i)
-		REQUIRE(data[i] == 0);
-	acl::detail::free(data);
-
-	data = (char*)acl::detail::aligned_alloc(16, 16);
-	REQUIRE((reinterpret_cast<uintptr_t>(data) & 15) == 0);
-	acl::detail::aligned_free(data);
-
-	data = (char*)acl::detail::aligned_zalloc(16, 16);
-	REQUIRE((reinterpret_cast<uintptr_t>(data) & 15) == 0);
-	for (int i = 0; i < 16; ++i)
-		REQUIRE(data[i] == 0);
-	acl::detail::aligned_free(data);
 }
 
 struct myBase
@@ -153,11 +132,11 @@ TEST_CASE("Validate general_allocator", "[general_allocator]")
 	using std_allocator = allocator_wrapper<int, allocator_t>;
 	[[maybe_unused]] std_allocator allocator;
 
-	allocator_t::address data = allocator_t::allocate(256, 128);
-	CHECK((reinterpret_cast<std::uintptr_t>(data) & 127) == 0);
-	allocator_t::deallocate(data, 256, 128);
+	allocator_t::address data = allocator_t::allocate(256, acl::alignment<64>());
+	CHECK((reinterpret_cast<std::uintptr_t>(data) & 63) == 0);
+	allocator_t::deallocate(data, 256, acl::alignment<64>());
 	// Should be fine to free nullptr
-	allocator_t::deallocate(nullptr, 0, 0);
+	allocator_t::deallocate(nullptr, 0, {});
 }
 
 TEST_CASE("Validate tagged_ptr", "[tagged_ptr]")

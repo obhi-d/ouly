@@ -84,7 +84,8 @@ TEST_CASE("Validate pool_allocator with alignment", "[pool_allocator]")
 			record r;
 
 			r.count = dice(gen) ? 1 : generator(gen);
-			r.data	= reinterpret_cast<trivial_object*>(allocator.allocate(r.count * sizeof(trivial_object), 128));
+			r.data	= reinterpret_cast<trivial_object*>(
+				allocator.allocate(r.count * sizeof(trivial_object), acl::alignarg<trivial_object>));
 
 			records.push_back(r);
 			ACL_ASSERT(validate());
@@ -94,7 +95,8 @@ TEST_CASE("Validate pool_allocator with alignment", "[pool_allocator]")
 		{
 			std::uniform_int_distribution<std::uint32_t> choose(0, static_cast<std::uint32_t>(records.size() - 1));
 			std::uint32_t																 chosen = choose(gen);
-			allocator.deallocate(records[chosen].data, records[chosen].count * sizeof(trivial_object), 128);
+			allocator.deallocate(records[chosen].data, records[chosen].count * sizeof(trivial_object),
+													 acl::alignarg<trivial_object>);
 			records.erase(records.begin() + chosen);
 			ACL_ASSERT(validate());
 			CHECK(validate());

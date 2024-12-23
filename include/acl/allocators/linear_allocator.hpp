@@ -24,7 +24,7 @@ public:
 			: k_arena_size(i_arena_size), left_over(i_arena_size)
 	{
 		statistics::report_new_arena();
-		buffer = underlying_allocator::allocate(k_arena_size, 0);
+		buffer = underlying_allocator::allocate(k_arena_size, {});
 	}
 
 	linear_allocator(linear_allocator const&) = delete;
@@ -109,17 +109,20 @@ public:
 		size_type offset				= (k_arena_size - new_left_over);
 		if (reinterpret_cast<std::uint8_t*>(buffer) + offset == reinterpret_cast<std::uint8_t*>(i_data))
 			left_over = new_left_over;
-		else if (i_alignment)
+		else
 		{
-			i_size += i_alignment;
+			if constexpr (i_alignment)
+			{
+				i_size += (std::size_t)i_alignment;
 
-			new_left_over = left_over + i_size;
-			offset				= (k_arena_size - new_left_over);
+				new_left_over = left_over + i_size;
+				offset				= (k_arena_size - new_left_over);
 
-			// This memory fixed up by alignment and is within range of alignment
-			if ((reinterpret_cast<std::uintptr_t>(i_data) - (reinterpret_cast<std::uintptr_t>(buffer) + offset)) <
-					i_alignment)
-				left_over = new_left_over;
+				// This memory fixed up by alignment and is within range of alignment
+				if ((reinterpret_cast<std::uintptr_t>(i_data) - (reinterpret_cast<std::uintptr_t>(buffer) + offset)) <
+						i_alignment)
+					left_over = new_left_over;
+			}
 		}
 	}
 

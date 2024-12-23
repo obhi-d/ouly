@@ -1,5 +1,6 @@
 #pragma once
 
+#include <acl/utils/type_traits.hpp>
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -18,53 +19,6 @@
 #include <typeinfo>
 #include <variant>
 #include <vector>
-
-#include <acl/utils/type_traits.hpp>
-
-#ifndef ACL_CUSTOM_MALLOC_NS
-#include <acl/allocators/malloc_ns.hpp>
-#define ACL_CUSTOM_MALLOC_NS acl::detail
-#endif
-
-namespace acl
-{
-
-inline void* malloc(std::size_t s)
-{
-	return ACL_CUSTOM_MALLOC_NS::malloc(s);
-}
-inline void* zmalloc(std::size_t s)
-{
-	return ACL_CUSTOM_MALLOC_NS::zmalloc(s);
-}
-inline void free(void* f)
-{
-	return ACL_CUSTOM_MALLOC_NS::free(f);
-}
-inline void* aligned_alloc(std::size_t alignment, std::size_t size)
-{
-	ACL_ASSERT(alignment > 0);
-	ACL_ASSERT((alignment & (alignment - 1)) == 0);
-	return ACL_CUSTOM_MALLOC_NS::aligned_alloc(alignment, size);
-}
-inline void* aligned_zalloc(std::size_t alignment, std::size_t size)
-{
-	ACL_ASSERT(alignment > 0);
-	ACL_ASSERT((alignment & (alignment - 1)) == 0);
-	return ACL_CUSTOM_MALLOC_NS::aligned_zalloc(alignment, size);
-}
-inline void aligned_free(void* ptr)
-{
-	return ACL_CUSTOM_MALLOC_NS::aligned_free(ptr);
-}
-
-inline void* align(void* ptr, size_t alignment)
-{
-	size_t off = static_cast<size_t>(reinterpret_cast<uintptr_t>(ptr) & (alignment - 1));
-	return static_cast<char*>(ptr) + off;
-}
-
-} // namespace acl
 
 #if defined(_MSC_VER)
 #include <intrin.h>
@@ -111,6 +65,12 @@ constexpr std::uint32_t safety_offset = alignof(void*);
 
 using uhandle = std::uint32_t;
 using ihandle = std::uint32_t;
+
+inline void* align(void* ptr, size_t alignment)
+{
+	size_t off = static_cast<size_t>(reinterpret_cast<uintptr_t>(ptr) & (alignment - 1));
+	return static_cast<char*>(ptr) + off;
+}
 
 namespace detail
 {

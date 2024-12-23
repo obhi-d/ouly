@@ -4,6 +4,7 @@
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
+#include <new>
 
 namespace acl
 {
@@ -19,11 +20,17 @@ namespace acl
 template <std::size_t value_ = 0>
 struct alignment
 {
-	static constexpr auto value = value_;
+	static constexpr std::align_val_t value = std::align_val_t{value_};
 	inline constexpr alignment() noexcept {}
+
+	inline constexpr explicit operator bool() const noexcept
+	{
+		return value_ > alignof(void*);
+	}
+
 	inline constexpr operator std::size_t() const noexcept
 	{
-		return value;
+		return value_;
 	}
 
 	static inline constexpr auto log2() noexcept
