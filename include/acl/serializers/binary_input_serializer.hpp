@@ -71,6 +71,8 @@ public:
       return read_bound_class(obj);
     else if constexpr (detail::InputSerializableClass<Class, Serializer>)
       return read_serializable(obj);
+    else if constexpr (detail::TransformFromString<Class>)
+      return read_string_transformed(obj);
     else if constexpr (detail::TupleLike<Class>)
       return read_tuple(obj);
     else if constexpr (detail::ContainerLike<Class>)
@@ -79,8 +81,6 @@ public:
       return read_variant(obj);
     else if constexpr (detail::ConstructedFromStringView<Class>)
       return read_string_constructed(obj);
-    else if constexpr (detail::TransformFromString<Class>)
-      return read_string_transformed(obj);
     else if constexpr (detail::BoolLike<Class>)
       return read_bool(obj);
     else if constexpr (detail::IntegerLike<Class>)

@@ -47,7 +47,8 @@ concept OutputSerializer = requires(V v)
   v.as_null();
 
   // begin of next key
-  v.next();
+  v.next_map_entry();
+  v.next_array_entry();
 
 };
 // clang-format on
@@ -80,6 +81,8 @@ public:
       write_bound_class(obj);
     else if constexpr (detail::OutputSerializableClass<Class, Serializer>)
       write_serializable(obj);
+    else if constexpr (detail::TransformToStringView<Class>)
+      write_string_view_transformable(obj);
     else if constexpr (detail::TupleLike<Class>)
       write_tuple(obj);
     else if constexpr (detail::ContainerLike<Class>)
@@ -90,8 +93,6 @@ public:
       write_string_view_castable(obj);
     else if constexpr (detail::CastableToString<Class>)
       write_string_castable(obj);
-    else if constexpr (detail::TransformToStringView<Class>)
-      write_string_view_transformable(obj);
     else if constexpr (detail::TransformToString<Class>)
       write_string_transformable(obj);
     else if constexpr (detail::ContainerIsStringLike<Class>)
@@ -115,8 +116,7 @@ public:
       []<bool flag = false>()
       {
         static_assert(flag, "This type is not serializable");
-      }
-      ();
+      }();
     }
   }
 
@@ -159,13 +159,38 @@ private:
     for (auto const& [key, value] : obj)
     {
       if (comma)
-        get().next();
+        get().next_map_entry();
       get().key(key);
       write(value);
       comma = true;
     }
 
     get().end_object();
+  }
+
+  template <detail::ComplexMapLike Class>
+  void write_container(Class const& obj) noexcept
+  {
+
+    using key_type    = detail::remove_cref<typename Class::key_type>;
+    using mapped_type = detail::remove_cref<typename Class::mapped_type>;
+
+    get().begin_array();
+    bool comma = false;
+    for (auto const& [key, value] : obj)
+    {
+      if (comma)
+        get().next_array_entry();
+      get().begin_object();
+      get().key("key");
+      write(key);
+      get().next_map_entry();
+      get().key("value");
+      write(value);
+      get().end_object();
+      comma = true;
+    }
+    get().end_array();
   }
 
   template <detail::ArrayLike Class>
@@ -177,7 +202,7 @@ private:
     for (auto const& value : obj)
     {
       if (comma)
-        get().next();
+        get().next_array_entry();
       write(value);
       comma = true;
     }
@@ -188,16 +213,18 @@ private:
   void write_variant(Class const& obj) noexcept
   {
     // Invalid type is unexpected
-    get().begin_array();
+    get().begin_object();
+    get().key("key");
     write(obj.index());
-    get().next();
+    get().next_map_entry();
+    get().key("value");
     std::visit(
       [this](auto const& arg)
       {
         write(arg);
       },
       obj);
-    get().end_array();
+    get().end_object();
   }
 
   template <detail::CastableToStringView Class>
@@ -295,7 +322,7 @@ public:
   inline void operator()(Class const& obj, Decl const& decl, std::integral_constant<std::size_t, I>) noexcept
   {
     if constexpr (I != 0)
-      get().next();
+      get().next_map_entry();
     get().key(decl.key());
     write(decl.value(obj));
   }
@@ -315,7 +342,7 @@ private:
   void at(Class const& obj) noexcept
   {
     if constexpr (N != 0)
-      get().next();
+      get().next_array_entry();
     write(std::get<N>(obj));
   }
 };

@@ -93,12 +93,12 @@ public:
     skip_indent = false;
   }
 
-  void next_key()
+  void next_map_entry()
   {
     indent();
   }
 
-  void next_item()
+  void next_array_entry()
   {
     indent();
     stream.push_back('-');

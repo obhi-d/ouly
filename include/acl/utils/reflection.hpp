@@ -314,6 +314,12 @@ concept MapLike = requires(Class t) {
 template <typename Class>
 concept StringMapLike = MapLike<Class> && ContainerIsStringLike<typename Class::key_type>;
 
+template <typename Class>
+concept StringMapValueType = requires { typename Class::is_string_map_value_type; };
+
+template <typename Class>
+concept ComplexMapLike = MapLike<Class> && !ContainerIsStringLike<typename Class::key_type>;
+
 template <HasValueType Class>
 using container_value_type = typename Class::value_type;
 
@@ -383,7 +389,7 @@ concept ContainerLike = (ContainerCanAppendValue<Class> || ContainerHasArrayValu
                         (ContainerIsIterable<Class> && !ContainerIsStringLike<Class>);
 
 template <typename Class>
-concept ArrayLike = ContainerLike<Class> && (!StringMapLike<Class>);
+concept ArrayLike = ContainerLike<Class> && (!MapLike<Class>);
 
 // Tuple
 template <class T, std::size_t N>

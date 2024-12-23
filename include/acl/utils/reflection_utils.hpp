@@ -96,4 +96,51 @@ static inline uint32_t size(C const& c)
   return 0;
 }
 
+template <typename K, typename V>
+struct map_value_type
+{
+  using key_type   = K;
+  using value_type = V;
+
+  K key;
+  V value;
+
+  map_value_type() noexcept = default;
+  map_value_type(K k, V v) noexcept : key(std::move(k)), value(std::move(v)) {}
+
+  map_value_type(map_value_type const&) noexcept            = default;
+  map_value_type(map_value_type&&) noexcept                 = default;
+  map_value_type& operator=(map_value_type const&) noexcept = default;
+  map_value_type& operator=(map_value_type&&) noexcept      = default;
+
+  static auto constexpr reflect() noexcept
+  {
+    return acl::bind(acl::bind<"key", &map_value_type::key>(), acl::bind<"value", &map_value_type::value>());
+  }
+};
+
+template <typename V>
+struct string_map_value_type
+{
+  using key_type   = std::string_view;
+  using value_type = V;
+
+  using is_string_map_value_type = std::true_type;
+  std::string_view key;
+  V                value;
+
+  string_map_value_type() noexcept = default;
+  string_map_value_type(std::string_view k, V v) noexcept : key(std::move(k)), value(std::move(v)) {}
+
+  string_map_value_type(string_map_value_type const&) noexcept            = default;
+  string_map_value_type(string_map_value_type&&) noexcept                 = default;
+  string_map_value_type& operator=(string_map_value_type const&) noexcept = default;
+  string_map_value_type& operator=(string_map_value_type&&) noexcept      = default;
+
+  static auto constexpr reflect() noexcept
+  {
+    return acl::bind(acl::bind<"value", &string_map_value_type::value>());
+  }
+};
+
 } // namespace acl::detail

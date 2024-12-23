@@ -8,6 +8,7 @@
 #include <acl/utils/reflection_utils.hpp>
 #include <acl/utils/type_traits.hpp>
 #include <cassert>
+#include <limits>
 #include <memory>
 #include <optional>
 
@@ -101,6 +102,8 @@ public:
       return read_bound_class(obj);
     else if constexpr (detail::InputSerializableClass<Class, Serializer>)
       return read_serializable(obj);
+    else if constexpr (detail::TransformFromString<Class>)
+      return read_string_transformed(obj);
     else if constexpr (detail::TupleLike<Class>)
       return read_tuple(obj);
     else if constexpr (detail::ContainerLike<Class>)
@@ -109,8 +112,6 @@ public:
       return read_variant(obj);
     else if constexpr (detail::ConstructedFromStringView<Class>)
       return read_string_constructed(obj);
-    else if constexpr (detail::TransformFromString<Class>)
-      return read_string_transformed(obj);
     else if constexpr (detail::ContainerIsStringLike<Class>)
       return read_string(obj);
     else if constexpr (detail::BoolLike<Class>)
@@ -141,9 +142,9 @@ private:
   template <detail::BoundClass Class>
   bool read_bound_class(Class& obj) noexcept
   {
-    bool status = true;
+    int keys_read = 0;
     for_each_field(
-      [this, &status]<typename Decl>(Class& obj, Decl const& decl, auto) noexcept
+      [this, &keys_read]<typename Decl>(Class& obj, Decl const& decl, auto) noexcept
       {
         auto key_val = get().at(decl.key());
         if (!key_val)
@@ -154,12 +155,13 @@ private:
         if (input_serializer(*key_val).read(load))
         {
           decl.value(obj, std::move(load));
+          keys_read++;
           return;
         }
-        status = false;
+        keys_read = std::numeric_limits<int>::min();
       },
       obj);
-    return status;
+    return keys_read > 0;
   }
 
   template <detail::InputSerializableClass<Serializer> Class>
@@ -208,6 +210,37 @@ private:
         if (input_serializer(value).read(stream_val))
         {
           detail::emplace(obj, key_type{key}, std::move(stream_val));
+          return true;
+        }
+        value.error(type_name<mapped_type>(), make_error_code(serializer_error::failed_streaming_map));
+        return false;
+      });
+  }
+
+  template <detail::ComplexMapLike Class>
+  bool read_container(Class& obj) noexcept
+  {
+    // Invalid is not unexpected
+    // Invalid type is unexpected
+    if (!get().is_array())
+    {
+      get().error(type_name<Class>(), make_error_code(serializer_error::invalid_type));
+      return false;
+    }
+
+    using key_type    = detail::remove_cref<typename Class::key_type>;
+    using mapped_type = detail::remove_cref<typename Class::mapped_type>;
+
+    detail::reserve(obj, get().size());
+
+    return get().for_each(
+      [this, &obj](Serializer value) -> bool
+      {
+        detail::map_value_type<key_type, mapped_type> stream_val;
+
+        if (input_serializer(value).read(stream_val))
+        {
+          detail::emplace(obj, std::move(stream_val.key), std::move(stream_val.value));
           return true;
         }
         value.error(type_name<mapped_type>(), make_error_code(serializer_error::failed_streaming_map));
@@ -276,32 +309,32 @@ private:
       return true;
 
     // Invalid type is unexpected
-    if (!get().is_array())
+    if (!get().is_object())
     {
       get().error(type_name<Class>(), make_error_code(serializer_error::invalid_type));
       return false;
     }
 
-    if (get().size() != 2)
+    auto type = get().at("type");
+    if (!type)
     {
-      get().error(type_name<Class>(), make_error_code(serializer_error::variant_invalid_format));
+      get().error(type_name<Class>(), make_error_code(serializer_error::variant_missing_index));
       return false;
     }
 
-    auto index_opt = get().at(0);
-    // Missing value is not an error
-    ACL_ASSERT(index_opt);
-
-    auto index = (*index_opt).as_uint64();
+    auto index = (*type).as_uint64();
     if (!index)
     {
       get().error(type_name<Class>(), make_error_code(serializer_error::variant_index_is_not_int));
       return false;
     }
 
-    auto value_opt = get().at(1);
-
-    ACL_ASSERT(value_opt);
+    auto value_opt = get().at("value");
+    if (!value_opt)
+    {
+      get().error(type_name<Class>(), make_error_code(serializer_error::variant_missing_value));
+      return false;
+    }
 
     auto value = *value_opt;
     return find_alt<std::variant_size_v<Class> - 1, Class>(

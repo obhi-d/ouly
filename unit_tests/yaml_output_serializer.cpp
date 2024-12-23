@@ -66,7 +66,7 @@ TEST_CASE("yaml_output: Test write vector")
     {1, 2, 3}
   };
   auto yaml = acl::yaml::to_string(vt);
-  REQUIRE(yaml.find("\nitems: \n - 1\n - 2\n - 3") != std::string::npos);
+  REQUIRE(yaml.find("items: \n - 1\n - 2\n - 3") != std::string::npos);
 }
 
 TEST_CASE("yaml_output: Test write optional")

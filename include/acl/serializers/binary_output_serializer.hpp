@@ -47,6 +47,10 @@ public:
       write_bound_class(obj);
     else if constexpr (detail::OutputSerializableClass<Class, Serializer>)
       write_serializable(obj);
+    else if constexpr (detail::TransformToStringView<Class>)
+      write_string_view_transformable(obj);
+    else if constexpr (detail::TransformToString<Class>)
+      write_string_transformable(obj);
     else if constexpr (detail::TupleLike<Class>)
       write_tuple(obj);
     else if constexpr (detail::ContainerLike<Class>)
@@ -57,10 +61,6 @@ public:
       write_string_view_castable(obj);
     else if constexpr (detail::CastableToString<Class>)
       write_string_castable(obj);
-    else if constexpr (detail::TransformToStringView<Class>)
-      write_string_view_transformable(obj);
-    else if constexpr (detail::TransformToString<Class>)
-      write_string_transformable(obj);
     else if constexpr (detail::ContainerIsStringLike<Class>)
       write_string(obj);
     else if constexpr (detail::BoolLike<Class>)
@@ -82,8 +82,7 @@ public:
       []<bool flag = false>()
       {
         static_assert(flag, "This type is not serializable");
-      }
-      ();
+      }();
     }
   }
 

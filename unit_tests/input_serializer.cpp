@@ -1,6 +1,7 @@
 
-#include "acl/containers/array_types.hpp"
 #include "acl/serializers/input_serializer.hpp"
+#include "acl/containers/array_types.hpp"
+#include <acl/utils/error_codes.hpp>
 #include <catch2/catch_all.hpp>
 #include <charconv>
 #include <nlohmann/json.hpp>
@@ -432,7 +433,8 @@ TEST_CASE("input_serializer: ArrayLike")
 {
   using pair_type = std::pair<int, std::string>;
   using type      = std::unordered_map<int, pair_type>;
-  json j          = R"([ [11, [ 100, "100"]], [13, [ 300, "300" ]] , [15, [ 400, "400" ]] ])"_json;
+  json j =
+    R"([ {"key":11, "value":[ 100, "100"]}, {"key":13, "value":[ 300, "300" ]} , {"key":15, "value":[ 400, "400" ]} ])"_json;
 
   InputData input;
   input.root      = j;
@@ -515,14 +517,15 @@ TEST_CASE("input_serializer: ArrayLike Invalid Subelement ")
   ser >> myMap;
 
   REQUIRE(myMap.empty());
-  REQUIRE(input.ec == acl::serializer_error::failed_streaming_array);
+  REQUIRE(input.ec == acl::serializer_error::failed_streaming_map);
 }
 
 TEST_CASE("input_serializer: VariantLike ")
 {
   std::vector<std::variant<int, bool, std::string>> variantList;
 
-  json j = R"([ [0, 100 ], [1, true], [2, "100" ], [ 1, false ] ])"_json;
+  json j =
+    R"([ {"type":0, "value":100 }, {"type":1, "value":true}, {"type":2, "value":"100" }, { "type":1, "value":false } ])"_json;
 
   InputData input;
   input.root      = j;
@@ -546,7 +549,7 @@ TEST_CASE("input_serializer: VariantLike Invalid")
 {
   std::variant<int, bool, std::string> variant;
 
-  json j = R"([ "value", "100" ])"_json;
+  json j = R"({ "type":"value", "value":"100" })"_json;
 
   InputData input;
   input.root      = j;
@@ -559,7 +562,7 @@ TEST_CASE("input_serializer: VariantLike Invalid")
   REQUIRE(input.ec == acl::serializer_error::variant_index_is_not_int);
 }
 
-TEST_CASE("input_serializer: VariantLike Invalid Type")
+TEST_CASE("input_serializer: VariantLike Missing Type")
 {
   std::variant<int, bool, std::string> variant;
 
@@ -573,10 +576,27 @@ TEST_CASE("input_serializer: VariantLike Invalid Type")
   ser >> variant;
 
   REQUIRE(variant.index() == 0);
-  REQUIRE(input.ec == acl::serializer_error::invalid_type);
+  REQUIRE(input.ec == acl::serializer_error::variant_missing_index);
 }
 
-TEST_CASE("input_serializer: VariantLike Invalid Size")
+TEST_CASE("input_serializer: VariantLike Missing Value")
+{
+  std::variant<int, bool, std::string> variant;
+
+  json j = R"({ "type": 1 })"_json;
+
+  InputData input;
+  input.root      = j;
+  auto serializer = Serializer(input);
+  auto ser        = acl::input_serializer<Serializer>(serializer);
+
+  ser >> variant;
+
+  REQUIRE(variant.index() == 0);
+  REQUIRE(input.ec == acl::serializer_error::variant_missing_value);
+}
+
+TEST_CASE("input_serializer: VariantLike Invalid Type")
 {
   std::variant<int, bool, std::string> variant;
 
@@ -590,7 +610,7 @@ TEST_CASE("input_serializer: VariantLike Invalid Size")
   ser >> variant;
 
   REQUIRE(variant.index() == 0);
-  REQUIRE(input.ec == acl::serializer_error::variant_invalid_format);
+  REQUIRE(input.ec == acl::serializer_error::invalid_type);
 }
 
 struct ConstructedSV

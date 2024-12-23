@@ -1,7 +1,7 @@
 
+#include "acl/serializers/output_serializer.hpp"
 #include "acl/containers/array_types.hpp"
 #include "acl/serializers/binary_serializer.hpp"
-#include "acl/serializers/output_serializer.hpp"
 #include <catch2/catch_all.hpp>
 #include <compare>
 #include <map>
@@ -72,7 +72,12 @@ public:
     val_ += "null";
   }
 
-  void next() noexcept
+  void next_map_entry() noexcept
+  {
+    val_ += ", ";
+  }
+
+  void next_array_entry() noexcept
   {
     val_ += ", ";
   }
@@ -206,11 +211,11 @@ TEST_CASE("output_serializer: VariantLike")
 
   json j = json::parse(instance.get());
   REQUIRE(j.size() == 5);
-  REQUIRE(j[0].at(1).get<int>() == std::get<int>(example[0]));
-  REQUIRE(j[1].at(1).get<std::string>() == std::get<std::string>(example[1]));
-  REQUIRE(j[2].at(1).get<bool>() == std::get<bool>(example[2]));
-  REQUIRE(j[3].at(1).get<int>() == std::get<int>(example[3]));
-  REQUIRE(j[4].at(1).get<std::string>() == std::get<std::string>(example[4]));
+  REQUIRE(j[0].at("value").get<int>() == std::get<int>(example[0]));
+  REQUIRE(j[1].at("value").get<std::string>() == std::get<std::string>(example[1]));
+  REQUIRE(j[2].at("value").get<bool>() == std::get<bool>(example[2]));
+  REQUIRE(j[3].at("value").get<int>() == std::get<int>(example[3]));
+  REQUIRE(j[4].at("value").get<std::string>() == std::get<std::string>(example[4]));
 }
 
 TEST_CASE("output_serializer: CastableToStringView")
@@ -381,8 +386,8 @@ TEST_CASE("output_serializer: VariantLike Monostate")
   ser << example;
 
   json j = json::parse(instance.get());
-  REQUIRE(j.at(0) == 0);
-  REQUIRE(j.at(1) == json());
+  REQUIRE(j.at("key") == 0);
+  REQUIRE(j.at("value") == json());
 }
 
 class CustomClass
