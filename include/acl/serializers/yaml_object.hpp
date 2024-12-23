@@ -32,9 +32,26 @@ class parser_state
 {
   yaml::istream                 stream;
   acl::linear_arena_allocator<> allocator;
+  in_context_base*              context = nullptr;
 
 public:
+<<<<<<< Updated upstream:include/acl/serializers/yaml_object.hpp
   parser_state(std::string_view content) noexcept : stream(content) {}
+=======
+  parser_state(std::string_view content) noexcept : stream(content), allocator(8096) {}
+  ~parser_state() noexcept
+  {
+    while (context)
+    {
+      auto parent = context->parent_;
+      if (context->pop_fn_)
+      {
+        context->pop_fn_(context);
+      }
+      context = parent;
+    }
+  }
+>>>>>>> Stashed changes:include/acl/serializers/yaml_input_serializer.hpp
 
   template <typename C>
   void parse(C& handler)
@@ -47,6 +64,7 @@ public:
   template <typename Context, typename... Args>
   inline Context* push(Args&&... args)
   {
+<<<<<<< Updated upstream:include/acl/serializers/yaml_object.hpp
     void* cursor  = allocator.allocate(sizeof(Context), alignof(Context));
     auto  context = std::construct_at(reinterpret_cast<Context*>(cursor), std::forward<Args>(args)...);
     stream.set_handler(context);
@@ -56,10 +74,23 @@ public:
 
   template <typename Context>
   inline void pop(Context* ptr, acl::yaml::context* parent)
+=======
+    void* cursor   = allocator.allocate(sizeof(Context), alignof(Context));
+    auto  icontext = std::construct_at(reinterpret_cast<Context*>(cursor), std::forward<Args>(args)...);
+    stream.set_handler(icontext);
+    icontext->setup_proxy();
+    context = icontext;
+    return icontext;
+  }
+
+  template <typename Context>
+  inline void pop(Context* ptr, in_context_base* parent)
+>>>>>>> Stashed changes:include/acl/serializers/yaml_input_serializer.hpp
   {
     std::destroy_at(ptr);
     allocator.deallocate(ptr, sizeof(Context), alignof(Context));
     stream.set_handler(parent);
+    context = parent;
   }
 };
 
