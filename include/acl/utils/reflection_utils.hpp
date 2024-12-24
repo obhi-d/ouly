@@ -4,6 +4,7 @@
 
 #pragma once
 #include <acl/utils/reflection.hpp>
+#include <type_traits>
 
 namespace acl::detail
 {
@@ -96,11 +97,14 @@ static inline uint32_t size(C const& c)
 	return 0;
 }
 
-template <typename K, typename V>
+template <typename K, typename V, typename Opt>
 struct map_value_type
 {
 	using key_type	 = K;
 	using value_type = V;
+
+	using map_key_field_name	 = detail::key_field_name_t<Opt>;
+	using map_value_field_name = detail::value_field_name_t<Opt>;
 
 	K key;
 	V value;
@@ -115,15 +119,17 @@ struct map_value_type
 
 	static auto constexpr reflect() noexcept
 	{
-		return acl::bind(acl::bind<"key", &map_value_type::key>(), acl::bind<"value", &map_value_type::value>());
+		return acl::bind(acl::bind<map_key_field_name::value, &map_value_type::key>(),
+										 acl::bind<map_value_field_name::value, &map_value_type::value>());
 	}
 };
 
-template <typename V>
+template <typename V, typename Opt>
 struct string_map_value_type
 {
-	using key_type	 = std::string_view;
-	using value_type = V;
+	using key_type						 = std::string_view;
+	using value_type					 = V;
+	using map_value_field_name = detail::value_field_name_t<Opt>;
 
 	using is_string_map_value_type = std::true_type;
 	std::string_view key;
@@ -139,7 +145,7 @@ struct string_map_value_type
 
 	static auto constexpr reflect() noexcept
 	{
-		return acl::bind(acl::bind<"value", &string_map_value_type::value>());
+		return acl::bind(acl::bind<map_value_field_name::value, &string_map_value_type::value>());
 	}
 };
 

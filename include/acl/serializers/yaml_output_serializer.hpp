@@ -120,11 +120,11 @@ private:
 namespace yaml
 {
 
-template <typename Class>
+template <typename Class, typename Opt = acl::options<>>
 std::string to_string(Class const& obj)
 {
 	auto state			= detail::writer_state();
-	auto serializer = output_serializer(state);
+	auto serializer = output_serializer<detail::writer_state, Opt>(state);
 	serializer << obj;
 	return state.get();
 }

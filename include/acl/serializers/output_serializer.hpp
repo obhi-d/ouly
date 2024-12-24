@@ -51,9 +51,13 @@ concept OutputSerializer = requires(V v) {
 
 // Given an input serializer, load
 // a bound class
-template <OutputSerializer Serializer>
+template <OutputSerializer Serializer, typename Opt = acl::options<>>
 class output_serializer
 {
+	using key_field_name	 = detail::key_field_name_t<Opt>;
+	using value_field_name = detail::value_field_name_t<Opt>;
+	using type_field_name	 = detail::type_field_name_t<Opt>;
+
 protected:
 	std::reference_wrapper<Serializer> ser_;
 
@@ -178,10 +182,10 @@ private:
 			if (comma)
 				get().next_array_entry();
 			get().begin_object();
-			get().key("key");
+			get().key(key_field_name::value);
 			write(key);
 			get().next_map_entry();
-			get().key("value");
+			get().key(value_field_name::value);
 			write(value);
 			get().end_object();
 			comma = true;
@@ -210,10 +214,13 @@ private:
 	{
 		// Invalid type is unexpected
 		get().begin_object();
-		get().key("key");
-		write(obj.index());
+		get().key(type_field_name::value);
+		if constexpr (detail::HasVariantTypeTransform<Class>)
+			get().as_string(acl::from_variant_index<Class>(obj.index()));
+		else
+			get().as_uint64(obj.index());
 		get().next_map_entry();
-		get().key("value");
+		get().key(value_field_name::value);
 		std::visit(
 		 [this](auto const& arg)
 		 {

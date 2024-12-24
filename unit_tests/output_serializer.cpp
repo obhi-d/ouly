@@ -2,6 +2,7 @@
 #include "acl/serializers/output_serializer.hpp"
 #include "acl/containers/array_types.hpp"
 #include "acl/serializers/binary_serializer.hpp"
+#include <acl/utils/reflection.hpp>
 #include <catch2/catch_all.hpp>
 #include <compare>
 #include <map>
@@ -218,6 +219,79 @@ TEST_CASE("output_serializer: VariantLike")
 	REQUIRE(j[4].at("value").get<std::string>() == std::get<std::string>(example[4]));
 }
 
+using custom_variant = std::variant<int, std::string, bool, double>;
+
+template <>
+uint32_t acl::to_variant_index<custom_variant>(std::string_view ref)
+{
+	if (ref == "int")
+		return 0;
+	if (ref == "string")
+		return 1;
+	if (ref == "bool")
+		return 2;
+	if (ref == "double")
+		return 3;
+	return 0;
+}
+
+template <>
+std::string_view acl::from_variant_index<custom_variant>(std::size_t ref)
+{
+	switch (ref)
+	{
+	case 0:
+		return "int";
+	case 1:
+		return "string";
+	case 2:
+		return "bool";
+	case 3:
+		return "double";
+	}
+	return "int";
+}
+
+TEST_CASE("output_serializer: VariantLike with custom index")
+{
+
+	{
+		custom_variant example = {2};
+		Serializer		 instance;
+		auto					 ser = acl::output_serializer<Serializer>(instance);
+		ser << example;
+
+		REQUIRE(instance.get().find("int") != std::string::npos);
+	}
+
+	{
+		custom_variant example = {2.0};
+		Serializer		 instance;
+		auto					 ser = acl::output_serializer<Serializer>(instance);
+		ser << example;
+
+		REQUIRE(instance.get().find("double") != std::string::npos);
+	}
+
+	{
+		custom_variant example = {true};
+		Serializer		 instance;
+		auto					 ser = acl::output_serializer<Serializer>(instance);
+		ser << example;
+
+		REQUIRE(instance.get().find("bool") != std::string::npos);
+	}
+
+	{
+		custom_variant example = {"string"};
+		Serializer		 instance;
+		auto					 ser = acl::output_serializer<Serializer>(instance);
+		ser << example;
+
+		REQUIRE(instance.get().find("string") != std::string::npos);
+	}
+}
+
 TEST_CASE("output_serializer: CastableToStringView")
 {
 	struct ReflEx
@@ -335,6 +409,11 @@ TEST_CASE("output_serializer: PointerLike")
 		std::shared_ptr<std::string> third	= std::make_shared<std::string>("third");
 		std::string*								 last		= nullptr;
 
+		~ReflEx() noexcept
+		{
+			delete first;
+		}
+
 		static auto reflect() noexcept
 		{
 			return acl::bind(acl::bind<"first", &ReflEx::first>(), acl::bind<"second", &ReflEx::second>(),
@@ -386,7 +465,7 @@ TEST_CASE("output_serializer: VariantLike Monostate")
 	ser << example;
 
 	json j = json::parse(instance.get());
-	REQUIRE(j.at("key") == 0);
+	REQUIRE(j.at("type") == 0);
 	REQUIRE(j.at("value") == json());
 }
 

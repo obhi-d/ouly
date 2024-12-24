@@ -28,7 +28,7 @@ struct string_literal
 		return compute(value, N - 1);
 	}
 
-	inline constexpr explicit operator std::string_view() const
+	inline constexpr operator std::string_view() const
 	{
 		return std::string_view(value, N - 1);
 	}

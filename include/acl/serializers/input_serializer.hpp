@@ -10,7 +10,6 @@
 #include <cassert>
 #include <limits>
 #include <memory>
-#include <optional>
 
 namespace acl
 {
@@ -79,9 +78,13 @@ concept InputSerializer = requires(V v) {
 
 // Given an input serializer, load
 // a bound class
-template <InputSerializer Serializer>
+template <InputSerializer Serializer, typename Opt = acl::options<>>
 class input_serializer
 {
+	using key_field_name	 = detail::key_field_name_t<Opt>;
+	using value_field_name = detail::value_field_name_t<Opt>;
+	using type_field_name	 = detail::type_field_name_t<Opt>;
+
 protected:
 	std::reference_wrapper<Serializer> ser_;
 
@@ -245,7 +248,7 @@ private:
 		return get().for_each(
 		 [this, &obj](Serializer value) -> bool
 		 {
-			 detail::map_value_type<key_type, mapped_type> stream_val;
+			 detail::map_value_type<key_type, mapped_type, Opt> stream_val;
 
 			 if (input_serializer(value).read(stream_val))
 			 {
@@ -324,21 +327,45 @@ private:
 			return false;
 		}
 
-		auto type = get().at("type");
+		auto type = get().at(type_field_name::value);
 		if (!type)
 		{
 			get().error(type_name<Class>(), make_error_code(serializer_error::variant_missing_index));
 			return false;
 		}
 
-		auto index = (*type).as_uint64();
-		if (!index)
+		uint32_t index_value = 0;
+		if constexpr (detail::HasVariantTypeTransform<Class>)
 		{
-			get().error(type_name<Class>(), make_error_code(serializer_error::variant_index_is_not_int));
-			return false;
+			auto type_str = (*type).as_string();
+			if (type_str)
+			{
+				index_value = acl::to_variant_index<Class>(*type_str);
+			}
+			else
+			{
+				auto index = (*type).as_uint64();
+				if (!index)
+				{
+					get().error(type_name<Class>(), make_error_code(serializer_error::variant_index_is_not_int));
+					return false;
+				}
+				index_value = *index;
+			}
+		}
+		else
+		{
+
+			auto index = (*type).as_uint64();
+			if (!index)
+			{
+				get().error(type_name<Class>(), make_error_code(serializer_error::variant_index_is_not_int));
+				return false;
+			}
+			index_value = *index;
 		}
 
-		auto value_opt = get().at("value");
+		auto value_opt = get().at(value_field_name::value);
 		if (!value_opt)
 		{
 			get().error(type_name<Class>(), make_error_code(serializer_error::variant_missing_value));
@@ -347,7 +374,7 @@ private:
 
 		auto value = *value_opt;
 		return find_alt<std::variant_size_v<Class> - 1, Class>(
-		 static_cast<uint32_t>(*index),
+		 index_value,
 		 [&obj, &value](auto I) -> bool
 		 {
 			 using type = std::variant_alternative_t<I, Class>;
