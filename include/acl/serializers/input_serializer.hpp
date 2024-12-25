@@ -221,7 +221,7 @@ private:
 
 			 if (input_serializer(value).read(stream_val))
 			 {
-				 detail::emplace(obj, key_type{key}, std::move(stream_val));
+				 detail::emplace(obj, std::move(key), std::move(stream_val));
 				 return true;
 			 }
 			 value.error(type_name<mapped_type>(), make_error_code(serializer_error::failed_streaming_map));

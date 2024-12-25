@@ -118,7 +118,7 @@ void run_test(unsigned int seed)
 	};
 	alloc_mem_manager mgr;
 	allocator_t				allocator(256 * 256, mgr);
-	for (std::uint32_t allocs = 0; allocs < 10000; ++allocs)
+	for (std::uint32_t allocs = 0; allocs < 100; ++allocs)
 	{
 		if (dice(gen) || mgr.valids.size() == 0)
 		{

@@ -114,6 +114,18 @@ uint32_t to_variant_index(std::string_view ref) = delete;
 template <typename T>
 std::string_view from_variant_index(std::size_t ref) = delete;
 
+template <>
+inline void from_string<std::string>(std::string& ref, std::string_view v)
+{
+	ref = std::string(v);
+}
+
+template <>
+inline std::string_view to_string_view<std::string>(std::string const& ref)
+{
+	return ref;
+}
+
 template <ClassWithReflect Class>
 auto reflect() noexcept
 {
@@ -384,8 +396,7 @@ concept HasCapacity = requires(Class const& c) {
 };
 
 template <typename Class>
-concept CanConstructFromString =
- detail::TransformFromString<Class> || detail::ConstructedFromStringView<Class> || detail::ConstructedFromString<Class>;
+concept StringLike = TransformFromString<Class> && (TransformToString<Class> || TransformToStringView<Class>);
 
 template <typename Class>
 concept MapLike = requires(Class t) {
@@ -398,13 +409,13 @@ concept MapLike = requires(Class t) {
 };
 
 template <typename Class>
-concept StringMapLike = MapLike<Class> && ContainerIsStringLike<typename Class::key_type>;
+concept StringMapLike = MapLike<Class> && StringLike<typename Class::key_type>;
 
 template <typename Class>
 concept StringMapValueType = requires { typename Class::is_string_map_value_type; };
 
 template <typename Class>
-concept ComplexMapLike = MapLike<Class> && !ContainerIsStringLike<typename Class::key_type>;
+concept ComplexMapLike = MapLike<Class> && !StringLike<typename Class::key_type>;
 
 template <HasValueType Class>
 using container_value_type = typename Class::value_type;
