@@ -93,9 +93,10 @@ void coalescing_arena_allocator::reinsert_left(size_t of, size_type size, std::u
 
 auto coalescing_arena_allocator::deallocate(allocation_id id) -> arena_id
 {
-	auto const node		 = id.id_;
-	auto const size		 = block_entries_.sizes_[node];
-	auto			 measure = this->statistics::report_deallocate(size);
+	auto const node = id.id_;
+	auto const size = block_entries_.sizes_[node];
+	// NOLINTNEXTLINE
+	[[maybe_unused]] auto measure = statistics::report_deallocate(size);
 
 	enum : std::uint8_t
 	{
@@ -315,17 +316,20 @@ void coalescing_arena_allocator::validate_integrity() const
 		}
 	}
 
-	size_type sz = 0;
 	assert(free_ordering_.size() == sizes_.size());
 	for (size_t i = 1; i < sizes_.size(); ++i)
 	{
 		assert(sizes_[i - 1] <= sizes_[i]);
 	}
-	for (size_t i = 0; i < free_ordering_.size(); ++i)
+
+	size_type sz = 0;
+	// NOLINTNEXTLINE
+	for (size_t free_idx = 0; free_idx < free_ordering_.size(); ++free_idx)
 	{
-		auto fn = free_ordering_[i];
+		auto fn = free_ordering_[free_idx];
 		assert(sz <= block_entries_.sizes_[fn]);
-		assert(block_entries_.sizes_[fn] == sizes_[i]);
+		assert(block_entries_.sizes_[fn] == sizes_[free_idx]);
+		// NOLINTNEXTLINE
 		sz = block_entries_.sizes_[fn];
 	}
 }
