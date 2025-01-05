@@ -2,7 +2,7 @@
 Language: Cpp
 PenaltyReturnTypeOnItsOwnLine: 10000
 TabWidth: 2
-UseTab: Never
+UseTab: Always
 DerivePointerAlignment: false
 PointerAlignment: Left
 ReferenceAlignment: Left
@@ -17,7 +17,7 @@ AllowShortFunctionsOnASingleLine: Empty
 AllowShortLambdasOnASingleLine: Empty
 IncludeBlocks: Preserve
 BreakBeforeBraces: Custom
-ContinuationIndentWidth: 2
+ContinuationIndentWidth: 1
 BraceWrapping:
   AfterCaseLabel: true
   AfterClass: true
@@ -37,10 +37,9 @@ BraceWrapping:
   SplitEmptyFunction: false
   SplitEmptyRecord: false
   SplitEmptyNamespace: false
-  
+
 BreakBeforeConceptDeclarations: Always
 RequiresExpressionIndentation: OuterScope
 AlignArrayOfStructures: Right
 
 ColumnLimit: 120
-...

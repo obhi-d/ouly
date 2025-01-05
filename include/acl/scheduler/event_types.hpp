@@ -12,39 +12,39 @@ class blocking_event
 {
 
 public:
-  inline blocking_event(bool set) noexcept : semaphore((std::ptrdiff_t)set) {}
-  inline blocking_event() noexcept : semaphore(0) {}
+	blocking_event(bool set) noexcept : semaphore_((std::ptrdiff_t)set) {}
+	blocking_event() noexcept : semaphore_(0) {}
 
-  inline void wait()
-  {
-    semaphore.acquire();
-  }
+	void wait()
+	{
+		semaphore_.acquire();
+	}
 
-  inline void notify()
-  {
-    semaphore.release();
-  }
+	void notify()
+	{
+		semaphore_.release();
+	}
 
 private:
-  std::binary_semaphore semaphore;
+	std::binary_semaphore semaphore_;
 };
 
 class scheduler;
 class busywork_event
 {
 public:
-  inline busywork_event(bool set) noexcept : semaphore((std::ptrdiff_t)set) {}
-  inline busywork_event() noexcept : semaphore(0) {}
+	busywork_event(bool set) noexcept : semaphore_((std::ptrdiff_t)set) {}
+	busywork_event() noexcept : semaphore_(0) {}
 
-  ACL_API void wait(worker_id worker, scheduler& s);
+	ACL_API void wait(worker_id worker, scheduler& s);
 
-  inline void notify()
-  {
-    semaphore.release();
-  }
+	void notify()
+	{
+		semaphore_.release();
+	}
 
 private:
-  std::binary_semaphore semaphore;
+	std::binary_semaphore semaphore_;
 };
 
 } // namespace acl

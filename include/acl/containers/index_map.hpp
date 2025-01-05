@@ -13,164 +13,181 @@ namespace acl
  * offset until the OffsetLimit number of indices occupy the list, upon which the list will be fully grown to support
  * `0...N` elements.
  */
-template <typename T = uint32_t, T OffsetLimit = 16>
+constexpr uint32_t default_offset_limit = 16;
+template <typename T = uint32_t, T OffsetLimit = default_offset_limit>
 class index_map
 {
-  static constexpr T MinOffset = std::max<T>(OffsetLimit, 1);
+	static constexpr T min_offset = std::max<T>(OffsetLimit, 1);
 
-  struct with_offset_limit
-  {
-    acl::small_vector<T, MinOffset> indices_;
-    T                               min_offset_ = null;
-  };
+	struct with_offset_limit
+	{
+		acl::small_vector<T, min_offset> indices_;
+		T																 min_offset_ = null;
+	};
 
-  struct without_offset_limit
-  {
-    std::vector<T> indices_;
-  };
+	struct without_offset_limit
+	{
+		std::vector<T> indices_;
+	};
 
-  using index_list = std::conditional_t<OffsetLimit == 0, without_offset_limit, with_offset_limit>;
+	using index_list = std::conditional_t<OffsetLimit == 0, without_offset_limit, with_offset_limit>;
 
 public:
-  using size_type          = T;
-  static constexpr T limit = OffsetLimit;
-  static constexpr T null  = std::numeric_limits<size_type>::max();
+	using size_type					 = T;
+	static constexpr T limit = OffsetLimit;
+	static constexpr T null	 = std::numeric_limits<size_type>::max();
 
-  T& operator[](T idx) noexcept
-  {
-    if constexpr (OffsetLimit > 0)
-    {
-      if (data_.min_offset_ > idx)
-      {
-        if (data_.indices_.empty())
-          data_.min_offset_ = idx;
-        else
-        {
-          T to_min_offset = 0;
-          if (data_.indices_.size() < limit)
-            to_min_offset = idx;
-          data_.min_offset_ = shift(to_min_offset);
-        }
-      }
-      idx = idx - data_.min_offset_;
-    }
-    if (idx >= data_.indices_.size())
-      data_.indices_.resize(idx + 1, null);
-    return data_.indices_[idx];
-  }
+	auto operator[](T idx) noexcept -> T&
+	{
+		if constexpr (OffsetLimit > 0)
+		{
+			if (data_.min_offset_ > idx)
+			{
+				if (data_.indices_.empty())
+				{
+					data_.min_offset_ = idx;
+				}
+				else
+				{
+					T to_min_offset = 0;
+					if (data_.indices_.size() < limit)
+					{
+						to_min_offset = idx;
+					}
+					data_.min_offset_ = shift(to_min_offset);
+				}
+			}
+			idx = idx - data_.min_offset_;
+		}
+		if (idx >= data_.indices_.size())
+		{
+			data_.indices_.resize(idx + 1, null);
+		}
+		return data_.indices_[idx];
+	}
 
-  bool contains(T idx) const noexcept
-  {
-    if constexpr (OffsetLimit > 0)
-      return ((idx - data_.min_offset_) < data_.indices_.size());
-    else
-      return idx < data_.indices_.size();
-  }
+	auto contains(T idx) const noexcept -> bool
+	{
+		if constexpr (OffsetLimit > 0)
+		{
+			return ((idx - data_.min_offset_) < data_.indices_.size());
+		}
+		else
+		{
+			return idx < data_.indices_.size();
+		}
+	}
 
-  T find(T idx) const noexcept
-  {
-    if constexpr (OffsetLimit > 0)
-      idx = idx - data_.min_offset_;
-    return idx < data_.indices_.size() ? data_.indices_[idx] : null;
-  }
+	auto find(T idx) const noexcept -> T
+	{
+		if constexpr (OffsetLimit > 0)
+		{
+			idx = idx - data_.min_offset_;
+		}
+		return idx < data_.indices_.size() ? data_.indices_[idx] : null;
+	}
 
-  T operator[](T idx) const noexcept
-  {
-    idx = idx - data_.min_offset_;
-    return data_.indices_[idx];
-  }
+	auto operator[](T idx) const noexcept -> T
+	{
+		idx = idx - data_.min_offset_;
+		return data_.indices_[idx];
+	}
 
-  T get_if(T idx) const noexcept
-  {
-    idx = idx - data_.min_offset_;
-    return idx < data_.indices_.size() ? data_.indices_[idx] : null;
-  }
+	auto get_if(T idx) const noexcept -> T
+	{
+		idx = idx - data_.min_offset_;
+		return idx < data_.indices_.size() ? data_.indices_[idx] : null;
+	}
 
-  void clear()
-  {
-    if constexpr (OffsetLimit > 0)
-      data_.min_offset_ = null;
-    data_.indices_.clear();
-  }
+	void clear()
+	{
+		if constexpr (OffsetLimit > 0)
+		{
+			data_.min_offset_ = null;
+		}
+		data_.indices_.clear();
+	}
 
-  /** @brief This value must be substracted from the index value while doing a query */
-  T base_offset() const noexcept
-  {
-    if constexpr (OffsetLimit > 0)
-      return data_.min_offset_;
-    return 0;
-  }
+	/** @brief This value must be substracted from the index value while doing a query */
+	auto base_offset() const noexcept -> T
+	{
+		if constexpr (OffsetLimit > 0)
+		{
+			return data_.min_offset_;
+		}
+		return 0;
+	}
 
-  bool empty() const noexcept
-  {
-    return data_.indices_.empty();
-  }
+	[[nodiscard]] auto empty() const noexcept -> bool
+	{
+		return data_.indices_.empty();
+	}
 
-  auto size() const noexcept
-  {
-    return data_.indices_.size();
-  }
+	auto size() const noexcept
+	{
+		return data_.indices_.size();
+	}
 
-  auto begin() noexcept
-  {
-    return data_.indices_.begin();
-  }
+	auto begin() noexcept
+	{
+		return data_.indices_.begin();
+	}
 
-  auto end() noexcept
-  {
-    return data_.indices_.end();
-  }
+	auto end() noexcept
+	{
+		return data_.indices_.end();
+	}
 
-  auto begin() const noexcept
-  {
-    return data_.indices_.begin();
-  }
+	auto begin() const noexcept
+	{
+		return data_.indices_.begin();
+	}
 
-  auto end() const noexcept
-  {
-    return data_.indices_.end();
-  }
+	auto end() const noexcept
+	{
+		return data_.indices_.end();
+	}
 
-  auto rbegin() noexcept
-  {
-    return data_.indices_.rbegin();
-  }
+	auto rbegin() noexcept
+	{
+		return data_.indices_.rbegin();
+	}
 
-  auto rend() noexcept
-  {
-    return data_.indices_.rend();
-  }
+	auto rend() noexcept
+	{
+		return data_.indices_.rend();
+	}
 
-  auto rbegin() const noexcept
-  {
-    return data_.indices_.rbegin();
-  }
+	auto rbegin() const noexcept
+	{
+		return data_.indices_.rbegin();
+	}
 
-  auto rend() const noexcept
-  {
-    return data_.indices_.rend();
-  }
+	auto rend() const noexcept
+	{
+		return data_.indices_.rend();
+	}
 
 private:
-  inline T shift(T offset)
-  {
-    if constexpr (OffsetLimit > 0)
-    {
-      T    amount   = data_.min_offset_ - offset;
-      auto cur_size = data_.indices_.size();
-      data_.indices_.resize(data_.indices_.size() + amount, null);
-      if (cur_size)
-      {
-        for (int64_t i = (int64_t)(cur_size - 1); i >= 0; --i)
-        {
-          data_.indices_[amount + (T)i] = data_.indices_[(T)i];
-          data_.indices_[(T)i]          = null;
-        }
-      }
-    }
-    return offset;
-  }
+	auto shift(T offset) -> T
+	{
+		if constexpr (OffsetLimit > 0)
+		{
+			T		 amount		= data_.min_offset_ - offset;
+			auto cur_size = data_.indices_.size();
+			data_.indices_.resize(data_.indices_.size() + amount, null);
+			if (cur_size)
+			{
+				for (auto i = (int64_t)(cur_size - 1); i >= 0; --i)
+				{
+					data_.indices_[amount + (T)i] = data_.indices_[(T)i];
+					data_.indices_[(T)i]					= null;
+				}
+			}
+		}
+		return offset;
+	}
 
-  index_list data_;
+	index_list data_;
 };
 } // namespace acl

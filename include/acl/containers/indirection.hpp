@@ -6,87 +6,86 @@
 #include <acl/utils/utils.hpp>
 #include <tuple>
 
-namespace acl
-{
-
-namespace detail
+namespace acl::detail
 {
 //============================================================
 template <typename Traits>
 class vector_indirection
 {
 protected:
-  using size_type = detail::choose_size_t<uint32_t, Traits>;
+	using size_type = detail::choose_size_t<uint32_t, Traits>;
 
 public:
-  inline size_type& get(size_type i) noexcept
-  {
-    return links_[i];
-  }
+	auto get(size_type i) noexcept -> size_type&
+	{
+		return links_[i];
+	}
 
-  inline size_type get(size_type i) const noexcept
-  {
-    return links_[i];
-  }
+	auto get(size_type i) const noexcept -> size_type
+	{
+		return links_[i];
+	}
 
-  inline size_type get_if(size_type i) const noexcept
-  {
-    return i < links_.size() ? links_[i] : Traits::null_v;
-  }
+	auto get_if(size_type i) const noexcept -> size_type
+	{
+		return i < links_.size() ? links_[i] : Traits::null_v;
+	}
 
-  inline size_type size() const
-  {
-    return static_cast<size_type>(links_.size());
-  }
+	auto size() const -> size_type
+	{
+		return static_cast<size_type>(links_.size());
+	}
 
-  inline void push_back(size_type s) noexcept
-  {
-    links_.push_back(s);
-  }
+	void push_back(size_type s) noexcept
+	{
+		links_.push_back(s);
+	}
 
-  inline void pop_back() noexcept
-  {
-    links_.pop_back();
-  }
+	void pop_back() noexcept
+	{
+		links_.pop_back();
+	}
 
-  inline auto best_erase(size_type s)
-  {
-    auto& v = links_[s];
-    auto  r = links_.back();
-    v       = r;
-    links_.pop_back();
-    return r;
-  }
+	auto best_erase(size_type s)
+	{
+		auto& v = links_[s];
+		auto	r = links_.back();
+		v				= r;
+		links_.pop_back();
+		return r;
+	}
 
-  inline size_type& ensure_at(size_type i) noexcept
-  {
-    if (i >= links_.size())
-      links_.resize(i + 1, Traits::null_v);
-    return links_[i];
-  }
+	auto ensure_at(size_type i) noexcept -> size_type&
+	{
+		if (i >= links_.size())
+		{
+			links_.resize(i + 1, Traits::null_v);
+		}
+		return links_[i];
+	}
 
-  inline void clear()
-  {
-    links_.clear();
-  }
+	void clear()
+	{
+		links_.clear();
+	}
 
-  inline void shrink_to_fit()
-  {
-    links_.shrink_to_fit();
-  }
+	void shrink_to_fit()
+	{
+		links_.shrink_to_fit();
+	}
 
-  inline bool contains(size_type i) const
-  {
-    return (i < links_.size() && links_[i] != Traits::null_v);
-  }
+	auto contains(size_type i) const -> bool
+	{
+		return (i < links_.size() && links_[i] != Traits::null_v);
+	}
 
-  inline bool contains_valid(size_type i) const
-  {
-    return i < links_.size() && links_[i] != Traits::null_v && detail::is_valid(links_[i]);
-  }
+	auto contains_valid(size_type i) const -> bool
+	{
+		return i < links_.size() && links_[i] != Traits::null_v && detail::is_valid(links_[i]);
+	}
 
 private:
-  vector<size_type, custom_allocator_t<Traits>> links_;
+	vector<size_type, custom_allocator_t<Traits>> links_;
 };
 
 //============================================================
@@ -94,97 +93,99 @@ template <typename Traits>
 class sparse_indirection
 {
 protected:
-  using size_type = detail::choose_size_t<uint32_t, Traits>;
+	using size_type = detail::choose_size_t<uint32_t, Traits>;
 
-  struct default_index_pool_size
-  {
-    static constexpr uint32_t index_pool_size = 4096;
-  };
+	struct default_index_pool_size
+	{
+		static constexpr uint32_t index_pool_size = 4096;
+	};
 
-  struct index_traits
-  {
-    using size_type = uint32_t;
-    static constexpr uint32_t pool_size_v =
-      std::conditional_t<detail::HasIndexPoolSize<Traits>, Traits, default_index_pool_size>::index_pool_size;
-    static constexpr uint32_t null_v            = Traits::null_v;
-    static constexpr bool     no_fill_v         = Traits::null_v == 0;
-    static constexpr bool     zero_out_memory_v = Traits::null_v == 0;
-  };
+	struct index_traits
+	{
+		using size_type = uint32_t;
+		static constexpr uint32_t pool_size_v =
+		 std::conditional_t<detail::HasIndexPoolSize<Traits>, Traits, default_index_pool_size>::index_pool_size;
+		static constexpr uint32_t null_v						= Traits::null_v;
+		static constexpr bool			no_fill_v					= Traits::null_v == 0;
+		static constexpr bool			zero_out_memory_v = Traits::null_v == 0;
+	};
 
 public:
-  inline size_type& get(size_type i) noexcept
-  {
-    return links_[i];
-  }
+	auto get(size_type i) noexcept -> size_type&
+	{
+		return links_[i];
+	}
 
-  inline size_type get(size_type i) const noexcept
-  {
-    return links_[i];
-  }
+	auto get(size_type i) const noexcept -> size_type
+	{
+		return links_[i];
+	}
 
-  inline size_type size() const
-  {
-    return static_cast<size_type>(links_.size());
-  }
+	auto size() const -> size_type
+	{
+		return static_cast<size_type>(links_.size());
+	}
 
-  inline void push_back(size_type i) noexcept
-  {
-    links_.emplace_back(i);
-  }
+	void push_back(size_type i) noexcept
+	{
+		links_.emplace_back(i);
+	}
 
-  inline void pop_back() noexcept
-  {
-    links_.pop_back();
-  }
+	void pop_back() noexcept
+	{
+		links_.pop_back();
+	}
 
-  inline size_type& ensure_at(size_type i) noexcept
-  {
-    if (i >= links_.size())
-      links_.grow(i + 1);
-    return links_[i];
-  }
+	auto ensure_at(size_type i) noexcept -> size_type&
+	{
+		if (i >= links_.size())
+		{
+			links_.grow(i + 1);
+		}
+		return links_[i];
+	}
 
-  inline size_type best_erase(size_type s)
-  {
-    auto& v = links_[s];
-    auto  r = links_.back();
-    v       = r;
-    links_.pop_back();
-    return r;
-  }
+	auto best_erase(size_type s) -> size_type
+	{
+		auto& v = links_[s];
+		auto	r = links_.back();
+		v				= r;
+		links_.pop_back();
+		return r;
+	}
 
-  inline bool contains(size_type i) const
-  {
-    return links_.contains(i);
-  }
+	auto contains(size_type i) const -> bool
+	{
+		return links_.contains(i);
+	}
 
-  inline size_type get_if(size_type i) const noexcept
-  {
-    return i < links_.size() ? links_[i] : Traits::null_v;
-  }
+	auto get_if(size_type i) const noexcept -> size_type
+	{
+		return i < links_.size() ? links_[i] : Traits::null_v;
+	}
 
-  inline bool contains_valid(size_type i) const
-  {
-    if (i < links_.size())
-    {
-      auto v = links_[i];
-      return v != Traits::null_v && detail::is_valid(v);
-    }
-    return false;
-  }
+	auto contains_valid(size_type i) const -> bool
+	{
+		if (i < links_.size())
+		{
+			auto v = links_[i];
+			return v != Traits::null_v && detail::is_valid(v);
+		}
+		return false;
+	}
 
-  inline void clear()
-  {
-    links_.clear();
-  }
+	void clear()
+	{
+		links_.clear();
+	}
 
-  inline void shrink_to_fit()
-  {
-    links_.shrink_to_fit();
-  }
+	void shrink_to_fit()
+	{
+		links_.shrink_to_fit();
+	}
 
 private:
-  sparse_vector<size_type, index_traits> links_;
+	sparse_vector<size_type, index_traits> links_;
 };
 
 //============================================================
@@ -192,47 +193,45 @@ template <typename Traits>
 class back_indirection
 {
 protected:
-  using size_type  = detail::choose_size_t<uint32_t, Traits>;
-  using self_index = typename Traits::self_index;
+	using size_type	 = detail::choose_size_t<uint32_t, Traits>;
+	using self_index = typename Traits::self_index;
 
 public:
-  template <typename T>
-  inline size_type& get(T& i) noexcept
-  {
-    return self_index::get(i);
-  }
+	template <typename T>
+	auto get(T& i) noexcept -> size_type&
+	{
+		return self_index::get(i);
+	}
 
-  template <typename T>
-  inline size_type get(T& i) const noexcept
-  {
-    return self_index::get(i);
-  }
+	template <typename T>
+	auto get(T& i) const noexcept -> size_type
+	{
+		return self_index::get(i);
+	}
 
-  template <typename T>
-  inline size_type& ensure_at(T& i) noexcept
-  {
-    return self_index::get(i);
-  }
+	template <typename T>
+	auto ensure_at(T& i) noexcept -> size_type&
+	{
+		return self_index::get(i);
+	}
 
-  template <typename T>
-  constexpr inline bool contains(T&) const noexcept
-  {
-    return true;
-  }
+	template <typename T>
+	constexpr auto contains(T& /*unused*/) const noexcept -> bool
+	{
+		return true;
+	}
 
-  inline void clear() noexcept {}
+	void clear() noexcept {}
 
-  inline void shrink_to_fit() noexcept {}
+	void shrink_to_fit() noexcept {}
 };
 
 template <typename Traits>
 using indirection_type = std::conditional_t<HasUseSparseIndexAttrib<Traits>, detail::sparse_indirection<Traits>,
-                                            detail::vector_indirection<Traits>>;
+																						detail::vector_indirection<Traits>>;
 
 template <typename Traits>
 using self_index_type =
-  std::conditional_t<HasSelfIndexValue<Traits>, detail::back_indirection<Traits>, indirection_type<Traits>>;
+ std::conditional_t<HasSelfIndexValue<Traits>, detail::back_indirection<Traits>, indirection_type<Traits>>;
 
-} // namespace detail
-
-} // namespace acl
+} // namespace acl::detail

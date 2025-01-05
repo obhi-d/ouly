@@ -17,160 +17,169 @@ class dynamic_array : public Allocator
 {
 
 public:
-  using value_type     = T;
-  using allocator_type = Allocator;
+	using value_type		 = T;
+	using allocator_type = Allocator;
 
-  dynamic_array() = default;
+	dynamic_array() = default;
 
-  inline dynamic_array(dynamic_array&& other) noexcept : data_(other.data_), count_(other.count_)
-  {
-    other.data_  = nullptr;
-    other.count_ = 0;
-  }
+	dynamic_array(dynamic_array&& other) noexcept : data_(other.data_), count_(other.count_)
+	{
+		other.data_	 = nullptr;
+		other.count_ = 0;
+	}
 
-  inline dynamic_array& operator=(dynamic_array&& other) noexcept
-  {
-    clear();
-    data_        = other.data_;
-    count_       = other.count_;
-    other.data_  = nullptr;
-    other.count_ = 0;
-    return *this;
-  }
+	auto operator=(dynamic_array&& other) noexcept -> dynamic_array&
+	{
+		clear();
+		data_				 = other.data_;
+		count_			 = other.count_;
+		other.data_	 = nullptr;
+		other.count_ = 0;
+		return *this;
+	}
 
-  inline dynamic_array(dynamic_array const& other) noexcept : dynamic_array(other.begin(), other.end()) {}
+	dynamic_array(dynamic_array const& other) noexcept : dynamic_array(other.begin(), other.end()) {}
 
-  inline dynamic_array& operator=(dynamic_array const& other) noexcept
-  {
-    clear();
-    count_ = other.count_;
-    if (count_)
-    {
-      data_ = (T*)Allocator::allocate(sizeof(T) * count_, alignarg<T>);
-      std::uninitialized_copy_n(other.begin(), count_, data_);
-    }
-    return *this;
-  }
+	auto operator=(dynamic_array const& other) noexcept -> dynamic_array&
+	{
+		if (this == &other)
+		{
+			return *this;
+		}
 
-  template <typename It>
-  inline dynamic_array(It first, It last) noexcept : count_(static_cast<uint32_t>(std::distance(first, last)))
-  {
-    if (count_)
-    {
-      data_ = (T*)Allocator::allocate(sizeof(T) * count_, alignarg<T>);
-      std::uninitialized_copy_n(first, count_, data_);
-    }
-  }
+		clear();
+		count_ = other.count_;
+		if (count_ != 0U)
+		{
+			data_ = (T*)Allocator::allocate(sizeof(T) * count_, alignarg<T>);
+			std::uninitialized_copy_n(other.begin(), count_, data_);
+		}
+		return *this;
+	}
 
-  template <typename OT>
-  inline dynamic_array(std::initializer_list<OT> data) noexcept : dynamic_array(data.begin(), data.end())
-  {}
+	template <typename It>
+	dynamic_array(It first, It last) noexcept : count_(static_cast<uint32_t>(std::distance(first, last)))
+	{
+		if (count_)
+		{
+			data_ = (T*)Allocator::allocate(sizeof(T) * count_, alignarg<T>);
+			std::uninitialized_copy_n(first, count_, data_);
+		}
+	}
 
-  inline dynamic_array(uint32_t n, T const& fill = T()) noexcept : count_(n)
-  {
-    if (count_)
-    {
-      data_ = (T*)Allocator::allocate(sizeof(T) * count_, alignarg<T>);
-      std::uninitialized_fill_n(data_, count_, fill);
-    }
-  }
+	template <typename OT>
+	dynamic_array(std::initializer_list<OT> data) noexcept : dynamic_array(data.begin(), data.end())
+	{}
 
-  inline ~dynamic_array() noexcept
-  {
-    clear();
-  }
+	dynamic_array(uint32_t n, T const& fill = T()) noexcept : count_(n)
+	{
+		if (count_ != 0U)
+		{
+			data_ = (T*)Allocator::allocate(sizeof(T) * count_, alignarg<T>);
+			std::uninitialized_fill_n(data_, count_, fill);
+		}
+	}
 
-  void clear() noexcept
-  {
-    if (data_)
-    {
-      if constexpr (!std::is_trivially_destructible_v<T>)
-        std::destroy_n(data_, count_);
-      Allocator::deallocate(data_, sizeof(T) * count_, alignarg<T>);
-      data_  = nullptr;
-      count_ = 0;
-    }
-  }
+	~dynamic_array() noexcept
+	{
+		clear();
+	}
 
-  T& operator[](std::size_t i) noexcept
-  {
-    ACL_ASSERT(i < count_);
-    return data_[i];
-  }
+	void clear() noexcept
+	{
+		if (data_)
+		{
+			if constexpr (!std::is_trivially_destructible_v<T>)
+			{
+				std::destroy_n(data_, count_);
+			}
+			Allocator::deallocate(data_, sizeof(T) * count_, alignarg<T>);
+			data_	 = nullptr;
+			count_ = 0;
+		}
+	}
 
-  T const& operator[](std::size_t i) const noexcept
-  {
-    ACL_ASSERT(i < count_);
-    return data_[i];
-  }
+	auto operator[](std::size_t i) noexcept -> T&
+	{
+		assert(i < count_);
+		return data_[i];
+	}
 
-  T* begin() noexcept
-  {
-    return data_;
-  }
+	auto operator[](std::size_t i) const noexcept -> T const&
+	{
+		assert(i < count_);
+		return data_[i];
+	}
 
-  T* end() noexcept
-  {
-    return data_ + count_;
-  }
+	auto begin() noexcept -> T*
+	{
+		return data_;
+	}
 
-  T const* begin() const noexcept
-  {
-    return data_;
-  }
+	auto end() noexcept -> T*
+	{
+		return data_ + count_;
+	}
 
-  T const* end() const noexcept
-  {
-    return data_ + count_;
-  }
+	auto begin() const noexcept -> T const*
+	{
+		return data_;
+	}
 
-  T* data() noexcept
-  {
-    return data_;
-  }
+	auto end() const noexcept -> T const*
+	{
+		return data_ + count_;
+	}
 
-  T const* data() const noexcept
-  {
-    return data_;
-  }
+	auto data() noexcept -> T*
+	{
+		return data_;
+	}
 
-  uint32_t size() const noexcept
-  {
-    return count_;
-  }
+	auto data() const noexcept -> T const*
+	{
+		return data_;
+	}
 
-  inline void resize(uint32_t n, T const& fill = T()) noexcept
-  {
-    if (n != count_)
-    {
-      auto data = n > 0 ? (T*)Allocator::allocate(sizeof(T) * n, alignarg<T>) : nullptr;
-      std::uninitialized_move_n(begin(), std::min(count_, n), data);
-      if (n > count_)
-        std::uninitialized_fill_n(data + count_, n - count_, fill);
-      clear();
-      data_  = data;
-      count_ = n;
-    }
-  }
+	[[nodiscard]] auto size() const noexcept -> uint32_t
+	{
+		return count_;
+	}
 
-  inline bool empty() const noexcept
-  {
-    return count_ == 0;
-  }
+	void resize(uint32_t n, T const& fill = T()) noexcept
+	{
+		if (n != count_)
+		{
+			auto data = n > 0 ? (T*)Allocator::allocate(sizeof(T) * n, alignarg<T>) : nullptr;
+			std::uninitialized_move_n(begin(), std::min(count_, n), data);
+			if (n > count_)
+			{
+				std::uninitialized_fill_n(data + count_, n - count_, fill);
+			}
+			clear();
+			data_	 = data;
+			count_ = n;
+		}
+	}
 
-  inline bool operator==(dynamic_array const& other) const noexcept
-  {
-    return count_ == other.size() && std::ranges::equal(*this, other);
-  }
+	[[nodiscard]] auto empty() const noexcept -> bool
+	{
+		return count_ == 0;
+	}
 
-  inline bool operator!=(dynamic_array const& other) const noexcept
-  {
-    return !(*this == other);
-  }
+	auto operator==(dynamic_array const& other) const noexcept -> bool
+	{
+		return count_ == other.size() && std::ranges::equal(*this, other);
+	}
+
+	auto operator!=(dynamic_array const& other) const noexcept -> bool
+	{
+		return !(*this == other);
+	}
 
 private:
-  T*       data_  = nullptr;
-  uint32_t count_ = 0;
+	T*			 data_	= nullptr;
+	uint32_t count_ = 0;
 };
 
 /**
@@ -184,133 +193,144 @@ class fixed_array : public Allocator
 {
 
 public:
-  using value_type     = T;
-  using allocator_type = Allocator;
+	using value_type		 = T;
+	using allocator_type = Allocator;
 
-  inline static constexpr uint32_t count_ = N;
-  static_assert(count_ > 0);
+	static constexpr uint32_t count = N;
+	static_assert(count > 0);
 
-  fixed_array() = default;
+	fixed_array() = default;
 
-  inline fixed_array(fixed_array&& other) noexcept : data_(other.data_)
-  {
-    other.data_ = nullptr;
-  }
+	fixed_array(fixed_array&& other) noexcept : data_(other.data_)
+	{
+		other.data_ = nullptr;
+	}
 
-  inline fixed_array& operator=(fixed_array&& other) noexcept
-  {
-    clear();
-    data_       = other.data_;
-    other.data_ = nullptr;
-    return *this;
-  }
+	auto operator=(fixed_array&& other) noexcept -> fixed_array&
+	{
+		clear();
+		data_				= other.data_;
+		other.data_ = nullptr;
+		return *this;
+	}
 
-  inline fixed_array(fixed_array const& other) noexcept : fixed_array(other.begin(), other.end()) {}
+	fixed_array(fixed_array const& other) noexcept : fixed_array(other.begin(), other.end()) {}
 
-  inline fixed_array& operator=(fixed_array const& other) noexcept
-  {
-    clear();
-    data_ = (T*)Allocator::allocate(sizeof(T) * count_, alignarg<T>);
-    std::uninitialized_copy_n(other.begin(), count_, data_);
-    return *this;
-  }
+	auto operator=(fixed_array const& other) noexcept -> fixed_array&
+	{
+		if (this == &other)
+		{
+			return *this;
+		}
+		clear();
+		data_ = (T*)Allocator::allocate(sizeof(T) * count, alignarg<T>);
+		std::uninitialized_copy_n(other.begin(), count, data_);
+		return *this;
+	}
 
-  template <typename It>
-  inline fixed_array(It first, It last) noexcept
-  {
-    auto count = (static_cast<uint32_t>(std::distance(first, last)));
-    data_      = (T*)Allocator::allocate(sizeof(T) * count_, alignarg<T>);
-    std::uninitialized_copy_n(first, std::min(count, count_), data_);
-    if (count < count_)
-      std::uninitialized_fill_n(data_ + count, count_ - count, T());
-  }
+	template <typename It>
+	fixed_array(It first, It last) noexcept : data_((T*)Allocator::allocate(sizeof(T) * count, alignarg<T>))
+	{
+		auto assign_count = (static_cast<uint32_t>(std::distance(first, last)));
 
-  template <typename OT>
-  inline fixed_array(std::initializer_list<OT> data) noexcept : fixed_array(data.begin(), data.end())
-  {}
+		std::uninitialized_copy_n(first, std::min(assign_count, count), data_);
+		if (assign_count < count)
+		{
+			std::uninitialized_fill_n(data_ + count, count - assign_count, T());
+		}
+	}
 
-  inline fixed_array(uint32_t count, T const& fill = T()) noexcept
-  {
-    data_ = (T*)Allocator::allocate(sizeof(T) * count_, alignarg<T>);
-    std::uninitialized_fill_n(data_, std::min(count, count_), fill);
-    if (count < count_)
-      std::uninitialized_fill_n(data_ + count, count_ - count, T());
-  }
+	template <typename OT>
+	fixed_array(std::initializer_list<OT> data) noexcept : fixed_array(data.begin(), data.end())
+	{}
 
-  inline ~fixed_array() noexcept
-  {
-    clear();
-  }
+	fixed_array(uint32_t fill_count, T const& fill = T()) noexcept
+			: data_((T*)Allocator::allocate(sizeof(T) * count, alignarg<T>))
+	{
 
-  void clear() noexcept
-  {
-    if (data_)
-    {
-      if constexpr (!std::is_trivially_destructible_v<T>)
-        std::destroy_n(data_, count_);
-      Allocator::deallocate(data_, sizeof(T) * count_, alignarg<T>);
-      data_ = nullptr;
-    }
-  }
+		std::uninitialized_fill_n(data_, std::min(fill_count, count), fill);
+		if (fill_count < count)
+		{
+			std::uninitialized_fill_n(data_ + count, count - fill_count, T());
+		}
+	}
 
-  T& operator[](std::size_t i) noexcept
-  {
-    ACL_ASSERT(i < count_);
-    return data_[i];
-  }
+	~fixed_array() noexcept
+	{
+		clear();
+	}
 
-  T const& operator[](std::size_t i) const noexcept
-  {
-    ACL_ASSERT(i < count_);
-    return data_[i];
-  }
+	void clear() noexcept
+	{
+		if (data_)
+		{
+			if constexpr (!std::is_trivially_destructible_v<T>)
+			{
+				std::destroy_n(data_, count);
+			}
+			Allocator::deallocate(data_, sizeof(T) * count, alignarg<T>);
+			data_ = nullptr;
+		}
+	}
 
-  T* begin() noexcept
-  {
-    return data_;
-  }
+	auto operator[](std::size_t i) noexcept -> T&
+	{
+		assert(i < count);
+		return data_[i];
+	}
 
-  T* end() noexcept
-  {
-    return data_ + count_;
-  }
+	auto operator[](std::size_t i) const noexcept -> T const&
+	{
+		assert(i < count);
+		return data_[i];
+	}
 
-  T const* begin() const noexcept
-  {
-    return data_;
-  }
+	auto begin() noexcept -> T*
+	{
+		return data_;
+	}
 
-  T const* end() const noexcept
-  {
-    return data_ + count_;
-  }
+	auto end() noexcept -> T*
+	{
+		return data_ + count;
+	}
 
-  T* data() noexcept
-  {
-    return data_;
-  }
+	auto begin() const noexcept -> T const*
+	{
+		return data_;
+	}
 
-  T const* data() const noexcept
-  {
-    return data_;
-  }
+	auto end() const noexcept -> T const*
+	{
+		return data_ + count;
+	}
 
-  uint32_t size() const noexcept
-  {
-    return count_;
-  }
+	auto data() noexcept -> T*
+	{
+		return data_;
+	}
 
-  inline bool operator==(fixed_array const& other) const noexcept
-  {
-    return count_ == other.size() && std::ranges::equal(*this, other);
-  }
+	auto data() const noexcept -> T const*
+	{
+		return data_;
+	}
 
-  inline bool operator!=(fixed_array const& other) const noexcept
-  {
-    return !(*this == other);
-  }
+	[[nodiscard]] auto size() const noexcept -> uint32_t
+	{
+		return count;
+	}
+
+	auto operator==(fixed_array const& other) const noexcept -> bool
+	{
+		return count == other.size() && std::ranges::equal(*this, other);
+	}
+
+	auto operator!=(fixed_array const& other) const noexcept -> bool
+	{
+		return !(*this == other);
+	}
 
 private:
-  T* data_ = nullptr;
+	T* data_ = nullptr;
 };
 } // namespace acl

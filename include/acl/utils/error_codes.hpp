@@ -10,48 +10,49 @@
 namespace acl
 {
 
-enum class serializer_error
+enum class serializer_error : uint8_t
 {
-  none                     = 0,
-  invalid_type             = 1,
-  failed_streaming_map     = 2,
-  failed_streaming_array   = 3,
-  failed_streaming_variant = 4,
-  failed_to_parse_value    = 5,
-  variant_invalid_format   = 6,
-  variant_index_is_not_int = 7,
-  variant_invalid_index    = 8,
-  invalid_key              = 9,
-  invalid_tuple_size       = 10,
-  corrupt_array_item       = 11,
-  corrupt_string_length    = 12,
-  corrupt_string           = 13,
+	none,
+	invalid_type,
+	failed_streaming_map,
+	failed_streaming_array,
+	failed_streaming_variant,
+	failed_to_parse_value,
+	variant_missing_index,
+	variant_missing_value,
+	variant_index_is_not_int,
+	variant_invalid_index,
+	invalid_key,
+	invalid_tuple_size,
+	corrupt_array_item,
+	corrupt_string_length,
+	corrupt_string,
 };
 
 template <typename E>
 struct error_category : std::error_category
 {
-  inline const char* name() const noexcept final
-  {
-    return detail::type_name<E>().data();
-  }
+	[[nodiscard]] auto name() const noexcept -> const char* final
+	{
+		return detail::type_name<E>().data();
+	}
 
-  inline std::string message(int ev) const final
-  {
-    return std::to_string(ev);
-  }
+	[[nodiscard]] auto message(int ev) const -> std::string final
+	{
+		return std::to_string(ev);
+	}
 
-  static inline auto& instance()
-  {
-    static error_category<E> inst;
-    return inst;
-  }
+	static auto instance() -> auto&
+	{
+		static error_category<E> inst;
+		return inst;
+	}
 };
 
 template <typename E>
-inline std::error_code make_error_code(E e)
+inline auto make_error_code(E e) -> std::error_code
 {
-  return {static_cast<int>(e), error_category<E>::instance()};
+	return {static_cast<int>(e), error_category<E>::instance()};
 }
 
 } // namespace acl

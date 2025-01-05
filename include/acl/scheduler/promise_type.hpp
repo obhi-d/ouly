@@ -13,146 +13,167 @@ namespace acl::detail
 class base_promise : public detail::coro_state
 {
 public:
-  auto initial_suspend() noexcept
-  {
-    return std::suspend_always();
-  }
+	static auto initial_suspend() noexcept
+	{
+		return std::suspend_always();
+	}
 
-  auto final_suspend() noexcept
-  {
-    return final_awaiter{};
-  }
+	static auto final_suspend() noexcept
+	{
+		return final_awaiter{};
+	}
 
-  void unhandled_exception() noexcept
-  {
-    assert(0 && "Coroutine throwing! Terminate!");
-  }
+	static void unhandled_exception() noexcept
+	{
+		assert(0 && "Coroutine throwing! Terminate!");
+	}
 };
 
-template <template <typename R> class task_class, typename Ty>
+template <template <typename R> class TaskClass, typename Ty>
 class promise_type : public base_promise
 {
 public:
-  using rvalue_type = std::conditional_t<std::is_arithmetic_v<Ty> || std::is_pointer_v<Ty>, Ty, Ty&&>;
+	promise_type() noexcept															 = default;
+	promise_type(const promise_type&)										 = default;
+	promise_type(promise_type&&)												 = default;
+	auto operator=(const promise_type&) -> promise_type& = default;
+	auto operator=(promise_type&&) -> promise_type&			 = default;
+	using rvalue_type = std::conditional_t<std::is_arithmetic_v<Ty> || std::is_pointer_v<Ty>, Ty, Ty&&>;
 
-  inline ~promise_type() noexcept
-  {
-    if (!std::is_trivially_destructible_v<Ty>)
-      result().~Ty();
-  }
+	~promise_type() noexcept
+	{
+		if (!std::is_trivially_destructible_v<Ty>)
+		{
+			result().~Ty();
+		}
+	}
 
-  template <std::convertible_to<Ty> V>
-  void return_value(V&& value) noexcept(std::is_nothrow_constructible_v<Ty, V&&>)
-  {
-    ::new (data) Ty(std::forward<V>(value));
-  }
+	template <std::convertible_to<Ty> V>
+	void return_value(V&& value) noexcept(std::is_nothrow_constructible_v<Ty, V&&>)
+	{
+		::new (data_) Ty(std::forward<V>(value));
+	}
 
-  Ty& result() & noexcept
-  {
-    return *reinterpret_cast<Ty*>(data);
-  }
+	auto result() & noexcept -> Ty&
+	{
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+		return *reinterpret_cast<Ty*>(data_);
+	}
 
-  rvalue_type result() &&
-  {
-    return std::move(*reinterpret_cast<Ty*>(data));
-  }
+	auto result() && -> rvalue_type
+	{
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+		return std::move(*reinterpret_cast<Ty*>(data_));
+	}
 
-  task_class<Ty> get_return_object() noexcept
-  {
-    return task_class<Ty>(std::coroutine_handle<promise_type<task_class, Ty>>::from_promise(*this));
-  }
-
-private:
-  alignas(alignof(Ty)) std::byte data[sizeof(Ty)];
-};
-
-template <template <typename R> class task_class, typename Ty>
-class promise_type<task_class, Ty&> : public base_promise
-{
-public:
-  inline ~promise_type() noexcept = default;
-
-  void return_value(Ty& value) noexcept
-  {
-    data = &value;
-  }
-
-  Ty& result() noexcept
-  {
-    return *data;
-  }
-
-  task_class<Ty&> get_return_object() noexcept
-  {
-    return task_class<Ty&>(std::coroutine_handle<promise_type<task_class, Ty&>>::from_promise(*this));
-  }
+	auto get_return_object() noexcept -> TaskClass<Ty>
+	{
+		return TaskClass<Ty>(std::coroutine_handle<promise_type<TaskClass, Ty>>::from_promise(*this));
+	}
 
 private:
-  Ty* data = nullptr;
+	alignas(alignof(Ty)) std::byte data_[sizeof(Ty)]{};
 };
 
-template <template <typename R> class task_class>
-class promise_type<task_class, void> : public base_promise
+template <template <typename R> class TaskClass, typename Ty>
+class promise_type<TaskClass, Ty&> : public base_promise
 {
 public:
-  inline ~promise_type() noexcept {}
+	promise_type() noexcept															 = default;
+	promise_type(const promise_type&)										 = default;
+	promise_type(promise_type&&)												 = default;
+	auto operator=(const promise_type&) -> promise_type& = default;
+	auto operator=(promise_type&&) -> promise_type&			 = default;
 
-  void result() & noexcept {}
-  void return_void() noexcept {}
+	~promise_type() noexcept = default;
 
-  task_class<void> get_return_object() noexcept
-  {
-    return task_class<void>(std::coroutine_handle<promise_type<task_class, void>>::from_promise(*this));
-  }
+	void return_value(Ty& value) noexcept
+	{
+		data_ = &value;
+	}
+
+	auto result() noexcept -> Ty&
+	{
+		return *data_;
+	}
+
+	auto get_return_object() noexcept -> TaskClass<Ty&>
+	{
+		return TaskClass<Ty&>(std::coroutine_handle<promise_type<TaskClass, Ty&>>::from_promise(*this));
+	}
+
+private:
+	Ty* data_ = nullptr;
 };
 
-template <template <typename R> class task_class, typename Ty>
-class sequence_promise : public promise_type<task_class, Ty>
+template <template <typename R> class TaskClass>
+class promise_type<TaskClass, void> : public base_promise
 {
 public:
-  auto initial_suspend() noexcept
-  {
-    return std::suspend_never();
-  }
+	promise_type() noexcept															 = default;
+	promise_type(const promise_type&)										 = default;
+	promise_type(promise_type&&)												 = default;
+	auto operator=(const promise_type&) -> promise_type& = default;
+	auto operator=(promise_type&&) -> promise_type&			 = default;
 
-  task_class<Ty> get_return_object() noexcept
-  {
-    return task_class<Ty>(std::coroutine_handle<sequence_promise<task_class, Ty>>::from_promise(*this));
-  }
+	~promise_type() noexcept = default;
+
+	void result() & noexcept {}
+	void return_void() noexcept {}
+
+	auto get_return_object() noexcept -> TaskClass<void>
+	{
+		return TaskClass<void>(std::coroutine_handle<promise_type<TaskClass, void>>::from_promise(*this));
+	}
+};
+
+template <template <typename R> class TaskClass, typename Ty>
+class sequence_promise : public promise_type<TaskClass, Ty>
+{
+public:
+	auto initial_suspend() noexcept
+	{
+		return std::suspend_never();
+	}
+
+	auto get_return_object() noexcept -> TaskClass<Ty>
+	{
+		return TaskClass<Ty>(std::coroutine_handle<sequence_promise<TaskClass, Ty>>::from_promise(*this));
+	}
 };
 
 struct sync_waiter
 {
-  class promise_type
-  {
-  public:
-    inline auto initial_suspend() noexcept
-    {
-      return std::suspend_never();
-    }
-    inline auto final_suspend() noexcept
-    {
-      return std::suspend_never();
-    }
-    inline void unhandled_exception() noexcept
-    {
-      assert(0 && "Coroutine throwing! Terminate!");
-    }
-    void return_void() noexcept {}
+	class promise_type
+	{
+	public:
+		static auto initial_suspend() noexcept
+		{
+			return std::suspend_never();
+		}
+		static auto final_suspend() noexcept
+		{
+			return std::suspend_never();
+		}
+		static void unhandled_exception() noexcept
+		{
+			assert(0 && "Coroutine throwing! Terminate!");
+		}
+		void return_void() noexcept {}
 
-    sync_waiter get_return_object() const
-    {
-      return sync_waiter{};
-    }
-  };
+		[[nodiscard]] static auto get_return_object() -> sync_waiter
+		{
+			return sync_waiter{};
+		}
+	};
 };
 
 template <typename EventType, typename Awaiter>
-sync_waiter wait(EventType& event, Awaiter&& task)
+auto wait(EventType* event, Awaiter* task) -> sync_waiter
 {
-  co_await task;
-  event.notify();
-  co_return;
+	co_await *task;
+	event->notify();
+	co_return;
 }
 
 } // namespace acl::detail
