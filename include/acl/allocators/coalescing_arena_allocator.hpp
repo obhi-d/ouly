@@ -329,7 +329,7 @@ public:
 	template <CoalescingMemoryManager M, typename Alignment = acl::alignment<>, typename Dedicated = std::false_type>
 	auto allocate(size_type size, M& manager, Alignment alignment = {}, Dedicated /*unused*/ = {}) -> ca_allocation
 	{
-		auto measure = this->statistics::report_allocate(size);
+		auto measure = statistics::report_allocate(size);
 		auto vsize	 = alignment ? size + static_cast<size_type>(alignment) : size;
 
 		if (Dedicated::value || vsize >= arena_size_)
@@ -383,7 +383,7 @@ private:
 	template <CoalescingMemoryManager M>
 	auto add_arena_filled(size_type size, M& manager) -> std::pair<arena_id, allocation_id>
 	{
-		this->statistics::report_new_arena();
+		statistics::report_new_arena();
 		auto ret = add_arena(size, false);
 		manager.add(ret.first, size);
 		return ret;
