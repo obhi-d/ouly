@@ -256,7 +256,31 @@ using coalescing_arena_allocator_base = detail::statistics<detail::ca_allocator_
 using coalescing_arena_allocator_base = detail::statistics<detail::ca_allocator_tag, acl::options<>>;
 #endif
 
-/** @brief Arena's and Allocation IDs are consequetive integers, and can be used as indexes. */
+/**
+ * @brief A coalescing arena allocator that manages memory blocks within arenas
+ *
+ * This allocator maintains a collection of memory arenas and manages allocations within them.
+ * It supports coalescing of free blocks to reduce fragmentation. The allocator tracks block
+ * sizes, offsets and arena assignments.
+ *
+ * Key features:
+ * - Supports variable sized allocations
+ * - Coalesces adjacent free blocks
+ * - Tracks arena assignments for blocks
+ * - Allows arena size adjustments
+ * - Supports dedicated allocations
+ * - Maintains allocation metadata
+ *
+ * The allocator uses an arena-based approach where memory is allocated in chunks (arenas)
+ * and then sub-allocated into smaller blocks. When blocks are freed, adjacent free blocks
+ * are merged to reduce fragmentation.
+ *
+ * @note This allocator inherits from coalescing_arena_allocator_base
+ * @note Arena size can only be increased, not decreased
+ * @note Allocation information can be retrieved using allocation IDs
+ * @note Dedicated allocations bypass block coalescing
+ * @note Arena and allocation IDs are consequetive integers, and can be used as indexes.
+ */
 class coalescing_arena_allocator : coalescing_arena_allocator_base
 {
 public:

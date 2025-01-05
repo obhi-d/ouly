@@ -8,6 +8,37 @@
 
 namespace acl::ecs
 {
+/**
+ * @brief A basic entity class that manages entity identifiers with optional revision tracking
+ *
+ * @tparam SizeType The underlying type used for storing entity identifiers
+ * @tparam RevisionBits The number of bits reserved for revision tracking
+ * @tparam NullValue The value representing a null/invalid entity
+ * @tparam min_revision_bit_count Minimum number of bits required for revision tracking
+ *
+ * This class provides a type-safe wrapper around entity identifiers with built-in
+ * support for optional revision tracking. The identifier is split into two parts:
+ * - Index bits: Used to store the actual entity identifier
+ * - Revision bits: Used to track entity reuse and detect stale references
+ *
+ * Key features:
+ * - Configurable size type and null value
+ * - Optional revision tracking through template parameters
+ * - Efficient bit manipulation for index and revision management
+ * - Comparison operators
+ * - Explicit conversion to underlying type and boolean
+ *
+ * The revision system helps detect use-after-free scenarios in entity management
+ * by incrementing a revision counter when entities are recycled.
+ *
+ * Example usage:
+ * @code
+ * basic_entity<uint32_t, 8> entity; // 8 bits for revision, 24 for index
+ * @endcode
+ *
+ * @note When RevisionBits is 0, revision tracking is disabled and the entire
+ * size_type is used for the entity index.
+ */
 constexpr uint8_t min_revision_bit_count = 8;
 template <typename Ty, typename SizeType = uint32_t, uint32_t RevisionBits = 0, SizeType NullValue = (SizeType)0>
 class basic_entity

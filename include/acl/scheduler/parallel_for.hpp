@@ -12,6 +12,52 @@
 namespace acl
 {
 
+/**
+ * @brief A parallel execution utility for processing ranges of data across multiple workers
+ *
+ * @namespace acl
+ *
+ * This namespace contains implementations for parallel task execution, particularly the parallel_for
+ * utility which distributes work across multiple workers in a work group.
+ *
+ * Key Components:
+ *
+ * - default_task_traits: Configuration struct for controlling parallel execution behavior
+ *   - batches_per_worker: Controls granularity of work distribution
+ *   - parallel_execution_threshold: Minimum task count for parallel execution
+ *   - fixed_batch_size: Optional override for batch size
+ *
+ * - parallel_for: Main interface for parallel execution
+ *   Supports two types of lambda functions:
+ *   1. Range-based: void(Iterator begin, Iterator end, worker_context const& context)
+ *   2. Element-based: void(T& element, worker_context const& context)
+ *
+ * Usage Examples:
+ * @code
+ *   // Range-based execution
+ *   parallel_for([](auto begin, auto end, auto& ctx) {
+ *       // Process range [begin, end)
+ *   }, container, workgroup_id);
+ *
+ *   // Element-based execution
+ *   parallel_for([](auto& element, auto& ctx) {
+ *       // Process single element
+ *   }, container, workgroup_id);
+ * @endcode
+ *
+ * The implementation automatically:
+ * - Determines optimal batch sizes based on task traits
+ * - Handles task distribution across available workers
+ * - Manages synchronization using std::latch
+ * - Falls back to sequential execution for small ranges
+ *
+ * @note The parallel execution is only triggered if the task count exceeds
+ *       parallel_execution_threshold and can be effectively parallelized
+ *
+ * @see default_task_traits For customizing execution behavior
+ * @see worker_context For execution context details
+ * @see scheduler For task scheduling implementation
+ */
 struct default_task_traits
 {
 	/**
@@ -299,7 +345,6 @@ void parallel_for(L lambda, FwIt range, worker_context const& this_context, Task
  * Use TaskTraits to modify the behavior of the execution. Check @class default_task_traits
  *
  */
-
 template <typename L, typename FwIt, typename TaskTraits = default_task_traits>
 void parallel_for(L&& lambda, FwIt range, worker_id current, workgroup_id workgroup, scheduler& s, TaskTraits tt = {})
 {

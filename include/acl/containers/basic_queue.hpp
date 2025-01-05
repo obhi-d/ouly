@@ -8,7 +8,39 @@
 
 namespace acl
 {
-
+/**
+ * @brief A queue container with block-based memory allocation
+ *
+ * @tparam Ty The type of elements stored in the queue
+ * @tparam Options Configuration options for the queue, affecting allocation and size type
+ *
+ * basic_queue implements a queue data structure that allocates memory in fixed-size blocks.
+ * It provides efficient push and pop operations with memory reuse through a free list.
+ * The container supports both trivial and non-trivial types, handling construction and
+ * destruction appropriately.
+ *
+ * Key features:
+ * - Block-based memory allocation with configurable block size
+ * - Efficient memory reuse through free list
+ * - Support for move and copy operations
+ * - Exception-safe operations
+ * - Custom allocator support
+ *
+ * Memory layout:
+ * - Elements are stored in blocks of fixed size (determined by Options)
+ * - Each block maintains a pointer to the next block
+ * - Freed blocks are kept in a free list for reuse
+ *
+ * Usage example:
+ * ```
+ * basic_queue<int> queue;
+ * queue.emplace_back(1);
+ * int value = queue.pop_front();
+ * ```
+ *
+ * @note The queue size grows automatically as elements are added
+ * @warning pop_front() throws an exception when the queue is empty
+ */
 template <typename Ty, typename Options = acl::default_options<Ty>>
 class basic_queue : public detail::custom_allocator_t<Options>
 {

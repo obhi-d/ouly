@@ -14,10 +14,47 @@
 #include <cstdint>
 #include <cstring>
 #include <memory>
-// refer to:
-// https://en.cppreference.com/w/cpp/header/vector
 namespace acl
 {
+/**
+ * @brief A vector implementation that can store a small number of elements inline
+ *
+ * small_vector is a container that encapsulates dynamic size arrays with the ability to store
+ * a small number of elements within the object itself, avoiding heap allocation for small arrays.
+ * It combines the benefits of std::vector with small buffer optimization.
+ *
+ * @tparam Ty The type of elements
+ * @tparam N The number of elements that can be stored inline before requiring heap allocation
+ * @tparam Options Configuration options for the vector (allocator, memory traits, etc.)
+ *
+ * Features:
+ * - Inline storage for small arrays (up to N elements)
+ * - Automatic transition to heap storage when size exceeds inline capacity
+ * - STL-compatible container interface
+ * - Support for custom allocators
+ * - Configurable memory traits (zero memory, no fill, POD optimizations)
+ * - Move semantics support
+ *
+ * Performance characteristics:
+ * - O(1) access to elements
+ * - O(1) addition/removal at the end
+ * - O(n) insertion/removal in the middle
+ * - No heap allocation for small arrays (≤ N elements)
+ *
+ * Memory guarantees:
+ * - Elements are stored contiguously
+ * - No heap allocation until more than N elements are stored
+ * - Maintains proper alignment for the stored type
+ *
+ * Example usage:
+ * @code
+ * small_vector<int, 16> vec;  // Can store up to 16 ints without heap allocation
+ * vec.push_back(42);          // Stored inline
+ * @endcode
+ *
+ * @note The actual inline capacity might be larger than N to accommodate the heap storage data
+ *       when N is very small
+ */
 template <typename Ty, std::size_t N = 0, typename Options = acl::default_options<Ty>>
 class small_vector : public detail::custom_allocator_t<Options>
 {

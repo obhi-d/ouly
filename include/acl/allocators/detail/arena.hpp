@@ -1,41 +1,9 @@
 ﻿#pragma once
-#include "arena_block.hpp"
 #include <acl/allocators/default_allocator.hpp>
+#include <acl/allocators/detail/arena_block.hpp>
 #include <acl/containers/table.hpp>
-
-namespace acl::opt
-{
-template <std::size_t Value>
-struct granularity
-{
-	static constexpr std::size_t granularity_v = Value;
-};
-
-template <std::size_t Value>
-struct max_bucket
-{
-	static constexpr std::size_t max_bucket_v = Value;
-};
-
-template <std::size_t Value>
-struct search_window
-{
-	static constexpr std::size_t search_window_v = Value;
-};
-
-template <typename T>
-struct fallback_start
-{
-	using fallback_strat_t = T;
-};
-
-template <std::size_t Value>
-struct fixed_max_per_slot
-{
-	static constexpr std::size_t fixed_max_per_slot_v = Value;
-};
-
-} // namespace acl::opt
+#include <concepts>
+#include <cstdint>
 
 namespace acl::detail
 {

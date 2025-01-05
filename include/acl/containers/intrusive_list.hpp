@@ -134,6 +134,37 @@ struct list_data<Ty, M, B, true> : B
 
 } // namespace detail
 
+/**
+ * @brief A templated intrusive linked list container.
+ *
+ * An intrusive list where nodes contain their own linking pointers, allowing for
+ * efficient insertion and removal without additional memory allocation. Supports both
+ * singly-linked and doubly-linked list variants.
+ *
+ * Features:
+ * - Optional tail caching for O(1) back operations
+ * - Optional size caching
+ * - Bidirectional iteration when using doubly-linked nodes with tail caching
+ * - Move semantics (no copy operations)
+ *
+ * @tparam M Member pointer type that points to the hook in the node
+ * @tparam SizeType Integer type used for size tracking
+ * @tparam CacheSize Whether to cache and maintain list size
+ * @tparam CacheTail Whether to cache the tail node pointer
+ *
+ * Key operations:
+ * - push_front() - O(1) insertion at front
+ * - push_back() - O(1) insertion at back (requires CacheTail)
+ * - pop_front() - O(1) removal from front
+ * - pop_back() - O(1) removal from back (requires doubly-linked and CacheTail)
+ * - insert_after() - O(1) insertion after node
+ * - erase_after() - O(1) removal after node
+ * - insert() - O(1) insertion before node (requires doubly-linked)
+ * - erase() - O(1) removal of node (requires doubly-linked)
+ *
+ * @note This is an intrusive container - nodes must contain appropriate hook members.
+ * @note No memory management is performed by the container.
+ */
 template <auto M, bool CacheSize = true, bool CacheTail = true, typename SizeType = uint32_t>
 class intrusive_list
 {

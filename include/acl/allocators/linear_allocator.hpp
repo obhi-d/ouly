@@ -9,6 +9,35 @@ namespace acl
 struct linear_allocator_tag
 {};
 
+/**
+ * @brief A linear (arena) allocator that allocates memory in a sequential manner
+ *
+ * The linear allocator manages a contiguous block of memory and allocates by simply
+ * incrementing a pointer. It only supports deallocation of the most recently allocated
+ * block (LIFO order).
+ *
+ * @tparam Options Configuration options for the allocator
+ *
+ * Features:
+ * - Fast allocation (O(1))
+ * - Supports aligned allocations
+ * - Memory is only freed when the allocator is destroyed
+ * - Supports LIFO (Last-In-First-Out) deallocation
+ * - Move constructible/assignable but not copy constructible/assignable
+ *
+ * Example usage:
+ * @code
+ * linear_allocator alloc(1024); // Creates 1KB arena
+ * void* ptr = alloc.allocate(128); // Allocates 128 bytes
+ * alloc.deallocate(ptr, 128); // Deallocates if it was the last allocation
+ * @endcode
+ *
+ * @note This allocator is particularly useful for situations where memory is allocated
+ * in a specific order and freed all at once, or when memory fragmentation needs to be avoided.
+ *
+ * @warning Deallocating memory out of order will not reclaim the memory until the allocator
+ * is destroyed. Only the most recently allocated block can be effectively deallocated.
+ */
 template <typename Options = acl::options<>>
 class linear_allocator : detail::statistics<linear_allocator_tag, Options>
 {

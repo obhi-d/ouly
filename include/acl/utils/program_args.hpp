@@ -12,6 +12,40 @@
 #include <variant>
 #include <vector>
 
+/**
+ * @file program_args.hpp
+ * @brief A flexible command-line argument parsing utility.
+ *
+ * This header provides the program_args class template for parsing and managing
+ * command-line arguments in C++ applications. It supports various argument types
+ * including scalars, booleans, arrays, and strings with features such as:
+ *
+ * - Support for both long (--argument) and short (-a) argument formats
+ * - Type-safe argument parsing and conversion
+ * - Documentation generation
+ * - Automatic help message generation
+ * - Flexible argument declaration and value retrieval
+ *
+ * Example usage:
+ * @code
+ * acl::program_args args;
+ * args.parse_args(argc, argv);
+ * auto arg = args.decl<int>("number", "n").doc("A number argument");
+ * if (auto value = arg.value()) {
+ *     // use *value
+ * }
+ * @endcode
+ *
+ * The utility supports several argument type concepts:
+ * - ProgramDocFormatter: For formatting documentation output
+ * - ProgramArgScalarType: For numeric types (int32_t, uint32_t, float)
+ * - ProgramArgBoolType: For boolean flags
+ * - ProgramArgArrayType: For container types
+ *
+ * @tparam StringType The string type used for storing names and documentation
+ *                    (defaults to std::string_view)
+ */
+
 namespace acl
 {
 enum class program_document_type : uint8_t

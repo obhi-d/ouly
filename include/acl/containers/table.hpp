@@ -8,7 +8,34 @@
 
 namespace acl
 {
-
+/**
+ * @brief A container class that manages a pool of elements with recycled indices
+ *
+ * @tparam T The type of elements stored in the table
+ * @tparam IsPOD Boolean indicating if T is a Plain Old Data type
+ *
+ * This container provides constant-time insertion and deletion operations while
+ * maintaining stable indices to elements. When elements are erased, their slots
+ * are recycled for future insertions. The implementation differs based on whether
+ * T is a POD type or not:
+ *
+ * For POD types:
+ * - Uses a single free_idx structure to track unused slots
+ * - Reuses memory of deleted elements to store the free list
+ * - Maintains a count of valid elements
+ *
+ * For non-POD types:
+ * - Uses a separate vector to store free indices
+ * - Resets deleted elements to default state
+ * - Recycles indices from the free list
+ *
+ * Memory layout is optimized for POD types by avoiding additional storage for
+ * managing free slots.
+ *
+ * @note Indices remain stable until the referenced element is erased
+ * @note The implementation uses reinterpret_cast for POD types which assumes
+ *       the size of T is sufficient to store a 32-bit index
+ */
 template <DefaultConstructible T, bool IsPOD = std::is_trivial_v<T>>
 class table
 {

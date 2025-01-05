@@ -11,6 +11,38 @@ namespace opt
 struct linear_arena_allocator_tag
 {};
 
+/**
+ * @brief A linear arena allocator that manages memory in contiguous blocks (arenas)
+ *
+ * This allocator maintains a list of memory arenas and allocates memory linearly within them.
+ * When an arena is full, it creates a new one. Memory can only be deallocated in reverse order
+ * of allocation within each arena. The allocator supports aligned allocations.
+ *
+ * @tparam Options Configuration options for the allocator including statistics tracking and
+ *                 underlying allocator selection
+ *
+ * Key features:
+ * - Linear allocation within fixed-size arenas
+ * - Support for aligned allocations
+ * - Memory can be deallocated in LIFO order within arenas
+ * - Ability to rewind memory state
+ * - Optional statistics tracking
+ * - Configurable arena size (default 4MB)
+ * - Move constructible but not copy constructible
+ *
+ * Memory management:
+ * - Allocations are made linearly within the current arena
+ * - When an arena is full, a new one is created
+ * - Minimum allocation size is 64 bytes
+ * - Supports zero-initialization of allocated memory
+ * - Smart rewind functionality to clean up unused arenas
+ *
+ * Usage notes:
+ * - Best suited for temporary allocations with defined lifetime
+ * - Efficient for sequential allocations
+ * - Deallocation only works effectively for LIFO order
+ * - Memory fragmentation is minimized due to linear allocation pattern
+ */
 template <typename Options = acl::options<>>
 class linear_arena_allocator : detail::statistics<linear_arena_allocator_tag, Options>
 {

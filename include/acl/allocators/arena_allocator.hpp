@@ -1,6 +1,7 @@
 ﻿#pragma once
 
-#include "arena.hpp"
+#include <acl/allocators/arena_options.hpp>
+#include <acl/allocators/detail/arena.hpp>
 
 #include <bit>
 #include <concepts>
@@ -13,6 +14,47 @@
 #include "strat_best_fit_v2.hpp"
 #include "strat_greedy_v0.hpp"
 #include "strat_greedy_v1.hpp"
+
+/**
+ * @file arena_allocator.hpp
+ * @brief Arena-based memory allocation system with defragmentation support
+ *
+ * This file implements a sophisticated arena allocator that manages memory in fixed-size
+ * blocks (arenas) with support for:
+ * - Custom allocation strategies
+ * - Memory defragmentation
+ * - Memory tracking and statistics
+ * - Configurable memory managers
+ * - Alignment control
+ *
+ * Key components:
+ * - arena_allocator: Main allocator class template
+ * - MemoryManager concept: Interface for external memory management
+ * - HasDefragmentSupport concept: Interface for defragmentation capabilities
+ *
+ * Features:
+ * - Efficient memory allocation and deallocation
+ * - Block coalescing for reduced fragmentation
+ * - Optional memory manager integration
+ * - Customizable allocation strategies
+ * - Memory movement tracking during defragmentation
+ * - Arena size customization
+ * - Memory alignment support
+ * - Statistics collection
+ *
+ * The allocator supports different operation modes:
+ * - Standalone mode (no external memory manager)
+ * - Managed mode (with external memory manager)
+ * - With or without defragmentation support
+ * - With or without statistics tracking
+ *
+ * @note The implementation uses template metaprogramming extensively to provide
+ * compile-time configuration options through the Options parameter.
+ *
+ * @see acl::arena_allocator
+ * @see acl::MemoryManager
+ * @see acl::HasDefragmentSupport
+ */
 
 namespace acl
 {
@@ -134,6 +176,46 @@ namespace acl
 {
 
 template <typename Options = std::monostate>
+/**
+ * @brief A memory allocator that manages memory in arenas (contiguous memory blocks).
+ *
+ * The arena_allocator provides efficient memory allocation and deallocation by managing
+ * memory in fixed-size arenas. It supports memory defragmentation, statistics tracking,
+ * and custom memory management strategies.
+ *
+ * @tparam Options Configuration options for the allocator, including:
+ *         - Memory manager support
+ *         - Defragmentation capabilities
+ *         - Statistics tracking
+ *         - Custom allocation strategies
+ *
+ * Key features:
+ * - Arena-based memory management
+ * - Optional memory defragmentation
+ * - Configurable arena sizes
+ * - Memory movement tracking
+ * - Memory alignment support
+ * - Memory statistics collection
+ * - Dedicated arena allocation for large memory blocks
+ *
+ * The allocator maintains internal data structures to track:
+ * - Free and allocated memory blocks
+ * - Arena organization
+ * - Memory block ordering
+ * - Allocation metadata
+ *
+ * Memory operations:
+ * - Allocation with optional alignment
+ * - Deallocation with automatic memory coalescing
+ * - Memory defragmentation (when supported)
+ * - Arena creation and management
+ *
+ * @note The allocator can be configured to work with or without an external memory manager
+ *       through the Options template parameter.
+ *
+ * @see memory_move For memory movement tracking during defragmentation
+ * @see alloc_info For allocation information storage
+ */
 class arena_allocator
 		: detail::statistics<detail::arena_allocator_tag, acl::options<Options, opt::base_stats<detail::defrag_stats>>>
 {
@@ -173,6 +255,12 @@ protected:
 	};
 
 public:
+	/**
+	 * @brief Represents a memory movement operation between locations and arenas
+	 *
+	 * This structure tracks the source and destination information for memory moves,
+	 * including positions and arena identifiers.
+	 */
 	struct memory_move
 	{
 		size_type			from_{};
@@ -181,19 +269,33 @@ public:
 		std::uint32_t arena_src_{};
 		std::uint32_t arena_dst_{};
 
+		/**
+		 * @brief Checks if memory has been moved from its original location
+		 * @return true if memory has been moved (different position or different arena)
+		 * @return false if memory is in original location
+		 */
 		[[nodiscard]] auto is_moved() const noexcept -> bool
 		{
 			return (from_ != to_ || arena_src_ != arena_dst_);
 		}
+
+		/**
+		 * @brief Constructs a memory_move with specific movement parameters
+		 * @param ifrom Starting position in source arena
+		 * @param ito Destination position in target arena
+		 * @param isize Size of memory block to move
+		 * @param iarena_src Source arena identifier
+		 * @param iarena_dst Destination arena identifier
+		 */
+		memory_move(size_type ifrom, size_type ito, size_type isize, std::uint32_t iarena_src, std::uint32_t iarena_dst)
+				: from_(ifrom), to_(ito), size_(isize), arena_src_(iarena_src), arena_dst_(iarena_dst)
+		{}
 
 		memory_move() noexcept														 = default;
 		memory_move(const memory_move&)										 = default;
 		memory_move(memory_move&&)												 = default;
 		auto operator=(const memory_move&) -> memory_move& = default;
 		auto operator=(memory_move&&) -> memory_move&			 = default;
-		memory_move(size_type ifrom, size_type ito, size_type isize, std::uint32_t iarena_src, std::uint32_t iarena_dst)
-				: from_(ifrom), to_(ito), size_(isize), arena_src_(iarena_src), arena_dst_(iarena_dst)
-		{}
 
 		~memory_move() = default;
 
@@ -238,6 +340,13 @@ public:
 	using alloc_info =
 	 std::conditional_t<has_memory_mgr, std::tuple<uhandle, ihandle, size_type>, std::pair<ihandle, size_type>>;
 
+	/**
+	 * @brief Constructs an arena allocator with a specified size and manager
+	 * @param i_arena_size The size of the memory arena to be managed
+	 * @param i_manager Reference to the arena manager that will oversee this allocator
+	 * @requires has_memory_mgr must be true for this constructor to be available
+	 * @note This constructor is marked noexcept and will not throw exceptions
+	 */
 	arena_allocator(size_type i_arena_size, arena_manager& i_manager) noexcept
 		requires(has_memory_mgr)
 			: mgr_(&i_manager), arena_size_(i_arena_size)
@@ -245,6 +354,17 @@ public:
 		ibank_.strat_.init(*this);
 	}
 
+	/**
+	 * @brief Default constructor for the arena_allocator
+	 *
+	 * Initializes the internal bank strategy and, if no memory manager is present,
+	 * creates an initial arena of default size.
+	 *
+	 * @note This constructor is marked noexcept
+	 *
+	 * @details If has_memory_mgr is false, it automatically adds a default arena
+	 * using k_null_sz handle with arena_size_ and marks it as static
+	 */
 	arena_allocator() noexcept
 	{
 		ibank_.strat_.init(*this);
@@ -272,19 +392,49 @@ public:
 	auto operator=(arena_allocator const&) noexcept -> arena_allocator& = default;
 	auto operator=(arena_allocator&&) noexcept -> arena_allocator&			= default;
 
+	/**
+	 * @brief Returns the root memory block of the arena allocator.
+	 *
+	 * @return The root memory block handle.
+	 */
 	auto get_root_block() const
 	{
 		return ibank_.bank_.root_blk;
 	}
 
-	//! get allocation info
+	/**
+	 * @brief Gets the arena and offset associated with a given handle.
+	 *
+	 * @param i_address The internal handle representing an allocation
+	 * @return std::pair<arena_id_t, size_t> Pair containing:
+	 *         - First: The arena identifier where allocation exists
+	 *         - Second: The offset within that arena
+	 */
 	auto get_alloc_offset(ihandle i_address) const
 	{
 		auto const& blk = ibank_.bank_.blocks()[block_link(i_address)];
 		return std::pair(blk.arena_, blk.offset_);
 	}
 
-	//! Allocate
+	/**
+	 * @brief Allocates memory from the arena with specified size and alignment
+	 *
+	 * @param isize Size of memory to allocate
+	 * @param i_alignment Alignment requirement for the allocation (default: no specific alignment)
+	 * @param huser User handle for the allocation (default: null handle)
+	 * @param Dedicated Whether the allocation requires a dedicated arena (unused parameter)
+	 *
+	 * @return alloc_info Structure containing:
+	 *         - If has_memory_mgr is true: pointer to allocated memory, block ID, and offset
+	 *         - If has_memory_mgr is false: block ID and offset
+	 *
+	 * @details
+	 * The allocation strategy is as follows:
+	 * 1. If allocation is dedicated or larger than arena size, creates a new arena
+	 * 2. Otherwise, attempts to allocate from existing arenas using the bank strategy
+	 * 3. If allocation fails and has_memory_mgr is true, attempts to create a new arena
+	 * 4. Returns empty alloc_info if allocation fails
+	 */
 	template <typename Alignment = alignment<>, typename Dedicated = std::false_type>
 	auto allocate(size_type isize, Alignment i_alignment = {}, uhandle huser = {}, Dedicated /*unused*/ = {})
 	 -> alloc_info
@@ -343,7 +493,24 @@ public:
 		}
 	}
 
-	//! Deallocate, size is optional
+	/**
+	 * @brief Deallocates a memory block and handles block merging
+	 *
+	 * This function deallocates a memory block identified by the given handle. It updates
+	 * the allocator statistics and performs block merging when possible. The function can
+	 * merge the block with adjacent free blocks (left and/or right) to reduce fragmentation.
+	 * If memory manager is enabled and an arena becomes completely free, it may be dropped.
+	 *
+	 * The merging strategy has four possible outcomes:
+	 * - No merge: The block is simply marked as free
+	 * - Left merge: Combines with free block on the left
+	 * - Right merge: Combines with free block on the right
+	 * - Both merge: Combines with free blocks on both sides
+	 *
+	 * @param node Handle to the memory block to deallocate
+	 *
+	 * @note This operation updates internal free size tracking and arena statistics
+	 */
 	void deallocate(ihandle node)
 	{
 		auto& blk			= ibank_.bank_.blocks()[block_link(node)];
@@ -505,6 +672,26 @@ public:
 		ibank_.strat_.validate_integrity(ibank_.bank_.blocks());
 	}
 
+	/**
+	 * @brief Defragments the memory arena by consolidating allocated blocks and removing empty arenas.
+	 *
+	 * This function performs memory defragmentation by:
+	 * 1. Creating a new memory layout with compacted allocations
+	 * 2. Moving allocated blocks to new locations
+	 * 3. Updating bindings for moved blocks
+	 * 4. Removing empty arenas
+	 *
+	 * The defragmentation process:
+	 * - Iterates through all arenas and their blocks
+	 * - Copies allocated blocks to new locations using a fresh allocation strategy
+	 * - Tracks memory moves and rebinding information
+	 * - Executes memory moves in correct sequence to prevent overwrites
+	 * - Updates all bindings to point to new locations
+	 * - Cleans up empty arenas
+	 *
+	 * @note This function is only available when the allocator supports defragmentation (can_defragment = true)
+	 * @note Statistics are updated if Options includes ComputeStats
+	 */
 	void defragment()
 		requires(can_defragment)
 	{

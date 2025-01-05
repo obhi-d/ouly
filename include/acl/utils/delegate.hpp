@@ -12,7 +12,6 @@
 /**
  * Defines a basic_delegate object with a memory store to store a function pointer and its capture inline allocated.
  */
-namespace acl
 /**
  * @brief A type-safe, lightweight delegate implementation with small object optimization.
  *
@@ -54,6 +53,7 @@ namespace acl
  * @note All stored callable objects must be trivially destructible
  * @warning The size of stored callables must not exceed the specified SmallSize
  */
+namespace acl
 {
 template <size_t SmallSize, typename>
 class basic_delegate;

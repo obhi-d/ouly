@@ -10,6 +10,33 @@
 #include <sstream>
 #include <vector>
 
+/**
+ * @file string_utils.hpp
+ * @brief Utility functions for string manipulation and processing
+ *
+ * This header provides a comprehensive set of string manipulation utilities including:
+ * - String searching and modification (index_of, contains, replace)
+ * - Case conversion (to_lower, to_upper)
+ * - String splitting and tokenization (split, split_last, tokenize)
+ * - Time string formatting (time_stamp, time_string)
+ * - String trimming and whitespace handling (trim, trim_leading, trim_trailing)
+ * - Word wrapping utilities (word_wrap, word_wrap_multiline)
+ * - Unicode and ASCII handling
+ * - Regular expression utilities
+ *
+ * The utilities support various string types including std::string, std::string_view,
+ * and Unicode encodings (UTF-8, UTF-16, UTF-32).
+ *
+ * Constants:
+ * - k_default_uchar: Default Unicode character (0xFFFD)
+ * - k_wrong_uchar: Invalid Unicode character marker (0xFFFF)
+ * - k_last_uchar: Maximum Unicode codepoint (0x10FFFF)
+ * - k_default: Default string value
+ * - k_default_sym: Default symbol (*)
+ *
+ * @note This utility header is part of the ACL (Abstract Core Library) namespace
+ * @note All functions are designed to be exception-safe and performance-oriented
+ */
 namespace acl
 {
 
@@ -313,6 +340,15 @@ inline auto trim_trailing(std::string_view str)
 	return str;
 }
 
+/**
+ * @brief Removes leading and trailing whitespace from a string.
+ *
+ * This function trims both leading and trailing whitespace characters from the input string
+ * by calling trim_leading and trim_trailing in sequence.
+ *
+ * @param str The string_view to be trimmed
+ * @return std::string_view The trimmed string
+ */
 inline auto trim(std::string_view str) -> std::string_view
 {
 	str = trim_leading(str);
@@ -320,6 +356,16 @@ inline auto trim(std::string_view str) -> std::string_view
 	return str;
 }
 
+/**
+ * @brief Checks if a string contains only ASCII characters
+ *
+ * Iterates through each character in the string and verifies if it falls within
+ * the ASCII character set (0-127).
+ *
+ * @param utf8_str The string view to check for ASCII characters
+ * @return true if all characters in the string are ASCII
+ * @return false if any character in the string is not ASCII
+ */
 inline auto is_ascii(std::string_view utf8_str) -> bool
 {
 	return std::ranges::find_if(utf8_str,
@@ -329,6 +375,22 @@ inline auto is_ascii(std::string_view utf8_str) -> bool
 															}) == utf8_str.end();
 }
 
+/**
+ * @brief Word wraps text to a specified width, handling tabs
+ *
+ * Takes a line of text and wraps it at word boundaries to ensure each line is no longer
+ * than the specified width. Tabs are converted to spaces according to tab_width.
+ *
+ * @tparam L Callable type that accepts two size_t parameters (line start and end positions)
+ * @param line_accept Callback function called for each wrapped line with (start, end) positions
+ * @param width Maximum width in characters for each line
+ * @param line Input text to be word-wrapped
+ * @param tab_width Number of spaces to substitute for each tab character (default: 2)
+ *
+ * The function processes the input text token by token, keeping track of tabs and line width.
+ * When a line exceeds the specified width, it calls the line_accept callback with the
+ * current line's start and end positions, then starts a new line.
+ */
 template <typename L>
 inline void word_wrap(L line_accept, uint32_t width, std::string_view line, uint32_t tab_width = 2)
 {
@@ -358,6 +420,22 @@ inline void word_wrap(L line_accept, uint32_t width, std::string_view line, uint
 	line_accept(line_start, line.length());
 }
 
+/**
+ * @brief Wraps text into multiple lines respecting both line width and existing line breaks
+ *
+ * Takes a multiline text input and performs word wrapping on each line individually,
+ * preserving original line breaks while ensuring no line exceeds the specified width.
+ *
+ * @tparam L Callable type that accepts line start and end positions
+ * @param line_accept Callback function called for each wrapped line with (start, end) positions
+ * @param width Maximum width of each line in characters
+ * @param input Input text to be wrapped
+ * @param tab_width Number of spaces a tab character represents (default: 2)
+ *
+ * The line_accept callback receives:
+ * - start position of the line in the original input
+ * - end position of the line in the original input
+ */
 template <typename L>
 inline void word_wrap_multiline(L line_accept, uint32_t width, std::string_view input, uint32_t tab_width = 2)
 {

@@ -7,8 +7,39 @@
 
 namespace acl::ecs
 {
-
 /**
+ * @brief A container class for managing components in an Entity Component System (ECS)
+ *
+ * @tparam Ty The type of component being stored
+ * @tparam EntityTy The entity type used for identification
+ * @tparam Options Configuration options for the component storage
+ *
+ * This class provides a efficient storage and management system for components in an ECS.
+ * It supports both sparse and dense storage strategies, direct mapping, and self-indexing
+ * capabilities based on the provided Options.
+ *
+ * Key features:
+ * - Flexible storage strategies (sparse or dense)
+ * - Optional direct mapping for faster access
+ * - Self-indexing capabilities for reverse lookups
+ * - Support for custom allocators
+ * - Iteration over components with entity information
+ *
+ * Requirements:
+ * - Ty must be default constructible
+ * - Ty must be move assignable
+ *
+ * Example usage:
+ * @code
+ * components<Position, Entity> positions;
+ * positions.emplace_at(entity, x, y, z);
+ * positions.for_each([](Entity e, Position& p) {
+ *     // Process each position component
+ * });
+ * @endcode
+ *
+ * @note The storage strategy and behavior can be customized through the Options template parameter
+ * @see EntityTy
  * Options:
  *  @par acl::opt::custom_vector<std::vector<Ty>>
  *  Use custom vector as the container
@@ -234,12 +265,23 @@ public:
 		}
 	}
 
+	/**
+	 * @brief For indirectly mapped components, returns the key (index) associated with the entity
+	 * @return The key associated with the entity or `tombstone` if not found (which is
+	 * std::numeric_limits<uint32_t>::max())
+	 */
 	auto key(entity_type point) const noexcept -> size_type
 		requires(!has_direct_mapping)
 	{
 		return keys_.get_if(point.get());
 	}
 
+	/**
+	 * @brief Returns a const reference to the internal keys container
+	 * @details This function is only available when the class does not use direct mapping
+	 * @return Const reference to the container holding the keys
+	 * @requires !has_direct_mapping
+	 */
 	auto keys() const noexcept -> auto const&
 		requires(!has_direct_mapping)
 	{
@@ -486,6 +528,15 @@ public:
 		}
 	}
 
+	/**
+	 * @brief Sets the maximum size for the component storage
+	 *
+	 * If the storage has direct mapping, ensures the internal storage
+	 * can accommodate at least (size-1) elements. This operation is
+	 * a no-op if the storage doesn't use direct mapping.
+	 *
+	 * @param size The maximum number of elements to accommodate
+	 */
 	void set_max(size_type size)
 	{
 		if constexpr (has_direct_mapping)

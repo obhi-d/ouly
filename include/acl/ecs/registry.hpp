@@ -71,7 +71,16 @@ public:
 	using revision_type = typename EntityTy::revision_type;
 	using type					= EntityTy;
 
-	/** @brief This can possibly be thread safe. */
+	/**
+	 * @brief Creates a new entity in the registry
+	 *
+	 * Attempts to reuse a previously freed slot if available.
+	 * If no freed slots are available, creates a new entity by incrementing the max size.
+	 *
+	 * @return A new entity of the specified type
+	 *
+	 * @note This operation is thread-safe due to atomic operations depending on the CounterType
+	 */
 	auto emplace() -> type
 	{
 		auto i = free_slot_.fetch_sub(1);
@@ -83,7 +92,22 @@ public:
 		return type(max_size_.fetch_add(1));
 	}
 
-	/** @brief This is not thread safe */
+	/**
+	 * @brief Erases a slot and manages its revision for reuse
+	 *
+	 * This method handles the erasure of a slot and prepares it for reuse by:
+	 * 1. Adding the revised slot to the free list
+	 * 2. Updating the free slot counter
+	 * 3. Incrementing the revision number (if revision tracking is enabled)
+	 * 4. Marking the container as unsorted
+	 *
+	 * @param l The slot to be erased
+	 *
+	 * @note If revision tracking is enabled, the revision number for the slot will be incremented
+	 * @note The operation will resize the revisions array if needed
+	 * @note Sets the sorted flag to false as the operation may affect sorting
+	 * @note This method is not thread safe
+	 */
 	void erase(type l)
 	{
 		auto count = free_slot_.load();
@@ -114,7 +138,21 @@ public:
 		sorted_ = false;
 	}
 
-	/** @brief This is not thread safe */
+	/**
+	 * @brief Erases a list of elements from the registry
+	 *
+	 * This function handles the erasure of multiple elements by:
+	 * 1. Adding their indices to the free list for reuse
+	 * 2. Incrementing the revision counter for each erased element (if revision tracking is enabled)
+	 * 3. Marking the free list as unsorted
+	 *
+	 * @param ls Span of elements to erase
+	 *
+	 * @note The function maintains a free list of slots that can be reused when creating new elements
+	 * @note If revision tracking is enabled, the revision counter for each erased element is incremented
+	 * @note The sorted state is set to false after erasure
+	 * @note This method is not thread safe
+	 */
 	void erase(std::span<type const> ls)
 	{
 		auto count = free_slot_.load();
@@ -162,18 +200,38 @@ public:
 		return static_cast<revision_type>(l.revision()) == base::revisions_[l.get()];
 	}
 
+	/**
+	 * @brief Gets the revision of a type identifier or component.
+	 * @tparam type The type parameter being used to query the revision.
+	 * @param l The type identifier or component to get the revision for.
+	 * @return The revision value associated with the type.
+	 * @note This overload only participates in overload resolution when revision_type is not void.
+	 */
 	auto get_revision(type l) const noexcept
 		requires(!std::is_same_v<revision_type, void>)
 	{
 		return get_revision(l.get());
 	}
 
+	/** @see get_revision */
 	auto get_revision(size_type l) const noexcept
 		requires(!std::is_same_v<revision_type, void>)
 	{
 		return l < base::revisions_.size() ? base::revisions_[l] : 0;
 	}
 
+	/**
+	 * @brief Iterates through all entity indices in the registry
+	 *
+	 * If the free list is not sorted, sorts it before iteration.
+	 * Calls the provided lambda for each valid entity index.
+	 *
+	 * @tparam Lambda Callable type that accepts an entity index parameter
+	 * @param l Lambda function to execute for each index, must accept a size_type parameter
+	 *
+	 * @note Ensures the free list is sorted before iteration
+	 * @see sort_free()
+	 */
 	template <typename Lambda>
 	void for_each_index(Lambda&& l)
 	{
@@ -184,6 +242,15 @@ public:
 		internal_for_each(std::forward<Lambda>(l), free_, max_size_.load());
 	}
 
+	/**
+	 * @brief Iterates through indices in the registry, optionally sorting them
+	 * @tparam Lambda Function type that accepts index parameters
+	 * @param l Lambda function to execute for each valid index
+	 *
+	 * If the registry is marked as sorted, iterates through indices directly.
+	 * Otherwise, creates a sorted copy of indices before iteration.
+	 * Sorting is done based on the type of each index.
+	 */
 	template <typename Lambda>
 	void for_each_index(Lambda&& l) const
 	{
@@ -203,11 +270,25 @@ public:
 		}
 	}
 
+	/**
+	 * @brief Gets the maximum size limit of the registry
+	 * @return The maximum number of entities that can be stored in the registry
+	 * @note This is a thread-safe operation as it accesses an atomic value
+	 */
 	[[nodiscard]] auto max_size() const -> uint32_t
 	{
 		return max_size_.load();
 	}
 
+	/**
+	 * @brief Sorts the free list based on entity types.
+	 *
+	 * This function sorts the internal free list of entities in ascending order based on their types.
+	 * After sorting, the sorted_ flag is set to true to indicate the list is in sorted state.
+	 *
+	 * @note The sorting is performed using std::ranges::sort with a comparison function that
+	 *       compares entity types.
+	 */
 	void sort_free()
 	{
 		std::ranges::sort(free_,

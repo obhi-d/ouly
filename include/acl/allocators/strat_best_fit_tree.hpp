@@ -1,5 +1,7 @@
 ﻿#pragma once
-#include <acl/allocators/arena.hpp>
+
+#include <acl/allocators/arena_options.hpp>
+#include <acl/allocators/detail/arena.hpp>
 #include <acl/containers/rbtree.hpp>
 #include <acl/utils/type_traits.hpp>
 

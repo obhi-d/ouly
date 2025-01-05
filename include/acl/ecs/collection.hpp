@@ -13,8 +13,40 @@ namespace acl::ecs
 {
 
 /**
- * @brief A collection of links, but not stored in vectors, instead managed by bitmap
- * @tparam Options options controlling behaviour of the container
+ * @brief A collection class for managing entities with optional revision tracking
+ *
+ * @tparam EntityTy The entity type to be stored
+ * @tparam Options Configuration options for the collection
+ *
+ * Collection provides efficient storage and management of entities using a bitset-based
+ * approach with optional revision tracking. It organizes entities in fixed-size pools
+ * for memory efficiency.
+ *
+ * Features:
+ * - Efficient entity insertion and removal
+ * - Optional revision tracking for entity validation
+ * - Memory-efficient bitset-based storage
+ * - Custom allocator support
+ * - Range-based iteration capabilities
+ *
+ * The collection uses a pool-based memory allocation strategy where entities are stored
+ * in fixed-size pools. When revision tracking is enabled, it maintains both entity
+ * existence bits and revision numbers.
+ *
+ * Memory Layout:
+ * - Without revision: Single bitset per pool
+ * - With revision: Bitset and hazard (revision) array per pool
+ *
+ * Usage:
+ * ```
+ * collection<Entity> entities;
+ * entities.emplace(entity);  // Add entity
+ * entities.erase(entity);    // Remove entity
+ * entities.contains(entity); // Check if entity exists
+ * ```
+ *
+ * @note The collection automatically manages memory allocation and deallocation of pools
+ * @note Revision tracking is only enabled in debug mode and when entity type uses uint8_t revision
  */
 template <typename EntityTy, typename Options = acl::default_options<EntityTy>>
 class collection : public detail::custom_allocator_t<Options>
@@ -80,11 +112,36 @@ public:
 		return *this;
 	}
 
+	/**
+	 * @brief Applies a lambda function to each element in the container within the entire range.
+	 *
+	 * This is a convenience overload that processes the entire container range.
+	 *
+	 * @tparam Cont The container type
+	 * @tparam Lambda The lambda function type
+	 * @param cont The container to process
+	 * @param lambda The lambda function to apply to each element
+	 *
+	 * @note This operation is noexcept
+	 */
 	template <typename Cont, typename Lambda>
 	void for_each(Cont& cont, Lambda&& lambda) noexcept
 	{
 		for_each_l<Cont, Lambda>(cont, 0, range(), std::forward<Lambda>(lambda));
 	}
+
+	/**
+	 * @brief Applies a lambda function to each element in the container within the entire range.
+	 *
+	 * This is a const-qualified convenience overload that processes the entire container range.
+	 *
+	 * @tparam Cont The container type
+	 * @tparam Lambda The lambda function type
+	 * @param cont The container to process
+	 * @param lambda The lambda function to apply to each element
+	 *
+	 * @note This operation is noexcept
+	 */
 	template <typename Cont, typename Lambda>
 	void for_each(Cont const& cont, Lambda&& lambda) const noexcept
 	{
@@ -92,12 +149,29 @@ public:
 		const_cast<this_type*>(this)->for_each_l(cont, 0, range(), std::forward<Lambda>(lambda));
 	}
 
+	/**
+	 * @brief Applies a lambda function to each element in the container within the specified range.
+	 *
+	 * This is a convenience overload that processes the container range from first to last.
+	 *
+	 * @tparam Cont The container type
+	 * @tparam Lambda The lambda function type
+	 * @param cont The container to process
+	 * @param first The first element index
+	 * @param last The last element index
+	 * @param lambda The lambda function to apply to each element
+	 *
+	 * @note This operation is noexcept
+	 */
 	template <typename Cont, typename Lambda>
 	void for_each(Cont& cont, size_type first, size_type last, Lambda&& lambda) noexcept
 	{
 		for_each_l<Cont, Lambda>(cont, first, last, std::forward<Lambda>(lambda));
 	}
 
+	/**
+	 * @brief Applies a lambda function to each element in the container within the specified range.
+	 */
 	template <typename Cont, typename Lambda>
 	void for_each(Cont const& cont, size_type first, size_type last, Lambda&& lambda) const noexcept
 	{
@@ -105,6 +179,23 @@ public:
 		const_cast<this_type*>(this)->for_each_l(cont, first, last, std::forward<Lambda>(lambda));
 	}
 
+	/**
+	 * @brief Adds an entity to the collection.
+	 *
+	 * This function inserts an entity into the collection by setting the appropriate bit
+	 * and updating related metadata. If revision tracking is enabled, it also stores
+	 * the entity's revision information.
+	 *
+	 * @param l The entity to be emplaced into the collection.
+	 *
+	 * @note This operation is noexcept and will not throw exceptions.
+	 *
+	 * @details The function:
+	 * - Updates the maximum linked index if necessary
+	 * - Sets the corresponding bit for the entity
+	 * - Updates revision information if revision tracking is enabled
+	 * - Increments the collection length
+	 */
 	void emplace(entity_type l) noexcept
 	{
 		auto idx = l.get();
@@ -117,6 +208,20 @@ public:
 		length_++;
 	}
 
+	/**
+	 * @brief Removes an entity from the collection
+	 *
+	 * Erases the specified entity from the collection by unsetting its corresponding bit
+	 * and decrements the collection length. If revision checking is enabled, validates
+	 * the entity's hazard revision before erasing.
+	 *
+	 * @param l The entity to erase from the collection
+	 *
+	 * @note This operation is noexcept and will not throw exceptions
+	 *
+	 * @pre If has_revision is true, the entity's revision must match the stored revision
+	 * @post The entity will be removed and the collection length decremented
+	 */
 	void erase(entity_type l) noexcept
 	{
 		auto idx = l.get();
@@ -128,6 +233,12 @@ public:
 		length_--;
 	}
 
+	/**
+	 * @brief Checks if the entity exists in the collection
+	 * @param l The entity to check
+	 * @return true if the entity exists in the collection, false otherwise
+	 * @note This operation is noexcept and will not throw exceptions
+	 */
 	auto contains(entity_type l) const noexcept -> bool
 	{
 		return is_bit_set(l.get());
@@ -143,6 +254,14 @@ public:
 		return static_cast<size_type>(items_.size()) * pool_size;
 	}
 
+	/**
+	 * @brief Returns the size of the range covering all valid indices
+	 *
+	 * The range includes all indices from 0 to the maximum link value plus 1,
+	 * representing the complete span of possible indices in the collection.
+	 *
+	 * @return size_type The number of elements in the range (max_link + 1)
+	 */
 	auto range() const noexcept -> size_type
 	{
 		return max_lnk_ + 1;
