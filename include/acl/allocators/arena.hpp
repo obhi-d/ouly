@@ -152,11 +152,11 @@ template <typename UsizeType, typename Extension>
 struct bank_data
 {
 	using link = typename block_bank<UsizeType, Extension>::link;
-	block_bank<UsizeType, Extension>	blocks_;
-	arena_bank<UsizeType, Extension>	arenas_;
-	arena_list<UsizeType, Extension>	arena_order_;
-	UsizeType													free_size_ = 0;
-	link															root_blk_;
+	block_bank<UsizeType, Extension> blocks_;
+	arena_bank<UsizeType, Extension> arenas_;
+	arena_list<UsizeType, Extension> arena_order_;
+	UsizeType												 free_size_ = 0;
+	link														 root_blk_;
 
 	bank_data() : root_blk_(blocks_.emplace())
 	{

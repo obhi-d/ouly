@@ -181,7 +181,7 @@ public:
 		{
 			sort_free();
 		}
-		for_each_(std::forward<Lambda>(l), free_, max_size_.load());
+		internal_for_each(std::forward<Lambda>(l), free_, max_size_.load());
 	}
 
 	template <typename Lambda>
@@ -189,7 +189,7 @@ public:
 	{
 		if (sorted_)
 		{
-			for_each_(std::forward<Lambda>(l), free_, max_size_.load());
+			internal_for_each(std::forward<Lambda>(l), free_, max_size_.load());
 		}
 		else
 		{
@@ -199,7 +199,7 @@ public:
 												{
 													return type(first).get() < type(second).get();
 												});
-			for_each_(std::forward<Lambda>(l), copy, max_size_.load());
+			internal_for_each(std::forward<Lambda>(l), copy, max_size_.load());
 		}
 	}
 
@@ -228,7 +228,7 @@ public:
 
 private:
 	template <typename Lambda>
-	static void for_each(Lambda lambda, auto const& copy, size_type max_size)
+	static void internal_for_each(Lambda lambda, auto const& copy, size_type max_size)
 	{
 		for (size_type i = 1, fi = 0; i < max_size; ++i)
 		{

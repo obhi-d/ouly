@@ -144,11 +144,12 @@ inline auto indent(int32_t amt) -> std::string
  * @return	true if string was replaced.
  *
  */
-inline auto replace_first(std::string& source, std::string_view search, std::string_view replace) -> bool
+inline auto replace_first(std::string& source, std::string_view search, std::string_view replace, size_t start_pos = 0)
+ -> bool
 {
 	assert(!search.empty());
 
-	if (size_t b = source.find(search, b); b != std::string::npos)
+	if (size_t b = source.find(search, start_pos); b != std::string::npos)
 	{
 		source.replace(b, search.size(), replace);
 		return true;
@@ -162,7 +163,8 @@ inline auto replace_first(std::string& source, std::string_view search, std::str
  * @return	Number of replacements
  *
  */
-inline auto replace(std::string& source, std::string_view search, std::string_view replace) -> uint32_t
+inline auto replace(std::string& source, std::string_view search, std::string_view replace, size_t start_pos = 0)
+ -> uint32_t
 
 {
 	if (search.empty())
@@ -171,7 +173,6 @@ inline auto replace(std::string& source, std::string_view search, std::string_vi
 	}
 	uint32_t count = 0;
 
-	size_t start_pos = 0;
 	while ((start_pos = source.find(search, start_pos)) != std::string::npos)
 	{
 		source.replace(start_pos, search.length(), replace);

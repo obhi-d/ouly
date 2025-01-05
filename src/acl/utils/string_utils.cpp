@@ -23,7 +23,7 @@ auto format_snake_case(const std::string& str) -> std::string
 		}
 		else
 		{
-			ret += std::to_string(upper ? ::toupper(str[i]) : ::tolower(str[i]));
+			ret += static_cast<char>(upper ? ::toupper(str[i]) : ::tolower(str[i]));
 			upper = false;
 		}
 		i++;

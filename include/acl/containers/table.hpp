@@ -37,11 +37,11 @@ public:
 		std::uint32_t index = 0;
 		if constexpr (IsPOD)
 		{
-			if (free_pool_.unused != detail::k_null_32)
+			if (free_pool_.unused_ != detail::k_null_32)
 			{
-				index = free_pool_.unused;
+				index = free_pool_.unused_;
 				// NOLINTNEXTLINE
-				free_pool_.unused = reinterpret_cast<std::uint32_t&>(pool_[free_pool_.unused]);
+				free_pool_.unused_ = reinterpret_cast<std::uint32_t&>(pool_[free_pool_.unused_]);
 			}
 			else
 			{
@@ -49,7 +49,7 @@ public:
 				pool_.resize(index + 1);
 			}
 			pool_[index] = T(std::forward<Args>(args)...);
-			free_pool_.valids++;
+			free_pool_.valids_++;
 		}
 		else
 		{
@@ -73,9 +73,9 @@ public:
 		if constexpr (IsPOD)
 		{
 			// NOLINTNEXTLINE
-			reinterpret_cast<std::uint32_t&>(pool_[index]) = free_pool_.unused;
-			free_pool_.unused															 = index;
-			free_pool_.valids--;
+			reinterpret_cast<std::uint32_t&>(pool_[index]) = free_pool_.unused_;
+			free_pool_.unused_														 = index;
+			free_pool_.valids_--;
 		}
 		else
 		{
@@ -112,7 +112,7 @@ public:
 	{
 		if constexpr (IsPOD)
 		{
-			return free_pool_.valids;
+			return free_pool_.valids_;
 		}
 		else
 		{

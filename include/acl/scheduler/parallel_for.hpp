@@ -176,20 +176,20 @@ void launch_parallel_tasks(L& lambda, auto range, uint32_t work_count, uint32_t 
 										 {
 											 if constexpr (detail::RangeExcuter<L, iterator_t>)
 											 {
-												 instance->lambda_instance.get()(instance->first + start, instance->first + end, wc);
+												 instance->lambda_instance_.get()(instance->first_ + start, instance->first_ + end, wc);
 											 }
 											 else
 											 {
-												 if constexpr (std::is_integral_v<std::decay_t<decltype(instance->first)>>)
+												 if constexpr (std::is_integral_v<std::decay_t<decltype(instance->first_)>>)
 												 {
-													 instance->lambda_instance.get()((instance->first + start), wc);
+													 instance->lambda_instance_.get()((instance->first_ + start), wc);
 												 }
 												 else
 												 {
-													 instance->lambda_instance.get()(*(instance->first + start), wc);
+													 instance->lambda_instance_.get()(*(instance->first_ + start), wc);
 												 }
 											 }
-											 instance->counter.count_down();
+											 instance->counter_.count_down();
 										 });
 		begin = next;
 	}
@@ -282,7 +282,7 @@ void parallel_for(L lambda, FwIt range, worker_context const& this_context, Task
 	}
 	else
 	{
-		launch_parallel_tasks(lambda, std::begin(range), work_count, fixed_batch_size, count, this_context);
+		launch_parallel_tasks(lambda, range, work_count, fixed_batch_size, count, this_context);
 	}
 }
 

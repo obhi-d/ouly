@@ -302,9 +302,9 @@ public:
 
 	auto erase(iterator node) -> iterator
 	{
-		auto r = unlink(node.owner, node.index);
-		Accessor::erase(node.owner, node.index);
-		return iterator(node.owner, r);
+		auto r = unlink(node.owner_, node.index_);
+		Accessor::erase(node.owner_, node.index_);
+		return iterator(node.owner_, r);
 	}
 
 	auto erase(container& cont, std::uint32_t node) -> std::uint32_t

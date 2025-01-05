@@ -40,9 +40,9 @@ struct block
 		using offset																		 = opt::member<&block<size_type, Extension>::self_>;
 	};
 
-	block() noexcept							 = default;
-	block(const block&)						 = default;
-	block(block&&)								 = default;
+	block() noexcept											 = default;
+	block(const block&)										 = default;
+	block(block&&)												 = default;
 	auto operator=(const block&) -> block& = default;
 	auto operator=(block&&) -> block&			 = default;
 	block(size_type ioffset, size_type isize, std::uint32_t iarena) noexcept

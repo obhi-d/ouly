@@ -149,7 +149,7 @@ public:
 	template <typename Lambda>
 	void for_each(Lambda&& lambda) noexcept
 	{
-		for_each_l<Lambda, value_type>(std::forward<Lambda>(lambda));
+		internal_for_each<Lambda, value_type>(std::forward<Lambda>(lambda));
 	}
 
 	/**
@@ -160,7 +160,7 @@ public:
 	void for_each(Lambda&& lambda) const noexcept
 	{
 		// NOLINTNEXTLINE
-		const_cast<this_type*>(this)->for_each_l<Lambda, value_type const>(std::forward<Lambda>(lambda));
+		const_cast<this_type*>(this)->internal_for_each<Lambda, value_type const>(std::forward<Lambda>(lambda));
 	}
 
 	/**
@@ -172,7 +172,7 @@ public:
 	template <typename Lambda>
 	void for_each(size_type first, size_type last, Lambda&& lambda) noexcept
 	{
-		for_each_l<Lambda, value_type>(first, last, std::forward<Lambda>(lambda));
+		internal_for_each<Lambda, value_type>(first, last, std::forward<Lambda>(lambda));
 	}
 
 	/**
@@ -182,7 +182,8 @@ public:
 	void for_each(size_type first, size_type last, Lambda&& lambda) const noexcept
 	{
 		// NOLINTNEXTLINE
-		const_cast<this_type*>(this)->for_each_l<Lambda, value_type const>(first, last, std::forward<Lambda>(lambda));
+		const_cast<this_type*>(this)->internal_for_each<Lambda, value_type const>(first, last,
+																																							std::forward<Lambda>(lambda));
 	}
 
 	/**
@@ -507,13 +508,13 @@ private:
 	 * @tparam Lambda Lambda should accept value_type& parameter
 	 */
 	template <typename Lambda, typename Cast>
-	void for_each_l(Lambda&& lambda) noexcept
+	void internal_for_each(Lambda&& lambda) noexcept
 	{
-		for_each_l<Lambda, Cast>(1, extents_, std::forward<Lambda>(lambda));
+		internal_for_each<Lambda, Cast>(1, extents_, std::forward<Lambda>(lambda));
 	}
 
 	template <typename Lambda, typename Cast>
-	void for_each_l(size_type first, size_type last, Lambda& lambda) noexcept
+	void internal_for_each(size_type first, size_type last, Lambda& lambda) noexcept
 	{
 		constexpr auto arity = function_traits<Lambda>::arity;
 

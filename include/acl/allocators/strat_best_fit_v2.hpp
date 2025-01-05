@@ -120,7 +120,7 @@ public:
 		size_type size											= blocks[block_link(block)].size_;
 		blocks[block_link(new_block)].size_ = new_size;
 
-		auto it = bsearch(sizes_.data(), sizes_.size(), size);
+		auto it = find_free_it(sizes_.data(), sizes_.size(), size);
 		for (auto end = static_cast<uint32_t>(free_ordering_.size()); it != end && free_ordering_[it] != block; ++it)
 		{
 			;
@@ -132,7 +132,7 @@ public:
 
 	void erase(block_bank& blocks, std::uint32_t block) noexcept
 	{
-		auto it = bsearch(sizes_.data(), sizes_.size(), blocks[block_link(block)].size_);
+		auto it = find_free_it(sizes_.data(), sizes_.size(), blocks[block_link(block)].size_);
 		for (auto end = static_cast<uint32_t>(free_ordering_.size()); it != end && free_ordering_[it] != block; ++it)
 		{
 			;
@@ -186,7 +186,7 @@ protected:
 		auto blkid						 = block_link(block);
 		blocks[blkid].is_free_ = true;
 		auto size							 = blocks[blkid].size_;
-		auto it								 = bsearch(sizes_.data(), sizes_.size(), size);
+		auto it								 = find_free_it(sizes_.data(), sizes_.size(), size);
 		free_ordering_.emplace(free_ordering_.begin() + it, block);
 		sizes_.emplace(sizes_.begin() + it, size);
 	}

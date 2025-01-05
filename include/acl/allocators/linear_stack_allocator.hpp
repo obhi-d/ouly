@@ -73,7 +73,7 @@ public:
 	{
 		for (auto& arena : arenas_)
 		{
-			underlying_allocator::deallocate(arena.buffer, arena.arena_size);
+			underlying_allocator::deallocate(arena.buffer_, arena.arena_size_);
 		}
 	}
 
@@ -186,7 +186,7 @@ public:
 		// delete remaining arenas_
 		for (size_type index = current_arena_ + 1, end = static_cast<size_type>(arenas_.size()); index < end; ++index)
 		{
-			underlying_allocator::deallocate(arenas_[index].buffer, arenas_[index].arena_size);
+			underlying_allocator::deallocate(arenas_[index].buffer_, arenas_[index].arena_size_);
 		}
 		arenas_.resize(current_arena_ + 1);
 		current_arena_ = 0;
@@ -210,15 +210,15 @@ public:
 		return static_cast<std::uint32_t>(arenas_.size());
 	}
 
-	void rewind(rewind_point marker_)
+	void rewind(rewind_point marker)
 	{
-		current_arena_ = marker_.arena_;
+		current_arena_ = marker.arena_;
 		if (current_arena_ < arenas_.size())
 		{
-			arenas_[current_arena_].left_over_ = std::min(marker_.left_over_, arenas_[current_arena_].arena_size);
+			arenas_[current_arena_].left_over_ = std::min(marker.left_over_, arenas_[current_arena_].arena_size_);
 		}
 		auto end = static_cast<size_type>(arenas_.size());
-		for (size_type i = marker_.arena_ + 1; i < end; ++i)
+		for (size_type i = marker.arena_ + 1; i < end; ++i)
 		{
 			arenas_[i].reset();
 		}
@@ -258,9 +258,9 @@ private:
 
 	auto allocate_from(size_type id, size_type size) -> address
 	{
-		size_type offset = arenas_[id].arena_size - arenas_[id].left_over_;
+		size_type offset = arenas_[id].arena_size_ - arenas_[id].left_over_;
 		arenas_[id].left_over_ -= size;
-		return static_cast<std::uint8_t*>(arenas_[id].buffer) + offset;
+		return static_cast<std::uint8_t*>(arenas_[id].buffer_) + offset;
 	}
 
 	podvector<arena, underlying_allocator> arenas_;

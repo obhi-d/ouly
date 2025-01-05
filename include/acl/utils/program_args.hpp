@@ -135,6 +135,11 @@ public:
 			return *p_args_;
 		}
 
+		auto args() const -> std::vector<arg> const&
+		{
+			return *p_args_;
+		}
+
 		std::vector<arg>* p_args_;
 		size_t						arg_;
 	};
@@ -237,15 +242,15 @@ public:
 	}
 
 	template <ProgramDocFormatter Formatter>
-	auto doc(Formatter f) const noexcept -> auto&
+	void doc(Formatter formatter) const noexcept
 	{
 		if (!brief_.empty())
 		{
-			f(program_document_type::brief_doc, "Usage", "", brief_);
+			formatter(program_document_type::brief_doc, "Usage", "", brief_);
 		}
 		for (auto d : docs_)
 		{
-			f(program_document_type::full_doc, "Description", "", d);
+			formatter(program_document_type::full_doc, "Description", "", d);
 		}
 		for (auto const& a : arguments_)
 		{
@@ -253,15 +258,14 @@ public:
 			{
 				if (a.flag_ != no_flag && (size_t)a.flag_ < arguments_.size())
 				{
-					f(program_document_type::arg_doc, a.name_, arguments_[(size_t)a.flag_].name_, a.doc_);
+					formatter(program_document_type::arg_doc, a.name_, arguments_[(size_t)a.flag_].name_, a.doc_);
 				}
 				else
 				{
-					f(program_document_type::arg_doc, a.name_, "", a.doc_);
+					formatter(program_document_type::arg_doc, a.name_, "", a.doc_);
 				}
 			}
 		}
-		return f;
 	}
 
 	[[nodiscard]] auto get_max_arg_length() const noexcept -> std::size_t

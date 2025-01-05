@@ -101,49 +101,49 @@ private:
 		void set_parent(std::uint32_t par)
 			requires(!std::is_const_v<Container>)
 		{
-			Accessor::links(*ref_).parent = par;
+			Accessor::links(*ref_).parent_ = par;
 		}
 
 		void set_left(std::uint32_t left)
 			requires(!std::is_const_v<Container>)
 		{
-			Accessor::links(*ref_).left = left;
+			Accessor::links(*ref_).left_ = left;
 		}
 
 		void set_right(std::uint32_t right)
 			requires(!std::is_const_v<Container>)
 		{
-			Accessor::links(*ref_).right = right;
+			Accessor::links(*ref_).right_ = right;
 		}
 
 		auto parent(Container& cont) const -> tnode_it
 		{
-			return tnode_it(cont, Accessor::links(*ref_).parent);
+			return tnode_it(cont, Accessor::links(*ref_).parent_);
 		}
 
 		auto left(Container& cont) const -> tnode_it
 		{
-			return tnode_it(cont, Accessor::links(*ref_).left);
+			return tnode_it(cont, Accessor::links(*ref_).left_);
 		}
 
 		auto right(Container& cont) const -> tnode_it
 		{
-			return tnode_it(cont, Accessor::links(*ref_).right);
+			return tnode_it(cont, Accessor::links(*ref_).right_);
 		}
 
 		[[nodiscard]] auto parent() const -> std::uint32_t
 		{
-			return Accessor::links(*ref_).parent;
+			return Accessor::links(*ref_).parent_;
 		}
 
 		[[nodiscard]] auto left() const -> std::uint32_t
 		{
-			return Accessor::links(*ref_).left;
+			return Accessor::links(*ref_).left_;
 		}
 
 		[[nodiscard]] auto right() const -> std::uint32_t
 		{
-			return Accessor::links(*ref_).right;
+			return Accessor::links(*ref_).right_;
 		}
 
 		[[nodiscard]] auto index() const -> std::uint32_t
@@ -158,7 +158,7 @@ private:
 
 		using node_t = std::conditional_t<std::is_const_v<Container>, node_type const, node_type>;
 
-		tnode_it(Container& cont, std::uint32_t inode) : node_(inode), ref_(&Accessor::node_(cont, inode)) {}
+		tnode_it(Container& cont, std::uint32_t inode) : node_(inode), ref_(&Accessor::node(cont, inode)) {}
 		tnode_it(std::uint32_t inode, node_t* iref) : node_(inode), ref_(iref) {}
 		tnode_it()																			 = delete;
 		tnode_it(tnode_it const&)												 = default;
@@ -466,11 +466,11 @@ public:
 			}
 			if (Accessor::value(node_ref) <= ivalue)
 			{
-				node = Accessor::links(node_ref).right;
+				node = Accessor::links(node_ref).right_;
 			}
 			else
 			{
-				node = Accessor::links(node_ref).left;
+				node = Accessor::links(node_ref).left_;
 			}
 		}
 		return node;
@@ -480,7 +480,7 @@ public:
 	{
 		if (node != Tombstone)
 		{
-			return Accessor::links(Accessor::node(cont, node)).left;
+			return Accessor::links(Accessor::node(cont, node)).left_;
 		}
 		return Tombstone;
 	}
@@ -489,7 +489,7 @@ public:
 	{
 		if (node != Tombstone)
 		{
-			return Accessor::links(Accessor::node(cont, node)).right;
+			return Accessor::links(Accessor::node(cont, node)).right_;
 		}
 		return Tombstone;
 	}
@@ -509,11 +509,11 @@ public:
 			if (Accessor::value(node_ref) >= ivalue)
 			{
 				lb	 = node;
-				node = Accessor::links(node_ref).left;
+				node = Accessor::links(node_ref).left_;
 			}
 			else
 			{
-				node = Accessor::links(node_ref).right;
+				node = Accessor::links(node_ref).right_;
 			}
 		}
 		return lb;
@@ -697,9 +697,9 @@ public:
 		if (node != Tombstone)
 		{
 			auto& n = Accessor::node(blocks, node);
-			in_order_traversal(blocks, Accessor::links(n).left, std::forward<L>(visitor));
+			in_order_traversal(blocks, Accessor::links(n).left_, std::forward<L>(visitor));
 			visitor(Accessor::node(blocks, node));
-			in_order_traversal(blocks, Accessor::links(n).right, std::forward<L>(visitor));
+			in_order_traversal(blocks, Accessor::links(n).right_, std::forward<L>(visitor));
 		}
 	}
 	template <typename L>
@@ -714,9 +714,9 @@ public:
 		if (node != Tombstone)
 		{
 			auto& n = Accessor::node(blocks, node);
-			in_order_traversal(blocks, Accessor::links(n).left, std::forward<L>(visitor));
+			in_order_traversal(blocks, Accessor::links(n).left_, std::forward<L>(visitor));
 			visitor(Accessor::node(blocks, node));
-			in_order_traversal(blocks, Accessor::links(n).right, std::forward<L>(visitor));
+			in_order_traversal(blocks, Accessor::links(n).right_, std::forward<L>(visitor));
 		}
 	}
 
@@ -762,8 +762,8 @@ public:
 		}
 		auto& n = Accessor::node(blocks, node);
 		assert(Accessor::links(n).parent == parent);
-		validate_parents(blocks, node, Accessor::links(n).left);
-		validate_parents(blocks, node, Accessor::links(n).right);
+		validate_parents(blocks, node, Accessor::links(n).left_);
+		validate_parents(blocks, node, Accessor::links(n).right_);
 	}
 
 private:

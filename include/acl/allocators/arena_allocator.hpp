@@ -509,7 +509,7 @@ public:
 		requires(can_defragment)
 	{
 		mgr_->begin_defragment(*this);
-		std::uint32_t arena_id = ibank_.bank_.arena_order_.first;
+		std::uint32_t arena_id = ibank_.bank_.arena_order_.first_;
 		// refresh all banks
 		remap_data refresh;
 		refresh.strat_.init(*this);
@@ -562,7 +562,7 @@ public:
 			}
 			else
 			{
-				arena_it = ibank_.bank_.arena_order_.next_(ibank_.bank_.arenas(), arena_it);
+				arena_it = ibank_.bank_.arena_order_.next(ibank_.bank_.arenas(), arena_it);
 			}
 		}
 

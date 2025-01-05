@@ -13,16 +13,52 @@
  * Defines a basic_delegate object with a memory store to store a function pointer and its capture inline allocated.
  */
 namespace acl
-{
-
 /**
+ * @brief A type-safe, lightweight delegate implementation with small object optimization.
  *
- * A basic_delegate can be constructed either by a lambda expression
+ * @tparam SmallSize The size in bytes reserved for small object optimization
+ * @tparam Ret Return type of the delegate function
+ * @tparam Args Argument types of the delegate function
+ *
+ * This class implements a delegate pattern that can wrap and store different types of callables:
+ * - Free functions
+ * - Member functions
+ * - Lambdas and functors
+ * - Functions with associated data (compressed pairs)
+ *
+ * Features:
+ * - Small object optimization for storing callable objects
+ * - Type-safe function wrapping
+ * - Support for move semantics
+ * - Ability to store extra data alongside the function (compressed pairs)
+ * - Trivially destructible storage
+ *
+ * The delegate uses a small buffer optimization technique to avoid heap allocations
+ * for small callable objects. The size of this buffer is determined by SmallSize template parameter.
+ *
+ * Usage examples:
+ * ```cpp
+ * // Binding a free function
+ * auto d1 = basic_delegate<32, void(int)>::bind(&free_function);
+ *
+ * // Binding a member function
+ * auto d2 = basic_delegate<32, void(int)>::bind<&Class::method>(instance);
+ *
+ * // Binding a lambda
+ * auto d3 = basic_delegate<32, void(int)>::bind([](int x) { ... });
+ *
+ * // Binding with associated data
+ * auto d4 = basic_delegate<32, void(int)>::pbind(func, extra_data);
+ * ```
+ *
+ * @note All stored callable objects must be trivially destructible
+ * @warning The size of stored callables must not exceed the specified SmallSize
  */
-
+{
 template <size_t SmallSize, typename>
 class basic_delegate;
 
+/**  */
 template <size_t SmallSize, typename Ret, typename... Args>
 class basic_delegate<SmallSize, Ret(Args...)>
 {

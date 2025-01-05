@@ -8,8 +8,8 @@ template <typename I>
 class integer_range
 {
 public:
-	using difference_type						= I;
-	integer_range() noexcept				= default;
+	using difference_type		 = I;
+	integer_range() noexcept = default;
 	integer_range(I vbegin, I vend) noexcept : begin_(vbegin), end_(vend) {}
 
 	void begin(I v) noexcept

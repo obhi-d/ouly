@@ -81,13 +81,13 @@ public:
 		for (auto end = static_cast<size_type>(arenas_.size()); index < end; ++index)
 		{
 
-			if (arenas_[index].left_over >= i_size)
+			if (arenas_[index].left_over_ >= i_size)
 			{
 				ret_value = allocate_from(index, i_size);
 				break;
 			}
 
-			if (arenas_[index].left_over < k_minimum_size && index != current_arena_)
+			if (arenas_[index].left_over_ < k_minimum_size && index != current_arena_)
 			{
 				std::swap(arenas_[index], arenas_[current_arena_++]);
 			}
@@ -106,7 +106,7 @@ public:
 			// already aligned
 			if ((pointer & fixup) == 0)
 			{
-				arenas_[index].left_over += i_alignment;
+				arenas_[index].left_over_ += i_alignment;
 				return ret_value;
 			}
 
@@ -137,27 +137,27 @@ public:
 			{
 				// merge back?
 
-				size_type new_left_over = arenas_[id].left_over + i_size;
-				size_type offset				= (arenas_[id].arena_size - new_left_over);
+				size_type new_left_over = arenas_[id].left_over_ + i_size;
+				size_type offset				= (arenas_[id].arena_size_ - new_left_over);
 				// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-				if (reinterpret_cast<std::uint8_t*>(arenas_[id].buffer) + offset == reinterpret_cast<std::uint8_t*>(i_data))
+				if (reinterpret_cast<std::uint8_t*>(arenas_[id].buffer_) + offset == reinterpret_cast<std::uint8_t*>(i_data))
 				{
-					arenas_[id].left_over = new_left_over;
+					arenas_[id].left_over_ = new_left_over;
 				}
 				else if (i_alignment)
 				{
 					i_size += i_alignment;
 
-					new_left_over = arenas_[id].left_over + i_size;
-					offset				= (arenas_[id].arena_size - new_left_over);
+					new_left_over = arenas_[id].left_over_ + i_size;
+					offset				= (arenas_[id].arena_size_ - new_left_over);
 
 					// This memory fixed up by alignment and is within range of alignment
 					// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 					if ((reinterpret_cast<std::uintptr_t>(i_data) -
 							 // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-							 (reinterpret_cast<std::uintptr_t>(arenas_[id].buffer) + offset)) < i_alignment)
+							 (reinterpret_cast<std::uintptr_t>(arenas_[id].buffer_) + offset)) < i_alignment)
 					{
-						arenas_[id].left_over = new_left_over;
+						arenas_[id].left_over_ = new_left_over;
 					}
 				}
 
@@ -171,7 +171,7 @@ public:
 		// delete remaining arenas
 		for (size_type index = current_arena_ + 1, end = static_cast<size_type>(arenas_.size()); index < end; ++index)
 		{
-			underlying_allocator::deallocate(arenas_[index].buffer, arenas_[index].arena_size);
+			underlying_allocator::deallocate(arenas_[index].buffer_, arenas_[index].arena_size_);
 		}
 		arenas_.resize(current_arena_ + 1);
 		current_arena_ = 0;
@@ -229,9 +229,9 @@ private:
 
 	auto allocate_from(size_type id, size_type size) -> address
 	{
-		size_type offset = arenas_[id].arena_size - arenas_[id].left_over;
-		arenas_[id].left_over -= size;
-		return static_cast<std::uint8_t*>(arenas_[id].buffer) + offset;
+		size_type offset = arenas_[id].arena_size_ - arenas_[id].left_over_;
+		arenas_[id].left_over_ -= size;
+		return static_cast<std::uint8_t*>(arenas_[id].buffer_) + offset;
 	}
 
 	acl::vector<arena> arenas_;

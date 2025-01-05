@@ -140,17 +140,17 @@ public:
 		std::for_each(lookup_.begin(), lookup_.end(),
 									[this](auto& el)
 									{
-										if (el.second.destructor)
+										if (el.second.destructor_)
 										{
-											el.second.destructor(el.second.data);
-											el.second.destructor = nullptr;
+											el.second.destructor_(el.second.data_);
+											el.second.destructor_ = nullptr;
 										}
 									});
 		auto h = head_;
 		while (h)
 		{
-			auto n = h->pnext;
-			acl::deallocate(*this, h, h->size + sizeof(arena));
+			auto n = h->pnext_;
+			acl::deallocate(*this, h, h->size_ + sizeof(arena));
 			h = n;
 		}
 		lookup_.clear();
@@ -181,7 +181,7 @@ public:
 		auto it = lookup_.find(k);
 		assert(it != lookup_.end());
 		// NOLINTNEXTLINE
-		return *reinterpret_cast<T*>(it->second.data);
+		return *reinterpret_cast<T*>(it->second.data_);
 	}
 
 	template <typename T>
@@ -206,7 +206,7 @@ public:
 			return nullptr;
 		}
 		// NOLINTNEXTLINE
-		return reinterpret_cast<T*>(it->second.data);
+		return reinterpret_cast<T*>(it->second.data_);
 	}
 
 	/**
@@ -220,20 +220,20 @@ public:
 	auto emplace(key_type k, Args&&... args) noexcept -> T&
 	{
 		auto& lookup_ent = lookup_[k];
-		if (lookup_ent.destructor && lookup_ent.data)
+		if (lookup_ent.destructor_ && lookup_ent.data_)
 		{
-			lookup_ent.destructor(lookup_ent.data);
+			lookup_ent.destructor_(lookup_ent.data_);
 		}
-		if (!lookup_ent.data)
+		if (!lookup_ent.data_)
 		{
-			lookup_ent.data = allocate_space(sizeof(T), alignof(T));
+			lookup_ent.data_ = allocate_space(sizeof(T), alignof(T));
 		}
 
 		// NOLINTNEXTLINE
-		std::construct_at(reinterpret_cast<T*>(lookup_ent.data), std::forward<Args>(args)...);
-		lookup_ent.destructor = std::is_trivially_destructible_v<T> ? &do_nothing : &destroy_at<T>;
+		std::construct_at(reinterpret_cast<T*>(lookup_ent.data_), std::forward<Args>(args)...);
+		lookup_ent.destructor_ = std::is_trivially_destructible_v<T> ? &do_nothing : &destroy_at<T>;
 		// NOLINTNEXTLINE
-		return *reinterpret_cast<T*>(lookup_ent.data);
+		return *reinterpret_cast<T*>(lookup_ent.data_);
 	}
 
 	template <typename T>
@@ -249,11 +249,11 @@ public:
 		if (it != lookup_.end())
 		{
 			auto& lookup_ent = it->second;
-			if (lookup_ent.destructor && lookup_ent.data)
+			if (lookup_ent.destructor_ && lookup_ent.data_)
 			{
-				lookup_ent.destructor(lookup_ent.data);
+				lookup_ent.destructor_(lookup_ent.data_);
 			}
-			lookup_ent.destructor = nullptr;
+			lookup_ent.destructor_ = nullptr;
 		}
 	}
 
@@ -267,7 +267,7 @@ public:
 	auto contains(key_type index) const noexcept -> bool
 	{
 		auto it = lookup_.find(index);
-		return it != lookup_.end() && it->second.destructor != nullptr;
+		return it != lookup_.end() && it->second.destructor_ != nullptr;
 	}
 
 private:
@@ -287,9 +287,9 @@ private:
 		reinterpret_cast<T*>(s)->~T();
 	}
 
-	auto allocate_space(size_t size, size_t alignment) -> void*
+	auto allocate_space(size_t size_, size_t alignment) -> void*
 	{
-		auto req = static_cast<uint32_t>(size + (alignment - 1));
+		auto req = static_cast<uint32_t>(size_ + (alignment - 1));
 		if ((current_ == nullptr) || current_->remaining_ < req)
 		{
 			uint32_t page_size	 = std::max<uint32_t>(total_atoms_in_page, req);
@@ -298,10 +298,10 @@ private:
 			{
 				current_->pnext_ = new_current;
 			}
-			new_current->pnext		 = nullptr;
-			new_current->size			 = page_size;
-			new_current->remaining = (page_size - req);
-			current_							 = new_current;
+			new_current->pnext_			= nullptr;
+			new_current->size_			= page_size;
+			new_current->remaining_ = (page_size - req);
+			current_								= new_current;
 			if (head_ == nullptr)
 			{
 				head_ = current_;

@@ -45,7 +45,7 @@ private:
 public:
 	auto operator=(const binary_input_serializer&) -> binary_input_serializer& = default;
 	auto operator=(binary_input_serializer&&) -> binary_input_serializer&			 = default;
-	binary_input_serializer(binary_input_serializer const&) noexcept	 = default;
+	binary_input_serializer(binary_input_serializer const&) noexcept					 = default;
 	binary_input_serializer(binary_input_serializer&& i_other) noexcept : ser_(i_other.ser_) {}
 	binary_input_serializer(Serializer& ser) noexcept : ser_(ser) {}
 	~binary_input_serializer() noexcept = default;

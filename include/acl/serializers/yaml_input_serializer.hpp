@@ -18,14 +18,14 @@ struct in_context_base : public acl::yaml::context
 {
 	using pop_fn = void (*)(in_context_base*);
 
-	parser_state*		 parser_state_;
-	in_context_base* parent_	= nullptr;
-	pop_fn					 pop_fn_	= nullptr;
-	uint32_t				 xvalue_	= 0;
-	bool						 is_null_ = false;
+	std::reference_wrapper<parser_state> parser_state_;
+	in_context_base*										 parent_	= nullptr;
+	pop_fn															 pop_fn_	= nullptr;
+	uint32_t														 xvalue_	= 0;
+	bool																 is_null_ = false;
 
 	in_context_base(parser_state& parser_state, in_context_base* parent) noexcept
-			: parser_state_(&parser_state), parent_(parent)
+			: parser_state_(parser_state), parent_(parent)
 	{}
 };
 constexpr uint32_t default_parser_buffer_size = 8096;
@@ -36,10 +36,10 @@ class parser_state
 	in_context_base*							context_ = nullptr;
 
 public:
-	auto					operator=(const parser_state&) -> parser_state& = delete;
-	auto					operator=(parser_state&&) -> parser_state& = default;
-	parser_state(const parser_state&)												 = delete;
-	parser_state(parser_state&&)														 = default;
+	auto operator=(const parser_state&) -> parser_state& = delete;
+	auto operator=(parser_state&&) -> parser_state&			 = default;
+	parser_state(const parser_state&)										 = delete;
+	parser_state(parser_state&&)												 = default;
 	parser_state(std::string_view content) noexcept : stream_(content), allocator_(default_parser_buffer_size) {}
 	~parser_state() noexcept
 	{
@@ -288,7 +288,7 @@ public:
 			}
 		}
 
-		auto mapping		 = parser_state_->push<icontext<pvalue_type&, Opt>>(*obj_, parser_state_, this);
+		auto mapping		 = parser_state_.get().template push<icontext<pvalue_type&, Opt>>(*obj_, parser_state_.get(), this);
 		mapping->pop_fn_ = [](in_context_base* mapping)
 		{
 			// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
@@ -296,7 +296,7 @@ public:
 			auto	parent = static_cast<icontext<Class, Opt>*>(object->parent_);
 
 			bool nullify = object->is_null_;
-			parent->parser_state_->pop(object, parent);
+			parent->parser_state_.get().pop(object, parent);
 
 			if (nullify)
 			{
@@ -318,7 +318,7 @@ public:
 			obj_.emplace();
 		}
 
-		auto mapping		 = parser_state_->push<icontext<pvalue_type&, Opt>>(*obj_, parser_state_, this);
+		auto mapping		 = parser_state_.get().template push<icontext<pvalue_type&, Opt>>(*obj_, parser_state_.get(), this);
 		mapping->pop_fn_ = [](in_context_base* mapping)
 		{
 			// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
@@ -326,7 +326,7 @@ public:
 			auto	parent = static_cast<icontext<Class, Opt>*>(object->parent_);
 
 			bool nullify = object->is_null_;
-			parent->parser_state_->pop(object, parent);
+			parent->parser_state_.get().pop(object, parent);
 
 			if (nullify)
 			{
@@ -361,7 +361,7 @@ public:
 	{
 		using variant_tt = std::conditional_t<detail::HasVariantTypeTransform<class_type>, std::string_view, uint32_t>;
 
-		auto mapping		 = parser_state_->push<icontext<variant_tt, Opt>>(parser_state_, this);
+		auto mapping		 = parser_state_.get().template push<icontext<variant_tt, Opt>>(parser_state_.get(), this);
 		mapping->pop_fn_ = [](in_context_base* mapping)
 		{
 			auto object = static_cast<icontext<uint32_t, Opt>*>(mapping);
@@ -373,7 +373,7 @@ public:
 			{
 				object->parent_->xvalue_ = object->get();
 			}
-			object->parent_->parser_state_->pop(object, object->parent_);
+			object->parent_->parser_state_.get().pop(object, object->parent_);
 		};
 	}
 
@@ -384,13 +384,13 @@ public:
 		{
 			using type = std::variant_alternative_t<I, class_type>;
 
-			auto mapping		 = parser_state_->push<icontext<type, Opt>>(parser_state_, this);
+			auto mapping		 = parser_state_.get().template push<icontext<type, Opt>>(parser_state_.get(), this);
 			mapping->pop_fn_ = [](in_context_base* mapping)
 			{
 				auto* object = static_cast<icontext<type, Opt>*>(mapping);
 				auto	parent = static_cast<icontext<Class, Opt>*>(object->parent_);
 				parent->get().template emplace<type>(std::move(object->get()));
-				parent->parser_state_->pop(object, parent);
+				parent->parser_state_.get().pop(object, parent);
 			};
 		}
 		else if constexpr (I > 0)
@@ -410,13 +410,13 @@ public:
 		{
 			using type = std::tuple_element_t<I, class_type>;
 
-			auto mapping		 = parser_state_->push<icontext<type, Opt>>(parser_state_, this);
+			auto mapping		 = parser_state_.get().template push<icontext<type, Opt>>(parser_state_.get(), this);
 			mapping->pop_fn_ = [](in_context_base* mapping)
 			{
 				auto* object							 = static_cast<icontext<type, Opt>*>(mapping);
 				auto	parent							 = static_cast<icontext<Class, Opt>*>(object->parent_);
 				std::get<I>(parent->get()) = std::move(object->get());
-				parent->parser_state_->pop(object, parent);
+				parent->parser_state_.get().pop(object, parent);
 			};
 		}
 		else if constexpr (I > 0)
@@ -432,7 +432,8 @@ public:
 	void push_container_item()
 		requires(!ContainerHasEmplaceBack<class_type> && ContainerHasArrayValueAssignable<class_type>)
 	{
-		auto mapping		 = parser_state_->push<icontext<array_value_type<class_type>, Opt>>(parser_state_, this);
+		auto mapping =
+		 parser_state_.get().template push<icontext<array_value_type<class_type>, Opt>>(parser_state_.get(), this);
 		mapping->pop_fn_ = [](in_context_base* mapping)
 		{
 			auto* object = static_cast<icontext<array_value_type<class_type>, Opt>*>(mapping);
@@ -441,20 +442,21 @@ public:
 			{
 				parent->get()[parent->xvalue_++] = std::move(object->get());
 			}
-			parent->parser_state_->pop(object, parent);
+			parent->parser_state_.get().pop(object, parent);
 		};
 	}
 
 	void push_container_item()
 		requires(ContainerHasEmplaceBack<class_type>)
 	{
-		auto mapping		 = parser_state_->push<icontext<typename class_type::value_type, Opt>>(parser_state_, this);
+		auto mapping =
+		 parser_state_.get().template push<icontext<typename class_type::value_type, Opt>>(parser_state_.get(), this);
 		mapping->pop_fn_ = [](in_context_base* mapping)
 		{
 			auto* object = static_cast<icontext<typename class_type::value_type, Opt>*>(mapping);
 			auto	parent = static_cast<icontext<Class, Opt>*>(object->parent_);
 			parent->get().emplace_back(std::move(object->get()));
-			parent->parser_state_->pop(object, parent);
+			parent->parser_state_.get().pop(object, parent);
 		};
 	}
 
@@ -462,13 +464,13 @@ public:
 		requires(ContainerHasEmplace<class_type> && !MapLike<class_type>)
 	{
 		using value_t		 = typename class_type::value_type;
-		auto mapping		 = parser_state_->push<icontext<value_t, Opt>>(parser_state_, this);
+		auto mapping		 = parser_state_.get().template push<icontext<value_t, Opt>>(parser_state_.get(), this);
 		mapping->pop_fn_ = [](in_context_base* mapping)
 		{
 			auto* object = static_cast<icontext<value_t, Opt>*>(mapping);
 			auto	parent = static_cast<icontext<Class, Opt>*>(object->parent_);
 			parent->get().emplace(std::move(object->get()));
-			parent->parser_state_->pop(object, parent);
+			parent->parser_state_.get().pop(object, parent);
 		};
 	}
 
@@ -476,14 +478,14 @@ public:
 		requires(detail::ComplexMapLike<class_type>)
 	{
 		using value_t		 = map_value_type<typename class_type::key_type, typename class_type::mapped_type, Opt>;
-		auto mapping		 = parser_state_->push<icontext<value_t, Opt>>(parser_state_, this);
+		auto mapping		 = parser_state_.get().template push<icontext<value_t, Opt>>(parser_state_.get(), this);
 		mapping->pop_fn_ = [](in_context_base* mapping)
 		{
 			auto* object = static_cast<icontext<value_t, Opt>*>(mapping);
 			auto	parent = static_cast<icontext<Class, Opt>*>(object->parent_);
 			auto& pair	 = object->get();
-			parent->get().emplace(std::move(pair.key), std::move(pair.value));
-			parent->parser_state_->pop(object, parent);
+			parent->get().emplace(std::move(pair.key), std::move(pair.value_));
+			parent->parser_state_.get().pop(object, parent);
 		};
 	}
 
@@ -491,27 +493,27 @@ public:
 		requires(detail::StringMapLike<class_type>)
 	{
 		using value_t		 = string_map_value_type<typename class_type::mapped_type, Opt>;
-		auto mapping		 = parser_state_->push<icontext<value_t, Opt>>(parser_state_, this);
+		auto mapping		 = parser_state_.get().template push<icontext<value_t, Opt>>(parser_state_.get(), this);
 		mapping->pop_fn_ = [](in_context_base* mapping)
 		{
 			auto* object = static_cast<icontext<value_t, Opt>*>(mapping);
 			auto	parent = static_cast<icontext<Class, Opt>*>(object->parent_);
 			auto& pair	 = object->get();
-			parent->get().emplace(std::move(pair.key), std::move(pair.value));
-			parent->parser_state_->pop(object, parent);
+			parent->get().emplace(std::move(pair.key_), std::move(pair.value_));
+			parent->parser_state_.get().pop(object, parent);
 		};
 	}
 
 	void read_string_map_value(std::string_view key)
 	{
-		obj_.key				 = key;
-		using value_t		 = typename class_type::value_type;
-		auto mapping		 = parser_state_->push<icontext<value_t&, Opt>>(obj_.value, parser_state_, this);
+		obj_.key_			= key;
+		using value_t = typename class_type::value_type;
+		auto mapping	= parser_state_.get().template push<icontext<value_t&, Opt>>(obj_.value_, parser_state_.get(), this);
 		mapping->pop_fn_ = [](in_context_base* mapping)
 		{
 			auto* object = static_cast<icontext<value_t&, Opt>*>(mapping);
 			auto	parent = static_cast<icontext<Class, Opt>*>(object->parent_);
-			parent->parser_state_->pop(object, parent);
+			parent->parser_state_.get().pop(object, parent);
 		};
 	}
 
@@ -524,7 +526,7 @@ public:
 			 {
 				 using value_t = typename Decl::MemTy;
 
-				 auto mapping			= parser_state_->push<icontext<value_t, Opt>>(parser_state_, this);
+				 auto mapping			= parser_state_.get().template push<icontext<value_t, Opt>>(parser_state_.get(), this);
 				 mapping->pop_fn_ = [](in_context_base* mapping)
 				 {
 					 // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
@@ -532,7 +534,7 @@ public:
 					 auto parent = static_cast<icontext<Class, Opt>*>(object->parent_);
 					 Decl decl;
 					 decl.value(parent->get(), std::move(object->get()));
-					 parent->parser_state_->pop(object, parent);
+					 parent->parser_state_.get().pop(object, parent);
 				 };
 			 }
 		 },

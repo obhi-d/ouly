@@ -22,7 +22,7 @@ public:
 
 	auto operator=(best_fit_tree const&) -> best_fit_tree&		 = default;
 	auto operator=(best_fit_tree&&) noexcept -> best_fit_tree& = default;
-	~best_fit_tree() noexcept													 = default;
+	~best_fit_tree() noexcept																	 = default;
 
 	using extension	 = acl::detail::tree_node<1>;
 	using size_type	 = detail::choose_size_t<uint32_t, Options>;

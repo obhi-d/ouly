@@ -241,21 +241,22 @@ auto microexpr_state::unary() -> int64_t
 		{
 			auto token = read_token();
 			read_ += (uint32_t)token.length();
+			uint64_t value = 0;
 			if (token.starts_with("0x"))
 			{
 				constexpr int hex_base = 16;
-				std::from_chars(token.data() + 2, token.data() + token.size(), read_, hex_base);
+				std::from_chars(token.data() + 2, token.data() + token.size(), value, hex_base);
 			}
 			else if (token.starts_with("0"))
 			{
 				constexpr int oc_base = 8;
-				std::from_chars(token.data() + 1, token.data() + token.size(), read_, oc_base);
+				std::from_chars(token.data() + 1, token.data() + token.size(), value, oc_base);
 			}
 			else
 			{
-				std::from_chars(token.data(), token.data() + token.size(), read_);
+				std::from_chars(token.data(), token.data() + token.size(), value);
 			}
-			return (int64_t)read_;
+			return static_cast<int64_t>(value);
 		}
 		if (oper == '$')
 		{

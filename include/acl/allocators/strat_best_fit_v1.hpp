@@ -222,7 +222,7 @@ protected:
 		return it;
 	}
 
-	static auto find_free_it(block_bank const& blocks, uint32_t const* it, size_t s, size_type key) noexcept
+	static auto bsearch(block_bank const& blocks, uint32_t const* it, size_t s, size_type key) noexcept
 	{
 		if constexpr (bsearch_algo == 0)
 		{
@@ -240,12 +240,12 @@ protected:
 
 	static auto find_free_it(block_bank const& blocks, size_type const* it, size_t s, size_type key) noexcept
 	{
-		return std::distance(it, find_free_it(blocks, it, s, key));
+		return std::distance(it, bsearch(blocks, it, s, key));
 	}
 
 	auto find_free(block_bank const& blocks, size_type size) const noexcept -> optional_addr
 	{
-		auto it = find_free_it(blocks, free_ordering_.data(), free_ordering_.size(), size);
+		auto it = bsearch(blocks, free_ordering_.data(), free_ordering_.size(), size);
 		return (it < (free_ordering_.data() + free_ordering_.size())) ? optional_addr(it) : optional_addr(nullptr);
 	}
 

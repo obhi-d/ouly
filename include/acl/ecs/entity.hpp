@@ -44,8 +44,8 @@ public:
 	}();
 
 	constexpr basic_entity() noexcept											 = default;
-	basic_entity(basic_entity&&)													 = delete;
-	auto operator=(basic_entity&&) -> basic_entity&				 = delete;
+	basic_entity(basic_entity&&)													 = default;
+	auto operator=(basic_entity&&) -> basic_entity&				 = default;
 	constexpr basic_entity(basic_entity const& i) noexcept = default;
 	constexpr explicit basic_entity(size_type i) noexcept : i_(i) {}
 	constexpr explicit basic_entity(size_type i, size_type revision) noexcept

@@ -22,7 +22,8 @@ TEST_CASE("Validate program args creation and destruction", "[program_args][basi
 	pgargs.parse_args(1, args.data());
 
 	REQUIRE(pgargs.decl<int>("arg").doc("help_int").value() == 1);
-	REQUIRE(pgargs.doc(argfmt).text != "");
+	pgargs.doc(std::ref(argfmt));
+	REQUIRE(argfmt.text != "");
 }
 
 TEST_CASE("Validate program args switches", "[program_args][switches]")
@@ -36,7 +37,7 @@ TEST_CASE("Validate program args switches", "[program_args][switches]")
 	pgargs.doc("settings");
 	auto one = pgargs.decl("one").doc("first_arg").value();
 	auto two = pgargs.decl("two", "2").doc("second_arg").value();
-	pgargs.doc(argfmt);
+	pgargs.doc(std::ref(argfmt));
 
 	REQUIRE(argfmt.text.find("settings") != std::string_view::npos);
 	REQUIRE(argfmt.text.find("first_arg") != std::string_view::npos);

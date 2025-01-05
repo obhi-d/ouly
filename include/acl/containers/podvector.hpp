@@ -452,13 +452,13 @@ private:
 		return *this;
 	}
 
-	auto assign_move(podvector& x, std::false_type /*unused*/) noexcept -> podvector&
+	auto assign_move(podvector&& x, std::false_type /*unused*/) noexcept -> podvector&
 	{
 		if (allocator_is_always_equal::value ||
 				static_cast<const allocator_type&>(x) == static_cast<const allocator_type&>(*this))
 		{
 			deallocate();
-			data_				= x.data_;
+			data_				= std::move(x.data_);
 			size_				= x.size_;
 			capacity_		= x.capacity_;
 			x.data_			= nullptr;

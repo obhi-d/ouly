@@ -91,7 +91,7 @@ private:
 public:
 	auto operator=(const input_serializer&) -> input_serializer& = default;
 	auto operator=(input_serializer&&) -> input_serializer&			 = default;
-	input_serializer(input_serializer const&) noexcept	 = default;
+	input_serializer(input_serializer const&) noexcept					 = default;
 	input_serializer(input_serializer&& i_other) noexcept : ser_(i_other.ser_) {}
 	input_serializer(Serializer& ser) noexcept : ser_(ser) {}
 	~input_serializer() noexcept = default;
@@ -258,7 +258,13 @@ private:
 		 {
 			 mapped_type stream_val;
 
-			 return static_cast<bool>(input_serializer(value).read(stream_val));
+			 if (input_serializer(value).read(stream_val))
+			 {
+				 detail::emplace(obj, key, std::move(stream_val));
+				 return true;
+			 }
+			 value.error(type_name<mapped_type>(), make_error_code(serializer_error::failed_streaming_map));
+			 return false;
 		 });
 	}
 
@@ -283,7 +289,13 @@ private:
 		 {
 			 detail::map_value_type<key_type, mapped_type, Opt> stream_val;
 
-			 return input_serializer(value).read(stream_val);
+			 if (input_serializer(value).read(stream_val))
+			 {
+				 detail::emplace(obj, std::move(stream_val.key_), std::move(stream_val.value_));
+				 return true;
+			 }
+			 value.error(type_name<mapped_type>(), make_error_code(serializer_error::failed_streaming_map));
+			 return false;
 		 });
 	}
 
@@ -319,20 +331,25 @@ private:
 		{
 			detail::resize(obj, get().size());
 			std::uint32_t index = 0;
-			return static_cast<bool>(get().for_each(
+			if (!get().for_each(
 
-			 [&obj, &index](Serializer value)
-			 {
-				 detail::array_value_type<Class> stream_val;
-				 bool														 result = input_serializer(value).read(stream_val);
-				 if (result)
-				 {
-					 obj[index++] = std::move(stream_val);
-					 return true;
-				 }
-				 value.error(type_name<Class>(), make_error_code(serializer_error::failed_streaming_array));
-				 return false;
-			 }));
+					 [&obj, &index](Serializer value)
+					 {
+						 detail::array_value_type<Class> stream_val;
+						 bool														 result = input_serializer(value).read(stream_val);
+						 if (result)
+						 {
+							 obj[index++] = std::move(stream_val);
+							 return true;
+						 }
+						 value.error(type_name<Class>(), make_error_code(serializer_error::failed_streaming_array));
+						 return false;
+					 }))
+			{
+				detail::resize(obj, index);
+				return false;
+			}
+			return true;
 		}
 	}
 
