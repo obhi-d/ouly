@@ -5,7 +5,7 @@
 namespace acl
 {
 
-std::string format_snake_case(const std::string& str)
+auto format_snake_case(const std::string& str) -> std::string
 {
 	std::string ret;
 	ret.reserve(str.length() + 1);
@@ -23,7 +23,7 @@ std::string format_snake_case(const std::string& str)
 		}
 		else
 		{
-			ret += upper ? ::toupper(str[i]) : ::tolower(str[i]);
+			ret += std::to_string(upper ? ::toupper(str[i]) : ::tolower(str[i]));
 			upper = false;
 		}
 		i++;
@@ -31,15 +31,15 @@ std::string format_snake_case(const std::string& str)
 	return ret;
 }
 
-std::string format_camel_case(const std::string& str)
+auto format_camel_case(const std::string& str) -> std::string
 {
 	std::string ret;
 	ret.reserve(str.length() + 4);
 	size_t i = 1;
-	ret += ::toupper(str[0]);
+	ret += static_cast<char>(::toupper(str[0]));
 	while (i < str.length())
 	{
-		if (::isupper(str[i]))
+		if (::isupper(str[i]) != 0)
 		{
 			ret += ' ';
 		}
@@ -49,14 +49,17 @@ std::string format_camel_case(const std::string& str)
 	return ret;
 }
 
-std::string format_name(const std::string& str)
+auto format_name(const std::string& str) -> std::string
 {
-	if (!str.length())
+	if (str.empty())
+	{
 		return {};
+	}
 	if (str.find('_') != std::string::npos)
+	{
 		return format_snake_case(str);
-	else
-		return format_camel_case(str);
+	}
+	return format_camel_case(str);
 }
 
 inline void encode(std::string& enc, utf32 c) {}

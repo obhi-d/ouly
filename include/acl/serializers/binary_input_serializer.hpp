@@ -11,6 +11,7 @@
 #include <cassert>
 #include <cstddef>
 #include <ios>
+#include <limits>
 #include <memory>
 #include <optional>
 
@@ -36,66 +37,101 @@ concept BinaryInputStream = requires(V v, std::size_t N) {
 template <BinaryInputStream Serializer, std::endian Endian = std::endian::little>
 class binary_input_serializer
 {
-protected:
+private:
 	std::reference_wrapper<Serializer> ser_;
 
 	static constexpr bool has_fast_path = (Endian == std::endian::native);
 
 public:
-	binary_input_serializer(binary_input_serializer const&) noexcept = delete;
+	auto operator=(const binary_input_serializer&) -> binary_input_serializer& = default;
+	auto operator=(binary_input_serializer&&) -> binary_input_serializer&			 = default;
+	binary_input_serializer(binary_input_serializer const&) noexcept	 = default;
 	binary_input_serializer(binary_input_serializer&& i_other) noexcept : ser_(i_other.ser_) {}
-	inline binary_input_serializer(Serializer& ser) noexcept : ser_(ser) {}
+	binary_input_serializer(Serializer& ser) noexcept : ser_(ser) {}
+	~binary_input_serializer() noexcept = default;
 
 	template <typename Class>
-	inline auto& operator>>(Class& obj)
+	auto operator>>(Class& obj) -> auto&
 	{
 		if (!ser_.get().failed())
 		{
 			if (!read(obj) && !ser_.get().failed())
+			{
 				ser_.get().error(type_name<Class>(), make_error_code(serializer_error::failed_to_parse_value));
+			}
 		}
 		return *this;
 	}
 
 	template <typename Class>
-	inline bool read(Class& obj) noexcept
+	auto read(Class& obj) noexcept -> bool
 	{
 		if (ser_.get().failed())
+		{
 			return false;
+		}
 		// Ensure ordering with multiple matches
 		if constexpr (detail::BoundClass<Class>)
+		{
 			return read_bound_class(obj);
+		}
 		else if constexpr (detail::InputSerializableClass<Class, Serializer>)
+		{
 			return read_serializable(obj);
+		}
 		else if constexpr (detail::TransformFromString<Class>)
+		{
 			return read_string_transformed(obj);
+		}
 		else if constexpr (detail::TupleLike<Class>)
+		{
 			return read_tuple(obj);
+		}
 		else if constexpr (detail::ContainerLike<Class>)
+		{
 			return read_container(obj);
+		}
 		else if constexpr (detail::VariantLike<Class>)
+		{
 			return read_variant(obj);
+		}
 		else if constexpr (detail::ConstructedFromStringView<Class>)
+		{
 			return read_string_constructed(obj);
+		}
 		else if constexpr (detail::BoolLike<Class>)
+		{
 			return read_bool(obj);
+		}
 		else if constexpr (detail::IntegerLike<Class>)
+		{
 			return read_integer(obj);
+		}
 		else if constexpr (detail::EnumLike<Class>)
+		{
 			return read_enum(obj);
+		}
 		else if constexpr (detail::FloatLike<Class>)
+		{
 			return read_float(obj);
+		}
 		else if constexpr (detail::PointerLike<Class>)
+		{
 			return read_pointer(obj);
+		}
 		else if constexpr (detail::OptionalLike<Class>)
+		{
 			return read_optional(obj);
+		}
 		else if constexpr (detail::MonostateLike<Class>)
+		{
 			return read_monostate(obj);
+		}
 		else
 		{
-			[]<bool flag = false>()
+			[]<bool Flag = false>()
 			{
-				static_assert(flag, "This type is not serializable");
+				static_assert(Flag, "This type is not serializable");
 			}();
 			return false;
 		}
@@ -103,7 +139,7 @@ public:
 
 private:
 	template <detail::BoundClass Class>
-	bool read_bound_class(Class& obj) noexcept
+	auto read_bound_class(Class& obj) noexcept -> bool
 	{
 		uint32_t h = 0;
 		read(h);
@@ -131,7 +167,7 @@ private:
 	}
 
 	template <detail::InputSerializableClass<Serializer> Class>
-	bool read_serializable(Class& obj) noexcept
+	auto read_serializable(Class& obj) noexcept -> bool
 	{
 		uint32_t h = 0;
 		read(h);
@@ -146,10 +182,11 @@ private:
 	}
 
 	template <detail::TupleLike Class>
-	bool read_tuple(Class& obj) noexcept
+	auto read_tuple(Class& obj) noexcept -> bool
 	{
 		constexpr auto tup_size = std::tuple_size_v<Class>;
-		static_assert(tup_size < 256, "Tuple is too big, please customize the serailization!");
+		static_assert(tup_size < std::numeric_limits<uint8_t>::max(),
+									"Tuple is too big, please customize the serailization!");
 		uint8_t size = 0;
 		read(size);
 		if (size != tup_size)
@@ -164,7 +201,7 @@ private:
 	}
 
 	template <detail::ContainerLike Class>
-	bool read_container(Class& obj) noexcept
+	auto read_container(Class& obj) noexcept -> bool
 	{
 		uint32_t h = 0;
 		read(h);
@@ -179,7 +216,9 @@ private:
 
 		detail::reserve(obj, count);
 		if constexpr (!detail::ContainerCanAppendValue<Class>)
+		{
 			detail::resize(obj, count);
+		}
 		if constexpr (detail::LinearArrayLike<Class, Serializer> && has_fast_path)
 		{
 			detail::resize(obj, count);
@@ -210,7 +249,7 @@ private:
 	}
 
 	template <detail::VariantLike Class>
-	bool read_variant(Class& obj) noexcept
+	auto read_variant(Class& obj) noexcept -> bool
 	{
 		uint8_t index = 0;
 		read(index);
@@ -236,7 +275,7 @@ private:
 	}
 
 	template <detail::ConstructedFromStringView Class>
-	bool read_string_constructed(Class& obj) noexcept
+	auto read_string_constructed(Class& obj) noexcept -> bool
 	{
 		auto value = read_string();
 		if (value)
@@ -244,15 +283,13 @@ private:
 			obj = Class(*value);
 			return true;
 		}
-		else
-		{
-			get().error("string", make_error_code(serializer_error::failed_to_parse_value));
-			return false;
-		}
+
+		get().error("string", make_error_code(serializer_error::failed_to_parse_value));
+		return false;
 	}
 
 	template <detail::TransformFromString Class>
-	bool read_string_transformed(Class& obj) noexcept
+	auto read_string_transformed(Class& obj) noexcept -> bool
 	{
 		auto value = read_string();
 		if (value)
@@ -260,24 +297,24 @@ private:
 			acl::from_string(obj, *value);
 			return true;
 		}
-		else
-		{
-			get().error("string", make_error_code(serializer_error::failed_to_parse_value));
-			return false;
-		}
+
+		get().error("string", make_error_code(serializer_error::failed_to_parse_value));
+		return false;
 	}
 
 	template <detail::BoolLike Class>
-	bool read_bool(Class& obj) noexcept
+	auto read_bool(Class& obj) noexcept -> bool
 	{
 		return get().read(&obj, sizeof(obj));
 	}
 
 	template <detail::IntegerLike Class>
-	bool read_integer(Class& obj) noexcept
+	auto read_integer(Class& obj) noexcept -> bool
 	{
 		if constexpr (has_fast_path)
+		{
 			return get().read(&obj, sizeof(obj));
+		}
 		else
 		{
 			bool result = get().read(&obj, sizeof(obj));
@@ -287,11 +324,13 @@ private:
 	}
 
 	template <detail::EnumLike Class>
-	bool read_enum(Class& obj) noexcept
+	auto read_enum(Class& obj) noexcept -> bool
 	{
 		using type = std::underlying_type_t<Class>;
 		if constexpr (has_fast_path)
+		{
 			return get().read(&obj, sizeof(obj));
+		}
 		else
 		{
 			bool result = get().read(&obj, sizeof(obj));
@@ -300,34 +339,48 @@ private:
 		}
 	}
 
-	bool read_float(float& obj) noexcept
+	auto read_float(float& obj) noexcept -> bool
 	{
 		if constexpr (has_fast_path)
+		{
 			return get().read(&obj, sizeof(obj));
+		}
 		else
 		{
-			auto& ref		 = (uint32_t&)obj;
-			bool	result = get().read(&ref, sizeof(ref));
-			ref					 = detail::byteswap(ref);
+			union
+			{
+				float		 val_;
+				uint32_t ref_;
+			} data			= {obj};
+			bool result = get().read(&data.ref_, sizeof(data.ref_));
+			data.ref_		= detail::byteswap(data.ref_);
+			obj					= data.val_;
 			return result;
 		}
 	}
 
-	bool read_float(double& obj) noexcept
+	auto read_float(double& obj) noexcept -> bool
 	{
 		if constexpr (has_fast_path)
+		{
 			return get().read(&obj, sizeof(obj));
+		}
 		else
 		{
-			auto& ref		 = (uint64_t&)obj;
-			bool	result = get().read(&ref, sizeof(ref));
-			ref					 = detail::byteswap(ref);
+			union
+			{
+				double	 val_;
+				uint64_t ref_;
+			} data			= {obj};
+			bool result = get().read(&data.ref_, sizeof(data.ref_));
+			data.ref_		= detail::byteswap(data.ref_);
+			obj					= data.val_;
 			return result;
 		}
 	}
 
 	template <detail::PointerLike Class>
-	bool read_pointer(Class& obj) noexcept
+	auto read_pointer(Class& obj) noexcept -> bool
 	{
 		bool is_null = false;
 		if (get().read(&is_null, sizeof(is_null)))
@@ -337,20 +390,23 @@ private:
 				using class_type	= detail::remove_cref<Class>;
 				using pvalue_type = detail::pointer_class_type<Class>;
 				if constexpr (std::same_as<class_type, std::shared_ptr<pvalue_type>>)
+				{
 					obj = std::make_shared<pvalue_type>();
+				}
 				else
+				{
 					obj = Class(new detail::pointer_class_type<Class>());
+				}
 				return read(*obj);
 			}
-			else
-				obj = nullptr;
+			obj = nullptr;
 			return true;
 		}
 		return false;
 	}
 
 	template <detail::OptionalLike Class>
-	bool read_optional(Class& obj) noexcept
+	auto read_optional(Class& obj) noexcept -> bool
 	{
 		bool is_null = false;
 		if (get().read(&is_null, sizeof(is_null)))
@@ -360,31 +416,29 @@ private:
 				obj.emplace();
 				return read(*obj);
 			}
-			else
-				obj.reset();
+			obj.reset();
 			return true;
 		}
 		return false;
 	}
 
 	template <detail::MonostateLike Class>
-	bool read_monostate(Class& obj) noexcept
+	auto read_monostate(Class& obj) noexcept -> bool
 	{
 		return true;
 	}
 
-private:
-	inline auto& get() noexcept
+	auto get() noexcept -> auto&
 	{
 		return ser_.get();
 	}
 
-	inline auto const& get() const noexcept
+	auto get() const noexcept -> auto const&
 	{
 		return ser_.get();
 	}
 
-	inline std::optional<std::string> read_string() noexcept
+	auto read_string() noexcept -> std::optional<std::string>
 	{
 		std::optional<std::string> result;
 		uint32_t									 length = 0;
@@ -405,7 +459,7 @@ private:
 	}
 
 	template <std::size_t N, typename Class>
-	bool at(Class& obj) noexcept
+	auto at(Class& obj) noexcept -> bool
 	{
 		using type = detail::remove_cref<std::tuple_element_t<N, Class>>;
 		return read(const_cast<type&>(std::get<N>(obj)));
@@ -415,11 +469,17 @@ private:
 	static constexpr auto find_alt(std::size_t i, L&& lambda) noexcept -> bool
 	{
 		if (I == i)
+		{
 			return std::forward<L>(lambda)(std::integral_constant<uint32_t, I>{});
+		}
 		if constexpr (I > 0)
+		{
 			return find_alt<I - 1, Class>(i, std::forward<L>(lambda));
+		}
 		else
+		{
 			return false;
+		}
 	}
 };
 
@@ -427,14 +487,14 @@ namespace detail
 {
 struct empty_input_streamer
 {
-	bool read(std::byte* data, size_t s)
+	static auto read(std::byte* data, size_t s) -> bool
 	{
 		return true;
 	}
 
-	void error(std::string_view, std::error_code) {}
+	void error(std::string_view /*unused*/, std::error_code /*unused*/) {}
 
-	bool failed()
+	static auto failed() -> bool
 	{
 		return false;
 	}

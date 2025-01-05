@@ -4,50 +4,53 @@
 namespace acl
 {
 #define ACL_BINARY_SEARCH_STEP2                                                                                        \
-	do                                                                                                                   \
 	{                                                                                                                    \
 		const auto* const middle = it + (size >> 1);                                                                       \
 		size										 = (size + 1) >> 1;                                                                        \
 		it											 = *middle < key ? middle : it;                                                            \
-	}                                                                                                                    \
-	while (0)
+	}
 
 static inline auto mini2(auto const* it, size_t size, auto key) noexcept
 {
-	do
+	while (true)
 	{
 		ACL_BINARY_SEARCH_STEP2;
 		ACL_BINARY_SEARCH_STEP2;
+		if (size <= 2)
+		{
+			break;
+		}
 	}
-	while (size > 2);
+
 	it += size > 1 && (*it < key);
 	it += size > 0 && (*it < key);
 	return it;
 }
 
 #define ACL_BINARY_SEARCH_STEP_INDIRECT                                                                                \
-	do                                                                                                                   \
 	{                                                                                                                    \
 		const auto* const middle = it + (size >> 1);                                                                       \
 		size										 = (size + 1) >> 1;                                                                        \
 		it											 = data[*middle] < key ? middle : it;                                                      \
-	}                                                                                                                    \
-	while (0)
+	}
 
 static inline auto mini2(auto const* it, auto const* data, size_t size, auto key) noexcept
 {
-	do
+	while (true)
 	{
 		ACL_BINARY_SEARCH_STEP_INDIRECT;
 		ACL_BINARY_SEARCH_STEP_INDIRECT;
+		if (size <= 2)
+		{
+			break;
+		}
 	}
-	while (size > 2);
 	it += size > 1 && (data[*it] < key);
 	it += size > 0 && (data[*it] < key);
 	return it;
 }
 
-coalescing_allocator::size_type coalescing_allocator::allocate(size_type size)
+auto coalescing_allocator::allocate(size_type size) -> coalescing_allocator::size_type
 {
 	// first fit
 	for (uint32_t i = 0, end = static_cast<uint32_t>(sizes_.size()); i < end; ++i)
@@ -57,7 +60,7 @@ coalescing_allocator::size_type coalescing_allocator::allocate(size_type size)
 			auto ret = offsets_[i];
 			sizes_[i] -= size;
 			offsets_[i] += size;
-			if (!sizes_[i])
+			if (sizes_[i] == 0U)
 			{
 				offsets_.erase(i + offsets_.begin());
 				sizes_.erase(i + sizes_.begin());
@@ -73,7 +76,7 @@ void coalescing_allocator::deallocate(size_type offset, size_type size)
 {
 	assert(!offsets_.empty());
 
-	auto it = mini2(offsets_.data(), offsets_.size(), offset);
+	const auto* it = mini2(offsets_.data(), offsets_.size(), offset);
 
 	if (it == offsets_.data())
 	{

@@ -4,6 +4,7 @@
 #include <compare>
 #include <string>
 
+// NOLINTBEGIN
 template <typename IntTy>
 inline IntTy range_rand(IntTy iBeg, IntTy iEnd)
 {
@@ -109,3 +110,5 @@ inline uint32_t xorshift32(uint32_t seed)
 	x ^= x << 5;
 	return x;
 }
+
+// NOLINTEND

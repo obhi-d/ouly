@@ -103,16 +103,16 @@ template <typename T>
 void from_string(T& ref, std::string_view) = delete;
 
 template <typename T>
-std::string to_string(T const& ref) = delete;
+auto to_string(T const& ref) -> std::string = delete;
 
 template <typename T>
-std::string_view to_string_view(T const& ref) = delete;
+auto to_string_view(T const& ref) -> std::string_view = delete;
 
 // Variant type transform
 template <typename T>
-uint32_t to_variant_index(std::string_view ref) = delete;
+auto to_variant_index(std::string_view ref) -> uint32_t = delete;
 template <typename T>
-std::string_view from_variant_index(std::size_t ref) = delete;
+auto from_variant_index(std::size_t ref) -> std::string_view = delete;
 
 template <>
 inline void from_string<std::string>(std::string& ref, std::string_view v)
@@ -121,7 +121,7 @@ inline void from_string<std::string>(std::string& ref, std::string_view v)
 }
 
 template <>
-inline std::string_view to_string_view<std::string>(std::string const& ref)
+inline auto to_string_view<std::string>(std::string const& ref) -> std::string_view
 {
 	return ref;
 }
@@ -144,7 +144,7 @@ namespace detail
 template <auto>
 struct member_ptr_type;
 
-template <typename T, typename M, M T::*P>
+template <typename T, typename M, M T::* P>
 struct member_ptr_type<P>
 {
 	using class_t	 = std::decay_t<T>;
@@ -441,9 +441,13 @@ template <typename T>
 constexpr auto get_pointer_class_type()
 {
 	if constexpr (IsBasicPointer<T>)
+	{
 		return std::decay_t<std::remove_pointer_t<remove_cref<T>>>();
+	}
 	else if constexpr (IsSmartPointer<T>)
+	{
 		return std::decay_t<remove_cref<typename T::element_type>>();
+	}
 }
 
 template <typename T>
@@ -528,12 +532,12 @@ public:
 	using ClassTy = std::decay_t<Class>;
 	using MemTy		= std::decay_t<M>;
 
-	inline static constexpr std::uint32_t key_hash() noexcept
+	static constexpr auto key_hash() noexcept -> std::uint32_t
 	{
 		return Name.hash();
 	}
 
-	inline static constexpr std::string_view key() noexcept
+	static constexpr auto key() noexcept -> std::string_view
 	{
 		return (std::string_view)Name;
 	}
@@ -546,27 +550,27 @@ public:
 	using super = decl_base<Name, Class, MPtr>;
 	using M			= typename super::MemTy;
 
-	inline static void value(Class& obj, M const& value) noexcept
+	static void value(Class& obj, M const& value) noexcept
 	{
 		obj.*Ptr = value;
 	}
 
-	inline static void value(Class& obj, M&& value) noexcept
+	static void value(Class& obj, M&& value) noexcept
 	{
 		obj.*Ptr = std::move(value);
 	}
 
-	inline static M const& value(Class const& obj) noexcept
+	static auto value(Class const& obj) noexcept -> M const&
 	{
 		return (obj.*Ptr);
 	}
 
-	inline static M const* offset(Class const& obj) noexcept
+	static auto offset(Class const& obj) noexcept -> M const*
 	{
 		return &(obj.*Ptr);
 	}
 
-	inline static M* offset(Class& obj) noexcept
+	static auto offset(Class& obj) noexcept -> M*
 	{
 		return &(obj.*Ptr);
 	}
@@ -579,12 +583,12 @@ public:
 	using super = decl_base<Name, Class, RetTy>;
 	using M			= typename super::MemTy;
 
-	inline static void value(Class& obj, M&& value) noexcept
+	static void value(Class& obj, M&& value) noexcept
 	{
 		(obj.*Setter)(std::move(value));
 	}
 
-	inline static auto value(Class const& obj) noexcept
+	static auto value(Class const& obj) noexcept
 	{
 		return ((obj.*Getter)());
 	}
@@ -597,12 +601,12 @@ public:
 	using super = decl_base<Name, Class, RetTy>;
 	using M			= typename super::MemTy;
 
-	inline static void value(Class& obj, M const& value) noexcept
+	static void value(Class& obj, M const& value) noexcept
 	{
 		(*Setter)(obj, value);
 	}
 
-	inline static auto value(Class const& obj) noexcept
+	static auto value(Class const& obj) noexcept
 	{
 		return (*Getter)(obj);
 	}
@@ -626,13 +630,13 @@ concept DeclBase = requires {
 };
 
 template <typename Class>
-auto const reflect_() noexcept
+auto reflect() noexcept
 {
 	return acl::reflect<Class>();
 }
 
 template <std::integral T>
-constexpr T byteswap(T value) noexcept
+constexpr auto byteswap(T value) noexcept -> T
 {
 	static_assert(std::has_unique_object_representations_v<T>, "T may not have padding bits");
 	auto value_representation = std::bit_cast<std::array<std::byte, sizeof(T)>>(value);
@@ -735,14 +739,14 @@ struct type_field_name
  * method to access the internal member given the instance of the object
  */
 template <typename Class, typename Fn>
-void for_each_field(Fn&& fn, Class& obj) noexcept
+void for_each_field(Fn fn, Class& obj) noexcept
 {
 	using ClassType = std::remove_const_t<Class>;
 	static_assert(detail::tuple_size<ClassType> > 0, "Invalid tuple size");
 	return [&]<std::size_t... I>(std::index_sequence<I...>, auto tup)
 	{
 		(fn(obj, std::get<I>(tup), std::integral_constant<std::size_t, I>()), ...);
-	}(std::make_index_sequence<detail::tuple_size<ClassType>>(), detail::reflect_<ClassType>());
+	}(std::make_index_sequence<detail::tuple_size<ClassType>>(), detail::reflect<ClassType>());
 }
 
 /**
@@ -751,14 +755,14 @@ void for_each_field(Fn&& fn, Class& obj) noexcept
  * internal member given the instance of the object
  */
 template <typename Class, typename Fn>
-void for_each_field(Fn&& fn) noexcept
+void for_each_field(Fn fn) noexcept
 {
 	using ClassType = std::remove_const_t<Class>;
 	static_assert(detail::tuple_size<ClassType> > 0, "Invalid tuple size");
 	return [&]<std::size_t... I>(std::index_sequence<I...>, auto tup)
 	{
 		(fn(std::get<I>(tup), std::integral_constant<std::size_t, I>()), ...);
-	}(std::make_index_sequence<detail::tuple_size<ClassType>>(), detail::reflect_<ClassType>());
+	}(std::make_index_sequence<detail::tuple_size<ClassType>>(), detail::reflect<ClassType>());
 }
 
 template <typename Class, std::size_t I>
@@ -766,11 +770,11 @@ constexpr auto field_at() noexcept
 {
 	using ClassType = std::remove_const_t<Class>;
 	static_assert(detail::tuple_size<ClassType> > 0, "Invalid tuple size");
-	return std::get<I>(detail::reflect_<ClassType>());
+	return std::get<I>(detail::reflect<ClassType>());
 }
 
 template <typename ClassType>
-constexpr uint32_t field_size() noexcept
+constexpr auto field_size() noexcept -> uint32_t
 {
 	return detail::tuple_size<ClassType>;
 }

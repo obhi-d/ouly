@@ -33,58 +33,59 @@ public:
 	using propagate_allocator_on_swap = typename acl::allocator_traits<allocator_tag>::propagate_on_container_swap;
 	// using visualizer                  = detail::tuple_array_visualizer<this_type, Tuple>;
 
-	template <std::size_t i>
-	using ivalue_type = std::tuple_element_t<i, tuple_type>;
-	template <std::size_t i>
-	using ireference = ivalue_type<i>&;
-	template <std::size_t i>
-	using iconst_reference = const ivalue_type<i>&;
-	template <std::size_t i>
-	using ipointer = ivalue_type<i>*;
-	template <std::size_t i>
-	using iconst_pointer = ivalue_type<i> const*;
-	template <std::size_t i>
-	using iiterator = ivalue_type<i>*;
-	template <std::size_t i>
-	using iconst_iterator = ivalue_type<i> const*;
-	template <std::size_t i>
-	using ireverse_iterator = std::reverse_iterator<iiterator<i>>;
-	template <std::size_t i>
-	using iconst_reverse_iterator = std::reverse_iterator<iconst_iterator<i>>;
+	template <std::size_t I>
+	using ivalue_type = std::tuple_element_t<I, tuple_type>;
+	template <std::size_t I>
+	using ireference = ivalue_type<I>&;
+	template <std::size_t I>
+	using iconst_reference = const ivalue_type<I>&;
+	template <std::size_t I>
+	using ipointer = ivalue_type<I>*;
+	template <std::size_t I>
+	using iconst_pointer = ivalue_type<I> const*;
+	template <std::size_t I>
+	using iiterator = ivalue_type<I>*;
+	template <std::size_t I>
+	using iconst_iterator = ivalue_type<I> const*;
+	template <std::size_t I>
+	using ireverse_iterator = std::reverse_iterator<iiterator<I>>;
+	template <std::size_t I>
+	using iconst_reverse_iterator = std::reverse_iterator<iconst_iterator<I>>;
 
 	static auto constexpr index_seq = std::make_index_sequence<std::tuple_size_v<Tuple>>();
 
-	template <bool const is_const>
+	template <bool const IsConst>
 	class base_iterator
 	{
 	public:
 		using value_type			= Tuple;
 		using difference_type = std::make_signed_t<size_type>;
-		using pointer = std::conditional_t<is_const, detail::tuple_of_cptrs<value_type>, detail::tuple_of_ptrs<value_type>>;
+		using pointer = std::conditional_t<IsConst, detail::tuple_of_cptrs<value_type>, detail::tuple_of_ptrs<value_type>>;
 		using reference =
-		 std::conditional_t<is_const, detail::tuple_of_crefs<value_type>, detail::tuple_of_refs<value_type>>;
+		 std::conditional_t<IsConst, detail::tuple_of_crefs<value_type>, detail::tuple_of_refs<value_type>>;
 		using const_reference = detail::tuple_of_crefs<value_type>;
 
 		base_iterator(base_iterator const&) noexcept = default;
 		base_iterator(base_iterator&&) noexcept			 = default;
 		base_iterator() noexcept										 = default;
-		base_iterator(pointer init) noexcept : pointers(init) {}
+		base_iterator(pointer init) noexcept : pointers_(init) {}
+		~base_iterator() noexcept = default;
 
-		base_iterator& operator=(base_iterator const&) noexcept					= default;
-		base_iterator& operator=(base_iterator&&) noexcept							= default;
-		auto					 operator<=>(base_iterator const&) const noexcept = default;
+		auto operator=(base_iterator const&) noexcept -> base_iterator& = default;
+		auto operator=(base_iterator&&) noexcept -> base_iterator&			= default;
+		auto operator<=>(base_iterator const&) const noexcept						= default;
 
-		reference operator*() const noexcept
+		auto operator*() const noexcept -> reference
 		{
 			return get(index_seq);
 		}
 
-		pointer operator->() const noexcept
+		auto operator->() const noexcept -> pointer
 		{
-			return pointers;
+			return pointers_;
 		}
 
-		auto& operator++() noexcept
+		auto operator++() noexcept -> auto&
 		{
 			advance(index_seq);
 			return *this;
@@ -97,7 +98,7 @@ public:
 			return v;
 		}
 
-		auto& operator--() noexcept
+		auto operator--() noexcept -> auto&
 		{
 			retreat(index_seq);
 			return *this;
@@ -110,71 +111,71 @@ public:
 			return v;
 		}
 
-		base_iterator operator+(difference_type n) const noexcept
+		auto operator+(difference_type n) const noexcept -> base_iterator
 		{
 			return add(index_seq, n);
 		}
 
-		base_iterator operator-(difference_type n) const noexcept
+		auto operator-(difference_type n) const noexcept -> base_iterator
 		{
 			return add(index_seq, -n);
 		}
 
-		base_iterator& operator+=(difference_type n) const noexcept
+		auto operator+=(difference_type n) const noexcept -> base_iterator&
 		{
-			*this = base_iterator<is_const>(add(index_seq, n));
+			*this = base_iterator<IsConst>(add(index_seq, n));
 			return *this;
 		}
 
-		base_iterator& operator-=(difference_type n) const noexcept
+		auto operator-=(difference_type n) const noexcept -> base_iterator&
 		{
-			*this = base_iterator<is_const>(add(index_seq, -n));
+			*this = base_iterator<IsConst>(add(index_seq, -n));
 			return *this;
 		}
 
-		friend difference_type operator-(base_iterator const& first, base_iterator const& second) noexcept
+		friend auto operator-(base_iterator const& first, base_iterator const& second) noexcept -> difference_type
 		{
-			return static_cast<difference_type>(std::distance(std::get<0>(second.pointers), std::get<0>(first.pointers)));
+			return static_cast<difference_type>(std::distance(std::get<0>(second.pointers_), std::get<0>(first.pointers_)));
 		}
 
 	private:
 		template <std::size_t... I>
-		reference get(std::index_sequence<I...>) const noexcept
+		auto get(std::index_sequence<I...> /*unused*/) const noexcept -> reference
 		{
-			return reference(*std::get<I>(pointers)...);
+			return reference(*std::get<I>(pointers_)...);
 		}
 
 		template <std::size_t... I>
-		auto add(std::index_sequence<I...>, difference_type n) const noexcept
+		auto add(std::index_sequence<I...> /*unused*/, difference_type n) const noexcept
 		{
-			return pointer((std::get<I>(pointers) + n)...);
+			return pointer((std::get<I>(pointers_) + n)...);
 		}
 
 		template <std::size_t... I>
-		void advance(std::index_sequence<I...>) noexcept
+		void advance(std::index_sequence<I...> /*unused*/) noexcept
 		{
-			(std::get<I>(pointers)++, ...);
+			(std::get<I>(pointers_)++, ...);
 		}
 
 		template <std::size_t... I>
-		void retreat(std::index_sequence<I...>) noexcept
+		void retreat(std::index_sequence<I...> /*unused*/) noexcept
 		{
-			(std::get<I>(pointers)--, ...);
+			(std::get<I>(pointers_)--, ...);
 		}
 
 		template <std::size_t... I>
-		reference next(std::index_sequence<I...>) const noexcept
+		auto next(std::index_sequence<I...> /*unused*/) const noexcept -> reference
 		{
-			return reference((*std::get<I>(pointers) + 1)...);
+			return reference((*std::get<I>(pointers_) + 1)...);
 		}
 
 		template <std::size_t... I>
-		reference prev(std::index_sequence<I...>) const noexcept
+		auto prev(std::index_sequence<I...> /*unused*/) const noexcept -> reference
 		{
-			return reference((*std::get<I>(pointers) - 1)...);
+			return reference((*std::get<I>(pointers_) - 1)...);
 		}
 
-		pointer pointers = {};
+		pointer pointers_ = {};
 	};
 
 	using iterator							 = base_iterator<false>;
@@ -188,7 +189,7 @@ public:
 	using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
 	explicit soavector(allocator_type const& alloc = allocator_type()) noexcept
-			: allocator_type(alloc), data_{}, size_(0), capacity_(0) {};
+			: allocator_type(alloc), size_(0), capacity_(0) {};
 
 	explicit soavector(size_type n) noexcept : data_(allocate(n)), size_(n), capacity_(n) {}
 
@@ -206,7 +207,7 @@ public:
 	}
 
 	soavector(soavector&& x, const allocator_type& alloc) noexcept
-			: allocator_type(alloc), data_(x.data_), size_(x.size_), capacity_(x.capacity_)
+			: allocator_type(alloc), data_(std::move(x.data_)), size_(x.size_), capacity_(x.capacity_)
 	{
 		std::memset(&x, 0, sizeof(x));
 	};
@@ -231,17 +232,19 @@ public:
 		destroy_and_deallocate();
 	}
 
-	soavector& operator=(const soavector& x) noexcept
+	auto operator=(const soavector& x) noexcept -> soavector&
 	{
-		return assign_copy(x, propagate_allocator_on_copy(), index_seq);
+		assign_copy(x, propagate_allocator_on_copy(), index_seq);
+		return *this;
 	}
 
-	soavector& operator=(soavector&& x) noexcept
+	auto operator=(soavector&& x) noexcept -> soavector&
 	{
-		return assign_move(std::move(x), propagate_allocator_on_move(), index_seq);
+		assign_move(std::move(x), propagate_allocator_on_move(), index_seq);
+		return *this;
 	}
 
-	soavector& operator=(std::initializer_list<tuple_type> x) noexcept
+	auto operator=(std::initializer_list<tuple_type> x) noexcept -> soavector&
 	{
 		destroy_all(0, size_, index_seq);
 		if (capacity_ < x.size())
@@ -259,14 +262,14 @@ public:
 	void assign(InputIterator first, InputIterator last) noexcept
 	{
 		destroy_all(0, size_, index_seq);
-		size_type s = static_cast<size_type>(std::distance(first, last));
+		auto s = static_cast<size_type>(std::distance(first, last));
 		if (capacity_ < s)
 		{
-			capacity_ = static_cast<size_type>(s);
+			capacity_ = s;
 			deallocate();
 			data_ = allocate(s);
 		}
-		size_ = static_cast<size_type>(s);
+		size_ = s;
 		construct_range(first, last, data_, 0, index_seq);
 	}
 
@@ -281,7 +284,7 @@ public:
 		}
 
 		uninitialized_fill(0, n, value, index_seq);
-		size_ = static_cast<size_type>(n);
+		size_ = n;
 	}
 
 	void assign(std::initializer_list<tuple_type> x) noexcept
@@ -297,152 +300,152 @@ public:
 		construct_range(std::begin(x), std::end(x), data_, 0, index_seq);
 	}
 
-	allocator_type get_allocator() const noexcept
+	auto get_allocator() const noexcept -> allocator_type
 	{
 		return *this;
 	}
 
 	// iterators:
-	template <std::size_t i>
-	iiterator<i> ibegin() noexcept
+	template <std::size_t I>
+	auto ibegin() noexcept -> iiterator<I>
 	{
-		return std::get<i>(data_);
+		return std::get<I>(data_);
 	}
 
-	template <std::size_t i>
-	iconst_iterator<i> ibegin() const noexcept
+	template <std::size_t I>
+	auto ibegin() const noexcept -> iconst_iterator<I>
 	{
-		return std::get<i>(data_);
+		return std::get<I>(data_);
 	}
 
-	template <std::size_t i>
-	iiterator<i> iend() noexcept
+	template <std::size_t I>
+	auto iend() noexcept -> iiterator<I>
 	{
-		return std::get<i>(data_) + size_;
+		return std::get<I>(data_) + size_;
 	}
 
-	template <std::size_t i>
-	iconst_iterator<i> iend() const noexcept
+	template <std::size_t I>
+	auto iend() const noexcept -> iconst_iterator<I>
 	{
-		return std::get<i>(data_) + size_;
+		return std::get<I>(data_) + size_;
 	}
 
-	template <std::size_t i>
-	ireverse_iterator<i> irbegin() noexcept
+	template <std::size_t I>
+	auto irbegin() noexcept -> ireverse_iterator<I>
 	{
-		return ireverse_iterator<i>(iend<i>());
+		return ireverse_iterator<I>(iend<I>());
 	}
 
-	template <std::size_t i>
-	iconst_reverse_iterator<i> irbegin() const noexcept
+	template <std::size_t I>
+	auto irbegin() const noexcept -> iconst_reverse_iterator<I>
 	{
-		return iconst_reverse_iterator<i>(iend<i>());
+		return iconst_reverse_iterator<I>(iend<I>());
 	}
 
-	template <std::size_t i>
-	ireverse_iterator<i> irend() noexcept
+	template <std::size_t I>
+	auto irend() noexcept -> ireverse_iterator<I>
 	{
-		return ireverse_iterator<i>(ibegin<i>());
+		return ireverse_iterator<I>(ibegin<I>());
 	}
 
-	template <std::size_t i>
-	iconst_reverse_iterator<i> irend() const noexcept
+	template <std::size_t I>
+	auto irend() const noexcept -> iconst_reverse_iterator<I>
 	{
-		return iconst_reverse_iterator<i>(ibegin<i>());
+		return iconst_reverse_iterator<I>(ibegin<I>());
 	}
 
-	template <std::size_t i>
-	iconst_iterator<i> icbegin() const noexcept
+	template <std::size_t I>
+	auto icbegin() const noexcept -> iconst_iterator<I>
 	{
-		return ibegin<i>();
+		return ibegin<I>();
 	}
 
-	template <std::size_t i>
-	iconst_iterator<i> icend() const noexcept
+	template <std::size_t I>
+	auto icend() const noexcept -> iconst_iterator<I>
 	{
-		return iend<i>();
+		return iend<I>();
 	}
 
-	template <std::size_t i>
-	iconst_reverse_iterator<i> icrbegin() const noexcept
+	template <std::size_t I>
+	auto icrbegin() const noexcept -> iconst_reverse_iterator<I>
 	{
-		return irbegin<i>();
+		return irbegin<I>();
 	}
 
-	template <std::size_t i>
-	iconst_reverse_iterator<i> icrend() const noexcept
+	template <std::size_t I>
+	auto icrend() const noexcept -> iconst_reverse_iterator<I>
 	{
-		return irend<i>();
+		return irend<I>();
 	}
 
 	// iterators:
-	iterator begin() noexcept
+	auto begin() noexcept -> iterator
 	{
 		return iterator(data_);
 	}
 
-	const_iterator begin() const noexcept
+	auto begin() const noexcept -> const_iterator
 	{
 		return const_iterator(data_);
 	}
 
-	iterator end() noexcept
+	auto end() noexcept -> iterator
 	{
 		return begin() + static_cast<difference_type>(size_);
 	}
 
-	const_iterator end() const noexcept
+	auto end() const noexcept -> const_iterator
 	{
 		return begin() + static_cast<difference_type>(size_);
 	}
 
-	reverse_iterator rbegin() noexcept
+	auto rbegin() noexcept -> reverse_iterator
 	{
 		return reverse_iterator(end());
 	}
 
-	const_reverse_iterator rbegin() const noexcept
+	auto rbegin() const noexcept -> const_reverse_iterator
 	{
 		return const_reverse_iterator(end());
 	}
 
-	reverse_iterator rend() noexcept
+	auto rend() noexcept -> reverse_iterator
 	{
 		return reverse_iterator(begin());
 	}
 
-	const_reverse_iterator rend() const noexcept
+	auto rend() const noexcept -> const_reverse_iterator
 	{
 		return const_reverse_iterator(begin());
 	}
 
-	const_iterator cbegin() const noexcept
+	auto cbegin() const noexcept -> const_iterator
 	{
 		return begin();
 	}
 
-	const_iterator cend() const noexcept
+	auto cend() const noexcept -> const_iterator
 	{
 		return end();
 	}
 
-	const_reverse_iterator crbegin() const noexcept
+	auto crbegin() const noexcept -> const_reverse_iterator
 	{
 		return rbegin();
 	}
 
-	const_reverse_iterator crend() const noexcept
+	auto crend() const noexcept -> const_reverse_iterator
 	{
 		return rend();
 	}
 
 	// capacity:
-	size_type size() const noexcept
+	auto size() const noexcept -> size_type
 	{
 		return size_;
 	}
 
-	size_type max_size() const noexcept
+	auto max_size() const noexcept -> size_type
 	{
 		return std::numeric_limits<size_type>::max();
 	}
@@ -460,16 +463,18 @@ public:
 			uninitialized_fill(size_, sz - size_, c, index_seq);
 		}
 		else
+		{
 			destroy_all(sz, size_ - sz, index_seq);
+		}
 		size_ = sz;
 	}
 
-	size_type capacity() const noexcept
+	auto capacity() const noexcept -> size_type
 	{
 		return capacity_;
 	}
 
-	bool empty() const noexcept
+	[[nodiscard]] auto empty() const noexcept -> bool
 	{
 		return size_ == 0;
 	}
@@ -490,103 +495,103 @@ public:
 		}
 	}
 
-	inline reference operator[](size_type n) noexcept
+	auto operator[](size_type n) noexcept -> reference
 	{
 		return get<reference>(index_seq, n);
 	}
 
-	inline const_reference operator[](size_type n) const noexcept
+	auto operator[](size_type n) const noexcept -> const_reference
 	{
 		return get<const_reference>(index_seq, n);
 	}
 
-	inline reference at(size_type n) noexcept
+	auto at(size_type n) noexcept -> reference
 	{
 		return get<reference>(index_seq, n);
 	}
 
-	inline const_reference at(size_type n) const noexcept
+	auto at(size_type n) const noexcept -> const_reference
 	{
 		return get<const_reference>(index_seq, n);
 	}
 
-	inline reference front() noexcept
+	auto front() noexcept -> reference
 	{
 		assert(!empty());
 		return get<reference>(index_seq, 0);
 	}
 
-	inline const_reference front() const noexcept
+	auto front() const noexcept -> const_reference
 	{
 		assert(!empty());
 		return get<const_reference>(index_seq, 0);
 	}
 
-	inline reference back() noexcept
+	auto back() noexcept -> reference
 	{
 		assert(!empty());
 		return get<reference>(index_seq, size_ - 1);
 	}
 
-	inline const_reference back() const noexcept
+	auto back() const noexcept -> const_reference
 	{
 		assert(!empty());
 		return get<const_reference>(index_seq, size_ - 1);
 	}
 
-	template <std::size_t i>
-	ireference<i> at(size_type n) noexcept
+	template <std::size_t I>
+	auto at(size_type n) noexcept -> ireference<I>
 	{
-		ACL_ASSERT(n < size_);
-		return std::get<i>(data_)[n];
+		assert(n < size_);
+		return std::get<I>(data_)[n];
 	}
 
-	template <std::size_t i>
-	iconst_reference<i> at(size_type n) const noexcept
+	template <std::size_t I>
+	auto at(size_type n) const noexcept -> iconst_reference<I>
 	{
-		ACL_ASSERT(n < size_);
-		return std::get<i>(data_)[n];
+		assert(n < size_);
+		return std::get<I>(data_)[n];
 	}
 
-	template <std::size_t i>
-	ireference<i> front() noexcept
+	template <std::size_t I>
+	auto front() noexcept -> ireference<I>
 	{
-		ACL_ASSERT(0 < size_);
-		return std::get<i>(data_)[0];
+		assert(0 < size_);
+		return std::get<I>(data_)[0];
 	}
 
-	template <std::size_t i>
-	iconst_reference<i> front() const noexcept
+	template <std::size_t I>
+	auto front() const noexcept -> iconst_reference<I>
 	{
-		ACL_ASSERT(0 < size_);
-		return std::get<i>(data_)[0];
+		assert(0 < size_);
+		return std::get<I>(data_)[0];
 	}
 
-	template <std::size_t i>
-	ireference<i> back() noexcept
+	template <std::size_t I>
+	auto back() noexcept -> ireference<I>
 	{
-		ACL_ASSERT(0 < size_);
-		return std::get<i>(data_)[size_ - 1];
+		assert(0 < size_);
+		return std::get<I>(data_)[size_ - 1];
 	}
 
-	template <std::size_t i>
-	iconst_reference<i> back() const noexcept
+	template <std::size_t I>
+	auto back() const noexcept -> iconst_reference<I>
 	{
-		ACL_ASSERT(0 < size_);
-		return std::get<i>(data_)[size_ - 1];
+		assert(0 < size_);
+		return std::get<I>(data_)[size_ - 1];
 	}
 
 	// data access
-	template <std::size_t i>
-	auto* data() noexcept
+	template <std::size_t I>
+	auto data() noexcept -> auto*
 	{
-		return std::get<i>(data_);
+		return std::get<I>(data_);
 	}
 
-	template <std::size_t i>
-	const auto* data() const noexcept
+	template <std::size_t I>
+	auto data() const noexcept -> const auto*
 	{
-		return std::get<i>(data_);
+		return std::get<I>(data_);
 	}
 
 	// modifiers:
@@ -594,7 +599,9 @@ public:
 	void emplace_back(Args&&... args) noexcept
 	{
 		if (capacity_ < size_ + 1)
+		{
 			unchecked_reserve(size_ + std::max<size_type>(size_ >> 1, 1));
+		}
 
 		construct_at(size_++, index_seq, std::forward<Args>(args)...);
 	}
@@ -602,14 +609,16 @@ public:
 	void push_back(const tuple_type& x) noexcept
 	{
 		if (capacity_ < size_ + 1)
+		{
 			unchecked_reserve(size_ + std::max<size_type>(size_ >> 1, 1));
+		}
 
 		construct_tuple_at(size_++, index_seq, x);
 	}
 
 	void pop_back() noexcept
 	{
-		ACL_ASSERT(size_);
+		assert(size_);
 		destroy_at(--size_, index_seq);
 	}
 
@@ -652,43 +661,51 @@ public:
 	template <typename Ty>
 	void erase_at(Ty* data, size_type first, size_type last) noexcept
 	{
-		ACL_ASSERT(last < size());
+		assert(last < size());
 		if constexpr (std::is_trivially_copyable_v<Ty>)
+		{
 			std::memmove(data + first, data + last, (size_ - last) * sizeof(Ty));
+		}
 		else
 		{
 			while (last < size_)
+			{
 				data[first++] = std::move(data[last++]);
+			}
 
 			if constexpr (!std::is_trivially_destructible_v<Ty>)
+			{
 				for (; first < size_; ++first)
+				{
 					std::destroy_at(&data[first++]);
+				}
+			}
 		}
 	}
 
 	template <std::size_t... I>
-	void erase_at(size_type position, std::index_sequence<I...>) noexcept
+	void erase_at(size_type position, std::index_sequence<I...> /*unused*/) noexcept
 	{
 		(erase_at(std::get<I>(data_), position, position + 1), ...);
 	}
 
 	template <std::size_t... I>
-	void erase_at(size_type first, size_type last, std::index_sequence<I...>) noexcept
+	void erase_at(size_type first, size_type last, std::index_sequence<I...> /*unused*/) noexcept
 	{
 		(erase_at(std::get<I>(data_), first, last), ...);
 	}
 
-	size_type erase(size_type position) noexcept
+	auto erase(size_type position) noexcept -> size_type
 	{
-		ACL_ASSERT(position < size());
+		assert(position < size());
 		erase_at(position, index_seq);
 		size_--;
 		return position;
 	}
 
-	size_type erase(size_type first, size_type last) noexcept
+	auto erase(size_type first, size_type last) noexcept -> size_type
 	{
-		ACL_ASSERT(last < size());
+		assert(last < size());
 		erase_at(first, last, index_seq);
 		size_ -= (last - first);
 		return first;
@@ -706,7 +723,8 @@ public:
 
 private:
 	template <std::size_t... I>
-	void uninitialized_fill(size_type start, size_type count, tuple_type const& t, std::index_sequence<I...>) noexcept
+	void uninitialized_fill(size_type start, size_type count, tuple_type const& t,
+													std::index_sequence<I...> /*unused*/) noexcept
 	{
 		// This implementation is valid since C++20 (via P1065R2)
 		// In C++17, a constexpr counterpart of std::invoke is actually needed here
@@ -717,11 +735,13 @@ private:
 	void copy_fill_n(It it, It end_it, size_type count, Arg&& arg) noexcept
 	{
 		for (; it != end_it; ++it)
+		{
 			*it = std::forward<Arg>(arg);
+		}
 	}
 
 	template <std::size_t... I>
-	void copy_fill(size_type start, size_type count, tuple_type const& t, std::index_sequence<I...>) noexcept
+	void copy_fill(size_type start, size_type count, tuple_type const& t, std::index_sequence<I...> /*unused*/) noexcept
 	{
 		// This implementation is valid since C++20 (via P1065R2)
 		// In C++17, a constexpr counterpart of std::invoke is actually needed here
@@ -729,22 +749,26 @@ private:
 	}
 
 	template <std::size_t... I, typename... Args>
-	void construct_at(size_type i, std::index_sequence<I...>, Args&&... args) noexcept
+	void construct_at(size_type i, std::index_sequence<I...> /*unused*/, Args&&... args) noexcept
 	{
 		if constexpr (sizeof...(Args) != 0)
+		{
 			(std::construct_at(std::get<I>(data_) + i, std::forward<Args>(args)), ...);
+		}
 		else
+		{
 			(std::construct_at(std::get<I>(data_) + i), ...);
+		}
 	}
 
 	template <std::size_t... I>
-	void construct_tuple_at(size_type i, std::index_sequence<I...>, tuple_type const& arg) noexcept
+	void construct_tuple_at(size_type i, std::index_sequence<I...> /*unused*/, tuple_type const& arg) noexcept
 	{
 		(std::construct_at(std::get<I>(data_) + i, std::get<I>(arg)), ...);
 	}
 
 	template <std::size_t... I>
-	void construct_tuple_at(size_type i, std::index_sequence<I...>, tuple_type&& arg) noexcept
+	void construct_tuple_at(size_type i, std::index_sequence<I...> /*unused*/, tuple_type&& arg) noexcept
 	{
 		(std::construct_at(std::get<I>(data_) + i, std::move(std::get<I>(arg))), ...);
 	}
@@ -756,13 +780,13 @@ private:
 	}
 
 	template <std::size_t... I, typename... Args>
-	void move_at(size_type i, std::index_sequence<I...>, Args&&... args) noexcept
+	void move_at(size_type i, std::index_sequence<I...> /*unused*/, Args&&... args) noexcept
 	{
 		(move_at(std::get<I>(data_) + i, std::forward<Args>(args)), ...);
 	}
 
 	template <std::size_t... I>
-	void move_tuple_at(size_type i, std::index_sequence<I...>, tuple_type const& arg) noexcept
+	void move_tuple_at(size_type i, std::index_sequence<I...> /*unused*/, tuple_type const& arg) noexcept
 	{
 		(move_at(std::get<I>(data_) + i, std::get<I>(arg)), ...);
 	}
@@ -771,12 +795,14 @@ private:
 	void move_construct(Ty* to, Ty* from, size_type n) noexcept
 	{
 		for (size_type i = 0; i < n; ++i)
+		{
 			std::construct_at(to + i, std::move(from[i]));
+		}
 	}
 
 	template <std::size_t... I>
 	void move_construct(array_type& dst, size_type dst_offset, array_type& src, size_type src_offset, size_type n,
-											std::index_sequence<I...>) noexcept
+											std::index_sequence<I...> /*unused*/) noexcept
 	{
 		(move_construct(std::get<I>(dst) + dst_offset, std::get<I>(src) + src_offset, n), ...);
 	}
@@ -785,13 +811,17 @@ private:
 	void copy_assign(Ty* to, Ty const* from, size_type n) noexcept
 	{
 		if constexpr (std::is_trivially_copyable_v<Ty>)
+		{
 			std::memcpy(to, from, n * sizeof(Ty));
+		}
 		else
+		{
 			std::copy(from, from + n, to);
+		}
 	}
 
 	template <std::size_t... I>
-	void copy(array_type& dst, array_type const& src, size_type n, std::index_sequence<I...>) noexcept
+	void copy(array_type& dst, array_type const& src, size_type n, std::index_sequence<I...> /*unused*/) noexcept
 	{
 		(copy_assign(std::get<I>(dst), std::get<I>(src), n), ...);
 	}
@@ -800,11 +830,15 @@ private:
 	void construct_list(T* data, size_type sz, T const* src) noexcept
 	{
 		if constexpr (std::is_trivially_copyable_v<T>)
+		{
 			std::memcpy(data, src, sz * sizeof(T));
+		}
 		else
 		{
 			for (size_type i = 0; i < sz; ++i)
+			{
 				std::construct_at(data + i, *(src + i));
+			}
 		}
 	}
 
@@ -812,7 +846,9 @@ private:
 	void construct_single(T& data, T const& src) noexcept
 	{
 		if constexpr (std::is_trivially_copyable_v<T>)
+		{
 			std::memcpy(&data, &src, sizeof(T));
+		}
 		else
 		{
 			std::construct_at(&data, src);
@@ -820,14 +856,14 @@ private:
 	}
 
 	template <std::size_t... I>
-	void construct_list(soavector const& x, std::index_sequence<I...>) noexcept
+	void construct_list(soavector const& x, std::index_sequence<I...> /*unused*/) noexcept
 	{
 		(construct_list(std::get<I>(data_), size_, std::get<I>(x.data_)), ...);
 	}
 
 	template <typename InputIterator, std::size_t... I>
 	static void construct_range(InputIterator start, InputIterator end, array_type& store, size_type offset,
-															std::index_sequence<I...>) noexcept
+															std::index_sequence<I...> /*unused*/) noexcept
 	{
 		while (start != end)
 		{
@@ -841,28 +877,32 @@ private:
 	static void destroy_seq(T* data, size_type size) noexcept
 	{
 		if constexpr (!std::is_trivially_destructible_v<T>)
+		{
 			std::for_each(data, data + size,
 										[](T& d)
 										{
 											std::destroy_at(&d);
 										});
+		}
 	}
 
 	template <typename T>
 	static void destroy_single(T* data) noexcept
 	{
 		if constexpr (!std::is_trivially_destructible_v<T>)
+		{
 			std::destroy_at(data);
+		}
 	}
 
 	template <std::size_t... I>
-	void destroy_all(size_type start, size_type count, std::index_sequence<I...>) noexcept
+	void destroy_all(size_type start, size_type count, std::index_sequence<I...> /*unused*/) noexcept
 	{
 		(destroy_seq(std::get<I>(data_) + start, count), ...);
 	}
 
 	template <std::size_t... I>
-	void destroy_at(size_type at, std::index_sequence<I...>) noexcept
+	void destroy_at(size_type at, std::index_sequence<I...> /*unused*/) noexcept
 	{
 		(destroy_single(std::get<I>(data_) + at), ...);
 	}
@@ -874,10 +914,12 @@ private:
 	}
 
 	template <typename Ty>
-	inline void memmove(Ty* dst, Ty* src, size_type n)
+	void memmove(Ty* dst, Ty* src, size_type n)
 	{
 		if constexpr (std::is_trivially_copyable_v<Ty>)
+		{
 			std::memmove(dst, src, (n * sizeof(Ty)));
+		}
 		else
 		{
 			move_construct(dst, src, n);
@@ -885,12 +927,12 @@ private:
 	}
 
 	template <std::size_t... I>
-	inline void memmove(size_type to, size_type from, size_type n, std::index_sequence<I...>)
+	void memmove(size_type to, size_type from, size_type n, std::index_sequence<I...> /*unused*/)
 	{
 		(memmove(std::get<I>(data_) + to, std::get<I>(data_) + from, n), ...);
 	}
 
-	inline size_type insert_hole(size_type p, size_type n = 1) noexcept
+	auto insert_hole(size_type p, size_type n = 1) noexcept -> size_type
 	{
 		size_type nsz = size_ + n;
 		if (capacity_ < nsz)
@@ -906,7 +948,7 @@ private:
 		return p;
 	}
 
-	inline soavector& assign_copy(soavector const& x, std::false_type) noexcept
+	auto assign_copy(soavector const& x, std::false_type /*unused*/) noexcept -> soavector&
 	{
 		if (capacity_ < x.size_)
 		{
@@ -923,11 +965,13 @@ private:
 		return *this;
 	}
 
-	inline soavector& assign_copy(soavector const& x, std::true_type) noexcept
+	auto assign_copy(soavector const& x, std::true_type /*unused*/) noexcept -> soavector&
 	{
 		if (allocator_is_always_equal::value ||
 				static_cast<const allocator_type&>(x) == static_cast<const allocator_type&>(*this))
+		{
 			assign(x, std::false_type());
+		}
 		else
 		{
 			destroy_and_deallocate();
@@ -939,7 +983,7 @@ private:
 		return *this;
 	}
 
-	inline soavector& assign_move(soavector&& x, std::false_type) noexcept
+	auto assign_move(soavector& x, std::false_type /*unused*/) noexcept -> soavector&
 	{
 		if (allocator_is_always_equal::value ||
 				static_cast<const allocator_type&>(x) == static_cast<const allocator_type&>(*this))
@@ -952,11 +996,13 @@ private:
 			x.capacity_ = x.size_ = 0;
 		}
 		else
+		{
 			assign_copy(x, std::false_type());
+		}
 		return *this;
 	}
 
-	inline soavector& assign_move(soavector&& x, std::true_type) noexcept
+	auto assign_move(soavector& x, std::true_type /*unused*/) noexcept -> soavector&
 	{
 		destroy_and_deallocate();
 		allocator_type::operator=(std::move(static_cast<allocator_type&>(x)));
@@ -975,14 +1021,14 @@ private:
 	}
 
 	template <std::size_t... I>
-	inline array_type allocate(size_type n, std::index_sequence<I...>) noexcept
+	auto allocate(size_type n, std::index_sequence<I...> /*unused*/) noexcept -> array_type
 	{
 		array_type r;
 		(allocate(std::get<I>(r), n), ...);
 		return r;
 	}
 
-	inline array_type allocate(size_type n) noexcept
+	auto allocate(size_type n) noexcept -> array_type
 	{
 		return allocate(n, index_seq);
 	}
@@ -994,17 +1040,17 @@ private:
 	}
 
 	template <std::size_t... I>
-	inline void deallocate(size_type n, std::index_sequence<I...>) noexcept
+	void deallocate(size_type n, std::index_sequence<I...> /*unused*/) noexcept
 	{
 		(deallocate(std::get<I>(data_), n), ...);
 	}
 
-	inline void deallocate() noexcept
+	void deallocate() noexcept
 	{
 		deallocate(capacity_, index_seq);
 	}
 
-	inline void unchecked_reserve(size_type n) noexcept
+	void unchecked_reserve(size_type n) noexcept
 	{
 		auto d = allocate(n);
 		if (size_)
@@ -1016,7 +1062,7 @@ private:
 		capacity_ = n;
 	}
 
-	inline void unchecked_reserve(size_type n, size_type at, size_type holes) noexcept
+	void unchecked_reserve(size_type n, size_type at, size_type holes) noexcept
 	{
 		auto d = allocate(n);
 		if (size_)
@@ -1029,14 +1075,14 @@ private:
 		capacity_ = n;
 	}
 
-	void swap(soavector& x, std::false_type) noexcept
+	void swap(soavector& x, std::false_type /*unused*/) noexcept
 	{
 		std::swap(capacity_, x.capacity_);
 		std::swap(size_, x.size_);
 		std::swap(data_, x.data_);
 	}
 
-	void swap(soavector& x, std::true_type) noexcept
+	void swap(soavector& x, std::true_type /*unused*/) noexcept
 	{
 		std::swap(capacity_, x.capacity_);
 		std::swap(size_, x.size_);
@@ -1050,18 +1096,21 @@ private:
 	}
 
 	template <typename Ty>
-	static bool equals(Ty const* first, Ty const* second, size_type n) noexcept
+	static auto equals(Ty const* first, Ty const* second, size_type n) noexcept -> bool
 	{
 		for (size_type i = 0; i < n; ++i)
 		{
 			if (first[i] != second[i])
+			{
 				return false;
+			}
 		}
 		return true;
 	}
 
 	template <std::size_t... I>
-	static bool equals(array_type const& first, array_type const& second, size_type n, std::index_sequence<I...>) noexcept
+	static auto equals(array_type const& first, array_type const& second, size_type n,
+										 std::index_sequence<I...> /*unused*/) noexcept -> bool
 	{
 		return (equals(std::get<I>(first), std::get<I>(second), n) && ...);
 	}
@@ -1070,35 +1119,41 @@ private:
 	 * Less
 	 */
 	template <typename Ty>
-	static bool less(Ty const* first, Ty const* second, size_type n) noexcept
+	static auto less(Ty const* first, Ty const* second, size_type n) noexcept -> bool
 	{
 		for (size_type i = 0; i < n; ++i)
 		{
 			if (first[i] >= second[i])
+			{
 				return false;
+			}
 		}
 		return true;
 	}
 
 	template <std::size_t... I>
-	static bool less(array_type const& first, array_type const& second, size_type n, std::index_sequence<I...>) noexcept
+	static auto less(array_type const& first, array_type const& second, size_type n,
+									 std::index_sequence<I...> /*unused*/) noexcept -> bool
 	{
 		return (less(std::get<I>(first), std::get<I>(second), n) && ...);
 	}
 
 	template <typename Ty>
-	static bool lesseq(Ty const* first, Ty const* second, size_type n) noexcept
+	static auto lesseq(Ty const* first, Ty const* second, size_type n) noexcept -> bool
 	{
 		for (size_type i = 0; i < n; ++i)
 		{
 			if (first[i] > second[i])
+			{
 				return false;
+			}
 		}
 		return true;
 	}
 
 	template <std::size_t... I>
-	static bool lesseq(array_type const& first, array_type const& second, size_type n, std::index_sequence<I...>) noexcept
+	static auto lesseq(array_type const& first, array_type const& second, size_type n,
+										 std::index_sequence<I...> /*unused*/) noexcept -> bool
 	{
 		return (lesseq(std::get<I>(first), std::get<I>(second), n) && ...);
 	}
@@ -1106,47 +1161,47 @@ private:
 	 *
 	 */
 
-	friend bool operator==(soavector const& x, soavector const& y) noexcept
+	friend auto operator==(soavector const& x, soavector const& y) noexcept -> bool
 	{
 		return x.size_ == y.size_ && equals(x.data_, y.data_, x.size_, index_seq);
 	}
 
-	friend bool operator<(soavector const& x, soavector const& y) noexcept
+	friend auto operator<(soavector const& x, soavector const& y) noexcept -> bool
 	{
 		auto n = std::min(x.size(), y.size());
-		return (less(x, y, n, index_seq) | (x.size < y.size));
+		return (less(x, y, n, index_seq) | (x.size_ < y.size_));
 	}
 
-	friend bool operator<=(soavector const& x, soavector const& y) noexcept
+	friend auto operator<=(soavector const& x, soavector const& y) noexcept -> bool
 	{
 		auto n = std::min(x.size(), y.size());
-		return (lesseq(x, y, n, index_seq) | (x.size <= y.size));
+		return (lesseq(x, y, n, index_seq) | (x.size_ <= y.size_));
 	}
 
-	friend bool operator!=(soavector const& x, soavector const& y) noexcept
+	friend auto operator!=(soavector const& x, soavector const& y) noexcept -> bool
 	{
 		return !(x == y);
 	}
 
-	friend bool operator>(soavector const& x, soavector const& y) noexcept
+	friend auto operator>(soavector const& x, soavector const& y) noexcept -> bool
 	{
 		return y < x;
 	}
 
-	friend bool operator>=(soavector const& x, soavector const& y) noexcept
+	friend auto operator>=(soavector const& x, soavector const& y) noexcept -> bool
 	{
 		return y <= x;
 	}
 
 	template <class InputIterator>
-	inline size_type insert_range(size_type position, InputIterator first, InputIterator last) noexcept
+	auto insert_range(size_type position, InputIterator first, InputIterator last) noexcept -> size_type
 	{
 		size_type p = insert_hole(position, static_cast<size_type>(std::distance(first, last)));
 		construct_range(first, last, data_, p, index_seq);
 		return p;
 	}
 
-	inline size_type insert_range(size_type position, size_type n, tuple_type const& x) noexcept
+	auto insert_range(size_type position, size_type n, tuple_type const& x) noexcept -> size_type
 	{
 		size_type p = insert_hole(position, n);
 		uninitialized_fill(p, n, x, index_seq);
@@ -1154,7 +1209,7 @@ private:
 	}
 
 	template <typename InputIterator>
-	inline void construct_from_range(InputIterator first, InputIterator last) noexcept
+	void construct_from_range(InputIterator first, InputIterator last) noexcept
 	{
 		size_			= static_cast<size_type>(std::distance(first, last));
 		data_			= allocate(size_);
@@ -1162,16 +1217,16 @@ private:
 		construct_range(first, last, data_, 0, index_seq);
 	}
 
-	template <typename reftype, std::size_t... I>
-	reftype get(std::index_sequence<I...>) const noexcept
+	template <typename Reftype, std::size_t... I>
+	auto get(std::index_sequence<I...> /*unused*/) const noexcept -> Reftype
 	{
-		return reftype(*std::get<I>(data_)...);
+		return Reftype(*std::get<I>(data_)...);
 	}
 
-	template <typename reftype, std::size_t... I>
-	reftype get(std::index_sequence<I...>, size_type i) const noexcept
+	template <typename Reftype, std::size_t... I>
+	auto get(std::index_sequence<I...> /*unused*/, size_type i) const noexcept -> Reftype
 	{
-		return reftype(*(std::get<I>(data_) + i)...);
+		return Reftype(*(std::get<I>(data_) + i)...);
 	}
 
 	array_type data_{};

@@ -37,8 +37,8 @@ public:
 	}
 
 	// If the iterator lengths don't match we will have an error
-	bool operator!=(zip_iterator const& other) const noexcept = default;
-	bool operator==(zip_iterator const& other) const noexcept = default;
+	auto operator!=(zip_iterator const& other) const noexcept -> bool = default;
+	auto operator==(zip_iterator const& other) const noexcept -> bool = default;
 
 	auto operator*() -> value_type
 	{

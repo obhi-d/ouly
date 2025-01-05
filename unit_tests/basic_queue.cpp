@@ -2,6 +2,8 @@
 #include <catch2/catch_all.hpp>
 #include <string>
 
+// NOLINTBEGIN
+
 struct string_traits
 {
 	static constexpr uint32_t pool_size_v = 4;
@@ -105,3 +107,5 @@ TEST_CASE("Validate basic_queue initialization", "[basic_queue]")
 
 	CHECK(queue4.empty() == true);
 }
+
+// NOLINTEND

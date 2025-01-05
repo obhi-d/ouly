@@ -3,6 +3,7 @@
 #include <string>
 #include <unordered_map>
 
+// NOLINTBEGIN
 template <typename V>
 using custom_map = std::unordered_map<std::string, V>;
 
@@ -86,3 +87,4 @@ TEST_CASE("blackboard: push_back", "[blackboard][push_back]")
 	// check decl
 	acl::blackboard<acl::options<acl::opt::name_map<custom_map>>> map;
 }
+// NOLINTEND

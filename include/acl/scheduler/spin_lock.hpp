@@ -10,24 +10,28 @@ struct spin_lock
 	void lock() noexcept
 	{
 		while (!try_lock())
-			flag.wait(true, std::memory_order_relaxed);
+		{
+			flag_.wait(true, std::memory_order_relaxed);
+		}
 	}
 
-	bool try_lock() noexcept
+	auto try_lock() noexcept -> bool
 	{
-		return !flag.test_and_set(std::memory_order_acquire);
+		return !flag_.test_and_set(std::memory_order_acquire);
 	}
 
 	template <typename Notify = std::true_type>
 	void unlock() noexcept
 	{
-		flag.clear(std::memory_order_release);
+		flag_.clear(std::memory_order_release);
 		if constexpr (Notify::value)
-			flag.notify_one();
+		{
+			flag_.notify_one();
+		}
 	}
 
 private:
-	std::atomic_flag flag = ATOMIC_FLAG_INIT;
+	std::atomic_flag flag_ = ATOMIC_FLAG_INIT;
 };
 
 } // namespace acl

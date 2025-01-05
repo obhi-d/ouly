@@ -3,6 +3,7 @@
 #include <acl/allocators/linear_stack_allocator.hpp>
 #include <catch2/catch_all.hpp>
 
+// NOLINTBEGIN
 TEST_CASE("Validate linear_allocator", "[linear_allocator]")
 {
 	using allocator_t = acl::linear_allocator<>;
@@ -135,3 +136,4 @@ TEST_CASE("Validate linear_stack_allocator with alignment", "[linear_stack_alloc
 	auto a1 = acl::allocate<std::uint8_t>(allocator, 32, 0);
 	CHECK(a1 == first);
 }
+// NOLINTEND

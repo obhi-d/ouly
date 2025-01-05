@@ -20,79 +20,83 @@ public:
 	using address							 = typename underlying_allocator::address;
 
 	template <typename... Args>
-	linear_allocator(size_type i_arena_size, Args&&... i_args) noexcept
-			: k_arena_size(i_arena_size), left_over(i_arena_size)
+	linear_allocator(size_type i_arena_size, [[maybe_unused]] Args... args) noexcept
+			: k_arena_size_(i_arena_size), left_over_(i_arena_size)
 	{
 		statistics::report_new_arena();
-		buffer = underlying_allocator::allocate(k_arena_size, {});
+		buffer_ = underlying_allocator::allocate(k_arena_size_, {});
 	}
 
 	linear_allocator(linear_allocator const&) = delete;
 
 	linear_allocator(linear_allocator&& other) noexcept
-			: buffer(other.buffer), left_over(other.left_over), k_arena_size(other.k_arena_size)
+			: buffer_(other.buffer_), left_over_(other.left_over_), k_arena_size_(other.k_arena_size_)
 	{
-		other.buffer		= nullptr;
-		other.left_over = 0;
+		other.buffer_		 = nullptr;
+		other.left_over_ = 0;
 	}
 
 	~linear_allocator() noexcept
 	{
-		underlying_allocator::deallocate(buffer, k_arena_size);
+		underlying_allocator::deallocate(buffer_, k_arena_size_);
 	}
 
-	linear_allocator& operator=(linear_allocator const&) = delete;
+	auto operator=(linear_allocator const&) -> linear_allocator& = delete;
 
-	linear_allocator& operator=(linear_allocator&& other) noexcept
+	auto operator=(linear_allocator&& other) noexcept -> linear_allocator&
 	{
-		ACL_ASSERT(k_arena_size == other.k_arena_size);
-		buffer					= other.buffer;
-		left_over				= other.left_over;
-		other.buffer		= nullptr;
-		other.left_over = 0;
+		assert(k_arena_size_ == other.k_arena_size_);
+		buffer_					 = other.buffer_;
+		left_over_			 = other.left_over_;
+		other.buffer_		 = nullptr;
+		other.left_over_ = 0;
 		return *this;
 	}
 
-	inline constexpr static address null()
+	constexpr static auto null() -> address
 	{
 		return underlying_allocator::null();
 	}
 
 	template <typename Alignment = alignment<>>
-	[[nodiscard]] address allocate(size_type i_size, Alignment i_alignment = {})
+	[[nodiscard]] auto allocate(size_type i_size, Alignment i_alignment = {}) -> address
 	{
 		auto measure = statistics::report_allocate(i_size);
-		// ACL_ASSERT
+		// assert
 		auto const fixup = i_alignment - 1;
 		// make sure you allocate enough space
 		// but keep alignment distance so that next allocations
 		// do not suffer from lost alignment
 		if (i_alignment)
+		{
 			i_size += i_alignment;
+		}
 
-		ACL_ASSERT(left_over >= i_size);
-		size_type offset = k_arena_size - left_over;
-		left_over -= i_size;
+		assert(left_over_ >= i_size);
+		size_type offset = k_arena_size_ - left_over_;
+		left_over_ -= i_size;
 		if (i_alignment)
 		{
-			auto pointer = reinterpret_cast<std::uintptr_t>(buffer) + static_cast<std::uintptr_t>(offset);
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+			auto pointer = reinterpret_cast<std::uintptr_t>(buffer_) + static_cast<std::uintptr_t>(offset);
 			if ((pointer & fixup) == 0)
 			{
-				left_over += i_alignment;
-				return reinterpret_cast<address>(reinterpret_cast<std::uint8_t*>(buffer) + offset);
+				left_over_ += i_alignment;
+				// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+				return reinterpret_cast<address>(reinterpret_cast<std::uint8_t*>(buffer_) + offset);
 			}
-			else
-			{
-				auto ret = (pointer + static_cast<std::uintptr_t>(fixup)) & ~static_cast<std::uintptr_t>(fixup);
-				return reinterpret_cast<address>(ret);
-			}
+
+			auto ret = (pointer + static_cast<std::uintptr_t>(fixup)) & ~static_cast<std::uintptr_t>(fixup);
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+			return reinterpret_cast<address>(ret);
 		}
-		else
-			return reinterpret_cast<address>(reinterpret_cast<std::uint8_t*>(buffer) + offset);
+
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+		return reinterpret_cast<address>(reinterpret_cast<std::uint8_t*>(buffer_) + offset);
 	}
 
 	template <typename Alignment = alignment<>>
-	[[nodiscard]] address zero_allocate(size_type i_size, Alignment i_alignment = {})
+	[[nodiscard]] auto zero_allocate(size_type i_size, Alignment i_alignment = {}) -> address
 	{
 		auto z = allocate(i_size, i_alignment);
 		std::memset(z, 0, i_size);
@@ -105,38 +109,44 @@ public:
 		auto measure = statistics::report_deallocate(i_size);
 
 		// merge back?
-		size_type new_left_over = left_over + i_size;
-		size_type offset				= (k_arena_size - new_left_over);
-		if (reinterpret_cast<std::uint8_t*>(buffer) + offset == reinterpret_cast<std::uint8_t*>(i_data))
-			left_over = new_left_over;
+		size_type new_left_over = left_over_ + i_size;
+		size_type offset				= (k_arena_size_ - new_left_over);
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+		if (reinterpret_cast<std::uint8_t*>(buffer_) + offset == reinterpret_cast<std::uint8_t*>(i_data))
+		{
+			left_over_ = new_left_over;
+		}
 		else
 		{
 			if constexpr (i_alignment)
 			{
 				i_size += (std::size_t)i_alignment;
 
-				new_left_over = left_over + i_size;
-				offset				= (k_arena_size - new_left_over);
+				new_left_over = left_over_ + i_size;
+				offset				= (k_arena_size_ - new_left_over);
 
 				// This memory fixed up by alignment and is within range of alignment
-				if ((reinterpret_cast<std::uintptr_t>(i_data) - (reinterpret_cast<std::uintptr_t>(buffer) + offset)) <
+				// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+				if ((reinterpret_cast<std::uintptr_t>(i_data) - (reinterpret_cast<std::uintptr_t>(buffer_) + offset)) <
 						i_alignment)
-					left_over = new_left_over;
+				{
+					left_over_ = new_left_over;
+				}
 			}
 		}
 	}
 
-	size_type get_free_size() const
+	auto get_free_size() const -> size_type
 	{
-		return left_over;
+		return left_over_;
 	}
 
-	inline auto operator<=>(linear_allocator const&) const = default;
+	auto operator<=>(linear_allocator const&) const = default;
 
 private:
-	address					buffer;
-	size_type				left_over;
-	const size_type k_arena_size;
+	address		buffer_;
+	size_type left_over_;
+	size_type k_arena_size_;
 };
 
 } // namespace acl

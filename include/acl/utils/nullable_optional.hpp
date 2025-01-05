@@ -8,35 +8,43 @@
 
 namespace acl
 {
-template <typename T, typename auto_delete = std::true_type>
+template <typename T, typename AutoDelete = std::true_type>
 struct nullable_optional
 {
+	nullable_optional() noexcept																	 = default;
+	nullable_optional(nullable_optional const&)										 = delete;
+	auto operator=(nullable_optional const&) -> nullable_optional& = delete;
+	auto operator=(nullable_optional&&) -> nullable_optional&			 = default;
+	nullable_optional(nullable_optional&&) noexcept								 = default;
+
 	~nullable_optional() noexcept
 	{
-		if constexpr (auto_delete::value)
+		if constexpr (AutoDelete::value)
 		{
 			if (*this)
+			{
 				reset();
+			}
 		}
 	}
 
 	template <typename... Args>
-	inline void emplace(Args&&... args)
+	void emplace(Args&&... args)
 	{
 		new (memory()) T(std::forward<Args>(args)...);
 	}
 
-	inline T& get() noexcept
+	auto get() noexcept -> T&
 	{
 		return *memory();
 	}
 
-	inline T const& get() const noexcept
+	auto get() const noexcept -> T const&
 	{
 		return *memory();
 	}
 
-	inline explicit operator bool() const noexcept
+	explicit operator bool() const noexcept
 	{
 		return std::any_of((uint8_t*)&bytes_, ((uint8_t*)&bytes_) + sizeof(bytes_),
 											 [](uint8_t nonZero)
@@ -45,18 +53,20 @@ struct nullable_optional
 											 });
 	}
 
-	inline void reset() noexcept
+	void reset() noexcept
 	{
 		memory()->~T();
 	}
 
-	inline T* memory() noexcept
+	auto memory() noexcept -> T*
 	{
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 		return reinterpret_cast<T*>(&bytes_);
 	}
 
-	inline T const* memory() const noexcept
+	auto memory() const noexcept -> T const*
 	{
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 		return reinterpret_cast<T const*>(&bytes_);
 	}
 

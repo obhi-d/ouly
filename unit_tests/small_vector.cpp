@@ -6,6 +6,7 @@
 #include <compare>
 #include <utility>
 
+// NOLINTBEGIN
 TEST_CASE("small_vector: Validate small_vector emplace", "[small_vector][emplace]")
 {
 	acl::small_vector<pod> v1, v2;
@@ -409,3 +410,5 @@ TEST_CASE("small_vector: erase", "[small_vector][erase]")
 	REQUIRE(v1.size() == 4);
 	REQUIRE(v1.is_inlined());
 }
+
+// NOLINTEND

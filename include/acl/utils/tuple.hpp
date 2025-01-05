@@ -11,7 +11,7 @@ namespace acl
 template <std::size_t I, typename T>
 struct tuple_leaf
 {
-	T value;
+	T value_;
 };
 
 // Base case for the tuple definition (empty tuple)
@@ -51,14 +51,14 @@ struct tuple : tuple_impl<std::index_sequence_for<Args...>, Args...>
 
 	// Accessor function to get the I-th element
 	template <std::size_t I>
-	auto& get() noexcept
+	auto get() noexcept -> auto&
 	{
 		return static_cast<tuple_leaf<I, typename tuple::type<I>>&>(*this).value;
 	}
 
 	// Const accessor function
 	template <std::size_t I>
-	const auto& get() const noexcept
+	auto get() const noexcept -> const auto&
 	{
 		return static_cast<tuple_leaf<I, typename tuple::type<I>> const&>(*this).value;
 	}

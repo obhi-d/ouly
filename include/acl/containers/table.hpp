@@ -14,52 +14,55 @@ class table
 {
 	struct free_idx
 	{
-		std::uint32_t unused = detail::k_null_32;
-		std::uint32_t valids = 0;
+		std::uint32_t unused_ = detail::k_null_32;
+		std::uint32_t valids_ = 0;
 	};
 
 	using vector	 = std::conditional_t<IsPOD, podvector<T>, acl::vector<T>>;
 	using freepool = std::conditional_t<IsPOD, free_idx, podvector<std::uint32_t>>;
 
 public:
-	table() noexcept				= default;
+	table() noexcept = default;
+	table(vector pool, freepool free_pool) : pool_(std::move(pool)), free_pool_(std::move(free_pool)) {}
 	table(table const&)			= default;
 	table(table&&) noexcept = default;
+	~table() noexcept				= default;
 
-	table& operator=(table const&)		 = default;
-	table& operator=(table&&) noexcept = default;
+	auto operator=(table const&) -> table&		 = default;
+	auto operator=(table&&) noexcept -> table& = default;
 
 	template <typename... Args>
-	std::uint32_t emplace(Args&&... args)
+	auto emplace(Args&&... args) -> std::uint32_t
 	{
 		std::uint32_t index = 0;
 		if constexpr (IsPOD)
 		{
-			if (free_pool.unused != detail::k_null_32)
+			if (free_pool_.unused != detail::k_null_32)
 			{
-				index						 = free_pool.unused;
-				free_pool.unused = reinterpret_cast<std::uint32_t&>(pool[free_pool.unused]);
+				index = free_pool_.unused;
+				// NOLINTNEXTLINE
+				free_pool_.unused = reinterpret_cast<std::uint32_t&>(pool_[free_pool_.unused]);
 			}
 			else
 			{
-				index = static_cast<std::uint32_t>(pool.size());
-				pool.resize(index + 1);
+				index = static_cast<std::uint32_t>(pool_.size());
+				pool_.resize(index + 1);
 			}
-			pool[index] = T(std::forward<Args>(args)...);
-			free_pool.valids++;
+			pool_[index] = T(std::forward<Args>(args)...);
+			free_pool_.valids++;
 		}
 		else
 		{
-			if (!free_pool.empty())
+			if (!free_pool_.empty())
 			{
-				index = free_pool.back();
-				free_pool.pop_back();
-				pool[index] = std::move(T(std::forward<Args>(args)...));
+				index = free_pool_.back();
+				free_pool_.pop_back();
+				pool_[index] = std::move(T(std::forward<Args>(args)...));
 			}
 			else
 			{
-				index = static_cast<std::uint32_t>(pool.size());
-				pool.emplace_back(std::forward<Args>(args)...);
+				index = static_cast<std::uint32_t>(pool_.size());
+				pool_.emplace_back(std::forward<Args>(args)...);
 			}
 		}
 		return index;
@@ -69,53 +72,62 @@ public:
 	{
 		if constexpr (IsPOD)
 		{
-			reinterpret_cast<std::uint32_t&>(pool[index]) = free_pool.unused;
-			free_pool.unused															= index;
-			free_pool.valids--;
+			// NOLINTNEXTLINE
+			reinterpret_cast<std::uint32_t&>(pool_[index]) = free_pool_.unused;
+			free_pool_.unused															 = index;
+			free_pool_.valids--;
 		}
 		else
 		{
-			pool[index] = T();
-			free_pool.emplace_back(index);
+			pool_[index] = T();
+			free_pool_.emplace_back(index);
 		}
 	}
 
-	T& operator[](std::uint32_t i)
+	auto operator[](std::uint32_t i) -> T&
 	{
-		return reinterpret_cast<T&>(pool[i]);
+		// NOLINTNEXTLINE
+		return reinterpret_cast<T&>(pool_[i]);
 	}
 
-	T const& operator[](std::uint32_t i) const
+	auto operator[](std::uint32_t i) const -> T const&
 	{
-		return reinterpret_cast<T const&>(pool[i]);
+		// NOLINTNEXTLINE
+		return reinterpret_cast<T const&>(pool_[i]);
 	}
 
-	T& at(std::uint32_t i)
+	auto at(std::uint32_t i) -> T&
 	{
-		return reinterpret_cast<T&>(pool[i]);
+		// NOLINTNEXTLINE
+		return reinterpret_cast<T&>(pool_[i]);
 	}
 
-	T const& at(std::uint32_t i) const
+	auto at(std::uint32_t i) const -> T const&
 	{
-		return reinterpret_cast<T const&>(pool[i]);
+		// NOLINTNEXTLINE
+		return reinterpret_cast<T const&>(pool_[i]);
 	}
 
-	std::uint32_t size() const
+	[[nodiscard]] auto size() const -> std::uint32_t
 	{
 		if constexpr (IsPOD)
-			return free_pool.valids;
+		{
+			return free_pool_.valids;
+		}
 		else
-			return static_cast<std::uint32_t>(pool.size() - free_pool.size());
+		{
+			return static_cast<std::uint32_t>(pool_.size() - free_pool_.size());
+		}
 	}
 
-	uint32_t capacity() const
+	[[nodiscard]] auto capacity() const -> uint32_t
 	{
-		return static_cast<uint32_t>(pool.size());
+		return static_cast<uint32_t>(pool_.size());
 	}
 
 private:
-	vector	 pool;
-	freepool free_pool;
+	vector	 pool_;
+	freepool free_pool_;
 };
 
 } // namespace acl

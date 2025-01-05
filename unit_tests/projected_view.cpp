@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+// NOLINTBEGIN
 struct MyClass
 {
 	std::string name;
@@ -56,3 +57,4 @@ TEST_CASE("Projected view basic tests")
 												});
 	REQUIRE(c == 10);
 }
+// NOLINTEND

@@ -12,91 +12,90 @@ class projected_view : public std::ranges::view_interface<projected_view<M, C>>
 public:
 	static constexpr bool is_const = std::is_const_v<C>;
 
-public:
 	struct iterator_wrapper
 	{
 
 	public:
 		iterator_wrapper() noexcept = default;
-		iterator_wrapper(C* d) noexcept : data(d) {} // Concept requirements
+		iterator_wrapper(C* d) noexcept : data_(d) {} // Concept requirements
 		using iterator_category = std::random_access_iterator_tag;
 		using value_type				= std::remove_reference_t<decltype(std::declval<C&>().*M)>;
 		using difference_type		= std::ptrdiff_t;
 
 		// Member functions (stubs)
-		value_type& operator*() const& noexcept
+		auto operator*() const& noexcept -> value_type&
 		{
-			return data->*M;
+			return data_->*M;
 		}
 
-		value_type* operator->() const& noexcept
+		auto operator->() const& noexcept -> value_type*
 		{
-			return &(data->*M);
+			return &(data_->*M);
 		};
 
-		iterator_wrapper& operator++() & noexcept
+		auto operator++() & noexcept -> iterator_wrapper&
 		{
-			++data;
+			++data_;
 			return *this;
 		};
 
-		iterator_wrapper operator++(int) & noexcept
+		auto operator++(int) & noexcept -> iterator_wrapper
 		{
-			return iterator_wrapper(data++);
+			return iterator_wrapper(data_++);
 		};
 
-		iterator_wrapper& operator--() & noexcept
+		auto operator--() & noexcept -> iterator_wrapper&
 		{
-			--data;
+			--data_;
 			return *this;
 		}
 
-		iterator_wrapper operator--(int) & noexcept
+		auto operator--(int) & noexcept -> iterator_wrapper
 		{
-			return iterator_wrapper(data--);
+			return iterator_wrapper(data_--);
 		}
 
-		iterator_wrapper& operator+=(difference_type n) & noexcept
+		auto operator+=(difference_type n) & noexcept -> iterator_wrapper&
 		{
-			data += n;
+			data_ += n;
 			return *this;
 		}
 
-		iterator_wrapper operator+(difference_type n) const& noexcept
+		auto operator+(difference_type n) const& noexcept -> iterator_wrapper
 		{
-			return iterator_wrapper(data + n);
+			return iterator_wrapper(data_ + n);
 		}
 
-		friend iterator_wrapper operator+(difference_type n, iterator_wrapper other) noexcept
+		friend auto operator+(difference_type n, iterator_wrapper other) noexcept -> iterator_wrapper
 		{
-			return iterator_wrapper(other.data + n);
+			return iterator_wrapper(other.data_ + n);
 		}
 
-		iterator_wrapper& operator-=(difference_type n) & noexcept
+		auto operator-=(difference_type n) & noexcept -> iterator_wrapper&
 		{
-			data -= n;
+			data_ -= n;
 			return *this;
 		}
 
-		iterator_wrapper operator-(difference_type n) const& noexcept
+		auto operator-(difference_type n) const& noexcept -> iterator_wrapper
 		{
-			return iterator_wrapper(data - n);
+			return iterator_wrapper(data_ - n);
 		}
 
-		difference_type operator-(iterator_wrapper other) const& noexcept
+		auto operator-(iterator_wrapper other) const& noexcept -> difference_type
 		{
-			return static_cast<difference_type>(data - other.data);
+			return static_cast<difference_type>(data_ - other.data_);
 		}
 
 		auto operator<=>(iterator_wrapper const& other) const& noexcept = default;
 
-		value_type& operator[](difference_type n) const& noexcept
+		auto operator[](difference_type n) const& noexcept -> value_type&
 		{
-			return data[n].*M;
+			return data_[n].*M;
 		}
 
 	private:
-		C* data = nullptr;
+		C* data_ = nullptr;
 	};
 
 	auto begin() const noexcept

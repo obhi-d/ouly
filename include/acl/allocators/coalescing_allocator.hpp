@@ -20,7 +20,7 @@ class coalescing_allocator
 public:
 	using size_type = coalescing_allocator_size_type;
 
-	size_type allocate(size_type size);
+	auto			allocate(size_type size) -> size_type;
 	void			deallocate(size_type offset, size_type size);
 
 private:

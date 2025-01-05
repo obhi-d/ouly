@@ -22,21 +22,13 @@
 
 #if defined(_MSC_VER)
 #include <intrin.h>
-#define ACL_EXPORT							__declspec(dllexport)
-#define ACL_IMPORT							__declspec(dllimport)
-#define ACL_EMPTY_BASES					__declspec(empty_bases)
-#define ACL_POPCOUNT(v)					__popcnt(v)
-#define ACL_PREFETCH_ONETIME(x) _mm_prefetch((const char*)(x), _MM_HINT_T0)
-#define ACL_LIKELY(x)						(x)
-#define ACL_UNLIKELY(x)					(x)
+#define ACL_EXPORT			__declspec(dllexport)
+#define ACL_IMPORT			__declspec(dllimport)
+#define ACL_EMPTY_BASES __declspec(empty_bases)
 #else
 #define ACL_EXPORT __attribute__((visibility("default")))
 #define ACL_IMPORT __attribute__((visibility("default")))
 #define ACL_EMPTY_BASES
-#define ACL_POPCOUNT(v)					__builtin_popcount(v)
-#define ACL_PREFETCH_ONETIME(x) __builtin_prefetch((x))
-#define ACL_LIKELY(x)						__builtin_expect((x), 1)
-#define ACL_UNLIKELY(x)					__builtin_expect((x), 0)
 #endif
 
 #ifdef ACL_DLL_IMPL
@@ -54,7 +46,7 @@
 #endif
 
 #ifndef ACL_PRINT_DEBUG
-#define ACL_PRINT_DEBUG(info) acl::detail::print_debug_info(info)
+#define ACL_PRINT_DEBUG acl::detail::print_debug_info
 #endif
 
 #define ACL_EXTERN extern "C"
@@ -66,17 +58,17 @@ constexpr std::uint32_t safety_offset = alignof(void*);
 using uhandle = std::uint32_t;
 using ihandle = std::uint32_t;
 
-inline void* align(void* ptr, size_t alignment)
+inline auto align(void* ptr, size_t alignment) -> void*
 {
-	size_t off = static_cast<size_t>(reinterpret_cast<uintptr_t>(ptr) & (alignment - 1));
+	auto off = static_cast<size_t>(reinterpret_cast<uintptr_t>(ptr) & (alignment - 1)); // NOLINT
 	return static_cast<char*>(ptr) + off;
 }
 
 namespace detail
 {
 
-template <typename size_type>
-constexpr size_type			k_null_sz	 = std::numeric_limits<size_type>::max();
+template <typename SizeType>
+constexpr SizeType			k_null_sz	 = std::numeric_limits<SizeType>::max();
 constexpr std::uint32_t k_null_0	 = 0;
 constexpr std::uint32_t k_null_32	 = std::numeric_limits<std::uint32_t>::max();
 constexpr std::int32_t	k_null_i32 = std::numeric_limits<std::int32_t>::min();
@@ -88,140 +80,140 @@ struct optional_ref
 {
 	using type							 = std::remove_reference_t<T>;
 	constexpr optional_ref() = default;
-	constexpr explicit optional_ref(type& iv) noexcept : value(&iv) {}
-	constexpr explicit optional_ref(type* iv) noexcept : value(iv) {}
+	constexpr explicit optional_ref(type& iv) noexcept : value_(&iv) {}
+	constexpr explicit optional_ref(type* iv) noexcept : value_(iv) {}
 
-	inline constexpr operator bool() const noexcept
+	constexpr operator bool() const noexcept
 	{
-		return value != nullptr;
+		return value_ != nullptr;
 	}
 
-	inline constexpr type& operator*() const noexcept
+	constexpr auto operator*() const noexcept -> type&
 	{
-		ACL_ASSERT(value);
-		return *value;
+		assert(value_);
+		return *value_;
 	}
 
-	inline constexpr type& get() const noexcept
+	constexpr auto get() const noexcept -> type&
 	{
-		ACL_ASSERT(value);
-		return *value;
+		assert(value_);
+		return *value_;
 	}
 
-	inline constexpr type* operator->() const noexcept
+	constexpr auto operator->() const noexcept -> type*
 	{
-		return value;
+		return value_;
 	}
 
-	inline constexpr explicit operator type*() const noexcept
+	constexpr explicit operator type*() const noexcept
 	{
-		return value;
+		return value_;
 	}
 
-	inline constexpr explicit operator type&() const noexcept
+	constexpr explicit operator type&() const noexcept
 	{
-		ACL_ASSERT(value);
-		return *value;
+		assert(value_);
+		return *value_;
 	}
 
-	inline constexpr bool has_value() const noexcept
+	[[nodiscard]] constexpr auto has_value() const noexcept -> bool
 	{
-		return value != nullptr;
+		return value_ != nullptr;
 	}
 
-	inline constexpr void reset() const noexcept
+	constexpr void reset() const noexcept
 	{
-		value = nullptr;
+		value_ = nullptr;
 	}
 
-	inline constexpr type* release() const noexcept
+	constexpr auto release() const noexcept -> type*
 	{
-		auto r = value;
-		value	 = nullptr;
+		auto r = value_;
+		value_ = nullptr;
 		return r;
 	}
 
-	inline constexpr auto operator<=>(const optional_ref& other) const noexcept = default;
+	constexpr auto operator<=>(const optional_ref& other) const noexcept = default;
 
-	type* value = nullptr;
+	type* value_ = nullptr;
 };
 
-template <auto nullv>
+template <auto Nullv>
 struct optional_val
 {
-	using vtype							 = std::decay_t<decltype(nullv)>;
+	using vtype							 = std::decay_t<decltype(Nullv)>;
 	constexpr optional_val() = default;
-	constexpr optional_val(vtype iv) noexcept : value(iv) {}
+	constexpr optional_val(vtype iv) noexcept : value_(iv) {}
 
-	inline constexpr operator bool() const noexcept
+	constexpr operator bool() const noexcept
 	{
-		return value != nullv;
+		return value_ != Nullv;
 	}
 
-	inline constexpr vtype operator*() const noexcept
+	constexpr auto operator*() const noexcept -> vtype
 	{
-		return value;
+		return value_;
 	}
 
-	inline constexpr vtype get() const noexcept
+	[[nodiscard]] constexpr auto get() const noexcept -> vtype
 	{
-		return value;
+		return value_;
 	}
 
-	inline constexpr explicit operator vtype() const noexcept
+	constexpr explicit operator vtype() const noexcept
 	{
-		return value;
+		return value_;
 	}
 
-	inline constexpr bool has_value() const noexcept
+	[[nodiscard]] constexpr auto has_value() const noexcept -> bool
 	{
-		return value != nullv;
+		return value_ != Nullv;
 	}
 
-	inline constexpr void reset() const noexcept
+	constexpr void reset() const noexcept
 	{
-		value = nullv;
+		value_ = Nullv;
 	}
 
-	inline constexpr vtype release() const noexcept
+	[[nodiscard]] constexpr auto release() const noexcept -> vtype
 	{
-		auto r = value;
-		value	 = nullv;
+		auto r = value_;
+		value_ = Nullv;
 		return r;
 	}
 
-	inline constexpr auto operator<=>(const optional_val& other) const noexcept = default;
+	constexpr auto operator<=>(const optional_val& other) const noexcept = default;
 
-	vtype value = nullv;
+	vtype value_ = Nullv;
 };
 
-template <typename var>
+template <typename Var>
 struct variant_result
 {
 	variant_result() = default;
 	template <typename... Args>
-	variant_result(Args&&... args) : res(std::forward<Args>(args)...)
+	variant_result(Args&&... args) : res_(std::forward<Args>(args)...)
 	{}
 
-	var const& operator*() const
+	auto operator*() const -> Var const&
 	{
-		return res;
+		return res_;
 	}
 
-	var& operator*()
+	auto operator*() -> Var&
 	{
-		return res;
+		return res_;
 	}
 
-	inline explicit operator bool() const
+	explicit operator bool() const
 	{
-		return res.index() != 0;
+		return res_.index() != 0;
 	}
 
-	var res;
+	Var res_;
 };
 
-enum ordering_by : std::uint32_t
+enum ordering_by : uint8_t
 {
 	e_size,
 	e_offset,

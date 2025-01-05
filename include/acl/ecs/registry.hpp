@@ -28,22 +28,22 @@ template <typename S>
 class counter
 {
 public:
-	inline S fetch_sub(S)
+	auto fetch_sub(S /*unused*/) -> S
 	{
 		return value_--;
 	}
 
-	inline S fetch_add(S)
+	auto fetch_add(S /*unused*/) -> S
 	{
 		return value_++;
 	}
 
-	inline S load() const noexcept
+	auto load() const noexcept -> S
 	{
 		return value_;
 	}
 
-	inline void store(S v, std::memory_order)
+	void store(S v, std::memory_order /*unused*/)
 	{
 		value_ = v;
 	}
@@ -72,21 +72,19 @@ public:
 	using type					= EntityTy;
 
 	/** @brief This can possibly be thread safe. */
-	inline type emplace()
+	auto emplace() -> type
 	{
 		auto i = free_slot_.fetch_sub(1);
 		if (i > 0)
 		{
 			return type(free_[i - 1]);
 		}
-		else
-		{
-			return type(max_size_.fetch_add(1));
-		}
+
+		return type(max_size_.fetch_add(1));
 	}
 
 	/** @brief This is not thread safe */
-	inline void erase(type l)
+	void erase(type l)
 	{
 		auto count = free_slot_.load();
 		if (count > 0)
@@ -106,16 +104,18 @@ public:
 		{
 			auto idx = l.get();
 			if (idx >= base::revisions_.size())
+			{
 				base::revisions_.resize(idx + 1);
+			}
 			assert(l.revision() == base::revisions_[idx]);
 			base::revisions_[idx]++;
 		}
 
-		sorted = false;
+		sorted_ = false;
 	}
 
 	/** @brief This is not thread safe */
-	inline void erase(std::span<type const> ls)
+	void erase(std::span<type const> ls)
 	{
 		auto count = free_slot_.load();
 		if (count > 0)
@@ -123,14 +123,18 @@ public:
 			free_.resize(static_cast<size_t>(count));
 			free_.reserve(static_cast<size_t>(count) + ls.size());
 			for (auto const& l : ls)
+			{
 				free_.emplace_back(l.revised());
+			}
 		}
 		else
 		{
 			free_.clear();
 			free_.reserve(ls.size());
 			for (auto const& l : ls)
+			{
 				free_.emplace_back(l.revised());
+			}
 		}
 
 		free_slot_.store((ssize_type)free_.size(), std::memory_order_relaxed);
@@ -141,37 +145,39 @@ public:
 			{
 				auto idx = l.get();
 				if (idx >= base::revisions_.size())
+				{
 					base::revisions_.resize(idx + 1);
+				}
 				assert(l.revision() == base::revisions_[idx]);
 				base::revisions_[idx]++;
 			}
 		}
 
-		sorted = false;
+		sorted_ = false;
 	}
 
-	inline bool is_valid(type l) const noexcept
+	auto is_valid(type l) const noexcept -> bool
 		requires(!std::is_same_v<revision_type, void>)
 	{
 		return static_cast<revision_type>(l.revision()) == base::revisions_[l.get()];
 	}
 
-	inline auto get_revision(type l) const noexcept
+	auto get_revision(type l) const noexcept
 		requires(!std::is_same_v<revision_type, void>)
 	{
 		return get_revision(l.get());
 	}
 
-	inline auto get_revision(size_type l) const noexcept
+	auto get_revision(size_type l) const noexcept
 		requires(!std::is_same_v<revision_type, void>)
 	{
 		return l < base::revisions_.size() ? base::revisions_[l] : 0;
 	}
 
 	template <typename Lambda>
-	inline void for_each_index(Lambda&& l)
+	void for_each_index(Lambda&& l)
 	{
-		if (!sorted)
+		if (!sorted_)
 		{
 			sort_free();
 		}
@@ -179,10 +185,12 @@ public:
 	}
 
 	template <typename Lambda>
-	inline void for_each_index(Lambda&& l) const
+	void for_each_index(Lambda&& l) const
 	{
-		if (sorted)
+		if (sorted_)
+		{
 			for_each_(std::forward<Lambda>(l), free_, max_size_.load());
+		}
 		else
 		{
 			auto copy = free_;
@@ -195,7 +203,7 @@ public:
 		}
 	}
 
-	inline uint32_t max_size() const
+	[[nodiscard]] auto max_size() const -> uint32_t
 	{
 		return max_size_.load();
 	}
@@ -207,34 +215,38 @@ public:
 											{
 												return type(first).get() < type(second).get();
 											});
-		sorted = true;
+		sorted_ = true;
 	}
 
 	/**
 	 * @brief This function is not threadsafe
 	 */
-	inline void shrink() noexcept
+	void shrink() noexcept
 	{
 		free_.resize(free_slot_.load());
 	}
 
 private:
 	template <typename Lambda>
-	static inline void for_each_(Lambda&& l, auto const& copy, size_type max_size)
+	static void for_each(Lambda lambda, auto const& copy, size_type max_size)
 	{
 		for (size_type i = 1, fi = 0; i < max_size; ++i)
 		{
 			if (fi < copy.size() && type(copy[fi]).get() == i)
+			{
 				fi++;
+			}
 			else
-				l(i);
+			{
+				lambda(i);
+			}
 		}
 	}
 
 	std::vector<size_type>	free_;
 	CounterType<size_type>	max_size_	 = {1};
 	CounterType<ssize_type> free_slot_ = {0};
-	bool										sorted		 = false;
+	bool										sorted_		 = false;
 };
 
 template <typename T = std::true_type>

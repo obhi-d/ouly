@@ -2,6 +2,7 @@
 #include <acl/allocators/std_allocator_wrapper.hpp>
 #include <catch2/catch_all.hpp>
 
+// NOLINTBEGIN
 TEST_CASE("Validate pool_allocator", "[pool_allocator]")
 {
 	using namespace acl;
@@ -88,7 +89,7 @@ TEST_CASE("Validate pool_allocator with alignment", "[pool_allocator]")
 				allocator.allocate(r.count * sizeof(trivial_object), acl::alignarg<trivial_object>));
 
 			records.push_back(r);
-			ACL_ASSERT(validate());
+			assert(validate());
 			CHECK(validate());
 		}
 		else
@@ -98,7 +99,7 @@ TEST_CASE("Validate pool_allocator with alignment", "[pool_allocator]")
 			allocator.deallocate(records[chosen].data, records[chosen].count * sizeof(trivial_object),
 													 acl::alignarg<trivial_object>);
 			records.erase(records.begin() + chosen);
-			ACL_ASSERT(validate());
+			assert(validate());
 			CHECK(validate());
 		}
 	}
@@ -118,3 +119,4 @@ TEST_CASE("Validate std_allocator", "[std_allocator]")
 			vlist.push_back(i);
 	}
 }
+// NOLINTEND

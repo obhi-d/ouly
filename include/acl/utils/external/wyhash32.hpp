@@ -1,8 +1,10 @@
 #pragma once
+// NOLINTBEGIN
 // Author: Wang Yi <godspeed_china@yeah.net>
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
+#include <tuple>
 #include <utility>
 
 namespace cwyhash32
@@ -65,3 +67,4 @@ static consteval inline uint32_t wyhash32(const T* const key, uint64_t len, uint
 }
 
 } // namespace cwyhash32
+// NOLINTEND

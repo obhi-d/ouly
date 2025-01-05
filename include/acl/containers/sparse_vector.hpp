@@ -3,6 +3,7 @@
 #include "podvector.hpp"
 #include <acl/utils/type_traits.hpp>
 #include <acl/utils/utils.hpp>
+#include <functional>
 #include <memory>
 
 namespace acl
@@ -35,7 +36,8 @@ public:
 	using size_type				= detail::choose_size_t<uint32_t, Options>;
 	using allocator_type	= detail::custom_allocator_t<Options>;
 	using options					= Options;
-	bool is_sparse_vector = true;
+
+	static constexpr bool is_sparse_vector = true;
 
 private:
 	using this_type = sparse_vector<value_type, Options>;
@@ -63,97 +65,85 @@ private:
 	using allocator_is_always_equal = typename acl::allocator_traits<allocator_tag>::is_always_equal;
 	using check_type								= std::conditional_t<has_pool_tracking, std::true_type, std::false_type>;
 
-	inline constexpr static value_type* cast(storage* src)
-		requires(std::is_same_v<storage, value_type>)
-	{
-		return src;
-	}
+	constexpr static auto cast(storage* src) -> value_type* requires(std::is_same_v<storage, value_type>) { return src; }
 
-	inline constexpr static value_type* cast(storage* src)
-		requires(!std::is_same_v<storage, value_type>)
-	{
+	constexpr static auto cast(storage* src) -> value_type* requires(!std::is_same_v<storage, value_type>) {
+		// NOLINTNEXTLINE
 		return reinterpret_cast<value_type*>(src);
 	}
 
-	inline constexpr static value_type const* cast(storage const* src)
-		requires(std::is_same_v<storage, value_type>)
-	{
-		return src;
-	}
+	constexpr static auto cast(storage const* src)
+	 -> value_type const* requires(std::is_same_v<storage, value_type>) { return src; }
 
-	inline constexpr static value_type const* cast(storage const* src)
-		requires(!std::is_same_v<storage, value_type>)
-	{
+	constexpr static auto cast(storage const* src) -> value_type const* requires(!std::is_same_v<storage, value_type>) {
+		// NOLINTNEXTLINE
 		return reinterpret_cast<value_type*>(src);
 	}
 
-	inline constexpr static value_type& cast(storage& src)
-		requires(std::is_same_v<storage, value_type>)
-	{
-		return src;
-	}
+	constexpr static auto cast(storage& src) -> value_type& requires(std::is_same_v<storage, value_type>) { return src; }
 
-	inline constexpr static value_type& cast(storage& src)
-		requires(!std::is_same_v<storage, value_type>)
-	{
+	constexpr static auto cast(storage& src) -> value_type& requires(!std::is_same_v<storage, value_type>) {
+		// NOLINTNEXTLINE
 		return reinterpret_cast<value_type&>(src);
 	}
 
-	inline constexpr static value_type const& cast(storage const& src)
+	constexpr static auto cast(storage const& src) -> value_type const&
 		requires(std::is_same_v<storage, value_type>)
 	{
+		// NOLINTNEXTLINE
 		return src;
 	}
 
-	inline constexpr static value_type const& cast(storage const& src)
+	constexpr static auto cast(storage const& src) -> value_type const&
 		requires(!std::is_same_v<storage, value_type>)
 	{
+		// NOLINTNEXTLINE
 		return reinterpret_cast<value_type&>(src);
 	}
 
-	inline static bool is_null(value_type const& other) noexcept
+	static auto is_null(value_type const& other) noexcept -> bool
 		requires(has_null_method)
 	{
 		return options::is_null(other);
 	}
 
-	inline static bool is_null(value_type const& other) noexcept
+	static auto is_null(value_type const& other) noexcept -> bool
 		requires(has_null_value && !has_null_method)
 	{
 		return other == options::null_v;
 	}
 
-	inline static constexpr bool is_null(value_type const& other) noexcept
+	static constexpr auto is_null(value_type const& other) noexcept -> bool
 		requires(!has_null_value && !has_null_method)
 	{
 		return false;
 	}
 
 public:
-	inline sparse_vector() noexcept {}
-	inline sparse_vector(allocator_type&& alloc) noexcept : base_type(std::move<allocator_type>(alloc)) {}
-	inline sparse_vector(allocator_type const& alloc) noexcept : base_type(alloc) {}
-	inline sparse_vector(sparse_vector&& other) noexcept
+	sparse_vector() noexcept = default;
+	sparse_vector(allocator_type&& alloc) noexcept : base_type(std::move<allocator_type>(alloc)) {}
+	sparse_vector(allocator_type const& alloc) noexcept : base_type(alloc) {}
+	sparse_vector(sparse_vector&& other) noexcept
 	{
 		*this = std::move(other);
 	}
-	inline sparse_vector(sparse_vector const& other) noexcept
+	sparse_vector(sparse_vector const& other) noexcept
 		requires(std::is_copy_constructible_v<value_type>)
 	{
 		*this = other;
 	}
-	inline ~sparse_vector()
+	~sparse_vector()
 	{
 		clear();
 	}
 
 	struct index_t
 	{
-		size_type block;
-		size_type item;
+		size_type block_;
+		size_type item_;
 	};
 
-	sparse_vector& operator=(sparse_vector&& other) noexcept
+	auto operator=(sparse_vector&& other) noexcept -> sparse_vector&
 	{
 		clear();
 		(base_type&)* this = std::move((base_type&)other);
@@ -163,47 +153,53 @@ public:
 		return *this;
 	}
 
-	sparse_vector& operator=(sparse_vector const& other) noexcept
-		requires(std::is_copy_constructible_v<value_type>)
-	{
-		clear();
-		items_.resize(other.items_.size());
-		for (size_type i = 0; i < items_.size(); ++i)
-		{
-			auto const src_storage = other.items_[i];
-			if (src_storage)
-			{
-				items_[i] = acl::allocate<storage>(*this, allocate_bytes, alignarg<Ty>);
+	// NOLINTNEXTLINE
+	auto operator=(sparse_vector const& other) noexcept
+	 -> sparse_vector& requires(std::is_copy_constructible_v<value_type>) {
+		 clear();
+		 items_.resize(other.items_.size());
+		 for (size_type i = 0; i < items_.size(); ++i)
+		 {
+			 auto const src_storage = other.items_[i];
+			 if (src_storage)
+			 {
+				 items_[i] = acl::allocate<storage>(*this, allocate_bytes, alignarg<Ty>);
 
-				if (src_storage)
-				{
-					if constexpr (std::is_trivially_copyable_v<Ty> || has_pod)
-					{
-						std::memcpy(items_[i], src_storage, allocate_bytes);
-					}
-					else
-					{
-						if constexpr (has_pool_tracking)
-							pool_occupation(i) = other.pool_occupation(i);
-						for (size_type e = 0; e < pool_size; ++e)
-						{
-							auto const& src = cast(src_storage[e]);
-							auto&				dst = cast(items_[i][e]);
+				 if (src_storage)
+				 {
+					 if constexpr (std::is_trivially_copyable_v<Ty> || has_pod)
+					 {
+						 std::memcpy(items_[i], src_storage, allocate_bytes);
+					 }
+					 else
+					 {
+						 if constexpr (has_pool_tracking)
+						 {
+							 pool_occupation(i) = other.pool_occupation(i);
+						 }
+						 for (size_type e = 0; e < pool_size; ++e)
+						 {
+							 auto const& src = cast(src_storage[e]);
+							 auto&			 dst = cast(items_[i][e]);
 
-							if (!is_null(src))
-								std::construct_at(&dst, src);
-						}
-					}
-				}
-			}
-			else
-				items_[i] = nullptr;
-		}
+							 if (!is_null(src))
+							 {
+								 std::construct_at(&dst, src);
+							 }
+						 }
+					 }
+				 }
+			 }
+			 else
+			 {
+				 items_[i] = nullptr;
+			 }
+		 }
 
-		static_cast<base_type&>(*this) = static_cast<base_type const&>(other);
-		length_												 = other.length_;
-		return *this;
-	}
+		 static_cast<base_type&>(*this) = static_cast<base_type const&>(other);
+		 length_												= other.length_;
+		 return *this;
+	 }
 
 	/**
 	 * @brief Lambda called for each element
@@ -250,7 +246,7 @@ public:
 	 * @tparam Lambda Lambda should accept A link and value_type& parameter
 	 */
 	template <typename Lambda>
-	void for_each(Lambda&& lambda, nocheck) noexcept
+	void for_each(Lambda&& lambda, nocheck /*unused*/) noexcept
 	{
 		for_each(items_, 0, length_, std::forward<Lambda>(lambda), nocheck{});
 	}
@@ -260,7 +256,7 @@ public:
 	 * @tparam Lambda Lambda should accept A link and value_type const& parameter
 	 */
 	template <typename Lambda>
-	void for_each(Lambda&& lambda, nocheck) const noexcept
+	void for_each(Lambda&& lambda, nocheck /*unused*/) const noexcept
 	{
 		for_each(items_, 0, length_, std::forward<Lambda>(lambda), nocheck{});
 	}
@@ -270,7 +266,7 @@ public:
 	 * @tparam Lambda Lambda should accept A link and value_type& parameter
 	 */
 	template <typename Lambda>
-	void for_each(Lambda&& lambda, size_type start, size_type end, nocheck) noexcept
+	void for_each(Lambda&& lambda, size_type start, size_type end, nocheck /*unused*/) noexcept
 	{
 		for_each(items_, start, end, std::forward<Lambda>(lambda), nocheck());
 	}
@@ -280,7 +276,7 @@ public:
 	 * @tparam Lambda Lambda should accept A link and value_type const& parameter
 	 */
 	template <typename Lambda>
-	void for_each(Lambda&& lambda, size_type start, size_type end, nocheck) const noexcept
+	void for_each(Lambda&& lambda, size_type start, size_type end, nocheck /*unused*/) const noexcept
 	{
 		for_each(items_, start, end, std::forward<Lambda>(lambda), nocheck());
 	}
@@ -288,7 +284,7 @@ public:
 	/**
 	 * @brief Returns size of packed array
 	 */
-	size_type size() const noexcept
+	auto size() const noexcept -> size_type
 	{
 		return length_;
 	}
@@ -296,7 +292,7 @@ public:
 	/**
 	 * @brief Returns capacity of packed array
 	 */
-	size_type capacity() const noexcept
+	auto capacity() const noexcept -> size_type
 	{
 		return static_cast<size_type>(items_.size()) * pool_size;
 	}
@@ -305,7 +301,7 @@ public:
 	 * @brief Returns the maximum entry slot currently already reserved for the table.
 	 * @remarks This value is more than item capacity, and is the current max link value.
 	 */
-	size_type max_size() const noexcept
+	auto max_size() const noexcept -> size_type
 	{
 		return capacity();
 	}
@@ -314,7 +310,7 @@ public:
 	 * @brief packed_table has active pool count depending upon number of elements it contains
 	 * @return active pool count
 	 */
-	size_type max_pools() const noexcept
+	auto max_pools() const noexcept -> size_type
 	{
 		return static_cast<size_type>(items_.size());
 	}
@@ -334,33 +330,33 @@ public:
 		return cast(items_[i]);
 	}
 
-	auto& back()
+	auto back() -> auto&
 	{
 		return at(length_ - 1);
 	}
 
-	auto& front()
+	auto front() -> auto&
 	{
 		return at(0);
 	}
 
-	auto const& back() const
+	auto back() const -> auto const&
 	{
 		return at(length_ - 1);
 	}
 
-	auto const& front() const
+	auto front() const -> auto const&
 	{
 		return at(0);
 	}
 
-	inline void push_back(value_type const& v) noexcept
+	void push_back(value_type const& v) noexcept
 	{
 		emplace_at_idx(length_++, v);
 	}
 
 	template <typename... Args>
-	auto& emplace_back(Args&&... args) noexcept
+	auto emplace_back(Args&&... args) noexcept -> auto&
 	{
 		// length_ is increased by emplace_at
 		return emplace_at_idx(length_++, std::forward<Args>(args)...);
@@ -371,7 +367,7 @@ public:
 	 * @return Returns link to the element pushed. link can be used to destroy entry.
 	 */
 	template <typename... Args>
-	auto& emplace_at(size_type idx, Args&&... args) noexcept
+	auto emplace_at(size_type idx, Args&&... args) noexcept -> auto&
 	{
 		auto& dst = emplace_at_idx(idx, std::forward<Args>(args)...);
 		length_		= std::max(idx, length_) + 1;
@@ -384,7 +380,7 @@ public:
 	 * @return Returns link to the element pushed. link can be used to destroy entry.
 	 */
 	template <typename... Args>
-	auto& ensure(size_type idx) noexcept
+	auto ensure(size_type idx) noexcept -> auto&
 	{
 		auto block = idx >> pool_mul;
 		auto index = idx & pool_mod;
@@ -403,7 +399,9 @@ public:
 		requires(allocator_is_always_equal::value && !has_pool_tracking)
 	{
 		if (other.items_.empty())
+		{
 			return;
+		}
 		if (items_.empty())
 		{
 			*this = std::move(other);
@@ -427,7 +425,9 @@ public:
 			items_.insert(items_.end(), other.items_.begin(), other.items_.end());
 
 			if constexpr (has_trivial_copy)
+			{
 				std::memcpy(items_.back() + other_back_length, back, length_to_move_in * sizeof(storage));
+			}
 			else
 			{
 				auto dest = cast(items_.back() + other_back_length);
@@ -439,7 +439,9 @@ public:
 			{
 				items_.push_back(back);
 				if constexpr (has_trivial_copy)
+				{
 					std::memmove(back, back + length_to_move_in, length_to_shift * sizeof(storage));
+				}
 				else
 				{
 					auto dest = cast(back);
@@ -470,17 +472,21 @@ public:
 	 * @return
 	 */
 	template <typename SparseVectorIt>
-	inline void unordered_merge(SparseVectorIt first, SparseVectorIt end) noexcept
+	void unordered_merge(SparseVectorIt first, SparseVectorIt end) noexcept
 	{
 		// merge multiple sparse vectors into a single
 		size_type sz = 0;
 		for (auto it = first; it != end; ++it)
+		{
 			sz += it->items_.size();
+		}
 
 		items_.reserve(sz);
 
 		for (; first != end; ++first)
+		{
 			unordered_merge(std::move(*first));
+		}
 	}
 
 	/**
@@ -497,15 +503,19 @@ public:
 	void erase(size_type l) noexcept
 	{
 		if constexpr (detail::debug)
+		{
 			validate(l);
+		}
 		erase_at(l);
 	}
 
 	void pop_back()
 	{
-		ACL_ASSERT(length_ > 0);
+		assert(length_ > 0);
 		if constexpr (detail::debug)
+		{
 			validate(length_ - 1);
+		}
 		erase_at(--length_);
 	}
 
@@ -521,29 +531,33 @@ public:
 		}
 	}
 
-	inline void fill(value_type const& v) noexcept
+	void fill(value_type const& v) noexcept
 	{
 		for (auto block : items_)
 		{
 			if (block)
+			{
 				std::fill(cast(block), cast(block + pool_size), v);
+			}
 		}
 	}
 
 	void shrink(size_type idx) noexcept
 	{
-		ACL_ASSERT(length_ > idx);
+		assert(length_ > idx);
 		if constexpr (!std::is_trivially_destructible_v<value_type> && !has_pod)
 		{
 			for (size_type i = idx; i < length_; ++i)
+			{
 				std::destroy_at(std::addressof(item_at(i)));
+			}
 		}
 		length_ = idx;
 	}
 
 	void grow(size_type idx) noexcept
 	{
-		ACL_ASSERT(length_ < idx);
+		assert(length_ < idx);
 		auto block = idx >> pool_mul;
 		auto index = idx & pool_mod;
 
@@ -571,7 +585,9 @@ public:
 		for (size_type block = from; block < items_.size(); ++block)
 		{
 			if (items_[block])
+			{
 				acl::deallocate(static_cast<allocator_type&>(*this), items_[block], allocate_bytes, alignarg<Ty>);
+			}
 		}
 		items_.resize(from);
 		items_.shrink_to_fit();
@@ -593,79 +609,81 @@ public:
 		length_ = 0;
 	}
 
-	value_type& at(size_type l) noexcept
+	auto at(size_type l) noexcept -> value_type&
 	{
-		ACL_ASSERT(l < length_);
+		assert(l < length_);
 		return item_at(l);
 	}
 
-	value_type const& at(size_type l) const noexcept
+	auto at(size_type l) const noexcept -> value_type const&
 	{
-		ACL_ASSERT(l < length_);
+		assert(l < length_);
 		return item_at(l);
 	}
 
-	value_type& operator[](size_type l) noexcept
+	auto operator[](size_type l) noexcept -> value_type&
 	{
 		return at(l);
 	}
 
-	value_type const& operator[](size_type l) const noexcept
+	auto operator[](size_type l) const noexcept -> value_type const&
 	{
 		return at(l);
 	}
 
-	bool contains(size_type idx) const noexcept
+	auto contains(size_type idx) const noexcept -> bool
 	{
 		if (idx >= length_)
+		{
 			return false;
+		}
 
 		auto block = (idx >> pool_mul);
 		return block < items_.size() && items_[block] && !is_null(cast(items_[block][idx & pool_mod]));
 	}
 
-	Ty const* get_if(size_type idx) const noexcept
+	auto get_if(size_type idx) const noexcept -> Ty const*
 	{
 		auto block = (idx >> pool_mul);
 		return block < items_.size() && items_[block] ? &cast(items_[block][idx & pool_mod]) : nullptr;
 	}
 
-	Ty* get_if(size_type idx) noexcept
+	auto get_if(size_type idx) noexcept -> Ty*
 	{
 		auto block = (idx >> pool_mul);
 		return block < items_.size() && items_[block] ? &cast(items_[block][idx & pool_mod]) : nullptr;
 	}
 
-	Ty const& get_or(size_type idx, Ty const& other) const noexcept
+	auto get_or(size_type idx, Ty const& other) const noexcept -> Ty const&
 	{
 		auto block = (idx >> pool_mul);
 		return block < items_.size() && items_[block] ? cast(items_[block][idx & pool_mod]) : other;
 	}
 
-	Ty& get_or(size_type idx, Ty& other) noexcept
+	auto get_or(size_type idx, Ty& other) noexcept -> Ty&
 	{
 		auto block = (idx >> pool_mul);
 		return block < items_.size() && items_[block] ? cast(items_[block][idx & pool_mod]) : other;
 	}
 
-	Ty get_value(size_type idx) const noexcept
+	auto get_value(size_type idx) const noexcept -> Ty
 		requires(has_null_value)
 	{
 		auto block = (idx >> pool_mul);
 		return block < items_.size() && items_[block] ? cast(items_[block][idx & pool_mod]) : options::null_v;
 	}
 
-	Ty& get_unsafe(size_type idx) const noexcept
+	auto get_unsafe(size_type idx) const noexcept -> Ty&
 	{
 		return cast(items_[(idx >> pool_mul)][idx & pool_mod]);
 	}
 
-	bool empty() const noexcept
+	[[nodiscard]] auto empty() const noexcept -> bool
 	{
 		return length_ == 0;
 	}
 
-	static constexpr index_t index(size_type i)
+	static constexpr auto index(size_type i) -> index_t
 	{
 		return index_t{i >> pool_mul, i & pool_mod};
 	}
@@ -677,35 +695,40 @@ public:
 		data_view() noexcept = default;
 		data_view(VTy* const* items_, size_type block_count_) noexcept : items_(items_), block_count_(block_count_) {}
 
-		bool contains(index_t i) const noexcept
+		auto contains(index_t i) const noexcept -> bool
 		{
-			return i.block < block_count_ && items_[i.block];
+			return i.block_ < block_count_ && items_[i.block_];
 		}
 
-		VTy& operator[](index_t i) const noexcept
+		auto operator[](index_t i) const noexcept -> VTy&
 		{
 			assert(contains(i));
-			return items_[i.block][i.item];
+			return items_[i.block_][i.item_];
 		}
 
-		VTy& operator()(uint32_t i, VTy& default_value) const noexcept
+		auto operator()(uint32_t i, VTy& default_value) const noexcept -> VTy&
 		{
 			auto block = (i >> pool_mul);
 			if (block < block_count_)
+			{
 				return items_[block] ? items_[block][i & pool_mod] : default_value;
+			}
 			return default_value;
 		}
 
-		value_type const& operator()(uint32_t i, value_type const& default_value) const noexcept
+		auto operator()(uint32_t i, std::reference_wrapper<value_type const> default_value) const noexcept
+		 -> value_type const&
 			requires(!std::is_const_v<VTy>)
 		{
 			auto block = (i >> pool_mul);
 			if (block < block_count_)
+			{
 				return items_[block] ? items_[block][i & pool_mod] : default_value;
-			return default_value;
+			}
+			return default_value.get();
 		}
 
-		VTy& operator[](uint32_t i) const noexcept
+		auto operator[](uint32_t i) const noexcept -> VTy&
 		{
 			auto block = (i >> pool_mul);
 			assert(block < block_count_);
@@ -731,7 +754,8 @@ public:
 	}
 
 private:
-	inline void ensure_block(size_type block)
+	// NOLINTNEXTLINE
+	void ensure_block(size_type block)
 	{
 		if (block >= items_.size())
 		{
@@ -741,7 +765,9 @@ private:
 		if (!items_[block])
 		{
 			if constexpr (has_zero_memory)
+			{
 				items_[block] = acl::zallocate<storage>(*this, allocate_bytes, alignarg<Ty>);
+			}
 			else
 			{
 				items_[block] = acl::allocate<storage>(*this, allocate_bytes, alignarg<Ty>);
@@ -751,7 +777,9 @@ private:
 												(std::is_trivially_copyable_v<value_type> && std::is_trivially_constructible_v<value_type>))
 					{
 						if constexpr (has_null_value)
+						{
 							std::fill(cast(items_[block]), cast(items_[block] + pool_size), options::null_v);
+						}
 						else if constexpr (has_null_construct)
 						{
 							std::for_each(cast(items_[block]), cast(items_[block] + pool_size), options::null_construct);
@@ -767,11 +795,17 @@ private:
 													[](value_type& dst)
 													{
 														if constexpr (has_null_value)
+														{
 															std::construct_at(std::addressof(dst), options::null_v);
+														}
 														else if constexpr (has_null_construct)
+														{
 															options::null_construct(dst);
+														}
 														else
+														{
 															std::construct_at(std::addressof(dst));
+														}
 													});
 					}
 				}
@@ -779,58 +813,61 @@ private:
 		}
 	}
 
-	inline uint32_t& pool_occupation(storage* p) noexcept
-		requires(has_pool_tracking)
-	{
+	auto pool_occupation(storage* p) noexcept -> uint32_t& requires(has_pool_tracking) {
+		// NOLINTNEXTLINE
 		return *reinterpret_cast<uint32_t*>(reinterpret_cast<std::uint8_t*>(p) + pool_bytes);
 	}
 
-	inline uint32_t pool_occupation(storage const* p) const noexcept
+	auto pool_occupation(storage const* p) const noexcept -> uint32_t
 		requires(has_pool_tracking)
 	{
+		// NOLINTNEXTLINE
 		return *reinterpret_cast<uint32_t*>(reinterpret_cast<std::uint8_t const*>(p) + pool_bytes);
 	}
 
-	inline uint32_t& pool_occupation(size_type p) noexcept
+	auto pool_occupation(size_type p) noexcept
+	 -> uint32_t& requires(has_pool_tracking) { return pool_occupation(items_[p]); }
+
+	auto pool_occupation(size_type p) const noexcept -> uint32_t
 		requires(has_pool_tracking)
 	{
 		return pool_occupation(items_[p]);
 	}
 
-	inline uint32_t pool_occupation(size_type p) const noexcept
-		requires(has_pool_tracking)
+	void validate(size_type idx) const noexcept
 	{
-		return pool_occupation(items_[p]);
+		assert(contains(idx));
 	}
 
-	inline void validate(size_type idx) const noexcept
-	{
-		ACL_ASSERT(contains(idx));
-	}
-
-	inline auto& item_at(size_type idx) noexcept
+	auto item_at(size_type idx) noexcept -> auto&
 	{
 		auto block = (idx >> pool_mul);
 		ensure_block(block);
 		return cast(items_[block][idx & pool_mod]);
 	}
 
-	inline auto& item_at(size_type idx) const noexcept
+	auto item_at(size_type idx) const noexcept -> auto&
 	{
 		auto block = (idx >> pool_mul);
 		return cast(items_[block][idx & pool_mod]);
 	}
 
-	inline void erase_at(size_type idx) noexcept
+	void erase_at(size_type idx) noexcept
 	{
 		auto block = (idx >> pool_mul);
 
 		if constexpr (has_null_value)
+		{
 			cast(items_[block][idx & pool_mod]) = options::null_v;
+		}
 		else if constexpr (has_null_construct)
+		{
 			options::null_reset(cast(items_[block][idx & pool_mod]));
+		}
 		else
+		{
 			cast(items_[block][idx & pool_mod]) = value_type();
+		}
 		if constexpr (has_pool_tracking)
 		{
 			if (!--pool_occupation(block))
@@ -840,12 +877,14 @@ private:
 		}
 	}
 
-	inline void delete_block(size_type block)
+	void delete_block(size_type block)
 	{
 		if constexpr (!std::is_trivially_destructible_v<value_type> && !has_pod)
 		{
 			for (size_type i = 0; i < pool_size; ++i)
+			{
 				std::destroy_at(std::addressof(cast(items_[block][i])));
+			}
 		}
 
 		acl::deallocate(static_cast<allocator_type&>(*this), items_[block], allocate_bytes, alignarg<Ty>);
@@ -857,36 +896,46 @@ private:
 	 * @tparam Lambda Lambda should accept value_type& parameter
 	 */
 	template <typename Lambda, typename Store, typename Check>
-	inline static void for_each(Store& items_, size_type start, size_type end, Lambda&& lambda, Check) noexcept
+	static void for_each(Store& items_, size_type start, size_type end, Lambda&& lambda, Check /*unused*/) noexcept
 	{
 		if (start == end)
+		{
 			return;
+		}
 		auto bstart			= start >> pool_mul;
 		auto bend				= end >> pool_mul;
 		auto item_start = start & pool_mod;
-		ACL_ASSERT(bstart <= bend);
+		assert(bstart <= bend);
 		constexpr auto arity = function_traits<std::remove_reference_t<Lambda>>::arity;
 		for (size_type block = bstart; block != bend; ++block)
 		{
 			auto store = items_[block];
 			if constexpr (arity == 2)
-				for_each_value(store, block, item_start, pool_size, lambda, Check());
+			{
+				for_each_value(store, block, item_start, pool_size, std::forward<Lambda>(lambda), Check());
+			}
 			else
-				for_each_value(store, item_start, pool_size, lambda, Check());
+			{
+				for_each_value(store, item_start, pool_size, std::forward<Lambda>(lambda), Check());
+			}
 			item_start = 0;
 		}
 		// Final block
 		if (end & pool_mod)
 		{
 			if constexpr (arity == 2)
-				for_each_value(items_[bend], bend, item_start, end & pool_mod, lambda, Check());
+			{
+				for_each_value(items_[bend], bend, item_start, end & pool_mod, std::forward<Lambda>(lambda), Check());
+			}
 			else
-				for_each_value(items_[bend], item_start, end & pool_mod, lambda, Check());
+			{
+				for_each_value(items_[bend], item_start, end & pool_mod, std::forward<Lambda>(lambda), Check());
+			}
 		}
 	}
 
 	template <typename Lambda, typename Store, typename Check>
-	inline static void for_each_value(Store* store, size_type start, size_type end, Lambda&& lambda, Check) noexcept
+	static void for_each_value(Store* store, size_type start, size_type end, Lambda lambda, Check /*unused*/) noexcept
 	{
 		if (store)
 		{
@@ -895,7 +944,9 @@ private:
 				if constexpr (Check::value)
 				{
 					if (is_null(cast(store[e])))
+					{
 						continue;
+					}
 				}
 				lambda(cast(store[e]));
 			}
@@ -903,8 +954,8 @@ private:
 	}
 
 	template <typename Lambda, typename Store, typename Check>
-	inline static void for_each_value(Store* store, size_type block, size_type start, size_type end, Lambda&& lambda,
-																		Check) noexcept
+	static void for_each_value(Store* store, size_type block, size_type start, size_type end, Lambda lambda,
+														 Check /*unused*/) noexcept
 	{
 		constexpr auto arity = function_traits<std::remove_reference_t<Lambda>>::arity;
 		if (store)
@@ -914,7 +965,9 @@ private:
 				if constexpr (Check::value)
 				{
 					if (is_null(cast(store[e])))
+					{
 						continue;
+					}
 				}
 				lambda((block << pool_mul) | e, cast(store[e]));
 			}
@@ -922,7 +975,7 @@ private:
 	}
 
 	template <typename... Args>
-	auto& emplace_at_idx(size_type idx, Args&&... args) noexcept
+	auto emplace_at_idx(size_type idx, Args&&... args) noexcept -> auto&
 	{
 		auto block = idx >> pool_mul;
 		auto index = idx & pool_mod;
@@ -932,7 +985,9 @@ private:
 		value_type& dst = *cast((items_[block] + index));
 		dst							= value_type(std::forward<Args>(args)...);
 		if constexpr (has_pool_tracking)
+		{
 			pool_occupation(block)++;
+		}
 		return dst;
 	}
 

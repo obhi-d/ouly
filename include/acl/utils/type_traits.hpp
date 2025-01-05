@@ -30,6 +30,7 @@ struct allocator_traits
 	using propagate_on_container_swap						 = std::true_type;
 };
 
+constexpr uint32_t default_pool_size = 4096;
 /**
  *--------------- Basic Options ----------------
  */
@@ -49,19 +50,19 @@ struct member;
  * @tparam M member_type for the member
  * @tparam MPtr Pointer to member
  */
-template <typename T, typename M, M T::*MPtr>
+template <typename T, typename M, M T::* MPtr>
 struct member<MPtr>
 {
 	using class_type	= T;
 	using member_type = M;
 	using self_index	= opt::member<MPtr>;
 
-	inline static member_type& get(class_type& to) noexcept
+	static auto get(class_type& to) noexcept -> member_type&
 	{
 		return to.*MPtr;
 	}
 
-	inline static member_type const& get(class_type const& to) noexcept
+	static auto get(class_type const& to) noexcept -> member_type const&
 	{
 		return to.*MPtr;
 	}
@@ -70,7 +71,7 @@ struct member<MPtr>
 /**
  * @brief Option to control underlying pool size
  */
-template <uint32_t PoolSize = 4096>
+template <uint32_t PoolSize = default_pool_size>
 struct pool_size
 {
 	static constexpr uint32_t pool_size_v = PoolSize;
@@ -79,7 +80,7 @@ struct pool_size
 /**
  * @brief Option to control the pool size of index maps used by container
  */
-template <uint32_t PoolSize = 4096>
+template <uint32_t PoolSize = default_pool_size>
 struct index_pool_size
 {
 	static constexpr uint32_t index_pool_size_v = PoolSize;
@@ -88,7 +89,7 @@ struct index_pool_size
 /**
  * @brief Self index pool size controls the pool size for back references
  */
-template <uint32_t PoolSize = 4096>
+template <uint32_t PoolSize = default_pool_size>
 struct self_index_pool_size
 {
 	static constexpr uint32_t self_index_pool_size_v = PoolSize;
@@ -97,7 +98,7 @@ struct self_index_pool_size
 /**
  * @brief Key index pool size controls the pool size for key indexes in tables
  */
-template <uint32_t PoolSize = 4096>
+template <uint32_t PoolSize = default_pool_size>
 struct keys_index_pool_size
 {
 	static constexpr uint32_t keys_index_pool_size_v = PoolSize;
@@ -198,13 +199,13 @@ struct custom_vector
  * @brief Class type to string_view name of the class
  */
 template <typename T>
-constexpr std::string_view type_name()
+constexpr auto type_name() -> std::string_view
 {
 	return detail::type_name<std::remove_cv_t<std::remove_reference_t<T>>>();
 }
 
 template <typename T>
-constexpr std::uint32_t type_hash()
+constexpr auto type_hash() -> std::uint32_t
 {
 	return detail::type_hash<std::remove_cv_t<std::remove_reference_t<T>>>();
 }
@@ -280,7 +281,7 @@ struct member_function<M>
 	template <std::size_t Index>
 	using arg_type = typename std::tuple_element_t<Index, std::tuple<Args...>>;
 
-	static inline auto invoke(C& instance, Args&&... args)
+	static auto invoke(C& instance, Args&&... args)
 	{
 		return std::invoke(M, instance, std::forward<Args>(args)...);
 	}
@@ -299,7 +300,7 @@ struct member_function<M>
 	template <std::size_t Index>
 	using arg_type = typename std::tuple_element_t<Index, std::tuple<Args...>>;
 
-	static inline auto invoke(C const& instance, Args&&... args)
+	static auto invoke(C const& instance, Args&&... args)
 	{
 		return std::invoke(M, instance, std::forward<Args>(args)...);
 	}
@@ -426,14 +427,14 @@ struct choose_size_ty<S, T1>
 template <typename S, typename... Args>
 using choose_size_t = typename choose_size_ty<S, Args...>::type;
 
-template <typename underlying_allocator_tag>
+template <typename UnderlyingAllocatorTag>
 struct is_static
 {
-	constexpr inline static bool value = false;
+	constexpr static bool value = false;
 };
 
-template <typename underlying_allocator_tag>
-constexpr static bool is_static_v = is_static<underlying_allocator_tag>::value;
+template <typename UnderlyingAllocatorTag>
+constexpr static bool is_static_v = is_static<UnderlyingAllocatorTag>::value;
 
 template <typename T, bool>
 struct link_value;
@@ -453,35 +454,35 @@ struct link_value<T, false>
 template <typename T>
 using link_value_t = typename link_value<T, HasLinkType<T>>::type;
 
-template <typename ua_t, class = std::void_t<>>
+template <typename UaT, class = std::void_t<>>
 struct tag
 {
 	using type = void;
 };
-template <typename ua_t>
-struct tag<ua_t, std::void_t<typename ua_t::tag>>
+template <typename UaT>
+struct tag<UaT, std::void_t<typename UaT::tag>>
 {
-	using type = typename ua_t::tag;
+	using type = typename UaT::tag;
 };
 
-template <typename ua_t>
-using tag_t = typename tag<ua_t>::type;
+template <typename UaT>
+using tag_t = typename tag<UaT>::type;
 
-template <typename ua_t, class = std::void_t<>>
+template <typename UaT, class = std::void_t<>>
 struct size_type
 {
 	using type = std::size_t;
 };
-template <typename ua_t>
-struct size_type<ua_t, std::void_t<typename ua_t::size_type>>
+template <typename UaT>
+struct size_type<UaT, std::void_t<typename UaT::size_type>>
 {
-	using type = typename ua_t::size_type;
+	using type = typename UaT::size_type;
 };
 
 template <typename T>
 struct pool_size
 {
-	static constexpr uint32_t value = 4096;
+	static constexpr uint32_t value = default_pool_size;
 };
 
 template <HasPoolSize T>

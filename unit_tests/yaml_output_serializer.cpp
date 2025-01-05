@@ -7,6 +7,7 @@
 #include <variant>
 #include <vector>
 
+// NOLINTBEGIN
 TEST_CASE("yaml_output: Test write simple struct")
 {
 	struct OutputTestStruct
@@ -136,3 +137,5 @@ TEST_CASE("yaml_output: Test write tuple")
 	REQUIRE(yaml.find("test") != std::string::npos);
 	REQUIRE(yaml.find("3.14") != std::string::npos);
 }
+
+// NOLINTEND

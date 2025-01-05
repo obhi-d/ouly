@@ -3,6 +3,8 @@
 #include "common.hpp"
 #include "word_list.hpp"
 #include <acl/utils/wyhash.hpp>
+#include <algorithm>
+#include <cstddef>
 #include <ctime>
 #include <regex>
 #include <sstream>
@@ -13,9 +15,9 @@ namespace acl
 
 using string_view_pair = std::pair<std::string, std::string>;
 
-static inline int32_t													 k_default_uchar = 0xFFFD;
-static inline int32_t													 k_wrong_uchar	 = 0xFFFF;
-static inline int32_t													 k_last_uchar		 = 0x10FFFF;
+static constexpr inline int32_t								 k_default_uchar = 0xFFFD;
+static constexpr inline int32_t								 k_wrong_uchar	 = 0xFFFF;
+static constexpr inline int32_t								 k_last_uchar		 = 0x10FFFF;
 static inline constexpr std::string_view			 k_default			 = "default";
 static inline constexpr std::string_view const k_default_sym	 = "*";
 
@@ -29,7 +31,7 @@ using utf16 = char16_t;
  * @param in The word list
  *
  */
-inline uint32_t index_of(std::string const& in, std::string_view to_find)
+inline auto index_of(std::string const& in, std::string_view to_find) -> uint32_t
 {
 	return word_list<>::index_of(in, to_find);
 }
@@ -40,7 +42,7 @@ inline uint32_t index_of(std::string const& in, std::string_view to_find)
  * @param in The word list
  *
  */
-inline bool contains(std::string const& in, std::string const& to_find)
+inline auto contains(std::string const& in, std::string const& to_find) -> bool
 {
 	return in.find(to_find) != std::string::npos;
 }
@@ -56,39 +58,41 @@ inline void word_push_back(std::string& in, const std::string_view& word)
 	word_list<>::push_back(in, word);
 }
 
-inline std::string time_stamp()
+inline auto time_stamp() -> std::string
 {
-	std::time_t t = std::time(nullptr);
-	char				mbstr[32];
+	std::time_t			 t							 = std::time(nullptr);
+	constexpr size_t max_size				 = 32;
+	char						 mbstr[max_size] = {};
 #ifdef _MSC_VER
 	struct tm buf;
 	localtime_s(&buf, &t);
 	std::strftime(mbstr, sizeof(mbstr), "%m-%d-%y_%H-%M-%S", &buf);
 #else
-	struct tm buf;
-	std::strftime(mbstr, sizeof(mbstr), "%m-%d-%y_%H-%M-%S", localtime_r(&t, &buf));
+	struct tm buf{};
+	std::strftime(static_cast<char*>(mbstr), sizeof(mbstr), "%m-%d-%y_%H-%M-%S", localtime_r(&t, &buf));
 #endif
-	return std::string(mbstr);
+	return {static_cast<char const*>(mbstr)};
 }
 
-inline std::string time_string()
+inline auto time_string() -> std::string
 {
-	std::time_t t = std::time(nullptr);
-	char				mbstr[32];
+	std::time_t			 t							 = std::time(nullptr);
+	constexpr size_t max_size				 = 32;
+	char						 mbstr[max_size] = {};
 #ifdef _MSC_VER
 	struct tm buf;
 	localtime_s(&buf, &t);
 	std::strftime(mbstr, sizeof(mbstr), "%H-%M-%S", &buf);
 #else
-	struct tm buf;
-	std::strftime(mbstr, sizeof(mbstr), "%H-%M-%S", localtime_r(&t, &buf));
+	struct tm buf{};
+	std::strftime(static_cast<char*>(mbstr), sizeof(mbstr), "%H-%M-%S", localtime_r(&t, &buf));
 #endif
-	return std::string(mbstr);
+	return {static_cast<char const*>(mbstr)};
 }
 
 template <class OutputIt, class BidirIt, class Traits, class CharT, class UnaryFunction>
-OutputIt regex_replace(OutputIt out, BidirIt first, BidirIt last, const std::basic_regex<CharT, Traits>& re,
-											 UnaryFunction f)
+auto regex_replace(OutputIt out, BidirIt first, BidirIt last, const std::basic_regex<CharT, Traits>& re,
+									 UnaryFunction f) -> OutputIt
 {
 	typename std::match_results<BidirIt>::difference_type pos_of_last_match = 0;
 	auto																									end_of_last_match = first;
@@ -113,7 +117,8 @@ OutputIt regex_replace(OutputIt out, BidirIt first, BidirIt last, const std::bas
 		std::advance(end_of_last_match, len_of_match);
 	};
 
-	std::regex_iterator<BidirIt> begin(first, last, re), end;
+	std::regex_iterator<BidirIt> begin(first, last, re);
+	std::regex_iterator<BidirIt> end;
 	std::for_each(begin, end, callback);
 	std::copy(end_of_last_match, last, out);
 	return out;
@@ -127,7 +132,7 @@ auto regex_replace(std::basic_string<CharT> const& s, const std::basic_regex<Cha
 	return out;
 }
 
-inline std::string indent(int32_t amt)
+inline auto indent(int32_t amt) -> std::string
 {
 	std::string s;
 	s.resize(amt, ' ');
@@ -139,11 +144,11 @@ inline std::string indent(int32_t amt)
  * @return	true if string was replaced.
  *
  */
-inline bool replace_first(std::string& source, std::string_view search, std::string_view replace)
+inline auto replace_first(std::string& source, std::string_view search, std::string_view replace) -> bool
 {
 	assert(!search.empty());
-	size_t b = 0;
-	if (((b = source.find(search, b)) != std::string::npos))
+
+	if (size_t b = source.find(search, b); b != std::string::npos)
 	{
 		source.replace(b, search.size(), replace);
 		return true;
@@ -157,11 +162,13 @@ inline bool replace_first(std::string& source, std::string_view search, std::str
  * @return	Number of replacements
  *
  */
-inline uint32_t replace(std::string& source, std::string_view search, std::string_view replace)
+inline auto replace(std::string& source, std::string_view search, std::string_view replace) -> uint32_t
 
 {
 	if (search.empty())
+	{
 		return 0;
+	}
 	uint32_t count = 0;
 
 	size_t start_pos = 0;
@@ -180,14 +187,14 @@ inline uint32_t replace(std::string& source, std::string_view search, std::strin
  * "madeInChina" to "Made In China" or
  * MADE_IN_CHINA to "Made In China"
  */
-ACL_API std::string format_name(std::string const& str);
+ACL_API auto format_name(std::string const& str) -> std::string;
 
 /**
  * @brief	Converts string to lower case.
  * @param [in,out]	str	The string to convert.
  */
 template <typename StringType>
-inline StringType& to_lower(StringType& str)
+inline auto to_lower(StringType& str) -> StringType&
 {
 	std::transform(std::begin(str), std::end(str), std::begin(str), ::tolower);
 	return str;
@@ -198,7 +205,7 @@ inline StringType& to_lower(StringType& str)
  * @param [in,out]	str	The string to convert.
  */
 template <typename StringType>
-inline StringType& to_upper(StringType& str)
+inline auto to_upper(StringType& str) -> StringType&
 {
 	std::transform(std::begin(str), std::end(str), std::begin(str), ::toupper);
 	return str;
@@ -207,7 +214,7 @@ inline StringType& to_upper(StringType& str)
 /**
  * Use the string hasher to find hash
  */
-inline auto hash(std::string_view v, uint32_t seed = 1337)
+inline auto hash(std::string_view v, uint32_t seed = acl::wyhash32_default_prime_seed)
 {
 	return acl::wyhash32(seed)(v.data(), (uint32_t)v.length());
 }
@@ -217,21 +224,19 @@ inline auto hash(std::string_view v, uint32_t seed = 1337)
  * returned pair has the second element filled with empty string if is_prefix is true, if is_prefix is false, the
  * first string is set to empty
  */
-inline string_view_pair split(std::string_view name, char by = ':', bool is_prefix = true) noexcept
+inline auto split(std::string_view name, char by = ':', bool is_prefix = true) noexcept -> string_view_pair
 {
 	size_t seperator = name.find_first_of(by);
 	if (seperator < name.size())
 	{
 		return string_view_pair(name.substr(0, seperator), name.substr(seperator + 1));
 	}
-	else if (is_prefix)
+	if (is_prefix)
 	{
 		return string_view_pair(name, std::string_view());
 	}
-	else
-	{
-		return string_view_pair(std::string_view(), name);
-	}
+
+	return string_view_pair(std::string_view(), name);
 }
 
 /**
@@ -239,40 +244,45 @@ inline string_view_pair split(std::string_view name, char by = ':', bool is_pref
  * returned pair has the second element filled with empty string if is_prefix is true, if is_prefix is false, the
  * first string is set to empty. The search begins from the end unlike in acl::split
  */
-inline string_view_pair split_last(const std::string_view& name, char by = ':', bool is_prefix = true)
+inline auto split_last(const std::string_view& name, char by = ':', bool is_prefix = true) -> string_view_pair
 {
 	size_t seperator = name.find_last_of(by);
 	if (seperator < name.size())
 	{
 		return string_view_pair(name.substr(0, seperator), name.substr(seperator + 1));
 	}
-	else if (is_prefix)
+	if (is_prefix)
 	{
 		return string_view_pair(name, std::string_view());
 	}
-	else
-	{
-		return string_view_pair(std::string_view(), name);
-	}
+
+	return string_view_pair(std::string_view(), name);
 }
 
 template <typename A>
-inline response tokenize(A&& acceptor, std::string_view value, std::string_view seperators)
+inline auto tokenize(A acceptor, std::string_view value, std::string_view seperators) -> response
 {
 	response r		= response::e_ok;
 	size_t	 what = std::numeric_limits<size_t>::max();
-	do
+	while (true)
 	{
 		size_t start = what + 1;
 		what				 = value.find_first_of(seperators, start);
-		auto end		 = what == value.npos ? value.length() : what;
+		auto end		 = what == std::string_view::npos ? value.length() : what;
 		if (end > start)
 		{
-			if ((r = acceptor(start, end, what == value.npos ? 0 : value[what])) != response::e_continue)
+			r = acceptor(start, end, what == std::string_view::npos ? 0 : value[what]);
+			if (r != response::e_continue)
+			{
 				return r;
+			}
+		}
+		if (what == std::string_view::npos)
+		{
+			break;
 		}
 	}
-	while (what != std::string::npos);
+
 	return r;
 }
 
@@ -283,7 +293,9 @@ inline auto trim_leading(std::string_view str)
 {
 	size_t endpos = str.find_first_not_of(" \t\n\r");
 	if (endpos != 0)
+	{
 		str = str.substr(endpos);
+	}
 	return str;
 }
 
@@ -294,28 +306,30 @@ inline auto trim_trailing(std::string_view str)
 {
 	size_t endpos = str.find_last_not_of(" \t\n\r");
 	if (endpos != std::string::npos)
+	{
 		str = str.substr(0, endpos + 1);
+	}
 	return str;
 }
 
-inline std::string_view trim(std::string_view str)
+inline auto trim(std::string_view str) -> std::string_view
 {
 	str = trim_leading(str);
 	str = trim_trailing(str);
 	return str;
 }
 
-inline bool is_ascii(std::string_view utf8_str)
+inline auto is_ascii(std::string_view utf8_str) -> bool
 {
-	return std::find_if(utf8_str.begin(), utf8_str.end(),
-											[](char a) -> bool
-											{
-												return !isascii(a);
-											}) == utf8_str.end();
+	return std::ranges::find_if(utf8_str,
+															[](char a) -> bool
+															{
+																return isascii(a) == 0;
+															}) == utf8_str.end();
 }
 
 template <typename L>
-inline void word_wrap(L&& line_accept, uint32_t width, std::string_view line, uint32_t tab_width = 2)
+inline void word_wrap(L line_accept, uint32_t width, std::string_view line, uint32_t tab_width = 2)
 {
 	size_t	 line_start = 0;
 	size_t	 line_end		= 0;
@@ -325,8 +339,10 @@ inline void word_wrap(L&& line_accept, uint32_t width, std::string_view line, ui
 	 [&](std::size_t token_start, std::size_t token_end, char token) -> response
 	 {
 		 if (token == '\t')
+		 {
 			 nb_tabs++;
-		 auto line_width = (token_end - line_start) + nb_tabs * tab_width;
+		 }
+		 auto line_width = (token_end - line_start) + (static_cast<unsigned long>(nb_tabs * tab_width));
 		 if (line_width >= width)
 		 {
 			 line_accept(line_start, line_end);
@@ -342,7 +358,7 @@ inline void word_wrap(L&& line_accept, uint32_t width, std::string_view line, ui
 }
 
 template <typename L>
-inline void word_wrap_multiline(L&& line_accept, uint32_t width, std::string_view input, uint32_t tab_width = 2)
+inline void word_wrap_multiline(L line_accept, uint32_t width, std::string_view input, uint32_t tab_width = 2)
 {
 	tokenize(
 	 [&](std::size_t token_start, std::size_t token_end, char)
@@ -359,7 +375,7 @@ inline void word_wrap_multiline(L&& line_accept, uint32_t width, std::string_vie
 }
 
 template <typename StringType>
-bool is_number(const StringType& s)
+auto is_number(const StringType& s) -> bool
 {
 	return !s.empty() && std::find_if(s[0] == '-' ? s.begin() + 1 : s.begin(), s.end(),
 																		[](char c)

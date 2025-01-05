@@ -8,9 +8,9 @@ namespace acl::detail
 template <uint32_t Tombstone>
 struct tree_node
 {
-	std::uint32_t parent = Tombstone;
-	std::uint32_t left	 = Tombstone;
-	std::uint32_t right	 = Tombstone;
+	std::uint32_t parent_ = Tombstone;
+	std::uint32_t left_		= Tombstone;
+	std::uint32_t right_	= Tombstone;
 };
 
 /**
@@ -51,23 +51,23 @@ private:
 	using container	 = typename Accessor::container;
 	using tree_node	 = acl::detail::tree_node<Tombstone>;
 
-	inline static bool is_set(node_type const& node)
+	static auto is_set(node_type const& node) -> bool
 	{
 		return Accessor::is_set(node);
 	}
 
-	inline static void set_parent(container& cont, std::uint32_t node, std::uint32_t parent)
+	static void set_parent(container& cont, std::uint32_t node, std::uint32_t parent)
 	{
 		tree_node& lnk_ref = Accessor::links(Accessor::node(cont, node));
 		lnk_ref.parent		 = parent;
 	}
 
-	inline static void unset_flag(node_type& node_ref)
+	static void unset_flag(node_type& node_ref)
 	{
 		Accessor::unset_flag(node_ref);
 	}
 
-	inline static void set_flag(node_type& node_ref)
+	static void set_flag(node_type& node_ref)
 	{
 		Accessor::set_flag(node_ref);
 	}
@@ -78,195 +78,226 @@ private:
 		void set()
 			requires(!std::is_const_v<Container>)
 		{
-			Accessor::set_flag(*ref);
+			Accessor::set_flag(*ref_);
 		}
 
 		void set(bool b)
 			requires(!std::is_const_v<Container>)
 		{
-			Accessor::set_flag(*ref, b);
+			Accessor::set_flag(*ref_, b);
 		}
 
 		void unset()
 			requires(!std::is_const_v<Container>)
 		{
-			Accessor::unset_flag(*ref);
+			Accessor::unset_flag(*ref_);
 		}
 
-		bool is_set() const
+		[[nodiscard]] auto is_set() const -> bool
 		{
-			return Accessor::is_set(*ref);
+			return Accessor::is_set(*ref_);
 		}
 
 		void set_parent(std::uint32_t par)
 			requires(!std::is_const_v<Container>)
 		{
-			Accessor::links(*ref).parent = par;
+			Accessor::links(*ref_).parent = par;
 		}
 
 		void set_left(std::uint32_t left)
 			requires(!std::is_const_v<Container>)
 		{
-			Accessor::links(*ref).left = left;
+			Accessor::links(*ref_).left = left;
 		}
 
 		void set_right(std::uint32_t right)
 			requires(!std::is_const_v<Container>)
 		{
-			Accessor::links(*ref).right = right;
+			Accessor::links(*ref_).right = right;
 		}
 
-		tnode_it parent(Container& cont) const
+		auto parent(Container& cont) const -> tnode_it
 		{
-			return tnode_it(cont, Accessor::links(*ref).parent);
+			return tnode_it(cont, Accessor::links(*ref_).parent);
 		}
 
-		tnode_it left(Container& cont) const
+		auto left(Container& cont) const -> tnode_it
 		{
-			return tnode_it(cont, Accessor::links(*ref).left);
+			return tnode_it(cont, Accessor::links(*ref_).left);
 		}
 
-		tnode_it right(Container& cont) const
+		auto right(Container& cont) const -> tnode_it
 		{
-			return tnode_it(cont, Accessor::links(*ref).right);
+			return tnode_it(cont, Accessor::links(*ref_).right);
 		}
 
-		std::uint32_t parent() const
+		[[nodiscard]] auto parent() const -> std::uint32_t
 		{
-			return Accessor::links(*ref).parent;
+			return Accessor::links(*ref_).parent;
 		}
 
-		std::uint32_t left() const
+		[[nodiscard]] auto left() const -> std::uint32_t
 		{
-			return Accessor::links(*ref).left;
+			return Accessor::links(*ref_).left;
 		}
 
-		std::uint32_t right() const
+		[[nodiscard]] auto right() const -> std::uint32_t
 		{
-			return Accessor::links(*ref).right;
+			return Accessor::links(*ref_).right;
 		}
 
-		std::uint32_t index() const
+		[[nodiscard]] auto index() const -> std::uint32_t
 		{
-			return node;
+			return node_;
 		}
 
-		value_type const& value() const
+		auto value() const -> value_type const&
 		{
-			return Accessor::value(*ref);
+			return Accessor::value(*ref_);
 		}
 
 		using node_t = std::conditional_t<std::is_const_v<Container>, node_type const, node_type>;
 
-		tnode_it(Container& cont, std::uint32_t inode) : node(inode), ref(&Accessor::node(cont, inode)) {}
-		tnode_it(std::uint32_t inode, node_t* iref) : node(inode), ref(iref) {}
-		tnode_it()													 = delete;
-		tnode_it(tnode_it const&)						 = default;
-		tnode_it(tnode_it&&)								 = default;
-		tnode_it& operator=(tnode_it const&) = default;
-		tnode_it& operator=(tnode_it&&)			 = default;
+		tnode_it(Container& cont, std::uint32_t inode) : node_(inode), ref_(&Accessor::node_(cont, inode)) {}
+		tnode_it(std::uint32_t inode, node_t* iref) : node_(inode), ref_(iref) {}
+		tnode_it()																			 = delete;
+		tnode_it(tnode_it const&)												 = default;
+		tnode_it(tnode_it&&) noexcept										 = default;
+		auto operator=(tnode_it const&) -> tnode_it&		 = default;
+		auto operator=(tnode_it&&) noexcept -> tnode_it& = default;
+		~tnode_it() noexcept														 = default;
 
-		bool operator==(tnode_it const& iother) const
+		auto operator==(tnode_it const& iother) const -> bool
 		{
-			return node == iother.index();
-		}
-
-		bool operator==(std::uint32_t iother) const
-		{
-			return node == iother;
-		}
-		bool operator!=(tnode_it const& iother) const
-		{
-			return node != iother.index();
-		}
-		bool operator!=(std::uint32_t iother) const
-		{
-			return node != iother;
+			return node_ == iother.index();
 		}
 
-		inline explicit operator bool() const
+		auto operator==(std::uint32_t iother) const -> bool
 		{
-			return node != Tombstone;
+			return node_ == iother;
+		}
+		auto operator!=(tnode_it const& iother) const -> bool
+		{
+			return node_ != iother.index();
+		}
+		auto operator!=(std::uint32_t iother) const -> bool
+		{
+			return node_ != iother;
 		}
 
-		std::uint32_t node = Tombstone;
-		node_t*				ref	 = nullptr;
+		explicit operator bool() const
+		{
+			return node_ != Tombstone;
+		}
+
+		std::uint32_t node_ = Tombstone;
+		node_t*				ref_	= nullptr;
 	};
 
 	using node_it	 = tnode_it<container>;
 	using cnode_it = tnode_it<container const>;
 
-	inline cnode_it minimum(container const& cont, cnode_it u) const
+	auto minimum(container const& cont, cnode_it u) const -> cnode_it
 	{
 		while (u.left() != Tombstone)
+		{
 			u = u.left(cont);
+		}
 		return u;
 	}
 
-	inline cnode_it maximum(container const& cont, cnode_it u) const
+	auto maximum(container const& cont, cnode_it u) const -> cnode_it
 	{
 		while (u.right() != Tombstone)
+		{
 			u = u.right(cont);
+		}
 		return u;
 	}
 
-	inline node_it minimum(container& cont, node_it u) const
+	auto minimum(container& cont, node_it u) const -> node_it
 	{
 		while (u.left() != Tombstone)
+		{
 			u = u.left(cont);
+		}
 		return u;
 	}
 
-	inline node_it maximum(container& cont, node_it u) const
+	auto maximum(container& cont, node_it u) const -> node_it
 	{
 		while (u.right() != Tombstone)
+		{
 			u = u.right(cont);
+		}
 		return u;
 	}
 
-	inline void left_rotate(container& cont, node_it x)
+	void left_rotate(container& cont, node_it x)
 	{
 		node_it y = x.right(cont);
 		x.set_right(y.left());
 		if (y.left() != Tombstone)
+		{
 			y.left(cont).set_parent(x.index());
+		}
 		y.set_parent(x.parent());
 		if (x.parent() == Tombstone)
-			root = y.index();
+		{
+			root_ = y.index();
+		}
 		else if (x.index() == x.parent(cont).left())
+		{
 			x.parent(cont).set_left(y.index());
+		}
 		else
+		{
 			x.parent(cont).set_right(y.index());
+		}
 		y.set_left(x.index());
 		x.set_parent(y.index());
 	}
 
-	inline void right_rotate(container& cont, node_it x)
+	void right_rotate(container& cont, node_it x)
 	{
 		node_it y = x.left(cont);
 		x.set_left(y.right());
 		if (y.right() != Tombstone)
+		{
 			y.right(cont).set_parent(x.index());
+		}
 		y.set_parent(x.parent());
 		if (x.parent() == Tombstone)
-			root = y.index();
+		{
+			root_ = y.index();
+		}
 		else if (x.index() == x.parent(cont).right())
+		{
 			x.parent(cont).set_right(y.index());
+		}
 		else
+		{
 			x.parent(cont).set_left(y.index());
+		}
 		y.set_right(x.index());
 		x.set_parent(y.index());
 	}
 
-	inline void transplant(container& cont, node_it u, node_it v)
+	void transplant(container& cont, node_it u, node_it v)
 	{
 		auto parent = u.parent(cont);
 		if (!parent)
-			root = v.index();
+		{
+			root_ = v.index();
+		}
 		else if (parent.left() == u.index())
+		{
 			parent.set_left(v.index());
+		}
 		else
+		{
 			parent.set_right(v.index());
+		}
 		v.set_parent(parent.index());
 	}
 
@@ -325,13 +356,14 @@ private:
 			}
 		}
 
-		unset_flag(Accessor::node(cont, root));
+		unset_flag(Accessor::node(cont, root_));
 	}
 
+	// NOLINTNEXTLINE
 	void erase_fix(container& cont, node_it x)
 	{
 		node_it w(cont, Tombstone);
-		while (x.index() != root && !x.is_set())
+		while (x.index() != root_ && !x.is_set())
 		{
 			auto x_p = x.parent(cont);
 			if (x.index() == x_p.left())
@@ -365,7 +397,7 @@ private:
 					x_p.unset();
 					w.right(cont).unset();
 					left_rotate(cont, x_p);
-					x = node_it(cont, root);
+					x = node_it(cont, root_);
 				}
 			}
 			else
@@ -399,7 +431,7 @@ private:
 					x_p.unset();
 					w.left(cont).unset();
 					right_rotate(cont, x_p);
-					x = node_it(cont, root);
+					x = node_it(cont, root_);
 				}
 			}
 		}
@@ -407,57 +439,67 @@ private:
 	}
 
 public:
-	std::uint32_t get_root() const
+	[[nodiscard]] auto get_root() const -> std::uint32_t
 	{
-		return root;
+		return root_;
 	}
 
-	value_type minimum(container const& cont) const
+	auto minimum(container const& cont) const -> value_type
 	{
-		return root == Tombstone ? value_type() : minimum(cont, cnode_it(cont, root)).value();
+		return root_ == Tombstone ? value_type() : minimum(cont, cnode_it(cont, root_)).value();
 	}
 
-	value_type maximum(container const& cont) const
+	auto maximum(container const& cont) const -> value_type
 	{
-		return root == Tombstone ? value_type() : maximum(cont, cnode_it(cont, root)).value();
+		return root_ == Tombstone ? value_type() : maximum(cont, cnode_it(cont, root_)).value();
 	}
 
-	std::uint32_t find(container const& cont, std::uint32_t iroot, value_type ivalue) const
+	auto find(container const& cont, std::uint32_t iroot, value_type ivalue) const -> std::uint32_t
 	{
 		std::uint32_t node = iroot;
 		while (node != Tombstone)
 		{
 			auto const& node_ref = Accessor::node(cont, node);
 			if (Accessor::value(node_ref) == ivalue)
+			{
 				break;
-			else if (Accessor::value(node_ref) <= ivalue)
+			}
+			if (Accessor::value(node_ref) <= ivalue)
+			{
 				node = Accessor::links(node_ref).right;
+			}
 			else
+			{
 				node = Accessor::links(node_ref).left;
+			}
 		}
 		return node;
 	}
 
-	std::uint32_t next_less(container& cont, std::uint32_t node)
+	auto next_less(container& cont, std::uint32_t node) -> std::uint32_t
 	{
 		if (node != Tombstone)
+		{
 			return Accessor::links(Accessor::node(cont, node)).left;
+		}
 		return Tombstone;
 	}
 
-	std::uint32_t next_more(container& cont, std::uint32_t node)
+	auto next_more(container& cont, std::uint32_t node) -> std::uint32_t
 	{
 		if (node != Tombstone)
+		{
 			return Accessor::links(Accessor::node(cont, node)).right;
+		}
 		return Tombstone;
 	}
 
-	std::uint32_t lower_bound(container& cont, value_type ivalue) const
+	auto lower_bound(container& cont, value_type ivalue) const -> std::uint32_t
 	{
-		return lower_bound(cont, root, ivalue);
+		return lower_bound(cont, root_, ivalue);
 	}
 
-	std::uint32_t lower_bound(container& cont, std::uint32_t iroot, value_type ivalue) const
+	auto lower_bound(container& cont, std::uint32_t iroot, value_type ivalue) const -> std::uint32_t
 	{
 		std::uint32_t node = iroot;
 		std::uint32_t lb	 = iroot;
@@ -470,14 +512,16 @@ public:
 				node = Accessor::links(node_ref).left;
 			}
 			else
+			{
 				node = Accessor::links(node_ref).right;
+			}
 		}
 		return lb;
 	}
 
-	std::uint32_t find(container& cont, value_type ivalue) const
+	auto find(container& cont, value_type ivalue) const -> std::uint32_t
 	{
-		return find(cont, root, ivalue);
+		return find(cont, root_, ivalue);
 	}
 
 	void insert_after(container& cont, std::uint32_t n, std::uint32_t iz)
@@ -489,21 +533,28 @@ public:
 		{
 			y = x;
 			if (z.value() < x.value())
+			{
 				x = x.left(cont);
+			}
 			else
+			{
 				x = x.right(cont);
-			ACL_PREFETCH_ONETIME(x.ref);
+			}
 		}
 		z.set_parent(y.index());
 		if (!y)
 		{
-			root = z.index();
+			root_ = z.index();
 			return;
 		}
-		else if (z.value() < y.value())
+		if (z.value() < y.value())
+		{
 			y.set_left(z.index());
+		}
 		else
+		{
 			y.set_right(z.index());
+		}
 		z.set();
 		insert_fixup(cont, z);
 #ifdef ACL_VALIDITY_CHECKS
@@ -525,9 +576,9 @@ public:
 			auto prev = x;
 			x					= x.parent(cont);
 
-			if (ACL_UNLIKELY(x.index() == Tombstone))
+			if ((x.index() == Tombstone)) [[unlikely]]
 			{
-				x = node_it(cont, root);
+				x = node_it(cont, root_);
 				break;
 			}
 
@@ -553,21 +604,29 @@ public:
 		{
 			y = x;
 			if (z.value() < x.value())
+			{
 				x = x.left(cont);
+			}
 			else
+			{
 				x = x.right(cont);
+			}
 			ACL_PREFETCH_ONETIME(x.ref);
 		}
 		z.set_parent(y.index());
 		if (!y)
 		{
-			root = z.index();
+			root_ = z.index();
 			return;
 		}
-		else if (z.value() < y.value())
+		if (z.value() < y.value())
+		{
 			y.set_left(z.index());
+		}
 		else
+		{
 			y.set_right(z.index());
+		}
 		z.set();
 		insert_fixup(cont, z);
 #ifdef ACL_VALIDITY_CHECKS
@@ -575,14 +634,14 @@ public:
 #endif
 	}
 
-	inline void insert(container& cont, std::uint32_t iz)
+	void insert(container& cont, std::uint32_t iz)
 	{
-		insert_after(cont, root, iz);
+		insert_after(cont, root_, iz);
 	}
 
 	void erase(container& cont, std::uint32_t iz)
 	{
-		ACL_ASSERT(iz != Tombstone);
+		assert(iz != Tombstone);
 
 		node_it z(cont, iz);
 		node_it y								 = z;
@@ -604,7 +663,9 @@ public:
 			y_original_color = y.is_set();
 			x								 = y.right(cont);
 			if (y.parent() == iz)
+			{
 				x.set_parent(y.index());
+			}
 			else
 			{
 				transplant(cont, y, x);
@@ -618,7 +679,9 @@ public:
 			y.set(z.is_set());
 		}
 		if (!y_original_color)
+		{
 			erase_fix(cont, x);
+		}
 		z.unset();
 		z.set_left(Tombstone);
 		z.set_right(Tombstone);
@@ -642,7 +705,7 @@ public:
 	template <typename L>
 	void in_order_traversal(container& blocks, L&& visitor)
 	{
-		in_order_traversal(blocks, root, std::forward<L>(visitor));
+		in_order_traversal(blocks, root_, std::forward<L>(visitor));
 	}
 
 	template <typename L>
@@ -660,10 +723,10 @@ public:
 	template <typename L>
 	void in_order_traversal(container const& blocks, L&& visitor) const
 	{
-		in_order_traversal(blocks, root, std::forward<L>(visitor));
+		in_order_traversal(blocks, root_, std::forward<L>(visitor));
 	}
 
-	std::uint32_t node_count(container const& blocks) const
+	auto node_count(container const& blocks) const -> std::uint32_t
 	{
 		std::uint32_t cnt = 0;
 		in_order_traversal(blocks,
@@ -676,31 +739,35 @@ public:
 
 	void validate_integrity(container const& blocks) const
 	{
-		if (root == Tombstone)
+		if (root_ == Tombstone)
+		{
 			return;
+		}
 		value_type last = minimum(blocks);
 		in_order_traversal(blocks,
 											 [&last](node_type const& n)
 											 {
-												 ACL_ASSERT(last <= Accessor::value(n));
+												 assert(last <= Accessor::value(n));
 												 last = Accessor::value(n);
 											 });
 
-		validate_parents(blocks, Tombstone, root);
+		validate_parents(blocks, Tombstone, root_);
 	}
 
 	void validate_parents(container const& blocks, std::uint32_t parent, std::uint32_t node) const
 	{
 		if (node == Tombstone)
+		{
 			return;
+		}
 		auto& n = Accessor::node(blocks, node);
-		ACL_ASSERT(Accessor::links(n).parent == parent);
+		assert(Accessor::links(n).parent == parent);
 		validate_parents(blocks, node, Accessor::links(n).left);
 		validate_parents(blocks, node, Accessor::links(n).right);
 	}
 
 private:
-	std::uint32_t root = Tombstone;
+	std::uint32_t root_ = Tombstone;
 };
 
 } // namespace acl::detail

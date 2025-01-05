@@ -19,5 +19,5 @@ struct bsearch_min2
 namespace acl::detail
 {
 template <typename O>
-concept has_bsearch_algo = requires { O::bsearch_algo; };
+concept HasBsearchAlgo = requires { O::bsearch_algo; };
 } // namespace acl::detail

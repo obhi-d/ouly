@@ -4,6 +4,7 @@
 #include <ranges>
 #include <string>
 
+// NOLINTBEGIN
 TEST_CASE("scheduler: Construction")
 {
 	acl::scheduler scheduler;
@@ -22,7 +23,7 @@ TEST_CASE("scheduler: Construction")
 
 		void execute2(acl::worker_context const& id, uint32_t n)
 		{
-			id.get_scheduler();
+			[[maybe_unused]] auto& scheduler = id.get_scheduler();
 			accumulate[id.get_worker().get_index()].push_back(n);
 		}
 
@@ -289,3 +290,4 @@ TEST_CASE("scheduler: Test submit_to")
 		REQUIRE(collection[i] == i);
 	}
 }
+// NOLINTEND

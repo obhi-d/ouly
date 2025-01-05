@@ -3,6 +3,7 @@
 #include <catch2/catch_all.hpp>
 #include <string>
 
+// NOLINTBEGIN
 TEST_CASE("dynamic_array: Validate use of dynamic_array")
 {
 	acl::dynamic_array<std::string> table;
@@ -45,3 +46,4 @@ TEST_CASE("dynamic_array: Validate use of fixed size  dynamic_array")
 	for (auto& t : table)
 		REQUIRE(t == "second");
 }
+// NOLINTEND

@@ -46,18 +46,20 @@ struct is_tuple<std::tuple<T...>> : std::true_type
 template <std::size_t Len, std::size_t Align>
 struct aligned_storage
 {
-	alignas(Align) std::byte data[Len];
+	alignas(Align) std::byte data_[Len];
 
 	template <typename T>
-	T* as() noexcept
+	auto as() noexcept -> T*
 	{
-		return std::launder(reinterpret_cast<T*>(data));
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+		return std::launder(reinterpret_cast<T*>(data_));
 	}
 
 	template <typename T>
-	T const* as() const noexcept
+	[[nodiscard]] [[nodiscard]] auto as() const noexcept -> T const*
 	{
-		return std::launder(reinterpret_cast<T const*>(data));
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+		return std::launder(reinterpret_cast<T const*>(data_));
 	}
 };
 
@@ -85,87 +87,109 @@ using tuple_of_refs = decltype(tuple_element_refs(std::declval<Tuple>()));
 template <typename Tuple>
 using tuple_of_crefs = decltype(tuple_element_crefs(std::declval<Tuple>()));
 
-template <typename size_type>
-constexpr size_type high_bit_mask_v = (static_cast<size_type>(0x80) << ((sizeof(size_type) - 1) * 8));
+template <typename SizeType>
+constexpr SizeType high_bit_mask_v = (static_cast<SizeType>(0x80) << ((sizeof(SizeType) - 1) * 8));
 
-template <typename size_type>
-constexpr size_type log2(size_type val)
+template <typename SizeType>
+constexpr auto log2(SizeType val) -> SizeType
 {
 	return val ? 1 + log2(val >> 1) : -1;
 }
 
-template <typename size_type>
-inline constexpr size_type hazard_idx(size_type val, std::uint8_t spl)
+template <typename SizeType>
+constexpr auto hazard_idx(SizeType val, std::uint8_t spl) -> SizeType
 {
 	if constexpr (detail::debug)
 	{
-		ACL_ASSERT(val < (static_cast<size_type>(1) << ((sizeof(size_type) - 1) * 8)));
-		return (static_cast<size_type>(spl) << ((sizeof(size_type) - 1) * 8)) | val;
+		constexpr SizeType bit_count = 8;
+		assert(val < (static_cast<SizeType>(1) << ((sizeof(SizeType) - 1) * 8)));
+		return (static_cast<SizeType>(spl) << ((sizeof(SizeType) - 1) * bit_count)) | val;
 	}
 	else
+	{
 		return val;
+	}
 }
 
-template <typename size_type>
-inline constexpr std::uint8_t hazard_val(size_type val)
+template <typename SizeType>
+constexpr auto hazard_val(SizeType val) -> std::uint8_t
 {
 	if constexpr (detail::debug)
-		return (val >> ((sizeof(size_type) - 1) * 8));
+	{
+		constexpr SizeType bit_count = 8;
+		return (val >> ((sizeof(SizeType) - 1) * bit_count));
+	}
 	else
+	{
 		return val;
+	}
 }
 
-template <typename size_type>
-inline constexpr auto index_val(size_type val)
+template <typename SizeType>
+constexpr auto index_val(SizeType val)
 {
-	constexpr size_type one	 = 1;
-	constexpr size_type mask = (one << ((sizeof(size_type) - one) * 8)) - 1;
+	constexpr SizeType bit_count = 8;
+	constexpr SizeType one			 = 1;
+	constexpr SizeType mask			 = (one << ((sizeof(SizeType) - one) * bit_count)) - 1;
 	if constexpr (detail::debug)
+	{
 		return val & mask;
+	}
 	else
+	{
 		return val;
+	}
 }
 
-template <typename size_type>
-inline constexpr size_type revise(size_type val)
+template <typename SizeType>
+constexpr auto revise(SizeType val) -> SizeType
 {
 	if constexpr (detail::debug)
+	{
 		return hazard_idx(index_val(val), (hazard_val(val) + 1));
+	}
 	else
+	{
 		return val;
+	}
 }
 
-template <typename size_type>
-inline constexpr size_type invalidate(size_type val)
+template <typename SizeType>
+constexpr auto invalidate(SizeType val) -> SizeType
 {
-	return high_bit_mask_v<size_type> | val;
+	return high_bit_mask_v<SizeType> | val;
 }
 
-template <typename size_type>
-inline constexpr size_type validate(size_type val)
+template <typename SizeType>
+constexpr auto validate(SizeType val) -> SizeType
 {
-	return (~high_bit_mask_v<size_type>)&(val);
+	return (~high_bit_mask_v<SizeType>)&(val);
 }
 
-template <typename size_type>
-inline constexpr size_type revise_invalidate(size_type val)
+template <typename SizeType>
+constexpr auto revise_invalidate(SizeType val) -> SizeType
 {
 	if constexpr (detail::debug)
-		return (hazard_idx(index_val(val), (hazard_val(val) + 1) | 0x80));
+	{
+		constexpr SizeType high_bit = 0x80;
+		return (hazard_idx(index_val(val), (hazard_val(val) + 1) | high_bit));
+	}
 	else
+	{
 		return invalidate(val);
+	}
 }
 
-template <typename size_type>
-inline constexpr size_type is_valid(size_type val)
+template <typename SizeType>
+constexpr auto is_valid(SizeType val) -> SizeType
 {
-	return !(high_bit_mask_v<size_type> & val);
+	return !(high_bit_mask_v<SizeType> & val);
 }
 
-constexpr uint32_t fnv1a_32(std::string_view view)
+constexpr auto fnv1a_32(std::string_view view) -> uint32_t
 {
-	constexpr uint32_t prime				= 16777619u;
-	constexpr uint32_t offset_basis = 2166136261u;
+	constexpr uint32_t prime				= 16777619U;
+	constexpr uint32_t offset_basis = 2166136261U;
 	uint32_t					 hash					= offset_basis;
 	for (auto v : view)
 	{

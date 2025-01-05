@@ -3,6 +3,7 @@
 #include <catch2/catch_all.hpp>
 #include <string>
 
+// NOLINTBEGIN
 TEST_CASE("soavector: Validate soavector emplace", "[soavector][emplace]")
 {
 	using pack = acl::pack<int, bool, std::string>;
@@ -95,3 +96,5 @@ TEST_CASE("soavector: Validate soavector erase", "[soavector][erase]")
 	REQUIRE(v1.size() == 9);
 	REQUIRE(v2 == v1);
 }
+
+// NOLINTEND

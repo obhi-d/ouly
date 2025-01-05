@@ -9,6 +9,7 @@
 #include <variant>
 #include <vector>
 
+// NOLINTBEGIN
 struct TestStruct
 {
 	int					a;
@@ -858,3 +859,4 @@ a: 2
 	// Expect the last value to override
 	REQUIRE(ts.a == 2);
 }
+// NOLINTEND

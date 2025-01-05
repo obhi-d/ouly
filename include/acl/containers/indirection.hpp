@@ -6,10 +6,7 @@
 #include <acl/utils/utils.hpp>
 #include <tuple>
 
-namespace acl
-{
-
-namespace detail
+namespace acl::detail
 {
 //============================================================
 template <typename Traits>
@@ -19,37 +16,37 @@ protected:
 	using size_type = detail::choose_size_t<uint32_t, Traits>;
 
 public:
-	inline size_type& get(size_type i) noexcept
+	auto get(size_type i) noexcept -> size_type&
 	{
 		return links_[i];
 	}
 
-	inline size_type get(size_type i) const noexcept
+	auto get(size_type i) const noexcept -> size_type
 	{
 		return links_[i];
 	}
 
-	inline size_type get_if(size_type i) const noexcept
+	auto get_if(size_type i) const noexcept -> size_type
 	{
 		return i < links_.size() ? links_[i] : Traits::null_v;
 	}
 
-	inline size_type size() const
+	auto size() const -> size_type
 	{
 		return static_cast<size_type>(links_.size());
 	}
 
-	inline void push_back(size_type s) noexcept
+	void push_back(size_type s) noexcept
 	{
 		links_.push_back(s);
 	}
 
-	inline void pop_back() noexcept
+	void pop_back() noexcept
 	{
 		links_.pop_back();
 	}
 
-	inline auto best_erase(size_type s)
+	auto best_erase(size_type s)
 	{
 		auto& v = links_[s];
 		auto	r = links_.back();
@@ -58,29 +55,31 @@ public:
 		return r;
 	}
 
-	inline size_type& ensure_at(size_type i) noexcept
+	auto ensure_at(size_type i) noexcept -> size_type&
 	{
 		if (i >= links_.size())
+		{
 			links_.resize(i + 1, Traits::null_v);
+		}
 		return links_[i];
 	}
 
-	inline void clear()
+	void clear()
 	{
 		links_.clear();
 	}
 
-	inline void shrink_to_fit()
+	void shrink_to_fit()
 	{
 		links_.shrink_to_fit();
 	}
 
-	inline bool contains(size_type i) const
+	auto contains(size_type i) const -> bool
 	{
 		return (i < links_.size() && links_[i] != Traits::null_v);
 	}
 
-	inline bool contains_valid(size_type i) const
+	auto contains_valid(size_type i) const -> bool
 	{
 		return i < links_.size() && links_[i] != Traits::null_v && detail::is_valid(links_[i]);
 	}
@@ -112,39 +111,41 @@ protected:
 	};
 
 public:
-	inline size_type& get(size_type i) noexcept
+	auto get(size_type i) noexcept -> size_type&
 	{
 		return links_[i];
 	}
 
-	inline size_type get(size_type i) const noexcept
+	auto get(size_type i) const noexcept -> size_type
 	{
 		return links_[i];
 	}
 
-	inline size_type size() const
+	auto size() const -> size_type
 	{
 		return static_cast<size_type>(links_.size());
 	}
 
-	inline void push_back(size_type i) noexcept
+	void push_back(size_type i) noexcept
 	{
 		links_.emplace_back(i);
 	}
 
-	inline void pop_back() noexcept
+	void pop_back() noexcept
 	{
 		links_.pop_back();
 	}
 
-	inline size_type& ensure_at(size_type i) noexcept
+	auto ensure_at(size_type i) noexcept -> size_type&
 	{
 		if (i >= links_.size())
+		{
 			links_.grow(i + 1);
+		}
 		return links_[i];
 	}
 
-	inline size_type best_erase(size_type s)
+	auto best_erase(size_type s) -> size_type
 	{
 		auto& v = links_[s];
 		auto	r = links_.back();
@@ -153,17 +154,17 @@ public:
 		return r;
 	}
 
-	inline bool contains(size_type i) const
+	auto contains(size_type i) const -> bool
 	{
 		return links_.contains(i);
 	}
 
-	inline size_type get_if(size_type i) const noexcept
+	auto get_if(size_type i) const noexcept -> size_type
 	{
 		return i < links_.size() ? links_[i] : Traits::null_v;
 	}
 
-	inline bool contains_valid(size_type i) const
+	auto contains_valid(size_type i) const -> bool
 	{
 		if (i < links_.size())
 		{
@@ -173,12 +174,12 @@ public:
 		return false;
 	}
 
-	inline void clear()
+	void clear()
 	{
 		links_.clear();
 	}
 
-	inline void shrink_to_fit()
+	void shrink_to_fit()
 	{
 		links_.shrink_to_fit();
 	}
@@ -197,32 +198,32 @@ protected:
 
 public:
 	template <typename T>
-	inline size_type& get(T& i) noexcept
+	auto get(T& i) noexcept -> size_type&
 	{
 		return self_index::get(i);
 	}
 
 	template <typename T>
-	inline size_type get(T& i) const noexcept
+	auto get(T& i) const noexcept -> size_type
 	{
 		return self_index::get(i);
 	}
 
 	template <typename T>
-	inline size_type& ensure_at(T& i) noexcept
+	auto ensure_at(T& i) noexcept -> size_type&
 	{
 		return self_index::get(i);
 	}
 
 	template <typename T>
-	constexpr inline bool contains(T&) const noexcept
+	constexpr auto contains(T& /*unused*/) const noexcept -> bool
 	{
 		return true;
 	}
 
-	inline void clear() noexcept {}
+	void clear() noexcept {}
 
-	inline void shrink_to_fit() noexcept {}
+	void shrink_to_fit() noexcept {}
 };
 
 template <typename Traits>
@@ -233,6 +234,4 @@ template <typename Traits>
 using self_index_type =
  std::conditional_t<HasSelfIndexValue<Traits>, detail::back_indirection<Traits>, indirection_type<Traits>>;
 
-} // namespace detail
-
-} // namespace acl
+} // namespace acl::detail

@@ -62,24 +62,24 @@ struct atom_size<T>
 
 struct padding_stats
 {
-	std::uint32_t padding_atoms = 0;
+	std::uint32_t padding_atoms_ = 0;
 
-	inline void pad_atoms(std::uint32_t v) noexcept
+	void pad_atoms(std::uint32_t v) noexcept
 	{
-		padding_atoms += v;
+		padding_atoms_ += v;
 	}
 
-	inline void unpad_atoms(std::uint32_t v) noexcept
+	void unpad_atoms(std::uint32_t v) noexcept
 	{
-		padding_atoms -= v;
+		padding_atoms_ -= v;
 	}
 
-	inline std::uint32_t padding_atoms_count() const noexcept
+	[[nodiscard]] auto padding_atoms_count() const noexcept -> std::uint32_t
 	{
-		return padding_atoms;
+		return padding_atoms_;
 	}
 
-	std::string print() const
+	[[nodiscard]] static auto print() -> std::string
 	{
 		return {};
 	}
@@ -105,115 +105,138 @@ public:
 	using address														 = typename underlying_allocator::address;
 
 	pool_allocator() noexcept
-			: k_atom_size(static_cast<size_type>(default_atom_size)), k_atom_count(static_cast<size_type>(default_atom_count))
+			: k_atom_size_(static_cast<size_type>(default_atom_size)),
+				k_atom_count_(static_cast<size_type>(default_atom_count))
 	{}
 
 	template <typename... Args>
 	pool_allocator(size_type i_atom_size, size_type i_atom_count, Args&&... i_args)
-			: k_atom_size(i_atom_size), k_atom_count(i_atom_count), statistics(std::forward<Args>(i_args)...)
+			: k_atom_size_(i_atom_size), k_atom_count_(i_atom_count), statistics(std::forward<Args>(i_args)...)
 	{}
 
 	pool_allocator(pool_allocator const& i_other) = delete;
-	inline pool_allocator(pool_allocator&& i_other) noexcept
+	pool_allocator(pool_allocator&& i_other) noexcept
 			//  array_arena arrays;
 			//  solo_arena      solo;
 			//  const size_type k_atom_count;
 			//  const size_type k_atom_size;
 			//  arena_linker    linked_arenas;
-			: arrays(std::move(i_other.arrays)), solo(std::move(i_other.solo)), k_atom_count(i_other.k_atom_count),
-				k_atom_size(i_other.k_atom_size), linked_arenas(std::move(i_other.linked_arenas))
+			: arrays_(std::move(i_other.arrays_)), solo_(std::move(i_other.solo_)), k_atom_count_(i_other.k_atom_count_),
+				k_atom_size_(i_other.k_atom_size_), linked_arenas_(std::move(i_other.linked_arenas_))
 	{}
 
-	pool_allocator&				 operator=(pool_allocator const& i_other) = delete;
-	inline pool_allocator& operator=(pool_allocator&& i_other) noexcept
+	auto operator=(pool_allocator const& i_other) -> pool_allocator& = delete;
+	auto operator=(pool_allocator&& i_other) noexcept -> pool_allocator&
 	{
-		arrays = (std::move(i_other.arrays));
-		solo	 = std::move(i_other.solo);
-		ACL_ASSERT(k_atom_count == i_other.k_atom_count);
-		ACL_ASSERT(k_atom_size = i_other.k_atom_size);
-		linked_arenas = std::move(i_other.linked_arenas);
+		arrays_ = (std::move(i_other.arrays_));
+		solo_		= std::move(i_other.solo_);
+		assert(k_atom_count_ == i_other.k_atom_count_);
+		assert(k_atom_size_ == i_other.k_atom_size_);
+		linked_arenas_ = std::move(i_other.linked_arenas_);
 		return *this;
 	}
 
-	inline constexpr static address null()
+	constexpr static auto null() -> address
 	{
 		return underlying_allocator::null();
 	}
 
 	template <typename Alignment = alignment<>>
-	[[nodiscard]] inline address allocate(size_type size_value, Alignment alignment = {})
+	[[nodiscard]] auto allocate(size_type size_value, Alignment alignment = {}) -> address
 	{
 		constexpr auto alignment_value = (size_t)alignment;
 		auto					 fixup					 = alignment_value - 1;
-		if (alignment_value && ((k_atom_size < alignment_value) || (k_atom_size & fixup)))
+		if (alignment_value && ((k_atom_size_ < alignment_value) || (k_atom_size_ & fixup)))
+		{
 			size_value += alignment_value + 4;
+		}
 
-		size_type i_count = (size_value + k_atom_size - 1) / k_atom_size;
+		size_type i_count = (size_value + k_atom_size_ - 1) / k_atom_size_;
 
 		if constexpr (detail::HasComputeStats<Options>)
 		{
-			if (alignment_value && ((k_atom_size < alignment_value) || (k_atom_size & fixup)))
+			if (alignment_value && ((k_atom_size_ < alignment_value) || (k_atom_size_ & fixup)))
 			{
 				// Account for the missing atoms
 				auto			real_size = size_value - alignment_value - 4;
-				size_type count			= (real_size + k_atom_size - 1) / k_atom_size;
+				size_type count			= (real_size + k_atom_size_ - 1) / k_atom_size_;
 				this->statistics::pad_atoms(static_cast<std::uint32_t>(i_count - count));
 			}
 		}
 
-		if (i_count > k_atom_count)
+		if (i_count > k_atom_count_)
+		{
 			return underlying_allocator::allocate(size_value, alignment);
+		}
 
 		address ret_value;
 		auto		measure = statistics::report_allocate(size_value);
-		ret_value				= (i_count == 1) ? ((!solo) ? consume(1) : consume()) : consume(i_count);
 
-		if (alignment_value && ((k_atom_size < alignment_value) || (k_atom_size & fixup)))
+		if (i_count == 1)
 		{
-			auto pointer = reinterpret_cast<std::uintptr_t>(ret_value);
-			auto ret		 = ((pointer + 4 + static_cast<std::uintptr_t>(fixup)) & ~static_cast<std::uintptr_t>(fixup));
-			*(reinterpret_cast<std::uint32_t*>(ret) - 1) = static_cast<std::uint32_t>(ret - pointer);
-			return reinterpret_cast<address>(ret);
+			ret_value = solo_ ? consume() : consume(1);
 		}
 		else
-			return ret_value;
+		{
+			ret_value = consume(i_count);
+		}
+
+		if (alignment_value && ((k_atom_size_ < alignment_value) || (k_atom_size_ & fixup)))
+		{
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+			auto pointer = reinterpret_cast<std::uintptr_t>(ret_value);
+			auto ret		 = ((pointer + 4 + static_cast<std::uintptr_t>(fixup)) & ~static_cast<std::uintptr_t>(fixup));
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast, performance-no-int-to-ptr)
+			*(reinterpret_cast<std::uint32_t*>(ret) - 1) = static_cast<std::uint32_t>(ret - pointer);
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+			return reinterpret_cast<address>(ret);
+		}
+		return ret_value;
 	}
 
 	template <typename Alignment = alignment<>>
-	inline void deallocate(address i_ptr, size_type size_value, Alignment alignment = {})
+	void deallocate(address i_ptr, size_type size_value, Alignment alignment = {})
 	{
 		constexpr auto alignment_value = (size_t)alignment;
 		auto					 fixup					 = alignment_value - 1;
 		address				 orig_ptr				 = i_ptr;
-		if (alignment_value && ((k_atom_size < alignment_value) || (k_atom_size & fixup)))
+		if (alignment_value && ((k_atom_size_ < alignment_value) || (k_atom_size_ & fixup)))
 		{
 			size_value += alignment_value + 4;
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 			std::uint32_t off_by = *(reinterpret_cast<std::uint32_t*>(i_ptr) - 1);
-			i_ptr								 = reinterpret_cast<address>(reinterpret_cast<std::uint8_t*>(i_ptr) - off_by);
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+			i_ptr = reinterpret_cast<address>(reinterpret_cast<std::uint8_t*>(i_ptr) - off_by);
 		}
 
-		size_type i_count = (size_value + k_atom_size - 1) / k_atom_size;
+		size_type i_count = (size_value + k_atom_size_ - 1) / k_atom_size_;
 
 		if constexpr (detail::HasComputeStats<Options>)
 		{
-			if (alignment_value && ((k_atom_size < alignment_value) || (k_atom_size & fixup)))
+			if (alignment_value && ((k_atom_size_ < alignment_value) || (k_atom_size_ & fixup)))
 			{
 				// Account for the missing atoms
 				auto			real_size = size_value - alignment_value - 4;
-				size_type count			= (real_size + k_atom_size - 1) / k_atom_size;
+				size_type count			= (real_size + k_atom_size_ - 1) / k_atom_size_;
 				this->statistics::unpad_atoms(static_cast<std::uint32_t>(i_count - count));
 			}
 		}
 
-		if (i_count > k_atom_count)
+		if (i_count > k_atom_count_)
+		{
 			underlying_allocator::deallocate(orig_ptr, size_value, alignment);
+		}
 		else
 		{
 			auto measure = statistics::report_deallocate(size_value);
 			if (i_count == 1)
+			{
 				release(i_ptr);
+			}
 			else
+			{
 				release(i_ptr, i_count);
+			}
 		}
 	}
 
@@ -221,141 +244,153 @@ private:
 	struct array_arena
 	{
 
-		array_arena() : ppvalue(nullptr) {}
-		array_arena(array_arena const& other) : ppvalue(other.ppvalue) {}
-		array_arena(array_arena&& other) noexcept : ppvalue(other.ppvalue)
+		array_arena() : ppvalue_(nullptr) {}
+		array_arena(array_arena const& other) : ppvalue_(other.ppvalue_) {}
+		array_arena(array_arena&& other) noexcept : ppvalue_(other.ppvalue_)
 		{
-			other.ppvalue = nullptr;
+			other.ppvalue_ = nullptr;
 		}
-		array_arena(void* i_pdata) : pvalue(i_pdata) {}
-		array_arena& operator=(array_arena&& other) noexcept
+		array_arena(void* i_pdata) : pvalue_(i_pdata) {}
+		~array_arena() noexcept = default;
+		auto operator=(array_arena&& other) noexcept -> array_arena&
 		{
-			ppvalue				= other.ppvalue;
-			other.ppvalue = nullptr;
+			ppvalue_			 = other.ppvalue_;
+			other.ppvalue_ = nullptr;
 			return *this;
 		}
-		array_arena& operator=(array_arena const& other) noexcept
+		auto operator=(array_arena const& other) noexcept -> array_arena&
 		{
-			pvalue = other.pvalue;
+			pvalue_ = other.pvalue_;
 			return *this;
 		}
-		explicit array_arena(address i_addr, size_type i_count) : ivalue(reinterpret_cast<std::uintptr_t>(i_addr) | 0x1)
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+		explicit array_arena(address i_addr, size_type i_count) : ivalue_(reinterpret_cast<std::uintptr_t>(i_addr) | 0x1)
 		{
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 			*reinterpret_cast<size_type*>(i_addr) = i_count;
 		}
 
-		size_type length() const
+		auto length() const -> size_type
 		{
-			return *reinterpret_cast<size_type*>(ivalue & ~0x1);
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+			return *reinterpret_cast<size_type*>(ivalue_ & ~0x1);
 		}
 
 		void set_length(size_type i_length)
 		{
-			*reinterpret_cast<size_type*>(ivalue & ~0x1) = i_length;
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+			*reinterpret_cast<size_type*>(ivalue_ & ~0x1) = i_length;
 		}
 
-		array_arena get_next() const
+		auto get_next() const -> array_arena
 		{
-			return *(reinterpret_cast<void**>(ivalue & ~0x1) + 1);
+			// NOLINTNEXTLINE
+			return *(reinterpret_cast<void**>(ivalue_ & ~0x1) + 1);
 		}
 
 		void set_next(array_arena next)
 		{
-			*(reinterpret_cast<void**>(ivalue & ~0x1) + 1) = next.value;
+			// NOLINTNEXTLINE
+			*(reinterpret_cast<void**>(ivalue_ & ~0x1) + 1) = next.value_;
 		}
 
 		void clear_flag()
 		{
-			ivalue &= (~0x1);
+			ivalue_ &= (~0x1);
 		}
 
-		std::uint8_t* get_value() const
+		[[nodiscard]] auto get_value() const -> std::uint8_t*
 		{
-			return reinterpret_cast<std::uint8_t*>(ivalue & ~0x1);
+			// NOLINTNEXTLINE
+			return reinterpret_cast<std::uint8_t*>(ivalue_ & ~0x1);
 		}
-		void* update(size_type i_count)
+		auto update(size_type i_count) -> void*
 		{
 			return get_value() + i_count;
 		}
 
 		explicit operator bool() const
 		{
-			return ppvalue != nullptr;
+			return ppvalue_ != nullptr;
 		}
 		union
 		{
-			address				 addr;
-			void*					 pvalue;
-			void**				 ppvalue;
-			std::uint8_t*	 value;
-			std::uintptr_t ivalue;
+			address				 addr_;
+			void*					 pvalue_;
+			void**				 ppvalue_;
+			std::uint8_t*	 value_;
+			std::uintptr_t ivalue_;
 		};
 	};
 
 	struct solo_arena
 	{
-		solo_arena() : ppvalue(nullptr) {}
-		solo_arena(solo_arena const&& other) : ppvalue(other.ppvalue) {}
-		solo_arena(void* i_pdata) : pvalue(i_pdata) {}
-		solo_arena(solo_arena&& other) noexcept : ppvalue(other.ppvalue)
+		solo_arena() : ppvalue_(nullptr) {}
+		solo_arena(solo_arena const&& other) noexcept : ppvalue_(other.ppvalue_) {}
+		solo_arena(void* i_pdata) : pvalue_(i_pdata) {}
+		solo_arena(solo_arena&& other) noexcept : ppvalue_(other.ppvalue_)
 		{
-			other.ppvalue = nullptr;
+			other.ppvalue_ = nullptr;
 		}
-		solo_arena(solo_arena const& other) : pvalue(other.pvalue) {}
-		solo_arena(array_arena const& other) : pvalue(other.get_value()) {}
-		solo_arena& operator=(solo_arena&& other) noexcept
+		solo_arena(solo_arena const& other) : pvalue_(other.pvalue_) {}
+		solo_arena(array_arena const& other) : pvalue_(other.get_value()) {}
+		~solo_arena() noexcept = default;
+		auto operator=(solo_arena&& other) noexcept -> solo_arena&
 		{
-			ppvalue				= other.ppvalue;
-			other.ppvalue = nullptr;
+			ppvalue_			 = other.ppvalue_;
+			other.ppvalue_ = nullptr;
 			return *this;
 		}
-		solo_arena& operator=(array_arena const& other)
+		auto operator=(array_arena const& other) -> solo_arena&
 		{
-			pvalue = other.get_value();
+			pvalue_ = other.get_value();
 			return *this;
 		}
-		solo_arena& operator=(solo_arena const& other)
+		auto operator=(solo_arena const& other) -> solo_arena&
 		{
-			pvalue = other.pvalue;
+			pvalue_ = other.pvalue_;
 			return *this;
 		}
 
-		void* get_value() const
+		[[nodiscard]] auto get_value() const -> void*
 		{
-			return pvalue;
+			return pvalue_;
 		}
 
-		solo_arena get_next() const
+		auto get_next() const -> solo_arena
 		{
-			return *(ppvalue);
+			return *(ppvalue_);
 		}
 		void set_next(solo_arena next)
 		{
-			*(ppvalue) = next.value;
+			*(ppvalue_) = next.value_;
 		}
 
 		explicit operator bool() const
 		{
-			return ppvalue != nullptr;
+			return ppvalue_ != nullptr;
 		}
 		union
 		{
-			address				 addr;
-			void*					 pvalue;
-			void**				 ppvalue;
-			std::uint8_t*	 value;
-			std::uintptr_t ivalue;
+			address				 addr_;
+			void*					 pvalue_;
+			void**				 ppvalue_;
+			std::uint8_t*	 value_;
+			std::uintptr_t ivalue_;
 		};
 	};
 
 	struct arena_linker
 	{
-		arena_linker()																		 = default;
-		explicit arena_linker(const arena_linker& i_other) = default;
-		arena_linker(arena_linker&& i_other) : first(i_other.first)
+		arena_linker()																			 = default;
+		auto operator=(const arena_linker&) -> arena_linker& = delete;
+		auto operator=(arena_linker&&) -> arena_linker&			 = delete;
+		explicit arena_linker(const arena_linker& i_other)	 = default;
+		arena_linker(arena_linker&& i_other) noexcept : first_(i_other.first_)
 		{
-			i_other.first = nullptr;
+			i_other.first_ = nullptr;
 		}
+		~arena_linker() noexcept = default;
 
 		enum : size_type
 		{
@@ -364,19 +399,23 @@ private:
 
 		void link_with(address arena, size_type size)
 		{
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 			void** loc = reinterpret_cast<void**>(static_cast<std::uint8_t*>(arena) + size);
-			*loc			 = first;
-			first			 = loc;
+			*loc			 = first_;
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+			first_ = reinterpret_cast<void*>(loc);
 		}
 
-		template <typename lambda>
-		void for_each(lambda&& i_deleter, size_type size)
+		template <typename Lambda>
+		void for_each(Lambda i_deleter, size_type size)
 		{
 			size_type real_size = size + k_header_size;
-			void*			it				= first;
+			void*			it				= first_;
 			while (it)
 			{
+				// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 				void* next = *reinterpret_cast<void**>(it);
+				// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 				i_deleter(reinterpret_cast<address>(reinterpret_cast<std::uint8_t*>(it) - size), real_size);
 				it = next;
 			}
@@ -384,16 +423,16 @@ private:
 
 		explicit operator bool() const
 		{
-			return first != nullptr;
+			return first_ != nullptr;
 		}
-		void* first = nullptr;
+		void* first_ = nullptr;
 	};
 
 public:
 	~pool_allocator()
 	{
-		size_type size = k_atom_count * k_atom_size;
-		linked_arenas.for_each(
+		size_type size = k_atom_count_ * k_atom_size_;
+		linked_arenas_.for_each(
 		 [=](address i_value, size_type size_value)
 		 {
 			 underlying_allocator::deallocate(i_value, size_value);
@@ -402,40 +441,40 @@ public:
 	}
 
 private:
-	address consume(size_type i_count)
+	auto consume(size_type i_count) -> address
 	{
-		size_type len;
-		if (!arrays || (len = arrays.length()) < i_count)
+		size_type len = arrays_ ? arrays_.length() : 0;
+		if (!arrays_ || len < i_count)
 		{
 			allocate_arena();
-			len = arrays.length();
+			len = arrays_.length();
 		}
 
-		ACL_ASSERT(len >= i_count);
-		std::uint8_t* ptr				= arrays.get_value();
-		std::uint8_t* head			= ptr + (i_count * k_atom_size);
+		assert(len >= i_count);
+		std::uint8_t* ptr				= arrays_.get_value();
+		std::uint8_t* head			= ptr + (i_count * k_atom_size_);
 		size_type			left_over = len - i_count;
 		switch (left_over)
 		{
 		case 0:
-			arrays = arrays.get_next();
+			arrays_ = arrays_.get_next();
 			break;
 		case 1:
 		{
 			solo_arena new_solo(head);
-			arrays = arrays.get_next();
-			new_solo.set_next(solo);
-			solo = new_solo;
+			arrays_ = arrays_.get_next();
+			new_solo.set_next(solo_);
+			solo_ = new_solo;
 		}
 		break;
 		default:
 		{
 			// reorder arrays to sort them from big to small
-			array_arena cur = arrays.get_next();
+			array_arena cur = arrays_.get_next();
 			array_arena save(head, left_over);
 			if (cur && cur.length() > left_over)
 			{
-				arrays					 = cur;
+				arrays_					 = cur;
 				array_arena prev = save;
 				while (true)
 				{
@@ -452,7 +491,7 @@ private:
 			else
 			{
 				save.set_next(cur);
-				arrays = save;
+				arrays_ = save;
 			}
 		}
 		break;
@@ -461,17 +500,17 @@ private:
 		return ptr;
 	}
 
-	address consume()
+	auto consume() -> address
 	{
-		address ptr = solo.get_value();
-		solo				= solo.get_next();
+		address ptr = solo_.get_value();
+		solo_				= solo_.get_next();
 		return ptr;
 	}
 
 	void release(address i_only, size_type i_count)
 	{
 		array_arena new_arena(i_only, i_count);
-		array_arena cur = arrays;
+		array_arena cur = arrays_;
 		if (cur.length() > i_count)
 		{
 			array_arena prev = new_arena;
@@ -490,39 +529,39 @@ private:
 		else
 		{
 			new_arena.set_next(cur);
-			arrays = new_arena;
+			arrays_ = new_arena;
 		}
 	}
 
 	void release(address i_only)
 	{
 		solo_arena arena(i_only);
-		arena.set_next(std::move(solo));
-		solo = arena;
+		arena.set_next(std::move(solo_));
+		solo_ = arena;
 	}
 
 	void allocate_arena()
 	{
-		size_type		size			 = k_atom_count * k_atom_size;
+		size_type		size			 = k_atom_count_ * k_atom_size_;
 		address			arena_data = underlying_allocator::allocate(size + arena_linker::k_header_size);
-		array_arena new_arena(arena_data, k_atom_count);
-		linked_arenas.link_with(arena_data, size);
-		new_arena.set_next(arrays);
-		arrays = new_arena;
+		array_arena new_arena(arena_data, k_atom_count_);
+		linked_arenas_.link_with(arena_data, size);
+		new_arena.set_next(arrays_);
+		arrays_ = new_arena;
 		statistics::report_new_arena();
 	}
 
-	std::uint32_t get_total_free_count() const
+	[[nodiscard]] auto get_total_free_count() const -> std::uint32_t
 	{
 		std::uint32_t count		= 0;
-		auto					a_first = arrays;
+		auto					a_first = arrays_;
 		while (a_first)
 		{
 			count += static_cast<std::uint32_t>(a_first.length());
 			a_first = a_first.get_next();
 		}
 
-		auto s_first = solo;
+		auto s_first = solo_;
 		while (s_first)
 		{
 			count++;
@@ -531,49 +570,57 @@ private:
 		return count;
 	}
 
-	std::uint32_t get_missing_atoms() const
+	[[nodiscard]] auto get_missing_atoms() const -> std::uint32_t
 	{
 		if constexpr (detail::HasComputeStats<Options>)
+		{
 			return this->statistics::padding_atoms_count();
+		}
 		return 0;
 	}
 
-	std::uint32_t get_total_arena_count() const
+	[[nodiscard]] auto get_total_arena_count() const -> std::uint32_t
 	{
 		std::uint32_t count = 0;
-		arena_linker	a_first(linked_arenas);
+		arena_linker	a_first(linked_arenas_);
 		a_first.for_each(
 		 [&](address i_value, size_type size_value)
 		 {
 			 count++;
 		 },
-		 k_atom_size * k_atom_count);
+		 k_atom_size_ * k_atom_count_);
 		return count;
 	}
 
-	array_arena			arrays;
-	solo_arena			solo;
-	const size_type k_atom_count;
-	const size_type k_atom_size;
-	arena_linker		linked_arenas;
+	array_arena	 arrays_;
+	solo_arena	 solo_;
+	size_type		 k_atom_count_ = {};
+	size_type		 k_atom_size_	 = {};
+	arena_linker linked_arenas_;
 
 public:
-	template <typename record_ty>
-	bool validate(record_ty const& records)
+	template <typename RecordTy>
+	auto validate(RecordTy const& records) -> bool
 	{
 		std::uint32_t rec_count = 0;
 		for (auto& rec : records)
 		{
-			if (rec.count <= k_atom_count)
+			if (rec.count <= k_atom_count_)
+			{
 				rec_count += rec.count;
+			}
 		}
 
 		std::uint32_t arena_count = get_total_arena_count();
-		if (rec_count + get_total_free_count() + get_missing_atoms() != arena_count * k_atom_count)
+		if (rec_count + get_total_free_count() + get_missing_atoms() != arena_count * k_atom_count_)
+		{
 			return false;
+		}
 
 		if (arena_count != this->statistics::get_arenas_allocated())
+		{
 			return false;
+		}
 		return true;
 	}
 };

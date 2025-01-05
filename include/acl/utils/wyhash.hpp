@@ -1,32 +1,34 @@
 #pragma once
-#include "detail/wyhash.h"
-#define wyhash_final_version_3
-#include "detail/wyhash32.h"
-#include "detail/wyhash32.hpp"
+#include "external/wyhash.h"
+#define WYHASH_FINAL_VERSION_3
+#include "external/wyhash32.h"
+#include "external/wyhash32.hpp"
 #include <compare>
 #include <cstdint>
 
 namespace acl
 {
-
+constexpr uint32_t wyhash32_default_prime_seed = 1337;
+constexpr uint32_t wyhash64_default_prime_seed = 11579;
 class wyhash32
 {
 public:
-	inline constexpr wyhash32() noexcept = default;
-	inline constexpr wyhash32(std::uint32_t initial) noexcept : value(initial) {}
+	constexpr wyhash32() noexcept = default;
+	constexpr wyhash32(std::uint32_t initial) noexcept : value_(initial) {}
 
-	inline constexpr auto operator()() const noexcept
+	constexpr auto operator()() const noexcept
 	{
-		return value;
+		return value_;
 	}
 
-	inline auto operator()(void const* key, std::size_t len) noexcept
+	auto operator()(void const* key, std::size_t len) noexcept
 	{
-		return (value = ::wyhash32(key, len, value));
+		return (value_ = ::wyhash32(key, len, value_));
 	}
 
 	template <cwyhash32::CharType T>
-	static inline consteval auto make(T const* const key, std::size_t len, std::uint32_t seed = 1337) noexcept
+	static consteval auto make(T const* const key, std::size_t len,
+														 std::uint32_t seed = wyhash32_default_prime_seed) noexcept
 	{
 		return cwyhash32::wyhash32(key, len, seed);
 	}
@@ -37,45 +39,45 @@ public:
 		return (*this)(&key, sizeof(T));
 	}
 
-	inline auto operator<=>(wyhash32 const&) const noexcept = default;
+	auto operator<=>(wyhash32 const&) const noexcept = default;
 
 private:
-	std::uint32_t value = 1337;
+	std::uint32_t value_ = wyhash32_default_prime_seed;
 };
 
 class wyhash64
 {
 public:
-	inline wyhash64() noexcept
+	wyhash64() noexcept
 	{
-		::make_secret(value, secret);
+		::make_secret(value_, static_cast<uint64_t*>(secret_));
 	}
-	inline wyhash64(std::uint64_t initial) noexcept : value(initial)
+	wyhash64(std::uint64_t initial) noexcept : value_(initial)
 	{
-		::make_secret(value, secret);
-	}
-
-	inline auto operator()() const noexcept
-	{
-		return value;
+		::make_secret(value_, static_cast<uint64_t*>(secret_));
 	}
 
-	inline auto operator()(void const* key, std::size_t len) noexcept
+	auto operator()() const noexcept
 	{
-		return (value = ::wyhash(key, len, value, secret));
+		return value_;
+	}
+
+	auto operator()(void const* key, std::size_t len) noexcept
+	{
+		return (value_ = ::wyhash(key, len, value_, static_cast<uint64_t*>(secret_)));
 	}
 
 	template <typename T>
-	inline auto operator()(T const& key) noexcept
+	auto operator()(T const& key) noexcept
 	{
 		return (*this)(&key, sizeof(T));
 	}
 
-	inline auto operator<=>(wyhash64 const&) const noexcept = default;
+	auto operator<=>(wyhash64 const&) const noexcept = default;
 
 private:
-	std::uint64_t value = 11579;
-	std::uint64_t secret[4];
+	std::uint64_t value_ = wyhash64_default_prime_seed;
+	std::uint64_t secret_[4]{};
 };
 
 } // namespace acl

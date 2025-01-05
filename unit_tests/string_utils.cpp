@@ -2,6 +2,8 @@
 #include <catch2/catch_all.hpp>
 #include <sstream>
 
+// NOLINTBEGIN
+
 TEST_CASE("Validate word_list", "[word_list]")
 {
 	using wlutils = acl::word_list<>;
@@ -189,3 +191,5 @@ TEST_CASE("Validate string functions", "[string_utils]")
 	CHECK(acl::is_number("a43r"sv) == false);
 	CHECK(acl::is_number("43"sv) == true);
 }
+
+// NOLINTEND

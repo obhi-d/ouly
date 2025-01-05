@@ -18,31 +18,31 @@ class worker_id
 {
 public:
 	constexpr worker_id() noexcept = default;
-	constexpr explicit worker_id(uint32_t id) noexcept : index(id) {}
+	constexpr explicit worker_id(uint32_t id) noexcept : index_(id) {}
 
 	/**
 	 * @brief Retruns a positive integer != std::numeric_limits<uint32_t>::max() when valid, that represents the index of
 	 * the current worker thread
 	 */
-	inline constexpr uint32_t get_index() const noexcept
+	[[nodiscard]] constexpr auto get_index() const noexcept -> uint32_t
 	{
-		return index;
+		return index_;
 	}
 
-	inline constexpr explicit operator bool() const
+	constexpr explicit operator bool() const
 	{
-		return index != std::numeric_limits<uint32_t>::max();
+		return index_ != std::numeric_limits<uint32_t>::max();
 	}
 
 	/**
 	 * @brief Returns the worker id for the current thread
 	 */
-	static worker_id const& get() noexcept;
+	static auto get() noexcept -> worker_id const&;
 
-	inline auto operator<=>(worker_id const&) const noexcept = default;
+	auto operator<=>(worker_id const&) const noexcept = default;
 
 private:
-	uint32_t index = 0;
+	uint32_t index_ = 0;
 };
 
 static constexpr worker_id main_worker_id = worker_id(0);
@@ -56,26 +56,26 @@ class workgroup_id
 {
 public:
 	constexpr workgroup_id() noexcept = default;
-	constexpr explicit workgroup_id(uint32_t id) noexcept : index(id) {}
+	constexpr explicit workgroup_id(uint32_t id) noexcept : index_(id) {}
 
 	/**
 	 * @brief Retruns a positive integer != std::numeric_limits<uint32_t>::max() when valid, that represents the index of
 	 * the current worker thread
 	 */
-	inline constexpr uint32_t get_index() const noexcept
+	[[nodiscard]] constexpr auto get_index() const noexcept -> uint32_t
 	{
-		return index;
+		return index_;
 	}
 
-	inline constexpr explicit operator bool() const
+	constexpr explicit operator bool() const
 	{
-		return index != std::numeric_limits<uint32_t>::max();
+		return index_ != std::numeric_limits<uint32_t>::max();
 	}
 
-	inline auto operator<=>(workgroup_id const&) const noexcept = default;
+	auto operator<=>(workgroup_id const&) const noexcept = default;
 
 private:
-	uint32_t index = 0;
+	uint32_t index_ = 0;
 };
 
 static constexpr workgroup_id default_workgroup_id = workgroup_id(0);
@@ -90,61 +90,61 @@ public:
 	worker_context() noexcept = default;
 	worker_context(scheduler& s, void* user_context, worker_id id, workgroup_id group, uint32_t mask,
 								 uint32_t offset) noexcept
-			: owner(&s), user_context(user_context), index(id), group_id(group), group_mask(mask), group_offset(offset)
+			: owner_(&s), user_context_(user_context), index_(id), group_id_(group), group_mask_(mask), group_offset_(offset)
 	{}
 
 	/**
 	 * @brief Retruns the current worker id
 	 */
-	worker_id get_worker() const noexcept
+	[[nodiscard]] auto get_worker() const noexcept -> worker_id
 	{
-		return index;
+		return index_;
 	}
 
 	/**
 	 * @brief get the current worker's index relative to the group's thread start offset
 	 */
-	inline uint32_t get_group_offset() const noexcept
+	[[nodiscard]] auto get_group_offset() const noexcept -> uint32_t
 	{
-		return group_offset;
+		return group_offset_;
 	}
 
-	scheduler& get_scheduler() const
+	[[nodiscard]] auto get_scheduler() const -> scheduler&
 	{
-		assert(owner);
-		return *owner;
+		assert(owner_);
+		return *owner_;
 	}
 
-	workgroup_id get_workgroup() const noexcept
+	[[nodiscard]] auto get_workgroup() const noexcept -> workgroup_id
 	{
-		return group_id;
+		return group_id_;
 	}
 
-	bool belongs_to(workgroup_id group) const noexcept
+	[[nodiscard]] auto belongs_to(workgroup_id group) const noexcept -> bool
 	{
-		return group_mask & (1u << group.get_index());
+		return (group_mask_ & (1U << group.get_index())) != 0U;
 	}
 
 	template <typename T>
-	T* get_user_context() const noexcept
+	auto get_user_context() const noexcept -> T*
 	{
-		return reinterpret_cast<T*>(user_context);
+		return static_cast<T*>(user_context_);
 	}
 
 	/**
 	 * @brief returns the context on the current thread for a given worker group
 	 */
-	static worker_context const& get(workgroup_id group) noexcept;
+	static auto get(workgroup_id group) noexcept -> worker_context const&;
 
-	inline auto operator<=>(worker_context const&) const noexcept = default;
+	auto operator<=>(worker_context const&) const noexcept = default;
 
 private:
-	scheduler*	 owner				= nullptr;
-	void*				 user_context = nullptr;
-	worker_id		 index;
-	workgroup_id group_id;
-	uint32_t		 group_mask		= 0;
-	uint32_t		 group_offset = 0;
+	scheduler*	 owner_				 = nullptr;
+	void*				 user_context_ = nullptr;
+	worker_id		 index_;
+	workgroup_id group_id_;
+	uint32_t		 group_mask_	 = 0;
+	uint32_t		 group_offset_ = 0;
 };
 
 using worker_context_opt = acl::nullable_optional<worker_context>;
@@ -152,28 +152,28 @@ using worker_context_opt = acl::nullable_optional<worker_context>;
 class worker_desc
 {
 public:
-	worker_desc(worker_id id, uint32_t mask) noexcept : index(id), group_mask(mask) {}
+	worker_desc(worker_id id, uint32_t mask) noexcept : index_(id), group_mask_(mask) {}
 	/**
 	 * @brief Retruns the current worker id
 	 */
-	worker_id get_worker() const noexcept
+	[[nodiscard]] auto get_worker() const noexcept -> worker_id
 	{
-		return index;
+		return index_;
 	}
 
-	bool belongs_to(workgroup_id group) const noexcept
+	[[nodiscard]] auto belongs_to(workgroup_id group) const noexcept -> bool
 	{
-		return group_mask & (1u << group.get_index());
+		return (group_mask_ & (1U << group.get_index())) != 0U;
 	}
 
-	inline auto operator<=>(worker_desc const&) const noexcept = default;
+	auto operator<=>(worker_desc const&) const noexcept = default;
 
 private:
-	uint32_t friend_worker_count = 0;
-	uint32_t friend_worker_start = std::numeric_limits<uint32_t>::max();
+	uint32_t friend_worker_count_ = 0;
+	uint32_t friend_worker_start_ = std::numeric_limits<uint32_t>::max();
 
-	worker_id index;
-	uint32_t	group_mask = 0;
+	worker_id index_;
+	uint32_t	group_mask_ = 0;
 };
 
 } // namespace acl

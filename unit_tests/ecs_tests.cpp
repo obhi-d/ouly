@@ -6,6 +6,7 @@
 #include <string>
 #include <unordered_map>
 
+// NOLINTBEGIN
 struct link_traits_1
 {
 	static constexpr uint32_t pool_size_v	 = 2;
@@ -350,3 +351,4 @@ TEST_CASE("collection: validate collection", "[packed_table][emplace]")
 	REQUIRE(collection.contains(e20) == false);
 	REQUIRE(collection.contains(e30) == true);
 }
+// NOLINTEND

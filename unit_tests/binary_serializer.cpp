@@ -8,7 +8,7 @@
 #include <compare>
 #include <sstream>
 #include <unordered_map>
-
+// NOLINTBEGIN
 struct FileData
 {
 	std::stringstream			root;
@@ -739,3 +739,4 @@ TEMPLATE_TEST_CASE("serializer: SerializableClass", "[serializer][optional]", bi
 	REQUIRE(read[1].get() == 12);
 	REQUIRE(read[2].get() == 13);
 }
+// NOLINTEND

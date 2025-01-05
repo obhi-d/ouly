@@ -3,6 +3,7 @@
 #include <acl/containers/podvector.hpp>
 #include <catch2/catch_all.hpp>
 
+// NOLINTBEGIN
 TEST_CASE("podvector: Validate podvector emplace", "[podvector][emplace]")
 {
 	acl::podvector<pod> v1, v2;
@@ -94,3 +95,4 @@ TEST_CASE("podvector: Validate podvector erase", "[podvector][erase]")
 	 };
 	REQUIRE(other == v1);
 }
+// NOLINTEND

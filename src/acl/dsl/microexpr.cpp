@@ -1,31 +1,35 @@
 
 #include <acl/dsl/microexpr.hpp>
+#include <cstdint>
 
 namespace acl
 {
+
 struct microexpr_state
 {
-	microexpr::macro_context const& ctx_;
+	microexpr::macro_context const* ctx_ = nullptr;
 	std::string_view								content_;
 	uint32_t												read_ = 0;
 
-	microexpr_state(microexpr::macro_context const& c, std::string_view txt) noexcept : ctx_(c), content_(txt) {}
+	microexpr_state(microexpr::macro_context const& ctx, std::string_view txt) noexcept : ctx_(&ctx), content_(txt) {}
 
-	inline char get() const noexcept
+	[[nodiscard]] auto get() const noexcept -> char
 	{
 		return content_[read_];
 	}
 
-	std::string_view read_token() noexcept;
+	[[nodiscard]] auto read_token() const noexcept -> std::string_view;
 
-	void		skip_white() noexcept;
-	int64_t conditional();
-	int64_t comparison();
-	int64_t binary();
-	int64_t unary();
+	void skip_white() noexcept;
+	auto conditional() -> int64_t;
+	auto comparison() -> int64_t;
+	auto binary() -> int64_t;
+	auto unary() -> int64_t;
+
+	auto exec_binary(int64_t& left) -> bool;
 };
 
-bool microexpr::evaluate(std::string_view expr) const
+auto microexpr::evaluate(std::string_view expr) const -> bool
 {
 	auto state = microexpr_state(ctx_, expr);
 	return state.conditional() != 0;
@@ -33,207 +37,240 @@ bool microexpr::evaluate(std::string_view expr) const
 
 void microexpr_state::skip_white() noexcept
 {
-	auto n = content_.find_first_not_of(" \t\r\n", read_);
-	if (n != content_.npos)
-		read_ = (uint32_t)n;
+	auto tok_pos = content_.find_first_not_of(" \t\r\n", read_);
+	if (tok_pos != std::string_view::npos)
+	{
+		read_ = (uint32_t)tok_pos;
+	}
 }
 
-int64_t microexpr_state::conditional()
+auto microexpr_state::conditional() -> int64_t
 {
 	int64_t left = comparison();
 	skip_white();
 	if (read_ >= content_.length() || content_[read_] != '?')
+	{
 		return left;
+	}
 	read_++;
 	int64_t op_a = comparison();
 	skip_white();
 	if (read_ >= content_.length() || content_[read_] != ':')
+	{
 		return left;
+	}
 	read_++;
 	int64_t op_b = comparison();
-	return left ? op_a : op_b;
+	return (left != 0) ? op_a : op_b;
 }
 
-int64_t microexpr_state::comparison()
+auto microexpr_state::comparison() -> int64_t
 {
 	int64_t left = binary();
 	skip_white();
 	if (read_ >= content_.length())
+	{
 		return left;
+	}
 
-	char sv[2] = {content_[read_], 0};
+	char sview[2] = {content_[read_], 0};
 	if (read_ + 1 < content_.length())
-		sv[1] = content_[read_ + 1];
+	{
+		sview[1] = content_[read_ + 1];
+	}
 
-	if (sv[0] == '=' && sv[1] == '=')
+	if (sview[0] == '=' && sview[1] == '=')
 	{
 		read_ += 2;
-		return (left == binary());
+		return static_cast<int64_t>(left == binary());
 	}
-	else if (sv[0] == '!' && sv[1] == '=')
+	if (sview[0] == '!' && sview[1] == '=')
 	{
 		read_ += 2;
-		return left != binary();
+		return static_cast<int64_t>(left != binary());
 	}
-	else if (sv[0] == '<' && sv[1] == '=')
+	if (sview[0] == '<' && sview[1] == '=')
 	{
 		read_ += 2;
-		return left <= binary();
+		return static_cast<int64_t>(left <= binary());
 	}
-	else if (sv[0] == '>' && sv[1] == '=')
+	if (sview[0] == '>' && sview[1] == '=')
 	{
 		read_ += 2;
-		return left >= binary();
+		return static_cast<int64_t>(left >= binary());
 	}
-	else if (sv[0] == '>')
+	if (sview[0] == '>')
 	{
 		read_++;
-		return left > binary();
+		return static_cast<int64_t>(left > binary());
 	}
-	else if (sv[0] == '<')
+	if (sview[0] == '<')
 	{
 		read_++;
-		return left < binary();
+		return static_cast<int64_t>(left < binary());
+	}
+
+	return left;
+}
+
+auto microexpr_state::exec_binary(int64_t& left) -> bool
+{
+	skip_white();
+
+	if (read_ >= content_.length())
+	{
+		return false;
+	}
+
+	char sview[2] = {content_[read_], 0};
+	if (read_ + 1 < content_.length())
+	{
+		sview[1] = content_[read_ + 1];
+	}
+
+	if (sview[0] == '&' && sview[1] == '&')
+	{
+		read_ += 2;
+		left = static_cast<int64_t>((left != 0) && (unary() != 0));
+	}
+	else if (sview[0] == '|' && sview[1] == '|')
+	{
+		read_ += 2;
+		left = static_cast<int64_t>((left != 0) || (unary() != 0));
+		return true;
+	}
+	else if (sview[0] == '&')
+	{
+		read_++;
+		left = left & unary();
+	}
+	else if (sview[0] == '|')
+	{
+		read_++;
+		left = left | unary();
+	}
+	else if (sview[0] == '^')
+	{
+		read_++;
+		left = left ^ unary();
+	}
+	else if (sview[0] == '+')
+	{
+		read_++;
+		left = left + unary();
+	}
+	else if (sview[0] == '-')
+	{
+		read_++;
+		left = left - unary();
+	}
+	else if (sview[0] == '*')
+	{
+		read_++;
+		left = left * unary();
+	}
+	else if (sview[0] == '/')
+	{
+		read_++;
+		auto value = unary();
+		left			 = (value != 0) ? left / value : value;
+	}
+	else if (sview[0] == '%')
+	{
+		read_++;
+		auto value = unary();
+		left			 = (value != 0) ? left % value : value;
 	}
 	else
 	{
-		return left;
+		return false;
 	}
+	return true;
 }
 
-int64_t microexpr_state::binary()
+auto microexpr_state::binary() -> int64_t
 {
 	int64_t left = unary();
-	while (true)
+	while (exec_binary(left))
 	{
-		skip_white();
-		if (read_ >= content_.length())
-			return left;
-
-		char sv[2] = {content_[read_], 0};
-		if (read_ + 1 < content_.length())
-			sv[1] = content_[read_ + 1];
-
-		if (sv[0] == '&' && sv[1] == '&')
-		{
-			read_ += 2;
-			left = (left && unary());
-		}
-		else if (sv[0] == '|' && sv[1] == '|')
-		{
-			read_ += 2;
-			return (left || unary());
-		}
-		else if (sv[0] == '&')
-		{
-			read_++;
-			left = left & unary();
-		}
-		else if (sv[0] == '|')
-		{
-			read_++;
-			return left | unary();
-		}
-		else if (sv[0] == '^')
-		{
-			read_++;
-			left = left ^ unary();
-		}
-		else if (sv[0] == '+')
-		{
-			read_++;
-			left = left + unary();
-		}
-		else if (sv[0] == '-')
-		{
-			read_++;
-			left = left - unary();
-		}
-		else if (sv[0] == '*')
-		{
-			read_++;
-			left = left * unary();
-		}
-		else if (sv[0] == '/')
-		{
-			read_++;
-			left = left / unary();
-		}
-		else if (sv[0] == '%')
-		{
-			read_++;
-			left = left % unary();
-		}
-		else
-		{
-			return left;
-		}
 	}
+	return left;
 }
 
-std::string_view microexpr_state::read_token() noexcept
+auto microexpr_state::read_token() const noexcept -> std::string_view
 {
 	std::string_view ret;
-	uint32_t				 t = read_;
-	while (t < content_.size() && std::isalnum(content_[t]))
-		t++;
+	uint32_t				 token = read_;
+	while (token < content_.size() && (std::isalnum(content_[token]) != 0))
+	{
+		token++;
+	}
 
-	return content_.substr(read_, t - read_);
+	return content_.substr(read_, token - read_);
 }
 
-int64_t microexpr_state::unary()
+auto microexpr_state::unary() -> int64_t
 {
 	skip_white();
 	if (read_ < content_.length())
 	{
-		char op = get();
-		if (op == '(')
+		char oper = get();
+		if (oper == '(')
 		{
 			read_++;
 			int64_t result = conditional();
-			op						 = get();
-			if (op != ')')
+			oper					 = get();
+			if (oper != ')')
+			{
 				return 0;
+			}
 			read_++;
 			return result;
 		}
-		else if (op == '-')
+		if (oper == '-')
 		{
 			read_++;
 			return -unary();
 		}
-		else if (op == '~')
+		if (oper == '~')
 		{
 			read_++;
 			return ~unary();
 		}
-		else if (std::isdigit(op))
+		if (std::isdigit(oper) != 0)
 		{
-			auto tk = read_token();
-			read_ += (uint32_t)tk.length();
-			uint64_t value = 0;
-			if (tk.starts_with("0x"))
-				std::from_chars(tk.data() + 2, tk.data() + tk.size(), value, 16);
-			else if (tk.starts_with("0"))
-				std::from_chars(tk.data() + 1, tk.data() + tk.size(), value, 8);
+			auto token = read_token();
+			read_ += (uint32_t)token.length();
+			if (token.starts_with("0x"))
+			{
+				constexpr int hex_base = 16;
+				std::from_chars(token.data() + 2, token.data() + token.size(), read_, hex_base);
+			}
+			else if (token.starts_with("0"))
+			{
+				constexpr int oc_base = 8;
+				std::from_chars(token.data() + 1, token.data() + token.size(), read_, oc_base);
+			}
 			else
-				std::from_chars(tk.data(), tk.data() + tk.size(), value);
-			return (int64_t)value;
+			{
+				std::from_chars(token.data(), token.data() + token.size(), read_);
+			}
+			return (int64_t)read_;
 		}
-		else if (op == '$')
+		if (oper == '$')
 		{
 			read_++;
 			skip_white();
-			auto tk = read_token();
-			read_ += (uint32_t)tk.length();
-			return ctx_(tk).has_value();
+			auto token = read_token();
+			read_ += (uint32_t)token.length();
+			return static_cast<int64_t>((*ctx_)(token).has_value());
 		}
-		else if (isalpha(op) || op == '_')
+		if ((isalpha(oper) != 0) || oper == '_')
 		{
-			auto tk = read_token();
-			read_ += (uint32_t)tk.length();
-			auto v = ctx_(tk);
-			return v.has_value() ? v.value() : 0;
+			auto token = read_token();
+			read_ += (uint32_t)token.length();
+			auto value = (*ctx_)(token);
+			return value.has_value() ? value.value() : 0;
 		}
 	}
 	return 0;

@@ -3,6 +3,7 @@
 #include <nanobench.h>
 #include <string_view>
 
+// NOLINTBEGIN
 struct alloc_mem_manager
 {
 
@@ -93,3 +94,4 @@ int main(int argc, char* argv[])
 
 	return 0;
 }
+// NOLINTEND

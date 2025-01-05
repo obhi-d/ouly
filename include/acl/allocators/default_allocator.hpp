@@ -27,7 +27,7 @@ namespace detail
 template <>
 struct is_static<default_allocator_tag>
 {
-	constexpr inline static bool value = true;
+	constexpr static bool value = true;
 };
 } // namespace detail
 
@@ -132,16 +132,20 @@ struct ACL_EMPTY_BASES default_allocator
 	static constexpr auto align = detail::min_alignment_v<Options>;
 
 	template <typename Alignment = alignment<align>>
-	[[nodiscard]] inline static address allocate(size_type size, Alignment alignment = {})
+	[[nodiscard]] static auto allocate(size_type size, Alignment alignment = {}) -> address
 	{
 		if constexpr (alignment)
+		{
 			return tracker::when_allocate(::operator new(size, std::align_val_t{(std::size_t)alignment}), size);
+		}
 		else
+		{
 			return tracker::when_allocate(::operator new(size), size);
+		}
 	}
 
 	template <typename Alignment = alignment<align>>
-	[[nodiscard]] inline static address zero_allocate(size_type size, Alignment alignment = {})
+	[[nodiscard]] static auto zero_allocate(size_type size, Alignment alignment = {}) -> address
 	{
 		void* ptr = allocate(size, alignment);
 		std::memset(ptr, 0, size);
@@ -149,26 +153,30 @@ struct ACL_EMPTY_BASES default_allocator
 	}
 
 	template <typename Alignment = alignment<align>>
-	inline static void deallocate(address addr, size_type size, Alignment alignment = {})
+	static void deallocate(address addr, size_type size, Alignment alignment = {})
 	{
 		void* fixup = tracker::when_deallocate(addr, size);
 		if constexpr (alignment)
+		{
 			::operator delete(fixup, std::align_val_t{(std::size_t)alignment});
+		}
 		else
+		{
 			::operator delete(fixup);
+		}
 	}
 
-	static constexpr void* null()
+	static constexpr auto null() -> void*
 	{
 		return nullptr;
 	}
 
-	inline constexpr bool operator==(default_allocator const&) const
+	constexpr auto operator==(default_allocator const& /*unused*/) const -> bool
 	{
 		return true;
 	}
 
-	inline constexpr bool operator!=(default_allocator const&) const
+	constexpr auto operator!=(default_allocator const& /*unused*/) const -> bool
 	{
 		return false;
 	}

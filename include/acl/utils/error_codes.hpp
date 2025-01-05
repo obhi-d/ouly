@@ -10,7 +10,7 @@
 namespace acl
 {
 
-enum class serializer_error
+enum class serializer_error : uint8_t
 {
 	none,
 	invalid_type,
@@ -32,17 +32,17 @@ enum class serializer_error
 template <typename E>
 struct error_category : std::error_category
 {
-	inline const char* name() const noexcept final
+	[[nodiscard]] auto name() const noexcept -> const char* final
 	{
 		return detail::type_name<E>().data();
 	}
 
-	inline std::string message(int ev) const final
+	[[nodiscard]] auto message(int ev) const -> std::string final
 	{
 		return std::to_string(ev);
 	}
 
-	static inline auto& instance()
+	static auto instance() -> auto&
 	{
 		static error_category<E> inst;
 		return inst;
@@ -50,7 +50,7 @@ struct error_category : std::error_category
 };
 
 template <typename E>
-inline std::error_code make_error_code(E e)
+inline auto make_error_code(E e) -> std::error_code
 {
 	return {static_cast<int>(e), error_category<E>::instance()};
 }

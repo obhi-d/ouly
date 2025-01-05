@@ -9,6 +9,7 @@
 
 using json = nlohmann::json;
 
+// NOLINTBEGIN
 struct InputData
 {
 	json									root;
@@ -51,7 +52,7 @@ public:
 		requires(acl::function_traits<L>::arity == 2)
 	bool for_each(L&& lambda) const noexcept
 	{
-		ACL_ASSERT(value.get().is_object());
+		assert(value.get().is_object());
 		for (auto const& [key, value] : value.get().items())
 		{
 			if (!lambda(std::string_view(key), Serializer(owner, value)))
@@ -964,3 +965,4 @@ TEST_CASE("input_serializer: InputSerializableClass")
 	REQUIRE(integers[1].get() == 542);
 	REQUIRE(integers[2].get() == 234);
 }
+// NOLINTEND

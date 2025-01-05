@@ -4,6 +4,7 @@
 #include "scheduler.hpp"
 #include <acl/utils/integer_range.hpp>
 #include <acl/utils/type_traits.hpp>
+#include <functional>
 #include <iterator>
 #include <latch>
 #include <type_traits>
@@ -55,7 +56,7 @@ struct it_size_type;
 template <HasIteratorDiff T>
 struct it_size_type<T>
 {
-	inline static uint32_t size(T const& range) noexcept
+	static auto size(T const& range) noexcept -> uint32_t
 	{
 		return static_cast<uint32_t>(range.size());
 	}
@@ -66,7 +67,7 @@ struct it_size_type<T>
 {
 	using type = typename std::iterator_traits<T>::difference_type;
 
-	inline static uint32_t size(T const& range) noexcept
+	static auto size(T const& range) noexcept -> uint32_t
 	{
 		return static_cast<uint32_t>(std::distance(std::begin(range), std::end(range)));
 	}
@@ -136,7 +137,7 @@ struct final_task_traits
 	static constexpr uint32_t parallel_execution_threshold = parallel_execution_threshold_t<Traits>::value;
 };
 
-inline constexpr uint32_t get_work_count(uint32_t batches_per_wk, uint32_t wk_count, uint32_t tk_count)
+constexpr auto get_work_count(uint32_t batches_per_wk, uint32_t wk_count, uint32_t tk_count) -> uint32_t
 {
 	uint32_t batch_count = wk_count * batches_per_wk;
 	return (tk_count + batch_count - 1) / batch_count;
@@ -144,8 +145,83 @@ inline constexpr uint32_t get_work_count(uint32_t batches_per_wk, uint32_t wk_co
 
 } // namespace detail
 
+template <typename Iterator, typename L>
+struct parallel_for_data
+{
+	parallel_for_data(L& lambda, Iterator f, uint32_t task_count) noexcept
+			: lambda_instance_(lambda), first_(f), counter_(static_cast<ptrdiff_t>(task_count))
+	{}
+
+	Iterator									first_;
+	std::latch								counter_;
+	std::reference_wrapper<L> lambda_instance_;
+};
+
+template <typename L>
+void launch_parallel_tasks(L& lambda, auto range, uint32_t work_count, uint32_t fixed_batch_size, uint32_t count,
+													 worker_context const& this_context)
+{
+	auto& scheduler = this_context.get_scheduler();
+
+	using iterator_t																	 = decltype(std::begin(range));
+	using size_type																		 = uint32_t;
+	constexpr bool									 is_range_executor = detail::RangeExcuter<L, iterator_t>;
+	parallel_for_data<iterator_t, L> pfor_instance(lambda, std::begin(range), work_count - 1);
+	size_type												 begin = 0;
+	for (size_type i = 1; i < work_count; ++i)
+	{
+		auto next = std::min(begin + fixed_batch_size, count);
+		scheduler.submit(this_context.get_worker(), this_context.get_workgroup(),
+										 [instance = &pfor_instance, start = begin, end = next](worker_context const& wc)
+										 {
+											 if constexpr (detail::RangeExcuter<L, iterator_t>)
+											 {
+												 instance->lambda_instance.get()(instance->first + start, instance->first + end, wc);
+											 }
+											 else
+											 {
+												 if constexpr (std::is_integral_v<std::decay_t<decltype(instance->first)>>)
+												 {
+													 instance->lambda_instance.get()((instance->first + start), wc);
+												 }
+												 else
+												 {
+													 instance->lambda_instance.get()(*(instance->first + start), wc);
+												 }
+											 }
+											 instance->counter.count_down();
+										 });
+		begin = next;
+	}
+
+	// Work before wait
+	{
+		auto next = std::min(begin + fixed_batch_size, count);
+		if constexpr (is_range_executor)
+		{
+			lambda(std::begin(range) + begin, std::begin(range) + next, this_context);
+		}
+		else
+		{
+			for (auto it = std::begin(range) + begin, end = std::begin(range) + next; it != end; ++it)
+			{
+				if constexpr (std::is_integral_v<std::decay_t<decltype(it)>>)
+				{
+					lambda(it, this_context);
+				}
+				else
+				{
+					lambda(*it, this_context);
+				}
+			}
+		}
+	}
+
+	pfor_instance.counter_.wait();
+}
+
 template <typename L, typename FwIt, typename TaskTr = default_task_traits>
-void parallel_for(L&& lambda, FwIt range, worker_context const& this_context, TaskTr = {})
+void parallel_for(L lambda, FwIt range, worker_context const& this_context, TaskTr /*unused*/ = {})
 {
 	using iterator_t								 = decltype(std::begin(range));
 	constexpr bool is_range_executor = detail::RangeExcuter<L, iterator_t>;
@@ -153,92 +229,60 @@ void parallel_for(L&& lambda, FwIt range, worker_context const& this_context, Ta
 	using size_type									 = uint32_t; // Range is limited
 	using traits										 = detail::final_task_traits<TaskTr>;
 
-	struct parallel_for_data
-	{
-		parallel_for_data(L& lambda, iterator_t f, size_type task_count) noexcept
-				: lambda_instance(lambda), first(f), counter(static_cast<ptrdiff_t>(task_count))
-		{}
-
-		iterator_t first;
-		std::latch counter;
-		L&				 lambda_instance;
-	};
-
-	auto&			s			= this_context.get_scheduler();
 	size_type count = it_helper::size(range);
 
 	constexpr uint32_t min_batches_per_worker = 1;
-	const size_type		 work_count =
-		is_range_executor
-			 ? (traits::fixed_batch_size ? (count + traits::fixed_batch_size - 1) / traits::fixed_batch_size
-																	 : detail::get_work_count(std::max(min_batches_per_worker, traits::batches_per_worker),
-																														s.get_worker_count(this_context.get_workgroup()), count))
-			 : count;
+	const size_type		 work_count							= [&]()
+	{
+		if (!is_range_executor)
+		{
+			return count;
+		}
+		if (traits::fixed_batch_size)
+		{
+			return (count + traits::fixed_batch_size - 1) / traits::fixed_batch_size;
+		}
+		return detail::get_work_count(std::max(min_batches_per_worker, traits::batches_per_worker),
+																	this_context.get_scheduler().get_worker_count(this_context.get_workgroup()), count);
+	}();
 
-	const size_type fixed_batch_size =
-	 is_range_executor ? (traits::fixed_batch_size ? traits::fixed_batch_size : ((count + work_count - 1) / work_count))
-										 : 1;
+	const size_type fixed_batch_size = [&]()
+	{
+		if (!is_range_executor)
+		{
+			return size_type{1};
+		}
+		if (traits::fixed_batch_size)
+		{
+			return traits::fixed_batch_size;
+		}
+		return (count + work_count - 1) / work_count;
+	}();
 
 	if (count <= traits::parallel_execution_threshold || work_count <= 1)
 	{
 		if constexpr (is_range_executor)
+		{
 			lambda(std::begin(range), std::end(range), this_context);
+		}
 		else
 		{
 			for (auto it = std::begin(range), end = std::end(range); it != end; ++it)
 			{
 				if constexpr (std::is_integral_v<std::decay_t<decltype(it)>>)
+				{
 					lambda(it, this_context);
+				}
 				else
+				{
 					lambda(*it, this_context);
+				}
 			}
 		}
 	}
 	else
 	{
-		auto pfor_data = parallel_for_data(lambda, std::begin(range), work_count - 1);
-
-		size_type begin = 0;
-		for (size_type i = 1; i < work_count; ++i)
-		{
-			auto next = std::min(begin + fixed_batch_size, count);
-			s.submit(this_context.get_worker(), this_context.get_workgroup(),
-							 [instance = &pfor_data, start = begin, end = next](worker_context const& wc)
-							 {
-								 if constexpr (detail::RangeExcuter<L, iterator_t>)
-								 {
-									 instance->lambda_instance(instance->first + start, instance->first + end, wc);
-								 }
-								 else
-								 {
-									 if constexpr (std::is_integral_v<std::decay_t<decltype(instance->first)>>)
-										 instance->lambda_instance((instance->first + start), wc);
-									 else
-										 instance->lambda_instance(*(instance->first + start), wc);
-								 }
-								 instance->counter.count_down();
-							 });
-			begin = next;
-		}
-
-		// Work before wait
-		{
-			auto next = std::min(begin + fixed_batch_size, count);
-			if constexpr (is_range_executor)
-				lambda(std::begin(range) + begin, std::begin(range) + next, this_context);
-			else
-			{
-				for (auto it = std::begin(range) + begin, end = std::begin(range) + next; it != end; ++it)
-				{
-					if constexpr (std::is_integral_v<std::decay_t<decltype(it)>>)
-						lambda(it, this_context);
-					else
-						lambda(*it, this_context);
-				}
-			}
-		}
-
-		pfor_data.counter.wait();
+		launch_parallel_tasks(lambda, std::begin(range), work_count, fixed_batch_size, count, this_context);
 	}
 }
 

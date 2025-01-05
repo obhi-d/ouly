@@ -1,6 +1,7 @@
 #include "acl/utils/program_args.hpp"
 #include <catch2/catch_all.hpp>
 
+// NOLINTBEGIN
 struct arg_formatter
 {
 	std::string text;
@@ -171,3 +172,4 @@ TEST_CASE("Validate program args parse failure", "[program_args][failure]")
 	REQUIRE(pgargs.sink(two, "two", "2") == false);
 	REQUIRE(pgargs.sink(three, "three", "c") == false);
 }
+// NOLINTEND

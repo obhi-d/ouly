@@ -1,8 +1,8 @@
 
 #pragma once
 
+#include <acl/allocators/default_allocator.hpp>
 #include <acl/utils/type_traits.hpp>
-#include <memory>
 #include <memory_resource>
 
 namespace acl
@@ -50,16 +50,16 @@ struct allocator_wrapper : public detail::allocator_common<T>, public UA
 	allocator_wrapper(allocator_wrapper<U, UA> const& other) : UA((UA const&)other)
 	{}
 	template <typename U>
-	allocator_wrapper(allocator_wrapper<U, UA>&& other) : UA(std::move((UA&)other))
+	allocator_wrapper(allocator_wrapper<U, UA>&& other) : UA(std::move((UA&)other)) // NOLINT
 	{}
 
-	[[nodiscard]] inline pointer allocate(size_type cnt) const
+	[[nodiscard]] auto allocate(size_type cnt) const -> pointer
 	{
-		pointer ret = reinterpret_cast<pointer>(UA::allocate(static_cast<size_type>(sizeof(T) * cnt), alignarg<T>));
+		auto ret = static_cast<pointer>(UA::allocate(static_cast<size_type>(sizeof(T) * cnt), alignarg<T>));
 		return ret;
 	}
 
-	inline void deallocate(pointer p, size_type cnt) const
+	void deallocate(pointer p, size_type cnt) const
 	{
 		UA::deallocate(p, static_cast<size_type>(sizeof(T) * cnt), alignarg<T>);
 	}
@@ -86,14 +86,14 @@ struct allocator_ref : public detail::allocator_common<T>
 	allocator_ref() noexcept = default;
 	allocator_ref(UA& ref) noexcept : ref_(&ref) {}
 	template <typename U>
-	allocator_ref(allocator_ref<U, UA>&& ref) noexcept : ref_(ref.ref_)
+	allocator_ref(allocator_ref<U, UA>&& ref) noexcept : ref_(std::move(ref.ref_))
 	{
 		ref.ref_ = nullptr;
 	}
 	template <typename U>
-	allocator_ref& operator=(allocator_ref<U, UA>&& ref) noexcept
+	auto operator=(allocator_ref<U, UA>&& ref) noexcept -> allocator_ref&
 	{
-		ref_		 = ref.ref_;
+		ref_		 = std::move(ref.ref_);
 		ref.ref_ = nullptr;
 		return *this;
 	}
@@ -101,22 +101,22 @@ struct allocator_ref : public detail::allocator_common<T>
 	allocator_ref(allocator_ref<U, UA> const& ref) noexcept : ref_(ref.ref_)
 	{}
 	template <typename U>
-	allocator_ref& operator=(allocator_ref<U, UA> const& ref) noexcept
+	auto operator=(allocator_ref<U, UA> const& ref) noexcept -> allocator_ref&
 	{
 		ref_ = ref.ref_;
 		return *this;
 	}
 
-	[[nodiscard]] inline pointer allocate(size_type cnt) const
+	[[nodiscard]] auto allocate(size_type cnt) const -> pointer
 	{
-		ACL_ASSERT(ref_);
-		pointer ret = reinterpret_cast<pointer>(ref_->allocate(static_cast<size_type>(sizeof(T) * cnt), alignarg<T>));
+		assert(ref_);
+		auto ret = static_cast<pointer>(ref_->allocate(static_cast<size_type>(sizeof(T) * cnt), alignarg<T>));
 		return ret;
 	}
 
-	inline void deallocate(pointer p, size_type cnt) const
+	void deallocate(pointer p, size_type cnt) const
 	{
-		ACL_ASSERT(ref_);
+		assert(ref_);
 		ref_->deallocate(p, static_cast<size_type>(sizeof(T) * cnt), alignarg<T>);
 	}
 
@@ -127,12 +127,15 @@ template <typename UA>
 class memory_resource_ref : public std::pmr::memory_resource
 {
 public:
+	memory_resource_ref(const memory_resource_ref&) = delete;
 	memory_resource_ref(UA* impl) : impl_(impl) {}
 	memory_resource_ref(memory_resource_ref&& other) noexcept : impl_(other.impl_)
 	{
 		other.impl_ = nullptr;
 	}
-	memory_resource_ref& operator=(memory_resource_ref&& other) noexcept
+	~memory_resource_ref() noexcept override													 = default;
+	auto operator=(const memory_resource_ref&) -> memory_resource_ref& = delete;
+	auto operator=(memory_resource_ref&& other) noexcept -> memory_resource_ref&
 	{
 		impl_				= other.impl_;
 		other.impl_ = nullptr;
@@ -142,27 +145,25 @@ public:
 	/**
 	 * \thread_safe
 	 */
-	[[nodiscard]] inline void* do_allocate(std::size_t bytes, std::size_t alignment) override
+	[[nodiscard]] auto do_allocate(std::size_t bytes, std::size_t alignment) -> void* override
 	{
 		return impl_->allocate(bytes, alignment);
 	}
 	/**
 	 * \thread_safe
 	 */
-	inline void do_deallocate(void* ptr, std::size_t bytes, std::size_t alignment) override
+	void do_deallocate(void* ptr, std::size_t bytes, std::size_t alignment) override
 	{
 		return impl_->deallocate(ptr, bytes, alignment);
 	}
 	/**
 	 * \thread_safe
 	 */
-	inline bool do_is_equal(const memory_resource& other) const noexcept override
+	[[nodiscard]] auto do_is_equal(const memory_resource& other) const noexcept -> bool override
 	{
 		// TODO
 		auto pother = dynamic_cast<memory_resource_ref<UA> const*>(&other);
-		if (!pother || pother->impl_ != impl_)
-			return false;
-		return true;
+		return !static_cast<bool>(!pother || pother->impl_ != impl_);
 	}
 
 private:
@@ -177,8 +178,11 @@ public:
 	memory_resource(Args&&... args) : impl_(std::forward<Args>(args)...)
 	{}
 
+	memory_resource(const memory_resource&) = delete;
 	memory_resource(memory_resource&& r) noexcept : impl_(std::move(r.impl_)) {}
-	memory_resource& operator=(memory_resource&& r) noexcept
+	~memory_resource() noexcept override											 = default;
+	auto operator=(const memory_resource&) -> memory_resource& = delete;
+	auto operator=(memory_resource&& r) noexcept -> memory_resource&
 	{
 		impl_ = std::move(r.impl_);
 		return *this;
@@ -186,27 +190,25 @@ public:
 	/**
 	 * \thread_safe
 	 */
-	[[nodiscard]] inline void* do_allocate(std::size_t bytes, std::size_t alignment) override
+	[[nodiscard]] auto do_allocate(std::size_t bytes, std::size_t alignment) -> void* override
 	{
 		return impl_.allocate(bytes, alignment);
 	}
 	/**
 	 * \thread_safe
 	 */
-	inline void do_deallocate(void* ptr, std::size_t bytes, std::size_t alignment) override
+	void do_deallocate(void* ptr, std::size_t bytes, std::size_t alignment) override
 	{
 		return impl_.deallocate(ptr, bytes, alignment);
 	}
 	/**
 	 * \thread_safe
 	 */
-	inline bool do_is_equal(const memory_resource& other) const noexcept override
+	auto do_is_equal(const memory_resource& other) const noexcept -> bool override
 	{
 		// TODO
 		auto pother = dynamic_cast<memory_resource<UA> const*>(&other);
-		if (!pother || &(pother->impl_) != &impl_)
-			return false;
-		return true;
+		return !static_cast<bool>(!pother || &(pother->impl_) != &impl_);
 	}
 
 private:

@@ -85,66 +85,103 @@ class input_serializer
 	using value_field_name = detail::value_field_name_t<Opt>;
 	using type_field_name	 = detail::type_field_name_t<Opt>;
 
-protected:
+private:
 	std::reference_wrapper<Serializer> ser_;
 
 public:
-	input_serializer(input_serializer const&) noexcept = delete;
+	auto operator=(const input_serializer&) -> input_serializer& = default;
+	auto operator=(input_serializer&&) -> input_serializer&			 = default;
+	input_serializer(input_serializer const&) noexcept	 = default;
 	input_serializer(input_serializer&& i_other) noexcept : ser_(i_other.ser_) {}
-	inline input_serializer(Serializer& ser) noexcept : ser_(ser) {}
+	input_serializer(Serializer& ser) noexcept : ser_(ser) {}
+	~input_serializer() noexcept = default;
 
 	template <typename Class>
-	inline auto& operator>>(Class& obj)
+	auto operator>>(Class& obj) -> auto&
 	{
 		if (!ser_.get().failed())
 		{
 			if (!read(obj) && !ser_.get().failed())
+			{
 				ser_.get().error(type_name<Class>(), make_error_code(serializer_error::failed_to_parse_value));
+			}
 		}
 		return *this;
 	}
 
 	template <typename Class>
-	inline bool read(Class& obj) noexcept
+	auto read(Class& obj) noexcept -> bool
 	{
 		if (ser_.get().failed())
+		{
 			return false;
+		}
 		// Ensure ordering with multiple matches
 		if constexpr (detail::BoundClass<Class>)
+		{
 			return read_bound_class(obj);
+		}
 		else if constexpr (detail::InputSerializableClass<Class, Serializer>)
+		{
 			return read_serializable(obj);
+		}
 		else if constexpr (detail::TransformFromString<Class>)
+		{
 			return read_string_transformed(obj);
+		}
 		else if constexpr (detail::TupleLike<Class>)
+		{
 			return read_tuple(obj);
+		}
 		else if constexpr (detail::ContainerLike<Class>)
+		{
 			return read_container(obj);
+		}
 		else if constexpr (detail::VariantLike<Class>)
+		{
 			return read_variant(obj);
+		}
 		else if constexpr (detail::ConstructedFromStringView<Class>)
+		{
 			return read_string_constructed(obj);
+		}
 		else if constexpr (detail::ContainerIsStringLike<Class>)
+		{
 			return read_string(obj);
+		}
 		else if constexpr (detail::BoolLike<Class>)
+		{
 			return read_bool(obj);
+		}
 		else if constexpr (detail::IntegerLike<Class>)
+		{
 			return read_integer(obj);
+		}
 		else if constexpr (detail::EnumLike<Class>)
+		{
 			return read_enum(obj);
+		}
 		else if constexpr (detail::FloatLike<Class>)
+		{
 			return read_float(obj);
+		}
 		else if constexpr (detail::PointerLike<Class>)
+		{
 			return read_pointer(obj);
+		}
 		else if constexpr (detail::OptionalLike<Class>)
+		{
 			return read_optional(obj);
+		}
 		else if constexpr (detail::MonostateLike<Class>)
+		{
 			return read_monostate(obj);
+		}
 		else
 		{
-			[]<bool flag = false>()
+			[]<bool Flag = false>()
 			{
-				static_assert(flag, "This type is not serializable");
+				static_assert(Flag, "This type is not serializable");
 			}();
 			return false;
 		}
@@ -152,7 +189,7 @@ public:
 
 private:
 	template <detail::BoundClass Class>
-	bool read_bound_class(Class& obj) noexcept
+	auto read_bound_class(Class& obj) noexcept -> bool
 	{
 		int keys_read = 0;
 		for_each_field(
@@ -160,7 +197,9 @@ private:
 		 {
 			 auto key_val = get().at(decl.key());
 			 if (!key_val)
+			 {
 				 return;
+			 }
 
 			 using value_t = typename Decl::MemTy;
 			 value_t load;
@@ -177,14 +216,14 @@ private:
 	}
 
 	template <detail::InputSerializableClass<Serializer> Class>
-	bool read_serializable(Class& obj) noexcept
+	auto read_serializable(Class& obj) noexcept -> bool
 	{
 		get() >> obj;
 		return !get().failed();
 	}
 
 	template <detail::TupleLike Class>
-	bool read_tuple(Class& obj) noexcept
+	auto read_tuple(Class& obj) noexcept -> bool
 	{
 		// Invalid type is unexpected
 		if (!get().is_array())
@@ -199,7 +238,7 @@ private:
 	}
 
 	template <detail::StringMapLike Class>
-	bool read_container(Class& obj) noexcept
+	auto read_container(Class& obj) noexcept -> bool
 	{
 		// Invalid is not unexpected
 		// Invalid type is unexpected
@@ -219,18 +258,12 @@ private:
 		 {
 			 mapped_type stream_val;
 
-			 if (input_serializer(value).read(stream_val))
-			 {
-				 detail::emplace(obj, std::move(key), std::move(stream_val));
-				 return true;
-			 }
-			 value.error(type_name<mapped_type>(), make_error_code(serializer_error::failed_streaming_map));
-			 return false;
+			 return static_cast<bool>(input_serializer(value).read(stream_val));
 		 });
 	}
 
 	template <detail::ComplexMapLike Class>
-	bool read_container(Class& obj) noexcept
+	auto read_container(Class& obj) noexcept -> bool
 	{
 		// Invalid is not unexpected
 		// Invalid type is unexpected
@@ -250,18 +283,12 @@ private:
 		 {
 			 detail::map_value_type<key_type, mapped_type, Opt> stream_val;
 
-			 if (input_serializer(value).read(stream_val))
-			 {
-				 detail::emplace(obj, std::move(stream_val.key), std::move(stream_val.value));
-				 return true;
-			 }
-			 value.error(type_name<mapped_type>(), make_error_code(serializer_error::failed_streaming_map));
-			 return false;
+			 return input_serializer(value).read(stream_val);
 		 });
 	}
 
 	template <detail::ArrayLike Class>
-	bool read_container(Class& obj) noexcept
+	auto read_container(Class& obj) noexcept -> bool
 	{
 		// Invalid type is unexpected
 		if (!get().is_array())
@@ -292,33 +319,30 @@ private:
 		{
 			detail::resize(obj, get().size());
 			std::uint32_t index = 0;
-			if (!get().for_each(
+			return static_cast<bool>(get().for_each(
 
-					 [&obj, &index](Serializer value)
-					 {
-						 detail::array_value_type<Class> stream_val;
-						 bool														 result = input_serializer(value).read(stream_val);
-						 if (result)
-						 {
-							 obj[index++] = std::move(stream_val);
-							 return true;
-						 }
-						 value.error(type_name<Class>(), make_error_code(serializer_error::failed_streaming_array));
-						 return false;
-					 }))
-			{
-				detail::resize(obj, index);
-				return false;
-			}
-			return true;
+			 [&obj, &index](Serializer value)
+			 {
+				 detail::array_value_type<Class> stream_val;
+				 bool														 result = input_serializer(value).read(stream_val);
+				 if (result)
+				 {
+					 obj[index++] = std::move(stream_val);
+					 return true;
+				 }
+				 value.error(type_name<Class>(), make_error_code(serializer_error::failed_streaming_array));
+				 return false;
+			 }));
 		}
 	}
 
 	template <detail::VariantLike Class>
-	bool read_variant(Class& obj) noexcept
+	auto read_variant(Class& obj) noexcept -> bool
 	{
 		if (get().is_null())
+		{
 			return true;
+		}
 
 		// Invalid type is unexpected
 		if (!get().is_object())
@@ -390,7 +414,7 @@ private:
 	}
 
 	template <detail::ConstructedFromStringView Class>
-	bool read_string_constructed(Class& obj) noexcept
+	auto read_string_constructed(Class& obj) noexcept -> bool
 	{
 		auto value = get().as_string();
 		if (value)
@@ -398,15 +422,13 @@ private:
 			obj = Class(*value);
 			return true;
 		}
-		else
-		{
-			get().error("string", make_error_code(serializer_error::failed_to_parse_value));
-			return false;
-		}
+
+		get().error("string", make_error_code(serializer_error::failed_to_parse_value));
+		return false;
 	}
 
 	template <detail::TransformFromString Class>
-	bool read_string_transformed(Class& obj) noexcept
+	auto read_string_transformed(Class& obj) noexcept -> bool
 	{
 		auto value = get().as_string();
 		if (value)
@@ -414,15 +436,13 @@ private:
 			acl::from_string(obj, *value);
 			return true;
 		}
-		else
-		{
-			get().error("string", make_error_code(serializer_error::failed_to_parse_value));
-			return false;
-		}
+
+		get().error("string", make_error_code(serializer_error::failed_to_parse_value));
+		return false;
 	}
 
 	template <detail::ContainerIsStringLike Class>
-	bool read_string(Class& obj) noexcept
+	auto read_string(Class& obj) noexcept -> bool
 	{
 		auto value = get().as_string();
 		if (value)
@@ -430,15 +450,13 @@ private:
 			obj = Class(*value);
 			return true;
 		}
-		else
-		{
-			get().error("string", make_error_code(serializer_error::failed_to_parse_value));
-			return false;
-		}
+
+		get().error("string", make_error_code(serializer_error::failed_to_parse_value));
+		return false;
 	}
 
 	template <detail::BoolLike Class>
-	bool read_bool(Class& obj) noexcept
+	auto read_bool(Class& obj) noexcept -> bool
 	{
 		auto value = get().as_bool();
 		if (value)
@@ -446,15 +464,13 @@ private:
 			obj = *value;
 			return true;
 		}
-		else
-		{
-			get().error("bool", make_error_code(serializer_error::failed_to_parse_value));
-			return false;
-		}
+
+		get().error("bool", make_error_code(serializer_error::failed_to_parse_value));
+		return false;
 	}
 
 	template <detail::SignedIntLike Class>
-	bool read_integer(Class& obj) noexcept
+	auto read_integer(Class& obj) noexcept -> bool
 	{
 		auto value = get().as_int64();
 		if (value)
@@ -462,15 +478,13 @@ private:
 			obj = static_cast<Class>(*value);
 			return true;
 		}
-		else
-		{
-			get().error("int64", make_error_code(serializer_error::failed_to_parse_value));
-			return false;
-		}
+
+		get().error("int64", make_error_code(serializer_error::failed_to_parse_value));
+		return false;
 	}
 
 	template <detail::UnsignedIntLike Class>
-	bool read_integer(Class& obj) noexcept
+	auto read_integer(Class& obj) noexcept -> bool
 	{
 		auto value = get().as_uint64();
 		if (value)
@@ -478,15 +492,13 @@ private:
 			obj = static_cast<Class>(*value);
 			return true;
 		}
-		else
-		{
-			get().error("uint64", make_error_code(serializer_error::failed_to_parse_value));
-			return false;
-		}
+
+		get().error("uint64", make_error_code(serializer_error::failed_to_parse_value));
+		return false;
 	}
 
 	template <detail::EnumLike Class>
-	bool read_enum(Class& obj) noexcept
+	auto read_enum(Class& obj) noexcept -> bool
 	{
 		auto value = get().as_uint64();
 		if (value)
@@ -494,15 +506,13 @@ private:
 			obj = static_cast<Class>(*value);
 			return true;
 		}
-		else
-		{
-			get().error("enum", make_error_code(serializer_error::failed_to_parse_value));
-			return false;
-		}
+
+		get().error("enum", make_error_code(serializer_error::failed_to_parse_value));
+		return false;
 	}
 
 	template <detail::FloatLike Class>
-	bool read_float(Class& obj) noexcept
+	auto read_float(Class& obj) noexcept -> bool
 	{
 		auto value = get().as_double();
 		if (value)
@@ -510,24 +520,26 @@ private:
 			obj = static_cast<Class>(*value);
 			return true;
 		}
-		else
-		{
-			get().error("float", make_error_code(serializer_error::failed_to_parse_value));
-			return false;
-		}
+
+		get().error("float", make_error_code(serializer_error::failed_to_parse_value));
+		return false;
 	}
 
 	template <detail::PointerLike Class>
-	bool read_pointer(Class& obj) noexcept
+	auto read_pointer(Class& obj) noexcept -> bool
 	{
 		if (!get().is_null())
 		{
 			using class_type	= detail::remove_cref<Class>;
 			using pvalue_type = detail::pointer_class_type<Class>;
 			if constexpr (std::same_as<class_type, std::shared_ptr<pvalue_type>>)
+			{
 				obj = std::make_shared<pvalue_type>();
+			}
 			else
+			{
 				obj = Class(new detail::pointer_class_type<Class>());
+			}
 			return read(*obj);
 		}
 		obj = nullptr;
@@ -535,37 +547,35 @@ private:
 	}
 
 	template <detail::OptionalLike Class>
-	bool read_optional(Class& obj) noexcept
+	auto read_optional(Class& obj) noexcept -> bool
 	{
 		if (!get().is_null())
 		{
 			obj.emplace();
 			return read(*obj);
 		}
-		else
-			obj.reset();
+		obj.reset();
 		return true;
 	}
 
 	template <detail::MonostateLike Class>
-	bool read_monostate(Class& obj) noexcept
+	auto read_monostate(Class& obj) noexcept -> bool
 	{
 		return true;
 	}
 
-private:
-	inline auto& get() noexcept
+	auto get() noexcept -> auto&
 	{
 		return ser_.get();
 	}
 
-	inline auto const& get() const noexcept
+	auto get() const noexcept -> auto const&
 	{
 		return ser_.get();
 	}
 
 	template <std::size_t N, typename Class>
-	bool at(Class& obj) noexcept
+	auto at(Class& obj) noexcept -> bool
 	{
 		auto ser = get().at(N);
 		if (ser)
@@ -580,11 +590,17 @@ private:
 	static constexpr auto find_alt(std::size_t i, L&& lambda) noexcept -> bool
 	{
 		if (I == i)
+		{
 			return std::forward<L>(lambda)(std::integral_constant<uint32_t, I>{});
+		}
 		if constexpr (I > 0)
+		{
 			return find_alt<I - 1, Class>(i, std::forward<L>(lambda));
+		}
 		else
+		{
 			return false;
+		}
 	}
 };
 

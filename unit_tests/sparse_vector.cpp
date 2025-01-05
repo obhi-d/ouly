@@ -4,6 +4,7 @@
 #include <catch2/catch_all.hpp>
 #include <string>
 
+// NOLINTBEGIN
 template <>
 struct acl::default_options<pod>
 {
@@ -314,3 +315,4 @@ TEST_CASE("sparse_vector: fill", "[sparse_vector][fill]")
 		 REQUIRE(0xbadf00d == v);
 	 });
 }
+// NOLINTEND

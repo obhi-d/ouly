@@ -4,6 +4,7 @@
 #include <catch2/catch_all.hpp>
 #include <string>
 
+// NOLINTBEGIN
 struct sobject
 {
 	std::string			value;
@@ -558,3 +559,4 @@ TEMPLATE_TEST_CASE("Validate intrusive_list erase", "[intrusive_list][erase]",
 	b++;
 	REQUIRE(b == il.end());
 }
+// NOLINTEND

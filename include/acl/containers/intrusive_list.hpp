@@ -28,40 +28,40 @@ namespace detail
 template <auto M>
 struct intrusive_list_type_traits;
 
-template <typename Ty, typename H, H Ty::*M>
+template <typename Ty, typename H, H Ty::* M>
 struct intrusive_list_type_traits<M>
 {
 	using value_type							 = Ty;
 	using hook_type								 = H;
 	static constexpr bool is_dlist = std::is_same_v<list_hook, H>;
 
-	inline static H& hook(Ty& t) noexcept
+	static auto hook(Ty& t) noexcept -> H&
 	{
 		return t.*M;
 	}
 
-	inline static H const& hook(Ty const& t) noexcept
+	static auto hook(Ty const& t) noexcept -> H const&
 	{
 		return t.*M;
 	}
 
-	inline static Ty* next(Ty const& t) noexcept
+	static auto next(Ty const& t) noexcept -> Ty*
 	{
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 		return reinterpret_cast<Ty*>(hook(t).pnext_);
 	}
 
-	inline static void next(Ty& t, Ty* next) noexcept
+	static void next(Ty& t, Ty* next) noexcept
 	{
 		hook(t).pnext_ = next;
 	}
 
-	inline static Ty* prev(Ty const& t) noexcept
-		requires(is_dlist)
-	{
+	static auto prev(Ty const& t) noexcept -> Ty* requires(is_dlist) {
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 		return reinterpret_cast<Ty*>(hook(t).pprev_);
 	}
 
-	inline static void prev(Ty& t, Ty* next) noexcept
+	static void prev(Ty& t, Ty* next) noexcept
 		requires(is_dlist)
 	{
 		hook(t).pprev_ = next;
@@ -71,45 +71,47 @@ struct intrusive_list_type_traits<M>
 template <typename SizeType, bool CacheSize = false>
 struct size_counter
 {
-	inline void added() noexcept {}
-	inline void added(SizeType) noexcept {}
-	inline void erased() noexcept {}
+	void added() noexcept {}
+	void added(SizeType /*unused*/) noexcept {}
+	void erased() noexcept {}
 	template <typename L>
-	inline SizeType count(L const& list) const noexcept
+	auto count(L const& list) const noexcept -> SizeType
 	{
 		SizeType nb = 0;
 		for (auto i = std::begin(list), e = std::end(list); i != e; ++i, ++nb)
+		{
 			;
+		}
 		return nb;
 	}
-	inline void clear() noexcept {}
+	void clear() noexcept {}
 };
 
 template <typename SizeType>
 struct size_counter<SizeType, true>
 {
-	inline void added() noexcept
+	void added() noexcept
 	{
 		count_++;
 	}
 
-	inline void erased() noexcept
+	void erased() noexcept
 	{
 		count_--;
 	}
 
-	inline void added(SizeType a) noexcept
+	void added(SizeType a) noexcept
 	{
 		count_ += a;
 	}
 
 	template <typename L>
-	inline SizeType count(L const&) const noexcept
+	auto count(L const& /*unused*/) const noexcept -> SizeType
 	{
 		return count_;
 	}
 
-	inline void clear() noexcept
+	void clear() noexcept
 	{
 		count_ = 0;
 	}
@@ -151,36 +153,36 @@ class intrusive_list
 	{
 	public:
 		constexpr iterator_type() noexcept = default;
-		inline constexpr iterator_type(V* item) noexcept : item_(item) {}
+		constexpr iterator_type(V* item) noexcept : item_(item) {}
 
-		inline auto operator->() const noexcept
+		auto operator->() const noexcept
 		{
-			ACL_ASSERT(item_);
+			assert(item_);
 			return item_;
 		}
 
-		inline auto& operator*() const noexcept
+		auto operator*() const noexcept -> auto&
 		{
-			ACL_ASSERT(item_);
+			assert(item_);
 			return *item_;
 		}
 
-		auto& operator++() noexcept
+		auto operator++() noexcept -> auto&
 		{
-			ACL_ASSERT(item_);
+			assert(item_);
 			item_ = traits::next(*item_);
 			return *this;
 		}
 
 		auto operator++(int) noexcept
 		{
-			ACL_ASSERT(item_);
+			assert(item_);
 			auto old = *this;
 			item_		 = traits::next(*item_);
 			return old;
 		}
 
-		inline auto operator<=>(iterator_type const& other) const noexcept = default;
+		auto operator<=>(iterator_type const& other) const noexcept = default;
 
 	private:
 		V* item_ = nullptr;
@@ -191,24 +193,22 @@ class intrusive_list
 	{
 	public:
 		constexpr reverse_iterator_type() noexcept = default;
-		inline constexpr reverse_iterator_type(V* item) noexcept : item_(item) {}
+		constexpr reverse_iterator_type(V* item) noexcept : item_(item) {}
 
-		inline auto operator->() const noexcept
+		auto operator->() const noexcept
 		{
-			ACL_ASSERT(item_);
+			assert(item_);
 			return item_;
 		}
 
-		inline auto& operator*() const noexcept
+		auto operator*() const noexcept -> auto&
 		{
-			ACL_ASSERT(item_);
+			assert(item_);
 			return *item_;
 		}
 
-		auto& operator++() noexcept
-			requires(is_dlist)
-		{
-			ACL_ASSERT(item_);
+		auto operator++() noexcept -> auto& requires(is_dlist) {
+			assert(item_);
 			item_ = traits::prev(*item_);
 			return *this;
 		}
@@ -216,13 +216,13 @@ class intrusive_list
 		auto operator++(int) noexcept
 			requires(is_dlist)
 		{
-			ACL_ASSERT(item_);
+			assert(item_);
 			auto old = *this;
 			item_		 = traits::prev(*item_);
 			return old;
 		}
 
-		inline auto operator<=>(reverse_iterator_type const& other) const noexcept = default;
+		auto operator<=>(reverse_iterator_type const& other) const noexcept = default;
 
 	private:
 		V* item_ = nullptr;
@@ -244,7 +244,9 @@ public:
 	{
 		data_.head_ = &from;
 		if (CacheSize)
+		{
 			data_.added(count);
+		}
 	}
 	intrusive_list(value_type& from, value_type& to, size_type count) noexcept
 		requires(CacheTail)
@@ -252,7 +254,9 @@ public:
 		data_.head_ = &from;
 		data_.tail_ = &to;
 		if (CacheSize)
+		{
 			data_.added(count);
+		}
 	}
 	intrusive_list(intrusive_list const&) = delete;
 	intrusive_list(intrusive_list&& other) noexcept
@@ -260,105 +264,107 @@ public:
 		*this = std::move(other);
 	}
 
-	intrusive_list& operator=(intrusive_list const&) = delete;
-	intrusive_list& operator=(intrusive_list&& other) noexcept
+	auto operator=(intrusive_list const&) -> intrusive_list& = delete;
+	auto operator=(intrusive_list&& other) noexcept -> intrusive_list&
 	{
 		data_.head_ = other.data_.head_;
 		if constexpr (CacheTail)
+		{
 			data_.tail_ = other.data_.tail_;
+		}
 		if constexpr (CacheSize)
+		{
 			data_.added(other.size());
+		}
 		other.clear();
 		return *this;
 	}
 
-	inline bool empty() const noexcept
+	~intrusive_list() noexcept = default;
+
+	[[nodiscard]] auto empty() const noexcept -> bool
 	{
 		return data_.head_ == nullptr;
 	}
 
-	inline size_type size() const noexcept
+	auto size() const noexcept -> size_type
 	{
 		return data_.count(*this);
 	}
 
-	inline iterator begin() noexcept
+	auto begin() noexcept -> iterator
 	{
 		return iterator(data_.head_);
 	}
 
-	inline constexpr iterator end() noexcept
+	constexpr auto end() noexcept -> iterator
 	{
 		return iterator();
 	}
 
-	inline const_iterator begin() const noexcept
+	auto begin() const noexcept -> const_iterator
 	{
 		return const_iterator(data_.head_);
 	}
 
-	inline constexpr const_iterator end() const noexcept
+	constexpr auto end() const noexcept -> const_iterator
 	{
 		return const_iterator();
 	}
 
-	inline reverse_iterator rbegin() noexcept
+	auto rbegin() noexcept -> reverse_iterator
 		requires(bidir)
 	{
 		return reverse_iterator(data_.tail_);
 	}
 
-	inline constexpr reverse_iterator rend() noexcept
+	constexpr auto rend() noexcept -> reverse_iterator
 		requires(bidir)
 	{
 		return reverse_iterator();
 	}
 
-	inline const_reverse_iterator rbegin() const noexcept
+	auto rbegin() const noexcept -> const_reverse_iterator
 		requires(bidir)
 	{
 		return const_reverse_iterator(data_.tail_);
 	}
 
-	inline constexpr const_reverse_iterator rend() const noexcept
+	constexpr auto rend() const noexcept -> const_reverse_iterator
 		requires(bidir)
 	{
 		return const_reverse_iterator();
 	}
 
-	inline const_iterator cbegin() const noexcept
+	auto cbegin() const noexcept -> const_iterator
 	{
 		return begin();
 	}
 
-	inline constexpr iterator cend() const noexcept
+	constexpr auto cend() const noexcept -> iterator
 	{
 		return iterator();
 	}
 
-	inline value_type& front() noexcept
+	auto front() noexcept -> value_type&
 	{
 		return *data_.head_;
 	}
 
-	inline value_type& back() noexcept
+	auto back() noexcept -> value_type& requires(CacheTail) { return *data_.tail_; }
+
+	auto front() const noexcept -> value_type const&
+	{
+		return *data_.head_;
+	}
+
+	auto back() const noexcept -> value_type const&
 		requires(CacheTail)
 	{
 		return *data_.tail_;
 	}
 
-	inline value_type const& front() const noexcept
-	{
-		return *data_.head_;
-	}
-
-	inline value_type const& back() const noexcept
-		requires(CacheTail)
-	{
-		return *data_.tail_;
-	}
-
-	inline void push_back(value_type& obj) noexcept
+	void push_back(value_type& obj) noexcept
 		requires(CacheTail)
 	{
 		if (data_.tail_)
@@ -377,7 +383,7 @@ public:
 		data_.added();
 	}
 
-	inline void push_front(value_type& obj) noexcept
+	void push_front(value_type& obj) noexcept
 	{
 		if (data_.head_)
 		{
@@ -392,12 +398,14 @@ public:
 		{
 			data_.head_ = &obj;
 			if constexpr (CacheTail)
+			{
 				data_.tail_ = &obj;
+			}
 		}
 		data_.added();
 	}
-
-	inline void append_front(intrusive_list&& other) noexcept
+	// NOLINTNEXTLINE
+	void append_front(intrusive_list&& other) noexcept
 		requires(is_dlist && CacheTail)
 	{
 		if (data_.head_)
@@ -414,8 +422,8 @@ public:
 		data_.added(other.size());
 		other.clear();
 	}
-
-	inline void append_back(intrusive_list&& other) noexcept
+	// NOLINTNEXTLINE
+	void append_back(intrusive_list&& other) noexcept
 		requires(is_dlist && CacheTail)
 	{
 		if (data_.tail_)
@@ -433,21 +441,23 @@ public:
 		other.clear();
 	}
 
-	inline void clear() noexcept
+	void clear() noexcept
 	{
 		data_.head_ = nullptr;
 		if constexpr (CacheTail)
+		{
 			data_.tail_ = nullptr;
+		}
 		data_.clear();
 	}
 
-	inline void erase_after(iterator it) noexcept
+	void erase_after(iterator it) noexcept
 	{
 		auto& l = *it;
 		erase_after(l);
 	}
 
-	inline void erase_after(value_type& l) noexcept
+	void erase_after(value_type& l) noexcept
 	{
 		auto next = traits::next(l);
 		if (next)
@@ -464,34 +474,42 @@ public:
 					}
 				}
 				else
+				{
 					data_.tail_ = &l;
+				}
 			}
 			else if constexpr (is_dlist)
 			{
 				if (next_next)
+				{
 					traits::prev(*next_next, &l);
+				}
 			}
 
 			traits::next(*next, nullptr);
 			if constexpr (is_dlist)
+			{
 				traits::prev(*next, nullptr);
+			}
 			data_.erased();
 		}
 	}
 
-	inline void insert_after(iterator it, value_type& obj) noexcept
+	void insert_after(iterator it, value_type& obj) noexcept
 	{
 		insert_after(*it, obj);
 	}
 
-	inline void insert_after(value_type& l, value_type& obj) noexcept
+	void insert_after(value_type& l, value_type& obj) noexcept
 	{
 		auto next = traits::next(l);
 		traits::next(l, &obj);
 		if (!next)
 		{
 			if constexpr (CacheTail)
+			{
 				data_.tail_ = &obj;
+			}
 		}
 		else
 		{
@@ -504,19 +522,22 @@ public:
 		data_.added();
 	}
 
-	inline void append_after(iterator it, intrusive_list&& other) noexcept
+	void append_after(iterator it, intrusive_list&& other) noexcept
 	{
 		append_after(*it, std::move(other));
 	}
 
-	inline void append_after(value_type& l, intrusive_list&& other) noexcept
+	// NOLINTNEXTLINE
+	void append_after(value_type& l, intrusive_list&& other) noexcept
 	{
 		auto next = traits::next(l);
 		traits::next(l, &other.front());
 		if (!next)
 		{
 			if constexpr (CacheTail)
+			{
 				data_.tail_ = &other.back();
+			}
 		}
 		else
 		{
@@ -527,21 +548,25 @@ public:
 			}
 		}
 		if constexpr (CacheSize)
+		{
 			data_.added(other.size());
+		}
 		other.clear();
 	}
 
-	inline void insert(iterator it, value_type& obj) noexcept
+	void insert(iterator it, value_type& obj) noexcept
 		requires(is_dlist)
 	{
 		insert(*it, obj);
 	}
 
-	inline void insert(value_type& l, value_type& obj) noexcept
+	void insert(value_type& l, value_type& obj) noexcept
 		requires(is_dlist)
 	{
 		if (&l == data_.head_)
+		{
 			push_front(obj);
+		}
 		else
 		{
 			auto prev = traits::prev(l);
@@ -553,18 +578,20 @@ public:
 		}
 	}
 
-	inline void append(iterator it, intrusive_list&& other) noexcept
+	void append(iterator it, intrusive_list&& other) noexcept
 		requires(is_dlist && CacheTail)
 
 	{
 		append(*it, std::move(other));
 	}
 
-	inline void append(value_type& l, intrusive_list&& other) noexcept
+	void append(value_type& l, intrusive_list&& other) noexcept
 		requires(is_dlist && CacheTail)
 	{
 		if (&l == data_.head_)
+		{
 			append_front(std::move(other));
+		}
 		else
 		{
 			auto	prev = traits::prev(l);
@@ -575,18 +602,20 @@ public:
 			traits::prev(l, &b);
 			traits::next(b, &l);
 			if constexpr (CacheSize)
+			{
 				data_.added(other.size());
+			}
 			other.clear();
 		}
 	}
 
-	inline void erase(iterator it) noexcept
+	void erase(iterator it) noexcept
 		requires(is_dlist)
 	{
 		erase(*it);
 	}
 
-	inline void erase(value_type& l) noexcept
+	void erase(value_type& l) noexcept
 		requires(is_dlist)
 	{
 		auto prev = traits::prev(l);
@@ -594,34 +623,46 @@ public:
 		traits::next(l, nullptr);
 		traits::prev(l, nullptr);
 		if (prev)
+		{
 			traits::next(*prev, next);
+		}
 		else
+		{
 			data_.head_ = next;
+		}
 		if (next)
+		{
 			traits::prev(*next, prev);
+		}
 		else
 		{
 			if constexpr (CacheTail)
+			{
 				data_.tail_ = prev;
+			}
 		}
 		data_.erased();
 	}
 
-	inline void pop_back() noexcept
+	void pop_back() noexcept
 		requires(CacheTail && is_dlist)
 	{
 		auto& l		 = *data_.tail_;
 		auto	prev = traits::prev(l);
 		traits::prev(l, nullptr);
 		if (prev)
+		{
 			traits::next(*prev, nullptr);
+		}
 		else
+		{
 			data_.head_ = nullptr;
+		}
 		data_.tail_ = prev;
 		data_.erased();
 	}
 
-	inline void pop_front() noexcept
+	void pop_front() noexcept
 	{
 		auto& l		 = *data_.head_;
 		auto	next = traits::next(l);
@@ -629,12 +670,16 @@ public:
 		if (next)
 		{
 			if constexpr (is_dlist)
+			{
 				traits::prev(*next, nullptr);
+			}
 		}
 		else
 		{
 			if constexpr (CacheTail)
+			{
 				data_.tail_ = nullptr;
+			}
 		}
 		data_.head_ = next;
 		data_.erased();

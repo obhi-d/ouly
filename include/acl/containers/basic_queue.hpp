@@ -28,20 +28,20 @@ private:
 
 	struct deque_block
 	{
-		alignas(alignment) std::array<storage, pool_size> data;
-		deque_block* next = nullptr;
+		alignas(alignment) std::array<storage, pool_size> data_;
+		deque_block* next_ = nullptr;
 	};
 
 public:
-	inline basic_queue() noexcept = default;
+	basic_queue() noexcept = default;
 
-	inline basic_queue(basic_queue const& other)
+	basic_queue(basic_queue const& other)
 		requires(std::is_copy_constructible_v<Ty>)
 	{
 		copy(other);
 	}
 
-	inline basic_queue(basic_queue&& other) noexcept
+	basic_queue(basic_queue&& other) noexcept
 			: head_(other.head_), tail_(other.tail_), free_(other.free_), front_(other.front_), back_(other.back_)
 	{
 		other.head_	 = nullptr;
@@ -51,14 +51,16 @@ public:
 		other.back_	 = 0;
 	}
 
-	inline basic_queue& operator=(basic_queue const& other)
-		requires(std::is_copy_constructible_v<Ty>)
-	{
+	auto operator=(basic_queue const& other) -> basic_queue& requires(std::is_copy_constructible_v<Ty>) {
+		if (this == &other)
+		{
+			return *this;
+		}
 		copy(other);
 		return *this;
 	}
 
-	inline basic_queue& operator=(basic_queue&& other) noexcept
+	auto operator=(basic_queue&& other) noexcept -> basic_queue&
 	{
 		clear();
 		free_chain(free_);
@@ -84,34 +86,38 @@ public:
 	}
 
 	template <typename... Args>
-	inline auto& emplace_back(Args&&... args) noexcept
+	auto emplace_back(Args&&... args) noexcept -> auto&
 	{
-		if (back_ == pool_size || !tail_)
+		if (back_ >= pool_size || !tail_)
 		{
 			add_tail();
 			back_ = 0;
 		}
-		auto ptr = tail_->data[back_++].template as<Ty>();
+		auto ptr = tail_->data_[back_++].template as<Ty>();
 		std::construct_at(ptr, std::forward<Args>(args)...);
 		return *ptr;
 	}
 
-	inline Ty pop_front()
+	auto pop_front() -> Ty
 	{
 		if (empty())
+		{
 			throw std::runtime_error("Deque is empty");
+		}
 
 		return pop_front_unsafe();
 	}
 
-	inline Ty pop_front_unsafe() noexcept
+	auto pop_front_unsafe() noexcept -> Ty
 	{
-		ACL_ASSERT(!empty());
+		assert(!empty());
 
-		Ty ret = std::move(*head_->data[front_].template as<Ty>());
+		Ty ret = std::move(*head_->data_[front_].template as<Ty>());
 
 		if constexpr (!std::is_trivially_destructible_v<Ty>)
-			std::destroy_at(head_->data[front_].template as<Ty>());
+		{
+			std::destroy_at(head_->data_[front_].template as<Ty>());
+		}
 
 		if (++front_ == pool_size)
 		{
@@ -122,7 +128,7 @@ public:
 		return ret;
 	}
 
-	inline bool empty() const noexcept
+	[[nodiscard]] auto empty() const noexcept -> bool
 	{
 		return (head_ == tail_ && front_ == back_);
 	}
@@ -130,34 +136,38 @@ public:
 	void clear() noexcept
 	{
 		if constexpr (!std::is_trivially_destructible_v<Ty>)
+		{
 			for_each(
 			 [](Ty& v)
 			 {
 				 std::destroy_at(&v);
 			 });
+		}
 
 		if (head_)
-			head_->next = free_;
+		{
+			head_->next_ = free_;
+		}
 		free_ = head_;
-		head_ = tail_ = 0;
+		head_ = tail_ = nullptr;
 		front_ = back_ = 0;
 	}
 
 	template <typename L>
 	void for_each(L&& l)
 	{
-		_for_each<Ty>(*this, std::forward<L>(l));
+		internal_for_each<Ty>(*this, std::forward<L>(l));
 	}
 
 	template <typename L>
 	void for_each(L&& l) const
 	{
-		_for_each<Ty const>(*this, std::forward<L>(l));
+		internal_for_each<Ty const>(*this, std::forward<L>(l));
 	}
 
 private:
 	template <typename V, typename T, typename L>
-	static void _for_each(T& self, L&& l)
+	static void internal_for_each(T& self, L lambda)
 	{
 		auto block = self.head_;
 		auto start = self.front_;
@@ -166,10 +176,10 @@ private:
 			auto end = block == self.tail_ ? self.back_ : pool_size;
 			for (; start < end; ++start)
 			{
-				l(*block->data[start].template as<V>());
+				lambda(*block->data_[start].template as<V>());
 			}
 			start = 0;
-			block = block->next;
+			block = block->next_;
 		}
 	}
 
@@ -188,27 +198,33 @@ private:
 	{
 		deque_block* db = free_;
 		if (free_)
-			free_ = free_->next;
+		{
+			free_ = free_->next_;
+		}
 		else
 		{
-			db			 = acl::allocate<deque_block>(static_cast<allocator_type&>(*this), sizeof(deque_block), alignarg<Ty>);
-			db->next = nullptr;
+			db				= acl::allocate<deque_block>(static_cast<allocator_type&>(*this), sizeof(deque_block), alignarg<Ty>);
+			db->next_ = nullptr;
 		}
 
 		if (tail_)
-			tail_->next = db;
+		{
+			tail_->next_ = db;
+		}
 		else
+		{
 			head_ = db;
+		}
 		tail_ = db;
 	}
 
 	void remove_head()
 	{
-		auto h	= head_;
-		head_		= head_->next;
-		h->next = free_;
-		free_		= h;
-		if (!head_)
+		auto h	 = head_;
+		head_		 = head_->next_;
+		h->next_ = free_;
+		free_		 = h;
+		if (head_ == nullptr)
 		{
 			tail_	 = nullptr;
 			front_ = 0;
@@ -220,7 +236,7 @@ private:
 	{
 		while (start)
 		{
-			auto next = start->next;
+			auto next = start->next_;
 			acl::deallocate(static_cast<allocator_type&>(*this), start, sizeof(deque_block), alignarg<Ty>);
 			start = next;
 		}

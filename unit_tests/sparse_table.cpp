@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
+// NOLINTBEGIN
 TEST_CASE("sparse_table: Validate sparse_table emplace", "[sparse_table][emplace]")
 {
 	acl::sparse_table<int> table;
@@ -171,3 +172,4 @@ TEST_CASE("sparse_table: Validate replace", "[sparse_table][replace]")
 
 	REQUIRE(table1.empty() == true);
 }
+// NOLINTEND

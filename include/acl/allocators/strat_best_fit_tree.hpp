@@ -20,8 +20,9 @@ public:
 	best_fit_tree(best_fit_tree const&)			= default;
 	best_fit_tree(best_fit_tree&&) noexcept = default;
 
-	best_fit_tree& operator=(best_fit_tree const&)		 = default;
-	best_fit_tree& operator=(best_fit_tree&&) noexcept = default;
+	auto operator=(best_fit_tree const&) -> best_fit_tree&		 = default;
+	auto operator=(best_fit_tree&&) noexcept -> best_fit_tree& = default;
+	~best_fit_tree() noexcept													 = default;
 
 	using extension	 = acl::detail::tree_node<1>;
 	using size_type	 = detail::choose_size_t<uint32_t, Options>;
@@ -41,137 +42,137 @@ public:
 		using tree_node	 = detail::tree_node<1>;
 		using block_link = typename block_bank::link;
 
-		inline static void erase(container& icont, std::uint32_t node)
+		static void erase(container& icont, std::uint32_t node)
 		{
 			icont.erase(block_link(node));
 		}
 
-		inline static node_type const& node(container const& icont, std::uint32_t id)
+		static auto node(container const& icont, std::uint32_t id) -> node_type const&
 		{
 			return icont[block_link(id)];
 		}
-		inline static node_type& node(container& icont, std::uint32_t id)
+		static auto node(container& icont, std::uint32_t id) -> node_type&
 		{
 			return icont[block_link(id)];
 		}
-		inline static tree_node const& links(node_type const& inode)
+		static auto links(node_type const& inode) -> tree_node const&
 		{
-			return inode.ext;
+			return inode.ext_;
 		}
-		inline static tree_node& links(node_type& inode)
+		static auto links(node_type& inode) -> tree_node&
 		{
-			return inode.ext;
+			return inode.ext_;
 		}
-		inline static size_type const& value(node_type const& inode)
+		static auto value(node_type const& inode) -> size_type const&
 		{
-			return inode.size;
+			return inode.size_;
 		}
-		inline static bool is_set(node_type const& inode)
+		static auto is_set(node_type const& inode) -> bool
 		{
-			return inode.is_flagged;
+			return inode.is_flagged_;
 		}
-		inline static void set_flag(node_type& inode)
+		static void set_flag(node_type& inode)
 		{
-			inode.is_flagged = true;
+			inode.is_flagged_ = true;
 		}
-		inline static void set_flag(node_type& inode, bool v)
+		static void set_flag(node_type& inode, bool v)
 		{
-			inode.is_flagged = v;
+			inode.is_flagged_ = v;
 		}
-		inline static void unset_flag(node_type& inode)
+		static void unset_flag(node_type& inode)
 		{
-			inode.is_flagged = false;
+			inode.is_flagged_ = false;
 		}
 	};
 
 	using tree_type				= detail::rbtree<blk_tree_node_accessor, 1>;
 	using allocate_result = optional_addr;
 
-	[[nodiscard]] inline auto try_allocate(bank_data& bank, size_type size)
+	[[nodiscard]] auto try_allocate(bank_data& bank, size_type size)
 	{
-		auto blk = tree.lower_bound(bank.blocks, size);
-		return optional_addr((bank.blocks[block_link(blk)].size < size) ? 0 : blk);
+		auto blk = tree_.lower_bound(bank.blocks_, size);
+		return optional_addr((bank.blocks_[block_link(blk)].size_ < size) ? 0 : blk);
 	}
 
-	inline std::uint32_t commit(bank_data& bank, size_type size, optional_addr found)
+	auto commit(bank_data& bank, size_type size, optional_addr found) -> std::uint32_t
 	{
-		auto& blk = bank.blocks[block_link(found.value)];
+		auto& blk = bank.blocks_[block_link(found.value_)];
 		// Marker
-		size_type			offset		= blk.offset;
-		std::uint32_t arena_num = blk.arena;
+		size_type			offset		= blk.offset_;
+		std::uint32_t arena_num = blk.arena_;
 
-		blk.is_free = false;
+		blk.is_free_ = false;
 
-		auto remaining = blk.size - size;
-		tree.erase(bank.blocks, found.value);
-		blk.size = size;
+		auto remaining = blk.size_ - size;
+		tree_.erase(bank.blocks_, found.value_);
+		blk.size_ = size;
 		if (remaining > 0)
 		{
-			auto& list	 = bank.arenas[blk.arena].block_order;
-			auto	arena	 = blk.arena;
-			auto	newblk = bank.blocks.emplace(blk.offset + size, remaining, arena, extension(), true);
-			list.insert_after(bank.blocks, found.value, (uint32_t)newblk);
-			tree.insert(bank.blocks, (uint32_t)newblk);
+			auto& list	 = bank.arenas_[blk.arena_].block_order();
+			auto	arena	 = blk.arena_;
+			auto	newblk = bank.blocks_.emplace(blk.offset_ + size, remaining, arena, extension(), true);
+			list.insert_after(bank.blocks_, found.value_, (uint32_t)newblk);
+			tree_.insert(bank.blocks_, (uint32_t)newblk);
 		}
 
-		return found.value;
+		return found.value_;
 	}
 
-	inline void add_free_arena([[maybe_unused]] block_bank& blocks, std::uint32_t block)
+	void add_free_arena([[maybe_unused]] block_bank& blocks, std::uint32_t block)
 	{
-		tree.insert(blocks, block);
+		tree_.insert(blocks, block);
 	}
 
-	inline void add_free(block_bank& blocks, std::uint32_t block)
+	void add_free(block_bank& blocks, std::uint32_t block)
 	{
-		tree.insert(blocks, block);
+		tree_.insert(blocks, block);
 	}
 
-	inline void grow_free_node(block_bank& blocks, std::uint32_t block, size_type new_size)
+	void grow_free_node(block_bank& blocks, std::uint32_t block, size_type new_size)
 	{
-		tree.erase(blocks, block);
-		blocks[block_link(block)].size = new_size;
-		tree.insert(blocks, block);
+		tree_.erase(blocks, block);
+		blocks[block_link(block)].size_ = new_size;
+		tree_.insert(blocks, block);
 	}
 
-	inline void replace_and_grow(block_bank& blocks, std::uint32_t block, std::uint32_t new_block, size_type new_size)
+	void replace_and_grow(block_bank& blocks, std::uint32_t block, std::uint32_t new_block, size_type new_size)
 	{
-		tree.erase(blocks, block);
-		blocks[block_link(new_block)].size = new_size;
-		tree.insert(blocks, new_block);
+		tree_.erase(blocks, block);
+		blocks[block_link(new_block)].size_ = new_size;
+		tree_.insert(blocks, new_block);
 	}
 
-	inline void erase(block_bank& blocks, std::uint32_t node)
+	void erase(block_bank& blocks, std::uint32_t node)
 	{
-		tree.erase(blocks, node);
+		tree_.erase(blocks, node);
 	}
 
-	inline std::uint32_t total_free_nodes(block_bank const& blocks) const
+	auto total_free_nodes(block_bank const& blocks) const -> std::uint32_t
 	{
-		return tree.node_count(blocks);
+		return tree_.node_count(blocks);
 	}
 
-	inline size_type total_free_size(block_bank const& blocks) const
+	auto total_free_size(block_bank const& blocks) const -> size_type
 	{
 		size_type sz = 0;
-		tree.in_order_traversal(blocks,
-														[&sz](block const& n)
-														{
-															sz += n.size;
-														});
+		tree_.in_order_traversal(blocks,
+														 [&sz](block const& n)
+														 {
+															 sz += n.size_;
+														 });
 		return sz;
 	}
 
 	void validate_integrity(block_bank const& blocks) const
 	{
-		tree.validate_integrity(blocks);
+		tree_.validate_integrity(blocks);
 	}
 
 	template <typename Owner>
-	inline void init(Owner const& owner)
+	void init(Owner const& owner)
 	{}
 
 private:
-	tree_type tree;
+	tree_type tree_;
 };
 } // namespace acl::strat

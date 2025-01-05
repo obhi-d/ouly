@@ -16,46 +16,53 @@
 #include <catch2/catch_all.hpp>
 #include <span>
 
+// NOLINTBEGIN
+
 #define BINARY_SEARCH_STEP                                                                                             \
-	do                                                                                                                   \
 	{                                                                                                                    \
 		const size_t* const middle = it + (size >> 1);                                                                     \
 		size											 = (size + 1) >> 1;                                                                      \
 		it												 = *middle < key ? middle : it;                                                          \
-	}                                                                                                                    \
-	while (0)
+	}
 
 static inline auto mini0(size_t const* it, size_t size, size_t key) noexcept
 {
 	while (size > 2)
 		BINARY_SEARCH_STEP;
-	it += size > 1 && (*it < key);
-	it += size > 0 && (*it < key);
+	it += static_cast<size_t>(size > 1 && (*it < key));
+	it += static_cast<size_t>(size > 0 && (*it < key));
 	return it;
 }
 
 static inline auto mini1(size_t const* it, size_t size, size_t key) noexcept
 {
-	do
+	while (true)
 	{
 		BINARY_SEARCH_STEP;
+		if (size <= 2)
+		{
+			break;
+		}
 	}
-	while (size > 2);
-	it += size > 1 && (*it < key);
-	it += size > 0 && (*it < key);
+	it += static_cast<size_t>(size > 1 && (*it < key));
+	it += static_cast<size_t>(size > 0 && (*it < key));
 	return it;
 }
 
 static inline auto mini2(size_t const* it, size_t size, size_t key) noexcept
 {
-	do
+	while (true)
 	{
 		BINARY_SEARCH_STEP;
 		BINARY_SEARCH_STEP;
+		if (size <= 2)
+		{
+			break;
+		}
 	}
-	while (size > 2);
-	it += size > 1 && (*it < key);
-	it += size > 0 && (*it < key);
+
+	it += static_cast<size_t>(size > 1 && (*it < key));
+	it += static_cast<size_t>(size > 0 && (*it < key));
 	return it;
 }
 
@@ -63,7 +70,7 @@ TEST_CASE("Lower bound")
 {
 	std::vector<size_t> vec{3, 20, 60, 400};
 
-	auto i = mini0(vec.data(), 3, 40);
+	const auto* i = mini0(vec.data(), 3, 40);
 	REQUIRE(i < vec.data() + vec.size());
 }
 
@@ -503,3 +510,5 @@ TEST_CASE("Test tuple expand delegate behavior", "[delegate]")
 	REQUIRE(static_cast<bool>(del) == true);
 	REQUIRE(del(10, 5) == 35);
 }
+
+// NOLINTEND

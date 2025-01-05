@@ -15,25 +15,27 @@ struct string_literal
 
 	constexpr string_literal(const char (&str)[N])
 	{
-		std::copy_n(str, N, value);
+		std::copy_n(static_cast<char const*>(str), N, static_cast<char*>(value_));
 	}
 
-	static constexpr std::uint32_t compute(char const* const s, std::size_t count)
+	static constexpr auto compute(char const* const s, std::size_t count) -> std::uint32_t
 	{
-		return ((count ? compute(s, count - 1) : 2166136261u) ^ static_cast<std::uint8_t>(s[count])) * 16777619u;
+		constexpr uint32_t prime_0 = 2166136261U;
+		constexpr uint32_t prime_1 = 16777619U;
+		return (((count != 0U) ? compute(s, count - 1) : prime_0) ^ static_cast<std::uint8_t>(s[count])) * prime_1;
 	}
 
-	constexpr inline std::uint32_t hash() const
+	[[nodiscard]] constexpr auto hash() const -> std::uint32_t
 	{
-		return compute(value, N - 1);
+		return compute(static_cast<char const*>(value_), N - 1);
 	}
 
-	inline constexpr operator std::string_view() const
+	constexpr operator std::string_view() const
 	{
-		return std::string_view(value, N - 1);
+		return {static_cast<char const*>(value_), N - 1};
 	}
 
-	char value[N];
+	char value_[N]{};
 };
 
 } // namespace acl

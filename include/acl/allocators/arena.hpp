@@ -5,22 +5,22 @@
 
 namespace acl::opt
 {
-template <std::size_t value>
+template <std::size_t Value>
 struct granularity
 {
-	static constexpr std::size_t granularity_v = value;
+	static constexpr std::size_t granularity_v = Value;
 };
 
-template <std::size_t value>
+template <std::size_t Value>
 struct max_bucket
 {
-	static constexpr std::size_t max_bucket_v = value;
+	static constexpr std::size_t max_bucket_v = Value;
 };
 
-template <std::size_t value>
+template <std::size_t Value>
 struct search_window
 {
-	static constexpr std::size_t search_window_v = value;
+	static constexpr std::size_t search_window_v = Value;
 };
 
 template <typename T>
@@ -29,10 +29,10 @@ struct fallback_start
 	using fallback_strat_t = T;
 };
 
-template <std::size_t value>
+template <std::size_t Value>
 struct fixed_max_per_slot
 {
-	static constexpr std::size_t fixed_max_per_slot_v = value;
+	static constexpr std::size_t fixed_max_per_slot_v = Value;
 };
 
 } // namespace acl::opt
@@ -73,77 +73,127 @@ template <typename T, typename D>
 using fallback_strat_t =
  typename std::conditional_t<HasFallbackStrat<T>, T, acl::opt::fallback_start<D>>::fallback_strat_t;
 
-template <typename usize_type, typename uextension>
+template <typename UsizeType, typename Uextension>
 struct arena
 {
-	using size_type = usize_type;
-	using list			= block_list<usize_type, uextension>;
+	using size_type = UsizeType;
+	using list			= block_list<UsizeType, Uextension>;
 
-	list							block_order;
-	detail::list_node order;
-	size_type					size = 0;
-	size_type					free = 0;
-	uhandle						data = detail::k_null_sz<uhandle>;
+	list							block_order_;
+	detail::list_node order_;
+	size_type					size_ = 0;
+	size_type					free_ = 0;
+	uhandle						data_ = detail::k_null_sz<uhandle>;
+
+	[[nodiscard]] auto block_count() const noexcept -> std::uint32_t
+	{
+		return block_order_.size();
+	}
+
+	[[nodiscard]] auto size() const noexcept -> std::uint32_t
+	{
+		return size_;
+	}
+
+	auto block_order() noexcept -> list&
+	{
+		return block_order_;
+	}
+
+	auto block_order() const noexcept -> list const&
+	{
+		return block_order_;
+	}
 };
 
-template <typename usize_type, typename uextension>
-using arena_bank = table<detail::arena<usize_type, uextension>, true>;
+template <typename UsizeType, typename Uextension>
+using arena_bank = table<detail::arena<UsizeType, Uextension>, true>;
 
-template <typename usize_type, typename uextension>
+template <typename UsizeType, typename Uextension>
 struct arena_accessor
 {
-	using value_type = arena<usize_type, uextension>;
-	using bank_type	 = arena_bank<usize_type, uextension>;
-	using size_type	 = usize_type;
+	using value_type = arena<UsizeType, Uextension>;
+	using bank_type	 = arena_bank<UsizeType, Uextension>;
+	using size_type	 = UsizeType;
 	using container	 = bank_type;
 
-	inline static void erase(bank_type& bank, std::uint32_t node)
+	static void erase(bank_type& bank, std::uint32_t node)
 	{
 		bank.erase(node);
 	}
 
-	inline static detail::list_node& node(bank_type& bank, std::uint32_t node)
+	static auto node(bank_type& bank, std::uint32_t node) -> detail::list_node&
 	{
-		return bank[node].order;
+		return bank[node].order_;
 	}
 
-	inline static detail::list_node const& node(bank_type const& bank, std::uint32_t node)
+	static auto node(bank_type const& bank, std::uint32_t node) -> detail::list_node const&
 	{
-		return bank[node].order;
+		return bank[node].order_;
 	}
 
-	inline static value_type const& get(bank_type const& bank, std::uint32_t node)
+	static auto get(bank_type const& bank, std::uint32_t node) -> value_type const&
 	{
 		return bank[node];
 	}
 
-	inline static value_type& get(bank_type& bank, std::uint32_t node)
+	static auto get(bank_type& bank, std::uint32_t node) -> value_type&
 	{
 		return bank[node];
 	}
 };
 
-template <typename usize_type, typename uextension>
-using arena_list = detail::vlist<arena_accessor<usize_type, uextension>>;
+template <typename UsizeType, typename Uextension>
+using arena_list = detail::vlist<arena_accessor<UsizeType, Uextension>>;
 
 using free_list = acl::vector<std::uint32_t>;
 
-template <typename usize_type, typename extension>
+template <typename UsizeType, typename Extension>
 struct bank_data
 {
-	using link = typename block_bank<usize_type, extension>::link;
-	block_bank<usize_type, extension> blocks;
-	arena_bank<usize_type, extension> arenas;
-	arena_list<usize_type, extension> arena_order;
-	usize_type												free_size = 0;
-	link															root_blk;
+	using link = typename block_bank<UsizeType, Extension>::link;
+	block_bank<UsizeType, Extension>	blocks_;
+	arena_bank<UsizeType, Extension>	arenas_;
+	arena_list<UsizeType, Extension>	arena_order_;
+	UsizeType													free_size_ = 0;
+	link															root_blk_;
 
-	bank_data()
+	bank_data() : root_blk_(blocks_.emplace())
 	{
 		// blocks 0 is sentinel
-		root_blk = blocks.emplace();
+
 		// arena 0 is sentinel
-		arenas.emplace();
+		arenas_.emplace();
+	}
+
+	auto blocks() -> block_bank<UsizeType, Extension>&
+	{
+		return blocks_;
+	}
+
+	auto blocks() const -> block_bank<UsizeType, Extension> const&
+	{
+		return blocks_;
+	}
+
+	auto arenas() -> arena_bank<UsizeType, Extension>&
+	{
+		return arenas_;
+	}
+
+	auto arenas() const -> arena_bank<UsizeType, Extension> const&
+	{
+		return arenas_;
+	}
+
+	auto free_size() -> UsizeType&
+	{
+		return free_size_;
+	}
+
+	auto free_size() const -> UsizeType
+	{
+		return free_size_;
 	}
 };
 

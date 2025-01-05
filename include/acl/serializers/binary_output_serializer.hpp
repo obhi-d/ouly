@@ -5,6 +5,7 @@
 #include <acl/utils/reflection_utils.hpp>
 #include <acl/utils/type_traits.hpp>
 #include <cassert>
+#include <limits>
 #include <memory>
 #include <optional>
 
@@ -19,66 +20,103 @@ concept BinaryOutputStream = requires(V v, std::size_t N) {
 template <BinaryOutputStream Serializer, std::endian Endian = std::endian::little>
 class binary_output_serializer
 {
-protected:
+private:
 	std::reference_wrapper<Serializer> ser_;
 
 	static constexpr bool has_fast_path = (Endian == std::endian::native);
 
 public:
-	binary_output_serializer(binary_output_serializer const&) noexcept = delete;
+	auto operator=(const binary_output_serializer&) -> binary_output_serializer& = default;
+	auto operator=(binary_output_serializer&&) -> binary_output_serializer&			 = default;
+	binary_output_serializer(binary_output_serializer const&) noexcept					 = default;
 	binary_output_serializer(binary_output_serializer&& i_other) noexcept : ser_(i_other.ser_) {}
-	inline binary_output_serializer(Serializer& ser) noexcept : ser_(ser) {}
+	binary_output_serializer(Serializer& ser) noexcept : ser_(ser) {}
+	~binary_output_serializer() noexcept = default;
 
 	template <typename Class>
-	inline auto& operator<<(Class& obj)
+	auto operator<<(Class& obj) -> auto&
 	{
 		write(obj);
 		return *this;
 	}
 
 	template <typename Class>
-	inline void write(Class const& obj) noexcept
+	void write(Class const& obj) noexcept
 	{
 		// Ensure ordering with multiple matches
 		if constexpr (detail::BoundClass<Class>)
+		{
 			write_bound_class(obj);
+		}
 		else if constexpr (detail::OutputSerializableClass<Class, Serializer>)
+		{
 			write_serializable(obj);
+		}
 		else if constexpr (detail::TransformToStringView<Class>)
+		{
 			write_string_view_transformable(obj);
+		}
 		else if constexpr (detail::TransformToString<Class>)
+		{
 			write_string_transformable(obj);
+		}
 		else if constexpr (detail::TupleLike<Class>)
+		{
 			write_tuple(obj);
+		}
 		else if constexpr (detail::ContainerLike<Class>)
+		{
 			write_container(obj);
+		}
 		else if constexpr (detail::VariantLike<Class>)
+		{
 			write_variant(obj);
+		}
 		else if constexpr (detail::CastableToStringView<Class>)
+		{
 			write_string_view_castable(obj);
+		}
 		else if constexpr (detail::CastableToString<Class>)
+		{
 			write_string_castable(obj);
+		}
 		else if constexpr (detail::ContainerIsStringLike<Class>)
+		{
 			write_string(obj);
+		}
 		else if constexpr (detail::BoolLike<Class>)
+		{
 			write_bool(obj);
+		}
 		else if constexpr (detail::IntegerLike<Class>)
+		{
 			write_integer(obj);
+		}
 		else if constexpr (detail::EnumLike<Class>)
+		{
 			write_enum(obj);
+		}
 		else if constexpr (detail::FloatLike<Class>)
+		{
 			write_float(obj);
+		}
 		else if constexpr (detail::PointerLike<Class>)
+		{
 			write_pointer(obj);
+		}
 		else if constexpr (detail::OptionalLike<Class>)
+		{
 			write_optional(obj);
+		}
 		else if constexpr (detail::MonostateLike<Class>)
+		{
 			write_monostate(obj);
+		}
 		else
 		{
-			[]<bool flag = false>()
+			[]<bool Flag = false>()
 			{
-				static_assert(flag, "This type is not serializable");
+				static_assert(Flag, "This type is not serializable");
 			}();
 		}
 	}
@@ -104,8 +142,9 @@ private:
 	void write_tuple(Class const& obj) noexcept
 	{
 		constexpr auto tup_size = std::tuple_size_v<Class>;
-		static_assert(tup_size < 256, "Tuple is too big, please customize the serailization!");
-		uint8_t size = static_cast<uint8_t>(tup_size);
+		static_assert(tup_size < std::numeric_limits<uint8_t>::max(),
+									"Tuple is too big, please customize the serailization!");
+		auto size = static_cast<uint8_t>(tup_size);
 		write(size);
 
 		[this, &obj]<std::size_t... N>(std::index_sequence<N...>)
@@ -120,7 +159,7 @@ private:
 		constexpr uint32_t h = type_hash<Class>();
 		write(h);
 		// Invalid type is unexpected
-		uint32_t count = static_cast<uint32_t>(obj.size());
+		auto count = static_cast<uint32_t>(obj.size());
 		write(count);
 		if constexpr (detail::LinearArrayLike<Class, Serializer> && has_fast_path)
 		{
@@ -183,7 +222,9 @@ private:
 	void write_integer(Class obj) noexcept
 	{
 		if constexpr (has_fast_path)
+		{
 			get().write(&obj, sizeof(obj));
+		}
 		else
 		{
 			obj = detail::byteswap(obj);
@@ -196,7 +237,9 @@ private:
 	{
 		using type = std::underlying_type_t<Class>;
 		if constexpr (has_fast_path)
+		{
 			get().write(&obj, sizeof(obj));
+		}
 		else
 		{
 			auto data = static_cast<type>(obj);
@@ -208,24 +251,37 @@ private:
 	void write_float(float obj) noexcept
 	{
 		if constexpr (has_fast_path)
+		{
 			get().write(&obj, sizeof(obj));
+		}
 		else
 		{
-			auto& ref = (uint32_t&)obj;
-			ref				= detail::byteswap(ref);
-			get().write(&ref, sizeof(ref));
+
+			union
+			{
+				float		 val_;
+				uint32_t ref_;
+			} data		= {obj};
+			data.ref_ = detail::byteswap(data.ref_);
+			get().write(&data.ref_, sizeof(data.ref_));
 		}
 	}
 
 	void write_float(double obj) noexcept
 	{
 		if constexpr (has_fast_path)
+		{
 			get().write(&obj, sizeof(obj));
+		}
 		else
 		{
-			auto& ref = (uint64_t&)obj;
-			ref				= detail::byteswap(ref);
-			get().write(&ref, sizeof(ref));
+			union
+			{
+				double	 val_;
+				uint64_t ref_;
+			} data		= {obj};
+			data.ref_ = detail::byteswap(data.ref_);
+			get().write(&data.ref_, sizeof(data.ref_));
 		}
 	}
 
@@ -235,7 +291,9 @@ private:
 		bool is_null = !(bool)(obj);
 		write(is_null);
 		if (obj)
+		{
 			write(*obj);
+		}
 	}
 
 	template <detail::OptionalLike Class>
@@ -244,7 +302,9 @@ private:
 		bool is_null = !(bool)obj;
 		write(is_null);
 		if (obj)
+		{
 			write(*obj);
+		}
 	}
 
 	template <detail::MonostateLike Class>
@@ -253,25 +313,25 @@ private:
 
 public:
 	template <typename Class, typename Decl, std::size_t I>
-	inline void operator()(Class const& obj, Decl const& decl, std::integral_constant<std::size_t, I>) noexcept
+	void operator()(Class const& obj, Decl const& decl, std::integral_constant<std::size_t, I> /*unused*/) noexcept
 	{
 		write(decl.value(obj));
 	}
 
 private:
-	inline void write_string(std::string_view sv)
+	void write_string(std::string_view sv)
 	{
-		uint32_t length = static_cast<uint32_t>(sv.length());
+		auto length = static_cast<uint32_t>(sv.length());
 		write(length);
 		get().write(sv.data(), length);
 	}
 
-	inline auto& get() noexcept
+	auto get() noexcept -> auto&
 	{
 		return ser_.get();
 	}
 
-	inline auto const& get() const noexcept
+	auto get() const noexcept -> auto const&
 	{
 		return ser_.get();
 	}

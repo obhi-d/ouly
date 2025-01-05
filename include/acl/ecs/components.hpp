@@ -99,25 +99,25 @@ private:
 	using key_index = std::conditional_t<has_direct_mapping, std::monostate, detail::indirection_type<key_index_traits>>;
 
 public:
-	inline components() noexcept {}
-	inline components(allocator_type&& alloc) noexcept : allocator_type(std::move<allocator_type>(alloc)) {}
-	inline components(allocator_type const& alloc) noexcept : allocator_type(alloc) {}
-	inline components(components&& other) noexcept
+	components() noexcept = default;
+	components(allocator_type&& alloc) noexcept : allocator_type(std::move<allocator_type>(alloc)) {}
+	components(allocator_type const& alloc) noexcept : allocator_type(alloc) {}
+	components(components&& other) noexcept
 	{
 		*this = std::move(other);
 	}
-	inline components(components const& other) noexcept
+	components(components const& other) noexcept
 		requires(std::is_copy_constructible_v<value_type>)
 	{
 		*this = other;
 	}
-	inline ~components()
+	~components()
 	{
 		clear();
 		shrink_to_fit();
 	}
 
-	components& operator=(components&& other) noexcept
+	auto operator=(components&& other) noexcept -> components&
 	{
 		clear();
 		shrink_to_fit();
@@ -128,9 +128,7 @@ public:
 		return *this;
 	}
 
-	components& operator=(components const& other) noexcept
-		requires(std::is_copy_constructible_v<value_type>)
-	{
+	auto operator=(components const& other) noexcept -> components& requires(std::is_copy_constructible_v<value_type>) {
 		clear();
 		shrink_to_fit();
 
@@ -184,7 +182,7 @@ public:
 	/**
 	 * @brief Returns size of packed array
 	 */
-	size_type size() const noexcept
+	auto size() const noexcept -> size_type
 	{
 		return (size_type)values_.size();
 	}
@@ -192,17 +190,17 @@ public:
 	/**
 	 * @brief Valid range that can be iterated over
 	 */
-	size_type range() const noexcept
+	auto range() const noexcept -> size_type
 	{
 		return (size_type)values_.size();
 	}
 
-	vector_type& data()
+	auto data() -> vector_type&
 	{
 		return values_;
 	}
 
-	vector_type const& data() const
+	auto data() const -> vector_type const&
 	{
 		return values_;
 	}
@@ -211,7 +209,7 @@ public:
 	 * @brief Construct an item in a given location, assuming the location was empty
 	 */
 	template <typename... Args>
-	reference emplace_at(entity_type point, Args&&... args) noexcept
+	auto emplace_at(entity_type point, Args&&... args) noexcept -> reference
 	{
 		if constexpr (has_direct_mapping)
 		{
@@ -228,19 +226,21 @@ public:
 				self_.get(values_.back()) = point.value();
 			}
 			else
+			{
 				self_.ensure_at(k) = point.value();
+			}
 
 			return values_.back();
 		}
 	}
 
-	size_type key(entity_type point) const noexcept
+	auto key(entity_type point) const noexcept -> size_type
 		requires(!has_direct_mapping)
 	{
 		return keys_.get_if(point.get());
 	}
 
-	auto const& keys() const noexcept
+	auto keys() const noexcept -> auto const&
 		requires(!has_direct_mapping)
 	{
 		return keys_;
@@ -249,7 +249,7 @@ public:
 	/**
 	 * @brief Construct/Replace an item in a given location, depending upon if the location was empty or not.
 	 */
-	reference replace(entity_type point, value_type&& args) noexcept
+	auto replace(entity_type point, value_type&& args) noexcept -> reference
 	{
 		if constexpr (has_direct_mapping)
 		{
@@ -269,14 +269,16 @@ public:
 				self_.get(val) = point.value();
 			}
 			else
+			{
 				self_.get(k) = point.value();
+			}
 			return val;
 		}
 	}
 	/**
 	 * @brief Construct/Retrieve reference to an item, if the location is empty, an item is default constructed
 	 */
-	reference get_ref(entity_type point) noexcept
+	auto get_ref(entity_type point) noexcept -> reference
 	{
 		if constexpr (has_direct_mapping)
 		{
@@ -302,7 +304,9 @@ public:
 	void erase(entity_type l) noexcept
 	{
 		if constexpr (detail::debug)
+		{
 			validate(l);
+		}
 		erase_at(l);
 	}
 
@@ -321,7 +325,7 @@ public:
 	 * @return optional value of the object
 	 */
 
-	optional_val find(entity_type lnk) noexcept
+	auto find(entity_type lnk) noexcept -> optional_val
 	{
 		return optional_val(sfind(*this, lnk));
 	}
@@ -331,7 +335,7 @@ public:
 	 * @return optional value of the object
 	 */
 
-	optional_cval find(entity_type lnk) const noexcept
+	auto find(entity_type lnk) const noexcept -> optional_cval
 	{
 		return optional_cval(sfind(*this, lnk));
 	}
@@ -340,7 +344,7 @@ public:
 	 * @brief Find an object associated with a entity, provided a default value to return if it is not found
 	 */
 
-	value_type find(entity_type lnk, value_type def) const noexcept
+	auto find(entity_type lnk, value_type def) const noexcept -> value_type
 	{
 		return sfind(*this, lnk, def);
 	}
@@ -348,7 +352,7 @@ public:
 	/**
 	 * @brief Drop unused pages
 	 */
-	inline void shrink_to_fit() noexcept
+	void shrink_to_fit() noexcept
 	{
 		values_.shrink_to_fit();
 		if constexpr (!has_direct_mapping)
@@ -361,7 +365,7 @@ public:
 	/**
 	 * @brief Set size to 0, memory is not released, objects are destroyed
 	 */
-	inline void clear() noexcept
+	void clear() noexcept
 	{
 		values_.clear();
 		if constexpr (!has_direct_mapping)
@@ -371,39 +375,47 @@ public:
 		}
 	}
 
-	inline reference at(entity_type l) noexcept
+	auto at(entity_type l) noexcept -> reference
 	{
 		if constexpr (detail::debug)
+		{
 			validate(l);
+		}
 		return item_at(l.get());
 	}
 
-	inline const_reference at(entity_type l) const noexcept
+	auto at(entity_type l) const noexcept -> const_reference
 	{
 		if constexpr (detail::debug)
+		{
 			validate(l);
+		}
 		return item_at(l.get());
 	}
 
-	inline reference operator[](entity_type l) noexcept
+	auto operator[](entity_type l) noexcept -> reference
 	{
 		return at(l);
 	}
 
-	inline const_reference operator[](entity_type l) const noexcept
+	auto operator[](entity_type l) const noexcept -> const_reference
 	{
 		return at(l);
 	}
 
-	inline bool contains(entity_type l) const noexcept
+	auto contains(entity_type l) const noexcept -> bool
 	{
 		auto idx = l.get();
 		if constexpr (has_direct_mapping)
 		{
 			if constexpr (has_sparse_storage)
+			{
 				return values_.contains(idx);
+			}
 			else
+			{
 				return idx < values_.size();
+			}
 		}
 		else
 		{
@@ -411,20 +423,24 @@ public:
 			{
 				auto val = keys_.get(idx);
 				if constexpr (has_self_index)
+				{
 					return self_.get(values_[val]) == l.value();
+				}
 				else
+				{
 					return self_.get(val) == l.value();
+				}
 			}
 		}
 		return false;
 	}
 
-	inline bool empty() const noexcept
+	[[nodiscard]] auto empty() const noexcept -> bool
 	{
 		return values_.empty();
 	}
 
-	inline void validate_integrity() const
+	void validate_integrity() const
 	{
 		if constexpr (has_direct_mapping)
 		{
@@ -433,36 +449,44 @@ public:
 		{
 			for (size_type first = 0, last = size(); first < last; ++first)
 			{
-				ACL_ASSERT(keys_.get(entity_type(get_ref_at_idx(first)).get()) == first);
+				assert(keys_.get(entity_type(get_ref_at_idx(first)).get()) == first);
 			}
 
 			for (size_type i = 0; i < keys_.size(); ++i)
 			{
 				if (keys_.contains(i))
 				{
-					ACL_ASSERT(keys_.get(i) < values_.size());
+					assert(keys_.get(i) < values_.size());
 				}
 			}
 		}
 	}
 
-	inline reference item_at(size_type l) noexcept
+	auto item_at(size_type l) noexcept -> reference
 	{
 		if constexpr (has_direct_mapping)
+		{
 			return values_.at(l);
+		}
 		else
+		{
 			return item_at_idx(keys_.get(l));
+		}
 	}
 
-	inline const_reference item_at(size_type l) const noexcept
+	auto item_at(size_type l) const noexcept -> const_reference
 	{
 		if constexpr (has_direct_mapping)
+		{
 			return values_.at(l);
+		}
 		else
+		{
 			return item_at_idx(keys_.get(l));
+		}
 	}
 
-	inline void set_max(size_type size)
+	void set_max(size_type size)
 	{
 		if constexpr (has_direct_mapping)
 		{
@@ -475,8 +499,8 @@ public:
 
 private:
 	template <typename T>
-	static auto sfind(T&					cont,
-										entity_type lnk) noexcept -> std::conditional_t<std::is_const_v<T>, value_type const*, value_type*>
+	static auto sfind(T& cont, entity_type lnk) noexcept
+	 -> std::conditional_t<std::is_const_v<T>, value_type const*, value_type*>
 	{
 		if constexpr (has_direct_mapping)
 		{
@@ -491,13 +515,17 @@ private:
 				{
 					auto& val = cont.values_[cont.keys_.get(idx)];
 					if (cont.self_.get(val) == lnk.value())
+					{
 						return &val;
+					}
 				}
 				else
 				{
 					auto val_idx = cont.keys_.get(idx);
 					if (cont.self_.get(val_idx) == lnk.value())
+					{
 						return &cont.values_[val_idx];
+					}
 				}
 			}
 		}
@@ -520,63 +548,67 @@ private:
 				{
 					auto& val = cont.values_[cont.keys_.get(idx)];
 					if (cont.self_.get(val) == lnk.value())
+					{
 						return val;
+					}
 				}
 				else
 				{
 					auto val_idx = cont.keys_.get(idx);
 					if (cont.self_.get(val_idx) == lnk.value())
+					{
 						return cont.values_[val_idx];
+					}
 				}
 			}
 			return def;
 		}
 	}
 
-	inline void validate(entity_type l) const noexcept
+	void validate(entity_type l) const noexcept
 	{
 		if constexpr (has_direct_mapping)
 		{
-			ACL_ASSERT(get_if(values_, l.get()));
+			assert(get_if(values_, l.get()));
 		}
 		else
 		{
 			auto lnk	= l.get();
 			auto idx	= keys_.get(lnk);
 			auto self = get_ref_at_idx(idx);
-			ACL_ASSERT(self == l.value());
+			assert(self == l.value());
 		}
 	}
 
-	inline auto get_ref_at_idx(size_type idx) const noexcept
+	auto get_ref_at_idx(size_type idx) const noexcept
 		requires(has_direct_mapping && !has_self_index)
 	{
 		return idx;
 	}
 
-	inline auto get_ref_at_idx(size_type idx) const noexcept
+	auto get_ref_at_idx(size_type idx) const noexcept
 		requires(!has_self_index && !has_direct_mapping)
 	{
 		return self_.get(idx);
 	}
 
-	inline auto get_ref_at_idx(size_type idx) const noexcept
+	auto get_ref_at_idx(size_type idx) const noexcept
 		requires(has_self_index)
 	{
 		return self_.get(item_at_idx(idx));
 	}
 
-	inline reference item_at_idx(size_type item_id) noexcept
+	auto item_at_idx(size_type item_id) noexcept -> reference
 	{
 		return values_[item_id];
 	}
 
-	inline const_reference item_at_idx(size_type item_id) const noexcept
+	auto item_at_idx(size_type item_id) const noexcept -> const_reference
 	{
 		return values_[item_id];
 	}
 
-	inline void erase_at(entity_type l) noexcept
+	void erase_at(entity_type l) noexcept
 	{
 		if constexpr (has_direct_mapping)
 		{
@@ -592,9 +624,13 @@ private:
 			if (&back != &lb)
 			{
 				if constexpr (has_self_index)
+				{
 					keys_.get(entity_type(self_.get(back)).get()) = item_id;
+				}
 				else
+				{
 					keys_.get(entity_type(self_.best_erase(item_id)).get()) = item_id;
+				}
 
 				if constexpr (acl::detail::is_tuple<value_type>::value)
 				{
@@ -605,12 +641,16 @@ private:
 					}(std::make_index_sequence<std::tuple_size_v<value_type>>());
 				}
 				else
+				{
 					lb = std::move(back);
+				}
 			}
 			else
 			{
 				if constexpr (!has_self_index)
+				{
 					self_.pop_back();
+				}
 			}
 
 			values_.pop_back();
@@ -622,40 +662,48 @@ private:
 	 * @tparam Lambda Lambda should accept value_type& parameter
 	 */
 	template <typename Lambda>
-	inline void for_each_l(Lambda&& lambda) noexcept
+	void for_each_l(Lambda&& lambda) noexcept
 	{
 		for_each_l<Lambda>(0, static_cast<size_type>(values_.size()), std::forward<Lambda>(lambda));
 	}
 
 	template <typename Lambda>
-	inline void for_each_l(Lambda&& lambda) const noexcept
+	void for_each_l(Lambda&& lambda) const noexcept
 	{
 		for_each_l<Lambda>(0, static_cast<size_type>(values_.size()), std::forward<Lambda>(lambda));
 	}
 
 	template <typename Lambda>
-	inline void for_each_l(size_type first, size_type last, Lambda&& lambda) noexcept
+	void for_each_l(size_type first, size_type last, Lambda lambda) noexcept
 	{
 		constexpr auto arity = function_traits<Lambda>::arity;
 		for (; first != last; ++first)
 		{
 			if constexpr (arity == 2)
+			{
 				lambda(entity_type(get_ref_at_idx(first)), values_[first]);
+			}
 			else
+			{
 				lambda(values_[first]);
+			}
 		}
 	}
 
 	template <typename Lambda>
-	inline void for_each_l(size_type first, size_type last, Lambda&& lambda) const noexcept
+	void for_each_l(size_type first, size_type last, Lambda lambda) const noexcept
 	{
 		constexpr auto arity = function_traits<Lambda>::arity;
 		for (; first != last; ++first)
 		{
 			if constexpr (arity == 2)
+			{
 				lambda(entity_type(get_ref_at_idx(first)), values_[first]);
+			}
 			else
+			{
 				lambda(values_[first]);
+			}
 		}
 	}
 

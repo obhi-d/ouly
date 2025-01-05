@@ -3,6 +3,7 @@
 #include <catch2/catch_all.hpp>
 #include <unordered_map>
 
+// NOLINTBEGIN
 TEST_CASE("Validate basic expressions", "[microexpr]")
 {
 	std::unordered_map<std::string_view, int> table = {
@@ -50,3 +51,4 @@ TEST_CASE("Validate basic expressions", "[microexpr]")
 	REQUIRE(expr.evaluate("SECOND / (FIFTH) > 5 ? 0 : 1") == true);
 	REQUIRE(expr.evaluate("SECOND / (SECOND * FIFTH) > 5 ? 0 : 1") == true);
 }
+// NOLINTEND

@@ -4,30 +4,31 @@
 #include <iostream>
 #include <unordered_set>
 
+// NOLINTBEGIN
 struct alloc_mem_manager
 {
 	using arena_data_t = std::vector<char>;
 	struct allocation
 	{
-		acl::allocation_id alloc_id;
-		acl::arena_id			 arena;
-		std::size_t				 offset;
-		std::size_t				 size = 0;
-		allocation()						= default;
-		allocation(acl::allocation_id id, acl::arena_id arena, std::size_t ioffset, std::size_t isize)
-				: alloc_id(id), arena(arena), offset(ioffset), size(isize)
+		acl::allocation_id alloc_id_;
+		acl::arena_id			 arena_;
+		std::size_t				 offset_;
+		std::size_t				 size_ = 0;
+		allocation()						 = default;
+		allocation(acl::allocation_id id, acl::arena_id arena_, std::size_t ioffset, std::size_t isize)
+				: alloc_id_(id), arena_(arena_), offset_(ioffset), size_(isize)
 		{}
 	};
 
-	std::vector<arena_data_t> arenas;
-	std::vector<arena_data_t> backup_arenas;
-	std::vector<allocation>		allocs;
-	std::vector<allocation>		backup_allocs;
-	uint32_t									arena_count = 0;
+	std::vector<arena_data_t> arenas_;
+	std::vector<arena_data_t> backup_arenas_;
+	std::vector<allocation>		allocs_;
+	std::vector<allocation>		backup_allocs_;
+	uint32_t									arena_count_ = 0;
 
 	bool drop_arena([[maybe_unused]] acl::uhandle id)
 	{
-		arenas[id].clear();
+		arenas_[id].clear();
 		return true;
 	}
 
@@ -35,26 +36,26 @@ struct alloc_mem_manager
 	{
 		std::minstd_rand									 gen;
 		std::uniform_int_distribution<int> generator(65, 122);
-		for (std::size_t s = 0; s < l.size; ++s)
-			arenas[l.arena.id][s + l.offset] = static_cast<char>(generator(gen));
+		for (std::size_t s = 0; s < l.size_; ++s)
+			arenas_[l.arena_.get()][s + l.offset_] = static_cast<char>(generator(gen));
 	}
 
-	void add([[maybe_unused]] acl::arena_id id, [[maybe_unused]] uint32_t size)
+	void add([[maybe_unused]] acl::arena_id id, [[maybe_unused]] uint32_t size_)
 	{
-		arena_data_t arena;
-		arena.resize(size, 0x17);
-		if (id.id >= arenas.size())
-			arenas.resize(id.id + 1);
+		arena_data_t arena_;
+		arena_.resize(size_, 0x17);
+		if (id.get() >= arenas_.size())
+			arenas_.resize(id.get() + 1);
 
-		arenas[id.id] = std::move(arena);
-		arena_count++;
+		arenas_[id.get()] = std::move(arena_);
+		arena_count_++;
 	}
 
 	void remove(acl::arena_id h)
 	{
-		arenas[h.id].clear();
-		arenas[h.id].shrink_to_fit();
-		arena_count--;
+		arenas_[h.get()].clear();
+		arenas_[h.get()].shrink_to_fit();
+		arena_count_--;
 	}
 };
 
@@ -84,27 +85,27 @@ TEST_CASE("coalescing_arena_allocator all tests", "[coalescing_arena_allocator][
 	acl::coalescing_arena_allocator allocator;
 	allocator.set_arena_size(page_size);
 
-	for (std::uint32_t allocs = 0; allocs < 10000; ++allocs)
+	for (std::uint32_t allocs_ = 0; allocs_ < 10000; ++allocs_)
 	{
-		if ((xorshift(seed) & 0x1) || mgr.allocs.empty())
+		if ((xorshift(seed) & 0x1) || mgr.allocs_.empty())
 		{
-			auto size	 = xorshift(seed) % page_size;
-			auto alloc = allocator.allocate(size, mgr);
-			mgr.allocs.emplace_back(alloc.id, alloc.arena, alloc.offset, size);
-			mgr.fill(mgr.allocs.back());
+			auto size_ = xorshift(seed) % page_size;
+			auto alloc = allocator.allocate(size_, mgr);
+			mgr.allocs_.emplace_back(alloc.get_allocation_id(), alloc.get_arena_id(), alloc.get_offset(), size_);
+			mgr.fill(mgr.allocs_.back());
 		}
 		else
 		{
-			std::size_t chosen = xorshift(seed) % mgr.allocs.size();
-			auto				handle = mgr.allocs[chosen];
-			allocator.deallocate(handle.alloc_id, mgr);
-			mgr.allocs.erase(chosen + mgr.allocs.begin());
+			std::size_t chosen = xorshift(seed) % mgr.allocs_.size();
+			auto				handle = mgr.allocs_[chosen];
+			allocator.deallocate(handle.alloc_id_, mgr);
+			mgr.allocs_.erase(chosen + mgr.allocs_.begin());
 		}
 		allocator.validate_integrity();
 	}
 }
 
-TEST_CASE("coalescing_arena_allocator dedictated arena tests", "[coalescing_arena_allocator][default]")
+TEST_CASE("coalescing_arena_allocator dedictated arena_ tests", "[coalescing_arena_allocator][default]")
 {
 	acl::coalescing_arena_allocator allocator;
 	constexpr uint32_t							page_size = 100;
@@ -118,25 +119,25 @@ TEST_CASE("coalescing_arena_allocator dedictated arena tests", "[coalescing_aren
 	alloc_mem_manager mgr;
 	auto							block = allocator.allocate(50, mgr);
 
-	REQUIRE(block.offset == 0);
+	REQUIRE(block.get_offset() == 0);
 
 	auto ded_block = allocator.allocate(10, mgr, {}, std::true_type{});
-	REQUIRE(ded_block.arena.id == 2);
+	REQUIRE(ded_block.get_arena_id().get() == 2);
 
-	REQUIRE(mgr.arena_count == 2);
+	REQUIRE(mgr.arena_count_ == 2);
 
-	allocator.deallocate(ded_block.id, mgr);
+	allocator.deallocate(ded_block.get_allocation_id(), mgr);
 
-	REQUIRE(mgr.arena_count == 1);
+	REQUIRE(mgr.arena_count_ == 1);
 }
 
 TEST_CASE("coalescing_allocator without memory manager", "[coalescing_allocator][default]")
 {
 	acl::coalescing_allocator allocator;
-	auto											offset = allocator.allocate(256);
-	REQUIRE(offset == 0);
+	auto											offset_ = allocator.allocate(256);
+	REQUIRE(offset_ == 0);
 	auto noffset = allocator.allocate(256);
-	REQUIRE(offset + 256 == noffset);
+	REQUIRE(offset_ + 256 == noffset);
 	allocator.deallocate(0, 256);
 	auto toffset = allocator.allocate(256);
 	REQUIRE(toffset == 0);
@@ -152,3 +153,4 @@ TEST_CASE("coalescing_allocator without memory manager", "[coalescing_allocator]
 	auto xoffset = allocator.allocate(256 + 16 + 60);
 	REQUIRE(xoffset == soffset);
 }
+// NOLINTEND

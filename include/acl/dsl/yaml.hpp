@@ -15,17 +15,23 @@ namespace acl::yaml
 
 struct string_slice
 {
-	uint32_t start = 0;
-	uint32_t count = 0;
+	uint32_t start_ = 0;
+	uint32_t count_ = 0;
 
 	auto operator<=>(string_slice const&) const = default;
 };
 
-using string_slice_array = acl::small_vector<string_slice, 8>;
+constexpr uint32_t small_buffer_size = 8;
+using string_slice_array						 = acl::small_vector<string_slice, small_buffer_size>;
 
 class context
 {
 public:
+	context() noexcept														 = default;
+	context(const context&)												 = default;
+	context(context&&) noexcept										 = delete;
+	auto operator=(const context&) -> context&		 = default;
+	auto operator=(context&&) noexcept -> context& = delete;
 	virtual ~context() noexcept										 = default;
 	virtual void begin_array()										 = 0;
 	virtual void end_array()											 = 0;
@@ -37,7 +43,7 @@ public:
 class istream
 {
 public:
-	inline explicit istream(std::string_view content) : content_(content) {}
+	explicit istream(std::string_view content) : content_(content) {}
 
 	// Main parse function that processes the YAML content
 	void parse();
@@ -83,18 +89,18 @@ private:
 
 	struct token
 	{
-		token_type	 type = token_type::eof;
-		string_slice content;
+		token_type	 type_ = token_type::eof;
+		string_slice content_;
 
-		inline operator bool() const noexcept
+		operator bool() const noexcept
 		{
-			return type != token_type::eof;
+			return type_ != token_type::eof;
 		}
 	};
 
 	// Token processing
-	token next_token();
-	void	process_token(token tok);
+	auto next_token() -> token;
+	void process_token(token tok);
 	// Context management
 	void handle_indent(uint16_t new_indent);
 	void handle_key(string_slice key);
@@ -105,19 +111,19 @@ private:
 	void close_context(uint16_t new_indent);
 
 	// Utility functions
-	std::string_view get_view(string_slice slice) const
+	[[nodiscard]] auto get_view(string_slice slice) const -> std::string_view
 	{
-		return content_.substr(slice.start, slice.count);
+		return content_.substr(slice.start_, slice.count_);
 	}
 
-	string_slice count_indent()
+	auto count_indent() -> string_slice
 	{
 		auto start = current_pos_;
 		while (current_pos_ < content_.length() && (content_[current_pos_] == ' ' || content_[current_pos_] == '\t'))
 		{
 			current_pos_++;
 		}
-		return {start, static_cast<uint32_t>(current_pos_ - start)};
+		return {.start_ = start, .count_ = (current_pos_ - start)};
 	}
 
 	void skip_whitespace()
@@ -128,48 +134,50 @@ private:
 		}
 	}
 
-	char peek(uint32_t offset) const
+	[[nodiscard]] auto peek(uint32_t offset) const -> char
 	{
 		return (current_pos_ + offset < content_.length()) ? content_[current_pos_ + offset] : '\0';
 	}
 
-	string_slice get_current_line()
+	auto get_current_line() -> string_slice
 	{
 		auto start = current_pos_;
 		while (current_pos_ < content_.length() && content_[current_pos_] != '\n')
 		{
 			current_pos_++;
 		}
-		return {start, static_cast<uint32_t>(current_pos_ - start)};
+		return {.start_ = start, .count_ = (current_pos_ - start)};
 	}
 
-	container_type pop_indent()
+	auto pop_indent() -> container_type
 	{
 		if (indent_stack_.empty())
+		{
 			return container_type::none;
+		}
 		auto top = indent_stack_.back();
 		indent_stack_.pop_back();
-		return top.type;
+		return top.type_;
 	}
 
 	void close_last_context();
 
-private:
-	inline void throw_error(token token, std::string_view error) const
+	void throw_error(token token, std::string_view error) const
 	{
 		throw std::runtime_error(
-		 std::format("parse-error @{} : (around {}) - {}", token.content.start, get_view(token.content), error));
+		 std::format("parse-error @{} : (around {}) - {}", token.content_.start_, get_view(token.content_), error));
 	}
 
 	struct indent_entry
 	{
-		uint16_t			 indent = 0;
-		container_type type		= container_type::none;
+		uint16_t			 indent_ = 0;
+		container_type type_	 = container_type::none;
 	};
 
-	std::string_view							content_;
-	small_vector<indent_entry, 8> indent_stack_;
-	small_vector<string_slice, 8> block_lines_;
+	std::string_view content_;
+
+	small_vector<indent_entry, small_buffer_size> indent_stack_;
+	small_vector<string_slice, small_buffer_size> block_lines_;
 
 	context*		ctx_								 = nullptr;
 	parse_state state_							 = parse_state::none;

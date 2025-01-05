@@ -12,17 +12,22 @@ namespace acl
 
 using scheduler_worker_entry = std::function<void(worker_desc)>;
 
+static constexpr uint32_t default_logical_task_divisior = 64;
 class scheduler
 {
 
 public:
 	static constexpr uint32_t work_scale = 4;
 
-	ACL_API scheduler() noexcept = default;
-	ACL_API ~scheduler() noexcept;
+	ACL_API scheduler() noexcept									 = default;
+	ACL_API scheduler(const scheduler&)						 = delete;
+	scheduler(scheduler&&)												 = delete;
+	auto operator=(const scheduler&) -> scheduler& = delete;
+	auto operator=(scheduler&&) -> scheduler&			 = delete;
+	~scheduler() noexcept;
 
 	template <CoroutineTask C>
-	inline void submit(worker_id src, workgroup_id group, C const& task_obj) noexcept
+	void submit(worker_id src, workgroup_id group, C const& task_obj) noexcept
 	{
 		submit(src, group,
 					 detail::work_item::pbind(
@@ -35,25 +40,25 @@ public:
 
 	template <typename Lambda>
 		requires(detail::Callable<Lambda, acl::worker_context const&>)
-	inline void submit(worker_id src, workgroup_id group, Lambda&& data) noexcept
+	void submit(worker_id src, workgroup_id group, Lambda&& data) noexcept
 	{
-		submit(src, group, detail::work_item::pbind(data, group));
+		submit(src, group, detail::work_item::pbind(std::forward<Lambda>(data), group));
 	}
 
 	template <auto M, typename Class>
-	inline void submit(worker_id src, workgroup_id group, Class& ctx) noexcept
+	void submit(worker_id src, workgroup_id group, Class& ctx) noexcept
 	{
 		submit(src, group, detail::work_item::pbind<M>(ctx, group));
 	}
 
 	template <auto M>
-	inline void submit(worker_id src, workgroup_id group) noexcept
+	void submit(worker_id src, workgroup_id group) noexcept
 	{
 		submit(src, group, detail::work_item::pbind<M>(group));
 	}
 
 	template <typename... Args>
-	inline void submit(worker_id src, workgroup_id group, task_delegate::fnptr callable, Args&&... args) noexcept
+	void submit(worker_id src, workgroup_id group, task_delegate::fnptr callable, Args&&... args) noexcept
 	{
 		submit(
 		 src, group,
@@ -61,7 +66,7 @@ public:
 	}
 
 	template <CoroutineTask C>
-	inline void submit(worker_id src, worker_id dst, workgroup_id group, C const& task_obj) noexcept
+	void submit(worker_id src, worker_id dst, workgroup_id group, C const& task_obj) noexcept
 	{
 		submit(src, dst,
 					 detail::work_item::pbind(
@@ -74,26 +79,25 @@ public:
 
 	template <typename Lambda>
 		requires(detail::Callable<Lambda, acl::worker_context const&>)
-	inline void submit(worker_id src, worker_id dst, workgroup_id group, Lambda&& data) noexcept
+	void submit(worker_id src, worker_id dst, workgroup_id group, Lambda&& data) noexcept
 	{
-		submit(src, dst, detail::work_item::pbind(data, group));
+		submit(src, dst, detail::work_item::pbind(std::forward<Lambda>(data), group));
 	}
 
 	template <auto M, typename Class>
-	inline void submit(worker_id src, worker_id dst, workgroup_id group, Class& ctx) noexcept
+	void submit(worker_id src, worker_id dst, workgroup_id group, Class& ctx) noexcept
 	{
 		submit(src, dst, detail::work_item::pbind<M>(ctx, group));
 	}
 
 	template <auto M>
-	inline void submit(worker_id src, worker_id dst, workgroup_id group) noexcept
+	void submit(worker_id src, worker_id dst, workgroup_id group) noexcept
 	{
 		submit(src, dst, detail::work_item::pbind<M>(group));
 	}
 
 	template <typename... Args>
-	inline void submit(worker_id src, worker_id dst, workgroup_id group, task_delegate::fnptr callable,
-										 Args&&... args) noexcept
+	void submit(worker_id src, worker_id dst, workgroup_id group, task_delegate::fnptr callable, Args&&... args) noexcept
 	{
 		submit(
 		 src, dst,
@@ -124,9 +128,9 @@ public:
 	/**
 	 * @brief Get worker count in the scheduler
 	 */
-	inline uint32_t get_worker_count() const noexcept
+	[[nodiscard]] auto get_worker_count() const noexcept -> uint32_t
 	{
-		return worker_count;
+		return worker_count_;
 	}
 
 	/**
@@ -137,7 +141,7 @@ public:
 	 * @brief Get the next available group. Group priority controls if a thread is shared between multiple groups, which
 	 * group is executed first by the thread
 	 */
-	ACL_API workgroup_id create_group(uint32_t thread_offset, uint32_t thread_count, uint32_t priority = 0);
+	ACL_API auto create_group(uint32_t thread_offset, uint32_t thread_count, uint32_t priority = 0) -> workgroup_id;
 	/**
 	 * @brief Clear a group, and re-create it
 	 */
@@ -145,30 +149,30 @@ public:
 	/**
 	 * @brief Get worker count in this group
 	 */
-	inline uint32_t get_worker_count(workgroup_id g) const noexcept
+	[[nodiscard]] auto get_worker_count(workgroup_id g) const noexcept -> uint32_t
 	{
-		return workgroups[g.get_index()].thread_count;
+		return workgroups_[g.get_index()].thread_count_;
 	}
 
 	/**
 	 * @brief Get worker start index
 	 */
-	inline uint32_t get_worker_start_idx(workgroup_id g) const noexcept
+	[[nodiscard]] auto get_worker_start_idx(workgroup_id g) const noexcept -> uint32_t
 	{
-		return workgroups[g.get_index()].start_thread_idx;
+		return workgroups_[g.get_index()].start_thread_idx_;
 	}
 
 	/**
 	 * @brief Get worker d
 	 */
-	inline uint32_t get_logical_divisor(workgroup_id g) const noexcept
+	[[nodiscard]] auto get_logical_divisor(workgroup_id g) const noexcept -> uint32_t
 	{
-		return workgroups[g.get_index()].thread_count * work_scale;
+		return workgroups_[g.get_index()].thread_count_ * work_scale;
 	}
 
-	worker_context const& get_context(worker_id worker, workgroup_id group)
+	auto get_context(worker_id worker, workgroup_id group) -> worker_context const&
 	{
-		return workers[worker.get_index()].contexts[group.get_index()];
+		return workers_[worker.get_index()].contexts_[group.get_index()];
 	}
 
 	/**
@@ -176,33 +180,33 @@ public:
 	 * scheduler
 	 */
 	ACL_API void take_ownership() noexcept;
-	ACL_API void busy_work(worker_id) noexcept;
+	ACL_API void busy_work(worker_id /*thread*/) noexcept;
 
 private:
-	void							finish_pending_tasks() noexcept;
-	inline void				do_work(worker_id, detail::work_item&) noexcept;
-	void							wake_up(worker_id) noexcept;
-	void							run(worker_id);
-	detail::work_item get_work(worker_id) noexcept;
+	void				finish_pending_tasks() noexcept;
+	inline void do_work(worker_id /*thread*/, detail::work_item& /*work*/) noexcept;
+	void				wake_up(worker_id /*thread*/) noexcept;
+	void				run(worker_id /*thread*/);
+	auto				get_work(worker_id /*thread*/) noexcept -> detail::work_item;
 
-	bool work(worker_id) noexcept;
+	auto work(worker_id /*thread*/) noexcept -> bool;
 
-	scheduler_worker_entry entry_fn;
+	scheduler_worker_entry entry_fn_;
 	// Work groups
-	std::vector<detail::workgroup> workgroups;
+	std::vector<detail::workgroup> workgroups_;
 	// Workers present in the scheduler
-	std::unique_ptr<detail::worker[]> workers;
+	std::unique_ptr<detail::worker[]> workers_;
 	// Local cache for work items, until they are pushed into global queue
-	std::unique_ptr<detail::work_item[]> local_work;
+	std::unique_ptr<detail::work_item[]> local_work_;
 	// Global work items
-	std::unique_ptr<detail::group_range[]> group_ranges;
-	std::unique_ptr<std::atomic_bool[]>		 wake_status;
-	std::unique_ptr<detail::wake_event[]>	 wake_events;
-	std::vector<std::thread>							 threads;
+	std::unique_ptr<detail::group_range[]> group_ranges_;
+	std::unique_ptr<std::atomic_bool[]>		 wake_status_;
+	std::unique_ptr<detail::wake_event[]>	 wake_events_;
+	std::vector<std::thread>							 threads_;
 
-	uint32_t				 worker_count					= 0;
-	uint32_t				 logical_task_divisor = 32;
-	std::atomic_bool stop									= false;
+	uint32_t				 worker_count_				 = 0;
+	uint32_t				 logical_task_divisor_ = default_logical_task_divisior;
+	std::atomic_bool stop_								 = false;
 };
 
 template <typename... Args>

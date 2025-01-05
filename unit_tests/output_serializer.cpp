@@ -11,6 +11,7 @@
 
 using json = nlohmann::json;
 
+// NOLINTBEGIN
 class Serializer
 {
 public:
@@ -522,3 +523,4 @@ struct UnserializableClass
 
 static_assert(acl::Serializable<SerializableClass>, "Is not streamble");
 static_assert(!acl::Serializable<UnserializableClass>, "Is streamble");
+// NOLINTEND

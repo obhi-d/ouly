@@ -14,83 +14,83 @@ class writer_state;
 
 class writer_state
 {
-	std::string stream;
+	std::string stream_;
 
-	int	 indent_level = -1;
-	bool skip_indent	= false;
+	int	 indent_level_ = -1;
+	bool skip_indent_	 = false;
 
 public:
-	std::string get()
+	auto get() -> std::string
 	{
-		return std::move(stream);
+		return std::move(stream_);
 	}
 
 	void begin_array()
 	{
-		indent_level++;
+		indent_level_++;
 		indent();
-		stream.push_back('-');
-		stream.push_back(' ');
+		stream_.push_back('-');
+		stream_.push_back(' ');
 	}
 
 	void end_array()
 	{
-		indent_level--;
+		indent_level_--;
 	}
 
 	void begin_object()
 	{
-		indent_level++;
+		indent_level_++;
 		indent();
 	}
 
 	void end_object()
 	{
-		indent_level--;
+		indent_level_--;
 	}
 
 	void key(std::string_view slice)
 	{
-		stream.append(slice);
-		stream.push_back(':');
-		stream.push_back(' ');
-		skip_indent = false;
+		stream_.append(slice);
+		stream_.push_back(':');
+		stream_.push_back(' ');
+		skip_indent_ = false;
 	}
 
 	void as_string(std::string_view slice)
 	{
-		stream.append(slice);
-		skip_indent = false;
+		stream_.append(slice);
+		skip_indent_ = false;
 	}
 
 	void as_uint64(uint64_t value)
 	{
-		stream.append(std::to_string(value));
-		skip_indent = false;
+		stream_.append(std::to_string(value));
+		skip_indent_ = false;
 	}
 
 	void as_int64(int64_t value)
 	{
-		stream.append(std::to_string(value));
-		skip_indent = false;
+		stream_.append(std::to_string(value));
+		skip_indent_ = false;
 	}
 
 	void as_double(double value)
 	{
-		stream.append(std::to_string(value));
-		skip_indent = false;
+		stream_.append(std::to_string(value));
+		skip_indent_ = false;
 	}
 
 	void as_bool(bool value)
 	{
-		stream.append(value ? "true" : "false");
-		skip_indent = false;
+		stream_.append(value ? "true" : "false");
+		skip_indent_ = false;
 	}
 
 	void as_null()
 	{
-		stream.append("null");
-		skip_indent = false;
+		stream_.append("null");
+		skip_indent_ = false;
 	}
 
 	void next_map_entry()
@@ -101,17 +101,19 @@ public:
 	void next_array_entry()
 	{
 		indent();
-		stream.push_back('-');
-		stream.push_back(' ');
+		stream_.push_back('-');
+		stream_.push_back(' ');
 	}
 
 private:
 	void indent()
 	{
-		stream.push_back('\n');
-		if (!skip_indent)
-			std::fill_n(std::back_inserter(stream), static_cast<size_t>(indent_level), ' ');
-		skip_indent = true;
+		stream_.push_back('\n');
+		if (!skip_indent_)
+		{
+			std::fill_n(std::back_inserter(stream_), static_cast<size_t>(indent_level_), ' ');
+		}
+		skip_indent_ = true;
 	}
 };
 
@@ -121,7 +123,7 @@ namespace yaml
 {
 
 template <typename Class, typename Opt = acl::options<>>
-std::string to_string(Class const& obj)
+auto to_string(Class const& obj) -> std::string
 {
 	auto state			= detail::writer_state();
 	auto serializer = output_serializer<detail::writer_state, Opt>(state);

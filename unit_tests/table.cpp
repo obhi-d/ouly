@@ -4,6 +4,8 @@
 #include <catch2/catch_all.hpp>
 #include <string>
 
+// NOLINTBEGIN
+
 TEST_CASE("table: Validate table emplace", "[table][emplace]")
 {
 	acl::table<std::string> v1;
@@ -45,3 +47,5 @@ TEST_CASE("table: Validate table erase", "[table][erase]")
 	a4 = v1.emplace("jerry");
 	REQUIRE(v1[a4] == "jerry");
 }
+
+// NOLINTEND

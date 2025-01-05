@@ -1,6 +1,7 @@
 
 #include <catch2/catch_all.hpp>
 
+// NOLINTBEGIN
 int main(int argc, char* argv[])
 {
 	// your setup ...
@@ -11,3 +12,4 @@ int main(int argc, char* argv[])
 
 	return result;
 }
+// NOLINTEND

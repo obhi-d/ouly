@@ -23,11 +23,13 @@ set(ACL_INCLUDE_BUILD_DIR         "${PROJECT_SOURCE_DIR}/include")
 set(ACL_SOURCE_BUILD_DIR          "${PROJECT_SOURCE_DIR}/src")
 
 include(GNUInstallDirs)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-##
-## TARGET
-##
-message("Target name: ${ACL_TARGET_NAME}")
+find_program(CCACHE_PROGRAM ccache)
+if(CCACHE_PROGRAM)
+    set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+    set(CMAKE_CUDA_COMPILER_LAUNCHER "${CCACHE_PROGRAM}") # CMake 3.9+
+endif()
 
 add_library( ${ACL_TARGET_NAME} 
       
@@ -38,10 +40,22 @@ add_library( ${ACL_TARGET_NAME}
     "${ACL_SOURCE_BUILD_DIR}/acl/utils/string_utils.cpp"
     "${ACL_SOURCE_BUILD_DIR}/acl/allocators/coalescing_allocator.cpp"
     "${ACL_SOURCE_BUILD_DIR}/acl/allocators/coalescing_arena_allocator.cpp"
+    "${ACL_SOURCE_BUILD_DIR}/acl/all.cpp"
 )
 
-add_library(${PROJECT_NAME}::${ACL_TARGET_NAME} ALIAS ${ACL_TARGET_NAME})
 set_property(TARGET ${ACL_TARGET_NAME}  PROPERTY CXX_STANDARD 20)
+
+find_program(CLANG_TIDY_EXE NAMES "clang-tidy")
+# setup clang-tidy command from executable + options
+if (CLANG_TIDY_EXE)
+    set(CLANG_TIDY_COMMAND "${CLANG_TIDY_EXE}" 
+    "-fix"  "-fix-errors"
+    )
+    set_target_properties(${ACL_TARGET_NAME} PROPERTIES CXX_CLANG_TIDY "${CLANG_TIDY_COMMAND}")
+endif()
+
+add_library(${PROJECT_NAME}::${ACL_TARGET_NAME} ALIAS ${ACL_TARGET_NAME})
+
 
 if(MSVC)
   target_sources(
@@ -53,8 +67,8 @@ endif()
 
 target_include_directories(
     ${ACL_TARGET_NAME}
-    PUBLIC $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+    PUBLIC $<BUILD_INTERFACE:${ACL_INCLUDE_BUILD_DIR}>
+           $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
 if (ACL_REC_STATS)
