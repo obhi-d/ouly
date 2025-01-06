@@ -39,31 +39,31 @@ namespace acl::opt
 template <std::size_t Value>
 struct granularity
 {
-	static constexpr std::size_t granularity_v = Value;
+  static constexpr std::size_t granularity_v = Value;
 };
 
 template <std::size_t Value>
 struct max_bucket
 {
-	static constexpr std::size_t max_bucket_v = Value;
+  static constexpr std::size_t max_bucket_v = Value;
 };
 
 template <std::size_t Value>
 struct search_window
 {
-	static constexpr std::size_t search_window_v = Value;
+  static constexpr std::size_t search_window_v = Value;
 };
 
 template <typename T>
 struct fallback_start
 {
-	using fallback_strat_t = T;
+  using fallback_strat_t = T;
 };
 
 template <std::size_t Value>
 struct fixed_max_per_slot
 {
-	static constexpr std::size_t fixed_max_per_slot_v = Value;
+  static constexpr std::size_t fixed_max_per_slot_v = Value;
 };
 
 } // namespace acl::opt

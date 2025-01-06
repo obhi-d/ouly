@@ -6,44 +6,44 @@
 // NOLINTBEGIN
 TEST_CASE("dynamic_array: Validate use of dynamic_array")
 {
-	acl::dynamic_array<std::string> table;
+  acl::dynamic_array<std::string> table;
 
-	table = acl::dynamic_array<std::string>(10, "something");
-	for (auto& t : table)
-		REQUIRE(t == "something");
-	table = acl::dynamic_array<std::string>(10, "something_else");
-	for (auto& t : table)
-		REQUIRE(t == "something_else");
+  table = acl::dynamic_array<std::string>(10, "something");
+  for (auto& t : table)
+    REQUIRE(t == "something");
+  table = acl::dynamic_array<std::string>(10, "something_else");
+  for (auto& t : table)
+    REQUIRE(t == "something_else");
 
-	auto other = acl::dynamic_array<std::string>(10, "second");
-	for (auto& t : other)
-		REQUIRE(t == "second");
-	table = other;
-	for (auto& t : other)
-		REQUIRE(t == "second");
-	for (auto& t : table)
-		REQUIRE(t == "second");
+  auto other = acl::dynamic_array<std::string>(10, "second");
+  for (auto& t : other)
+    REQUIRE(t == "second");
+  table = other;
+  for (auto& t : other)
+    REQUIRE(t == "second");
+  for (auto& t : table)
+    REQUIRE(t == "second");
 }
 
 TEST_CASE("dynamic_array: Validate use of fixed size  dynamic_array")
 {
-	using darray = acl::fixed_array<std::string, 10>;
-	darray table;
+  using darray = acl::fixed_array<std::string, 10>;
+  darray table;
 
-	table = darray(10, "something");
-	for (auto& t : table)
-		REQUIRE(t == "something");
-	table = darray(10, "something_else");
-	for (auto& t : table)
-		REQUIRE(t == "something_else");
+  table = darray(10, "something");
+  for (auto& t : table)
+    REQUIRE(t == "something");
+  table = darray(10, "something_else");
+  for (auto& t : table)
+    REQUIRE(t == "something_else");
 
-	auto other = darray(10, "second");
-	for (auto& t : other)
-		REQUIRE(t == "second");
-	table = other;
-	for (auto& t : other)
-		REQUIRE(t == "second");
-	for (auto& t : table)
-		REQUIRE(t == "second");
+  auto other = darray(10, "second");
+  for (auto& t : other)
+    REQUIRE(t == "second");
+  table = other;
+  for (auto& t : other)
+    REQUIRE(t == "second");
+  for (auto& t : table)
+    REQUIRE(t == "second");
 }
 // NOLINTEND

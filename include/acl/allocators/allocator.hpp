@@ -20,24 +20,24 @@ namespace acl
 template <std::size_t Value = 0>
 struct alignment
 {
-	static constexpr std::align_val_t value = std::align_val_t{Value};
-	constexpr alignment() noexcept					= default;
+  static constexpr std::align_val_t value = std::align_val_t{Value};
+  constexpr alignment() noexcept          = default;
 
-	constexpr explicit operator bool() const noexcept
-	{
-		return Value > alignof(void*);
-	}
+  constexpr explicit operator bool() const noexcept
+  {
+    return Value > alignof(void*);
+  }
 
-	constexpr operator std::size_t() const noexcept
-	{
-		return Value;
-	}
+  constexpr operator std::size_t() const noexcept
+  {
+    return Value;
+  }
 
-	static constexpr auto log2() noexcept
-	{
-		auto constexpr half = Value >> 1;
-		return (Value != 0U) ? 1 + alignment<half>::log2() : -1;
-	}
+  static constexpr auto log2() noexcept
+  {
+    auto constexpr half = Value >> 1;
+    return (Value != 0U) ? 1 + alignment<half>::log2() : -1;
+  }
 };
 
 /** @brief constexpr value of alignment for a given type using alignof */
@@ -53,7 +53,7 @@ template <typename Ty, typename Allocator, typename Alignment = alignment<aligno
 [[nodiscard]] auto allocate(Allocator& allocator, typename Allocator::size_type size_in_bytes, Alignment alignment = {})
  -> Ty*
 {
-	return static_cast<Ty*>(allocator.allocate(size_in_bytes, alignment));
+  return static_cast<Ty*>(allocator.allocate(size_in_bytes, alignment));
 }
 
 /**
@@ -63,16 +63,16 @@ template <typename Ty, typename Allocator, typename Alignment = alignment<aligno
  */
 template <typename Ty, typename Allocator, typename Alignment = alignment<alignof(Ty)>>
 [[nodiscard]] auto zallocate(Allocator& allocator, typename Allocator::size_type size_in_bytes,
-														 Alignment alignment = {}) -> Ty*
+                             Alignment alignment = {}) -> Ty*
 {
-	return static_cast<Ty*>(allocator.zero_allocate(size_in_bytes, alignment));
+  return static_cast<Ty*>(allocator.zero_allocate(size_in_bytes, alignment));
 }
 
 /** @brief Deallocates memory allocated by allocate or zallocate */
 template <typename Ty, typename Allocator, typename Alignment = alignment<alignof(Ty)>>
 void deallocate(Allocator& allocator, Ty* data, typename Allocator::size_type size_in_bytes, Alignment alignment = {})
 {
-	allocator.deallocate(data, size_in_bytes, alignment);
+  allocator.deallocate(data, size_in_bytes, alignment);
 }
 
 /**
@@ -83,9 +83,9 @@ void deallocate(Allocator& allocator, Ty* data, typename Allocator::size_type si
  */
 template <typename Ty, typename Allocator, typename Alignment = alignment<alignof(Ty)>>
 [[nodiscard]] auto allocate(Allocator const& allocator, typename Allocator::size_type size_in_bytes,
-														Alignment alignment = {}) -> Ty*
+                            Alignment alignment = {}) -> Ty*
 {
-	return static_cast<Ty*>(allocator.allocate(size_in_bytes, alignment));
+  return static_cast<Ty*>(allocator.allocate(size_in_bytes, alignment));
 }
 
 /**
@@ -96,9 +96,9 @@ template <typename Ty, typename Allocator, typename Alignment = alignment<aligno
  */
 template <typename Ty, typename Allocator, typename Alignment = alignment<alignof(Ty)>>
 [[nodiscard]] auto zallocate(Allocator const& allocator, typename Allocator::size_type size_in_bytes,
-														 Alignment alignment = {}) -> Ty*
+                             Alignment alignment = {}) -> Ty*
 {
-	return static_cast<Ty*>(allocator.zero_allocate(size_in_bytes, alignment));
+  return static_cast<Ty*>(allocator.zero_allocate(size_in_bytes, alignment));
 }
 
 /**
@@ -106,9 +106,9 @@ template <typename Ty, typename Allocator, typename Alignment = alignment<aligno
  * default_allocator */
 template <typename Ty, typename Allocator, typename Alignment = alignment<alignof(Ty)>>
 void deallocate(Allocator const& allocator, Ty* data, typename Allocator::size_type size_in_bytes,
-								Alignment alignment = {})
+                Alignment alignment = {})
 {
-	allocator.deallocate(data, size_in_bytes, alignment);
+  allocator.deallocate(data, size_in_bytes, alignment);
 }
 
 } // namespace acl

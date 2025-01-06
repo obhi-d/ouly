@@ -2,7 +2,7 @@
 Language: Cpp
 PenaltyReturnTypeOnItsOwnLine: 10000
 TabWidth: 2
-UseTab: Always
+UseTab: Never
 DerivePointerAlignment: false
 PointerAlignment: Left
 ReferenceAlignment: Left
@@ -37,9 +37,10 @@ BraceWrapping:
   SplitEmptyFunction: false
   SplitEmptyRecord: false
   SplitEmptyNamespace: false
-
 BreakBeforeConceptDeclarations: Always
 RequiresExpressionIndentation: OuterScope
 AlignArrayOfStructures: Right
-
 ColumnLimit: 120
+---
+Language: Json
+BasedOnStyle: llvm

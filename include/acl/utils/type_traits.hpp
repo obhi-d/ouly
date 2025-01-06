@@ -24,10 +24,10 @@ struct default_options
 template <typename Ty = std::void_t<>>
 struct allocator_traits
 {
-	using is_always_equal												 = std::false_type;
-	using propagate_on_container_move_assignment = std::true_type;
-	using propagate_on_container_copy_assignment = std::true_type;
-	using propagate_on_container_swap						 = std::true_type;
+  using is_always_equal                        = std::false_type;
+  using propagate_on_container_move_assignment = std::true_type;
+  using propagate_on_container_copy_assignment = std::true_type;
+  using propagate_on_container_swap            = std::true_type;
 };
 
 constexpr uint32_t default_pool_size = 4096;
@@ -53,19 +53,19 @@ struct member;
 template <typename T, typename M, M T::* MPtr>
 struct member<MPtr>
 {
-	using class_type	= T;
-	using member_type = M;
-	using self_index	= opt::member<MPtr>;
+  using class_type  = T;
+  using member_type = M;
+  using self_index  = opt::member<MPtr>;
 
-	static auto get(class_type& to) noexcept -> member_type&
-	{
-		return to.*MPtr;
-	}
+  static auto get(class_type& to) noexcept -> member_type&
+  {
+    return to.*MPtr;
+  }
 
-	static auto get(class_type const& to) noexcept -> member_type const&
-	{
-		return to.*MPtr;
-	}
+  static auto get(class_type const& to) noexcept -> member_type const&
+  {
+    return to.*MPtr;
+  }
 };
 
 /**
@@ -74,7 +74,7 @@ struct member<MPtr>
 template <uint32_t PoolSize = default_pool_size>
 struct pool_size
 {
-	static constexpr uint32_t pool_size_v = PoolSize;
+  static constexpr uint32_t pool_size_v = PoolSize;
 };
 
 /**
@@ -83,7 +83,7 @@ struct pool_size
 template <uint32_t PoolSize = default_pool_size>
 struct index_pool_size
 {
-	static constexpr uint32_t index_pool_size_v = PoolSize;
+  static constexpr uint32_t index_pool_size_v = PoolSize;
 };
 
 /**
@@ -92,7 +92,7 @@ struct index_pool_size
 template <uint32_t PoolSize = default_pool_size>
 struct self_index_pool_size
 {
-	static constexpr uint32_t self_index_pool_size_v = PoolSize;
+  static constexpr uint32_t self_index_pool_size_v = PoolSize;
 };
 
 /**
@@ -101,7 +101,7 @@ struct self_index_pool_size
 template <uint32_t PoolSize = default_pool_size>
 struct keys_index_pool_size
 {
-	static constexpr uint32_t keys_index_pool_size_v = PoolSize;
+  static constexpr uint32_t keys_index_pool_size_v = PoolSize;
 };
 
 /**
@@ -110,7 +110,7 @@ struct keys_index_pool_size
 template <auto NullValue>
 struct null_value
 {
-	static constexpr auto null_v = NullValue;
+  static constexpr auto null_v = NullValue;
 };
 
 /**
@@ -119,7 +119,7 @@ struct null_value
 template <typename T = uint32_t>
 struct basic_size_type
 {
-	using size_type = T;
+  using size_type = T;
 };
 
 /**
@@ -132,64 +132,64 @@ using self_index_member = member<M>;
 template <typename T = void>
 struct basic_link_type
 {
-	using link_type = T;
+  using link_type = T;
 };
 
 struct assume_pod
 {
-	static constexpr bool assume_pod_v = true;
+  static constexpr bool assume_pod_v = true;
 };
 
 struct no_fill
 {
-	static constexpr bool no_fill_v = true;
+  static constexpr bool no_fill_v = true;
 };
 
 struct trivially_destroyed_on_move
 {
-	static constexpr bool trivially_destroyed_on_move_v = true;
+  static constexpr bool trivially_destroyed_on_move_v = true;
 };
 
 struct use_sparse
 {
-	static constexpr bool use_sparse_v = true;
+  static constexpr bool use_sparse_v = true;
 };
 
 struct use_sparse_index
 {
-	static constexpr bool use_sparse_index_v = true;
+  static constexpr bool use_sparse_index_v = true;
 };
 
 struct self_use_sparse_index
 {
-	static constexpr bool self_use_sparse_index_v = true;
+  static constexpr bool self_use_sparse_index_v = true;
 };
 
 struct keys_use_sparse_index
 {
-	static constexpr bool keys_use_sparse_index_v = true;
+  static constexpr bool keys_use_sparse_index_v = true;
 };
 
 struct zero_out_memory
 {
-	static constexpr bool zero_out_memory_v = true;
+  static constexpr bool zero_out_memory_v = true;
 };
 
 struct disable_pool_tracking
 {
-	static constexpr bool disable_pool_tracking_v = true;
+  static constexpr bool disable_pool_tracking_v = true;
 };
 
 struct use_direct_mapping
 {
-	static constexpr bool use_direct_mapping_v = true;
+  static constexpr bool use_direct_mapping_v = true;
 };
 
 // custom vector
 template <typename T>
 struct custom_vector
 {
-	using custom_vector_t = T;
+  using custom_vector_t = T;
 };
 
 } // namespace opt
@@ -201,13 +201,13 @@ struct custom_vector
 template <typename T>
 constexpr auto type_name() -> std::string_view
 {
-	return detail::type_name<std::remove_cv_t<std::remove_reference_t<T>>>();
+  return detail::type_name<std::remove_cv_t<std::remove_reference_t<T>>>();
 }
 
 template <typename T>
 constexpr auto type_hash() -> std::uint32_t
 {
-	return detail::type_hash<std::remove_cv_t<std::remove_reference_t<T>>>();
+  return detail::type_hash<std::remove_cv_t<std::remove_reference_t<T>>>();
 }
 
 struct nocheck : std::false_type
@@ -219,44 +219,44 @@ struct function_traits;
 template <typename R, typename... Args>
 struct function_traits<R (*)(Args...)>
 {
-	static constexpr std::size_t arity = sizeof...(Args);
-	using return_type									 = R;
-	using args												 = std::tuple<Args...>;
-	template <std::size_t Index>
-	using arg_type													 = typename std::tuple_element_t<Index, std::tuple<Args...>>;
-	constexpr static bool is_free_function	 = true;
-	constexpr static bool is_member_function = false;
-	constexpr static bool is_const_function	 = false;
-	constexpr static bool is_functor				 = false;
+  static constexpr std::size_t arity = sizeof...(Args);
+  using return_type                  = R;
+  using args                         = std::tuple<Args...>;
+  template <std::size_t Index>
+  using arg_type                           = typename std::tuple_element_t<Index, std::tuple<Args...>>;
+  constexpr static bool is_free_function   = true;
+  constexpr static bool is_member_function = false;
+  constexpr static bool is_const_function  = false;
+  constexpr static bool is_functor         = false;
 };
 
 template <typename R, typename C, typename... Args>
 struct function_traits<R (C::*)(Args...)>
 {
-	static constexpr std::size_t arity = sizeof...(Args);
-	using class_type									 = C;
-	using return_type									 = R;
-	using args												 = std::tuple<Args...>;
-	template <std::size_t Index>
-	using arg_type													 = typename std::tuple_element_t<Index, std::tuple<Args...>>;
-	constexpr static bool is_free_function	 = false;
-	constexpr static bool is_member_function = true;
-	constexpr static bool is_const_function	 = false;
-	constexpr static bool is_functor				 = false;
+  static constexpr std::size_t arity = sizeof...(Args);
+  using class_type                   = C;
+  using return_type                  = R;
+  using args                         = std::tuple<Args...>;
+  template <std::size_t Index>
+  using arg_type                           = typename std::tuple_element_t<Index, std::tuple<Args...>>;
+  constexpr static bool is_free_function   = false;
+  constexpr static bool is_member_function = true;
+  constexpr static bool is_const_function  = false;
+  constexpr static bool is_functor         = false;
 };
 
 template <typename R, typename C, typename... Args>
 struct function_traits<R (C::*)(Args...) const>
 {
-	static constexpr std::size_t arity = sizeof...(Args);
-	using return_type									 = R;
-	using args												 = std::tuple<Args...>;
-	template <std::size_t Index>
-	using arg_type													 = typename std::tuple_element_t<Index, std::tuple<Args...>>;
-	constexpr static bool is_free_function	 = false;
-	constexpr static bool is_member_function = true;
-	constexpr static bool is_const_function	 = true;
-	constexpr static bool is_functor				 = false;
+  static constexpr std::size_t arity = sizeof...(Args);
+  using return_type                  = R;
+  using args                         = std::tuple<Args...>;
+  template <std::size_t Index>
+  using arg_type                           = typename std::tuple_element_t<Index, std::tuple<Args...>>;
+  constexpr static bool is_free_function   = false;
+  constexpr static bool is_member_function = true;
+  constexpr static bool is_const_function  = true;
+  constexpr static bool is_functor         = false;
 };
 
 template <typename T>
@@ -267,45 +267,45 @@ struct function_traits : public function_traits<decltype(&T::operator())>
 template <auto>
 struct member_function
 {
-	constexpr static bool is_member_function_traits = false;
+  constexpr static bool is_member_function_traits = false;
 };
 
 template <typename C, typename Ret, typename... Args, Ret (C::*M)(Args...)>
 struct member_function<M>
 {
-	using class_type				 = C;
-	using function_type			 = Ret (C::*)(Args...);
-	using free_function_type = Ret (*)(Args...);
-	using return_type				 = Ret;
-	using args							 = std::tuple<Args...>;
-	template <std::size_t Index>
-	using arg_type = typename std::tuple_element_t<Index, std::tuple<Args...>>;
+  using class_type         = C;
+  using function_type      = Ret (C::*)(Args...);
+  using free_function_type = Ret (*)(Args...);
+  using return_type        = Ret;
+  using args               = std::tuple<Args...>;
+  template <std::size_t Index>
+  using arg_type = typename std::tuple_element_t<Index, std::tuple<Args...>>;
 
-	static auto invoke(C& instance, Args&&... args)
-	{
-		return std::invoke(M, instance, std::forward<Args>(args)...);
-	}
+  static auto invoke(C& instance, Args&&... args)
+  {
+    return std::invoke(M, instance, std::forward<Args>(args)...);
+  }
 
-	constexpr static bool is_member_function_traits = true;
+  constexpr static bool is_member_function_traits = true;
 };
 
 template <typename C, typename Ret, typename... Args, Ret (C::*M)(Args...) const>
 struct member_function<M>
 {
-	using class_type				 = const C;
-	using function_type			 = Ret (C::*)(Args...) const;
-	using free_function_type = Ret (*)(Args...);
-	using return_type				 = Ret;
-	using args							 = std::tuple<Args...>;
-	template <std::size_t Index>
-	using arg_type = typename std::tuple_element_t<Index, std::tuple<Args...>>;
+  using class_type         = const C;
+  using function_type      = Ret (C::*)(Args...) const;
+  using free_function_type = Ret (*)(Args...);
+  using return_type        = Ret;
+  using args               = std::tuple<Args...>;
+  template <std::size_t Index>
+  using arg_type = typename std::tuple_element_t<Index, std::tuple<Args...>>;
 
-	static auto invoke(C const& instance, Args&&... args)
-	{
-		return std::invoke(M, instance, std::forward<Args>(args)...);
-	}
+  static auto invoke(C const& instance, Args&&... args)
+  {
+    return std::invoke(M, instance, std::forward<Args>(args)...);
+  }
 
-	constexpr static bool is_member_function_traits = true;
+  constexpr static bool is_member_function_traits = true;
 };
 
 namespace detail
@@ -313,7 +313,7 @@ namespace detail
 
 template <typename F, typename... Args>
 concept Callable = requires(F f, Args&&... args) {
-	{ f(std::forward<Args>(args)...) };
+  { f(std::forward<Args>(args)...) };
 };
 
 // Concept to check if a type is a free function pointer
@@ -322,39 +322,39 @@ concept Function = std::is_function_v<std::remove_pointer_t<F>>;
 
 template <typename Traits, typename U>
 concept HasNullValue = requires(U t) {
-	{ Traits::null_v } -> std::convertible_to<U>;
-	{ Traits::null_v == t } -> std::same_as<bool>;
+  { Traits::null_v } -> std::convertible_to<U>;
+  { Traits::null_v == t } -> std::same_as<bool>;
 };
 
 template <typename Traits, typename U>
 concept HasNullMethod = requires(U v) {
-	{ Traits::is_null(v) } noexcept -> std::same_as<bool>;
+  { Traits::is_null(v) } noexcept -> std::same_as<bool>;
 };
 
 template <typename Traits, typename U>
 concept HasNullConstruct = requires(U v) {
-	Traits::null_construct(v);
-	Traits::null_reset(v);
+  Traits::null_construct(v);
+  Traits::null_reset(v);
 };
 
 template <typename Traits>
 concept HasIndexPoolSize = requires {
-	{ Traits::index_pool_size_v } -> std::convertible_to<uint32_t>;
+  { Traits::index_pool_size_v } -> std::convertible_to<uint32_t>;
 };
 
 template <typename Traits>
 concept HasPoolSize = requires {
-	{ Traits::pool_size_v } -> std::convertible_to<uint32_t>;
+  { Traits::pool_size_v } -> std::convertible_to<uint32_t>;
 };
 
 template <typename Traits>
 concept HasSelfIndexPoolSize = requires {
-	{ Traits::self_index_pool_size_v } -> std::convertible_to<uint32_t>;
+  { Traits::self_index_pool_size_v } -> std::convertible_to<uint32_t>;
 };
 
 template <typename Traits>
 concept HasKeysIndexPoolSize = requires {
-	{ Traits::keys_index_pool_size_v } -> std::convertible_to<uint32_t>;
+  { Traits::keys_index_pool_size_v } -> std::convertible_to<uint32_t>;
 };
 
 template <typename Traits>
@@ -399,8 +399,8 @@ concept HasLinkType = requires { typename Traits::link_type; };
 
 template <typename V, typename R>
 concept OptionalValueLike = requires(V v) {
-	{ *v } -> std::convertible_to<R>;
-	{ (bool)v } -> std::convertible_to<bool>;
+  { *v } -> std::convertible_to<R>;
+  { (bool)v } -> std::convertible_to<bool>;
 };
 template <typename T>
 concept HasAllocatorAttribs = requires { typename T::allocator_t; };
@@ -408,20 +408,20 @@ concept HasAllocatorAttribs = requires { typename T::allocator_t; };
 template <typename S, typename T1, typename... Args>
 struct choose_size_ty
 {
-	using type =
-	 std::conditional_t<HasSizeType<T1>, typename choose_size_ty<S, T1>::type, typename choose_size_ty<Args...>::type>;
+  using type =
+   std::conditional_t<HasSizeType<T1>, typename choose_size_ty<S, T1>::type, typename choose_size_ty<Args...>::type>;
 };
 
 template <typename S, typename T1>
 struct choose_size_ty<S, T1>
 {
-	using type = S;
+  using type = S;
 };
 
 template <typename S, HasSizeType T1>
 struct choose_size_ty<S, T1>
 {
-	using type = typename T1::size_type;
+  using type = typename T1::size_type;
 };
 
 template <typename S, typename... Args>
@@ -430,7 +430,7 @@ using choose_size_t = typename choose_size_ty<S, Args...>::type;
 template <typename UnderlyingAllocatorTag>
 struct is_static
 {
-	constexpr static bool value = false;
+  constexpr static bool value = false;
 };
 
 template <typename UnderlyingAllocatorTag>
@@ -442,13 +442,13 @@ struct link_value;
 template <typename T>
 struct link_value<T, true>
 {
-	using type = typename T::link_type;
+  using type = typename T::link_type;
 };
 
 template <typename T>
 struct link_value<T, false>
 {
-	using type = void;
+  using type = void;
 };
 
 template <typename T>
@@ -457,12 +457,12 @@ using link_value_t = typename link_value<T, HasLinkType<T>>::type;
 template <typename UaT, class = std::void_t<>>
 struct tag
 {
-	using type = void;
+  using type = void;
 };
 template <typename UaT>
 struct tag<UaT, std::void_t<typename UaT::tag>>
 {
-	using type = typename UaT::tag;
+  using type = typename UaT::tag;
 };
 
 template <typename UaT>
@@ -471,24 +471,24 @@ using tag_t = typename tag<UaT>::type;
 template <typename UaT, class = std::void_t<>>
 struct size_type
 {
-	using type = std::size_t;
+  using type = std::size_t;
 };
 template <typename UaT>
 struct size_type<UaT, std::void_t<typename UaT::size_type>>
 {
-	using type = typename UaT::size_type;
+  using type = typename UaT::size_type;
 };
 
 template <typename T>
 struct pool_size
 {
-	static constexpr uint32_t value = default_pool_size;
+  static constexpr uint32_t value = default_pool_size;
 };
 
 template <HasPoolSize T>
 struct pool_size<T>
 {
-	static constexpr uint32_t value = T::pool_size_v;
+  static constexpr uint32_t value = T::pool_size_v;
 };
 
 template <typename T>

@@ -25,15 +25,15 @@ namespace acl
 class microexpr
 {
 public:
-	/** Evaluator must return undefined if macro is not found */
-	using macro_context = std::function<std::optional<int>(std::string_view)>;
+  /** Evaluator must return undefined if macro is not found */
+  using macro_context = std::function<std::optional<int>(std::string_view)>;
 
-	microexpr(macro_context&& ctx) noexcept : ctx_(std::move(ctx)) {}
+  microexpr(macro_context&& ctx) noexcept : ctx_(std::move(ctx)) {}
 
-	[[nodiscard]] auto evaluate(std::string_view expr) const -> bool;
+  [[nodiscard]] auto evaluate(std::string_view expr) const -> bool;
 
 private:
-	macro_context ctx_;
+  macro_context ctx_;
 };
 
 } // namespace acl
