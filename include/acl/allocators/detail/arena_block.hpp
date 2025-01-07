@@ -18,12 +18,12 @@ struct block
   using uint32_pair     = std::pair<uint32_t, uint32_t>;
   union
   {
-    uhandle     data_;
-    uint32_t    reserved32_;
-    list_node   list_;
-    uint32_pair rtup_;
-    uint64_t    reserved64_;
-    Extension   ext_ = {};
+    std::uint32_t data_;
+    uint32_t      reserved32_;
+    list_node     list_;
+    uint32_pair   rtup_;
+    uint64_t      reserved64_;
+    Extension     ext_ = {};
   };
 
   detail::list_node arena_order_ = detail::list_node();
@@ -48,10 +48,10 @@ struct block
   block(size_type ioffset, size_type isize, std::uint32_t iarena) noexcept
       : offset_(ioffset), size_(isize), arena_(iarena)
   {}
-  block(size_type ioffset, size_type isize, std::uint32_t iarena, uhandle idata) noexcept
+  block(size_type ioffset, size_type isize, std::uint32_t iarena, std::uint32_t idata) noexcept
       : offset_(ioffset), size_(isize), arena_(iarena), rtup_(idata, 0)
   {}
-  block(size_type ioffset, size_type isize, std::uint32_t iarena, uhandle idata, bool ifree) noexcept
+  block(size_type ioffset, size_type isize, std::uint32_t iarena, std::uint32_t idata, bool ifree) noexcept
       : offset_(ioffset), size_(isize), arena_(iarena), rtup_(idata, 0), is_free_(ifree)
   {}
   block(size_type ioffset, size_type isize, std::uint32_t iarena, uint32_pair idata, bool ifree) noexcept
@@ -63,8 +63,9 @@ struct block
   block(size_type ioffset, size_type isize, std::uint32_t iarena, Extension idata, bool ifree) noexcept
       : offset_(ioffset), size_(isize), arena_(iarena), ext_(idata), is_free_(ifree)
   {}
-  block(size_type ioffset, size_type isize, std::uint32_t iarena, uhandle idata, bool ifree, bool islotted) noexcept
-    requires(!std::convertible_to<uhandle, Extension>)
+  block(size_type ioffset, size_type isize, std::uint32_t iarena, std::uint32_t idata, bool ifree,
+        bool islotted) noexcept
+    requires(!std::convertible_to<std::uint32_t, Extension>)
       : offset_(ioffset), size_(isize), arena_(iarena), rtup_(idata, 0), is_free_(ifree), is_slotted_(islotted)
   {}
   block(size_type ioffset, size_type isize, std::uint32_t iarena, Extension idata, bool ifree, bool islotted) noexcept

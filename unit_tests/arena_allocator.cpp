@@ -9,22 +9,22 @@ struct alloc_mem_manager
   using arena_data_t = acl::vector<char>;
   struct allocation
   {
-    acl::uhandle arena_;
-    acl::uhandle alloc_id_;
-    std::size_t  offset_;
-    std::size_t  size_ = 0;
-    allocation()       = default;
-    allocation(acl::uhandle iarena, acl::uhandle ialloc, std::size_t ioffset, std::size_t isize)
+    std::uint32_t arena_;
+    std::uint32_t alloc_id_;
+    std::size_t   offset_;
+    std::size_t   size_ = 0;
+    allocation()        = default;
+    allocation(std::uint32_t iarena, std::uint32_t ialloc, std::size_t ioffset, std::size_t isize)
         : arena_(iarena), alloc_id_(ialloc), offset_(ioffset), size_(isize)
     {}
   };
-  acl::vector<arena_data_t> arenas_;
-  acl::vector<arena_data_t> backup_arenas_;
-  acl::vector<allocation>   allocs_;
-  acl::vector<allocation>   backup_allocs_;
-  acl::vector<acl::uhandle> valids_;
+  acl::vector<arena_data_t>  arenas_;
+  acl::vector<arena_data_t>  backup_arenas_;
+  acl::vector<allocation>    allocs_;
+  acl::vector<allocation>    backup_allocs_;
+  acl::vector<std::uint32_t> valids_;
 
-  bool drop_arena([[maybe_unused]] acl::uhandle id)
+  bool drop_arena([[maybe_unused]] std::uint32_t id)
   {
     arenas_[id].clear();
     return true;
@@ -38,15 +38,15 @@ struct alloc_mem_manager
       arenas_[l.arena_][s + l.offset_] = static_cast<char>(generator(gen));
   }
 
-  acl::uhandle add_arena([[maybe_unused]] acl::ihandle id, [[maybe_unused]] std::size_t size_)
+  std::uint32_t add_arena([[maybe_unused]] std::uint32_t id, [[maybe_unused]] std::size_t size_)
   {
     arena_data_t arena_;
     arena_.resize(size_, 0x17);
     arenas_.emplace_back(std::move(arena_));
-    return static_cast<acl::uhandle>(arenas_.size() - 1);
+    return static_cast<std::uint32_t>(arenas_.size() - 1);
   }
 
-  void remove_arena(acl::uhandle h)
+  void remove_arena(std::uint32_t h)
   {
     arenas_[h].clear();
     arenas_[h].shrink_to_fit();
@@ -82,7 +82,7 @@ struct alloc_mem_manager
 #endif
   }
 
-  void rebind_alloc([[maybe_unused]] acl::uhandle halloc, acl::uhandle arena_, acl::uhandle allocid,
+  void rebind_alloc([[maybe_unused]] std::uint32_t halloc, std::uint32_t arena_, std::uint32_t allocid,
                     std::size_t offset_)
   {
     allocs_[halloc].arena_    = arena_;
@@ -90,7 +90,7 @@ struct alloc_mem_manager
     allocs_[halloc].offset_   = offset_;
   }
 
-  void move_memory([[maybe_unused]] acl::uhandle src_arena, [[maybe_unused]] acl::uhandle dst_arena,
+  void move_memory([[maybe_unused]] std::uint32_t src_arena, [[maybe_unused]] std::uint32_t dst_arena,
                    [[maybe_unused]] std::size_t from, [[maybe_unused]] std::size_t to, std::size_t size_)
   {
     assert(arenas_[dst_arena].size() >= to + size_);
@@ -126,11 +126,11 @@ void run_test(unsigned int seed)
     {
       // acl::fixed_alloc_desc<std::uint32_t, TestType::min_granularity> desc(generator(gen) *
       // TestType::min_granularity,
-      //                                                                      static_cast<acl::uhandle>(mgr.allocs_.size()),
+      //                                                                      static_cast<std::uint32_t>(mgr.allocs_.size()),
       //                                                                      acl::alloc_option_bits::f_defrag);
       if (biased_dice(gen))
         allocator.defragment();
-      auto huser                     = static_cast<acl::uhandle>(mgr.allocs_.size());
+      auto huser                     = static_cast<std::uint32_t>(mgr.allocs_.size());
       auto size_                     = generator(gen) * TestType::min_granularity;
       auto [arena_, halloc, offset_] = allocator.allocate(size_, {}, huser);
       mgr.allocs_.emplace_back(arena_, halloc, offset_, size_);

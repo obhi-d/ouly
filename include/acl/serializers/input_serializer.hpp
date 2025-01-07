@@ -248,8 +248,8 @@ private:
       return false;
     }
 
-    using key_type    = detail::remove_cref<typename Class::key_type>;
-    using mapped_type = detail::remove_cref<typename Class::mapped_type>;
+    using key_type    = std::decay_t<typename Class::key_type>;
+    using mapped_type = std::decay_t<typename Class::mapped_type>;
 
     detail::reserve(obj, get().size());
 
@@ -279,8 +279,8 @@ private:
       return false;
     }
 
-    using key_type    = detail::remove_cref<typename Class::key_type>;
-    using mapped_type = detail::remove_cref<typename Class::mapped_type>;
+    using key_type    = std::decay_t<typename Class::key_type>;
+    using mapped_type = std::decay_t<typename Class::mapped_type>;
 
     detail::reserve(obj, get().size());
 
@@ -547,7 +547,7 @@ private:
   {
     if (!get().is_null())
     {
-      using class_type  = detail::remove_cref<Class>;
+      using class_type  = std::decay_t<Class>;
       using pvalue_type = detail::pointer_class_type<Class>;
       if constexpr (std::same_as<class_type, std::shared_ptr<pvalue_type>>)
       {
@@ -597,7 +597,7 @@ private:
     auto ser = get().at(N);
     if (ser)
     {
-      using type = detail::remove_cref<std::tuple_element_t<N, Class>>;
+      using type = std::decay_t<std::tuple_element_t<N, Class>>;
       return input_serializer(*ser).read(const_cast<type&>(std::get<N>(obj)));
     }
     return true;

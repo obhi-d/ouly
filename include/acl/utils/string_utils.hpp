@@ -287,6 +287,13 @@ inline auto split_last(const std::string_view& name, char by = ':', bool is_pref
   return string_view_pair(std::string_view(), name);
 }
 
+enum class response : uint8_t
+{
+  e_ok,
+  e_cancel,
+  e_continue
+};
+
 template <typename A>
 inline auto tokenize(A acceptor, std::string_view value, std::string_view seperators) -> response
 {

@@ -51,7 +51,7 @@ struct arena
   detail::list_node order_;
   size_type         size_ = 0;
   size_type         free_ = 0;
-  uhandle           data_ = detail::k_null_sz<uhandle>;
+  std::uint32_t     data_ = detail::k_null_sz<std::uint32_t>;
 
   [[nodiscard]] auto block_count() const noexcept -> std::uint32_t
   {

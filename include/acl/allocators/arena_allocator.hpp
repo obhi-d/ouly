@@ -63,18 +63,18 @@ concept MemoryManager = requires(T m) {
   /**
    * Drop Arena
    */
-  { m.drop_arena(acl::uhandle()) } -> std::same_as<bool>;
+  { m.drop_arena(std::uint32_t()) } -> std::same_as<bool>;
   /**
    * Add an arena
    */
-  { m.add_arena(acl::ihandle(), std::size_t()) } -> std::same_as<acl::uhandle>;
+  { m.add_arena(std::uint32_t(), std::size_t()) } -> std::same_as<std::uint32_t>;
   // Remoe an arena
-  m.remove_arena(acl::uhandle());
+  m.remove_arena(std::uint32_t());
 };
 
 template <typename T, typename A>
-concept HasDefragmentSupport = requires(T a, A& allocator, acl::uhandle src_arena, acl::uhandle dst_arena,
-                                        acl::uhandle alloc_info, std::size_t from, std::size_t to, std::size_t size) {
+concept HasDefragmentSupport = requires(T a, A& allocator, std::uint32_t src_arena, std::uint32_t dst_arena,
+                                        std::uint32_t alloc_info, std::size_t from, std::size_t to, std::size_t size) {
   // Begin defragment
   a.begin_defragment(allocator);
   // End defragmentation
@@ -337,8 +337,8 @@ public:
   /**
    * Allocation info: [optional] arena, offset, input_handle
    */
-  using alloc_info =
-   std::conditional_t<has_memory_mgr, std::tuple<uhandle, ihandle, size_type>, std::pair<ihandle, size_type>>;
+  using alloc_info = std::conditional_t<has_memory_mgr, std::tuple<std::uint32_t, std::uint32_t, size_type>,
+                                        std::pair<std::uint32_t, size_type>>;
 
   /**
    * @brief Constructs an arena allocator with a specified size and manager
@@ -370,7 +370,7 @@ public:
     ibank_.strat_.init(*this);
     if constexpr (!has_memory_mgr)
     {
-      add_arena(detail::k_null_sz<uhandle>, arena_size_, true);
+      add_arena(detail::k_null_sz<std::uint32_t>, arena_size_, true);
     }
   }
 
@@ -380,7 +380,7 @@ public:
     ibank_.strat_.init(*this);
     if constexpr (!has_memory_mgr)
     {
-      add_arena(detail::k_null_sz<uhandle>, arena_size_, true);
+      add_arena(detail::k_null_sz<std::uint32_t>, arena_size_, true);
     }
   }
 
@@ -410,7 +410,7 @@ public:
    *         - First: The arena identifier where allocation exists
    *         - Second: The offset within that arena
    */
-  auto get_alloc_offset(ihandle i_address) const
+  auto get_alloc_offset(std::uint32_t i_address) const
   {
     auto const& blk = ibank_.bank_.blocks()[block_link(i_address)];
     return std::pair(blk.arena_, blk.offset_);
@@ -436,7 +436,7 @@ public:
    * 4. Returns empty alloc_info if allocation fails
    */
   template <typename Alignment = alignment<>, typename Dedicated = std::false_type>
-  auto allocate(size_type isize, Alignment i_alignment = {}, uhandle huser = {}, Dedicated /*unused*/ = {})
+  auto allocate(size_type isize, Alignment i_alignment = {}, std::uint32_t huser = {}, Dedicated /*unused*/ = {})
    -> alloc_info
   {
     auto measure = this->statistics::report_allocate(isize);
@@ -466,7 +466,7 @@ public:
       {
         if (id == null())
         {
-          add_arena(detail::k_null_sz<uhandle>, arena_size_, true);
+          add_arena(detail::k_null_sz<std::uint32_t>, arena_size_, true);
           ta = ibank_.strat_.try_allocate(ibank_.bank_, size);
           if (ta)
           {
@@ -511,7 +511,7 @@ public:
    *
    * @note This operation updates internal free size tracking and arena statistics
    */
-  void deallocate(ihandle node)
+  void deallocate(std::uint32_t node)
   {
     auto& blk     = ibank_.bank_.blocks()[block_link(node)];
     auto  measure = this->statistics::report_deallocate(blk.size());
@@ -619,7 +619,7 @@ public:
   }
 
   // null
-  static constexpr auto null() -> ihandle
+  static constexpr auto null() -> std::uint32_t
   {
     return 0;
   }
@@ -783,7 +783,7 @@ public:
   }
 
 private:
-  auto add_arena(uhandle handle, size_type iarena_size, bool empty) -> std::pair<ihandle, ihandle>
+  auto add_arena(std::uint32_t handle, size_type iarena_size, bool empty) -> std::pair<std::uint32_t, std::uint32_t>
   {
     this->statistics::report_new_arena();
     auto ret = add_arena(ibank_, handle, iarena_size, empty);
@@ -794,8 +794,8 @@ private:
     return ret;
   }
 
-  static auto add_arena(remap_data& ibank, uhandle handle, size_type iarena_size, bool iempty)
-   -> std::pair<ihandle, ihandle>
+  static auto add_arena(remap_data& ibank, std::uint32_t handle, size_type iarena_size, bool iempty)
+   -> std::pair<std::uint32_t, std::uint32_t>
   {
 
     std::uint32_t arena_id  = ibank.bank_.arenas().emplace();
@@ -824,7 +824,7 @@ private:
   }
 
   template <typename Alignment = alignment<>>
-  auto finalize_commit(block& blk, uhandle huser, Alignment ialign) -> size_type
+  auto finalize_commit(block& blk, std::uint32_t huser, Alignment ialign) -> size_type
   {
     blk.data_      = huser;
     blk.alignment_ = static_cast<std::uint8_t>(std::popcount(static_cast<uint32_t>(ialign)));

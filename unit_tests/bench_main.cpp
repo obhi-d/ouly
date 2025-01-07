@@ -11,17 +11,17 @@ struct alloc_mem_manager
 
   alloc_mem_manager() {}
 
-  bool drop_arena([[maybe_unused]] acl::uhandle id)
+  bool drop_arena([[maybe_unused]] std::uint32_t id)
   {
     return true;
   }
 
-  acl::uhandle add_arena([[maybe_unused]] acl::ihandle id, [[maybe_unused]] std::size_t size)
+  std::uint32_t add_arena([[maybe_unused]] std::uint32_t id, [[maybe_unused]] std::size_t size)
   {
     return arena_nb++;
   }
 
-  void remove_arena(acl::uhandle h) {}
+  void remove_arena(std::uint32_t h) {}
 };
 
 struct rand_device
@@ -43,9 +43,9 @@ void bench_arena(uint32_t size, std::string_view name)
 {
   using allocator_t = acl::arena_allocator<
    acl::options<acl::opt::strategy<T>, acl::opt::manager<alloc_mem_manager>, acl::opt::basic_size_type<uint32_t>>>;
-  constexpr uint32_t        nbatch = 200000;
-  alloc_mem_manager         mgr;
-  std::vector<acl::ihandle> allocations;
+  constexpr uint32_t         nbatch = 200000;
+  alloc_mem_manager          mgr;
+  std::vector<std::uint32_t> allocations;
   allocations.reserve(nbatch);
   ankerl::nanobench::Bench bench;
   bench.output(&std::cout);

@@ -88,7 +88,7 @@ template <typename Class, typename Opt>
 class icontext : public in_context_base
 {
   using pop_fn           = std::function<void(void*)>;
-  using class_type       = detail::remove_cref<Class>;
+  using class_type       = std::decay_t<Class>;
   using key_field_name   = detail::key_field_name_t<Opt>;
   using value_field_name = detail::value_field_name_t<Opt>;
   using type_field_name  = detail::type_field_name_t<Opt>;
@@ -274,7 +274,7 @@ public:
 
   void read_pointer()
   {
-    using class_type  = detail::remove_cref<class_type>;
+    using class_type  = std::decay_t<class_type>;
     using pvalue_type = detail::pointer_class_type<class_type>;
     if (!obj_)
     {

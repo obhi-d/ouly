@@ -188,8 +188,8 @@ private:
   void write_container(Class const& obj) noexcept
   {
 
-    using key_type    = detail::remove_cref<typename Class::key_type>;
-    using mapped_type = detail::remove_cref<typename Class::mapped_type>;
+    using key_type    = std::decay_t<typename Class::key_type>;
+    using mapped_type = std::decay_t<typename Class::mapped_type>;
 
     get().begin_object();
     bool comma = false;
@@ -211,8 +211,8 @@ private:
   void write_container(Class const& obj) noexcept
   {
 
-    using key_type    = detail::remove_cref<typename Class::key_type>;
-    using mapped_type = detail::remove_cref<typename Class::mapped_type>;
+    using key_type    = std::decay_t<typename Class::key_type>;
+    using mapped_type = std::decay_t<typename Class::mapped_type>;
 
     get().begin_array();
     bool comma = false;

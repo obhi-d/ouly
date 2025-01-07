@@ -26,7 +26,7 @@ struct alloc_mem_manager
   std::vector<allocation>   backup_allocs_;
   uint32_t                  arena_count_ = 0;
 
-  bool drop_arena([[maybe_unused]] acl::uhandle id)
+  bool drop_arena([[maybe_unused]] std::uint32_t id)
   {
     arenas_[id].clear();
     return true;

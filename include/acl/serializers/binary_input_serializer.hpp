@@ -387,7 +387,7 @@ private:
     {
       if (!is_null)
       {
-        using class_type  = detail::remove_cref<Class>;
+        using class_type  = std::decay_t<Class>;
         using pvalue_type = detail::pointer_class_type<Class>;
         if constexpr (std::same_as<class_type, std::shared_ptr<pvalue_type>>)
         {
@@ -461,7 +461,7 @@ private:
   template <std::size_t N, typename Class>
   auto at(Class& obj) noexcept -> bool
   {
-    using type = detail::remove_cref<std::tuple_element_t<N, Class>>;
+    using type = std::decay_t<std::tuple_element_t<N, Class>>;
     return read(const_cast<type&>(std::get<N>(obj)));
   }
 

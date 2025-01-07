@@ -76,7 +76,7 @@ public:
     {
       auto& list   = bank.arenas_[blk.arena_].block_order();
       auto  arena  = blk.arena_;
-      auto  newblk = bank.blocks_.emplace(blk.offset_ + size, remaining, arena, detail::k_null_sz<uhandle>, true);
+      auto  newblk = bank.blocks_.emplace(blk.offset_ + size, remaining, arena, detail::k_null_sz<std::uint32_t>, true);
       list.insert_after(bank.blocks_, free_node, (uint32_t)newblk);
       // reinsert the left-over size in free list
       reinsert_left(bank.blocks_, free_idx, remaining, (uint32_t)newblk);
