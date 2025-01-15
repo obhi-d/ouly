@@ -1,19 +1,13 @@
 ﻿#pragma once
 
-#include <acl/allocators/arena_options.hpp>
+#include <acl/allocators/config.hpp>
 #include <acl/allocators/detail/arena.hpp>
+#include <acl/allocators/detail/arena_manager_defs.hpp>
 
 #include <bit>
 #include <concepts>
 #include <functional>
 #include <tuple>
-
-#include "strat_best_fit_tree.hpp"
-#include "strat_best_fit_v0.hpp"
-#include "strat_best_fit_v1.hpp"
-#include "strat_best_fit_v2.hpp"
-#include "strat_greedy_v0.hpp"
-#include "strat_greedy_v1.hpp"
 
 /**
  * @file arena_allocator.hpp
@@ -49,7 +43,7 @@
  * - With or without statistics tracking
  *
  * @note The implementation uses template metaprogramming extensively to provide
- * compile-time configuration options through the Options parameter.
+ * compile-time configuration config through the Config parameter.
  *
  * @see acl::arena_allocator
  * @see acl::MemoryManager
@@ -85,97 +79,7 @@ concept HasDefragmentSupport = requires(T a, A& allocator, std::uint32_t src_are
   a.move_memory(src_arena, dst_arena, from, to, size);
 };
 
-} // namespace acl
-
-namespace acl::opt
-{
-
-template <typename T>
-struct extension
-{
-  using extension_t = T;
-};
-
-template <MemoryManager T>
-struct manager
-{
-  using manager_t = T;
-};
-
-template <typename T>
-struct strategy
-{
-  using strategy_t = T;
-};
-
-} // namespace acl::opt
-
-namespace acl::detail
-{
-
-template <typename T>
-concept HasMemoryManager = requires { typename T::manager_t; };
-
-template <typename T>
-concept HasAllocStrategy = requires { typename T::strategy_t; };
-
-template <typename T>
-struct manager
-{
-  using manager_t = std::false_type;
-};
-
-template <HasMemoryManager T>
-struct manager<T>
-{
-  using manager_t = typename T::manager_t;
-};
-
-template <typename T>
-struct strategy
-{
-  using strategy_t = acl::strat::best_fit_v2<acl::opt::bsearch_min1>;
-};
-
-template <HasAllocStrategy T>
-struct strategy<T>
-{
-  using strategy_t = typename T::strategy_t;
-};
-
-struct defrag_stats
-{
-  std::uint32_t total_mem_move_merge_ = 0;
-  std::uint32_t total_arenas_removed_ = 0;
-
-  void report_defrag_mem_move_merge()
-  {
-    total_mem_move_merge_++;
-  }
-
-  void report_defrag_arenas_removed()
-  {
-    total_arenas_removed_++;
-  }
-
-  [[nodiscard]] auto print() const -> std::string
-  {
-    std::stringstream ss;
-    ss << "Defrag memory move merges: " << total_mem_move_merge_ << "\n"
-       << "Defrag arenas removed: " << total_arenas_removed_;
-    return ss.str();
-  }
-};
-
-struct arena_allocator_tag
-{};
-
-} // namespace acl::detail
-
-namespace acl
-{
-
-template <typename Options = std::monostate>
+template <typename Config = std::monostate>
 /**
  * @brief A memory allocator that manages memory in arenas (contiguous memory blocks).
  *
@@ -183,7 +87,7 @@ template <typename Options = std::monostate>
  * memory in fixed-size arenas. It supports memory defragmentation, statistics tracking,
  * and custom memory management strategies.
  *
- * @tparam Options Configuration options for the allocator, including:
+ * @tparam Config Configuration config for the allocator, including:
  *         - Memory manager support
  *         - Defragmentation capabilities
  *         - Statistics tracking
@@ -211,42 +115,42 @@ template <typename Options = std::monostate>
  * - Arena creation and management
  *
  * @note The allocator can be configured to work with or without an external memory manager
- *       through the Options template parameter.
+ *       through the Config template parameter.
  *
  * @see memory_move For memory movement tracking during defragmentation
  * @see alloc_info For allocation information storage
  */
-class arena_allocator
-    : detail::statistics<detail::arena_allocator_tag, acl::options<Options, opt::base_stats<detail::defrag_stats>>>
+class arena_allocator : acl::detail::statistics<acl::detail::arena_allocator_tag,
+                                                acl::config<Config, cfg::base_stats<acl::detail::defrag_stats>>>
 {
 
 public:
-  using strategy      = typename detail::strategy<Options>::strategy_t;
+  using strategy      = typename acl::detail::strategy<Config>::strategy_t;
   using extension     = typename strategy::extension;
-  using arena_manager = typename detail::manager<Options>::manager_t;
-  using size_type     = detail::choose_size_t<uint32_t, Options>;
-  using this_type     = arena_allocator<Options>;
+  using arena_manager = typename acl::detail::manager<Config>::manager_t;
+  using size_type     = acl::detail::choose_size_t<uint32_t, Config>;
+  using this_type     = arena_allocator<Config>;
 
-  static constexpr bool has_memory_mgr = detail::HasMemoryManager<Options>;
+  static constexpr bool has_memory_mgr = acl::detail::HasMemoryManager<Config>;
   static constexpr bool can_defragment = HasDefragmentSupport<arena_manager, this_type>;
 
 protected:
-  using options = Options;
+  using config = Config;
 
-  using block          = detail::block<size_type, extension>;
-  using block_bank     = detail::block_bank<size_type, extension>;
-  using block_accessor = detail::block_accessor<size_type, extension>;
-  using block_list     = detail::block_list<size_type, extension>;
-  using arena_bank     = detail::arena_bank<size_type, extension>;
-  using arena_list     = detail::arena_list<size_type, extension>;
+  using block          = acl::detail::block<size_type, extension>;
+  using block_bank     = acl::detail::block_bank<size_type, extension>;
+  using block_accessor = acl::detail::block_accessor<size_type, extension>;
+  using block_list     = acl::detail::block_list<size_type, extension>;
+  using arena_bank     = acl::detail::arena_bank<size_type, extension>;
+  using arena_list     = acl::detail::arena_list<size_type, extension>;
 
-  using super =
-   detail::statistics<detail::arena_allocator_tag, acl::options<Options, opt::base_stats<detail::defrag_stats>>>;
+  using super = acl::detail::statistics<acl::detail::arena_allocator_tag,
+                                        acl::config<Config, cfg::base_stats<acl::detail::defrag_stats>>>;
 
   using statistics = super;
   using block_link = typename block_bank::link;
 
-  using bank_data = detail::bank_data<size_type, extension>;
+  using bank_data = acl::detail::bank_data<size_type, extension>;
 
   struct remap_data
   {
@@ -363,14 +267,14 @@ public:
    * @note This constructor is marked noexcept
    *
    * @details If has_memory_mgr is false, it automatically adds a default arena
-   * using k_null_sz handle with arena_size_ and marks it as static
+   * using std::numeric_limits<size_type>::max() handle with arena_size_ and marks it as static
    */
   arena_allocator() noexcept
   {
     ibank_.strat_.init(*this);
     if constexpr (!has_memory_mgr)
     {
-      add_arena(detail::k_null_sz<std::uint32_t>, arena_size_, true);
+      add_arena(std::numeric_limits<uint32_t>::max(), arena_size_, true);
     }
   }
 
@@ -380,7 +284,7 @@ public:
     ibank_.strat_.init(*this);
     if constexpr (!has_memory_mgr)
     {
-      add_arena(detail::k_null_sz<std::uint32_t>, arena_size_, true);
+      add_arena(std::numeric_limits<uint32_t>::max(), arena_size_, true);
     }
   }
 
@@ -466,7 +370,7 @@ public:
       {
         if (id == null())
         {
-          add_arena(detail::k_null_sz<std::uint32_t>, arena_size_, true);
+          add_arena(std::numeric_limits<uint32_t>::max(), arena_size_, true);
           ta = ibank_.strat_.try_allocate(ibank_.bank_, size);
           if (ta)
           {
@@ -690,7 +594,7 @@ public:
    * - Cleans up empty arenas
    *
    * @note This function is only available when the allocator supports defragmentation (can_defragment = true)
-   * @note Statistics are updated if Options includes ComputeStats
+   * @note Statistics are updated if Config includes ComputeStats
    */
   void defragment()
     requires(can_defragment)
@@ -720,7 +624,7 @@ public:
           auto ta = refresh.strat_.try_allocate(refresh.bank_, blk.size());
           if (!ta && !arena_allocated)
           {
-            auto p = add_arena(refresh, detail::k_null_uh, std::max(arena.size(), blk.size()), true);
+            auto p = add_arena(refresh, std::numeric_limits<uint32_t>::max(), std::max(arena.size(), blk.size()), true);
             refresh.bank_.arenas()[p.first].data_ = arena.data_;
             ta                                    = refresh.strat_.try_allocate(refresh.bank_, blk.size());
             arena_allocated                       = true;
@@ -771,7 +675,7 @@ public:
     {
       auto& arena = *arena_it;
       mgr_->remove_arena(arena.data_);
-      if constexpr (detail::HasComputeStats<Options>)
+      if constexpr (acl::detail::HasComputeStats<Config>)
       {
         statistics::report_defrag_arenas_removed();
       }
@@ -858,7 +762,7 @@ private:
     else
     {
       dst.back().size_ += value.size_;
-      if constexpr (detail::HasComputeStats<Options>)
+      if constexpr (acl::detail::HasComputeStats<Config>)
       {
         statistics::report_defrag_mem_move_merge();
       }

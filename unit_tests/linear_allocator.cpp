@@ -26,7 +26,7 @@ TEST_CASE("Validate linear_arena_allocator without alignment", "[linear_arena_al
 {
   using namespace acl;
   using allocator_t = acl::linear_arena_allocator<
-   acl::options<acl::opt::underlying_allocator<default_allocator<acl::options<acl::opt::min_alignment<8>>>>>>;
+   acl::config<acl::cfg::underlying_allocator<default_allocator<acl::config<acl::cfg::min_alignment<8>>>>>>;
   struct record
   {
     void*         data;
@@ -62,7 +62,7 @@ TEST_CASE("Validate linear_arena_allocator with alignment", "[linear_arena_alloc
 {
   using namespace acl;
   using allocator_t = acl::linear_arena_allocator<
-   acl::options<acl::opt::underlying_allocator<default_allocator<acl::options<acl::opt::min_alignment<128>>>>>>;
+   acl::config<acl::cfg::underlying_allocator<default_allocator<acl::config<acl::cfg::min_alignment<128>>>>>>;
   struct record
   {
     void*         data;

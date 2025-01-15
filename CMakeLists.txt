@@ -22,28 +22,25 @@ set(ACL_FLEX_EXE "flex" CACHE STRING "Flex executable")
 ## CONFIGURATION
 ##
 set(ACL_TARGET_NAME ${PROJECT_NAME})
-set(ACL_INCLUDE_BUILD_DIR "${PROJECT_SOURCE_DIR}/include")
-set(ACL_SOURCE_BUILD_DIR "${PROJECT_SOURCE_DIR}/src")
 
 include(GNUInstallDirs)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-find_program(CCACHE_PROGRAM ccache)
-if(CCACHE_PROGRAM)
-    set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
-    set(CMAKE_CUDA_COMPILER_LAUNCHER "${CCACHE_PROGRAM}") # CMake 3.9+
-endif()
+# find_program(CCACHE_PROGRAM ccache)
+# if(CCACHE_PROGRAM)
+#     set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+#     set(CMAKE_CUDA_COMPILER_LAUNCHER "${CCACHE_PROGRAM}") # CMake 3.9+
+# endif()
 
 add_library(
     ${ACL_TARGET_NAME}
-    "${ACL_SOURCE_BUILD_DIR}/acl/dsl/microexpr.cpp"
-    "${ACL_SOURCE_BUILD_DIR}/acl/dsl/yaml.cpp"
-    "${ACL_SOURCE_BUILD_DIR}/acl/scheduler/scheduler.cpp"
-    "${ACL_SOURCE_BUILD_DIR}/acl/scheduler/event_types.cpp"
-    "${ACL_SOURCE_BUILD_DIR}/acl/utils/string_utils.cpp"
-    "${ACL_SOURCE_BUILD_DIR}/acl/allocators/coalescing_allocator.cpp"
-    "${ACL_SOURCE_BUILD_DIR}/acl/allocators/coalescing_arena_allocator.cpp"
-    "${ACL_SOURCE_BUILD_DIR}/acl/all.cpp"
+    "src/acl/allocators/coalescing_allocator.cpp"
+    "src/acl/allocators/coalescing_arena_allocator.cpp"
+    "src/acl/dsl/lite_yml.cpp"
+    "src/acl/dsl/microexpr.cpp"
+    "src/acl/scheduler/scheduler.cpp"
+    "src/acl/scheduler/event_types.cpp"
+    "src/acl/utility/string_utils.cpp"
 )
 
 set_property(TARGET ${ACL_TARGET_NAME} PROPERTY CXX_STANDARD 20)
@@ -64,14 +61,14 @@ if(MSVC)
     target_sources(
         ${ACL_TARGET_NAME}
         PUBLIC
-            $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/natvis/acl/containers.natvis>
+            $<BUILD_INTERFACE:natvis/acl/containers.natvis>
     )
 endif()
 
 target_include_directories(
     ${ACL_TARGET_NAME}
     PUBLIC
-        $<BUILD_INTERFACE:${ACL_INCLUDE_BUILD_DIR}>
+        $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 

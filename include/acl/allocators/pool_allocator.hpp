@@ -1,106 +1,27 @@
 #pragma once
 
-#include "default_allocator.hpp"
-#include <acl/utils/common.hpp>
+#include <acl/allocators/default_allocator.hpp>
+#include <acl/allocators/detail/custom_allocator.hpp>
+#include <acl/allocators/detail/memory_stats.hpp>
+#include <acl/allocators/detail/pool_defs.hpp>
 
 namespace acl
 {
 
-namespace opt
-{
-
-template <std::size_t N>
-struct atom_count
-{
-  static constexpr std::size_t atom_count_v = N;
-};
-
-template <std::size_t N>
-struct atom_size
-{
-  static constexpr std::size_t atom_size_v = 1 << detail::log2(N);
-};
-
-template <std::size_t N>
-struct atom_size_npt
-{
-  static constexpr std::size_t atom_size_v = N;
-};
-} // namespace opt
-
-namespace detail
-{
-template <typename O>
-concept HasAtomCount = O::atom_count_v > 0;
-
-template <typename O>
-concept HasAtomSize = O::atom_size_v > 0;
-
-template <typename T>
-struct atom_count
-{
-  static constexpr std::size_t value = 128;
-};
-
-template <typename T>
-struct atom_size
-{
-  static constexpr std::size_t value = 32;
-};
-
-template <HasAtomCount T>
-struct atom_count<T>
-{
-  static constexpr std::size_t value = T::atom_count_v;
-};
-
-template <HasAtomSize T>
-struct atom_size<T>
-{
-  static constexpr std::size_t value = T::atom_size_v;
-};
-
-struct padding_stats
-{
-  std::uint32_t padding_atoms_ = 0;
-
-  void pad_atoms(std::uint32_t v) noexcept
-  {
-    padding_atoms_ += v;
-  }
-
-  void unpad_atoms(std::uint32_t v) noexcept
-  {
-    padding_atoms_ -= v;
-  }
-
-  [[nodiscard]] auto padding_atoms_count() const noexcept -> std::uint32_t
-  {
-    return padding_atoms_;
-  }
-
-  [[nodiscard]] static auto print() -> std::string
-  {
-    return {};
-  }
-};
-
-} // namespace detail
-
 struct pool_allocator_tag
 {};
 
-template <typename Options = acl::options<>>
+template <typename Config = acl::config<>>
 class pool_allocator
-    : detail::statistics<pool_allocator_tag, acl::options<Options, opt::base_stats<detail::padding_stats>>>
+    : acl::detail::statistics<pool_allocator_tag, acl::config<Config, cfg::base_stats<acl::detail::padding_stats>>>
 {
 public:
   using tag = pool_allocator_tag;
   using statistics =
-   detail::statistics<pool_allocator_tag, acl::options<Options, opt::base_stats<detail::padding_stats>>>;
-  static constexpr auto default_atom_size  = detail::atom_size<Options>::value;
-  static constexpr auto default_atom_count = detail::atom_count<Options>::value;
-  using underlying_allocator               = detail::underlying_allocator_t<Options>;
+   acl::detail::statistics<pool_allocator_tag, acl::config<Config, cfg::base_stats<acl::detail::padding_stats>>>;
+  static constexpr auto default_atom_size  = acl::detail::atom_size<Config>::value;
+  static constexpr auto default_atom_count = acl::detail::atom_count<Config>::value;
+  using underlying_allocator               = acl::detail::underlying_allocator_t<Config>;
   using size_type                          = typename underlying_allocator::size_type;
   using address                            = typename underlying_allocator::address;
 
@@ -153,7 +74,7 @@ public:
 
     size_type i_count = (size_value + k_atom_size_ - 1) / k_atom_size_;
 
-    if constexpr (detail::HasComputeStats<Options>)
+    if constexpr (acl::detail::HasComputeStats<Config>)
     {
       if (alignment_value && ((k_atom_size_ < alignment_value) || (k_atom_size_ & fixup)))
       {
@@ -211,7 +132,7 @@ public:
 
     size_type i_count = (size_value + k_atom_size_ - 1) / k_atom_size_;
 
-    if constexpr (detail::HasComputeStats<Options>)
+    if constexpr (acl::detail::HasComputeStats<Config>)
     {
       if (alignment_value && ((k_atom_size_ < alignment_value) || (k_atom_size_ & fixup)))
       {
@@ -572,7 +493,7 @@ private:
 
   [[nodiscard]] auto get_missing_atoms() const -> std::uint32_t
   {
-    if constexpr (detail::HasComputeStats<Options>)
+    if constexpr (acl::detail::HasComputeStats<Config>)
     {
       return this->statistics::padding_atoms_count();
     }

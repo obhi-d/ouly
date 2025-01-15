@@ -1,100 +1,18 @@
 #pragma once
-#include "podvector.hpp"
+
 #include <acl/allocators/allocator.hpp>
 #include <acl/allocators/default_allocator.hpp>
-#include <acl/utils/config.hpp>
-#include <acl/utils/utils.hpp>
-#include <algorithm>
+#include <acl/allocators/detail/custom_allocator.hpp>
+#include <acl/containers/config.hpp>
+#include <acl/containers/detail/blackboard_defs.hpp>
+#include <acl/utility/config.hpp>
+#include <acl/utility/utils.hpp>
 #include <cassert>
 #include <cstdint>
 #include <memory>
-#include <span>
-#include <string_view>
-#include <type_traits>
-#include <typeindex>
-#include <typeinfo>
-#include <unordered_map>
 
 namespace acl
 {
-
-struct blackboard_offset
-{
-  using dtor = void (*)(void*);
-
-  void* data_       = nullptr;
-  dtor  destructor_ = nullptr;
-};
-
-template <typename T>
-concept BlackboardHashMap = requires(T& obj, T const& cobj) {
-  typename T::key_type;
-  requires std::same_as<typename T::mapped_type, blackboard_offset>;
-  typename T::iterator;
-  typename T::const_iterator;
-  { obj.find(std::declval<typename T::key_type>()) } -> std::same_as<typename T::iterator>;
-  { cobj.find(std::declval<typename T::key_type>()) } -> std::same_as<typename T::const_iterator>;
-
-  obj.erase(obj.find(std::declval<typename T::key_type>()));
-  { obj[std::declval<typename T::key_type>()] } -> std::same_as<typename T::mapped_type&>;
-  requires std::same_as<typename T::mapped_type, blackboard_offset>;
-};
-
-namespace detail
-{
-
-template <typename T>
-concept HashMapDeclTraits = requires {
-  typename T::name_map_type;
-  requires BlackboardHashMap<typename T::name_map_type>;
-};
-
-template <typename H>
-struct name_index_map
-{
-  using type = std::unordered_map<std::string, blackboard_offset>;
-};
-
-template <HashMapDeclTraits H>
-struct name_index_map<H>
-{
-  using type = typename H::name_map_type;
-};
-} // namespace detail
-
-namespace opt
-{
-/**
- * Provide a custom blackboard hash map lookup implementation.
- */
-template <BlackboardHashMap H>
-struct name_val_map
-{
-  using name_map_type = H;
-};
-
-/**
- * This option allows blackboard to customize the <type key> by using std::type_index, you are free to provide
- * the hash map implementation and replace std::unordered_map by your own class if it satisfies
- *
- */
-template <template <typename K, typename V> typename H>
-struct map
-{
-  using name_map_type = H<std::type_index, blackboard_offset>;
-};
-
-/**
- * This option allows you to implement your own key type, the offset is always required to be blackboard_offset type and
- * provided by blackboard.
- */
-template <template <typename V> typename H>
-struct name_map
-{
-  using name_map_type = H<blackboard_offset>;
-};
-
-} // namespace opt
 
 /**
  * @brief Store data as name value pairs, value can be any blob of data, has no free memory management
@@ -103,16 +21,16 @@ struct name_map
  *         Data can also be retrieved by index.
  *         There is no restriction on the data type that is supported (POD or non-POD both are supported).
  */
-template <typename Options = acl::options<>>
-class blackboard : public detail::custom_allocator_t<Options>
+template <typename Config = acl::config<>>
+class blackboard : public acl::detail::custom_allocator_t<Config>
 {
   using dtor = bool (*)(void*);
 
-  using options                             = Options;
-  static constexpr auto total_atoms_in_page = detail::pool_size_v<options>;
-  using allocator                           = detail::custom_allocator_t<options>;
+  using config                              = Config;
+  static constexpr auto total_atoms_in_page = acl::detail::pool_size_v<config>;
+  using allocator                           = acl::detail::custom_allocator_t<config>;
   using base_type                           = allocator;
-  using name_index_map                      = typename detail::name_index_map<options>::type;
+  using name_index_map                      = typename acl::detail::name_index_map<config>::type;
 
 public:
   using link           = void*;

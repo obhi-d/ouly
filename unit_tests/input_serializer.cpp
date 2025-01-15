@@ -1,7 +1,8 @@
 
-#include "acl/serializers/input_serializer.hpp"
 #include "acl/containers/array_types.hpp"
-#include <acl/utils/error_codes.hpp>
+#include "acl/reflection/reflection.hpp"
+#include "acl/serializers/serializers.hpp"
+#include "acl/utility/optional_ref.hpp"
 #include <catch2/catch_all.hpp>
 #include <charconv>
 #include <nlohmann/json.hpp>
@@ -12,21 +13,15 @@ using json = nlohmann::json;
 // NOLINTBEGIN
 struct InputData
 {
-  json                  root;
-  acl::serializer_error ec = acl::serializer_error::none;
+  json root;
 };
 
-class Serializer
+class Stream
 {
 public:
-  Serializer() noexcept = default;
-  Serializer(InputData& r) : owner(r), value(std::cref(r.root)) {}
-  Serializer(InputData& r, json const& source) : owner(r), value(std::cref(source)) {}
-
-  bool failed() const noexcept
-  {
-    return owner.get().ec != acl::serializer_error::none;
-  }
+  Stream() noexcept = default;
+  Stream(InputData& r) : owner(r), value(std::cref(r.root)) {}
+  Stream(InputData& r, json const& source) : owner(r), value(std::cref(source)) {}
 
   bool is_object() const noexcept
   {
@@ -49,73 +44,55 @@ public:
   }
 
   template <typename L>
-    requires(acl::function_traits<L>::arity == 2)
-  bool for_each(L&& lambda) const noexcept
-  {
-    assert(value.get().is_object());
-    for (auto const& [key, value] : value.get().items())
-    {
-      if (!lambda(std::string_view(key), Serializer(owner, value)))
-        return false;
-    }
-    return true;
-  }
-
-  template <typename L>
-    requires(acl::function_traits<L>::arity == 1)
-  bool for_each(L&& lambda) const noexcept
+  void for_each_entry(L&& lambda) const
   {
     for (auto const& value : value.get())
     {
-      if (!lambda(Serializer(owner, value)))
-        return false;
+      auto stream = Stream(owner, value);
+      lambda(stream);
     }
-    return true;
   }
 
-  std::optional<Serializer> at(std::string_view name) const noexcept
+  std::optional<Stream> at(std::string_view name) const noexcept
   {
     auto it = value.get().find(name);
     if (it != value.get().end())
-      return Serializer(owner, *it);
+      return Stream(owner, *it);
     return {};
   }
 
-  std::optional<Serializer> at(uint32_t idx) const noexcept
+  std::optional<Stream> at(std::size_t index) const noexcept
   {
-    if (idx >= value.get().size())
-      return {};
-    return Serializer(owner, value.get().at(idx));
+    if (index < value.get().size())
+    {
+      return Stream(owner, value.get().at(index));
+    }
+    return {};
   }
 
   auto as_double() const noexcept
   {
-    return value.get().get_ptr<json::number_float_t const*>();
+    return acl::optional_ref(value.get().get_ptr<json::number_float_t const*>());
   }
 
   auto as_uint64() const noexcept
   {
-    return value.get().get_ptr<json::number_unsigned_t const*>();
+    return acl::optional_ref(value.get().get_ptr<json::number_unsigned_t const*>());
   }
 
   auto as_int64() const noexcept
   {
-    return value.get().get_ptr<json::number_integer_t const*>();
+    return acl::optional_ref(value.get().get_ptr<json::number_integer_t const*>());
   }
 
   auto as_bool() const noexcept
   {
-    return value.get().get_ptr<json::boolean_t const*>();
+    return acl::optional_ref(value.get().get_ptr<json::boolean_t const*>());
   }
 
   auto as_string() const noexcept
   {
-    return value.get().get_ptr<json::string_t const*>();
-  }
-
-  void error(std::string_view type, std::error_code iec)
-  {
-    owner.get().ec = (acl::serializer_error)iec.value();
+    return acl::optional_ref(value.get().get_ptr<json::string_t const*>());
   }
 
 private:
@@ -138,63 +115,54 @@ struct ReflTestFriend
 };
 
 template <>
-auto acl::reflect<ReflTestFriend>() noexcept
+constexpr auto acl::reflect<ReflTestFriend>() noexcept
 {
   return acl::bind(acl::bind<"a", &ReflTestFriend::a>(), acl::bind<"b", &ReflTestFriend::b>(),
                    acl::bind<"et", &ReflTestFriend::et>());
 }
 
-TEST_CASE("input_serializer: Test valid stream in with reflect outside")
+TEST_CASE("structured_input_serializer: Test valid stream in with reflect outside")
 {
   json j = "{ \"a\": 100, \"b\": 200, \"et\": 64533 }"_json;
 
   InputData input;
-  input.root      = j;
-  auto serializer = Serializer(input);
-  auto ser        = acl::input_serializer<Serializer>(serializer);
-
+  input.root                = j;
+  auto           serializer = Stream(input);
   ReflTestFriend myStruct;
-
-  ser >> myStruct;
+  acl::read(serializer, myStruct);
 
   REQUIRE(myStruct.a == 100);
   REQUIRE(myStruct.b == 200);
   REQUIRE(myStruct.et == EnumTest::value3);
 }
 
-TEST_CASE("input_serializer: Test partial stream in with reflect outside")
+TEST_CASE("structured_input_serializer: Test partial stream in with reflect outside")
 {
   json j = "{ \"a\": 100 }"_json;
 
   InputData input;
   input.root      = j;
-  auto serializer = Serializer(input);
-  auto ser        = acl::input_serializer<Serializer>(serializer);
+  auto serializer = Stream(input);
 
   ReflTestFriend myStruct;
 
-  ser >> myStruct;
+  acl::read(serializer, myStruct);
 
   REQUIRE(myStruct.a == 100);
   REQUIRE(myStruct.b == 0);
 }
 
-TEST_CASE("input_serializer: Test fail stream in with reflect outside")
+TEST_CASE("structured_input_serializer: Test fail stream in with reflect outside")
 {
   json j = "{ \"a\": \"is_string\" }"_json;
 
   InputData input;
   input.root      = j;
-  auto serializer = Serializer(input);
-  auto ser        = acl::input_serializer<Serializer>(serializer);
+  auto serializer = Stream(input);
 
   ReflTestFriend myStruct;
 
-  ser >> myStruct;
-
-  REQUIRE(input.ec == acl::serializer_error::failed_to_parse_value);
-  REQUIRE(myStruct.a == 0);
-  REQUIRE(myStruct.b == 0);
+  REQUIRE_THROWS(acl::read(serializer, myStruct));
 }
 
 class ReflTestClass
@@ -217,18 +185,17 @@ public:
   }
 };
 
-TEST_CASE("input_serializer: Test valid stream in with reflect member")
+TEST_CASE("structured_input_serializer: Test valid stream in with reflect member")
 {
   json j = "{ \"a\": 100, \"b\": 200 }"_json;
 
   InputData input;
   input.root      = j;
-  auto serializer = Serializer(input);
-  auto ser        = acl::input_serializer<Serializer>(serializer);
+  auto serializer = Stream(input);
 
   ReflTestClass myStruct;
 
-  ser >> myStruct;
+  acl::read(serializer, myStruct);
 
   REQUIRE(myStruct.get_a() == 100);
   REQUIRE(myStruct.get_b() == 200);
@@ -245,18 +212,17 @@ struct ReflTestMember
   }
 };
 
-TEST_CASE("input_serializer: Test 1 level scoped class")
+TEST_CASE("structured_input_serializer: Test 1 level scoped class")
 {
   json j = R"({ "first":{ "a": 100, "b": 200 }, "second":{ "a": 300, "b": 400 } } )"_json;
 
   InputData input;
   input.root      = j;
-  auto serializer = Serializer(input);
-  auto ser        = acl::input_serializer<Serializer>(serializer);
+  auto serializer = Stream(input);
 
   ReflTestMember myStruct;
 
-  ser >> myStruct;
+  acl::read(serializer, myStruct);
 
   REQUIRE(myStruct.first.get_a() == 100);
   REQUIRE(myStruct.first.get_b() == 200);
@@ -264,18 +230,17 @@ TEST_CASE("input_serializer: Test 1 level scoped class")
   REQUIRE(myStruct.second.get_b() == 400);
 }
 
-TEST_CASE("input_serializer: Test partial 1 level scoped class")
+TEST_CASE("structured_input_serializer: Test partial 1 level scoped class")
 {
   json j = R"({ "first":{ "a": 100, "b": 200 } } )"_json;
 
   InputData input;
   input.root      = j;
-  auto serializer = Serializer(input);
-  auto ser        = acl::input_serializer<Serializer>(serializer);
+  auto serializer = Stream(input);
 
   ReflTestMember myStruct;
 
-  ser >> myStruct;
+  acl::read(serializer, myStruct);
 
   REQUIRE(myStruct.first.get_a() == 100);
   REQUIRE(myStruct.first.get_b() == 200);
@@ -294,18 +259,17 @@ struct ReflTestClass2
   }
 };
 
-TEST_CASE("input_serializer: Test 2 level scoped class")
+TEST_CASE("structured_input_serializer: Test 2 level scoped class")
 {
   json j = R"({ "first":{ "first":{ "a": 100, "b": 200 }, "second":{ "a": 300, "b": 400 } }, "second":"value" })"_json;
 
   InputData input;
   input.root      = j;
-  auto serializer = Serializer(input);
-  auto ser        = acl::input_serializer<Serializer>(serializer);
+  auto serializer = Stream(input);
 
   ReflTestClass2 myStruct;
 
-  ser >> myStruct;
+  acl::read(serializer, myStruct);
 
   REQUIRE(myStruct.first.first.get_a() == 100);
   REQUIRE(myStruct.first.first.get_b() == 200);
@@ -314,18 +278,17 @@ TEST_CASE("input_serializer: Test 2 level scoped class")
   REQUIRE(myStruct.second == "value");
 }
 
-TEST_CASE("input_serializer: Test pair")
+TEST_CASE("structured_input_serializer: Test pair")
 {
   json j = R"([ { "first":{ "a": 100, "b": 200 }, "second":{ "a": 300, "b": 400 } }, "value" ])"_json;
 
   InputData input;
   input.root      = j;
-  auto serializer = Serializer(input);
-  auto ser        = acl::input_serializer<Serializer>(serializer);
+  auto serializer = Stream(input);
 
   std::pair<ReflTestMember, std::string> myStruct;
 
-  ser >> myStruct;
+  acl::read(serializer, myStruct);
 
   REQUIRE(myStruct.first.first.get_a() == 100);
   REQUIRE(myStruct.first.first.get_b() == 200);
@@ -334,18 +297,17 @@ TEST_CASE("input_serializer: Test pair")
   REQUIRE(myStruct.second == "value");
 }
 
-TEST_CASE("input_serializer: TupleLike ")
+TEST_CASE("structured_input_serializer: TupleLike ")
 {
   json j = R"([ { "first":{ "a": 100, "b": 200 }, "second":{ "a": 300, "b": 400 } }, "value", 324, true ])"_json;
 
   InputData input;
   input.root      = j;
-  auto serializer = Serializer(input);
-  auto ser        = acl::input_serializer<Serializer>(serializer);
+  auto serializer = Stream(input);
 
   std::tuple<ReflTestMember, std::string, int, bool> myStruct = {};
 
-  ser >> myStruct;
+  acl::read(serializer, myStruct);
 
   REQUIRE(std::get<0>(myStruct).first.get_a() == 100);
   REQUIRE(std::get<0>(myStruct).first.get_b() == 200);
@@ -356,112 +318,29 @@ TEST_CASE("input_serializer: TupleLike ")
   REQUIRE(std::get<3>(myStruct) == true);
 }
 
-TEST_CASE("input_serializer: Invalid TupleLike ")
+TEST_CASE("structured_input_serializer: Invalid TupleLike ")
 {
   json j = R"({ "first": "invalid" })"_json;
 
   InputData input;
   input.root      = j;
-  auto serializer = Serializer(input);
-  auto ser        = acl::input_serializer<Serializer>(serializer);
+  auto serializer = Stream(input);
 
   std::tuple<ReflTestMember, std::string, int, bool> myStruct = {};
 
-  ser >> myStruct;
-
-  REQUIRE(input.ec == acl::serializer_error::invalid_type);
+  REQUIRE_THROWS(acl::read(serializer, myStruct));
 }
 
-TEST_CASE("input_serializer: StringMapLike ")
-{
-  using pair_type = std::pair<int, std::string>;
-  using type      = std::unordered_map<std::string, pair_type>;
-  json j          = R"({ "first":[ 100, "100"], "second":[ 300, "300" ] , "third":[ 400, "400" ] })"_json;
-
-  InputData input;
-  input.root      = j;
-  auto serializer = Serializer(input);
-  auto ser        = acl::input_serializer<Serializer>(serializer);
-
-  type myMap = {};
-
-  ser >> myMap;
-
-  REQUIRE(myMap["first"] == pair_type(100, "100"));
-  REQUIRE(myMap["second"] == pair_type(300, "300"));
-  REQUIRE(myMap["third"] == pair_type(400, "400"));
-}
-
-TEST_CASE("input_serializer: StringMapLike Invalid ")
-{
-  using pair_type = std::pair<int, std::string>;
-  using type      = std::unordered_map<std::string, pair_type>;
-  json j          = R"({ "first":"invalid", "second":[ 300, "300" ] , "third":[ 400, "400" ] })"_json;
-
-  InputData input;
-  input.root      = j;
-  auto serializer = Serializer(input);
-  auto ser        = acl::input_serializer<Serializer>(serializer);
-
-  type myMap = {};
-
-  ser >> myMap;
-
-  REQUIRE(input.ec == acl::serializer_error::failed_streaming_map);
-  REQUIRE(myMap.empty());
-}
-
-TEST_CASE("input_serializer: StringMapLike Invalid  Subelement")
-{
-  using pair_type = std::pair<int, std::string>;
-  using type      = std::unordered_map<std::string, pair_type>;
-  json j          = R"([ "invalid", [ 300, "300" ] , [ 400, "400" ] ])"_json;
-
-  InputData input;
-  input.root      = j;
-  auto serializer = Serializer(input);
-  auto ser        = acl::input_serializer<Serializer>(serializer);
-
-  type myMap = {};
-
-  ser >> myMap;
-
-  REQUIRE(input.ec == acl::serializer_error::invalid_type);
-  REQUIRE(myMap.empty());
-}
-
-TEST_CASE("input_serializer: ArrayLike")
-{
-  using pair_type = std::pair<int, std::string>;
-  using type      = std::unordered_map<int, pair_type>;
-  json j =
-   R"([ {"key":11, "value":[ 100, "100"]}, {"key":13, "value":[ 300, "300" ]} , {"key":15, "value":[ 400, "400" ]} ])"_json;
-
-  InputData input;
-  input.root      = j;
-  auto serializer = Serializer(input);
-  auto ser        = acl::input_serializer<Serializer>(serializer);
-
-  type myMap = {};
-
-  ser >> myMap;
-
-  REQUIRE(myMap[11] == pair_type(100, "100"));
-  REQUIRE(myMap[13] == pair_type(300, "300"));
-  REQUIRE(myMap[15] == pair_type(400, "400"));
-}
-
-TEST_CASE("input_serializer: ArrayLike (no emplace)")
+TEST_CASE("structured_input_serializer: ArrayLike (no emplace)")
 {
   acl::dynamic_array<int> myArray;
   json                    j = R"([ 11, 100, 13, 300 ])"_json;
 
   InputData input;
   input.root      = j;
-  auto serializer = Serializer(input);
-  auto ser        = acl::input_serializer<Serializer>(serializer);
+  auto serializer = Stream(input);
 
-  ser >> myArray;
+  acl::read(serializer, myArray);
 
   REQUIRE(myArray.size() == 4);
   REQUIRE(myArray[0] == 11);
@@ -470,58 +349,35 @@ TEST_CASE("input_serializer: ArrayLike (no emplace)")
   REQUIRE(myArray[3] == 300);
 }
 
-TEST_CASE("input_serializer: ArrayLike Invalid ")
+TEST_CASE("structured_input_serializer: ArrayLike Invalid ")
 {
   acl::dynamic_array<int> myArray;
   json                    j = R"({ })"_json;
 
   InputData input;
   input.root      = j;
-  auto serializer = Serializer(input);
-  auto ser        = acl::input_serializer<Serializer>(serializer);
+  auto serializer = Stream(input);
 
-  ser >> myArray;
+  REQUIRE_THROWS(acl::read(serializer, myArray));
 
   REQUIRE(myArray.empty());
-  REQUIRE(input.ec == acl::serializer_error::invalid_type);
 }
 
-TEST_CASE("input_serializer: ArrayLike (no emplace) Invalid Subelement ")
+TEST_CASE("structured_input_serializer: ArrayLike (no emplace) Invalid Subelement ")
 {
   acl::dynamic_array<int> myArray;
   json                    j = R"([ "string", 100, 13, 300 ])"_json;
 
   InputData input;
   input.root      = j;
-  auto serializer = Serializer(input);
-  auto ser        = acl::input_serializer<Serializer>(serializer);
+  auto serializer = Stream(input);
 
-  ser >> myArray;
+  REQUIRE_THROWS(acl::read(serializer, myArray));
 
   REQUIRE(myArray.empty());
-  REQUIRE(input.ec == acl::serializer_error::failed_streaming_array);
 }
 
-TEST_CASE("input_serializer: ArrayLike Invalid Subelement ")
-{
-  using pair_type = std::pair<int, std::string>;
-  using type      = std::unordered_map<int, pair_type>;
-  json j          = R"([ [11, [ 100, 100]], [13, [ 300, "300" ]] , [15, [ 400, "400" ]] ])"_json;
-
-  InputData input;
-  input.root      = j;
-  auto serializer = Serializer(input);
-  auto ser        = acl::input_serializer<Serializer>(serializer);
-
-  type myMap = {};
-
-  ser >> myMap;
-
-  REQUIRE(myMap.empty());
-  REQUIRE(input.ec == acl::serializer_error::failed_streaming_map);
-}
-
-TEST_CASE("input_serializer: VariantLike ")
+TEST_CASE("structured_input_serializer: VariantLike ")
 {
   std::vector<std::variant<int, bool, std::string>> variantList;
 
@@ -530,10 +386,9 @@ TEST_CASE("input_serializer: VariantLike ")
 
   InputData input;
   input.root      = j;
-  auto serializer = Serializer(input);
-  auto ser        = acl::input_serializer<Serializer>(serializer);
+  auto serializer = Stream(input);
 
-  ser >> variantList;
+  acl::read(serializer, variantList);
 
   REQUIRE(variantList.size() == 4);
   REQUIRE(std::holds_alternative<int>(variantList[0]));
@@ -546,7 +401,7 @@ TEST_CASE("input_serializer: VariantLike ")
   REQUIRE(std::get<bool>(variantList[3]) == false);
 }
 
-TEST_CASE("input_serializer: VariantLike Invalid")
+TEST_CASE("structured_input_serializer: VariantLike Invalid")
 {
   std::variant<int, bool, std::string> variant;
 
@@ -554,16 +409,12 @@ TEST_CASE("input_serializer: VariantLike Invalid")
 
   InputData input;
   input.root      = j;
-  auto serializer = Serializer(input);
-  auto ser        = acl::input_serializer<Serializer>(serializer);
+  auto serializer = Stream(input);
 
-  ser >> variant;
-
-  REQUIRE(variant.index() == 0);
-  REQUIRE(input.ec == acl::serializer_error::variant_index_is_not_int);
+  REQUIRE_THROWS(acl::read(serializer, variant));
 }
 
-TEST_CASE("input_serializer: VariantLike Missing Type")
+TEST_CASE("structured_input_serializer: VariantLike Missing Type")
 {
   std::variant<int, bool, std::string> variant;
 
@@ -571,16 +422,12 @@ TEST_CASE("input_serializer: VariantLike Missing Type")
 
   InputData input;
   input.root      = j;
-  auto serializer = Serializer(input);
-  auto ser        = acl::input_serializer<Serializer>(serializer);
+  auto serializer = Stream(input);
 
-  ser >> variant;
-
-  REQUIRE(variant.index() == 0);
-  REQUIRE(input.ec == acl::serializer_error::variant_missing_index);
+  REQUIRE_THROWS(acl::read(serializer, variant));
 }
 
-TEST_CASE("input_serializer: VariantLike Missing Value")
+TEST_CASE("structured_input_serializer: VariantLike Missing Value")
 {
   std::variant<int, bool, std::string> variant;
 
@@ -588,16 +435,12 @@ TEST_CASE("input_serializer: VariantLike Missing Value")
 
   InputData input;
   input.root      = j;
-  auto serializer = Serializer(input);
-  auto ser        = acl::input_serializer<Serializer>(serializer);
+  auto serializer = Stream(input);
 
-  ser >> variant;
-
-  REQUIRE(variant.index() == 0);
-  REQUIRE(input.ec == acl::serializer_error::variant_missing_value);
+  REQUIRE_THROWS(acl::read(serializer, variant));
 }
 
-TEST_CASE("input_serializer: VariantLike Invalid Type")
+TEST_CASE("structured_input_serializer: VariantLike Invalid Type")
 {
   std::variant<int, bool, std::string> variant;
 
@@ -605,13 +448,9 @@ TEST_CASE("input_serializer: VariantLike Invalid Type")
 
   InputData input;
   input.root      = j;
-  auto serializer = Serializer(input);
-  auto ser        = acl::input_serializer<Serializer>(serializer);
+  auto serializer = Stream(input);
 
-  ser >> variant;
-
-  REQUIRE(variant.index() == 0);
-  REQUIRE(input.ec == acl::serializer_error::invalid_type);
+  REQUIRE_THROWS(acl::read(serializer, variant));
 }
 
 struct ConstructedSV
@@ -622,19 +461,23 @@ struct ConstructedSV
   {
     std::from_chars(sv.data(), sv.data() + sv.length(), id);
   }
+
+  inline explicit operator std::string() const noexcept
+  {
+    return std::to_string(id);
+  }
 };
 
-TEST_CASE("input_serializer: ConstructedFromStringView")
+TEST_CASE("structured_input_serializer: ConstructedFromStringView")
 {
   acl::dynamic_array<ConstructedSV> myArray;
   json                              j = R"([ "11", "100", "13", "300" ])"_json;
 
   InputData input;
   input.root      = j;
-  auto serializer = Serializer(input);
-  auto ser        = acl::input_serializer<Serializer>(serializer);
+  auto serializer = Stream(input);
 
-  ser >> myArray;
+  acl::read(serializer, myArray);
 
   REQUIRE(myArray.size() == 4);
   REQUIRE(myArray[0].id == 11);
@@ -643,20 +486,18 @@ TEST_CASE("input_serializer: ConstructedFromStringView")
   REQUIRE(myArray[3].id == 300);
 }
 
-TEST_CASE("input_serializer: ConstructedFromStringView Invalid")
+TEST_CASE("structured_input_serializer: ConstructedFromStringView Invalid")
 {
   acl::dynamic_array<ConstructedSV> myArray;
   json                              j = R"([ 11, "100", "13", "300" ])"_json;
 
   InputData input;
   input.root      = j;
-  auto serializer = Serializer(input);
-  auto ser        = acl::input_serializer<Serializer>(serializer);
+  auto serializer = Stream(input);
 
-  ser >> myArray;
+  REQUIRE_THROWS(acl::read(serializer, myArray));
 
   REQUIRE(myArray.empty());
-  REQUIRE(input.ec == acl::serializer_error::failed_streaming_array);
 }
 
 struct TransformSV
@@ -666,22 +507,29 @@ struct TransformSV
 };
 
 template <>
-void acl::from_string<TransformSV>(TransformSV& r, std::string_view sv)
+struct acl::convert<TransformSV>
 {
-  std::from_chars(sv.data(), sv.data() + sv.length(), r.id);
-}
+  static std::string to_string(TransformSV const& r)
+  {
+    return std::to_string(r.id);
+  }
 
-TEST_CASE("input_serializer: TransformFromString")
+  static void from_string(TransformSV& r, std::string_view sv)
+  {
+    std::from_chars(sv.data(), sv.data() + sv.length(), r.id);
+  }
+};
+
+TEST_CASE("structured_input_serializer: TransformFromString")
 {
   acl::dynamic_array<TransformSV> myArray;
   json                            j = R"([ "11", "100", "13", "300" ])"_json;
 
   InputData input;
   input.root      = j;
-  auto serializer = Serializer(input);
-  auto ser        = acl::input_serializer<Serializer>(serializer);
+  auto serializer = Stream(input);
 
-  ser >> myArray;
+  acl::read(serializer, myArray);
 
   REQUIRE(myArray.size() == 4);
   REQUIRE(myArray[0].id == 11);
@@ -690,33 +538,28 @@ TEST_CASE("input_serializer: TransformFromString")
   REQUIRE(myArray[3].id == 300);
 }
 
-TEST_CASE("input_serializer: TransformFromString Invalid")
+TEST_CASE("structured_input_serializer: TransformFromString Invalid")
 {
   acl::dynamic_array<TransformSV> myArray;
   json                            j = R"([ 11, "100", "13", "300" ])"_json;
 
   InputData input;
   input.root      = j;
-  auto serializer = Serializer(input);
-  auto ser        = acl::input_serializer<Serializer>(serializer);
+  auto serializer = Stream(input);
 
-  ser >> myArray;
-
-  REQUIRE(myArray.size() == 0);
-  REQUIRE(input.ec == acl::serializer_error::failed_streaming_array);
+  REQUIRE_THROWS(acl::read(serializer, myArray));
 }
 
-TEST_CASE("input_serializer: BoolLike")
+TEST_CASE("structured_input_serializer: BoolLike")
 {
   std::array<bool, 4> myArray = {};
   json                j       = R"([ false, true, false, true ])"_json;
 
   InputData input;
   input.root      = j;
-  auto serializer = Serializer(input);
-  auto ser        = acl::input_serializer<Serializer>(serializer);
+  auto serializer = Stream(input);
 
-  ser >> myArray;
+  acl::read(serializer, myArray);
 
   REQUIRE(myArray.size() == 4);
   REQUIRE(myArray[0] == false);
@@ -725,32 +568,28 @@ TEST_CASE("input_serializer: BoolLike")
   REQUIRE(myArray[3] == true);
 }
 
-TEST_CASE("input_serializer: BoolLike Invaild")
+TEST_CASE("structured_input_serializer: BoolLike Invaild")
 {
   std::array<bool, 4> myArray = {};
   json                j       = R"([ 1, true, false, true ])"_json;
 
   InputData input;
   input.root      = j;
-  auto serializer = Serializer(input);
-  auto ser        = acl::input_serializer<Serializer>(serializer);
+  auto serializer = Stream(input);
 
-  ser >> myArray;
-
-  REQUIRE(input.ec == acl::serializer_error::failed_streaming_array);
+  REQUIRE_THROWS(acl::read(serializer, myArray));
 }
 
-TEST_CASE("input_serializer: SignedIntLike")
+TEST_CASE("structured_input_serializer: SignedIntLike")
 {
   std::array<int, 4> myArray = {};
   json               j       = R"([ -40, -10, 10, 40 ])"_json;
 
   InputData input;
   input.root      = j;
-  auto serializer = Serializer(input);
-  auto ser        = acl::input_serializer<Serializer>(serializer);
+  auto serializer = Stream(input);
 
-  ser >> myArray;
+  acl::read(serializer, myArray);
 
   REQUIRE(myArray[0] == -40);
   REQUIRE(myArray[1] == -10);
@@ -758,32 +597,28 @@ TEST_CASE("input_serializer: SignedIntLike")
   REQUIRE(myArray[3] == 40);
 }
 
-TEST_CASE("input_serializer: SignedIntLike Invalid")
+TEST_CASE("structured_input_serializer: SignedIntLike Invalid")
 {
   std::array<int, 4> myArray = {};
   json               j       = R"([ "-40", -10, 10, 40 ])"_json;
 
   InputData input;
   input.root      = j;
-  auto serializer = Serializer(input);
-  auto ser        = acl::input_serializer<Serializer>(serializer);
+  auto serializer = Stream(input);
 
-  ser >> myArray;
-
-  REQUIRE(input.ec == acl::serializer_error::failed_streaming_array);
+  REQUIRE_THROWS(acl::read(serializer, myArray));
 }
 
-TEST_CASE("input_serializer: UnsignedIntLike")
+TEST_CASE("structured_input_serializer: UnsignedIntLike")
 {
   std::array<uint32_t, 4> myArray = {};
   json                    j       = R"([ 40, 10, 10, 40 ])"_json;
 
   InputData input;
   input.root      = j;
-  auto serializer = Serializer(input);
-  auto ser        = acl::input_serializer<Serializer>(serializer);
+  auto serializer = Stream(input);
 
-  ser >> myArray;
+  acl::read(serializer, myArray);
 
   REQUIRE(myArray[0] == 40);
   REQUIRE(myArray[1] == 10);
@@ -791,32 +626,28 @@ TEST_CASE("input_serializer: UnsignedIntLike")
   REQUIRE(myArray[3] == 40);
 }
 
-TEST_CASE("input_serializer: UnsignedIntLike Invalid")
+TEST_CASE("structured_input_serializer: UnsignedIntLike Invalid")
 {
   std::array<uint32_t, 4> myArray = {};
   json                    j       = R"([ true, 10, 10, 40 ])"_json;
 
   InputData input;
   input.root      = j;
-  auto serializer = Serializer(input);
-  auto ser        = acl::input_serializer<Serializer>(serializer);
+  auto serializer = Stream(input);
 
-  ser >> myArray;
-
-  REQUIRE(input.ec == acl::serializer_error::failed_streaming_array);
+  REQUIRE_THROWS(acl::read(serializer, myArray));
 }
 
-TEST_CASE("input_serializer: FloatLike")
+TEST_CASE("structured_input_serializer: FloatLike")
 {
   std::array<float, 4> myArray = {};
   json                 j       = R"([ 434.442, 757.10, 10.745, 424.40 ])"_json;
 
   InputData input;
   input.root      = j;
-  auto serializer = Serializer(input);
-  auto ser        = acl::input_serializer<Serializer>(serializer);
+  auto serializer = Stream(input);
 
-  ser >> myArray;
+  acl::read(serializer, myArray);
 
   REQUIRE(myArray[0] == Catch::Approx(434.442f));
   REQUIRE(myArray[1] == Catch::Approx(757.10f));
@@ -824,33 +655,24 @@ TEST_CASE("input_serializer: FloatLike")
   REQUIRE(myArray[3] == Catch::Approx(424.40f));
 }
 
-TEST_CASE("input_serializer: FloatLike Invalid")
+TEST_CASE("structured_input_serializer: FloatLike Invalid")
 {
   std::array<float, 4> myArray = {};
   json                 j       = R"([ 434, 757.10, 10.745, 424.40 ])"_json;
 
   InputData input;
   input.root      = j;
-  auto serializer = Serializer(input);
-  auto ser        = acl::input_serializer<Serializer>(serializer);
+  auto serializer = Stream(input);
 
-  ser >> myArray;
-
-  REQUIRE(input.ec == acl::serializer_error::failed_streaming_array);
+  REQUIRE_THROWS(acl::read(serializer, myArray));
 }
 
-TEST_CASE("input_serializer: PointerLike")
+TEST_CASE("structured_input_serializer: PointerLike")
 {
   struct pointer
   {
     std::shared_ptr<std::string> a;
     std::unique_ptr<std::string> b;
-    std::string*                 c = nullptr;
-
-    static auto reflect() noexcept
-    {
-      return acl::bind(acl::bind<"a", &pointer::a>(), acl::bind<"b", &pointer::b>(), acl::bind<"c", &pointer::c>());
-    }
   };
 
   pointer pvalue;
@@ -858,32 +680,26 @@ TEST_CASE("input_serializer: PointerLike")
 
   InputData input;
   input.root      = j;
-  auto serializer = Serializer(input);
-  auto ser        = acl::input_serializer<Serializer>(serializer);
+  auto serializer = Stream(input);
 
-  ser >> pvalue;
+  acl::read(serializer, pvalue);
 
   REQUIRE(pvalue.a);
   REQUIRE(pvalue.b);
-  REQUIRE(pvalue.c);
   REQUIRE(*pvalue.a == "A_value");
   REQUIRE(*pvalue.b == "B_value");
-  REQUIRE(*pvalue.c == "C_value");
-
-  delete pvalue.c;
 }
 
-TEST_CASE("input_serializer: PointerLike Null")
+TEST_CASE("structured_input_serializer: PointerLike Null")
 {
   struct pointer
   {
     std::shared_ptr<std::string> a;
     std::unique_ptr<std::string> b;
-    std::string*                 c = nullptr;
 
     static auto reflect() noexcept
     {
-      return acl::bind(acl::bind<"a", &pointer::a>(), acl::bind<"b", &pointer::b>(), acl::bind<"c", &pointer::c>());
+      return acl::bind(acl::bind<"a", &pointer::a>(), acl::bind<"b", &pointer::b>());
     }
   };
 
@@ -892,17 +708,15 @@ TEST_CASE("input_serializer: PointerLike Null")
 
   InputData input;
   input.root      = j;
-  auto serializer = Serializer(input);
-  auto ser        = acl::input_serializer<Serializer>(serializer);
+  auto serializer = Stream(input);
 
-  ser >> pvalue;
+  acl::read(serializer, pvalue);
 
   REQUIRE(!pvalue.a);
   REQUIRE(!pvalue.b);
-  REQUIRE(!pvalue.c);
 }
 
-TEST_CASE("input_serializer: OptionalLike")
+TEST_CASE("structured_input_serializer: OptionalLike")
 {
   struct pointer
   {
@@ -920,10 +734,9 @@ TEST_CASE("input_serializer: OptionalLike")
 
   InputData input;
   input.root      = j;
-  auto serializer = Serializer(input);
-  auto ser        = acl::input_serializer<Serializer>(serializer);
+  auto serializer = Stream(input);
 
-  ser >> pvalue;
+  acl::read(serializer, pvalue);
 
   REQUIRE(pvalue.a);
   REQUIRE(!pvalue.b);
@@ -933,7 +746,7 @@ TEST_CASE("input_serializer: OptionalLike")
 class CustomClass
 {
 public:
-  friend Serializer& operator>>(Serializer& ser, CustomClass& cc)
+  friend Stream& operator>>(Stream& ser, CustomClass& cc)
   {
     cc.value = (int)(*ser.as_int64());
     return ser;
@@ -948,21 +761,134 @@ private:
   int value;
 };
 
-TEST_CASE("input_serializer: InputSerializableClass")
+TEST_CASE("structured_input_serializer: InputSerializableClass")
 {
   std::vector<CustomClass> integers;
   json                     j = R"([ 34, 542, 234 ])"_json;
 
   InputData input;
   input.root      = j;
-  auto serializer = Serializer(input);
-  auto ser        = acl::input_serializer<Serializer>(serializer);
+  auto serializer = Stream(input);
 
-  ser >> integers;
+  acl::read(serializer, integers);
 
   REQUIRE(integers.size() == 3);
   REQUIRE(integers[0].get() == 34);
   REQUIRE(integers[1].get() == 542);
   REQUIRE(integers[2].get() == 234);
+}
+
+TEST_CASE("structured_input_serializer: UnorderedMap basic")
+{
+  std::unordered_map<std::string, int> map;
+  json                                 j = R"([
+     ["key1", 100],
+     ["key2", 200],
+     ["key3", 300]
+  ])"_json;
+
+  InputData input;
+  input.root      = j;
+  auto serializer = Stream(input);
+
+  acl::read(serializer, map);
+
+  REQUIRE(map.size() == 3);
+  REQUIRE(map["key1"] == 100);
+  REQUIRE(map["key2"] == 200);
+  REQUIRE(map["key3"] == 300);
+}
+
+TEST_CASE("structured_input_serializer: UnorderedMap with complex values")
+{
+  std::unordered_map<std::string, ReflTestMember> map;
+  json                                            j = R"([
+    ["obj1", {
+      "first": { "a": 10, "b": 20 },
+      "second": { "a": 30, "b": 40 }
+    } ],
+    ["obj2", {
+      "first": { "a": 50, "b": 60 },
+      "second": { "a": 70, "b": 80 }
+    } ]
+  ])"_json;
+
+  InputData input;
+  input.root      = j;
+  auto serializer = Stream(input);
+
+  acl::read(serializer, map);
+
+  REQUIRE(map.size() == 2);
+
+  auto& obj1 = map["obj1"];
+  REQUIRE(obj1.first.get_a() == 10);
+  REQUIRE(obj1.first.get_b() == 20);
+  REQUIRE(obj1.second.get_a() == 30);
+  REQUIRE(obj1.second.get_b() == 40);
+
+  auto& obj2 = map["obj2"];
+  REQUIRE(obj2.first.get_a() == 50);
+  REQUIRE(obj2.first.get_b() == 60);
+  REQUIRE(obj2.second.get_a() == 70);
+  REQUIRE(obj2.second.get_b() == 80);
+}
+
+TEST_CASE("structured_input_serializer: UnorderedMap invalid value type")
+{
+  std::unordered_map<std::string, int> map;
+  json                                 j = R"([
+    ["key1", "not an int"],
+    ["key2", 200]
+  ])"_json;
+
+  InputData input;
+  input.root      = j;
+  auto serializer = Stream(input);
+
+  REQUIRE_THROWS(acl::read(serializer, map));
+}
+
+TEST_CASE("structured_input_serializer: UnorderedMap nested maps")
+{
+  std::unordered_map<std::string, std::unordered_map<std::string, int>> nested;
+  json                                                                  j = R"([
+    ["map1", [
+      ["a", 1],
+      ["b", 2]
+    ]],
+    ["map2", [
+      ["c", 3],
+      ["d", 4]
+    ]]
+  ])"_json;
+
+  InputData input;
+  input.root      = j;
+  auto serializer = Stream(input);
+
+  acl::read(serializer, nested);
+
+  REQUIRE(nested.size() == 2);
+  REQUIRE(nested["map1"].size() == 2);
+  REQUIRE(nested["map2"].size() == 2);
+  REQUIRE(nested["map1"]["a"] == 1);
+  REQUIRE(nested["map1"]["b"] == 2);
+  REQUIRE(nested["map2"]["c"] == 3);
+  REQUIRE(nested["map2"]["d"] == 4);
+}
+
+TEST_CASE("structured_input_serializer: UnorderedMap empty")
+{
+  std::unordered_map<std::string, int> map;
+  json                                 j = R"([])"_json;
+
+  InputData input;
+  input.root      = j;
+  auto serializer = Stream(input);
+
+  acl::read(serializer, map);
+
+  REQUIRE(map.empty());
 }
 // NOLINTEND

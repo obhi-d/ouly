@@ -1,5 +1,11 @@
 #define ANKERL_NANOBENCH_IMPLEMENT
 #include <acl/allocators/arena_allocator.hpp>
+#include <acl/allocators/strat/best_fit_tree.hpp>
+#include <acl/allocators/strat/best_fit_v0.hpp>
+#include <acl/allocators/strat/best_fit_v1.hpp>
+#include <acl/allocators/strat/best_fit_v2.hpp>
+#include <acl/allocators/strat/greedy_v0.hpp>
+#include <acl/allocators/strat/greedy_v1.hpp>
 #include <nanobench.h>
 #include <string_view>
 
@@ -42,7 +48,7 @@ template <typename T>
 void bench_arena(uint32_t size, std::string_view name)
 {
   using allocator_t = acl::arena_allocator<
-   acl::options<acl::opt::strategy<T>, acl::opt::manager<alloc_mem_manager>, acl::opt::basic_size_type<uint32_t>>>;
+   acl::config<acl::cfg::strategy<T>, acl::cfg::manager<alloc_mem_manager>, acl::cfg::basic_size_type<uint32_t>>>;
   constexpr uint32_t         nbatch = 200000;
   alloc_mem_manager          mgr;
   std::vector<std::uint32_t> allocations;
@@ -85,12 +91,12 @@ int main(int argc, char* argv[])
   bench_arena<acl::strat::greedy_v1<>>(size, "greedy-v1");
   bench_arena<acl::strat::best_fit_tree<>>(size, "bf-tree");
   bench_arena<acl::strat::best_fit_v0<>>(size, "bf-v0");
-  bench_arena<acl::strat::best_fit_v1<acl::opt::bsearch_min0>>(size, "bf-v1-min0");
-  bench_arena<acl::strat::best_fit_v1<acl::opt::bsearch_min1>>(size, "bf-v1-min1");
-  bench_arena<acl::strat::best_fit_v1<acl::opt::bsearch_min2>>(size, "bf-v1-min2");
-  bench_arena<acl::strat::best_fit_v2<acl::opt::bsearch_min0>>(size, "bf-v2-min0");
-  bench_arena<acl::strat::best_fit_v2<acl::opt::bsearch_min1>>(size, "bf-v2-min1");
-  bench_arena<acl::strat::best_fit_v2<acl::opt::bsearch_min2>>(size, "bf-v2-min2");
+  bench_arena<acl::strat::best_fit_v1<acl::cfg::bsearch_min0>>(size, "bf-v1-min0");
+  bench_arena<acl::strat::best_fit_v1<acl::cfg::bsearch_min1>>(size, "bf-v1-min1");
+  bench_arena<acl::strat::best_fit_v1<acl::cfg::bsearch_min2>>(size, "bf-v1-min2");
+  bench_arena<acl::strat::best_fit_v2<acl::cfg::bsearch_min0>>(size, "bf-v2-min0");
+  bench_arena<acl::strat::best_fit_v2<acl::cfg::bsearch_min1>>(size, "bf-v2-min1");
+  bench_arena<acl::strat::best_fit_v2<acl::cfg::bsearch_min2>>(size, "bf-v2-min2");
 
   return 0;
 }

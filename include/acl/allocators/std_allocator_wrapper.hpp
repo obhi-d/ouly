@@ -2,42 +2,24 @@
 #pragma once
 
 #include <acl/allocators/default_allocator.hpp>
-#include <acl/utils/type_traits.hpp>
+#include <acl/allocators/detail/allocator_wrapper.hpp>
+#include <acl/utility/type_traits.hpp>
+
 #include <memory_resource>
 
 namespace acl
 {
 
-namespace detail
-{
-template <typename T>
-struct allocator_common
-{
-  using value_type      = T;
-  using size_type       = std::size_t;
-  using difference_type = std::ptrdiff_t;
-  using reference       = value_type&;
-  using const_reference = value_type const&;
-  using pointer         = value_type*;
-  using const_pointer   = value_type const*;
-
-  using propagate_on_container_copy_assignment = std::true_type;
-  using propagate_on_container_move_assignment = std::true_type;
-  using propagate_on_container_swap            = std::true_type;
-};
-
-} // namespace detail
-
 template <typename T, typename UA>
-struct allocator_wrapper : public detail::allocator_common<T>, public UA
+struct allocator_wrapper : public acl::detail::allocator_common<T>, public UA
 {
-  using typename detail::allocator_common<T>::value_type;
-  using typename detail::allocator_common<T>::size_type;
-  using typename detail::allocator_common<T>::difference_type;
-  using typename detail::allocator_common<T>::reference;
-  using typename detail::allocator_common<T>::const_reference;
-  using typename detail::allocator_common<T>::pointer;
-  using typename detail::allocator_common<T>::const_pointer;
+  using typename acl::detail::allocator_common<T>::value_type;
+  using typename acl::detail::allocator_common<T>::size_type;
+  using typename acl::detail::allocator_common<T>::difference_type;
+  using typename acl::detail::allocator_common<T>::reference;
+  using typename acl::detail::allocator_common<T>::const_reference;
+  using typename acl::detail::allocator_common<T>::pointer;
+  using typename acl::detail::allocator_common<T>::const_pointer;
 
   template <typename U>
   struct rebind
@@ -66,16 +48,16 @@ struct allocator_wrapper : public detail::allocator_common<T>, public UA
 };
 
 template <typename T, typename UA>
-struct allocator_ref : public detail::allocator_common<T>
+struct allocator_ref : public acl::detail::allocator_common<T>
 {
 
-  using typename detail::allocator_common<T>::value_type;
-  using typename detail::allocator_common<T>::size_type;
-  using typename detail::allocator_common<T>::difference_type;
-  using typename detail::allocator_common<T>::reference;
-  using typename detail::allocator_common<T>::const_reference;
-  using typename detail::allocator_common<T>::pointer;
-  using typename detail::allocator_common<T>::const_pointer;
+  using typename acl::detail::allocator_common<T>::value_type;
+  using typename acl::detail::allocator_common<T>::size_type;
+  using typename acl::detail::allocator_common<T>::difference_type;
+  using typename acl::detail::allocator_common<T>::reference;
+  using typename acl::detail::allocator_common<T>::const_reference;
+  using typename acl::detail::allocator_common<T>::pointer;
+  using typename acl::detail::allocator_common<T>::const_pointer;
 
   template <typename U>
   struct rebind

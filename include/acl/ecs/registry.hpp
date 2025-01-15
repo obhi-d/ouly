@@ -1,57 +1,14 @@
 
 #pragma once
 
+#include <acl/ecs/detail/registry_defs.hpp>
 #include <acl/ecs/entity.hpp>
 #include <algorithm>
-#include <atomic>
 #include <cassert>
 #include <span>
-#include <vector>
 
 namespace acl::ecs
 {
-
-namespace detail
-{
-template <typename RevType>
-class revision_table
-{
-protected:
-  std::vector<RevType> revisions_;
-};
-
-template <>
-class revision_table<void>
-{};
-
-template <typename S>
-class counter
-{
-public:
-  auto fetch_sub(S /*unused*/) -> S
-  {
-    return value_--;
-  }
-
-  auto fetch_add(S /*unused*/) -> S
-  {
-    return value_++;
-  }
-
-  auto load() const noexcept -> S
-  {
-    return value_;
-  }
-
-  void store(S v, std::memory_order /*unused*/)
-  {
-    value_ = v;
-  }
-
-  S value_;
-};
-
-} // namespace detail
 
 /**
  * @brief This class stores a list of reusable links, and allows for vector allocating objects on a seperate container
@@ -60,10 +17,10 @@ public:
  * @tparam Ty
  * @tparam SizeType
  */
-template <typename EntityTy, template <typename S> class CounterType = detail::counter>
-class basic_registry : detail::revision_table<typename EntityTy::revision_type>
+template <typename EntityTy, template <typename S> class CounterType = acl::detail::counter>
+class basic_registry : acl::detail::revision_table<typename EntityTy::revision_type>
 {
-  using base = detail::revision_table<typename EntityTy::revision_type>;
+  using base = acl::detail::revision_table<typename EntityTy::revision_type>;
 
 public:
   using size_type     = typename EntityTy::size_type;

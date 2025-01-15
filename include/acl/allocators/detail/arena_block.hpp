@@ -1,6 +1,6 @@
 ﻿#pragma once
+#include <acl/containers/detail/vlist.hpp>
 #include <acl/containers/sparse_table.hpp>
-#include <acl/containers/vlist.hpp>
 #include <utility>
 
 namespace acl::detail
@@ -11,7 +11,7 @@ struct block
 {
 
   using size_type       = UsizeType;
-  size_type     offset_ = detail::k_null_sz<size_type>;
+  size_type     offset_ = std::numeric_limits<size_type>::max();
   size_type     size_   = 0;
   std::uint32_t arena_  = 0;
   std::uint32_t self_   = {};
@@ -26,18 +26,18 @@ struct block
     Extension     ext_ = {};
   };
 
-  detail::list_node arena_order_ = detail::list_node();
-  bool              is_slotted_  = false;
-  bool              is_flagged_  = false;
-  bool              is_free_     = false;
-  std::uint8_t      alignment_   = 0;
+  acl::detail::list_node arena_order_ = acl::detail::list_node();
+  bool                   is_slotted_  = false;
+  bool                   is_flagged_  = false;
+  bool                   is_free_     = false;
+  std::uint8_t           alignment_   = 0;
 
   struct table_traits
   {
     using size_type                                  = std::uint32_t;
     static constexpr std::uint32_t pool_size_v       = 4096;
     static constexpr std::uint32_t index_pool_size_v = 4096;
-    using offset                                     = opt::member<&block<size_type, Extension>::self_>;
+    using offset                                     = cfg::member<&block<size_type, Extension>::self_>;
   };
 
   block() noexcept                       = default;
@@ -115,12 +115,12 @@ struct block_accessor
     bank.erase(block_link(node));
   }
 
-  static auto node(bank_type& bank, std::uint32_t node) -> detail::list_node&
+  static auto node(bank_type& bank, std::uint32_t node) -> acl::detail::list_node&
   {
     return bank[block_link(node)].arena_order_;
   }
 
-  static auto node(bank_type const& bank, std::uint32_t node) -> detail::list_node const&
+  static auto node(bank_type const& bank, std::uint32_t node) -> acl::detail::list_node const&
   {
     return bank[block_link(node)].arena_order_;
   }
@@ -137,6 +137,6 @@ struct block_accessor
 };
 
 template <typename SizeType, typename Extension>
-using block_list = detail::vlist<block_accessor<SizeType, Extension>>;
+using block_list = acl::detail::vlist<block_accessor<SizeType, Extension>>;
 
 } // namespace acl::detail

@@ -1,9 +1,8 @@
 
 #pragma once
-#include "task.hpp"
-#include "worker.hpp"
-#include <acl/utils/config.hpp>
-#include <acl/utils/type_traits.hpp>
+#include <acl/scheduler/detail/worker.hpp>
+#include <acl/utility/config.hpp>
+#include <acl/utility/type_traits.hpp>
 #include <array>
 #include <thread>
 
@@ -100,7 +99,7 @@ public:
   void submit(worker_id src, workgroup_id group, C const& task_obj) noexcept
   {
     submit(src, group,
-           detail::work_item::pbind(
+           acl::detail::work_item::pbind(
             [address = task_obj.address()](worker_context const&)
             {
               std::coroutine_handle<>::from_address(address).resume();
@@ -121,10 +120,10 @@ public:
    * @note This function is noexcept and will forward the lambda to the internal submit implementation
    */
   template <typename Lambda>
-    requires(detail::Callable<Lambda, acl::worker_context const&>)
+    requires(acl::detail::Callable<Lambda, acl::worker_context const&>)
   void submit(worker_id src, workgroup_id group, Lambda&& data) noexcept
   {
-    submit(src, group, detail::work_item::pbind(std::forward<Lambda>(data), group));
+    submit(src, group, acl::detail::work_item::pbind(std::forward<Lambda>(data), group));
   }
 
   /**
@@ -142,7 +141,7 @@ public:
   template <auto M, typename Class>
   void submit(worker_id src, workgroup_id group, Class& ctx) noexcept
   {
-    submit(src, group, detail::work_item::pbind<M>(ctx, group));
+    submit(src, group, acl::detail::work_item::pbind<M>(ctx, group));
   }
 
   /**
@@ -158,7 +157,7 @@ public:
   template <auto M>
   void submit(worker_id src, workgroup_id group) noexcept
   {
-    submit(src, group, detail::work_item::pbind<M>(group));
+    submit(src, group, acl::detail::work_item::pbind<M>(group));
   }
 
   /**
@@ -179,9 +178,9 @@ public:
   template <typename... Args>
   void submit(worker_id src, workgroup_id group, task_delegate::fnptr callable, Args&&... args) noexcept
   {
-    submit(
-     src, group,
-     detail::work_item::pbind(callable, std::make_tuple<std::decay_t<Args>...>(std::forward<Args>(args)...), group));
+    submit(src, group,
+           acl::detail::work_item::pbind(callable, std::make_tuple<std::decay_t<Args>...>(std::forward<Args>(args)...),
+                                         group));
   }
 
   /**
@@ -203,7 +202,7 @@ public:
   void submit(worker_id src, worker_id dst, workgroup_id group, C const& task_obj) noexcept
   {
     submit(src, dst,
-           detail::work_item::pbind(
+           acl::detail::work_item::pbind(
             [address = task_obj.address()](worker_context const&)
             {
               std::coroutine_handle<>::from_address(address).resume();
@@ -225,10 +224,10 @@ public:
    * @requires Lambda must satisfy the Callable concept with acl::worker_context const&
    */
   template <typename Lambda>
-    requires(detail::Callable<Lambda, acl::worker_context const&>)
+    requires(acl::detail::Callable<Lambda, acl::worker_context const&>)
   void submit(worker_id src, worker_id dst, workgroup_id group, Lambda&& data) noexcept
   {
-    submit(src, dst, detail::work_item::pbind(std::forward<Lambda>(data), group));
+    submit(src, dst, acl::detail::work_item::pbind(std::forward<Lambda>(data), group));
   }
 
   /**
@@ -245,13 +244,13 @@ public:
    * @note This function is marked noexcept and will not throw exceptions
    *
    * This is a convenience overload that binds a member function to a context object
-   * and creates a work item for execution. It internally uses detail::work_item::pbind
+   * and creates a work item for execution. It internally uses acl::detail::work_item::pbind
    * to create the bound work item.
    */
   template <auto M, typename Class>
   void submit(worker_id src, worker_id dst, workgroup_id group, Class& ctx) noexcept
   {
-    submit(src, dst, detail::work_item::pbind<M>(ctx, group));
+    submit(src, dst, acl::detail::work_item::pbind<M>(ctx, group));
   }
 
   /**
@@ -268,7 +267,7 @@ public:
   template <auto M>
   void submit(worker_id src, worker_id dst, workgroup_id group) noexcept
   {
-    submit(src, dst, detail::work_item::pbind<M>(group));
+    submit(src, dst, acl::detail::work_item::pbind<M>(group));
   }
 
   template <typename... Args>
@@ -290,20 +289,20 @@ public:
    */
   void submit(worker_id src, worker_id dst, workgroup_id group, task_delegate::fnptr callable, Args&&... args) noexcept
   {
-    submit(
-     src, dst,
-     detail::work_item::pbind(callable, std::make_tuple<std::decay_t<Args>...>(std::forward<Args>(args)...), group));
+    submit(src, dst,
+           acl::detail::work_item::pbind(callable, std::make_tuple<std::decay_t<Args>...>(std::forward<Args>(args)...),
+                                         group));
   }
 
   /**
    * @brief Submit a work for execution in the exclusive worker thread
    */
-  ACL_API void submit(worker_id src, worker_id dst, detail::work_item work);
+  ACL_API void submit(worker_id src, worker_id dst, acl::detail::work_item work);
 
   /**
    * @brief Submit a work for execution
    */
-  ACL_API void submit(worker_id src, workgroup_id dst, detail::work_item work);
+  ACL_API void submit(worker_id src, workgroup_id dst, acl::detail::work_item work);
 
   /**
    * @brief Begin scheduler execution, group creation is frozen after this call.
@@ -375,25 +374,25 @@ public:
 
 private:
   void        finish_pending_tasks() noexcept;
-  inline void do_work(worker_id /*thread*/, detail::work_item& /*work*/) noexcept;
+  inline void do_work(worker_id /*thread*/, acl::detail::work_item& /*work*/) noexcept;
   void        wake_up(worker_id /*thread*/) noexcept;
   void        run(worker_id /*thread*/);
-  auto        get_work(worker_id /*thread*/) noexcept -> detail::work_item;
+  auto        get_work(worker_id /*thread*/) noexcept -> acl::detail::work_item;
 
   auto work(worker_id /*thread*/) noexcept -> bool;
 
   scheduler_worker_entry entry_fn_;
   // Work groups
-  std::vector<detail::workgroup> workgroups_;
+  std::vector<acl::detail::workgroup> workgroups_;
   // Workers present in the scheduler
-  std::unique_ptr<detail::worker[]> workers_;
+  std::unique_ptr<acl::detail::worker[]> workers_;
   // Local cache for work items, until they are pushed into global queue
-  std::unique_ptr<detail::work_item[]> local_work_;
+  std::unique_ptr<acl::detail::work_item[]> local_work_;
   // Global work items
-  std::unique_ptr<detail::group_range[]> group_ranges_;
-  std::unique_ptr<std::atomic_bool[]>    wake_status_;
-  std::unique_ptr<detail::wake_event[]>  wake_events_;
-  std::vector<std::thread>               threads_;
+  std::unique_ptr<acl::detail::group_range[]> group_ranges_;
+  std::unique_ptr<std::atomic_bool[]>         wake_status_;
+  std::unique_ptr<acl::detail::wake_event[]>  wake_events_;
+  std::vector<std::thread>                    threads_;
 
   uint32_t         worker_count_         = 0;
   uint32_t         logical_task_divisor_ = default_logical_task_divisior;

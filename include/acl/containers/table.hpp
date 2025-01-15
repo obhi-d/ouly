@@ -1,8 +1,8 @@
 #pragma once
 #include <acl/allocators/default_allocator.hpp>
 #include <acl/containers/podvector.hpp>
-#include <acl/utils/common.hpp>
-#include <acl/utils/utils.hpp>
+#include <acl/utility/common.hpp>
+#include <acl/utility/utils.hpp>
 #include <type_traits>
 #include <vector>
 
@@ -41,7 +41,7 @@ class table
 {
   struct free_idx
   {
-    std::uint32_t unused_ = detail::k_null_32;
+    std::uint32_t unused_ = std::numeric_limits<uint32_t>::max();
     std::uint32_t valids_ = 0;
   };
 
@@ -64,7 +64,7 @@ public:
     std::uint32_t index = 0;
     if constexpr (IsPOD)
     {
-      if (free_pool_.unused_ != detail::k_null_32)
+      if (free_pool_.unused_ != std::numeric_limits<uint32_t>::max())
       {
         index = free_pool_.unused_;
         // NOLINTNEXTLINE

@@ -310,11 +310,11 @@ TEST_CASE("rlink_object_table: fuzz", "[rlink_object_table][nontrivial]")
 
 TEST_CASE("collection: validate collection", "[packed_table][emplace]")
 {
-  static_assert(acl::options<acl::opt::pool_size<>>::pool_size_v == 4096, "Default pool size");
-  static_assert(acl::detail::log2(acl::options<acl::opt::pool_size<>>::pool_size_v) == 12, "Default pool size");
+  static_assert(acl::config<acl::cfg::pool_size<>>::pool_size_v == 4096, "Default pool size");
+  static_assert(acl::detail::log2(acl::config<acl::cfg::pool_size<>>::pool_size_v) == 12, "Default pool size");
   acl::ecs::rxregistry<>                                                        registry;
   acl::ecs::collection<acl::ecs::rxentity<>>                                    collection;
-  acl::ecs::components<int, acl::ecs::rxentity<>, acl::opt::use_direct_mapping> data;
+  acl::ecs::components<int, acl::ecs::rxentity<>, acl::cfg::use_direct_mapping> data;
 
   auto e10 = registry.emplace();
   auto e20 = registry.emplace();

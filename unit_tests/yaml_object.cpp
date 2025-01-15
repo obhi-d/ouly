@@ -1,5 +1,5 @@
-﻿#include <acl/dsl/yaml.hpp>
-#include <acl/serializers/yaml_object.hpp>
+﻿#include <acl/dsl/yml.hpp>
+#include <acl/serializers/lite_yml.hpp>
 #include <array>
 #include <catch2/catch_all.hpp>
 #include <map>
@@ -25,14 +25,14 @@ struct TestStruct
 
 TEST_CASE("yaml_object: Test read")
 {
-  std::string yaml = R"(
+  std::string yml = R"(
 a: 100
 b: 200.0
 c: "value"
 )";
 
   TestStruct ts;
-  acl::yaml::from_string(ts, yaml);
+  acl::yml::from_string(ts, yml);
 
   REQUIRE(ts.a == 100);
   REQUIRE(ts.b == 200.0);
@@ -54,7 +54,7 @@ struct TestStruct2
 
 TEST_CASE("yaml_object: Test read nested")
 {
-  std::string yaml = R"(
+  std::string yml = R"(
 a: 100
 b: 200.0
 c: "value"
@@ -64,7 +64,7 @@ d:
   c: "value2"
 )";
   TestStruct2 ts;
-  acl::yaml::from_string(ts, yaml);
+  acl::yml::from_string(ts, yml);
   REQUIRE(ts.a == 100);
   REQUIRE(ts.b == 200.0);
   REQUIRE(ts.c == "value");
@@ -75,7 +75,7 @@ d:
 
 TEST_CASE("yaml_object: Test read vector")
 {
-  std::string yaml = R"(
+  std::string yml = R"(
 numbers:
   - 1
   - 2
@@ -91,7 +91,7 @@ numbers:
   };
 
   TestStructVector ts;
-  acl::yaml::from_string(ts, yaml);
+  acl::yml::from_string(ts, yml);
 
   REQUIRE(ts.numbers.size() == 3);
   REQUIRE(ts.numbers[0] == 1);
@@ -120,7 +120,7 @@ value: 42
   // Test with value present
   {
     TestStructOptional ts;
-    acl::yaml::from_string(ts, yaml_present);
+    acl::yml::from_string(ts, yaml_present);
     REQUIRE(ts.value.has_value());
     REQUIRE(ts.value.value() == 42);
   }
@@ -128,7 +128,7 @@ value: 42
   // Test with value absent
   {
     TestStructOptional ts;
-    acl::yaml::from_string(ts, yaml_absent);
+    acl::yml::from_string(ts, yaml_absent);
     REQUIRE(!ts.value.has_value());
   }
 }
@@ -142,7 +142,7 @@ enum class Color
 
 TEST_CASE("yaml_object: Test read enum")
 {
-  std::string yaml = R"(
+  std::string yml = R"(
 color: 1
 )";
 
@@ -156,7 +156,7 @@ color: 1
   };
 
   TestStructEnum ts;
-  acl::yaml::from_string(ts, yaml);
+  acl::yml::from_string(ts, yml);
 
   REQUIRE(ts.color == Color::Green);
 }
@@ -183,7 +183,7 @@ value: null
   // Test with value present
   {
     TestStructPointer ts;
-    acl::yaml::from_string(ts, yaml_present);
+    acl::yml::from_string(ts, yaml_present);
     REQUIRE(ts.value != nullptr);
     REQUIRE(*ts.value == 42);
   }
@@ -191,14 +191,14 @@ value: null
   // Test with value null
   {
     TestStructPointer ts;
-    acl::yaml::from_string(ts, yaml_null);
+    acl::yml::from_string(ts, yaml_null);
     REQUIRE(ts.value == nullptr);
   }
 }
 
 TEST_CASE("yaml_object: Test read tuple")
 {
-  std::string yaml = R"(
+  std::string yml = R"(
 tuple:
   - 1
   - "string"
@@ -215,7 +215,7 @@ tuple:
   };
 
   TestStructTuple ts;
-  acl::yaml::from_string(ts, yaml);
+  acl::yml::from_string(ts, yml);
 
   REQUIRE(std::get<0>(ts.tuple) == 1);
   REQUIRE(std::get<1>(ts.tuple) == "string");
@@ -224,7 +224,7 @@ tuple:
 
 TEST_CASE("yaml_object: Test read map")
 {
-  std::string yaml = R"(
+  std::string yml = R"(
 map:
   - key: key1
     value: 1
@@ -244,7 +244,7 @@ map:
   };
 
   TestStructMap ts;
-  acl::yaml::from_string(ts, yaml);
+  acl::yml::from_string(ts, yml);
 
   REQUIRE(ts.map.size() == 3);
   REQUIRE(ts.map["key1"] == 1);
@@ -254,7 +254,7 @@ map:
 
 TEST_CASE("yaml_object: Test read array")
 {
-  std::string yaml = R"(
+  std::string yml = R"(
 array:
   - 10
   - 20
@@ -271,7 +271,7 @@ array:
   };
 
   TestStructArray ts;
-  acl::yaml::from_string(ts, yaml);
+  acl::yml::from_string(ts, yml);
 
   REQUIRE(ts.array[0] == 10);
   REQUIRE(ts.array[1] == 20);
@@ -280,7 +280,7 @@ array:
 
 TEST_CASE("yaml_object: Test read compact array ")
 {
-  std::string yaml = R"(
+  std::string yml = R"(
 array: [10, 20, 30]
 )";
 
@@ -294,7 +294,7 @@ array: [10, 20, 30]
   };
 
   TestStructArray ts;
-  acl::yaml::from_string(ts, yaml);
+  acl::yml::from_string(ts, yml);
 
   REQUIRE(ts.array[0] == 10);
   REQUIRE(ts.array[1] == 20);
@@ -303,7 +303,7 @@ array: [10, 20, 30]
 
 TEST_CASE("yaml_object: Test read boolean")
 {
-  std::string yaml = R"(
+  std::string yml = R"(
 flag1: true
 flag2: false
 )";
@@ -319,7 +319,7 @@ flag2: false
   };
 
   TestStructBool ts;
-  acl::yaml::from_string(ts, yaml);
+  acl::yml::from_string(ts, yml);
 
   REQUIRE(ts.flag1 == true);
   REQUIRE(ts.flag2 == false);
@@ -352,14 +352,14 @@ var:
 
   {
     TestStructVariant ts;
-    acl::yaml::from_string(ts, yaml_int);
+    acl::yml::from_string(ts, yaml_int);
     REQUIRE(std::holds_alternative<int>(ts.var));
     REQUIRE(std::get<int>(ts.var) == 42);
   }
 
   {
     TestStructVariant ts;
-    acl::yaml::from_string(ts, yaml_string);
+    acl::yml::from_string(ts, yaml_string);
     REQUIRE(std::holds_alternative<std::string>(ts.var));
     REQUIRE(std::get<std::string>(ts.var) == "hello");
   }
@@ -367,7 +367,7 @@ var:
 
 TEST_CASE("yaml_object: Test read invalid YAML")
 {
-  std::string yaml = R"(
+  std::string yml = R"(
 a: 100
 b: [1, 2, 3
 c: "value
@@ -387,12 +387,12 @@ c: "value
   };
 
   TestStructInvalid ts;
-  REQUIRE_THROWS_AS(acl::yaml::from_string(ts, yaml), std::runtime_error);
+  REQUIRE_THROWS_AS(acl::yml::from_string(ts, yml), std::runtime_error);
 }
 
 TEST_CASE("yaml_object: Test read complex nested structure")
 {
-  std::string yaml = R"(
+  std::string yml = R"(
 root:
   child1:
     grandchild:
@@ -438,7 +438,7 @@ root:
   };
 
   Root ts;
-  acl::yaml::from_string(ts, yaml);
+  acl::yml::from_string(ts, yml);
 
   REQUIRE(ts.root.child1.grandchild.size() == 2);
   REQUIRE(ts.root.child1.grandchild[0] == "item1");
@@ -449,7 +449,7 @@ root:
 
 TEST_CASE("yaml_object: Test read block scalar literals")
 {
-  std::string yaml = R"(
+  std::string yml = R"(
 literal_block: |
   This is a block of text
   that spans multiple lines.
@@ -473,7 +473,7 @@ folded_block: >
   };
 
   TestStructBlockScalar ts;
-  acl::yaml::from_string(ts, yaml);
+  acl::yml::from_string(ts, yml);
 
   REQUIRE(ts.literal_block == "This is a block of text\nthat spans multiple lines.");
   REQUIRE(ts.folded_block == "This is another block that folds newlines into spaces.");
@@ -481,7 +481,7 @@ folded_block: >
 
 TEST_CASE("yaml_object: Test read with unexpected token")
 {
-  std::string yaml = R"(
+  std::string yml = R"(
 list:
   - 1
   - 2
@@ -499,12 +499,12 @@ list:
   };
 
   TestStructUnexpectedToken ts;
-  REQUIRE_THROWS_AS(acl::yaml::from_string(ts, yaml), std::runtime_error);
+  REQUIRE_THROWS_AS(acl::yml::from_string(ts, yml), std::runtime_error);
 }
 
 TEST_CASE("yaml_object: Test read with missing key")
 {
-  std::string yaml = R"(
+  std::string yml = R"(
 a: 100
 c: "value"
 )";
@@ -523,7 +523,7 @@ c: "value"
   };
 
   TestStructMissingKey ts;
-  acl::yaml::from_string(ts, yaml);
+  acl::yml::from_string(ts, yml);
 
   REQUIRE(ts.a == 100);
   REQUIRE(ts.b == -100); // value untouched
@@ -532,7 +532,7 @@ c: "value"
 
 TEST_CASE("yaml_object: Test read with extra fields")
 {
-  std::string yaml = R"(
+  std::string yml = R"(
 a: 100
 b: 200
 c: "value"
@@ -553,7 +553,7 @@ extra_field: "should be ignored"
   };
 
   TestStructExtraField ts;
-  acl::yaml::from_string(ts, yaml);
+  acl::yml::from_string(ts, yml);
 
   REQUIRE(ts.a == 100);
   REQUIRE(ts.b == 200);
@@ -562,7 +562,7 @@ extra_field: "should be ignored"
 
 TEST_CASE("yaml_object: Test read of unexpected type")
 {
-  std::string yaml = R"(
+  std::string yml = R"(
 number: "not_a_number"
 )";
 
@@ -577,12 +577,12 @@ number: "not_a_number"
   };
 
   TestStructUnexpectedType ts;
-  REQUIRE_THROWS_AS(acl::yaml::from_string(ts, yaml), std::runtime_error);
+  REQUIRE_THROWS_AS(acl::yml::from_string(ts, yml), std::runtime_error);
 }
 
 TEST_CASE("yaml_object: Test read recursive structures")
 {
-  std::string yaml = R"(
+  std::string yml = R"(
 node:
   value: 1
   next:
@@ -613,7 +613,7 @@ node:
   };
 
   TestStructRecursive ts;
-  acl::yaml::from_string(ts, yaml);
+  acl::yml::from_string(ts, yml);
 
   REQUIRE(ts.node.value == 1);
   REQUIRE(ts.node.next->value == 2);
@@ -623,7 +623,7 @@ node:
 
 TEST_CASE("yaml_object: Test read with incorrect type casting")
 {
-  std::string yaml = R"(
+  std::string yml = R"(
 value: "string_instead_of_int"
 )";
 
@@ -638,12 +638,12 @@ value: "string_instead_of_int"
   };
 
   TestStructTypeCast ts;
-  REQUIRE_THROWS_AS(acl::yaml::from_string(ts, yaml), std::runtime_error);
+  REQUIRE_THROWS_AS(acl::yml::from_string(ts, yml), std::runtime_error);
 }
 
 TEST_CASE("yaml_object: Test read with empty YAML")
 {
-  std::string yaml = "";
+  std::string yml = "";
 
   struct TestStructEmpty
   {
@@ -656,7 +656,7 @@ TEST_CASE("yaml_object: Test read with empty YAML")
   };
 
   TestStructEmpty ts;
-  acl::yaml::from_string(ts, yaml);
+  acl::yml::from_string(ts, yml);
 
   // Since YAML is empty, the value should remain default-initialized
   REQUIRE(ts.a == -1);
@@ -664,7 +664,7 @@ TEST_CASE("yaml_object: Test read with empty YAML")
 
 TEST_CASE("yaml_object: Test read with null value")
 {
-  std::string yaml = R"(
+  std::string yml = R"(
 value: null
 )";
 
@@ -679,7 +679,7 @@ value: null
   };
 
   TestStructNull ts;
-  acl::yaml::from_string(ts, yaml);
+  acl::yml::from_string(ts, yml);
 
   // The optional should not be set
   REQUIRE(!ts.value.has_value());
@@ -687,7 +687,7 @@ value: null
 
 TEST_CASE("yaml_object: Test read large numbers")
 {
-  std::string yaml = R"(
+  std::string yml = R"(
 int_max: 9223372036854775807
 int_min: -9223372036854775808
 uint_max: 18446744073709551615
@@ -708,7 +708,7 @@ uint_max: 18446744073709551615
   };
 
   TestStructLargeNumbers ts;
-  acl::yaml::from_string(ts, yaml);
+  acl::yml::from_string(ts, yml);
 
   REQUIRE(ts.int_max == INT64_MAX);
   REQUIRE(ts.int_min == INT64_MIN);
@@ -717,7 +717,7 @@ uint_max: 18446744073709551615
 
 TEST_CASE("yaml_object: Test read floating-point edge cases")
 {
-  std::string yaml = R"(
+  std::string yml = R"(
 positive_infinity: .inf
 negative_infinity: -.inf
 not_a_number: .nan
@@ -738,7 +738,7 @@ not_a_number: .nan
   };
 
   TestStructFloatEdgeCases ts;
-  acl::yaml::from_string(ts, yaml);
+  acl::yml::from_string(ts, yml);
 
   REQUIRE(std::isinf(ts.positive_infinity));
   REQUIRE(ts.positive_infinity > 0);
@@ -751,7 +751,7 @@ not_a_number: .nan
 
 TEST_CASE("yaml_object: Test read deeply nested structures")
 {
-  std::string yaml = R"(
+  std::string yml = R"(
 level1:
   level2:
     level3:
@@ -800,14 +800,14 @@ level1:
   };
 
   Level1 ts;
-  acl::yaml::from_string(ts, yaml);
+  acl::yml::from_string(ts, yml);
 
   REQUIRE(ts.level2.level3.level4.value == 42);
 }
 
 TEST_CASE("yaml_object: Test read sequence of maps")
 {
-  std::string yaml = R"(
+  std::string yml = R"(
 - name: "Item1"
   value: 10
 - name: "Item2"
@@ -830,7 +830,7 @@ TEST_CASE("yaml_object: Test read sequence of maps")
   using ItemsList = std::vector<Item>;
   ItemsList items;
 
-  acl::yaml::from_string(items, yaml);
+  acl::yml::from_string(items, yml);
 
   REQUIRE(items.size() == 3);
   REQUIRE(items[0].name == "Item1");
@@ -843,7 +843,7 @@ TEST_CASE("yaml_object: Test read sequence of maps")
 
 TEST_CASE("yaml_object: Test read with duplicate keys")
 {
-  std::string yaml = R"(
+  std::string yml = R"(
 a: 1
 a: 2
 )";
@@ -859,7 +859,7 @@ a: 2
   };
 
   TestStructDuplicateKeys ts;
-  acl::yaml::from_string(ts, yaml);
+  acl::yml::from_string(ts, yml);
 
   // Expect the last value to override
   REQUIRE(ts.a == 2);

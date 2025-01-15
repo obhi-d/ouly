@@ -1,8 +1,8 @@
 #pragma once
 
 #include "podvector.hpp"
-#include <acl/utils/type_traits.hpp>
-#include <acl/utils/utils.hpp>
+#include <acl/utility/type_traits.hpp>
+#include <acl/utility/utils.hpp>
 #include <functional>
 #include <memory>
 
@@ -12,7 +12,7 @@ namespace acl
  * @brief Represents a sparse vector with only pages/chunks/pools allocated for non-empty indexes
  * @tparam Ty Vector type
  * @tparam allocator_type Underlying allocator_type
- * @tparam Options Defined options for this type:
+ * @tparam Config Defined config for this type:
  *                  @note [option] pool_size Power of 2, count of elements in a single chunk/page/pool
  *                  @note [option] null_v : constexpr/static type Ty object that indicates a null value for the object
  *                  @note [option] is_null(Ty t) : method that returns true to identify null object
@@ -24,8 +24,8 @@ namespace acl
  *                  @note [option] disable_pool_tracking : true to indicate if individaul pool should not be tracked,
  *                  is false by default
  */
-template <typename Ty, typename Options = acl::default_options<Ty>>
-class sparse_vector : public detail::custom_allocator_t<Options>
+template <typename Ty, typename Config = acl::default_config<Ty>>
+class sparse_vector : public acl::detail::custom_allocator_t<Config>
 {
 public:
   using value_type      = Ty;
@@ -33,29 +33,29 @@ public:
   using const_reference = Ty const&;
   using pointer         = Ty*;
   using const_pointer   = Ty const*;
-  using size_type       = detail::choose_size_t<uint32_t, Options>;
-  using allocator_type  = detail::custom_allocator_t<Options>;
-  using options         = Options;
+  using size_type       = acl::detail::choose_size_t<uint32_t, Config>;
+  using allocator_type  = acl::detail::custom_allocator_t<Config>;
+  using config          = Config;
 
   static constexpr bool is_sparse_vector = true;
 
 private:
-  using this_type = sparse_vector<value_type, Options>;
+  using this_type = sparse_vector<value_type, Config>;
   using base_type = allocator_type;
   using storage   = value_type; // std::conditional_t<std::is_fundamental_v<value_type>, value_type,
-                                // detail::aligned_storage < sizeof(value_type), alignof(value_type)>> ;
+                                // acl::detail::aligned_storage < sizeof(value_type), alignof(value_type)>> ;
 
-  static constexpr bool has_null_method    = detail::HasNullMethod<options, value_type>;
-  static constexpr bool has_null_value     = detail::HasNullValue<options, value_type>;
-  static constexpr bool has_null_construct = detail::HasNullConstruct<options, value_type>;
-  static constexpr bool has_zero_memory    = detail::HasZeroMemoryAttrib<options>;
-  static constexpr bool has_no_fill        = detail::HasNoFillAttrib<options>;
-  static constexpr bool has_pod            = detail::HasTrivialAttrib<options>;
-  static constexpr bool has_pool_tracking  = !detail::HasDisablePoolTrackingAttrib<options>;
+  static constexpr bool has_null_method    = acl::detail::HasNullMethod<config, value_type>;
+  static constexpr bool has_null_value     = acl::detail::HasNullValue<config, value_type>;
+  static constexpr bool has_null_construct = acl::detail::HasNullConstruct<config, value_type>;
+  static constexpr bool has_zero_memory    = acl::detail::HasZeroMemoryAttrib<config>;
+  static constexpr bool has_no_fill        = acl::detail::HasNoFillAttrib<config>;
+  static constexpr bool has_pod            = acl::detail::HasTrivialAttrib<config>;
+  static constexpr bool has_pool_tracking  = !acl::detail::HasDisablePoolTrackingAttrib<config>;
   static constexpr bool has_trivial_copy   = std::is_trivially_copyable_v<Ty> || has_pod;
-  static constexpr bool has_self_index     = detail::HasSelfIndexValue<Options>;
+  static constexpr bool has_self_index     = acl::detail::HasSelfIndexValue<Config>;
 
-  static constexpr auto pool_mul       = detail::log2(detail::pool_size_v<Options>);
+  static constexpr auto pool_mul       = acl::detail::log2(acl::detail::pool_size_v<Config>);
   static constexpr auto pool_size      = static_cast<size_type>(1) << pool_mul;
   static constexpr auto pool_bytes     = pool_size * sizeof(value_type);
   static constexpr auto allocate_bytes = has_pool_tracking ? pool_bytes + sizeof(uint32_t) : pool_bytes;
@@ -104,13 +104,13 @@ private:
   static auto is_null(value_type const& other) noexcept -> bool
     requires(has_null_method)
   {
-    return options::is_null(other);
+    return config::is_null(other);
   }
 
   static auto is_null(value_type const& other) noexcept -> bool
     requires(has_null_value && !has_null_method)
   {
-    return other == options::null_v;
+    return other == config::null_v;
   }
 
   static constexpr auto is_null(value_type const& other) noexcept -> bool
@@ -502,7 +502,7 @@ public:
    */
   void erase(size_type l) noexcept
   {
-    if constexpr (detail::debug)
+    if constexpr (acl::debug)
     {
       validate(l);
     }
@@ -512,7 +512,7 @@ public:
   void pop_back()
   {
     assert(length_ > 0);
-    if constexpr (detail::debug)
+    if constexpr (acl::debug)
     {
       validate(length_ - 1);
     }
@@ -670,7 +670,7 @@ public:
     requires(has_null_value)
   {
     auto block = (idx >> pool_mul);
-    return block < items_.size() && items_[block] ? cast(items_[block][idx & pool_mod]) : options::null_v;
+    return block < items_.size() && items_[block] ? cast(items_[block][idx & pool_mod]) : config::null_v;
   }
 
   auto get_unsafe(size_type idx) const noexcept -> Ty&
@@ -778,11 +778,11 @@ private:
           {
             if constexpr (has_null_value)
             {
-              std::fill(cast(items_[block]), cast(items_[block] + pool_size), options::null_v);
+              std::fill(cast(items_[block]), cast(items_[block] + pool_size), config::null_v);
             }
             else if constexpr (has_null_construct)
             {
-              std::for_each(cast(items_[block]), cast(items_[block] + pool_size), options::null_construct);
+              std::for_each(cast(items_[block]), cast(items_[block] + pool_size), config::null_construct);
             }
             else
             {
@@ -796,11 +796,11 @@ private:
                           {
                             if constexpr (has_null_value)
                             {
-                              std::construct_at(std::addressof(dst), options::null_v);
+                              std::construct_at(std::addressof(dst), config::null_v);
                             }
                             else if constexpr (has_null_construct)
                             {
-                              options::null_construct(dst);
+                              config::null_construct(dst);
                             }
                             else
                             {
@@ -858,11 +858,11 @@ private:
 
     if constexpr (has_null_value)
     {
-      cast(items_[block][idx & pool_mod]) = options::null_v;
+      cast(items_[block][idx & pool_mod]) = config::null_v;
     }
     else if constexpr (has_null_construct)
     {
-      options::null_reset(cast(items_[block][idx & pool_mod]));
+      config::null_reset(cast(items_[block][idx & pool_mod]));
     }
     else
     {
@@ -991,8 +991,8 @@ private:
     return dst;
   }
 
-  podvector<storage*, Options> items_;
-  size_type                    length_ = 0;
+  podvector<storage*, Config> items_;
+  size_type                   length_ = 0;
 };
 
 namespace detail
@@ -1008,17 +1008,17 @@ concept HasCustomVector = requires {
   typename T::custom_vector_t::const_pointer;
 };
 
-template <typename Opt, typename V>
+template <typename Config, typename V>
 struct custom_vector_type
 {
-  using type =
-   std::conditional_t<HasUseSparseAttrib<Opt>, sparse_vector<V, Opt>, vector<V, detail::custom_allocator_t<Opt>>>;
+  using type = std::conditional_t<HasUseSparseAttrib<Config>, sparse_vector<V, Config>,
+                                  vector<V, acl::detail::custom_allocator_t<Config>>>;
 };
 
-template <HasCustomVector Opt>
-struct custom_vector_type<Opt, typename Opt::custom_vector_t::value_type>
+template <HasCustomVector Config>
+struct custom_vector_type<Config, typename Config::custom_vector_t::value_type>
 {
-  using type = Opt::custom_vector_t;
+  using type = Config::custom_vector_t;
 };
 
 } // namespace detail

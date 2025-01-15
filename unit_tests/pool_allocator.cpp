@@ -6,7 +6,7 @@
 TEST_CASE("Validate pool_allocator", "[pool_allocator]")
 {
   using namespace acl;
-  using allocator_t = pool_allocator<acl::options<acl::opt::compute_stats>>;
+  using allocator_t = pool_allocator<acl::config<acl::cfg::compute_stats>>;
   struct trivial_object
   {
     std::uint8_t value[16];
@@ -55,7 +55,7 @@ TEST_CASE("Validate pool_allocator", "[pool_allocator]")
 TEST_CASE("Validate pool_allocator with alignment", "[pool_allocator]")
 {
   using namespace acl;
-  using allocator_t = pool_allocator<acl::options<acl::opt::compute_stats>>;
+  using allocator_t = pool_allocator<acl::config<acl::cfg::compute_stats>>;
   struct trivial_object
   {
     std::uint8_t value[16];

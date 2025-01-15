@@ -29,17 +29,17 @@ template <typename T>
 concept HasFallbackStrat = requires { typename T::fallback_strat_t; };
 
 template <typename T>
-constexpr auto granularity_v = std::conditional_t<HasGranularity<T>, T, acl::opt::granularity<256>>::granularity_v;
+constexpr auto granularity_v = std::conditional_t<HasGranularity<T>, T, acl::cfg::granularity<256>>::granularity_v;
 template <typename T>
-constexpr auto max_bucket_v = std::conditional_t<HasMaxBucket<T>, T, acl::opt::max_bucket<255>>::max_bucket_v;
+constexpr auto max_bucket_v = std::conditional_t<HasMaxBucket<T>, T, acl::cfg::max_bucket<255>>::max_bucket_v;
 template <typename T>
-constexpr auto search_window_v = std::conditional_t<HasSearchWindow<T>, T, acl::opt::search_window<4>>::search_window_v;
+constexpr auto search_window_v = std::conditional_t<HasSearchWindow<T>, T, acl::cfg::search_window<4>>::search_window_v;
 template <typename T>
 constexpr auto fixed_max_per_slot_v =
- std::conditional_t<HasFixedMaxPerSlot<T>, T, acl::opt::fixed_max_per_slot<8>>::fixed_max_per_slot_v;
+ std::conditional_t<HasFixedMaxPerSlot<T>, T, acl::cfg::fixed_max_per_slot<8>>::fixed_max_per_slot_v;
 template <typename T, typename D>
 using fallback_strat_t =
- typename std::conditional_t<HasFallbackStrat<T>, T, acl::opt::fallback_start<D>>::fallback_strat_t;
+ typename std::conditional_t<HasFallbackStrat<T>, T, acl::cfg::fallback_start<D>>::fallback_strat_t;
 
 template <typename UsizeType, typename Uextension>
 struct arena
@@ -47,11 +47,11 @@ struct arena
   using size_type = UsizeType;
   using list      = block_list<UsizeType, Uextension>;
 
-  list              block_order_;
-  detail::list_node order_;
-  size_type         size_ = 0;
-  size_type         free_ = 0;
-  std::uint32_t     data_ = detail::k_null_sz<std::uint32_t>;
+  list                   block_order_;
+  acl::detail::list_node order_;
+  size_type              size_ = 0;
+  size_type              free_ = 0;
+  std::uint32_t          data_ = std::numeric_limits<uint32_t>::max();
 
   [[nodiscard]] auto block_count() const noexcept -> std::uint32_t
   {
@@ -75,7 +75,7 @@ struct arena
 };
 
 template <typename UsizeType, typename Uextension>
-using arena_bank = table<detail::arena<UsizeType, Uextension>, true>;
+using arena_bank = table<acl::detail::arena<UsizeType, Uextension>, true>;
 
 template <typename UsizeType, typename Uextension>
 struct arena_accessor
@@ -90,12 +90,12 @@ struct arena_accessor
     bank.erase(node);
   }
 
-  static auto node(bank_type& bank, std::uint32_t node) -> detail::list_node&
+  static auto node(bank_type& bank, std::uint32_t node) -> acl::detail::list_node&
   {
     return bank[node].order_;
   }
 
-  static auto node(bank_type const& bank, std::uint32_t node) -> detail::list_node const&
+  static auto node(bank_type const& bank, std::uint32_t node) -> acl::detail::list_node const&
   {
     return bank[node].order_;
   }
@@ -112,7 +112,7 @@ struct arena_accessor
 };
 
 template <typename UsizeType, typename Uextension>
-using arena_list = detail::vlist<arena_accessor<UsizeType, Uextension>>;
+using arena_list = acl::detail::vlist<arena_accessor<UsizeType, Uextension>>;
 
 using free_list = acl::vector<std::uint32_t>;
 

@@ -6,7 +6,7 @@ namespace acl
 
 auto coalescing_arena_allocator::add_arena(size_type size, bool empty) -> std::pair<arena_id, allocation_id>
 {
-  uint16_t arena_idx = static_cast<uint16_t>(arena_entries_.push(detail::ca_arena()));
+  uint16_t arena_idx = static_cast<uint16_t>(arena_entries_.push(acl::detail::ca_arena()));
   auto&    arena_ref = arena_entries_.entries_[arena_idx];
   arena_ref.size_    = size;
   auto block_id      = block_entries_.push(0, size, arena_idx, empty);

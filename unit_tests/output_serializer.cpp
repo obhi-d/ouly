@@ -1,8 +1,8 @@
 
-#include "acl/serializers/output_serializer.hpp"
 #include "acl/containers/array_types.hpp"
-#include "acl/serializers/binary_serializer.hpp"
-#include <acl/utils/reflection.hpp>
+#include "acl/serializers/serializers.hpp"
+#include "acl/utility/transforms.hpp"
+#include <acl/reflection/reflection.hpp>
 #include <catch2/catch_all.hpp>
 #include <compare>
 #include <map>
@@ -12,7 +12,7 @@
 using json = nlohmann::json;
 
 // NOLINTBEGIN
-class Serializer
+class Stream
 {
 public:
   void begin_array() noexcept
@@ -116,7 +116,7 @@ auto acl::reflect<ReflTestFriend>() noexcept
                    acl::bind<"et", &ReflTestFriend::et>());
 }
 
-TEST_CASE("output_serializer: Basic test")
+TEST_CASE("structured_output_serializer: Basic test")
 {
 
   ReflTestFriend example;
@@ -124,14 +124,13 @@ TEST_CASE("output_serializer: Basic test")
   example.b  = 534;
   example.et = EnumTest::value1;
 
-  Serializer instance;
-  auto       ser = acl::output_serializer<Serializer>(instance);
-  ser << example;
+  Stream stream;
+  acl::write(stream, example);
 
-  REQUIRE(instance.get() == R"({ "a": 4121, "b": 534, "et": 43535 })");
+  REQUIRE(stream.get() == R"({ "a": 4121, "b": 534, "et": 43535 })");
 }
 
-TEST_CASE("output_serializer: Basic test with internal decl")
+TEST_CASE("structured_output_serializer: Basic test with internal decl")
 {
 
   struct ReflTestMember
@@ -152,25 +151,23 @@ TEST_CASE("output_serializer: Basic test with internal decl")
   example.first.b = 534;
   example.second  = "String Value";
 
-  Serializer instance;
-  auto       ser = acl::output_serializer<Serializer>(instance);
-  ser << example;
+  Stream stream;
+  acl::write(stream, example);
 
-  REQUIRE(instance.get() == R"({ "first": { "a": 4121, "b": 534, "et": 323 }, "second": "String Value" })");
+  REQUIRE(stream.get() == R"({ "first": { "a": 4121, "b": 534, "et": 323 }, "second": "String Value" })");
 }
 
-TEST_CASE("output_serializer: Test tuple")
+TEST_CASE("structured_output_serializer: Test tuple")
 {
   std::tuple<int, std::string, int, bool> example = {10, "everything", 343, false};
 
-  Serializer instance;
-  auto       ser = acl::output_serializer<Serializer>(instance);
-  ser << example;
+  Stream stream;
+  acl::write(stream, example);
 
-  REQUIRE(instance.get() == R"([ 10, "everything", 343, false ])");
+  REQUIRE(stream.get() == R"([ 10, "everything", 343, false ])");
 }
 
-TEST_CASE("output_serializer: String map")
+TEST_CASE("structured_output_serializer: String map")
 {
   std::unordered_map<std::string, std::string> example = {
    {"everything",        "is"},
@@ -178,40 +175,42 @@ TEST_CASE("output_serializer: String map")
    {      "work", "just fine"}
   };
 
-  Serializer instance;
-  auto       ser = acl::output_serializer<Serializer>(instance);
-  ser << example;
+  Stream stream;
+  acl::write(stream, example);
 
-  json j = json::parse(instance.get());
-  REQUIRE(j["everything"] == "is");
-  REQUIRE(j["supposed"] == "to");
-  REQUIRE(j["work"] == "just fine");
+  json j = json::parse(stream.get());
+
+  // Readback the json into another unordered map
+  std::unordered_map<std::string, std::string> readback;
+  for (auto const& value : j)
+    readback[value[0]] = value[1];
+  // Ensure all elements of example match readback
+  for (auto const& [key, value] : example)
+    REQUIRE(readback[key] == value);
 }
 
-TEST_CASE("output_serializer: ArrayLike")
+TEST_CASE("structured_output_serializer: ArrayLike")
 {
   std::vector<int> example = {2, 3, 5, 8, 13};
 
-  Serializer instance;
-  auto       ser = acl::output_serializer<Serializer>(instance);
-  ser << example;
+  Stream stream;
+  acl::write(stream, example);
 
-  json j = json::parse(instance.get());
+  json j = json::parse(stream.get());
   REQUIRE(j.size() == 5);
   for (std::size_t i = 0; i < j.size(); ++i)
     REQUIRE(j[i] == example[i]);
 }
 
-TEST_CASE("output_serializer: VariantLike")
+TEST_CASE("structured_output_serializer: VariantLike")
 {
 
   std::vector<std::variant<int, std::string, bool>> example = {2, "string", false, 8, "moo"};
 
-  Serializer instance;
-  auto       ser = acl::output_serializer<Serializer>(instance);
-  ser << example;
+  Stream stream;
+  acl::write(stream, example);
 
-  json j = json::parse(instance.get());
+  json j = json::parse(stream.get());
   REQUIRE(j.size() == 5);
   REQUIRE(j[0].at("value").get<int>() == std::get<int>(example[0]));
   REQUIRE(j[1].at("value").get<std::string>() == std::get<std::string>(example[1]));
@@ -223,77 +222,81 @@ TEST_CASE("output_serializer: VariantLike")
 using custom_variant = std::variant<int, std::string, bool, double>;
 
 template <>
-uint32_t acl::to_variant_index<custom_variant>(std::string_view ref)
+struct acl::index_transform<custom_variant>
 {
-  if (ref == "int")
-    return 0;
-  if (ref == "string")
-    return 1;
-  if (ref == "bool")
-    return 2;
-  if (ref == "double")
-    return 3;
-  return 0;
-}
-
-template <>
-std::string_view acl::from_variant_index<custom_variant>(std::size_t ref)
-{
-  switch (ref)
+  static constexpr uint32_t to_index(std::string_view ref)
   {
-  case 0:
-    return "int";
-  case 1:
-    return "string";
-  case 2:
-    return "bool";
-  case 3:
-    return "double";
+    if (ref == "int")
+      return 0;
+    if (ref == "string")
+      return 1;
+    if (ref == "bool")
+      return 2;
+    if (ref == "double")
+      return 3;
+    return 0;
   }
-  return "int";
-}
 
-TEST_CASE("output_serializer: VariantLike with custom index")
+  static constexpr std::string_view from_index(std::size_t ref)
+  {
+    switch (ref)
+    {
+    case 0:
+      return "int";
+    case 1:
+      return "string";
+    case 2:
+      return "bool";
+    case 3:
+      return "double";
+    }
+    return "int";
+  }
+};
+
+TEST_CASE("structured_output_serializer: VariantLike with custom index")
 {
 
   {
     custom_variant example = {2};
-    Serializer     instance;
-    auto           ser = acl::output_serializer<Serializer>(instance);
-    ser << example;
+    Stream         stream;
+    acl::write(stream, example);
 
-    REQUIRE(instance.get().find("int") != std::string::npos);
+    REQUIRE(stream.get().find("int") != std::string::npos);
   }
 
   {
     custom_variant example = {2.0};
-    Serializer     instance;
-    auto           ser = acl::output_serializer<Serializer>(instance);
-    ser << example;
+    Stream         stream;
+    acl::write(stream, example);
 
-    REQUIRE(instance.get().find("double") != std::string::npos);
+    REQUIRE(stream.get().find("double") != std::string::npos);
   }
 
   {
     custom_variant example = {true};
-    Serializer     instance;
-    auto           ser = acl::output_serializer<Serializer>(instance);
-    ser << example;
+    Stream         stream;
+    acl::write(stream, example);
 
-    REQUIRE(instance.get().find("bool") != std::string::npos);
+    REQUIRE(stream.get().find("bool") != std::string::npos);
   }
 
   {
     custom_variant example = {"string"};
-    Serializer     instance;
-    auto           ser = acl::output_serializer<Serializer>(instance);
-    ser << example;
+    Stream         stream;
+    acl::write(stream, example);
 
-    REQUIRE(instance.get().find("string") != std::string::npos);
+    REQUIRE(stream.get().find("string") != std::string::npos);
   }
 }
 
-TEST_CASE("output_serializer: CastableToStringView")
+template <typename T>
+concept RR = requires {
+  T(std::declval<std::string_view>());
+  (std::string_view) std::declval<T>();
+};
+
+TEST_CASE("structured_output_serializer: CastableToStringView")
 {
   struct ReflEx
   {
@@ -312,16 +315,17 @@ TEST_CASE("output_serializer: CastableToStringView")
     }
   };
 
+  static_assert(RR<ReflEx>, "Convert");
   auto example = ReflEx("reflex output");
 
-  Serializer instance;
-  auto       ser = acl::output_serializer<Serializer>(instance);
-  ser << example;
+  Stream stream;
 
-  REQUIRE(instance.get() == R"("reflex output")");
+  acl::write(stream, example);
+
+  REQUIRE(stream.get() == R"("reflex output")");
 }
 
-TEST_CASE("output_serializer: CastableToString")
+TEST_CASE("structured_output_serializer: CastableToString")
 {
   struct ReflEx
   {
@@ -342,11 +346,11 @@ TEST_CASE("output_serializer: CastableToString")
 
   auto example = ReflEx("reflex output");
 
-  Serializer instance;
-  auto       ser = acl::output_serializer<Serializer>(instance);
-  ser << example;
+  Stream stream;
 
-  REQUIRE(instance.get() == R"("reflex output")");
+  acl::write(stream, example);
+
+  REQUIRE(stream.get() == R"("reflex output")");
 }
 
 struct ReflexToStr
@@ -355,21 +359,29 @@ struct ReflexToStr
 };
 
 template <>
-std::string acl::to_string<ReflexToStr>(ReflexToStr const& a)
+struct acl::convert<ReflexToStr>
 {
-  return std::to_string(a.value);
-}
+  static auto to_string(ReflexToStr const& a) -> std::string
+  {
+    return std::to_string(a.value);
+  }
 
-TEST_CASE("output_serializer: TransformToString")
+  static auto from_string(ReflexToStr& a, std::string_view v) -> void
+  {
+    a.value = std::stoi(std::string(v));
+  }
+};
+
+TEST_CASE("structured_output_serializer: TransformToString")
 {
   ReflexToStr example;
   example.value = 455232;
 
-  Serializer instance;
-  auto       ser = acl::output_serializer<Serializer>(instance);
-  ser << example;
+  Stream stream;
 
-  REQUIRE(instance.get() == R"("455232")");
+  acl::write(stream, example);
+
+  REQUIRE(stream.get() == R"("455232")");
 }
 
 struct ReflexToSV
@@ -385,23 +397,32 @@ struct ReflexToSV
 };
 
 template <>
-std::string_view acl::to_string_view<ReflexToSV>(ReflexToSV const& a)
+struct acl::convert<ReflexToSV>
 {
-  return std::string_view(a.myBuffer, (std::size_t)a.length);
-}
+  static auto to_string(ReflexToSV const& a) -> std::string
+  {
+    return std::string(a.myBuffer, (std::size_t)a.length);
+  }
 
-TEST_CASE("output_serializer: TransformToStringView")
+  static auto from_string(ReflexToSV& a, std::string_view v) -> void
+  {
+    std::memcpy(a.myBuffer, v.data(), v.length());
+    a.length = (int)v.length();
+  }
+};
+
+TEST_CASE("structured_output_serializer: TransformToStringView")
 {
   auto example = ReflexToSV("reflex output");
 
-  Serializer instance;
-  auto       ser = acl::output_serializer<Serializer>(instance);
-  ser << example;
+  Stream stream;
 
-  REQUIRE(instance.get() == R"("reflex output")");
+  acl::write(stream, example);
+
+  REQUIRE(stream.get() == R"("reflex output")");
 }
 
-TEST_CASE("output_serializer: PointerLike")
+TEST_CASE("structured_output_serializer: PointerLike")
 {
   struct ReflEx
   {
@@ -422,19 +443,19 @@ TEST_CASE("output_serializer: PointerLike")
     }
   };
 
-  ReflEx     example;
-  Serializer instance;
-  auto       ser = acl::output_serializer<Serializer>(instance);
-  ser << example;
+  ReflEx example;
+  Stream stream;
 
-  json j = json::parse(instance.get());
+  acl::write(stream, example);
+
+  json j = json::parse(stream.get());
   REQUIRE(j["first"] == "first");
   REQUIRE(j["second"] == "second");
   REQUIRE(j["third"] == "third");
   REQUIRE(j["last"] == json());
 }
 
-TEST_CASE("output_serializer: OptionalLike")
+TEST_CASE("structured_output_serializer: OptionalLike")
 {
   struct ReflEx
   {
@@ -447,26 +468,26 @@ TEST_CASE("output_serializer: OptionalLike")
     }
   };
 
-  ReflEx     example;
-  Serializer instance;
-  auto       ser = acl::output_serializer<Serializer>(instance);
-  ser << example;
+  ReflEx example;
+  Stream stream;
 
-  json j = json::parse(instance.get());
+  acl::write(stream, example);
+
+  json j = json::parse(stream.get());
   REQUIRE(j["first"] == "first");
   REQUIRE(j["last"] == json());
 }
 
-TEST_CASE("output_serializer: VariantLike Monostate")
+TEST_CASE("structured_output_serializer: VariantLike Monostate")
 {
   std::variant<std::monostate, int, std::string, bool> example;
 
-  Serializer instance;
-  auto       ser = acl::output_serializer<Serializer>(instance);
-  ser << example;
+  Stream stream;
 
-  json j = json::parse(instance.get());
-  REQUIRE(j.at("type") == 0);
+  acl::write(stream, example);
+
+  json j = json::parse(stream.get());
+  REQUIRE(j.at("type") == "0");
   REQUIRE(j.at("value") == json());
 }
 
@@ -476,7 +497,7 @@ public:
   CustomClass() noexcept = default;
   CustomClass(int a) : value(a) {}
 
-  friend Serializer& operator<<(Serializer& ser, CustomClass const& cc)
+  friend Stream& operator<<(Stream& ser, CustomClass const& cc)
   {
     ser.as_int64(cc.value);
     return ser;
@@ -491,14 +512,13 @@ private:
   int value;
 };
 
-TEST_CASE("output_serializer: OutputSerializableClass")
+TEST_CASE("structured_output_serializer: OutputSerializableClass")
 {
   std::vector<CustomClass> integers = {CustomClass(31), CustomClass(5454), CustomClass(323)};
-  Serializer               instance;
-  auto                     ser = acl::output_serializer<Serializer>(instance);
-  ser << integers;
+  Stream                   stream;
+  acl::write(stream, integers);
 
-  json j = json::parse(instance.get());
+  json j = json::parse(stream.get());
   REQUIRE(j.is_array());
   REQUIRE(j.size() == 3);
   REQUIRE(j[0] == 31);
@@ -506,21 +526,37 @@ TEST_CASE("output_serializer: OutputSerializableClass")
   REQUIRE(j[2] == 323);
 }
 
-struct SerializableClass
+TEST_CASE("structured_output_serializer: Unordered map")
 {
-  std::string str;
+  std::unordered_map<int, std::string> example = {
+   {1,   "one"},
+   {2,   "two"},
+   {3, "three"}
+  };
 
-  static inline constexpr auto reflect() noexcept
+  Stream stream;
+  acl::write(stream, example);
+
+  json j = json::parse(stream.get());
+  REQUIRE(j.is_array());
+  REQUIRE(j.size() == 3);
+
+  // Since unordered_map order is not guaranteed, check each pair exists
+  bool found_all = true;
+  for (const auto& pair : example)
   {
-    return acl::bind(acl::bind<"first", &SerializableClass::str>());
+    bool found_pair = false;
+    for (const auto& elem : j)
+    {
+      if (elem[0] == pair.first && elem[1] == pair.second)
+      {
+        found_pair = true;
+        break;
+      }
+    }
+    found_all &= found_pair;
   }
-};
+  REQUIRE(found_all);
+}
 
-struct UnserializableClass
-{
-  std::string str;
-};
-
-static_assert(acl::Serializable<SerializableClass>, "Is not streamble");
-static_assert(!acl::Serializable<UnserializableClass>, "Is streamble");
 // NOLINTEND

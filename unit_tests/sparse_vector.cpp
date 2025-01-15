@@ -6,7 +6,7 @@
 
 // NOLINTBEGIN
 template <>
-struct acl::default_options<pod>
+struct acl::default_config<pod>
 {
   static constexpr std::uint32_t pool_size_v  = 10;
   static constexpr pod           null_v       = pod{};
@@ -294,7 +294,7 @@ TEST_CASE("sparse_vector: unordered_merge iterator", "[sparse_vector][unordered_
 
 TEST_CASE("sparse_vector: fill", "[sparse_vector][fill]")
 {
-  acl::sparse_vector<int, acl::options<acl::opt::pool_size<20>>> vv;
+  acl::sparse_vector<int, acl::config<acl::cfg::pool_size<20>>> vv;
   for (int n = 0; n < 200; ++n)
   {
     std::uint32_t stop = range_rand<std::uint32_t>(10, 200);

@@ -1,13 +1,11 @@
 #pragma once
 
-#include "default_allocator.hpp"
-#include <acl/utils/common.hpp>
+#include <acl/allocators/default_allocator.hpp>
+#include <acl/allocators/detail/custom_allocator.hpp>
+#include <acl/utility/common.hpp>
 
 namespace acl
 {
-
-struct linear_allocator_tag
-{};
 
 /**
  * @brief A linear (arena) allocator that allocates memory in a sequential manner
@@ -16,7 +14,7 @@ struct linear_allocator_tag
  * incrementing a pointer. It only supports deallocation of the most recently allocated
  * block (LIFO order).
  *
- * @tparam Options Configuration options for the allocator
+ * @tparam Config Configuration config for the allocator
  *
  * Features:
  * - Fast allocation (O(1))
@@ -38,13 +36,13 @@ struct linear_allocator_tag
  * @warning Deallocating memory out of order will not reclaim the memory until the allocator
  * is destroyed. Only the most recently allocated block can be effectively deallocated.
  */
-template <typename Options = acl::options<>>
-class linear_allocator : detail::statistics<linear_allocator_tag, Options>
+template <typename Config = acl::config<>>
+class linear_allocator : acl::detail::statistics<linear_allocator_tag, Config>
 {
 public:
   using tag                  = linear_allocator_tag;
-  using statistics           = detail::statistics<linear_allocator_tag, Options>;
-  using underlying_allocator = detail::underlying_allocator_t<Options>;
+  using statistics           = acl::detail::statistics<linear_allocator_tag, Config>;
+  using underlying_allocator = acl::detail::underlying_allocator_t<Config>;
   using size_type            = typename underlying_allocator::size_type;
   using address              = typename underlying_allocator::address;
 

@@ -2,25 +2,22 @@
 // Created by obhi on 11/17/20.
 //
 #pragma once
-#include "linear_allocator.hpp"
+#include <acl/allocators/linear_allocator.hpp>
 #include <acl/containers/podvector.hpp>
 #include <limits>
 
 namespace acl
 {
 
-struct linear_stack_allocator_tag
-{};
-
-template <typename Options = acl::options<>>
-class linear_stack_allocator : detail::statistics<linear_stack_allocator_tag, Options>
+template <typename Config = acl::config<>>
+class linear_stack_allocator : acl::detail::statistics<linear_stack_allocator_tag, Config>
 {
 public:
   static constexpr uint32_t default_arena_size = 1024 * 1024;
 
   using tag                  = linear_stack_allocator_tag;
-  using statistics           = detail::statistics<linear_stack_allocator_tag, Options>;
-  using underlying_allocator = detail::underlying_allocator_t<Options>;
+  using statistics           = acl::detail::statistics<linear_stack_allocator_tag, Config>;
+  using underlying_allocator = acl::detail::underlying_allocator_t<Config>;
   using size_type            = typename underlying_allocator::size_type;
   using address              = typename underlying_allocator::address;
 

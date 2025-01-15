@@ -8,7 +8,8 @@
 #pragma once
 #include <acl/allocators/allocator.hpp>
 #include <acl/allocators/default_allocator.hpp>
-#include <acl/utils/type_traits.hpp>
+#include <acl/allocators/detail/custom_allocator.hpp>
+#include <acl/utility/type_traits.hpp>
 #include <cassert>
 #include <cstdint>
 #include <cstring>
@@ -17,13 +18,13 @@
 // https://en.cppreference.com/w/cpp/header/vector
 namespace acl
 {
-template <typename Ty, typename Options = acl::default_options<Ty>>
-class podvector : public detail::custom_allocator_t<Options>
+template <typename Ty, typename Config = acl::default_config<Ty>>
+class podvector : public acl::detail::custom_allocator_t<Config>
 {
 public:
   using value_type                = Ty;
-  using allocator_type            = detail::custom_allocator_t<Options>;
-  using size_type                 = detail::choose_size_t<uint32_t, Options>;
+  using allocator_type            = acl::detail::custom_allocator_t<Config>;
+  using size_type                 = acl::detail::choose_size_t<uint32_t, Config>;
   using difference_type           = size_type;
   using reference                 = value_type&;
   using const_reference           = const value_type&;

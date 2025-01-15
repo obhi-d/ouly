@@ -1,9 +1,9 @@
 #pragma once
 
-#include "podvector.hpp"
-#include <acl/containers/indirection.hpp>
-#include <acl/utils/type_traits.hpp>
-#include <acl/utils/utils.hpp>
+#include <acl/containers/detail/indirection.hpp>
+#include <acl/containers/podvector.hpp>
+#include <acl/utility/type_traits.hpp>
+#include <acl/utility/utils.hpp>
 #include <memory>
 
 namespace acl
@@ -12,35 +12,35 @@ namespace acl
  * @brief Represents a sparse table of elements. Free slots are reused.
  * @tparam Ty Vector type
  * @tparam allocator_type Underlying allocator_type
- * @tparam Options At minimum the options must define:
+ * @tparam Config At minimum the config must define:
  *          - pool_size Power of 2, count of elements in a single chunk/page/pool
- *          - [optional] using self_index = typename acl::opt::self_index<&type::offset> for self pointer
+ *          - [optional] using self_index = typename acl::cfg::self_index<&type::offset> for self pointer
  *          - [optional] self_index_pool_size Pool size for self indices if offset is missing
  */
-template <typename Ty, typename Options = acl::default_options<Ty>>
-class sparse_table : public detail::custom_allocator_t<Options>
+template <typename Ty, typename Config = acl::default_config<Ty>>
+class sparse_table : public acl::detail::custom_allocator_t<Config>
 {
 
 public:
-  using options         = Options;
+  using config          = Config;
   using value_type      = Ty;
   using reference       = Ty&;
   using const_reference = Ty const&;
   using pointer         = Ty*;
   using const_pointer   = Ty const*;
-  using size_type       = detail::choose_size_t<uint32_t, Options>;
+  using size_type       = acl::detail::choose_size_t<uint32_t, Config>;
   using link            = size_type;
-  using allocator_type  = detail::custom_allocator_t<Options>;
+  using allocator_type  = acl::detail::custom_allocator_t<Config>;
 
   static_assert(sizeof(Ty) >= sizeof(size_type), "Type must big enough to hold a link");
 
 private:
-  static constexpr auto      pool_mul       = detail::log2(detail::pool_size_v<Options>);
+  static constexpr auto      pool_mul       = acl::detail::log2(acl::detail::pool_size_v<Config>);
   static constexpr auto      pool_size      = static_cast<size_type>(1) << pool_mul;
   static constexpr auto      pool_mod       = pool_size - 1;
-  static constexpr bool      has_self_index = detail::HasSelfIndexValue<Options>;
+  static constexpr bool      has_self_index = acl::detail::HasSelfIndexValue<Config>;
   static constexpr size_type null_v         = 0;
-  using this_type                           = sparse_table<Ty, Options>;
+  using this_type                           = sparse_table<Ty, Config>;
   using storage                             = value_type;
 
   struct default_index_pool_size
@@ -51,7 +51,7 @@ private:
   struct self_index_traits_base
   {
     using size_type                              = uint32_t;
-    static constexpr uint32_t pool_size_v        = std::conditional_t<detail::HasSelfIndexPoolSize<Options>, Options,
+    static constexpr uint32_t pool_size_v        = std::conditional_t<acl::detail::HasSelfIndexPoolSize<Config>, Config,
                                                                       default_index_pool_size>::self_index_pool_size_v;
     static constexpr bool     use_sparse_index_v = true;
     static constexpr uint32_t null_v             = 0;
@@ -62,13 +62,13 @@ private:
   struct self_index_traits : self_index_traits_base
   {};
 
-  template <detail::HasSelfIndexValue TrTy>
+  template <acl::detail::HasSelfIndexValue TrTy>
   struct self_index_traits<TrTy> : self_index_traits_base
   {
     using self_index = typename TrTy::self_index;
   };
 
-  using self_index = detail::self_index_type<self_index_traits<Options>>;
+  using self_index = acl::detail::self_index_type<self_index_traits<Config>>;
 
 public:
   sparse_table() noexcept = default;
@@ -255,7 +255,7 @@ public:
   auto emplace(Args&&... args) noexcept -> link
   {
     auto lnk = ensure_slot();
-    auto idx = detail::index_val(lnk);
+    auto idx = acl::detail::index_val(lnk);
 
     auto block = idx >> pool_mul;
     auto index = idx & pool_mod;
@@ -272,7 +272,7 @@ public:
    */
   void replace(link point, value_type&& args) noexcept
   {
-    if constexpr (detail::debug)
+    if constexpr (acl::debug)
     {
       assert(contains(point));
     }
@@ -285,7 +285,7 @@ public:
    */
   void erase(link l) noexcept
   {
-    if constexpr (detail::debug)
+    if constexpr (acl::debug)
     {
       validate(l);
     }
@@ -338,11 +338,11 @@ public:
 
   auto at(link l) noexcept -> value_type&
   {
-    if constexpr (detail::debug)
+    if constexpr (acl::debug)
     {
       validate(l);
     }
-    return item_at(detail::index_val(l));
+    return item_at(acl::detail::index_val(l));
   }
 
   auto at(link l) const noexcept -> value_type const&
@@ -369,7 +369,7 @@ public:
 
   auto get_if(link l) noexcept -> value_type*
   {
-    auto idx = detail::index_val(l.value());
+    auto idx = acl::detail::index_val(l.value());
     if (idx < extents_)
     {
       if constexpr (has_self_index)
@@ -395,7 +395,7 @@ public:
   auto contains(link l) const noexcept -> bool
   {
     assert(is_valid_ref(l.value()));
-    auto idx = detail::index_val(l.value());
+    auto idx = acl::detail::index_val(l.value());
     return idx < extents_ && (l.value() == get_ref_at_idx(idx));
   }
 
@@ -407,7 +407,7 @@ public:
 private:
   void validate(link l) const noexcept
   {
-    auto idx  = detail::index_val(l);
+    auto idx  = acl::detail::index_val(l);
     auto self = get_ref_at_idx(idx);
     assert(self == l);
   }
@@ -457,7 +457,7 @@ private:
   {
     length_--;
 
-    auto lnk = detail::index_val(l);
+    auto lnk = acl::detail::index_val(l);
 
     // NOLINTNEXTLINE
     auto& item = reinterpret_cast<value_type&>(items_[lnk >> pool_mul][lnk & pool_mod]);
@@ -467,7 +467,7 @@ private:
       std::destroy_at(&item);
     }
 
-    auto newlnk = detail::revise_invalidate(l);
+    auto newlnk = acl::detail::revise_invalidate(l);
 
     if constexpr (has_self_index)
     {
@@ -497,8 +497,8 @@ private:
     }
     else
     {
-      lnk        = detail::validate(free_slot_);
-      free_slot_ = get_ref_at_idx(detail::index_val(lnk));
+      lnk        = acl::detail::validate(free_slot_);
+      free_slot_ = get_ref_at_idx(acl::detail::index_val(lnk));
     }
     return lnk;
   }
@@ -539,7 +539,7 @@ private:
 
   static auto is_valid_ref(size_type r) -> bool
   {
-    return (r && detail::is_valid(r));
+    return (r && acl::detail::is_valid(r));
   }
 
   podvector<storage*, allocator_type> items_;

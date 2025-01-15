@@ -1,9 +1,10 @@
 
 #pragma once
 
-#include <acl/containers/indirection.hpp>
+#include <acl/containers/detail/indirection.hpp>
 #include <acl/ecs/entity.hpp>
-#include <acl/utils/vector_abstraction.hpp>
+#include <acl/utility/detail/vector_abstraction.hpp>
+#include <acl/utility/optional_ref.hpp>
 
 namespace acl::ecs
 {
@@ -12,11 +13,11 @@ namespace acl::ecs
  *
  * @tparam Ty The type of component being stored
  * @tparam EntityTy The entity type used for identification
- * @tparam Options Configuration options for the component storage
+ * @tparam Config Configuration config for the component storage
  *
  * This class provides a efficient storage and management system for components in an ECS.
  * It supports both sparse and dense storage strategies, direct mapping, and self-indexing
- * capabilities based on the provided Options.
+ * capabilities based on the provided Config.
  *
  * Key features:
  * - Flexible storage strategies (sparse or dense)
@@ -38,19 +39,19 @@ namespace acl::ecs
  * });
  * @endcode
  *
- * @note The storage strategy and behavior can be customized through the Options template parameter
+ * @note The storage strategy and behavior can be customized through the Config template parameter
  * @see EntityTy
- * Options:
- *  @par acl::opt::custom_vector<std::vector<Ty>>
+ * Config:
+ *  @par acl::cfg::custom_vector<std::vector<Ty>>
  *  Use custom vector as the container
- *  @par acl::opt::use_direct_mapping
+ *  @par acl::cfg::use_direct_mapping
  *  Use direct non continuous data block
- *  @par acl::opt::use_sparse
+ *  @par acl::cfg::use_sparse
  *  Use sparse vector for data storage
- *  @par acl::opt::pool_size<V>
+ *  @par acl::cfg::pool_size<V>
  *  Sparse vector pool size
  */
-template <typename Ty, typename EntityTy = acl::ecs::entity<>, typename Options = acl::default_options<Ty>>
+template <typename Ty, typename EntityTy = acl::ecs::entity<>, typename Config = acl::default_config<Ty>>
 class components
 {
 
@@ -59,10 +60,10 @@ class components
 
 public:
   using entity_type     = EntityTy;
-  using options         = Options;
+  using config          = Config;
   using value_type      = Ty;
-  using vector_type     = std::conditional_t<detail::HasUseSparseAttrib<options>, sparse_vector<Ty, options>,
-                                             vector<Ty, detail::custom_allocator_t<options>>>;
+  using vector_type     = std::conditional_t<acl::detail::HasUseSparseAttrib<config>, sparse_vector<Ty, config>,
+                                             vector<Ty, acl::detail::custom_allocator_t<config>>>;
   using reference       = typename vector_type::reference;
   using const_reference = typename vector_type::const_reference;
   using pointer         = typename vector_type::pointer;
@@ -70,20 +71,20 @@ public:
   using size_type       = typename entity_type::size_type;
   using ssize_type      = std::make_signed_t<size_type>;
   using revision_type   = typename EntityTy::revision_type;
-  using allocator_type  = detail::custom_allocator_t<Options>;
+  using allocator_type  = acl::detail::custom_allocator_t<Config>;
 
   static_assert(std::is_same_v<typename vector_type::value_type, value_type>,
                 "Custom vector must have same value_type as Ty");
 
 private:
-  static constexpr bool      has_self_index     = detail::HasSelfIndexValue<options>;
-  static constexpr bool      has_direct_mapping = detail::HasDirectMapping<options>;
-  static constexpr bool      has_sparse_storage = detail::HasUseSparseAttrib<options>;
+  static constexpr bool      has_self_index     = acl::detail::HasSelfIndexValue<config>;
+  static constexpr bool      has_direct_mapping = acl::detail::HasDirectMapping<config>;
+  static constexpr bool      has_sparse_storage = acl::detail::HasUseSparseAttrib<config>;
   static constexpr size_type tombstone          = std::numeric_limits<uint32_t>::max();
 
-  using this_type     = components<value_type, entity_type, options>;
-  using optional_val  = acl::detail::optional_ref<reference>;
-  using optional_cval = acl::detail::optional_ref<const_reference>;
+  using this_type     = components<value_type, entity_type, config>;
+  using optional_val  = acl::optional_ref<reference>;
+  using optional_cval = acl::optional_ref<const_reference>;
 
   struct default_index_pool_size
   {
@@ -95,20 +96,21 @@ private:
 
   struct self_index_traits_base
   {
-    using size_type                          = detail::choose_size_t<uint32_t, Options>;
-    static constexpr size_type pool_size_v   = std::conditional_t<detail::HasSelfIndexPoolSize<options>, options,
-                                                                  default_index_pool_size>::self_index_pool_size_v;
-    static constexpr bool use_sparse_index_v = std::conditional_t<detail::HasSelfUseSparseIndexAttrib<options>, options,
-                                                                  default_index_pool_size>::self_use_sparse_index_v;
-    static constexpr size_type null_v        = std::numeric_limits<size_type>::max();
-    static constexpr bool      assume_pod_v  = true;
+    using size_type                        = acl::detail::choose_size_t<uint32_t, Config>;
+    static constexpr size_type pool_size_v = std::conditional_t<acl::detail::HasSelfIndexPoolSize<config>, config,
+                                                                default_index_pool_size>::self_index_pool_size_v;
+    static constexpr bool      use_sparse_index_v =
+     std::conditional_t<acl::detail::HasSelfUseSparseIndexAttrib<config>, config,
+                        default_index_pool_size>::self_use_sparse_index_v;
+    static constexpr size_type null_v       = std::numeric_limits<size_type>::max();
+    static constexpr bool      assume_pod_v = true;
   };
 
   template <typename TrTy>
   struct self_index_traits : self_index_traits_base
   {};
 
-  template <detail::HasSelfIndexValue TrTy>
+  template <acl::detail::HasSelfIndexValue TrTy>
   struct self_index_traits<TrTy> : self_index_traits_base
   {
     using self_index = typename TrTy::self_index;
@@ -116,18 +118,20 @@ private:
 
   struct key_index_traits
   {
-    using size_type                          = detail::choose_size_t<uint32_t, Options>;
-    static constexpr uint32_t pool_size_v    = std::conditional_t<detail::HasKeysIndexPoolSize<options>, options,
-                                                                  default_index_pool_size>::keys_index_pool_size_v;
-    static constexpr bool use_sparse_index_v = std::conditional_t<detail::HasKeysUseSparseIndexAttrib<options>, options,
-                                                                  default_index_pool_size>::keys_use_sparse_index_v;
-    static constexpr size_type null_v        = tombstone;
-    static constexpr bool      assume_pod_v  = true;
+    using size_type                       = acl::detail::choose_size_t<uint32_t, Config>;
+    static constexpr uint32_t pool_size_v = std::conditional_t<acl::detail::HasKeysIndexPoolSize<config>, config,
+                                                               default_index_pool_size>::keys_index_pool_size_v;
+    static constexpr bool     use_sparse_index_v =
+     std::conditional_t<acl::detail::HasKeysUseSparseIndexAttrib<config>, config,
+                        default_index_pool_size>::keys_use_sparse_index_v;
+    static constexpr size_type null_v       = tombstone;
+    static constexpr bool      assume_pod_v = true;
   };
 
   using self_index =
-   std::conditional_t<has_direct_mapping, std::monostate, detail::self_index_type<self_index_traits<options>>>;
-  using key_index = std::conditional_t<has_direct_mapping, std::monostate, detail::indirection_type<key_index_traits>>;
+   std::conditional_t<has_direct_mapping, std::monostate, acl::detail::self_index_type<self_index_traits<config>>>;
+  using key_index =
+   std::conditional_t<has_direct_mapping, std::monostate, acl::detail::indirection_type<key_index_traits>>;
 
 public:
   components() noexcept = default;
@@ -244,7 +248,7 @@ public:
   {
     if constexpr (has_direct_mapping)
     {
-      return detail::emplace_at(values_, point.get(), std::forward<Args>(args)...);
+      return acl::detail::emplace_at(values_, point.get(), std::forward<Args>(args)...);
     }
     else
     {
@@ -295,7 +299,7 @@ public:
   {
     if constexpr (has_direct_mapping)
     {
-      return detail::replace_at(values_, point.get(), std::move(args));
+      return acl::detail::replace_at(values_, point.get(), std::move(args));
     }
     else
     {
@@ -324,7 +328,7 @@ public:
   {
     if constexpr (has_direct_mapping)
     {
-      return detail::ensure_at(point.get());
+      return acl::detail::ensure_at(point.get());
     }
     else
     {
@@ -345,7 +349,7 @@ public:
 
   void erase(entity_type l) noexcept
   {
-    if constexpr (detail::debug)
+    if constexpr (acl::debug)
     {
       validate(l);
     }
@@ -419,7 +423,7 @@ public:
 
   auto at(entity_type l) noexcept -> reference
   {
-    if constexpr (detail::debug)
+    if constexpr (acl::debug)
     {
       validate(l);
     }
@@ -428,7 +432,7 @@ public:
 
   auto at(entity_type l) const noexcept -> const_reference
   {
-    if constexpr (detail::debug)
+    if constexpr (acl::debug)
     {
       validate(l);
     }
@@ -543,7 +547,7 @@ public:
     {
       if (size)
       {
-        detail::ensure_at(values_, size - 1);
+        acl::detail::ensure_at(values_, size - 1);
       }
     }
   }
@@ -555,7 +559,7 @@ private:
   {
     if constexpr (has_direct_mapping)
     {
-      return detail::get_if(cont, lnk.get());
+      return acl::detail::get_if(cont, lnk.get());
     }
     else
     {
@@ -588,7 +592,7 @@ private:
   {
     if constexpr (has_direct_mapping)
     {
-      return detail::get_or(cont, lnk.get(), def);
+      return acl::detail::get_or(cont, lnk.get(), def);
     }
     else
     {
@@ -688,7 +692,7 @@ private:
           // move each tuple element reference
           [&]<std::size_t... I>(std::index_sequence<I...>)
           {
-            (detail::move(std::get<I>(lb), std::get<I>(back)), ...);
+            (acl::detail::move(std::get<I>(lb), std::get<I>(back)), ...);
           }(std::make_index_sequence<std::tuple_size_v<value_type>>());
         }
         else

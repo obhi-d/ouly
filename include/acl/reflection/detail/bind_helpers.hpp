@@ -2,7 +2,7 @@
 #pragma once
 
 #include <acl/reflection/detail/deduced_types.hpp>
-#include <acl/utils/string_literal.hpp>
+#include <acl/utility/string_literal.hpp>
 
 namespace acl::detail
 {

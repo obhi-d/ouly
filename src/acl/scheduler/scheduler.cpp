@@ -8,7 +8,7 @@ namespace acl
 {
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-thread_local detail::worker const* g_worker = nullptr;
+thread_local acl::detail::worker const* g_worker = nullptr;
 
 auto worker_context::get(workgroup_id group) noexcept -> worker_context const&
 {
@@ -28,7 +28,7 @@ scheduler::~scheduler() noexcept
   }
 }
 
-inline void scheduler::do_work(worker_id thread, detail::work_item& work) noexcept
+inline void scheduler::do_work(worker_id thread, acl::detail::work_item& work) noexcept
 {
   work(workers_[thread.get_index()].contexts_[work.get_compressed_data<acl::workgroup_id>().get_index()]);
 }
@@ -95,7 +95,7 @@ inline auto scheduler::work(worker_id thread) noexcept -> bool
   return true;
 }
 
-auto scheduler::get_work(worker_id thread) noexcept -> detail::work_item
+auto scheduler::get_work(worker_id thread) noexcept -> acl::detail::work_item
 {
   auto const& range = group_ranges_[thread.get_index()];
 
@@ -146,12 +146,12 @@ void scheduler::wake_up(worker_id thread) noexcept
 
 void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_context)
 {
-  local_work_   = std::make_unique<detail::work_item[]>(worker_count_);
-  workers_      = std::make_unique<detail::worker[]>(worker_count_);
-  group_ranges_ = std::make_unique<detail::group_range[]>(worker_count_);
+  local_work_   = std::make_unique<acl::detail::work_item[]>(worker_count_);
+  workers_      = std::make_unique<acl::detail::worker[]>(worker_count_);
+  group_ranges_ = std::make_unique<acl::detail::group_range[]>(worker_count_);
   wake_status_  = std::make_unique<std::atomic_bool[]>(worker_count_);
-  wake_events_  = std::make_unique<detail::wake_event[]>(worker_count_);
-  workers_      = std::make_unique<detail::worker[]>(worker_count_);
+  wake_events_  = std::make_unique<acl::detail::wake_event[]>(worker_count_);
+  workers_      = std::make_unique<acl::detail::worker[]>(worker_count_);
 
   threads_.reserve(worker_count_ - 1);
 
@@ -285,7 +285,7 @@ void scheduler::end_execution()
   threads_.clear();
 }
 
-void scheduler::submit(worker_id src, worker_id dst, detail::work_item work)
+void scheduler::submit(worker_id src, worker_id dst, acl::detail::work_item work)
 {
   if (src == dst)
   {
@@ -305,7 +305,7 @@ void scheduler::submit(worker_id src, worker_id dst, detail::work_item work)
   }
 }
 
-void scheduler::submit(worker_id src, workgroup_id dst, detail::work_item work)
+void scheduler::submit(worker_id src, workgroup_id dst, acl::detail::work_item work)
 {
   auto& wg     = workgroups_[dst.get_index()];
   auto& worker = workers_[src.get_index()];

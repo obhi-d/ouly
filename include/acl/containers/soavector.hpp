@@ -1,8 +1,9 @@
 #pragma once
 #include <acl/allocators/allocator.hpp>
 #include <acl/allocators/default_allocator.hpp>
-#include <acl/utils/type_traits.hpp>
-#include <acl/utils/utils.hpp>
+#include <acl/allocators/detail/custom_allocator.hpp>
+#include <acl/utility/type_traits.hpp>
+#include <acl/utility/utils.hpp>
 #include <cassert>
 #include <cstdint>
 #include <cstring>
@@ -12,17 +13,17 @@
 namespace acl
 {
 
-template <typename Tuple, typename Options = acl::default_options<Tuple>>
-class soavector : public detail::custom_allocator_t<Options>
+template <typename Tuple, typename Config = acl::default_config<Tuple>>
+class soavector : public acl::detail::custom_allocator_t<Config>
 {
 
 public:
-  using allocator_type = detail::custom_allocator_t<Options>;
+  using allocator_type = acl::detail::custom_allocator_t<Config>;
   using tuple_type     = Tuple;
-  using array_type     = detail::tuple_of_ptrs<Tuple>;
-  using this_type      = soavector<Tuple, Options>;
+  using array_type     = acl::detail::tuple_of_ptrs<Tuple>;
+  using this_type      = soavector<Tuple, Config>;
 
-  using size_type                 = detail::choose_size_t<uint32_t, Options>;
+  using size_type                 = acl::detail::choose_size_t<uint32_t, Config>;
   using difference_type           = std::make_signed_t<size_type>;
   using allocator_tag             = typename allocator_type::tag;
   using allocator_is_always_equal = typename acl::allocator_traits<allocator_tag>::is_always_equal;
@@ -31,7 +32,7 @@ public:
   using propagate_allocator_on_copy =
    typename acl::allocator_traits<allocator_tag>::propagate_on_container_copy_assignment;
   using propagate_allocator_on_swap = typename acl::allocator_traits<allocator_tag>::propagate_on_container_swap;
-  // using visualizer                  = detail::tuple_array_visualizer<this_type, Tuple>;
+  // using visualizer                  = acl::detail::tuple_array_visualizer<this_type, Tuple>;
 
   template <std::size_t I>
   using ivalue_type = std::tuple_element_t<I, tuple_type>;
@@ -60,10 +61,11 @@ public:
   public:
     using value_type      = Tuple;
     using difference_type = std::make_signed_t<size_type>;
-    using pointer = std::conditional_t<IsConst, detail::tuple_of_cptrs<value_type>, detail::tuple_of_ptrs<value_type>>;
+    using pointer =
+     std::conditional_t<IsConst, acl::detail::tuple_of_cptrs<value_type>, acl::detail::tuple_of_ptrs<value_type>>;
     using reference =
-     std::conditional_t<IsConst, detail::tuple_of_crefs<value_type>, detail::tuple_of_refs<value_type>>;
-    using const_reference = detail::tuple_of_crefs<value_type>;
+     std::conditional_t<IsConst, acl::detail::tuple_of_crefs<value_type>, acl::detail::tuple_of_refs<value_type>>;
+    using const_reference = acl::detail::tuple_of_crefs<value_type>;
 
     base_iterator(base_iterator const&) noexcept = default;
     base_iterator(base_iterator&&) noexcept      = default;
@@ -181,10 +183,10 @@ public:
   using iterator               = base_iterator<false>;
   using const_iterator         = base_iterator<true>;
   using value_type             = Tuple;
-  using reference              = detail::tuple_of_refs<value_type>;
-  using const_reference        = detail::tuple_of_crefs<value_type>;
-  using pointer                = detail::tuple_of_ptrs<value_type>;
-  using const_pointer          = detail::tuple_of_cptrs<value_type>;
+  using reference              = acl::detail::tuple_of_refs<value_type>;
+  using const_reference        = acl::detail::tuple_of_crefs<value_type>;
+  using pointer                = acl::detail::tuple_of_ptrs<value_type>;
+  using const_pointer          = acl::detail::tuple_of_cptrs<value_type>;
   using reverse_iterator       = std::reverse_iterator<iterator>;
   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
@@ -228,7 +230,7 @@ public:
 
   ~soavector() noexcept
   {
-    // detail::do_not_optimize((visualizer*)this);
+    // acl::detail::do_not_optimize((visualizer*)this);
     destroy_and_deallocate();
   }
 

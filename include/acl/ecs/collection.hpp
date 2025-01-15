@@ -4,9 +4,9 @@
 #include <acl/allocators/default_allocator.hpp>
 #include <acl/containers/podvector.hpp>
 #include <acl/ecs/entity.hpp>
-#include <acl/utils/config.hpp>
-#include <acl/utils/type_traits.hpp>
-#include <acl/utils/utils.hpp>
+#include <acl/utility/config.hpp>
+#include <acl/utility/type_traits.hpp>
+#include <acl/utility/utils.hpp>
 #include <limits>
 
 namespace acl::ecs
@@ -16,7 +16,7 @@ namespace acl::ecs
  * @brief A collection class for managing entities with optional revision tracking
  *
  * @tparam EntityTy The entity type to be stored
- * @tparam Options Configuration options for the collection
+ * @tparam Config Configuration config for the collection
  *
  * Collection provides efficient storage and management of entities using a bitset-based
  * approach with optional revision tracking. It organizes entities in fixed-size pools
@@ -48,22 +48,22 @@ namespace acl::ecs
  * @note The collection automatically manages memory allocation and deallocation of pools
  * @note Revision tracking is only enabled in debug mode and when entity type uses uint8_t revision
  */
-template <typename EntityTy, typename Options = acl::default_options<EntityTy>>
-class collection : public detail::custom_allocator_t<Options>
+template <typename EntityTy, typename Config = acl::default_config<EntityTy>>
+class collection : public acl::detail::custom_allocator_t<Config>
 {
 public:
-  using size_type      = detail::choose_size_t<uint32_t, Options>;
+  using size_type      = acl::detail::choose_size_t<uint32_t, Config>;
   using entity_type    = EntityTy;
-  using allocator_type = detail::custom_allocator_t<Options>;
+  using allocator_type = acl::detail::custom_allocator_t<Config>;
 
 private:
-  static constexpr auto pool_mul     = detail::log2(detail::pool_size_v<Options>);
+  static constexpr auto pool_mul     = acl::detail::log2(acl::detail::pool_size_v<Config>);
   static constexpr auto pool_size    = static_cast<size_type>(1) << pool_mul;
   static constexpr auto pool_mod     = pool_size - 1;
-  using this_type                    = collection<EntityTy, Options>;
+  using this_type                    = collection<EntityTy, Config>;
   using base_type                    = allocator_type;
   using storage                      = uint8_t;
-  static constexpr bool has_revision = std::same_as<typename EntityTy::revision_type, uint8_t> && acl::detail::debug;
+  static constexpr bool has_revision = std::same_as<typename EntityTy::revision_type, uint8_t> && acl::debug;
 
 public:
   collection() noexcept = default;

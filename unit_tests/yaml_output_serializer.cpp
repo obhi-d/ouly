@@ -1,4 +1,5 @@
-#include <acl/serializers/yaml_output_serializer.hpp>
+#include "acl/reflection/detail/base_concepts.hpp"
+#include <acl/serializers/lite_yml.hpp>
 #include <catch2/catch_all.hpp>
 #include <map>
 #include <memory>
@@ -21,9 +22,9 @@ TEST_CASE("yaml_output: Test write simple struct")
   };
 
   OutputTestStruct ts{100, "value"};
-  auto             yaml = acl::yaml::to_string(ts);
-  REQUIRE(yaml.find("a: 100") != std::string::npos);
-  REQUIRE(yaml.find("b: value") != std::string::npos);
+  auto             yml = acl::yml::to_string(ts);
+  REQUIRE(yml.find("a: 100") != std::string::npos);
+  REQUIRE(yml.find("b: value") != std::string::npos);
 }
 
 TEST_CASE("yaml_output: Test write nested struct")
@@ -48,9 +49,9 @@ TEST_CASE("yaml_output: Test write nested struct")
   };
 
   NestedOuter no{200, {300}};
-  auto        yaml = acl::yaml::to_string(no);
-  REQUIRE(yaml.find("b: 200") != std::string::npos);
-  REQUIRE(yaml.find("a: 300") != std::string::npos);
+  auto        yml = acl::yml::to_string(no);
+  REQUIRE(yml.find("b: 200") != std::string::npos);
+  REQUIRE(yml.find("a: 300") != std::string::npos);
 }
 
 TEST_CASE("yaml_output: Test write vector")
@@ -66,8 +67,8 @@ TEST_CASE("yaml_output: Test write vector")
   VectorTest vt{
    {1, 2, 3}
   };
-  auto yaml = acl::yaml::to_string(vt);
-  REQUIRE(yaml.find("items: \n - 1\n - 2\n - 3") != std::string::npos);
+  auto yml = acl::yml::to_string(vt);
+  REQUIRE(yml.find("items: \n - 1\n - 2\n - 3") != std::string::npos);
 }
 
 TEST_CASE("yaml_output: Test write optional")
@@ -81,26 +82,8 @@ TEST_CASE("yaml_output: Test write optional")
     }
   };
   OptionalTest ot{42};
-  auto         yaml = acl::yaml::to_string(ot);
-  REQUIRE(yaml.find("value: 42") != std::string::npos);
-}
-
-TEST_CASE("yaml_output: Test write map")
-{
-  struct MapTest
-  {
-    std::map<std::string, int> data;
-    static constexpr auto      reflect() noexcept
-    {
-      return acl::bind(acl::bind<"data", &MapTest::data>());
-    }
-  };
-  MapTest mt{
-   {{"key1", 100}, {"key2", 200}}
-  };
-  auto yaml = acl::yaml::to_string(mt);
-  REQUIRE(yaml.find("key1: 100") != std::string::npos);
-  REQUIRE(yaml.find("key2: 200") != std::string::npos);
+  auto         yml = acl::yml::to_string(ot);
+  REQUIRE(yml.find("value: 42") != std::string::npos);
 }
 
 TEST_CASE("yaml_output: Test write variant")
@@ -115,8 +98,8 @@ TEST_CASE("yaml_output: Test write variant")
     }
   };
   VariantTest vt{std::string("Hello")};
-  auto        yaml = acl::yaml::to_string(vt);
-  REQUIRE(yaml.find("Hello") != std::string::npos);
+  auto        yml = acl::yml::to_string(vt);
+  REQUIRE(yml.find("Hello") != std::string::npos);
 }
 
 TEST_CASE("yaml_output: Test write tuple")
@@ -132,10 +115,28 @@ TEST_CASE("yaml_output: Test write tuple")
   TupleTest tt{
    {10, "test", 3.14}
   };
-  auto yaml = acl::yaml::to_string(tt);
-  REQUIRE(yaml.find("10") != std::string::npos);
-  REQUIRE(yaml.find("test") != std::string::npos);
-  REQUIRE(yaml.find("3.14") != std::string::npos);
+  auto yml = acl::yml::to_string(tt);
+  REQUIRE(yml.find("10") != std::string::npos);
+  REQUIRE(yml.find("test") != std::string::npos);
+  REQUIRE(yml.find("3.14") != std::string::npos);
 }
 
+TEST_CASE("yaml_output: Test write map")
+{
+  struct MapTest
+  {
+    std::map<std::string, int> m;
+    static constexpr auto      reflect() noexcept
+    {
+      return acl::bind(acl::bind<"m", &MapTest::m>());
+    }
+  };
+  MapTest mt{
+   {{"key1", 100}, {"key2", 200}, {"key3", 300}}
+  };
+  auto yml = acl::yml::to_string(mt);
+  REQUIRE(yml.find("- key1\n  - 100") != std::string::npos);
+  REQUIRE(yml.find("- key2\n  - 200") != std::string::npos);
+  REQUIRE(yml.find("- key3\n  - 300") != std::string::npos);
+}
 // NOLINTEND

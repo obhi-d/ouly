@@ -5,14 +5,12 @@
 #include <acl/allocators/std_allocator_wrapper.hpp>
 #include <acl/containers/index_map.hpp>
 #include <acl/containers/sparse_table.hpp>
-#include <acl/utils/delegate.hpp>
-#include <acl/utils/error_codes.hpp>
-#include <acl/utils/export.hxx>
-#include <acl/utils/intrusive_ptr.hpp>
-#include <acl/utils/komihash.hpp>
-#include <acl/utils/tagged_ptr.hpp>
-#include <acl/utils/wyhash.hpp>
-#include <acl/utils/zip_view.hpp>
+#include <acl/utility/delegate.hpp>
+#include <acl/utility/intrusive_ptr.hpp>
+#include <acl/utility/komihash.hpp>
+#include <acl/utility/tagged_ptr.hpp>
+#include <acl/utility/wyhash.hpp>
+#include <acl/utility/zip_view.hpp>
 #include <catch2/catch_all.hpp>
 #include <span>
 
@@ -135,7 +133,7 @@ TEST_CASE("Validate general_allocator", "[general_allocator]")
 {
 
   using namespace acl;
-  using allocator_t   = default_allocator<acl::options<acl::opt::compute_stats>>;
+  using allocator_t   = default_allocator<acl::config<acl::cfg::compute_stats>>;
   using std_allocator = allocator_wrapper<int, allocator_t>;
   [[maybe_unused]] std_allocator allocator;
 
@@ -149,7 +147,7 @@ TEST_CASE("Validate general_allocator", "[general_allocator]")
 TEST_CASE("Validate tagged_ptr", "[tagged_ptr]")
 {
   using namespace acl;
-  detail::tagged_ptr<std::string> tagged_string;
+  acl::detail::tagged_ptr<std::string> tagged_string;
 
   std::string my_string = "This is my string";
   std::string copy      = my_string;
@@ -166,20 +164,20 @@ TEST_CASE("Validate tagged_ptr", "[tagged_ptr]")
   CHECK(tagged_string.get_ptr() == &my_string);
   CHECK(*tagged_string.get_ptr() == copy);
 
-  auto second = detail::tagged_ptr(&my_string, 2);
+  auto second = acl::detail::tagged_ptr(&my_string, 2);
   CHECK((tagged_string == second) == true);
 
   tagged_string.set(&my_string, tagged_string.get_next_tag());
   CHECK(tagged_string != second);
 
-  detail::tagged_ptr<std::void_t<>> null = nullptr;
+  acl::detail::tagged_ptr<std::void_t<>> null = nullptr;
   CHECK(!null);
 }
 
 TEST_CASE("Validate compressed_ptr", "[compressed_ptr]")
 {
   using namespace acl;
-  detail::compressed_ptr<std::string> tagged_string;
+  acl::detail::compressed_ptr<std::string> tagged_string;
 
   std::string my_string = "This is my string";
   std::string copy      = my_string;
@@ -196,23 +194,14 @@ TEST_CASE("Validate compressed_ptr", "[compressed_ptr]")
   CHECK(tagged_string.get_ptr() == &my_string);
   CHECK(*tagged_string.get_ptr() == copy);
 
-  auto second = detail::compressed_ptr(&my_string, 2);
+  auto second = acl::detail::compressed_ptr(&my_string, 2);
   CHECK((tagged_string == second) == true);
 
   tagged_string.set(&my_string, tagged_string.get_next_tag());
   CHECK(tagged_string != second);
 
-  detail::compressed_ptr<std::void_t<>> null = nullptr;
+  acl::detail::compressed_ptr<std::void_t<>> null = nullptr;
   CHECK(!null);
-}
-
-TEST_CASE("Validate error_codes", "[error_code]")
-{
-  auto ec = acl::make_error_code(acl::serializer_error::corrupt_array_item);
-
-  CHECK(&ec.category() == &acl::error_category<acl::serializer_error>::instance());
-  CHECK(!ec.message().empty());
-  CHECK(ec.category().name() != nullptr);
 }
 
 TEST_CASE("Validate Hash: wyhash", "[hash]")

@@ -8,8 +8,9 @@
 #pragma once
 #include <acl/allocators/allocator.hpp>
 #include <acl/allocators/default_allocator.hpp>
-#include <acl/utils/type_traits.hpp>
-#include <acl/utils/utils.hpp>
+#include <acl/allocators/detail/custom_allocator.hpp>
+#include <acl/utility/type_traits.hpp>
+#include <acl/utility/utils.hpp>
 #include <cassert>
 #include <cstdint>
 #include <cstring>
@@ -25,7 +26,7 @@ namespace acl
  *
  * @tparam Ty The type of elements
  * @tparam N The number of elements that can be stored inline before requiring heap allocation
- * @tparam Options Configuration options for the vector (allocator, memory traits, etc.)
+ * @tparam Config Configuration config for the vector (allocator, memory traits, etc.)
  *
  * Features:
  * - Inline storage for small arrays (up to N elements)
@@ -55,13 +56,13 @@ namespace acl
  * @note The actual inline capacity might be larger than N to accommodate the heap storage data
  *       when N is very small
  */
-template <typename Ty, std::size_t N = 0, typename Options = acl::default_options<Ty>>
-class small_vector : public detail::custom_allocator_t<Options>
+template <typename Ty, std::size_t N = 0, typename Config = acl::default_config<Ty>>
+class small_vector : public acl::detail::custom_allocator_t<Config>
 {
 public:
   using value_type                = Ty;
-  using allocator_type            = detail::custom_allocator_t<Options>;
-  using size_type                 = detail::choose_size_t<uint32_t, Options>;
+  using allocator_type            = acl::detail::custom_allocator_t<Config>;
+  using size_type                 = acl::detail::choose_size_t<uint32_t, Config>;
   using difference_type           = size_type;
   using reference                 = value_type&;
   using const_reference           = const value_type&;
@@ -81,14 +82,14 @@ public:
   using propagate_allocator_on_swap = typename acl::allocator_traits<allocator_tag>::propagate_on_container_swap;
 
 private:
-  using options                                         = Options;
-  static constexpr bool has_zero_memory                 = detail::HasZeroMemoryAttrib<options>;
-  static constexpr bool has_no_fill                     = detail::HasNoFillAttrib<options>;
-  static constexpr bool has_pod                         = detail::HasTrivialAttrib<options>;
+  using config                                          = Config;
+  static constexpr bool has_zero_memory                 = acl::detail::HasZeroMemoryAttrib<config>;
+  static constexpr bool has_no_fill                     = acl::detail::HasNoFillAttrib<config>;
+  static constexpr bool has_pod                         = acl::detail::HasTrivialAttrib<config>;
   static constexpr bool has_trivial_dtor                = has_pod || std::is_trivially_destructible_v<Ty>;
-  static constexpr bool has_trivially_destroyed_on_move = detail::HasTriviallyDestroyedOnMoveAttrib<options>;
+  static constexpr bool has_trivially_destroyed_on_move = acl::detail::HasTriviallyDestroyedOnMoveAttrib<config>;
 
-  using storage = detail::aligned_storage<sizeof(value_type), alignof(value_type)>;
+  using storage = acl::detail::aligned_storage<sizeof(value_type), alignof(value_type)>;
   struct heap_storage
   {
     storage*  pdata_    = nullptr;

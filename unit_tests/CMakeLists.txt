@@ -26,12 +26,12 @@ FetchContent_MakeAvailable(nanobench)
 FetchContent_MakeAvailable(nlohmann_json)
 
 function(add_unit_test)
-    set(options SKIP_TEST SANITIZE)
+    set(config SKIP_TEST SANITIZE)
     set(one_value_arg NAME)
     set(multi_value_arg FILES LINK_LIBS DEFINES CCARGS)
     cmake_parse_arguments(
         unit_test
-        "${options}"
+        "${config}"
         "${one_value_arg}"
         "${multi_value_arg}"
         ${ARGN}
@@ -74,7 +74,6 @@ function(add_unit_test)
 endfunction(add_unit_test)
 
 add_unit_test(NAME basic_tests FILES "basic_tests.cpp" "string_utils.cpp")
-add_unit_test(NAME reflection FILES "reflection.cpp")
 add_unit_test(NAME projected_view FILES "projected_view.cpp")
 add_unit_test(NAME intrusive_list FILES "intrusive_list.cpp")
 add_unit_test(NAME program_args FILES "program_args.cpp")

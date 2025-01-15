@@ -1,15 +1,9 @@
 #pragma once
 
-#include "linear_allocator.hpp"
+#include <acl/allocators/linear_allocator.hpp>
 
 namespace acl
 {
-
-namespace opt
-{}
-
-struct linear_arena_allocator_tag
-{};
 
 /**
  * @brief A linear arena allocator that manages memory in contiguous blocks (arenas)
@@ -18,7 +12,7 @@ struct linear_arena_allocator_tag
  * When an arena is full, it creates a new one. Memory can only be deallocated in reverse order
  * of allocation within each arena. The allocator supports aligned allocations.
  *
- * @tparam Options Configuration options for the allocator including statistics tracking and
+ * @tparam Config Configuration config for the allocator including statistics tracking and
  *                 underlying allocator selection
  *
  * Key features:
@@ -43,15 +37,15 @@ struct linear_arena_allocator_tag
  * - Deallocation only works effectively for LIFO order
  * - Memory fragmentation is minimized due to linear allocation pattern
  */
-template <typename Options = acl::options<>>
-class linear_arena_allocator : detail::statistics<linear_arena_allocator_tag, Options>
+template <typename Config = acl::config<>>
+class linear_arena_allocator : acl::detail::statistics<linear_arena_allocator_tag, Config>
 {
 public:
   static constexpr uint32_t default_arena_size = 4 * 1024 * 1024;
 
   using tag                  = linear_arena_allocator_tag;
-  using statistics           = detail::statistics<linear_arena_allocator_tag, Options>;
-  using underlying_allocator = detail::underlying_allocator_t<Options>;
+  using statistics           = acl::detail::statistics<linear_arena_allocator_tag, Config>;
+  using underlying_allocator = acl::detail::underlying_allocator_t<Config>;
   using size_type            = typename underlying_allocator::size_type;
   using address              = typename underlying_allocator::address;
 

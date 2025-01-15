@@ -2,7 +2,8 @@
 
 #include <acl/allocators/allocator.hpp>
 #include <acl/allocators/default_allocator.hpp>
-#include <acl/utils/utils.hpp>
+#include <acl/allocators/detail/custom_allocator.hpp>
+#include <acl/utility/utils.hpp>
 #include <cstddef>
 #include <optional>
 
@@ -12,7 +13,7 @@ namespace acl
  * @brief A queue container with block-based memory allocation
  *
  * @tparam Ty The type of elements stored in the queue
- * @tparam Options Configuration options for the queue, affecting allocation and size type
+ * @tparam Config Configuration config for the queue, affecting allocation and size type
  *
  * basic_queue implements a queue data structure that allocates memory in fixed-size blocks.
  * It provides efficient push and pop operations with memory reuse through a free list.
@@ -27,7 +28,7 @@ namespace acl
  * - Custom allocator support
  *
  * Memory layout:
- * - Elements are stored in blocks of fixed size (determined by Options)
+ * - Elements are stored in blocks of fixed size (determined by Config)
  * - Each block maintains a pointer to the next block
  * - Freed blocks are kept in a free list for reuse
  *
@@ -41,22 +42,22 @@ namespace acl
  * @note The queue size grows automatically as elements are added
  * @warning pop_front() throws an exception when the queue is empty
  */
-template <typename Ty, typename Options = acl::default_options<Ty>>
-class basic_queue : public detail::custom_allocator_t<Options>
+template <typename Ty, typename Config = acl::default_config<Ty>>
+class basic_queue : public acl::detail::custom_allocator_t<Config>
 {
 public:
   using value_type     = Ty;
-  using size_type      = detail::choose_size_t<uint32_t, Options>;
-  using allocator_type = detail::custom_allocator_t<Options>;
+  using size_type      = acl::detail::choose_size_t<uint32_t, Config>;
+  using allocator_type = acl::detail::custom_allocator_t<Config>;
 
 private:
-  static constexpr auto pool_mul  = detail::log2(detail::pool_size_v<Options>);
+  static constexpr auto pool_mul  = acl::detail::log2(acl::detail::pool_size_v<Config>);
   static constexpr auto pool_size = static_cast<size_type>(1) << pool_mul;
   static constexpr auto pool_mod  = pool_size - 1;
-  static constexpr bool has_pod   = detail::HasTrivialAttrib<Options>;
+  static constexpr bool has_pod   = acl::detail::HasTrivialAttrib<Config>;
 
   static constexpr size_t alignment = std::max(alignof(std::max_align_t), alignof(Ty));
-  using storage                     = detail::aligned_storage<sizeof(value_type), alignment>;
+  using storage                     = acl::detail::aligned_storage<sizeof(value_type), alignment>;
 
   struct deque_block
   {

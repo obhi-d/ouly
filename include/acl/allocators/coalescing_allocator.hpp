@@ -1,16 +1,14 @@
 
 #pragma once
 
-#include <acl/utils/config.hpp>
-#include <compare>
-#include <cstdint>
+#include <acl/allocators/config.hpp>
 #include <limits>
 #include <vector>
 
 namespace acl
 {
 
-using coalescing_allocator_size_type = std::conditional_t<detail::coalescing_allocator_large_size, uint64_t, uint32_t>;
+using coalescing_allocator_size_type = std::conditional_t<cfg::coalescing_allocator_large_size, uint64_t, uint32_t>;
 
 /**
  * @brief This allocator grows the buffer size, and merges free sizes.
