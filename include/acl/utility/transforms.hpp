@@ -183,6 +183,36 @@ struct remove_last
   }
 };
 
+template <string_literal Target>
+struct append_first
+{
+  using is_string_transform = std::true_type;
+
+  constexpr static auto transform(std::string_view name) -> std::string
+  {
+    std::string result;
+    result.reserve(name.length() + Target.length);
+    result.append(Target);
+    result.append(name);
+    return result;
+  }
+};
+
+template <string_literal Target>
+struct append_last
+{
+  using is_string_transform = std::true_type;
+
+  constexpr static auto transform(std::string_view name) -> std::string
+  {
+    std::string result;
+    result.reserve(name.length() + Target.length);
+    result.append(name);
+    result.append(Target);
+    return result;
+  }
+};
+
 template <string_literal From, string_literal To>
 struct replace_all
 {
@@ -218,6 +248,35 @@ struct trim
   }
 };
 
+constexpr static auto toupper(char a) -> char
+{
+  // convert to upper
+  constexpr char value = 32;
+  return static_cast<char>((a >= 'a' && a <= 'z') ? (a - value) : a);
+}
+
+constexpr static auto tolower(char a) -> char
+{
+  // convert to lower
+  constexpr char value = 32;
+  return static_cast<char>((a >= 'A' && a <= 'Z') ? (a + value) : a);
+}
+
+constexpr static auto isalnum(char c) -> bool
+{
+  return c == '_' || c >= '0' && c <= '9' || c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z';
+}
+
+constexpr static auto isupper(char c) -> bool
+{
+  return c >= 'A' && c <= 'Z';
+}
+
+constexpr static auto islower(char c) -> bool
+{
+  return c >= 'a' && c <= 'z';
+}
+
 struct to_upper
 {
   using is_string_transform = std::true_type;
@@ -225,11 +284,7 @@ struct to_upper
   constexpr static auto transform(std::string_view name) -> std::string
   {
     std::string result{name};
-    std::ranges::transform(result, result.begin(),
-                           [](char a)
-                           {
-                             return static_cast<char>(std::toupper(a));
-                           });
+    std::ranges::transform(result, result.begin(), toupper);
     return result;
   }
 };
@@ -241,11 +296,7 @@ struct to_lower
   constexpr static auto transform(std::string_view name) -> std::string
   {
     std::string result{name};
-    std::ranges::transform(result, result.begin(),
-                           [](char a)
-                           {
-                             return static_cast<char>(std::tolower(a));
-                           });
+    std::ranges::transform(result, result.begin(), tolower);
     return result;
   }
 };
@@ -261,16 +312,16 @@ struct pascal_case
 
     for (char c : name)
     {
-      if (std::isalnum(c) != 0)
+      if (isalnum(c))
       {
         if (capitalize)
         {
-          result += static_cast<char>(std::toupper(c));
+          result += toupper(c);
           capitalize = false;
         }
         else
         {
-          result += static_cast<char>(std::tolower(c));
+          result += tolower(c);
         }
       }
       else
@@ -293,13 +344,13 @@ struct snake_case
 
     for (char c : name)
     {
-      if (std::isalnum(c) != 0)
+      if (isalnum(c))
       {
-        if ((std::isupper(c) != 0) && !first)
+        if ((isupper(c)) && !first)
         {
           result += '_';
         }
-        result += static_cast<char>(std::tolower(c));
+        result += tolower(c);
         first = false;
       }
       else
@@ -320,7 +371,7 @@ struct lower_pascal_case
     std::string result = pascal_case::transform(name);
     if (!result.empty())
     {
-      result[0] = static_cast<char>(std::tolower(result[0]));
+      result[0] = tolower(result[0]);
     }
     return result;
   }

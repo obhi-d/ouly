@@ -160,10 +160,9 @@ public:
   }
 
   template <typename Base, typename TClassType>
-  static auto read_key(TClassType& obj, parser_state* parser, std::string_view ikey) -> in_context_base*
+  static auto read_key(TClassType& obj, parser_state* parser, std::string_view key) -> in_context_base*
   {
     using tclass_type = std::decay_t<TClassType>;
-    auto key          = transform_type::transform(ikey);
 
     if constexpr (ExplicitlyReflected<tclass_type>)
     {
@@ -584,7 +583,7 @@ public:
     for_each_field(
      [&]<typename Decl>(tclass_type& obj, Decl const& decl, auto)
      {
-       if (decl.key() == key)
+       if (transform_type::transform(decl.key()) == key)
        {
          using value_t = typename Decl::MemTy;
 
@@ -635,7 +634,7 @@ public:
   static auto read_aggregate_field(parser_state* parser, std::string_view field_key, auto const& field_names)
    -> in_context_base*
   {
-    if (std::get<I>(field_names) == field_key)
+    if (transform_type::transform(std::get<I>(field_names)) == field_key)
     {
       using type      = field_type<I, TClassType>;
       auto ret        = parser->template create<in_context_impl<type, Config>>();
@@ -648,7 +647,8 @@ public:
   template <typename Base, typename TClassType>
   static auto read_aggregate(TClassType& obj, parser_state* parser, std::string_view field_key)
   {
-    using tclass_type            = std::decay_t<TClassType>;
+    using tclass_type = std::decay_t<TClassType>;
+
     constexpr auto   field_names = get_field_names<class_type>();
     in_context_base* ret         = nullptr;
 

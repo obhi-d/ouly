@@ -3,6 +3,7 @@
 #include "acl/reflection/reflection.hpp"
 #include "acl/serializers/serializers.hpp"
 #include "acl/utility/optional_ref.hpp"
+#include "acl/utility/transforms.hpp"
 #include <catch2/catch_all.hpp>
 #include <charconv>
 #include <nlohmann/json.hpp>
@@ -891,4 +892,34 @@ TEST_CASE("structured_input_serializer: UnorderedMap empty")
 
   REQUIRE(map.empty());
 }
+
+TEST_CASE("structured_input_serializer: Custom key transforms")
+{
+  json j = R"({
+    "my_number": 100,
+    "my_other_number": 200,
+    "my_last_number": 300
+  })"_json;
+
+  struct MyCustomStruct
+  {
+    int m_MyNumber      = -1;
+    int m_MyOtherNumber = -1;
+    int m_MyLastNumber  = -1;
+  };
+
+  InputData input;
+  input.root      = j;
+  auto serializer = Stream(input);
+
+  MyCustomStruct read;
+
+  using config = acl::config<acl::chain<acl::remove_first<"m_">, acl::snake_case>>;
+  acl::read<config>(serializer, read);
+
+  REQUIRE(read.m_MyNumber == 100);
+  REQUIRE(read.m_MyOtherNumber == 200);
+  REQUIRE(read.m_MyLastNumber == 300);
+}
+
 // NOLINTEND

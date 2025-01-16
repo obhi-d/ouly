@@ -59,7 +59,7 @@ void process_field(Class& obj, Ref& ref, Visitor& visitor, std::string_view name
 {
   using value_t = std::decay_t<Ref>;
 
-  Visitor field_visitor{field_visitor_tag{}, visitor, name};
+  Visitor field_visitor{field_visitor_tag{}, visitor, Visitor::transform_type::transform(name)};
 
   if (!field_visitor.can_visit(obj))
   {

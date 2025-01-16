@@ -24,6 +24,7 @@ template <typename T>
 
   constexpr auto length = type.length();
 
+  // NOLINTNEXTLINE
   return string_literal<length + 1>{type.data()};
 }
 
