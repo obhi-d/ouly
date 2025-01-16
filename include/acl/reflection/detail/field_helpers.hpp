@@ -78,13 +78,14 @@ constexpr auto deduce_field_name() -> decltype(auto)
 {
   constexpr auto name = function_name<T, &A.member_>();
 #if defined(__clang__)
-  constexpr auto        beg_mem     = name.substr(name.find_last_of('.') + 1);
-  constexpr auto        member_name = beg_mem.substr(0, beg_mem.find_first_of(']'));
+  constexpr auto        beg_mem     = name.substr(name.find("A ="));
+  constexpr auto        end_mem     = beg_mem.substr(0, beg_mem.find_first_of(']'));
+  constexpr auto        member_name = end_mem.substr(end_mem.find_last_of(':') + 1);
   constexpr std::size_t length      = member_name.size();
 
   return string_literal<length + 1>{member_name.data()};
 #elif defined(_MSC_VER)
-  constexpr auto        beg_mem     = name.substr(name.find("->") + 2);
+  constexpr auto        beg_mem     = name.substr(name.rfind("::") + 2);
   constexpr auto        member_name = beg_mem.substr(0, beg_mem.find_first_of('>'));
   constexpr std::size_t length      = member_name.size();
 
