@@ -45,14 +45,19 @@ add_library(
 
 set_property(TARGET ${ACL_TARGET_NAME} PROPERTY CXX_STANDARD 20)
 
-find_program(CLANG_TIDY_EXE NAMES "clang-tidy")
-# setup clang-tidy command from executable + options
-if(CLANG_TIDY_EXE)
-    set(CLANG_TIDY_COMMAND "${CLANG_TIDY_EXE}")
-    set_target_properties(
-        ${ACL_TARGET_NAME}
-        PROPERTIES CXX_CLANG_TIDY "${CLANG_TIDY_COMMAND}"
-    )
+# Check if Windows, skip clang-tidy in which case
+if(NOT MSVC)
+    
+  find_program(CLANG_TIDY_EXE NAMES "clang-tidy")
+  # setup clang-tidy command from executable + options
+  if(CLANG_TIDY_EXE)
+      set(CLANG_TIDY_COMMAND "${CLANG_TIDY_EXE}")
+      set_target_properties(
+          ${ACL_TARGET_NAME}
+          PROPERTIES CXX_CLANG_TIDY "${CLANG_TIDY_COMMAND}"
+      )
+  endif()
+
 endif()
 
 add_library(${PROJECT_NAME}::${ACL_TARGET_NAME} ALIAS ${ACL_TARGET_NAME})
@@ -61,7 +66,7 @@ if(MSVC)
     target_sources(
         ${ACL_TARGET_NAME}
         PUBLIC
-            $<BUILD_INTERFACE:natvis/acl/containers.natvis>
+            $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/natvis/acl/containers.natvis>
     )
 endif()
 

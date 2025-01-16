@@ -11,6 +11,7 @@
 #include <acl/allocators/detail/custom_allocator.hpp>
 #include <acl/utility/type_traits.hpp>
 #include <acl/utility/utils.hpp>
+#include <array>
 #include <cassert>
 #include <cstdint>
 #include <cstring>
@@ -1037,8 +1038,8 @@ private:
     return ldata + pos;
   }
 
-  constexpr auto insert_range(const_iterator position, size_type n, const Ty& other, std::true_type /*unused*/) noexcept
-   -> iterator
+  constexpr auto insert_range(const_iterator position, size_type n, const Ty& other,
+                              std::true_type /*unused*/) noexcept -> iterator
   {
     size_type pos   = insert_hole(position, n);
     auto      ldata = data();

@@ -73,6 +73,7 @@ function(add_unit_test)
     endif()
 endfunction(add_unit_test)
 
+add_unit_test(NAME name_deduction FILES "name_deduction.cpp")
 add_unit_test(NAME basic_tests FILES "basic_tests.cpp" "string_utils.cpp")
 add_unit_test(NAME projected_view FILES "projected_view.cpp")
 add_unit_test(NAME intrusive_list FILES "intrusive_list.cpp")

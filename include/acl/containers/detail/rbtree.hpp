@@ -761,7 +761,7 @@ public:
       return;
     }
     auto& n = Accessor::node(blocks, node);
-    assert(Accessor::links(n).parent == parent);
+    assert(Accessor::links(n).parent_ == parent);
     validate_parents(blocks, node, Accessor::links(n).left_);
     validate_parents(blocks, node, Accessor::links(n).right_);
   }

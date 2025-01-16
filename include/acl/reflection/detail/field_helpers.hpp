@@ -62,22 +62,23 @@ template <class T>
 field_ref(T&) -> field_ref<T>;
 
 template <typename T, auto A>
-[[nodiscard]] constexpr auto function_name() noexcept -> std::string_view
+[[nodiscard]] consteval auto function_name() noexcept -> std::string_view
 {
   return std::source_location::current().function_name();
 }
 
 template <typename T>
-[[nodiscard]] constexpr auto function_name() noexcept -> std::string_view
+[[nodiscard]] consteval auto function_name() noexcept -> std::string_view
 {
   return std::source_location::current().function_name();
 }
 
-template <typename T, auto A>
-constexpr auto deduce_field_name() -> decltype(auto)
+template <typename T, auto const A>
+consteval auto deduce_field_name() -> decltype(auto)
 {
-  constexpr auto name = function_name<T, &A.member_>();
+
 #if defined(__clang__)
+  constexpr auto        name        = function_name<T, &A.member_>();
   constexpr auto        beg_mem     = name.substr(name.find("A ="));
   constexpr auto        end_mem     = beg_mem.substr(0, beg_mem.find_first_of(']'));
   constexpr auto        member_name = end_mem.substr(end_mem.find_last_of(':') + 1);
@@ -85,12 +86,14 @@ constexpr auto deduce_field_name() -> decltype(auto)
 
   return string_literal<length + 1>{member_name.data()};
 #elif defined(_MSC_VER)
-  constexpr auto        beg_mem     = name.substr(name.rfind("::") + 2);
-  constexpr auto        member_name = beg_mem.substr(0, beg_mem.find_first_of('>'));
+  auto constexpr name               = std::string_view{std::source_location::current().function_name()};
+  constexpr auto        beg_mem     = name.substr(name.rfind("->") + 2);
+  constexpr auto        member_name = beg_mem.substr(0, beg_mem.find_first_of(">}("));
   constexpr std::size_t length      = member_name.size();
 
   return string_literal<length + 1>{member_name.data()};
 #elif defined(__GNUC__)
+  constexpr auto        name        = function_name<T, &A.member_>();
   constexpr auto        beg_mem     = name.substr(name.find("A ="));
   constexpr auto        end_mem     = beg_mem.substr(0, beg_mem.find_first_of(';') - 1);
   constexpr auto        member_name = end_mem.substr(end_mem.find_last_of(':') + 1);
@@ -104,7 +107,7 @@ constexpr auto deduce_field_name() -> decltype(auto)
 }
 
 template <Aggregate T>
-constexpr auto get_field_names() noexcept -> decltype(auto)
+consteval auto get_field_names() noexcept -> decltype(auto)
 {
   auto constexpr names = aggregate_lookup<T>(
    [](auto&&... args) constexpr -> decltype(auto)

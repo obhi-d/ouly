@@ -340,8 +340,8 @@ public:
    * 4. Returns empty alloc_info if allocation fails
    */
   template <typename Alignment = alignment<>, typename Dedicated = std::false_type>
-  auto allocate(size_type isize, Alignment i_alignment = {}, std::uint32_t huser = {}, Dedicated /*unused*/ = {})
-   -> alloc_info
+  auto allocate(size_type isize, Alignment i_alignment = {}, std::uint32_t huser = {},
+                Dedicated /*unused*/ = {}) -> alloc_info
   {
     auto measure = this->statistics::report_allocate(isize);
     auto size    = isize + static_cast<size_type>(i_alignment);
@@ -536,14 +536,14 @@ public:
               arena_end_it = ibank_.bank_.arena_order_.end(ibank_.bank_.arenas());
          arena_it != arena_end_it; ++arena_it)
     {
-      auto& arena           = *arena_it;
-      bool  arena_allocated = false;
+      auto const& arena           = *arena_it;
+      bool        arena_allocated = false;
 
       for (auto blk_it     = arena.block_order().begin(ibank_.bank_.blocks()),
                 blk_end_it = arena.block_order().end(ibank_.bank_.blocks());
            blk_it != blk_end_it; ++blk_it)
       {
-        auto& blk = *blk_it;
+        auto const& blk = *blk_it;
         if ((blk.is_free_))
         {
           total_free_nodes++;
@@ -559,15 +559,15 @@ public:
               arena_end_it = ibank_.bank_.arena_order_.end(ibank_.bank_.arenas());
          arena_it != arena_end_it; ++arena_it)
     {
-      auto&     arena           = *arena_it;
-      bool      arena_allocated = false;
-      size_type expected_offset = 0;
+      auto const& arena           = *arena_it;
+      bool        arena_allocated = false;
+      size_type   expected_offset = 0;
 
       for (auto blk_it     = arena.block_order().begin(ibank_.bank_.blocks()),
                 blk_end_it = arena.block_order().end(ibank_.bank_.blocks());
            blk_it != blk_end_it; ++blk_it)
       {
-        auto& blk = *blk_it;
+        auto const& blk = *blk_it;
         assert(blk.offset_ == expected_offset);
         expected_offset += blk.size();
       }
@@ -698,8 +698,8 @@ private:
     return ret;
   }
 
-  static auto add_arena(remap_data& ibank, std::uint32_t handle, size_type iarena_size, bool iempty)
-   -> std::pair<std::uint32_t, std::uint32_t>
+  static auto add_arena(remap_data& ibank, std::uint32_t handle, size_type iarena_size,
+                        bool iempty) -> std::pair<std::uint32_t, std::uint32_t>
   {
 
     std::uint32_t arena_id  = ibank.bank_.arenas().emplace();
