@@ -390,4 +390,11 @@ struct chain
   }
 };
 
+template <typename Transform, string_literal Target>
+auto cache_key()
+{
+  static auto key_str = std::string{Transform::transform(Target)};
+  return key_str;
+}
+
 } // namespace acl

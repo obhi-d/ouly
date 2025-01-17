@@ -22,6 +22,13 @@ public:
   {
     return (std::string_view)Name;
   }
+
+  template <typename TransformType>
+  static auto cache_key() noexcept -> std::string_view
+  {
+    static auto key_str = std::string{TransformType::transform(key())};
+    return key_str;
+  }
 };
 
 template <string_literal Name, typename Class, typename MPtr, auto Ptr>

@@ -76,34 +76,31 @@ template <typename T>
 template <typename T, auto const A>
 consteval auto deduce_field_name() -> decltype(auto)
 {
-
-#if defined(__clang__)
-  constexpr auto        name        = function_name<T, &A.member_>();
-  constexpr auto        beg_mem     = name.substr(name.find("A ="));
-  constexpr auto        end_mem     = beg_mem.substr(0, beg_mem.find_first_of(']'));
-  constexpr auto        member_name = end_mem.substr(end_mem.find_last_of(':') + 1);
-  constexpr std::size_t length      = member_name.size();
-
-  return string_literal<length + 1>{member_name.data()};
-#elif defined(_MSC_VER)
-  auto constexpr name               = std::string_view{std::source_location::current().function_name()};
-  constexpr auto        beg_mem     = name.substr(name.rfind("->") + 2);
-  constexpr auto        member_name = beg_mem.substr(0, beg_mem.find_first_of(">}("));
-  constexpr std::size_t length      = member_name.size();
-
-  return string_literal<length + 1>{member_name.data()};
-#elif defined(__GNUC__)
-  constexpr auto        name        = function_name<T, &A.member_>();
-  constexpr auto        beg_mem     = name.substr(name.find("A ="));
-  constexpr auto        end_mem     = beg_mem.substr(0, beg_mem.find_first_of(';') - 1);
-  constexpr auto        member_name = end_mem.substr(end_mem.find_last_of(':') + 1);
-  constexpr std::size_t length      = member_name.size();
-
-  return string_literal<length + 1>{member_name.data()};
+#if __cpp_lib_source_location >= 201907L
+#if defined(_MSC_VER)
+  constexpr auto name = std::string_view{std::source_location::current().function_name()};
 #else
-  constexpr std::size_t length = name.size();
-  return string_literal<length + 1>{name.data()};
+  constexpr auto name = function_name<T, &A.member_>();
 #endif
+#elif defined(_MSC_VER)
+  constexpr auto name = std::string_view{__FUNCSIG__};
+#else
+  constexpr auto name = std::string_view{__PRETTY_FUNCTION__};
+#endif
+#if defined(__clang__)
+  constexpr auto beg_mem     = name.substr(name.find("A ="));
+  constexpr auto end_mem     = beg_mem.substr(0, beg_mem.find_first_of(']'));
+  constexpr auto member_name = end_mem.substr(end_mem.find_last_of(':') + 1);
+#elif defined(_MSC_VER)
+  constexpr auto beg_mem     = name.substr(name.rfind("->") + 2);
+  constexpr auto member_name = beg_mem.substr(0, beg_mem.find_first_of(">}("));
+#elif defined(__GNUC__)
+  constexpr auto beg_mem     = name.substr(name.find("A ="));
+  constexpr auto end_mem     = beg_mem.substr(0, beg_mem.find_first_of(';') - 1);
+  constexpr auto member_name = end_mem.substr(end_mem.find_last_of(':') + 1);
+#endif
+  constexpr std::size_t length = member_name.size();
+  return string_literal<length + 1>{member_name.data()};
 }
 
 template <Aggregate T>
@@ -152,5 +149,17 @@ constexpr auto get_field_ref(T& ref) noexcept -> decltype(auto)
 
 template <auto I, Aggregate T>
 using field_type = std::remove_cvref_t<decltype(get_field_ref<I>(std::declval<T&>()))>;
+
+template <Aggregate A, typename Transform>
+auto get_cached_field_names() -> auto const&
+{
+  static const auto field_names = std::apply(
+   [](auto&&... args)
+   {
+     return std::make_tuple(std::string{Transform::transform(args)}...);
+   },
+   get_field_names<A>());
+  return field_names;
+}
 
 } // namespace acl::detail

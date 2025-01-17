@@ -35,7 +35,7 @@ void process_field(Class& obj, Visitor& visitor, Decl const& decl)
 {
   using value_t = typename Decl::MemTy;
 
-  Visitor field_visitor{field_visitor_tag{}, visitor, Visitor::transform_type::transform(decl.key())};
+  Visitor field_visitor{field_visitor_tag{}, visitor, decl.template cache_key<typename Visitor::transform_type>()};
 
   if (!field_visitor.can_visit(obj))
   {
@@ -51,30 +51,6 @@ void process_field(Class& obj, Visitor& visitor, Decl const& decl)
   else if constexpr (is_writer<Visitor>)
   {
     visit(decl.value(obj), field_visitor);
-  }
-}
-
-template <typename Class, typename Visitor, typename Ref>
-void process_field(Class& obj, Ref& ref, Visitor& visitor, std::string_view name)
-{
-  using value_t = std::decay_t<Ref>;
-
-  Visitor field_visitor{field_visitor_tag{}, visitor, Visitor::transform_type::transform(name)};
-
-  if (!field_visitor.can_visit(obj))
-  {
-    return;
-  }
-
-  if constexpr (is_reader<Visitor>)
-  {
-    value_t load;
-    visit(load, field_visitor);
-    ref = std::move(load);
-  }
-  else if constexpr (is_writer<Visitor>)
-  {
-    visit(ref, field_visitor);
   }
 }
 
@@ -258,8 +234,6 @@ void visit_container(Class const& obj, Visitor& visitor)
                                [&](value_type const& stream_val, auto& field_visitor)
                                {
                                  visit(stream_val, field_visitor);
-
-                                 acl::detail::emplace(obj, index++, std::move(stream_val));
                                });
 }
 
@@ -278,7 +252,7 @@ void visit_variant(Class& obj, Visitor& visitor)
   constexpr auto variant_size  = std::variant_size_v<type>;
   uint8_t        variant_index = std::numeric_limits<uint8_t>::max();
   {
-    Visitor field_visitor{field_visitor_tag{}, object_visitor, Visitor::transform_type::transform("type")};
+    Visitor field_visitor{field_visitor_tag{}, object_visitor, cache_key<typename Visitor::transform_type, "type">()};
 
     if (!field_visitor.can_visit(obj))
     {
@@ -310,7 +284,7 @@ void visit_variant(Class& obj, Visitor& visitor)
   }
 
   {
-    Visitor field_visitor{field_visitor_tag{}, object_visitor, Visitor::transform_type::transform("value")};
+    Visitor field_visitor{field_visitor_tag{}, object_visitor, cache_key<typename Visitor::transform_type, "value">()};
 
     if (!field_visitor.can_visit(obj))
     {
@@ -347,7 +321,7 @@ void visit_variant(Class const& obj, Visitor& visitor)
 
   auto variant_index = static_cast<uint8_t>(obj.index());
   {
-    Visitor field_visitor{field_visitor_tag{}, object_visitor, Visitor::transform_type::transform("type")};
+    Visitor field_visitor{field_visitor_tag{}, object_visitor, cache_key<typename Visitor::transform_type, "type">()};
 
     if (!field_visitor.can_visit(obj))
     {
@@ -366,7 +340,7 @@ void visit_variant(Class const& obj, Visitor& visitor)
   }
 
   {
-    Visitor field_visitor{field_visitor_tag{}, object_visitor, Visitor::transform_type::transform("value")};
+    Visitor field_visitor{field_visitor_tag{}, object_visitor, cache_key<typename Visitor::transform_type, "value">()};
 
     if (!field_visitor.can_visit(obj))
     {
@@ -495,6 +469,30 @@ void visit_monostate(Class& obj, Visitor& visitor)
   }
 }
 
+template <typename Class, typename Visitor, typename Ref>
+void process_field(Class& obj, Ref& ref, Visitor& visitor, std::string_view name)
+{
+  using value_t = std::decay_t<Ref>;
+
+  Visitor field_visitor{field_visitor_tag{}, visitor, name};
+
+  if (!field_visitor.can_visit(obj))
+  {
+    return;
+  }
+
+  if constexpr (is_reader<Visitor>)
+  {
+    value_t load;
+    visit(load, field_visitor);
+    ref = std::move(load);
+  }
+  else if constexpr (is_writer<Visitor>)
+  {
+    visit(ref, field_visitor);
+  }
+}
+
 template <typename Class, typename Visitor>
 void visit_aggregate(Class& obj, Visitor& visitor)
 {
@@ -505,13 +503,14 @@ void visit_aggregate(Class& obj, Visitor& visitor)
     throw visitor_error(visitor_error::invalid_aggregate);
   }
 
-  constexpr auto field_names = get_field_names<std::decay_t<Class>>();
-  // auto           field_refs  = get_field_refs<std::decay_t<Class>>(obj);
+  using tclass_type = std::decay_t<Class>;
+
+  auto const& field_names = get_cached_field_names<tclass_type, typename Visitor::transform_type>();
 
   [&]<std::size_t... I>(std::index_sequence<I...>)
   {
     ((process_field(obj, get_field_ref<I>(obj), object_visitor, std::get<I>(field_names))), ...);
-  }(std::make_index_sequence<std::tuple_size_v<decltype(field_names)>>());
+  }(std::make_index_sequence<std::tuple_size_v<std::decay_t<decltype(field_names)>>>());
 
   if constexpr (is_reader<Visitor>)
   {

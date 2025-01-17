@@ -438,11 +438,11 @@ public:
   static auto read_variant(TClassType& obj, parser_state* parser, std::string_view key) -> in_context_base*
   {
     using namespace std::string_view_literals;
-    if (key == "type"sv)
+    if (key == cache_key<transform_type, "type">())
     {
       return read_variant_type(obj, parser);
     }
-    if (key == "value"sv)
+    if (key == cache_key<transform_type, "value">())
     {
       return read_variant_value(obj, parser, parser->get_stored_value());
     }
@@ -583,7 +583,7 @@ public:
     for_each_field(
      [&]<typename Decl>(tclass_type& obj, Decl const& decl, auto)
      {
-       if (transform_type::transform(decl.key()) == key)
+       if (decl.template cache_key<transform_type>() == key)
        {
          using value_t = typename Decl::MemTy;
 
@@ -649,13 +649,13 @@ public:
   {
     using tclass_type = std::decay_t<TClassType>;
 
-    constexpr auto   field_names = get_field_names<class_type>();
+    auto const&      field_names = get_cached_field_names<tclass_type, transform_type>();
     in_context_base* ret         = nullptr;
 
     [&]<std::size_t... I>(std::index_sequence<I...>, std::string_view key)
     {
       ((ret || (ret = read_aggregate_field<Base, tclass_type, I>(parser, key, field_names))), ...);
-    }(std::make_index_sequence<std::tuple_size_v<decltype(field_names)>>(), field_key);
+    }(std::make_index_sequence<std::tuple_size_v<std::decay_t<decltype(field_names)>>>(), field_key);
 
     if (ret == nullptr)
     {
