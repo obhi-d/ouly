@@ -3,6 +3,7 @@
 #include <compare>
 #include <cstdint>
 #include <limits>
+#include <optional>
 #include <type_traits>
 
 namespace acl
@@ -46,6 +47,7 @@ struct optional_val
 
   constexpr optional_val() = default;
   constexpr optional_val(value_type iv) noexcept : value_(iv) {}
+  constexpr optional_val(std::nullopt_t /*value*/) noexcept {}
 
   constexpr operator bool() const noexcept
   {

@@ -1,6 +1,7 @@
 #pragma once
 #include <cassert>
 #include <compare>
+#include <optional>
 #include <type_traits>
 
 namespace acl
@@ -39,8 +40,10 @@ struct optional_ref
   using value_type = std::remove_reference_t<T>;
 
   constexpr optional_ref() = default;
-  constexpr explicit optional_ref(value_type& iv) noexcept : value_(&iv) {}
-  constexpr explicit optional_ref(value_type* iv) noexcept : value_(iv) {}
+  constexpr optional_ref(value_type& iv) noexcept : value_(&iv) {}
+  constexpr optional_ref(value_type* iv) noexcept : value_(iv) {}
+  constexpr optional_ref(std::nullopt_t /*value*/) noexcept {}
+  constexpr optional_ref(std::nullptr_t /*value*/) noexcept {}
 
   constexpr operator bool() const noexcept
   {
