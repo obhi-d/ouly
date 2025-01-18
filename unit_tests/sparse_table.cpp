@@ -1,6 +1,6 @@
 #include "test_common.hpp"
-#include <acl/containers/sparse_table.hpp>
-#include <catch2/catch_all.hpp>
+#include "acl/containers/sparse_table.hpp"
+#include "catch2/catch_all.hpp"
 #include <iomanip>
 #include <iostream>
 #include <string>

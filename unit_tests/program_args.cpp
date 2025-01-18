@@ -1,5 +1,5 @@
 #include "acl/utility/program_args.hpp"
-#include <catch2/catch_all.hpp>
+#include "catch2/catch_all.hpp"
 
 // NOLINTBEGIN
 struct arg_formatter

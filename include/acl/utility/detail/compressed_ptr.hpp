@@ -1,6 +1,6 @@
 #pragma once
 
-#include <acl/utility/config.hpp>
+#include "acl/utility/config.hpp"
 #include <compare>
 #include <cstdint>
 #include <utility>

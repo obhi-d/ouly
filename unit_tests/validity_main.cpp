@@ -1,5 +1,5 @@
 
-#include <catch2/catch_all.hpp>
+#include "catch2/catch_all.hpp"
 
 // NOLINTBEGIN
 int main(int argc, char* argv[])

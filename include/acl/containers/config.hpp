@@ -1,7 +1,7 @@
 
 #pragma once
 
-#include <acl/containers/detail/blackboard_defs.hpp>
+#include "acl/containers/detail/blackboard_defs.hpp"
 #include <typeindex>
 
 namespace acl::cfg

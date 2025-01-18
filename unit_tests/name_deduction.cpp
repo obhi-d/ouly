@@ -1,6 +1,6 @@
 #include "acl/reflection/detail/base_concepts.hpp"
 #include "acl/reflection/visitor.hpp"
-#include <catch2/catch_all.hpp>
+#include "catch2/catch_all.hpp"
 #include <iostream>
 
 TEST_CASE("Member name inside function")

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <acl/scheduler/scheduler.hpp>
-#include <acl/scheduler/task_traits.hpp>
+#include "acl/scheduler/scheduler.hpp"
+#include "acl/scheduler/task_traits.hpp"
 #include <iterator>
 
 namespace acl::detail

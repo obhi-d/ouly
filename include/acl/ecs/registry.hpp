@@ -1,8 +1,8 @@
 
 #pragma once
 
-#include <acl/ecs/detail/registry_defs.hpp>
-#include <acl/ecs/entity.hpp>
+#include "acl/ecs/detail/registry_defs.hpp"
+#include "acl/ecs/entity.hpp"
 #include <algorithm>
 #include <cassert>
 #include <span>

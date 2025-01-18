@@ -3,10 +3,10 @@
 #include "acl/serializers/config.hpp"
 #include "acl/serializers/serializers.hpp"
 #include "catch2/catch_test_macros.hpp"
-#include <acl/reflection/reflection.hpp>
+#include "acl/reflection/reflection.hpp"
 #include <algorithm>
 #include <array>
-#include <catch2/catch_all.hpp>
+#include "catch2/catch_all.hpp"
 #include <charconv>
 #include <compare>
 #include <sstream>

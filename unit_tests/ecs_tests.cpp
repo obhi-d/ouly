@@ -1,8 +1,8 @@
 #include "test_common.hpp"
-#include <acl/ecs/collection.hpp>
-#include <acl/ecs/components.hpp>
-#include <acl/ecs/registry.hpp>
-#include <catch2/catch_all.hpp>
+#include "acl/ecs/collection.hpp"
+#include "acl/ecs/components.hpp"
+#include "acl/ecs/registry.hpp"
+#include "catch2/catch_all.hpp"
 #include <string>
 #include <unordered_map>
 

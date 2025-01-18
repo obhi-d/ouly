@@ -1,10 +1,10 @@
 #pragma once
 
-#include <acl/serializers/detail/binary_input_serializer.hpp>
-#include <acl/serializers/detail/binary_output_serializer.hpp>
-#include <acl/serializers/detail/structured_input_serializer.hpp>
-#include <acl/serializers/detail/structured_output_serializer.hpp>
-#include <acl/utility/transforms.hpp>
+#include "acl/serializers/detail/binary_input_serializer.hpp"
+#include "acl/serializers/detail/binary_output_serializer.hpp"
+#include "acl/serializers/detail/structured_input_serializer.hpp"
+#include "acl/serializers/detail/structured_output_serializer.hpp"
+#include "acl/utility/transforms.hpp"
 
 namespace acl
 {
@@ -26,11 +26,7 @@ concept StructuredInputStream = requires(V v) {
   // function for_each: Should accept a lambda that accepts a value_type
   // This function should consume a field that is an array of values
   {
-    v.for_each_entry(
-     [](V) -> bool
-     {
-       return false;
-     })
+    v.for_each_entry([](V) {})
   } -> std::same_as<void>;
 
   // function object: Must return object_type
