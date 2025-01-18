@@ -2,11 +2,11 @@
 #include "acl/containers/array_types.hpp"
 #include "acl/reflection/reflection.hpp"
 #include "acl/serializers/serializers.hpp"
+#include "acl/utility/convert.hpp"
 #include "acl/utility/optional_ref.hpp"
-#include "acl/utility/transforms.hpp"
 #include "catch2/catch_all.hpp"
-#include <charconv>
 #include "nlohmann/json.hpp"
+#include <charconv>
 #include <unordered_map>
 
 using json = nlohmann::json;
@@ -510,12 +510,12 @@ struct TransformSV
 template <>
 struct acl::convert<TransformSV>
 {
-  static std::string to_string(TransformSV const& r)
+  static std::string to_type(TransformSV const& r)
   {
     return std::to_string(r.id);
   }
 
-  static void from_string(TransformSV& r, std::string_view sv)
+  static void from_type(TransformSV& r, std::string_view sv)
   {
     std::from_chars(sv.data(), sv.data() + sv.length(), r.id);
   }

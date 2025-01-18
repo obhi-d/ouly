@@ -1,12 +1,12 @@
 
 #include "acl/containers/array_types.hpp"
-#include "acl/serializers/serializers.hpp"
-#include "acl/utility/transforms.hpp"
 #include "acl/reflection/reflection.hpp"
+#include "acl/serializers/serializers.hpp"
+#include "acl/utility/convert.hpp"
 #include "catch2/catch_all.hpp"
+#include "nlohmann/json.hpp"
 #include <compare>
 #include <map>
-#include "nlohmann/json.hpp"
 #include <unordered_map>
 
 using json = nlohmann::json;
@@ -361,12 +361,12 @@ struct ReflexToStr
 template <>
 struct acl::convert<ReflexToStr>
 {
-  static auto to_string(ReflexToStr const& a) -> std::string
+  static auto to_type(ReflexToStr const& a) -> std::string
   {
     return std::to_string(a.value);
   }
 
-  static auto from_string(ReflexToStr& a, std::string_view v) -> void
+  static auto from_type(ReflexToStr& a, std::string_view v) -> void
   {
     a.value = std::stoi(std::string(v));
   }
@@ -399,12 +399,12 @@ struct ReflexToSV
 template <>
 struct acl::convert<ReflexToSV>
 {
-  static auto to_string(ReflexToSV const& a) -> std::string
+  static auto to_type(ReflexToSV const& a) -> std::string
   {
     return std::string(a.myBuffer, (std::size_t)a.length);
   }
 
-  static auto from_string(ReflexToSV& a, std::string_view v) -> void
+  static auto from_type(ReflexToSV& a, std::string_view v) -> void
   {
     std::memcpy(a.myBuffer, v.data(), v.length());
     a.length = (int)v.length();

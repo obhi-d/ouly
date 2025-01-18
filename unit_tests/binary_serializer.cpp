@@ -1,12 +1,13 @@
 
 #include "acl/containers/array_types.hpp"
+#include "acl/reflection/detail/base_concepts.hpp"
+#include "acl/reflection/reflection.hpp"
 #include "acl/serializers/config.hpp"
 #include "acl/serializers/serializers.hpp"
+#include "catch2/catch_all.hpp"
 #include "catch2/catch_test_macros.hpp"
-#include "acl/reflection/reflection.hpp"
 #include <algorithm>
 #include <array>
-#include "catch2/catch_all.hpp"
 #include <charconv>
 #include <compare>
 #include <sstream>
@@ -406,16 +407,18 @@ struct TransformSV
 template <>
 struct acl::convert<TransformSV>
 {
-  static std::string to_string(TransformSV const& r)
+  static std::string to_type(TransformSV const& r)
   {
     return std::to_string(r.id);
   }
 
-  static void from_string(TransformSV& r, std::string_view sv)
+  static void from_type(TransformSV& r, std::string_view sv)
   {
     std::from_chars(sv.data(), sv.data() + sv.length(), r.id);
   }
 };
+
+static_assert(acl::detail::Convertible<TransformSV>, "Type not convertible");
 
 TEMPLATE_TEST_CASE("stream: TransformFromString", "[stream][string]", big_endian, little_endian)
 {
@@ -424,6 +427,88 @@ TEMPLATE_TEST_CASE("stream: TransformFromString", "[stream][string]", big_endian
 
   using type = acl::dynamic_array<TransformSV>;
   type write = {TransformSV(11), TransformSV(100), TransformSV(13), TransformSV(300)};
+  type read;
+
+  acl::write<TestType::value>(stream, write);
+  acl::read<TestType::value>(stream, read);
+
+  REQUIRE(read == write);
+  REQUIRE_THROWS(acl::read<TestType::value>(stream, read));
+}
+
+struct TransformInt
+{
+  int id = -1;
+
+  TransformInt(int a) noexcept : id(a) {}
+  TransformInt() noexcept                                     = default;
+  inline auto operator<=>(TransformInt const&) const noexcept = default;
+};
+
+template <>
+struct acl::convert<TransformInt>
+{
+  static int to_type(TransformInt const& r)
+  {
+    return r.id;
+  }
+
+  static void from_type(TransformInt& r, int sv)
+  {
+    r.id = sv;
+  }
+};
+
+static_assert(acl::detail::Convertible<TransformInt>, "Type not convertible");
+
+TEMPLATE_TEST_CASE("stream: TransformFromInt", "[stream][int]", big_endian, little_endian)
+{
+  FileData data;
+  auto     stream = Stream(data);
+
+  using type = acl::dynamic_array<TransformInt>;
+  type write = {TransformInt(11), TransformInt(100), TransformInt(13), TransformInt(300)};
+  type read;
+
+  acl::write<TestType::value>(stream, write);
+  acl::read<TestType::value>(stream, read);
+
+  REQUIRE(read == write);
+  REQUIRE_THROWS(acl::read<TestType::value>(stream, read));
+}
+
+struct TransformIntInt
+{
+  TransformInt id = -1;
+
+  TransformIntInt(int a) noexcept : id(a) {}
+  TransformIntInt() noexcept                                     = default;
+  inline auto operator<=>(TransformIntInt const&) const noexcept = default;
+};
+
+template <>
+struct acl::convert<TransformIntInt>
+{
+  static TransformInt to_type(TransformIntInt const& r)
+  {
+    return r.id;
+  }
+
+  static void from_type(TransformIntInt& r, TransformInt sv)
+  {
+    r.id = sv;
+  }
+};
+
+static_assert(acl::detail::Convertible<TransformIntInt>, "Type not convertible");
+
+TEMPLATE_TEST_CASE("stream: TransformFromIntInt", "[stream][intint]", big_endian, little_endian)
+{
+  FileData data;
+  auto     stream = Stream(data);
+
+  using type = acl::dynamic_array<TransformIntInt>;
+  type write = {TransformIntInt(11), TransformIntInt(100), TransformIntInt(13), TransformIntInt(300)};
   type read;
 
   acl::write<TestType::value>(stream, write);

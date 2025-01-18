@@ -5,6 +5,7 @@
 #include "acl/reflection/visitor.hpp"
 #include "acl/serializers/config.hpp"
 #include "acl/utility/detail/concepts.hpp"
+#include <charconv>
 #include <cstddef>
 #include <string>
 #include <type_traits>
@@ -237,13 +238,20 @@ public:
     using tclass_type = std::decay_t<TClassType>;
     if constexpr (Convertible<tclass_type>)
     {
-      if constexpr (requires { typename Config::mutate_enums_type; } && std::is_enum_v<tclass_type>)
+      if constexpr (requires { typename Config::mutate_enums_type; } && std::is_enum_v<tclass_type> &&
+                    acl::detail::ConvertibleFrom<tclass_type, std::string_view>)
       {
-        acl::convert<tclass_type>::from_string(obj, transform_type::transform(slice));
+        acl::convert<tclass_type>::from_type(obj, transform_type::transform(slice));
+      }
+      else if constexpr (acl::detail::ConvertibleFrom<class_type, std::string_view>)
+      {
+        acl::convert<tclass_type>::from_type(obj, slice);
       }
       else
       {
-        acl::convert<tclass_type>::from_string(obj, slice);
+        acl::detail::convertible_to_type<tclass_type> value;
+        read_value(value, parser, slice);
+        acl::convert<tclass_type>::from_type(obj, value);
       }
     }
     else if constexpr (PointerLike<tclass_type>)

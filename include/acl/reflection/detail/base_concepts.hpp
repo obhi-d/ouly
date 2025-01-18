@@ -1,7 +1,7 @@
 #pragma once
 
 #include "acl/reflection/detail/accessors.hpp"
-#include "acl/utility/transforms.hpp"
+#include "acl/utility/convert.hpp"
 #include <concepts>
 #include <type_traits>
 #include <variant>
@@ -16,6 +16,10 @@ struct is_specialization_of : std::false_type
 template <template <typename...> class T, typename... Us>
 struct is_specialization_of<T, T<Us...>> : std::true_type
 {};
+
+template <typename T>
+concept ConvertibleNativeType =
+ std::is_arithmetic_v<T> || std::is_enum_v<T> || std::is_same_v<T, std::string> || std::is_same_v<T, std::string_view>;
 
 template <typename Class, typename Serializer>
 concept InputSerializableClass = requires(Class& o, Serializer s) { s >> o; };
@@ -80,9 +84,15 @@ template <typename T>
 concept ContainerIsStringLike = NativeStringLike<T>;
 
 template <typename T>
+using convertible_to_type = std::decay_t<decltype(acl::convert<T>::to_type(std::declval<T>()))>;
+
+template <typename T, typename S>
+concept ConvertibleFrom = requires(T t) { acl::convert<T>::from_type(t, std::declval<S>()); };
+
+template <typename T>
 concept Convertible = requires(T t) {
-  acl::convert<T>::to_string(t);
-  acl::convert<T>::from_string(t, std::string_view());
+  { acl::convert<T>::to_type(t) };
+  acl::convert<T>::from_type(t, std::declval<convertible_to_type<T> const&>());
 };
 
 // Array

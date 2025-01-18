@@ -1,13 +1,13 @@
 
 #pragma once
 
-#include "field_helpers.hpp"
 #include "acl/reflection/detail/aggregate.hpp"
 #include "acl/reflection/detail/base_concepts.hpp"
 #include "acl/reflection/detail/container_utils.hpp"
 #include "acl/reflection/visitor.hpp"
 #include "acl/utility/config.hpp"
-#include "acl/utility/transforms.hpp"
+#include "acl/utility/convert.hpp"
+#include "field_helpers.hpp"
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
@@ -79,34 +79,53 @@ void visit_explicitly_reflected(Class& obj, Visitor& visitor)
 }
 
 template <typename Class, typename Visitor>
+  requires(is_reader<Visitor>)
 void visit_convertible(Class& obj, Visitor& visitor)
 {
   using class_type = std::decay_t<Class>;
-  if constexpr (is_reader<Visitor>)
+  if constexpr (Visitor::mutate_enums && std::is_enum_v<class_type> &&
+                acl::detail::ConvertibleFrom<class_type, std::string_view>)
   {
     visitor.visit(
      [&](std::string_view str) -> void
      {
-       if constexpr (Visitor::mutate_enums && std::is_enum_v<class_type>)
-       {
-         acl::convert<class_type>::from_string(obj, Visitor::transform_type::transform(str));
-       }
-       else
-       {
-         acl::convert<class_type>::from_string(obj, str);
-       }
+       acl::convert<class_type>::from_type(obj, Visitor::transform_type::transform(str));
      });
   }
-  else if constexpr (is_writer<Visitor>)
+  else if constexpr (acl::detail::ConvertibleFrom<class_type, std::string_view>)
   {
-    if constexpr (Visitor::mutate_enums && std::is_enum_v<class_type>)
-    {
-      visitor.visit(Visitor::transform_type::transform(acl::convert<class_type>::to_string(obj)));
-    }
-    else
-    {
-      visitor.visit(acl::convert<class_type>::to_string(obj));
-    }
+    visitor.visit(
+     [&](std::string_view str) -> void
+     {
+       acl::convert<class_type>::from_type(obj, str);
+     });
+  }
+  else
+  {
+    acl::detail::convertible_to_type<class_type> value;
+    visit(value, visitor);
+    acl::convert<class_type>::from_type(obj, value);
+  }
+}
+
+template <typename Class, typename Visitor>
+  requires(is_writer<Visitor>)
+void visit_convertible(Class const& obj, Visitor& visitor)
+{
+  using class_type = std::decay_t<Class>;
+  if constexpr (Visitor::mutate_enums && std::is_enum_v<class_type> &&
+                acl::detail::ConvertibleFrom<class_type, std::string_view>)
+  {
+    visitor.visit(Visitor::transform_type::transform(acl::convert<class_type>::to_type(obj)));
+  }
+  else if constexpr (acl::detail::ConvertibleFrom<class_type, std::string_view>)
+  {
+    visitor.visit(acl::convert<class_type>::to_type(obj));
+  }
+  else
+  {
+    auto value = acl::convert<class_type>::to_type(obj);
+    visit(value, visitor);
   }
 }
 

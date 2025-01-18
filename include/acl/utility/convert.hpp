@@ -41,12 +41,12 @@ template <typename T>
   })
 struct convert<T>
 {
-  static auto to_string(T const& ref) -> std::string_view
+  static auto to_type(T const& ref) -> std::string_view
   {
     return (std::string_view)ref;
   }
 
-  static auto from_string(T& ref, std::string_view v) -> void
+  static auto from_type(T& ref, std::string_view v) -> void
   {
     ref = T(v);
   }
@@ -59,12 +59,12 @@ template <typename T>
   })
 struct convert<T>
 {
-  static auto to_string(T const& ref) -> std::string
+  static auto to_type(T const& ref) -> std::string
   {
     return (std::string)ref;
   }
 
-  static auto from_string(T& ref, std::string_view v) -> void
+  static auto from_type(T& ref, std::string_view v) -> void
   {
     ref = T(v);
   }
@@ -73,17 +73,17 @@ struct convert<T>
 template <>
 struct convert<std::string>
 {
-  static auto to_string(std::string const& ref) -> std::string_view
+  static auto to_type(std::string const& ref) -> std::string_view
   {
     return ref;
   }
 
-  static auto from_string(std::string& ref, std::string_view v) -> void
+  static auto from_type(std::string& ref, std::string_view v) -> void
   {
     ref = std::string(v);
   }
 
-  static auto from_string(std::string& ref, std::string&& v) -> void
+  static auto from_type(std::string& ref, std::string&& v) -> void
   {
     ref = std::move(v);
   }
@@ -92,12 +92,12 @@ struct convert<std::string>
 template <>
 struct convert<std::unique_ptr<char[]>>
 {
-  static auto to_string(std::unique_ptr<char[]> const& ref) -> std::string_view
+  static auto to_type(std::unique_ptr<char[]> const& ref) -> std::string_view
   {
     return {ref.get()};
   }
 
-  static auto from_string(std::unique_ptr<char[]>& ref, std::string_view v) -> void
+  static auto from_type(std::unique_ptr<char[]>& ref, std::string_view v) -> void
   {
     ref = std::make_unique<char[]>(v.size());
     std::ranges::copy(v, ref.get());
@@ -107,12 +107,12 @@ struct convert<std::unique_ptr<char[]>>
 template <>
 struct convert<std::string_view>
 {
-  static auto to_string(std::string_view const& ref) -> std::string_view
+  static auto to_type(std::string_view const& ref) -> std::string_view
   {
     return ref;
   }
 
-  static auto from_string(std::string_view& ref, std::string_view v) -> void
+  static auto from_type(std::string_view& ref, std::string_view v) -> void
   {
     ref = v;
   }
