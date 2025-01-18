@@ -138,7 +138,7 @@ constexpr auto get_field_ref(T& ref) noexcept -> decltype(auto)
    {
      return [&]<auto... Is>(std::index_sequence<Is...>) constexpr -> decltype(auto)
      {
-       return [](decltype((void*)Is)..., auto* nth, auto*...) -> decltype(auto)
+       return [](decltype((void const*)Is)..., auto* nth, auto*...) -> decltype(auto)
        {
          return *nth;
        }(&args...);
