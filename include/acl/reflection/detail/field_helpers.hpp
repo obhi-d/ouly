@@ -121,6 +121,48 @@ consteval auto get_field_names() noexcept -> decltype(auto)
 }
 
 template <Aggregate T>
+consteval auto get_field_ptr_types() noexcept -> decltype(auto)
+{
+  return aggregate_lookup<T>(
+   [](auto... args) constexpr -> decltype(auto)
+   {
+     using type = std::tuple<std::add_pointer_t<std::remove_cvref_t<decltype(args)>>...>;
+     return type();
+   });
+}
+
+template <Aggregate T>
+using field_ptr_types = std::remove_cvref_t<decltype(get_field_ptr_types<T>())>;
+
+template <Aggregate T>
+consteval auto get_field_cptr_types() noexcept -> decltype(auto)
+{
+  return aggregate_lookup<T>(
+   [](auto... args) constexpr -> decltype(auto)
+   {
+     using type = std::tuple<std::add_pointer_t<std::remove_cvref_t<decltype(args)> const>...>;
+     return type();
+   });
+}
+
+template <Aggregate T>
+using field_cptr_types = std::remove_cvref_t<decltype(get_field_cptr_types<T>())>;
+
+template <Aggregate T>
+consteval auto get_field_types() noexcept -> decltype(auto)
+{
+  return aggregate_lookup<T>(
+   []<typename... Args>(Args...) constexpr -> decltype(auto)
+   {
+     using type = std::tuple<std::remove_cvref_t<Args>...>;
+     return type();
+   });
+}
+
+template <Aggregate T>
+using field_types = std::remove_cvref_t<decltype(get_field_types<T>())>;
+
+template <Aggregate T>
 constexpr auto get_field_refs(T& ref) noexcept -> decltype(auto)
 {
   return aggregate_lookup(
@@ -130,6 +172,7 @@ constexpr auto get_field_refs(T& ref) noexcept -> decltype(auto)
    },
    ref);
 }
+
 template <auto I, Aggregate T>
 constexpr auto get_field_ref(T& ref) noexcept -> decltype(auto)
 {

@@ -2,6 +2,8 @@
 #include "acl/allocators/allocator.hpp"
 #include "acl/allocators/default_allocator.hpp"
 #include "acl/allocators/detail/custom_allocator.hpp"
+#include "acl/reflection/detail/base_concepts.hpp"
+#include "acl/reflection/detail/field_helpers.hpp"
 #include "acl/utility/type_traits.hpp"
 #include "acl/utility/utils.hpp"
 #include <cassert>
@@ -9,19 +11,25 @@
 #include <cstring>
 #include <limits>
 #include <memory>
+#include <utility>
 
 namespace acl
 {
 
-template <typename Tuple, typename Config = acl::default_config<Tuple>>
+template <acl::detail::Aggregate Agg, typename Config = acl::default_config<Agg>>
 class soavector : public acl::detail::custom_allocator_t<Config>
 {
 
 public:
+  using value_type = Agg;
+
   using allocator_type = acl::detail::custom_allocator_t<Config>;
-  using tuple_type     = Tuple;
-  using array_type     = acl::detail::tuple_of_ptrs<Tuple>;
-  using this_type      = soavector<Tuple, Config>;
+  using tuple_type     = acl::detail::field_types<Agg>;
+  using array_type     = acl::detail::field_ptr_types<Agg>;
+  using carray_type    = acl::detail::field_cptr_types<Agg>;
+  using this_type      = soavector<Agg, Config>;
+
+  static constexpr uint32_t field_count = std::tuple_size_v<tuple_type>;
 
   using size_type                 = acl::detail::choose_size_t<uint32_t, Config>;
   using difference_type           = std::make_signed_t<size_type>;
@@ -32,7 +40,7 @@ public:
   using propagate_allocator_on_copy =
    typename acl::allocator_traits<allocator_tag>::propagate_on_container_copy_assignment;
   using propagate_allocator_on_swap = typename acl::allocator_traits<allocator_tag>::propagate_on_container_swap;
-  // using visualizer                  = acl::detail::tuple_array_visualizer<this_type, Tuple>;
+  // using visualizer                  = acl::detail::tuple_array_visualizer<this_type, Agg>;
 
   template <std::size_t I>
   using ivalue_type = std::tuple_element_t<I, tuple_type>;
@@ -53,19 +61,57 @@ public:
   template <std::size_t I>
   using iconst_reverse_iterator = std::reverse_iterator<iconst_iterator<I>>;
 
-  static auto constexpr index_seq = std::make_index_sequence<std::tuple_size_v<Tuple>>();
+  static auto constexpr index_seq = std::make_index_sequence<field_count>();
+
+  template <bool const IsConst>
+  class value_wrapper
+  {
+  public:
+    using pointer =
+     std::conditional_t<IsConst, acl::detail::tuple_of_cptrs<tuple_type>, acl::detail::tuple_of_ptrs<tuple_type>>;
+    using const_reference = acl::detail::tuple_of_crefs<tuple_type>;
+
+    value_wrapper(auto... args) noexcept : pointer_{args...} {}
+    value_wrapper(pointer pointer_) noexcept : pointer_(pointer_) {}
+
+    auto operator=(value_type const& value) noexcept -> value_wrapper&
+    {
+      [&]<std::size_t... I>(std::index_sequence<I...>)
+      {
+        ((std::get<I>(pointer_) = acl::detail::get_field_ref<I>(value)), ...);
+      }(std::make_index_sequence<field_count>());
+      return *this;
+    }
+
+    operator value_type() const noexcept
+    {
+      return std::apply(
+       [&](auto... arg)
+       {
+         return value_type{*arg...};
+       },
+       pointer_);
+    }
+
+    auto get() const noexcept -> value_type
+    {
+      return static_cast<value_type>(*this);
+    }
+
+  private:
+    pointer pointer_ = {};
+  };
 
   template <bool const IsConst>
   class base_iterator
   {
   public:
-    using value_type      = Tuple;
     using difference_type = std::make_signed_t<size_type>;
     using pointer =
-     std::conditional_t<IsConst, acl::detail::tuple_of_cptrs<value_type>, acl::detail::tuple_of_ptrs<value_type>>;
+     std::conditional_t<IsConst, acl::detail::tuple_of_cptrs<tuple_type>, acl::detail::tuple_of_ptrs<tuple_type>>;
     using reference =
-     std::conditional_t<IsConst, acl::detail::tuple_of_crefs<value_type>, acl::detail::tuple_of_refs<value_type>>;
-    using const_reference = acl::detail::tuple_of_crefs<value_type>;
+     std::conditional_t<IsConst, acl::detail::tuple_of_crefs<tuple_type>, acl::detail::tuple_of_refs<tuple_type>>;
+    using const_reference = acl::detail::tuple_of_crefs<tuple_type>;
 
     base_iterator(base_iterator const&) noexcept = default;
     base_iterator(base_iterator&&) noexcept      = default;
@@ -182,20 +228,22 @@ public:
 
   using iterator               = base_iterator<false>;
   using const_iterator         = base_iterator<true>;
-  using value_type             = Tuple;
-  using reference              = acl::detail::tuple_of_refs<value_type>;
-  using const_reference        = acl::detail::tuple_of_crefs<value_type>;
-  using pointer                = acl::detail::tuple_of_ptrs<value_type>;
-  using const_pointer          = acl::detail::tuple_of_cptrs<value_type>;
+  using reference              = value_wrapper<false>;
+  using const_reference        = value_wrapper<true>;
+  using pointer                = acl::detail::tuple_of_ptrs<tuple_type>;
+  using const_pointer          = acl::detail::tuple_of_cptrs<tuple_type>;
   using reverse_iterator       = std::reverse_iterator<iterator>;
   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
   explicit soavector(allocator_type const& alloc = allocator_type()) noexcept
       : allocator_type(alloc), size_(0), capacity_(0) {};
 
-  explicit soavector(size_type n) noexcept : data_(allocate(n)), size_(n), capacity_(n) {}
+  explicit soavector(size_type n) noexcept : data_(allocate(n)), size_(n), capacity_(n)
+  {
+    uninitialized_fill(0, n, value_type{}, index_seq);
+  }
 
-  soavector(size_type n, tuple_type const& value, allocator_type const& alloc = allocator_type()) noexcept
+  soavector(size_type n, value_type const& value, allocator_type const& alloc = allocator_type()) noexcept
       : allocator_type(alloc), data_(allocate(n)), size_(n), capacity_(n)
   {
     uninitialized_fill(0, n, value, index_seq);
@@ -224,7 +272,7 @@ public:
 
   soavector(soavector const& x) noexcept : soavector(x, (allocator_type const&)x) {}
 
-  soavector(std::initializer_list<tuple_type> x, const allocator_type& alloc = allocator_type()) noexcept
+  soavector(std::initializer_list<value_type> x, const allocator_type& alloc = allocator_type()) noexcept
       : soavector(std::begin(x), std::end(x), alloc)
   {}
 
@@ -236,17 +284,17 @@ public:
 
   auto operator=(const soavector& x) noexcept -> soavector&
   {
-    assign_copy(x, propagate_allocator_on_copy(), index_seq);
+    assign_copy(x, propagate_allocator_on_copy());
     return *this;
   }
 
   auto operator=(soavector&& x) noexcept -> soavector&
   {
-    assign_move(std::move(x), propagate_allocator_on_move(), index_seq);
+    assign_move(x, propagate_allocator_on_move());
     return *this;
   }
 
-  auto operator=(std::initializer_list<tuple_type> x) noexcept -> soavector&
+  auto operator=(std::initializer_list<value_type> x) noexcept -> soavector&
   {
     destroy_all(0, size_, index_seq);
     if (capacity_ < x.size())
@@ -264,18 +312,27 @@ public:
   void assign(InputIterator first, InputIterator last) noexcept
   {
     destroy_all(0, size_, index_seq);
-    auto s = static_cast<size_type>(std::distance(first, last));
-    if (capacity_ < s)
+    size_type diff;
+    if constexpr (std::is_same_v<InputIterator, const_iterator> || std::is_same_v<InputIterator, iterator>)
     {
-      capacity_ = s;
-      deallocate();
-      data_ = allocate(s);
+      diff = last - first;
     }
-    size_ = s;
+    else
+    {
+      diff = static_cast<size_type>(std::distance(first, last));
+    }
+
+    if (capacity_ < diff)
+    {
+      capacity_ = diff;
+      deallocate();
+      data_ = allocate(diff);
+    }
+    size_ = diff;
     construct_range(first, last, data_, 0, index_seq);
   }
 
-  void assign(size_type n, const tuple_type& value) noexcept
+  void assign(size_type n, const value_type& value) noexcept
   {
     destroy_all(0, size_, index_seq);
     if (capacity_ < n)
@@ -289,7 +346,7 @@ public:
     size_ = n;
   }
 
-  void assign(std::initializer_list<tuple_type> x) noexcept
+  void assign(std::initializer_list<value_type> x) noexcept
   {
     destroy_all(0, size_, index_seq);
     if (capacity_ < x.size())
@@ -454,10 +511,10 @@ public:
 
   void resize(size_type sz) noexcept
   {
-    resize(sz, tuple_type());
+    resize(sz, value_type());
   }
 
-  void resize(size_type sz, tuple_type const& c) noexcept
+  void resize(size_type sz, value_type const& c) noexcept
   {
     if (sz > size_)
     {
@@ -608,7 +665,7 @@ public:
     construct_at(size_++, index_seq, std::forward<Args>(args)...);
   }
 
-  void push_back(const tuple_type& x) noexcept
+  void push_back(const value_type& x) noexcept
   {
     if (capacity_ < size_ + 1)
     {
@@ -631,19 +688,19 @@ public:
     construct_at(p, index_seq, std::forward<Args>(args)...);
   }
 
-  void insert(size_type position, tuple_type const& x)
+  void insert(size_type position, value_type const& x)
   {
     size_type p = insert_hole(position);
     construct_tuple_at(p, index_seq, x);
   }
 
-  void insert(size_type position, tuple_type&& x)
+  void insert(size_type position, value_type&& x)
   {
     size_type p = insert_hole(position);
     construct_tuple_at(p, index_seq, std::move(x));
   }
 
-  void insert(size_type position, size_type n, tuple_type const& x)
+  void insert(size_type position, size_type n, value_type const& x)
   {
     insert_range(position, n, x);
   }
@@ -654,7 +711,7 @@ public:
     insert_range(position, first, last);
   }
 
-  void insert(size_type position, std::initializer_list<tuple_type> x)
+  void insert(size_type position, std::initializer_list<value_type> x)
   {
     size_type p = insert_hole(position, static_cast<size_type>(x.size()));
     construct_range(std::begin(x), std::end(x), data_, p, index_seq);
@@ -725,12 +782,12 @@ public:
 
 private:
   template <std::size_t... I>
-  void uninitialized_fill(size_type start, size_type count, tuple_type const& t,
+  void uninitialized_fill(size_type start, size_type count, value_type const& t,
                           std::index_sequence<I...> /*unused*/) noexcept
   {
     // This implementation is valid since C++20 (via P1065R2)
     // In C++17, a constexpr counterpart of std::invoke is actually needed here
-    (std::uninitialized_fill_n(std::get<I>(data_) + start, count, std::get<I>(t)), ...);
+    (std::uninitialized_fill_n(std::get<I>(data_) + start, count, acl::detail::get_field_ref<I>(t)), ...);
   }
 
   template <typename It, typename Arg>
@@ -743,11 +800,11 @@ private:
   }
 
   template <std::size_t... I>
-  void copy_fill(size_type start, size_type count, tuple_type const& t, std::index_sequence<I...> /*unused*/) noexcept
+  void copy_fill(size_type start, size_type count, value_type const& t, std::index_sequence<I...> /*unused*/) noexcept
   {
     // This implementation is valid since C++20 (via P1065R2)
     // In C++17, a constexpr counterpart of std::invoke is actually needed here
-    (copy_fill_n(std::get<I>(data_) + start, count, std::get<I>(t)), ...);
+    (copy_fill_n(std::get<I>(data_) + start, count, acl::detail::get_field_ref<I>(t)), ...);
   }
 
   template <std::size_t... I, typename... Args>
@@ -764,15 +821,15 @@ private:
   }
 
   template <std::size_t... I>
-  void construct_tuple_at(size_type i, std::index_sequence<I...> /*unused*/, tuple_type const& arg) noexcept
+  void construct_tuple_at(size_type i, std::index_sequence<I...> /*unused*/, value_type const& arg) noexcept
   {
-    (std::construct_at(std::get<I>(data_) + i, std::get<I>(arg)), ...);
+    (std::construct_at(std::get<I>(data_) + i, acl::detail::get_field_ref<I>(arg)), ...);
   }
 
   template <std::size_t... I>
-  void construct_tuple_at(size_type i, std::index_sequence<I...> /*unused*/, tuple_type&& arg) noexcept
+  void construct_tuple_at(size_type i, std::index_sequence<I...> /*unused*/, value_type&& arg) noexcept
   {
-    (std::construct_at(std::get<I>(data_) + i, std::move(std::get<I>(arg))), ...);
+    (std::construct_at(std::get<I>(data_) + i, std::move(acl::detail::get_field_ref<I>(arg))), ...);
   }
 
   template <typename T, typename Arg>
@@ -788,9 +845,9 @@ private:
   }
 
   template <std::size_t... I>
-  void move_tuple_at(size_type i, std::index_sequence<I...> /*unused*/, tuple_type const& arg) noexcept
+  void move_tuple_at(size_type i, std::index_sequence<I...> /*unused*/, value_type const& arg) noexcept
   {
-    (move_at(std::get<I>(data_) + i, std::get<I>(arg)), ...);
+    (move_at(std::get<I>(data_) + i, acl::detail::get_field_ref<I>(arg)), ...);
   }
 
   template <typename Ty>
@@ -869,7 +926,14 @@ private:
   {
     while (start != end)
     {
-      (std::construct_at(std::get<I>(store) + offset, std::get<I>(*(start))), ...);
+      if constexpr (acl::detail::Aggregate<std::decay_t<decltype(*start)>>)
+      {
+        (std::construct_at(std::get<I>(store) + offset, acl::detail::get_field_ref<I>(*(start))), ...);
+      }
+      else
+      {
+        (std::construct_at(std::get<I>(store) + offset, std::get<I>(*(start))), ...);
+      }
       start++;
       offset++;
     }
@@ -1171,13 +1235,13 @@ private:
   friend auto operator<(soavector const& x, soavector const& y) noexcept -> bool
   {
     auto n = std::min(x.size(), y.size());
-    return (less(x, y, n, index_seq) | (x.size_ < y.size_));
+    return (less(x.data_, y.data_, n, index_seq) | (x.size_ < y.size_));
   }
 
   friend auto operator<=(soavector const& x, soavector const& y) noexcept -> bool
   {
     auto n = std::min(x.size(), y.size());
-    return (lesseq(x, y, n, index_seq) | (x.size_ <= y.size_));
+    return (lesseq(x.data_, y.data_, n, index_seq) | (x.size_ <= y.size_));
   }
 
   friend auto operator!=(soavector const& x, soavector const& y) noexcept -> bool
@@ -1203,7 +1267,7 @@ private:
     return p;
   }
 
-  auto insert_range(size_type position, size_type n, tuple_type const& x) noexcept -> size_type
+  auto insert_range(size_type position, size_type n, value_type const& x) noexcept -> size_type
   {
     size_type p = insert_hole(position, n);
     uninitialized_fill(p, n, x, index_seq);
@@ -1228,7 +1292,7 @@ private:
   template <typename Reftype, std::size_t... I>
   auto get(std::index_sequence<I...> /*unused*/, size_type i) const noexcept -> Reftype
   {
-    return Reftype(*(std::get<I>(data_) + i)...);
+    return Reftype((std::get<I>(data_) + i)...);
   }
 
   array_type data_{};
