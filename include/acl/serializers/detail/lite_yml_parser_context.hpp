@@ -642,7 +642,7 @@ public:
   static auto read_aggregate_field(parser_state* parser, std::string_view field_key, auto const& field_names)
    -> in_context_base*
   {
-    if (transform_type::transform(std::get<I>(field_names)) == field_key)
+    if (std::get<I>(field_names) == field_key)
     {
       using type      = field_type<I, TClassType>;
       auto ret        = parser->template create<in_context_impl<type, Config>>();
