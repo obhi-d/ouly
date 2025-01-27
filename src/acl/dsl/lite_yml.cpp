@@ -69,7 +69,6 @@ auto lite_stream::next_token() -> lite_stream::token
 
   if (at_line_start_)
   {
-    at_line_start_   = false;
     can_be_sequence_ = true;
     auto indent      = count_indent();
     if (peek(0) == '\n')
@@ -77,6 +76,8 @@ auto lite_stream::next_token() -> lite_stream::token
       current_pos_++;
       return token{.type_ = token_type::newline, .content_ = indent};
     }
+
+    at_line_start_ = false;
     if (peek(0) == '-')
     {
       current_pos_++;
@@ -274,7 +275,7 @@ void lite_stream::handle_indent(uint16_t new_indent)
 {
   if (new_indent < indent_level_)
   {
-    close_context(new_indent);
+    close_context(new_indent + 1);
   }
   else if (new_indent > indent_level_)
   {
