@@ -113,8 +113,6 @@ TEST_CASE("Validate string functions", "[string_utils]")
   cool = "cool_ing_like_King";
   REQUIRE(acl::format_name(cool) == "Cool Ing Like King");
   cool = "CoolIngLikeKing";
-  REQUIRE(acl::to_lower(cool) == "coolinglikeking");
-  REQUIRE(acl::to_upper(cool) == "COOLINGLIKEKING");
   REQUIRE(acl::split("Abc:Bcd") == acl::string_view_pair("Abc", "Bcd"));
   REQUIRE(acl::split(":Bcd") == acl::string_view_pair("", "Bcd"));
   REQUIRE(acl::split("Abc:") == acl::string_view_pair("Abc", ""));

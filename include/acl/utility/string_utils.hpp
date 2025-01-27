@@ -1,8 +1,8 @@
 #pragma once
 
+#include "acl/utility/wyhash.hpp"
 #include "common.hpp"
 #include "word_list.hpp"
-#include "acl/utility/wyhash.hpp"
 #include <algorithm>
 #include <cstddef>
 #include <ctime>
@@ -95,7 +95,8 @@ inline auto time_stamp() -> std::string
   localtime_s(&buf, &t);
   std::strftime(mbstr, sizeof(mbstr), "%m-%d-%y_%H-%M-%S", &buf);
 #else
-  struct tm buf{};
+  struct tm buf
+  {};
   std::strftime(static_cast<char*>(mbstr), sizeof(mbstr), "%m-%d-%y_%H-%M-%S", localtime_r(&t, &buf));
 #endif
   return {static_cast<char const*>(mbstr)};
@@ -111,7 +112,8 @@ inline auto time_string() -> std::string
   localtime_s(&buf, &t);
   std::strftime(mbstr, sizeof(mbstr), "%H-%M-%S", &buf);
 #else
-  struct tm buf{};
+  struct tm buf
+  {};
   std::strftime(static_cast<char*>(mbstr), sizeof(mbstr), "%H-%M-%S", localtime_r(&t, &buf));
 #endif
   return {static_cast<char const*>(mbstr)};
@@ -171,8 +173,8 @@ inline auto indent(int32_t amt) -> std::string
  * @return	true if string was replaced.
  *
  */
-inline auto replace_first(std::string& source, std::string_view search, std::string_view replace, size_t start_pos = 0)
- -> bool
+inline auto replace_first(std::string& source, std::string_view search, std::string_view replace,
+                          size_t start_pos = 0) -> bool
 {
   assert(!search.empty());
 
@@ -190,8 +192,8 @@ inline auto replace_first(std::string& source, std::string_view search, std::str
  * @return	Number of replacements
  *
  */
-inline auto replace(std::string& source, std::string_view search, std::string_view replace, size_t start_pos = 0)
- -> uint32_t
+inline auto replace(std::string& source, std::string_view search, std::string_view replace,
+                    size_t start_pos = 0) -> uint32_t
 
 {
   if (search.empty())
@@ -216,28 +218,6 @@ inline auto replace(std::string& source, std::string_view search, std::string_vi
  * MADE_IN_CHINA to "Made In China"
  */
 ACL_API auto format_name(std::string const& str) -> std::string;
-
-/**
- * @brief	Converts string to lower case.
- * @param [in,out]	str	The string to convert.
- */
-template <typename StringType>
-inline auto to_lower(StringType& str) -> StringType&
-{
-  std::transform(std::begin(str), std::end(str), std::begin(str), ::tolower);
-  return str;
-}
-
-/**
- * @brief	Converts string to upper case.
- * @param [in,out]	str	The string to convert.
- */
-template <typename StringType>
-inline auto to_upper(StringType& str) -> StringType&
-{
-  std::transform(std::begin(str), std::end(str), std::begin(str), ::toupper);
-  return str;
-}
 
 /**
  * Use the string hasher to find hash
