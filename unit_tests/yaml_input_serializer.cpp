@@ -2,8 +2,8 @@
 #include "acl/reflection/detail/base_concepts.hpp"
 #include "acl/reflection/visitor.hpp"
 #include "acl/serializers/lite_yml.hpp"
-#include <array>
 #include "catch2/catch_all.hpp"
+#include <array>
 #include <map>
 #include <memory>
 #include <optional>
@@ -849,6 +849,29 @@ map:
   REQUIRE(ts.map[1] == "one");
   REQUIRE(ts.map[2] == "two");
   REQUIRE(ts.map[3] == "three");
+}
+
+TEST_CASE("yaml_object: Test read map types with int pair")
+{
+  std::string yml = R"(
+map:
+  - [1, 2]
+  - [2, 3]
+  - [3, 4]
+)";
+
+  struct TestStructMap
+  {
+    std::map<int, int> map;
+  };
+
+  TestStructMap ts;
+  acl::yml::from_string(ts, yml);
+
+  REQUIRE(ts.map.size() == 3);
+  REQUIRE(ts.map[1] == 2);
+  REQUIRE(ts.map[2] == 3);
+  REQUIRE(ts.map[3] == 4);
 }
 
 // NOLINTEND

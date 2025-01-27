@@ -191,7 +191,8 @@ auto lite_stream::next_token() -> lite_stream::token
       current_pos_++;
       return token{.type_ = token_type::key, .content_ = slice};
     }
-    if (((c == ',' || (std::isspace(c) != 0)) && is_scope_of_type(container_type::compact_array)) || c == '\n')
+    if (((c == ',' || (std::isspace(c) != 0 || c == ']')) && is_scope_of_type(container_type::compact_array)) ||
+        c == '\n' || c == '[')
     {
       break;
     }
