@@ -193,15 +193,28 @@ constexpr auto get_field_ref(T& ref) noexcept -> decltype(auto)
 template <auto I, Aggregate T>
 using field_type = std::remove_cvref_t<decltype(get_field_ref<I>(std::declval<T&>()))>;
 
-template <Aggregate A, typename Transform>
+template <typename Transform>
+auto transform_field_name(std::string_view name) -> std::string
+{
+  return std::string{Transform::transform(name)};
+}
+
+template <Aggregate T, typename Transform>
 auto get_cached_field_names() -> auto const&
 {
-  static const auto field_names = std::apply(
-   [](auto&&... args)
+  auto constexpr names = aggregate_lookup<T>(
+   [](auto&&... args) constexpr -> decltype(auto)
    {
-     return std::make_tuple(std::string{Transform::transform(args)}...);
-   },
-   get_field_names<A>());
+     return std::make_tuple(field_ref{args}...);
+   });
+
+  using tup_t = std::remove_cvref_t<decltype(names)>;
+
+  static auto field_names = [&]<std::size_t... I>(std::index_sequence<I...>) constexpr -> decltype(auto)
+  {
+    return std::make_tuple(transform_field_name<Transform>(deduce_field_name<T, std::get<I>(names)>())...);
+  }(std::make_index_sequence<std::tuple_size_v<tup_t>>());
+
   return field_names;
 }
 
