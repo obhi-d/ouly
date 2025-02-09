@@ -304,10 +304,10 @@ public:
   static void read_integer(TClassType& obj, std::string_view slice)
   {
     constexpr uint32_t base_10 = 10;
-    constexpr uint32_t base_16 = 10;
     using namespace std::string_view_literals;
     if (slice.starts_with("0x"sv))
     {
+      constexpr uint32_t base_16 = 16;
       error_check(std::from_chars(slice.data() + 2, slice.data() + slice.size(), obj, base_16));
     }
     else if (slice.starts_with("0"))
@@ -347,11 +347,11 @@ public:
   static void read_enum(TClassType& obj, std::string_view slice)
   {
     constexpr uint32_t base_10 = 10;
-    constexpr uint32_t base_16 = 10;
 
     std::underlying_type_t<class_type> value;
     if (slice.starts_with("0x"))
     {
+      constexpr uint32_t base_16 = 16;
       error_check(std::from_chars(slice.data() + 2, slice.data() + slice.size(), value, base_16));
     }
     else if (slice.starts_with("0"))
