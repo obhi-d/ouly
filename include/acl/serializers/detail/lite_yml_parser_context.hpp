@@ -308,7 +308,12 @@ public:
     using namespace std::string_view_literals;
     if (slice.starts_with("0x"sv))
     {
-      error_check(std::from_chars(slice.data(), slice.data() + slice.size(), obj, base_16));
+      error_check(std::from_chars(slice.data() + 2, slice.data() + slice.size(), obj, base_16));
+    }
+    else if (slice.starts_with("0"))
+    {
+      constexpr int oc_base = 8;
+      error_check(std::from_chars(slice.data() + 1, slice.data() + slice.size(), obj, oc_base));
     }
     else
     {
@@ -347,7 +352,12 @@ public:
     std::underlying_type_t<class_type> value;
     if (slice.starts_with("0x"))
     {
-      error_check(std::from_chars(slice.data(), slice.data() + slice.size(), value, base_16));
+      error_check(std::from_chars(slice.data() + 2, slice.data() + slice.size(), value, base_16));
+    }
+    else if (slice.starts_with("0"))
+    {
+      constexpr int oc_base = 8;
+      error_check(std::from_chars(slice.data() + 1, slice.data() + slice.size(), value, oc_base));
     }
     else
     {
@@ -639,8 +649,8 @@ public:
   };
 
   template <typename Base, typename TClassType, std::size_t I>
-  static auto read_aggregate_field(parser_state* parser, std::string_view field_key, auto const& field_names)
-   -> in_context_base*
+  static auto read_aggregate_field(parser_state* parser, std::string_view field_key,
+                                   auto const& field_names) -> in_context_base*
   {
     if (std::get<I>(field_names) == field_key)
     {
