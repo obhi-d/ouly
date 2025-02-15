@@ -95,8 +95,7 @@ inline auto time_stamp() -> std::string
   localtime_s(&buf, &t);
   std::strftime(mbstr, sizeof(mbstr), "%m-%d-%y_%H-%M-%S", &buf);
 #else
-  struct tm buf
-  {};
+  struct tm buf{};
   std::strftime(static_cast<char*>(mbstr), sizeof(mbstr), "%m-%d-%y_%H-%M-%S", localtime_r(&t, &buf));
 #endif
   return {static_cast<char const*>(mbstr)};
@@ -112,8 +111,7 @@ inline auto time_string() -> std::string
   localtime_s(&buf, &t);
   std::strftime(mbstr, sizeof(mbstr), "%H-%M-%S", &buf);
 #else
-  struct tm buf
-  {};
+  struct tm buf{};
   std::strftime(static_cast<char*>(mbstr), sizeof(mbstr), "%H-%M-%S", localtime_r(&t, &buf));
 #endif
   return {static_cast<char const*>(mbstr)};
@@ -173,8 +171,8 @@ inline auto indent(int32_t amt) -> std::string
  * @return	true if string was replaced.
  *
  */
-inline auto replace_first(std::string& source, std::string_view search, std::string_view replace,
-                          size_t start_pos = 0) -> bool
+inline auto replace_first(std::string& source, std::string_view search, std::string_view replace, size_t start_pos = 0)
+ -> bool
 {
   assert(!search.empty());
 
@@ -192,8 +190,8 @@ inline auto replace_first(std::string& source, std::string_view search, std::str
  * @return	Number of replacements
  *
  */
-inline auto replace(std::string& source, std::string_view search, std::string_view replace,
-                    size_t start_pos = 0) -> uint32_t
+inline auto replace(std::string& source, std::string_view search, std::string_view replace, size_t start_pos = 0)
+ -> uint32_t
 
 {
   if (search.empty())
@@ -232,7 +230,7 @@ inline auto hash(std::string_view v, uint32_t seed = acl::wyhash32_default_prime
  * returned pair has the second element filled with empty string if is_prefix is true, if is_prefix is false, the
  * first string is set to empty
  */
-inline auto split(std::string_view name, char by = ':', bool is_prefix = true) noexcept -> string_view_pair
+inline auto split(std::string_view name, char by = ':', bool is_prefix = true) -> string_view_pair
 {
   size_t seperator = name.find_first_of(by);
   if (seperator < name.size())

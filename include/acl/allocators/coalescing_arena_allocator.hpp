@@ -92,7 +92,7 @@ public:
   auto operator=(coalescing_arena_allocator&&) -> coalescing_arena_allocator&      = delete;
   coalescing_arena_allocator(coalescing_arena_allocator const&) noexcept           = delete;
   coalescing_arena_allocator(coalescing_arena_allocator&&) noexcept                = delete;
-  coalescing_arena_allocator(size_type arena_sz) noexcept : arena_size_(arena_sz) {}
+  coalescing_arena_allocator(size_type arena_sz) : arena_size_(arena_sz) {}
   ~coalescing_arena_allocator() noexcept = default;
 
   /** @brief Arena size can be changed any time with this method, but it can only increase in size. */
@@ -261,7 +261,7 @@ private:
     return sz;
   }
 
-  auto try_allocate(size_type size) noexcept -> ca_allocation
+  auto try_allocate(size_type size) -> ca_allocation
   {
     if (sizes_.empty() || sizes_.back() < size)
     {
@@ -273,9 +273,9 @@ private:
      .offset_ = block_entries_.offsets_[id], .id_ = {.id_ = id}, .arena_ = {.id_ = block_entries_.arenas_[id]}};
   }
 
-  void reinsert_left(size_t of, size_type size, std::uint32_t node) noexcept;
+  void reinsert_left(size_t of, size_type size, std::uint32_t node);
   void reinsert_right(size_t of, size_type size, std::uint32_t node);
-  auto commit(size_type size, size_type const* found) noexcept -> uint32_t;
+  auto commit(size_type size, size_type const* found) -> uint32_t;
 
   // Free blocks
   acl::detail::ca_arena_entries arena_entries_;

@@ -437,7 +437,7 @@ list:
   };
 
   TestStructUnexpectedToken ts;
-  REQUIRE_THROWS_AS(acl::yml::from_string(ts, yml), acl::visitor_error);
+  REQUIRE_THROWS_AS(acl::yml::from_string(ts, yml), std::runtime_error);
 }
 
 TEST_CASE("yaml_object: Test read with missing key")
@@ -511,7 +511,7 @@ number: "not_a_number"
   };
 
   TestStructUnexpectedType ts;
-  REQUIRE_THROWS_AS(acl::yml::from_string(ts, yml), acl::visitor_error);
+  REQUIRE_THROWS_AS(acl::yml::from_string(ts, yml), std::runtime_error);
 }
 
 TEST_CASE("yaml_object: Test read recursive structures")
@@ -572,7 +572,7 @@ value: "string_instead_of_int"
   };
 
   TestStructTypeCast ts;
-  REQUIRE_THROWS_AS(acl::yml::from_string(ts, yml), acl::visitor_error);
+  REQUIRE_THROWS_AS(acl::yml::from_string(ts, yml), std::runtime_error);
 }
 
 TEST_CASE("yaml_object: Test read with empty YAML")

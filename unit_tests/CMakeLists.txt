@@ -21,9 +21,16 @@ FetchContent_Declare(
     GIT_TAG v3.11.2
 )
 
+FetchContent_Declare(
+    fast_float
+    GIT_REPOSITORY https://github.com/fastfloat/fast_float.git
+    GIT_TAG v8.0.0
+)
+
 FetchContent_MakeAvailable(Catch2)
 FetchContent_MakeAvailable(nanobench)
 FetchContent_MakeAvailable(nlohmann_json)
+FetchContent_MakeAvailable(fast_float)
 
 function(add_unit_test)
     set(config SKIP_TEST SANITIZE)
@@ -42,6 +49,7 @@ function(add_unit_test)
         ${target_name}
         acl::acl
         Catch2::Catch2
+        FastFloat::fast_float
         ${unit_test_LINK_LIBS}
     )
     target_compile_definitions(

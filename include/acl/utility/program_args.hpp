@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include "acl/utility/from_chars.hpp"
 #include <algorithm>
 #include <any>
 #include <charconv>
@@ -353,12 +354,15 @@ private:
   static auto convert_to(StringType const& sv) noexcept -> std::optional<V>
   {
     V numeric;
-    auto [ptr, ec] = std::from_chars(sv.data(), sv.data() + sv.size(), numeric);
-    if (ec == std::errc())
+    try
     {
-      return numeric;
+      from_chars(sv, numeric);
     }
-    return {};
+    catch (...)
+    {
+      return {};
+    }
+    return numeric;
   }
 
   template <ProgramArgBoolType V>

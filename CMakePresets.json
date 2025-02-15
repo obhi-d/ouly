@@ -1,194 +1,199 @@
 ﻿{
   "version": 2,
-      "configurePresets": [
-        {
-          "name": "linux-default",
-          "displayName": "Linux Debug",
-          "description": "Target the Windows Subsystem for Linux (WSL) or a remote Linux system.",
-          "generator": "Ninja",
-          "binaryDir": "${sourceDir}/build/${presetName}",
-          "cacheVariables": {
-            "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-            "CMAKE_BUILD_TYPE": "Debug",
-            "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
-            "ASAN_ENABLED": "ON",
-            "ACL_BUILD_TESTS": "ON"
-          },
-          "vendor": {
-            "microsoft.com/VisualStudioSettings/CMake/1.0": {
-              "hostOS": [
-                "Linux"
-              ]
-            },
-            "microsoft.com/VisualStudioRemoteSettings/CMake/1.0": {
-              "sourceDir": "$env{HOME}/.vs/$ms{projectDirName}"
-            }
-          }
+  "configurePresets": [
+    {
+      "name": "linux-default",
+      "displayName": "Linux Debug",
+      "description": "Target the Windows Subsystem for Linux (WSL) or a remote Linux system.",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
+        "ASAN_ENABLED": "ON",
+        "ACL_BUILD_TESTS": "ON"
+      },
+      "vendor": {
+        "microsoft.com/VisualStudioSettings/CMake/1.0": {
+          "hostOS": [
+            "Linux"
+          ]
         },
-        {
-          "name": "linux-release",
-          "displayName": "Linux Release",
-          "description": "Target the Windows Subsystem for Linux (WSL) or a remote Linux system.",
-          "generator": "Ninja",
-          "binaryDir": "${sourceDir}/build/${presetName}",
-          "cacheVariables": {
-            "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-            "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-            "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
-            "ACL_BUILD_TESTS": "ON"
-          }
-        },
-        {
-          "name": "macos-default",
-          "displayName": "macOS Debug",
-          "description": "Target a remote macOS system with Ninja",
-          "generator": "Ninja",
-          "binaryDir": "${sourceDir}/build/${presetName}",
-          "cacheVariables": {
-            "CMAKE_BUILD_TYPE": "Debug",
-            "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-            "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}"
-          },
-          "vendor": {
-            "microsoft.com/VisualStudioSettings/CMake/1.0": {
-              "hostOS": [
-                "macOS"
-              ]
-            },
-            "microsoft.com/VisualStudioRemoteSettings/CMake/1.0": {
-              "sourceDir": "$env{HOME}/.vs/$ms{projectDirName}"
-            }
-          }
-        },
-        {
-          "name": "windows-test",
-          "displayName": "Windows x64 Test",
-          "description": "Target Windows with the Visual Studio development environment.",
-          "generator": "Ninja",
-          "binaryDir": "${sourceDir}/build/${presetName}",
-          "architecture": {
-            "value": "x64",
-            "strategy": "external"
-          },
-          "cacheVariables": {
-            "CMAKE_BUILD_TYPE": "Debug",
-            "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-            "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
-            "ACL_BISON_EXE": "C:\\repos\\winflexbison\\win_bison.exe",
-            "ACL_FLEX_EXE": "C:\\repos\\winflexbison\\win_flex.exe",
-            "ACL_GENERATE_YAML_PARSER": "ON",
-            "ASAN_ENABLED": "ON",
-            "ACL_BUILD_TESTS": "ON"
-          },
-          "vendor": {
-            "microsoft.com/VisualStudioSettings/CMake/1.0": {
-              "hostOS": [
-                "Windows"
-              ]
-            }
-          }
-        },
-        {
-          "name": "windows-gen",
-          "displayName": "Windows x64 Generate",
-          "description": "Target Windows with the Visual Studio development environment.",
-          "generator": "Ninja",
-          "binaryDir": "${sourceDir}/build/${presetName}",
-          "architecture": {
-            "value": "x64",
-            "strategy": "external"
-          },
-          "cacheVariables": {
-            "CMAKE_BUILD_TYPE": "Debug",
-            "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-            "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
-            "ASAN_ENABLED": "ON",
-            "ACL_BUILD_TESTS": "ON",
-            "ACL_GENERATE_SCLI_PARSER": "ON",
-            "ACL_BISON_EXE": "C:\\repos\\winflexbison\\win_bison.exe",
-            "ACL_FLEX_EXE": "C:\\repos\\winflexbison\\win_flex.exe"
-          },
-          "vendor": {
-            "microsoft.com/VisualStudioSettings/CMake/1.0": {
-              "hostOS": [
-                "Windows"
-              ]
-            }
-          }
-        },
-        {
-          "name": "windows-default",
-          "displayName": "Windows x64 Debug",
-          "description": "Target Windows with the Visual Studio development environment.",
-          "generator": "Ninja",
-          "binaryDir": "${sourceDir}/build/${presetName}",
-          "architecture": {
-            "value": "x64",
-            "strategy": "external"
-          },
-          "cacheVariables": {
-            "CMAKE_BUILD_TYPE": "Debug",
-            "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
-            "ASAN_ENABLED": "ON"
-          },
-          "vendor": {
-            "microsoft.com/VisualStudioSettings/CMake/1.0": {
-              "hostOS": [
-                "Windows"
-              ]
-            }
-          }
-        },
-        {
-          "name": "windows-release",
-          "displayName": "Windows x64 Release",
-          "description": "Target Windows with the Visual Studio development environment.",
-          "generator": "Ninja",
-          "binaryDir": "${sourceDir}/build/${presetName}",
-          "architecture": {
-            "value": "x64",
-            "strategy": "external"
-          },
-          "cacheVariables": {
-            "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-            "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-            "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
-            "ASAN_ENABLED": "OFF",
-            "ACL_BUILD_TESTS": "ON"
-          },
-          "vendor": {
-            "microsoft.com/VisualStudioSettings/CMake/1.0": {
-              "hostOS": [
-                "Windows"
-              ]
-            }
-          }
+        "microsoft.com/VisualStudioRemoteSettings/CMake/1.0": {
+          "sourceDir": "$env{HOME}/.vs/$ms{projectDirName}"
         }
-      ],
-                          "buildPresets": [
-                            {
-                              "name": "windows-default",
-                              "configurePreset": "windows-default"
-                            },
-                            {
-                              "name": "windows-test",
-                              "configurePreset": "windows-test"
-                            },
-                            {
-                              "name": "windows-gen",
-                              "configurePreset": "windows-gen"
-                            },
-                            {
-                              "name": "windows-release",
-                              "configurePreset": "windows-release"
-                            },
-                            {
-                              "name": "linux-default",
-                              "configurePreset": "linux-default"
-                            },
-                            {
-                              "name": "linux-release",
-                              "configurePreset": "linux-release"
-                            }
-                          ]
+      }
+    },
+    {
+      "name": "linux-release",
+      "displayName": "Linux Release",
+      "description": "Target the Windows Subsystem for Linux (WSL) or a remote Linux system.",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
+        "ACL_BUILD_TESTS": "ON"
+      }
+    },
+    {
+      "name": "macos-default",
+      "displayName": "macOS Debug",
+      "description": "Target a remote macOS system with Ninja",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+        "ACL_BUILD_TESTS": "ON"
+      },
+      "vendor": {
+        "microsoft.com/VisualStudioSettings/CMake/1.0": {
+          "hostOS": [
+            "macOS"
+          ]
+        },
+        "microsoft.com/VisualStudioRemoteSettings/CMake/1.0": {
+          "sourceDir": "$env{HOME}/.vs/$ms{projectDirName}"
+        }
+      }
+    },
+    {
+      "name": "windows-test",
+      "displayName": "Windows x64 Test",
+      "description": "Target Windows with the Visual Studio development environment.",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
+        "ACL_BISON_EXE": "C:\\repos\\winflexbison\\win_bison.exe",
+        "ACL_FLEX_EXE": "C:\\repos\\winflexbison\\win_flex.exe",
+        "ACL_GENERATE_YAML_PARSER": "ON",
+        "ASAN_ENABLED": "ON",
+        "ACL_BUILD_TESTS": "ON"
+      },
+      "vendor": {
+        "microsoft.com/VisualStudioSettings/CMake/1.0": {
+          "hostOS": [
+            "Windows"
+          ]
+        }
+      }
+    },
+    {
+      "name": "windows-gen",
+      "displayName": "Windows x64 Generate",
+      "description": "Target Windows with the Visual Studio development environment.",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
+        "ASAN_ENABLED": "ON",
+        "ACL_BUILD_TESTS": "ON",
+        "ACL_GENERATE_SCLI_PARSER": "ON",
+        "ACL_BISON_EXE": "C:\\repos\\winflexbison\\win_bison.exe",
+        "ACL_FLEX_EXE": "C:\\repos\\winflexbison\\win_flex.exe"
+      },
+      "vendor": {
+        "microsoft.com/VisualStudioSettings/CMake/1.0": {
+          "hostOS": [
+            "Windows"
+          ]
+        }
+      }
+    },
+    {
+      "name": "windows-default",
+      "displayName": "Windows x64 Debug",
+      "description": "Target Windows with the Visual Studio development environment.",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
+        "ASAN_ENABLED": "ON"
+      },
+      "vendor": {
+        "microsoft.com/VisualStudioSettings/CMake/1.0": {
+          "hostOS": [
+            "Windows"
+          ]
+        }
+      }
+    },
+    {
+      "name": "windows-release",
+      "displayName": "Windows x64 Release",
+      "description": "Target Windows with the Visual Studio development environment.",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
+        "ASAN_ENABLED": "OFF",
+        "ACL_BUILD_TESTS": "ON"
+      },
+      "vendor": {
+        "microsoft.com/VisualStudioSettings/CMake/1.0": {
+          "hostOS": [
+            "Windows"
+          ]
+        }
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "windows-default",
+      "configurePreset": "windows-default"
+    },
+    {
+      "name": "windows-test",
+      "configurePreset": "windows-test"
+    },
+    {
+      "name": "windows-gen",
+      "configurePreset": "windows-gen"
+    },
+    {
+      "name": "windows-release",
+      "configurePreset": "windows-release"
+    },
+    {
+      "name": "linux-default",
+      "configurePreset": "linux-default"
+    },
+    {
+      "name": "linux-release",
+      "configurePreset": "linux-release"
+    },
+    {
+      "name": "macos-default",
+      "configurePreset": "macos-default"
+    }
+  ]
 }

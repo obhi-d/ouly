@@ -24,7 +24,7 @@ auto coalescing_arena_allocator::add_arena(size_type size, bool empty) -> std::p
   return std::make_pair(arena_id{arena_idx}, allocation_id{block_id});
 }
 
-auto coalescing_arena_allocator::commit(size_type size, size_type const* found) noexcept -> std::uint32_t
+auto coalescing_arena_allocator::commit(size_type size, size_type const* found) -> std::uint32_t
 {
   auto          free_idx  = std::distance((size_type const*)sizes_.data(), found);
   std::uint32_t free_node = free_ordering_[free_idx];
@@ -56,7 +56,7 @@ auto coalescing_arena_allocator::commit(size_type size, size_type const* found) 
   return free_node;
 }
 
-void coalescing_arena_allocator::reinsert_left(size_t of, size_type size, std::uint32_t node) noexcept
+void coalescing_arena_allocator::reinsert_left(size_t of, size_type size, std::uint32_t node)
 {
   if (of == 0U)
   {

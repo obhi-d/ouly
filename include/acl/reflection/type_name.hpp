@@ -5,7 +5,7 @@
 namespace acl
 {
 template <typename T>
-[[nodiscard]] constexpr auto type_name() noexcept -> decltype(auto)
+[[nodiscard]] constexpr auto type_name() -> decltype(auto)
 {
 #if defined(__clang__)
   std::string_view constexpr start = "T = ";
@@ -17,7 +17,7 @@ template <typename T>
   std::string_view constexpr start = "type_name<";
   std::string_view constexpr end   = ">(void)";
 #endif
-  constexpr std::string_view name = acl::detail::function_name<T>();
+  constexpr std::string_view name = acl::detail::function_name_type<T>();
   // return name;
   constexpr auto start_pos = name.find(start) + start.size();
   constexpr auto type      = name.substr(start_pos, name.find(end, start_pos) - start_pos);

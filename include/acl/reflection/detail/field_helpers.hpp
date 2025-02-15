@@ -62,13 +62,13 @@ template <class T>
 field_ref(T&) -> field_ref<T>;
 
 template <typename T, auto A>
-[[nodiscard]] consteval auto function_name() noexcept -> std::string_view
+[[nodiscard]] consteval auto function_name_member() noexcept -> std::string_view
 {
   return std::source_location::current().function_name();
 }
 
 template <typename T>
-[[nodiscard]] consteval auto function_name() noexcept -> std::string_view
+[[nodiscard]] consteval auto function_name_type() noexcept -> std::string_view
 {
   return std::source_location::current().function_name();
 }
@@ -79,8 +79,10 @@ consteval auto deduce_field_name() -> decltype(auto)
 #if __cpp_lib_source_location >= 201907L
 #if defined(_MSC_VER)
   constexpr auto name = std::string_view{std::source_location::current().function_name()};
+#elif defined(__clang__)
+  constexpr auto name = function_name_member<T, &A.member_>();
 #else
-  constexpr auto name = function_name<T, &A.member_>();
+  constexpr auto name = function_name_member<T, &A.member_>();
 #endif
 #elif defined(_MSC_VER)
   constexpr auto name = std::string_view{__FUNCSIG__};
@@ -90,7 +92,7 @@ consteval auto deduce_field_name() -> decltype(auto)
 #if defined(__clang__)
   constexpr auto beg_mem     = name.substr(name.find("A ="));
   constexpr auto end_mem     = beg_mem.substr(0, beg_mem.find_first_of(']'));
-  constexpr auto member_name = end_mem.substr(end_mem.find_last_of(':') + 1);
+  constexpr auto member_name = end_mem.substr(end_mem.find_last_of('.') + 1);
 #elif defined(_MSC_VER)
   constexpr auto beg_mem     = name.substr(name.rfind("->") + 2);
   constexpr auto member_name = beg_mem.substr(0, beg_mem.find_first_of(">}("));

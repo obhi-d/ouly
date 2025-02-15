@@ -5,6 +5,7 @@
 #include "acl/reflection/visitor.hpp"
 #include "acl/serializers/config.hpp"
 #include "acl/utility/detail/concepts.hpp"
+#include "acl/utility/from_chars.hpp"
 #include <charconv>
 #include <cstddef>
 #include <string>
@@ -283,14 +284,6 @@ public:
     }
   }
 
-  static void error_check(std::from_chars_result result)
-  {
-    if (result.ec != std::errc())
-    {
-      throw visitor_error(visitor_error::invalid_value);
-    }
-  }
-
   template <typename TClassType>
   static void read_bool(TClassType& obj, std::string_view slice)
   {
@@ -303,66 +296,23 @@ public:
   template <typename TClassType>
   static void read_integer(TClassType& obj, std::string_view slice)
   {
-    constexpr uint32_t base_10 = 10;
     using namespace std::string_view_literals;
-    if (slice.starts_with("0x"sv))
-    {
-      constexpr uint32_t base_16 = 16;
-      error_check(std::from_chars(slice.data() + 2, slice.data() + slice.size(), obj, base_16));
-    }
-    else if (slice.starts_with("0"))
-    {
-      constexpr int oc_base = 8;
-      error_check(std::from_chars(slice.data() + 1, slice.data() + slice.size(), obj, oc_base));
-    }
-    else
-    {
-      error_check(std::from_chars(slice.data(), slice.data() + slice.size(), obj, base_10));
-    }
+    from_chars(slice, obj);
   }
 
   template <typename TClassType>
   static void read_float(TClassType& obj, std::string_view slice)
   {
-    using namespace std::string_view_literals;
-    if (slice == ".nan"sv || slice == "nan"sv)
-    {
-      obj = std::numeric_limits<class_type>::quiet_NaN();
-    }
-    else if (slice == ".inf"sv || slice == "inf"sv)
-    {
-      obj = std::numeric_limits<class_type>::infinity();
-    }
-    else if (slice == "-.inf"sv || slice == "-inf"sv)
-    {
-      obj = -std::numeric_limits<class_type>::infinity();
-    }
-    else
-    {
-      error_check(std::from_chars(slice.data(), slice.data() + slice.size(), obj));
-    }
+    from_chars(slice, obj);
   }
 
   template <typename TClassType>
   static void read_enum(TClassType& obj, std::string_view slice)
   {
-    constexpr uint32_t base_10 = 10;
 
     std::underlying_type_t<class_type> value;
-    if (slice.starts_with("0x"))
-    {
-      constexpr uint32_t base_16 = 16;
-      error_check(std::from_chars(slice.data() + 2, slice.data() + slice.size(), value, base_16));
-    }
-    else if (slice.starts_with("0"))
-    {
-      constexpr int oc_base = 8;
-      error_check(std::from_chars(slice.data() + 1, slice.data() + slice.size(), value, oc_base));
-    }
-    else
-    {
-      error_check(std::from_chars(slice.data(), slice.data() + slice.size(), value, base_10));
-    }
+    from_chars(slice, value);
+
     obj = static_cast<class_type>(value);
   }
 
@@ -649,8 +599,8 @@ public:
   };
 
   template <typename Base, typename TClassType, std::size_t I>
-  static auto read_aggregate_field(parser_state* parser, std::string_view field_key,
-                                   auto const& field_names) -> in_context_base*
+  static auto read_aggregate_field(parser_state* parser, std::string_view field_key, auto const& field_names)
+   -> in_context_base*
   {
     if (std::get<I>(field_names) == field_key)
     {

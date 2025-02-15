@@ -1,5 +1,6 @@
 
 #include "acl/dsl/microexpr.hpp"
+#include "acl/utility/from_chars.hpp"
 #include <cstdint>
 
 namespace acl
@@ -18,7 +19,7 @@ struct microexpr_state
     return content_[read_];
   }
 
-  [[nodiscard]] auto read_token() const noexcept -> std::string_view;
+  [[nodiscard]] auto read_token() const -> std::string_view;
 
   void skip_white() noexcept;
   auto conditional() -> int64_t;
@@ -197,7 +198,7 @@ auto microexpr_state::binary() -> int64_t
   return left;
 }
 
-auto microexpr_state::read_token() const noexcept -> std::string_view
+auto microexpr_state::read_token() const -> std::string_view
 {
   std::string_view ret;
   uint32_t         token = read_;
@@ -242,20 +243,9 @@ auto microexpr_state::unary() -> int64_t
       auto token = read_token();
       read_ += (uint32_t)token.length();
       uint64_t value = 0;
-      if (token.starts_with("0x"))
-      {
-        constexpr int hex_base = 16;
-        std::from_chars(token.data() + 2, token.data() + token.size(), value, hex_base);
-      }
-      else if (token.starts_with("0"))
-      {
-        constexpr int oc_base = 8;
-        std::from_chars(token.data() + 1, token.data() + token.size(), value, oc_base);
-      }
-      else
-      {
-        std::from_chars(token.data(), token.data() + token.size(), value);
-      }
+
+      from_chars(token, value);
+
       return static_cast<int64_t>(value);
     }
     if (oper == '$')

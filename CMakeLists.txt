@@ -45,6 +45,7 @@ add_library(
 
 set_property(TARGET ${ACL_TARGET_NAME} PROPERTY CXX_STANDARD 20)
 
+message(STATUS "Using ${CMAKE_CXX_COMPILER} version ${CMAKE_CXX_COMPILER_VERSION}")
 # Check if Windows, skip clang-tidy in which case
 if(NOT MSVC)
     

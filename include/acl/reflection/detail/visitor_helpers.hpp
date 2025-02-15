@@ -310,16 +310,17 @@ void visit_variant(Class& obj, Visitor& visitor)
       throw visitor_error(visitor_error::invalid_variant);
     }
 
-    auto emplace_item = [&]<std::size_t I>(std::integral_constant<std::size_t, I>)
+    auto emplace_item = [&]<std::size_t I>(std::integral_constant<std::size_t, I>) -> bool
     {
       std::variant_alternative_t<I, Class> value;
       visit(value, field_visitor);
       obj = std::move(value);
+      return true;
     };
 
     [&]<std::size_t... I>(std::index_sequence<I...>)
     {
-      (((I == variant_index ? (emplace_item(std::integral_constant<std::size_t, I>()), true) : false) || ...), false);
+      (void)(((I == variant_index ? emplace_item(std::integral_constant<std::size_t, I>()) : false) || ...), false);
     }(std::make_index_sequence<variant_size>{});
 
     post_read(obj);

@@ -4,6 +4,7 @@
 #include "acl/reflection/reflection.hpp"
 #include "acl/serializers/config.hpp"
 #include "acl/serializers/serializers.hpp"
+#include "acl/utility/from_chars.hpp"
 #include "catch2/catch_all.hpp"
 #include "catch2/catch_test_macros.hpp"
 #include <algorithm>
@@ -21,7 +22,6 @@ struct FileData
 class Stream
 {
 public:
-  Stream() noexcept = default;
   Stream(FileData& r) : owner(r) {}
 
   void write(void const* data, std::size_t s)
@@ -368,7 +368,7 @@ struct ConstructedSV
   ConstructedSV() noexcept = default;
   explicit ConstructedSV(std::string_view sv)
   {
-    std::from_chars(sv.data(), sv.data() + sv.length(), id);
+    acl::from_chars(sv, id);
   }
 
   inline explicit operator std::string() const noexcept
@@ -414,7 +414,7 @@ struct acl::convert<TransformSV>
 
   static void from_type(TransformSV& r, std::string_view sv)
   {
-    std::from_chars(sv.data(), sv.data() + sv.length(), r.id);
+    acl::from_chars(sv, r.id);
   }
 };
 

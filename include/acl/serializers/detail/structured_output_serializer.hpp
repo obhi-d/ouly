@@ -60,6 +60,7 @@ public:
       case type::array:
         serializer_->end_array();
         break;
+      case type::none:
       case type::field:
         break;
       }

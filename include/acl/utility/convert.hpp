@@ -1,5 +1,6 @@
 #pragma once
 
+#include "acl/utility/from_chars.hpp"
 #include "acl/utility/string_literal.hpp"
 #include <algorithm>
 #include <cctype>
@@ -23,9 +24,9 @@ struct index_transform
 {
   static auto to_index(std::string_view ref) -> std::size_t
   {
-    uint32_t index  = std::numeric_limits<uint32_t>::max();
-    auto     result = std::from_chars(ref.data(), ref.data() + ref.size(), index);
-    return (result.ec != std::errc()) ? std::numeric_limits<std::size_t>::max() : index;
+    uint32_t index = std::numeric_limits<uint32_t>::max();
+    from_chars(ref, index);
+    return index;
   }
 
   static auto from_index(std::size_t ref) -> std::string

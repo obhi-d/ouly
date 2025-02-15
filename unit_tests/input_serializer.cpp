@@ -3,6 +3,7 @@
 #include "acl/reflection/reflection.hpp"
 #include "acl/serializers/serializers.hpp"
 #include "acl/utility/convert.hpp"
+#include "acl/utility/from_chars.hpp"
 #include "acl/utility/optional_ref.hpp"
 #include "catch2/catch_all.hpp"
 #include "nlohmann/json.hpp"
@@ -20,7 +21,6 @@ struct InputData
 class Stream
 {
 public:
-  Stream() noexcept = default;
   Stream(InputData& r) : owner(r), value(std::cref(r.root)) {}
   Stream(InputData& r, json const& source) : owner(r), value(std::cref(source)) {}
 
@@ -460,7 +460,7 @@ struct ConstructedSV
   ConstructedSV() noexcept = default;
   explicit ConstructedSV(std::string_view sv)
   {
-    std::from_chars(sv.data(), sv.data() + sv.length(), id);
+    acl::from_chars(sv, id);
   }
 
   inline explicit operator std::string() const noexcept
@@ -517,7 +517,7 @@ struct acl::convert<TransformSV>
 
   static void from_type(TransformSV& r, std::string_view sv)
   {
-    std::from_chars(sv.data(), sv.data() + sv.length(), r.id);
+    acl::from_chars(sv, r.id);
   }
 };
 
