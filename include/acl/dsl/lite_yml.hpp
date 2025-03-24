@@ -191,7 +191,7 @@ private:
 
   std::string_view content_;
 
-  std::vector<indent_entry>                     indent_stack_;
+  small_vector<indent_entry, small_buffer_size> indent_stack_;
   small_vector<string_slice, small_buffer_size> block_lines_;
 
   context*    ctx_                 = nullptr;
