@@ -17,11 +17,13 @@ class parser_state;
 
 struct in_context_base
 {
-  using post_init_fn          = void (*)(in_context_base*, parser_state*);
-  in_context_base* parent_    = nullptr;
-  in_context_base* proxy_     = nullptr;
-  post_init_fn     post_init_ = nullptr;
-  uint32_t         xvalue_    = 0;
+  using post_init_fn               = void (*)(in_context_base*, parser_state*);
+  in_context_base* parent_         = nullptr;
+  in_context_base* proxy_          = nullptr;
+  post_init_fn     post_init_      = nullptr;
+  uint32_t         xvalue_         = 0;
+  bool             is_proxy_       = false;
+  bool             is_post_inited_ = false;
 
   in_context_base() noexcept                                 = default;
   in_context_base(const in_context_base&)                    = default;
@@ -57,6 +59,11 @@ public:
     clear();
   }
 
+  void set_context(in_context_base* context) noexcept
+  {
+    context_ = context;
+  }
+
   [[nodiscard]] auto get_stored_value() const noexcept -> uint32_t
   {
     return context_->xvalue_;
@@ -81,6 +88,10 @@ public:
   {
     if (context_ != nullptr)
     {
+      while (context_->is_proxy_ && (context_->parent_ != nullptr))
+      {
+        context_ = context_->parent_;
+      }
       auto* parent = context_->parent_;
       context_->post_init_object(this);
       context_ = parent;
@@ -195,16 +206,24 @@ public:
 
   void post_init_object(parser_state* parser) final
   {
+    if (is_post_inited_)
+    {
+      return;
+    }
+
+    is_post_inited_ = true;
+
+    if (proxy_ != nullptr)
+    {
+      proxy_->post_init_object(parser);
+    }
+
     if (post_init_)
     {
       post_init_(this, parser);
     }
 
     post_read(obj_);
-    if (proxy_ != nullptr)
-    {
-      parser->destroy(proxy_);
-    }
 
     if (parent_ != nullptr)
     {
@@ -247,13 +266,21 @@ public:
   {
     if (proxy_ == nullptr)
     {
-      using value_type = convertible_to_type<class_type>;
-      proxy_           = parser->template create<in_context_impl<value_type, Config>>();
+      using value_type   = convertible_to_type<class_type>;
+      proxy_             = parser->template create<in_context_impl<value_type, Config>>();
+      proxy_->is_proxy_  = true;
+      proxy_->post_init_ = [](in_context_base* mapping, parser_state* /*parser_ptr*/)
+      {
+        auto object = static_cast<in_context_impl<value_type, Config>*>(mapping);
+        auto parent = static_cast<in_context_impl<Class, Config>*>(object->parent_);
+        acl::convert<class_type>::from_type(parent->get(), object->get());
+      };
     }
     if (proxy_ == nullptr)
     {
       throw visitor_error(visitor_error::type_is_not_an_array);
     }
+    parser->set_context(proxy_);
     return proxy_->add_item(parser);
   }
 

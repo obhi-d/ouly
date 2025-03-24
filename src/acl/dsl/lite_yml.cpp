@@ -322,9 +322,9 @@ void lite_stream::handle_dash(uint16_t new_indent, bool compact)
     ctx_->begin_array();
     indent_stack_.emplace_back(indent_level_, compact ? container_type::compact_array : container_type::array);
   }
-  if (is_scope_of_type(container_type::object, indent_level_))
+  else
   {
-    ctx_->end_object();
+    close_until(indent_level_, container_type::array);
   }
   ctx_->begin_new_array_item();
   state_ = parse_state::in_new_context;
@@ -360,6 +360,27 @@ void lite_stream::collect_block_scalar()
     ctx_->set_value(result);
     block_lines_.clear();
     state_ = parse_state::none;
+  }
+}
+
+void lite_stream::close_until(uint16_t new_indent, container_type type)
+{
+  while (!indent_stack_.empty() && indent_stack_.back().indent_ >= new_indent)
+  {
+    auto current = indent_stack_.back();
+    if (current.type_ == type)
+    {
+      return;
+    }
+    if (current.type_ == container_type::array || current.type_ == container_type::compact_array)
+    {
+      ctx_->end_array();
+    }
+    else
+    {
+      ctx_->end_object();
+    }
+    indent_stack_.pop_back();
   }
 }
 

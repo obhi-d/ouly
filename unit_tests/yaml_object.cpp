@@ -890,4 +890,97 @@ TEST_CASE("yaml_object: Test read custom type")
   REQUIRE(ts2.vec.y == 43.0f);
   REQUIRE(ts2.vec.z == 44.0f);
 }
+
+TEST_CASE("yaml_object: Test read complex custom type1")
+{
+
+  struct Vertex
+  {
+    float3      p;
+    inline auto operator<=>(Vertex const&) const = default;
+  };
+
+  struct TestStructCustomType
+  {
+    std::vector<Vertex>   vertices;
+    std::vector<uint16_t> indices;
+
+    inline auto operator<=>(TestStructCustomType const&) const = default;
+  };
+
+  TestStructCustomType ts;
+  ts.vertices.resize(2);
+  ts.vertices[0].p.x = 48.0f;
+  ts.vertices[0].p.y = 49.0f;
+  ts.vertices[0].p.z = 50.0f;
+  ts.vertices[1].p.x = 54.0f;
+  ts.vertices[1].p.y = 55.0f;
+  ts.vertices[1].p.z = 56.0f;
+  ts.indices.resize(3);
+  ts.indices[0] = 60;
+  ts.indices[1] = 61;
+  ts.indices[2] = 62;
+
+  std::string yml = acl::yml::to_string(ts);
+
+  TestStructCustomType ts2;
+  acl::yml::from_string(ts2, yml);
+
+  REQUIRE(ts2 == ts);
+}
+
+TEST_CASE("yaml_object: Test read complex custom type2")
+{
+
+  struct Vertex
+  {
+    float3 p;
+    float3 uv;
+
+    inline auto operator<=>(Vertex const&) const = default;
+  };
+
+  struct TestStructCustomType
+  {
+    float3                center;
+    float3                bounds;
+    std::vector<Vertex>   vertices;
+    std::vector<uint16_t> indices;
+
+    inline auto operator<=>(TestStructCustomType const&) const = default;
+  };
+
+  TestStructCustomType ts;
+  ts.center.x = 42.0f;
+  ts.center.y = 43.0f;
+  ts.center.z = 44.0f;
+  ts.bounds.x = 45.0f;
+  ts.bounds.y = 46.0f;
+  ts.bounds.z = 47.0f;
+  ts.vertices.resize(2);
+  ts.vertices[0].p.x  = 48.0f;
+  ts.vertices[0].p.y  = 49.0f;
+  ts.vertices[0].p.z  = 50.0f;
+  ts.vertices[0].uv.x = 51.0f;
+  ts.vertices[0].uv.y = 52.0f;
+  ts.vertices[0].uv.z = 53.0f;
+  ts.vertices[1].p.x  = 54.0f;
+  ts.vertices[1].p.y  = 55.0f;
+  ts.vertices[1].p.z  = 56.0f;
+  ts.vertices[1].uv.x = 57.0f;
+  ts.vertices[1].uv.y = 58.0f;
+  ts.vertices[1].uv.z = 59.0f;
+  ts.indices.resize(3);
+  ts.indices[0] = 60;
+  ts.indices[1] = 61;
+  ts.indices[2] = 62;
+
+  std::string yml = acl::yml::to_string(ts);
+
+  TestStructCustomType ts2;
+  acl::yml::from_string(ts2, yml);
+
+  REQUIRE(ts2 == ts);
+}
+
 // NOLINTEND

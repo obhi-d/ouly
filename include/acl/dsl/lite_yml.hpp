@@ -102,6 +102,7 @@ private:
   void handle_block_scalar(token_type type);
   void collect_block_scalar();
   void close_context(uint16_t new_indent);
+  void close_until(uint16_t new_indent, container_type type);
 
   // Utility functions
   [[nodiscard]] auto get_view(string_slice slice) const -> std::string_view
@@ -190,7 +191,7 @@ private:
 
   std::string_view content_;
 
-  small_vector<indent_entry, small_buffer_size> indent_stack_;
+  std::vector<indent_entry>                     indent_stack_;
   small_vector<string_slice, small_buffer_size> block_lines_;
 
   context*    ctx_                 = nullptr;
