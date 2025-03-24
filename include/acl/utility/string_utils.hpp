@@ -334,7 +334,7 @@ inline auto trim_trailing(std::string_view str)
  * @param str The string_view to be trimmed
  * @return std::string_view The trimmed string
  */
-inline auto trim(std::string_view str) -> std::string_view
+inline auto trim_view(std::string_view str) -> std::string_view
 {
   str = trim_leading(str);
   str = trim_trailing(str);

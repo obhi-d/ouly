@@ -155,10 +155,21 @@ private:
 
   void close_last_context();
 
-  void throw_error(token token, std::string_view error) const
+  void throw_error(token tok, std::string_view error) const
   {
+#ifdef __clang__
+    // Write error handlign without using std::format
+    std::string error_str = "parse-error - ";
+    error_str += std::to_string(tok.content_.start_);
+    error_str += " : (around ";
+    error_str += get_view(tok.content_);
+    error_str += ") - ";
+    error_str += error;
+    throw std::runtime_error(error_str);
+#else
     throw std::runtime_error(
-     std::format("parse-error @{} : (around {}) - {}", token.content_.start_, get_view(token.content_), error));
+     std::format("parse-error - {} : (around {}) - {}", tok.content_.start_, get_view(tok.content_), error));
+#endif
   }
 
   [[nodiscard]] auto is_scope_of_type(container_type type) const -> bool

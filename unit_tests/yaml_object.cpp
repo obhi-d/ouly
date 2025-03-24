@@ -1,7 +1,6 @@
-﻿#include <acl/dsl/yml.hpp>
-#include "acl/serializers/lite_yml.hpp"
-#include <array>
+﻿#include "acl/serializers/lite_yml.hpp"
 #include "catch2/catch_all.hpp"
+#include <array>
 #include <map>
 #include <memory>
 #include <optional>
@@ -865,4 +864,52 @@ a: 2
   REQUIRE(ts.a == 2);
 }
 
+struct float3
+{
+  float x, y, z;
+
+  inline auto operator<=>(float3 const&) const = default;
+};
+
+template <>
+struct acl::convert<float3>
+{
+  // NOLINTNEXTLINE
+  static auto to_type(float3 const& ref) -> std::array<float, 3>
+  {
+    return std::array{ref.x, ref.y, ref.z}; // NOLINT
+  }
+
+  // NOLINTNEXTLINE
+  static void from_type(float3& ref, std::array<float, 3> const& value)
+  {
+    ref.x = value[0];
+    ref.y = value[1];
+    ref.z = value[2];
+  }
+};
+
+TEST_CASE("yaml_object: Test read custom type")
+{
+
+  struct TestStructCustomType
+  {
+    float3 vec;
+
+    inline auto operator<=>(TestStructCustomType const&) const = default;
+  };
+
+  TestStructCustomType ts;
+  ts.vec.x        = 42.0f;
+  ts.vec.y        = 43.0f;
+  ts.vec.z        = 44.0f;
+  std::string yml = acl::yml::to_string(ts);
+
+  TestStructCustomType ts2;
+  acl::yml::from_string(ts2, yml);
+
+  REQUIRE(ts2.vec.x == 42.0f);
+  REQUIRE(ts2.vec.y == 43.0f);
+  REQUIRE(ts2.vec.z == 44.0f);
+}
 // NOLINTEND

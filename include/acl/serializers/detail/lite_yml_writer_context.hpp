@@ -25,11 +25,13 @@ public:
     indent();
     stream_.push_back('-');
     stream_.push_back(' ');
+    indent_level_++;
   }
 
   void end_array()
   {
-    indent_level_--;
+    indent_level_ -= 2;
+    skip_indent_ = false;
   }
 
   void begin_object()
@@ -41,6 +43,7 @@ public:
   void end_object()
   {
     indent_level_--;
+    skip_indent_ = false;
   }
 
   void key(std::string_view slice)
@@ -94,17 +97,19 @@ public:
 
   void next_array_entry()
   {
+    indent_level_--;
     indent();
     stream_.push_back('-');
     stream_.push_back(' ');
+    indent_level_++;
   }
 
 private:
   void indent()
   {
-    stream_.push_back('\n');
     if (!skip_indent_)
     {
+      stream_.push_back('\n');
       std::fill_n(std::back_inserter(stream_), static_cast<size_t>(indent_level_), ' ');
     }
     skip_indent_ = true;

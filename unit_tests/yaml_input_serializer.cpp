@@ -874,4 +874,21 @@ map:
   REQUIRE(ts.map[3] == 4);
 }
 
+TEST_CASE("yaml_object: Test empty array")
+{
+  std::string yml = R"(
+array: []
+)";
+
+  struct TestStructEmptyArray
+  {
+    std::vector<int> array;
+  };
+
+  TestStructEmptyArray ts;
+  acl::yml::from_string(ts, yml);
+
+  REQUIRE(ts.array.empty());
+}
+
 // NOLINTEND

@@ -4,11 +4,11 @@
 #pragma once
 
 #include "acl/reflection/detail/base_concepts.hpp"
-#include "acl/reflection/visitor.hpp"
 #include "acl/reflection/detail/container_utils.hpp"
 #include "acl/reflection/detail/derived_concepts.hpp"
 #include "acl/reflection/detail/visitor_helpers.hpp"
 #include "acl/reflection/reflection.hpp"
+#include "acl/reflection/visitor.hpp"
 #include "acl/reflection/visitor_impl.hpp"
 #include "acl/serializers/byteswap.hpp"
 #include "acl/serializers/config.hpp"
@@ -86,7 +86,6 @@ public:
   template <typename Class>
   auto can_visit(Class& obj) -> continue_token
   {
-    using class_type = std::decay_t<Class>;
     if (!may_fast_path_)
     {
       if constexpr (requires { Class::magic_type_header; })
@@ -117,8 +116,8 @@ public:
   void for_each_entry(Class& obj, auto&& fn)
   {
 
-    using type                   = std::decay_t<Class>;
-    constexpr bool may_fast_path = acl::detail::LinearArrayLike<type, Stream>;
+    using decay_class_type       = std::decay_t<Class>;
+    constexpr bool may_fast_path = acl::detail::LinearArrayLike<decay_class_type, Stream>;
 
     // First time entering a fast path container
     may_fast_path_ = may_fast_path;

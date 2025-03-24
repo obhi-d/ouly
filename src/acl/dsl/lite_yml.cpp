@@ -50,9 +50,9 @@ void lite_stream::parse()
   indent_level_ = 0;
   current_pos_  = 0;
 
-  while (auto token = next_token())
+  while (auto nxt_tok = next_token())
   {
-    process_token(token);
+    process_token(nxt_tok);
   }
 
   // Close any open structures

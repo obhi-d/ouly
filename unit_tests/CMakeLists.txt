@@ -100,6 +100,7 @@ add_unit_test(NAME input_serializer FILES "input_serializer.cpp" LINK_LIBS "nloh
 add_unit_test(NAME output_serializer FILES "output_serializer.cpp" LINK_LIBS "nlohmann_json::nlohmann_json" SANITIZE)
 add_unit_test(NAME binary_serializer FILES "binary_serializer.cpp" SANITIZE)
 add_unit_test(NAME yaml_serializer FILES "yaml_input_serializer.cpp" "yaml_output_serializer.cpp" SANITIZE)
+add_unit_test(NAME yaml_object FILES "yaml_object.cpp" SANITIZE)
 add_unit_test(NAME pool_allocator FILES "pool_allocator.cpp" )
 add_unit_test(NAME linear_allocator FILES "linear_allocator.cpp" )
 add_unit_test(NAME scheduler FILES "scheduler_tests.cpp")

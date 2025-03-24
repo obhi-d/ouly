@@ -66,9 +66,9 @@ void visit_explicitly_reflected(Class& obj, Visitor& visitor)
   }
 
   for_each_field(
-   [&]<typename Decl, std::size_t I>(Class& obj, Decl const& decl, std::integral_constant<std::size_t, I> /*unused*/)
+   [&]<typename Decl, std::size_t I>(Class& lobj, Decl const& decl, std::integral_constant<std::size_t, I> /*unused*/)
    {
-     process_field(obj, object_visitor, decl);
+     process_field(lobj, object_visitor, decl);
    },
    obj);
 
@@ -138,8 +138,6 @@ void visit_serializable(Class& obj, Visitor& visitor)
 template <typename Class, typename Visitor>
 void visit_at(Class& obj, std::size_t index, Visitor& visitor)
 {
-  using value_t = std::decay_t<Class>;
-
   Visitor field_visitor{field_visitor_tag{}, visitor, index};
 
   if (!field_visitor.can_visit(obj))
@@ -194,8 +192,6 @@ template <acl::detail::MapLike Class, typename Visitor>
   requires(is_writer<Visitor>)
 void visit_container(Class const& obj, Visitor& visitor)
 {
-  using key_type    = std::decay_t<typename Class::key_type>;
-  using mapped_type = std::decay_t<typename Class::mapped_type>;
 
   Visitor array_visitor{array_visitor_tag{}, visitor};
 
@@ -248,7 +244,6 @@ void visit_container(Class const& obj, Visitor& visitor)
     throw visitor_error(visitor_error::invalid_container);
   }
 
-  size_t index = 0;
   array_visitor.for_each_entry(obj,
                                [&](value_type const& stream_val, auto& field_visitor)
                                {

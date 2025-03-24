@@ -64,9 +64,9 @@ public:
 
   ~linear_arena_allocator() noexcept
   {
-    for (auto& arena : arenas_)
+    for (auto& arena_item : arenas_)
     {
-      underlying_allocator::deallocate(arena.buffer_, arena.arena_size_);
+      underlying_allocator::deallocate(arena_item.buffer_, arena_item.arena_size_);
     }
   }
 
@@ -90,7 +90,7 @@ public:
   [[nodiscard]] auto allocate(size_type i_size, Alignment i_alignment = {}) -> address
   {
 
-    auto measure = statistics::report_allocate(i_size);
+    [[maybe_unused]] auto measure = statistics::report_allocate(i_size);
     // assert
     auto fixup = i_alignment - 1;
     // make sure you allocate enough space
@@ -155,7 +155,7 @@ public:
   template <typename Alignment = alignment<>>
   void deallocate(address i_data, size_type i_size, Alignment i_alignment = {})
   {
-    auto measure = statistics::report_deallocate(i_size);
+    [[maybe_unused]] auto measure = statistics::report_deallocate(i_size);
 
     for (size_type id = static_cast<size_type>(arenas_.size()) - 1; id >= current_arena_; --id)
     {

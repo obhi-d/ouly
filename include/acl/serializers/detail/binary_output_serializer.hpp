@@ -77,7 +77,6 @@ public:
   template <typename Class>
   auto can_visit(Class const& obj) -> continue_token
   {
-    using class_type = std::decay_t<Class>;
     if (!may_fast_path_)
     {
       if constexpr (requires { Class::magic_type_header; })
@@ -101,8 +100,8 @@ public:
   template <typename Class>
   void for_each_entry(Class const& obj, auto&& fn)
   {
-    using type                   = std::decay_t<Class>;
-    constexpr bool may_fast_path = acl::detail::LinearArrayLike<type, Stream>;
+    using decay_class_type       = std::decay_t<Class>;
+    constexpr bool may_fast_path = acl::detail::LinearArrayLike<decay_class_type, Stream>;
 
     // First time entering a fast path container
     may_fast_path_ = may_fast_path;

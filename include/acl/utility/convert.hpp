@@ -265,7 +265,7 @@ constexpr static auto tolower(char a) -> char
 
 constexpr static auto isalnum(char c) -> bool
 {
-  return c == '_' || c >= '0' && c <= '9' || c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z';
+  return c == '_' || (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
 }
 
 constexpr static auto isupper(char c) -> bool

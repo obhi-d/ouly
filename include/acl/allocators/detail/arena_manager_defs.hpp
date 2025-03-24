@@ -48,8 +48,14 @@ struct defrag_stats
 
   [[nodiscard]] auto print() const -> std::string
   {
+#ifndef NDEBUG
+#ifdef __clang__
+    return "";
+#else
     return std::format("Defrag memory move merges: {}\nDefrag arenas removed: {}", total_mem_move_merge_,
                        total_arenas_removed_);
+#endif
+#endif
   }
 };
 

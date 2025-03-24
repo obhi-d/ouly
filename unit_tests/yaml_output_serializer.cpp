@@ -139,4 +139,15 @@ TEST_CASE("yaml_output: Test write map")
   REQUIRE(yml.find("- key2\n  - 200") != std::string::npos);
   REQUIRE(yml.find("- key3\n  - 300") != std::string::npos);
 }
+
+TEST_CASE("yaml_output: Test write empty array")
+{
+  struct ArrayTest
+  {
+    std::array<int, 3> a;
+  };
+  ArrayTest at;
+  auto      yml = acl::yml::to_string(at);
+  REQUIRE(yml.find("- ") != std::string::npos);
+}
 // NOLINTEND

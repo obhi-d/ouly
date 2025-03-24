@@ -48,7 +48,7 @@ public:
 
   template <typename... Args>
   linear_allocator(size_type i_arena_size, [[maybe_unused]] Args... args) noexcept
-      : k_arena_size_(i_arena_size), left_over_(i_arena_size)
+      : left_over_(i_arena_size), k_arena_size_(i_arena_size)
   {
     statistics::report_new_arena();
     buffer_ = underlying_allocator::allocate(k_arena_size_, {});
@@ -88,7 +88,7 @@ public:
   template <typename Alignment = alignment<>>
   [[nodiscard]] auto allocate(size_type i_size, Alignment i_alignment = {}) -> address
   {
-    auto measure = statistics::report_allocate(i_size);
+    [[maybe_unused]] auto measure = statistics::report_allocate(i_size);
     // assert
     auto const fixup = i_alignment - 1;
     // make sure you allocate enough space

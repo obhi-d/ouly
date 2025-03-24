@@ -287,8 +287,6 @@ public:
   template <typename TClassType>
   static void read_bool(TClassType& obj, std::string_view slice)
   {
-    using tclass_type = std::decay_t<TClassType>;
-
     using namespace std::string_view_literals;
     obj = slice == "true"sv || slice == "True"sv || slice == "null"sv;
   }
@@ -369,8 +367,6 @@ public:
   template <typename Base, typename TClassType>
   static auto read_key_in_optional(TClassType& obj, parser_state* parser, std::string_view key)
   {
-    using tclass_type = std::decay_t<TClassType>;
-    using pvalue_type = pointer_class_type<tclass_type>;
     using namespace std::string_view_literals;
 
     if (!obj)
@@ -384,8 +380,6 @@ public:
   template <typename TClassType>
   static void read_optional(TClassType& obj, parser_state* parser, std::string_view slice)
   {
-    using tclass_type = std::decay_t<TClassType>;
-    using pvalue_type = typename tclass_type::value_type;
     using namespace std::string_view_literals;
 
     if (slice == "null"sv)
@@ -422,9 +416,9 @@ public:
   static auto read_variant_type(TClassType& obj, parser_state* parser)
   {
     auto mapping        = parser->template create<in_context_impl<std::string_view, Config>>();
-    mapping->post_init_ = [](in_context_base* mapping, parser_state* parser)
+    mapping->post_init_ = [](in_context_base* mapping_base, parser_state* /* parser_ptr */)
     {
-      auto object              = static_cast<in_context_impl<std::string_view, Config>*>(mapping);
+      auto object              = static_cast<in_context_impl<std::string_view, Config>*>(mapping_base);
       object->parent_->xvalue_ = acl::index_transform<class_type>::to_index(object->get());
     };
     return mapping;
@@ -436,9 +430,9 @@ public:
     using type = std::variant_alternative_t<I, TClassType>;
 
     auto mapping        = parser->template create<in_context_impl<type, Config>>();
-    mapping->post_init_ = [](in_context_base* mapping, parser_state* parser)
+    mapping->post_init_ = [](in_context_base* mapping_base, parser_state* /*parser_ptr*/)
     {
-      auto object = static_cast<in_context_impl<type, Config>*>(mapping);
+      auto object = static_cast<in_context_impl<type, Config>*>(mapping_base);
       auto parent = static_cast<in_context_impl<Class, Config>*>(object->parent_);
       parent->get().template emplace<type>(std::move(object->get()));
     };
@@ -489,7 +483,7 @@ public:
   {
     using type      = array_value_type<class_type>;
     auto ret        = parser->template create<in_context_impl<type, Config>>();
-    ret->post_init_ = [](in_context_base* mapping, parser_state* parser)
+    ret->post_init_ = [](in_context_base* mapping, parser_state* /*parser_ptr*/)
     {
       auto object = static_cast<in_context_impl<type, Config>*>(mapping);
       auto parent = static_cast<in_context_impl<Class, Config>*>(object->parent_);
@@ -506,7 +500,7 @@ public:
   {
     using type      = array_value_type<class_type>;
     auto ret        = parser->template create<in_context_impl<type, Config>>();
-    ret->post_init_ = [](in_context_base* mapping, parser_state* parser)
+    ret->post_init_ = [](in_context_base* mapping, parser_state* /*parser_ptr*/)
     {
       auto object = static_cast<in_context_impl<type, Config>*>(mapping);
       auto parent = static_cast<in_context_impl<Class, Config>*>(object->parent_);
@@ -520,7 +514,7 @@ public:
   {
     using type      = typename class_type::value_type;
     auto ret        = parser->template create<in_context_impl<type, Config>>();
-    ret->post_init_ = [](in_context_base* mapping, parser_state* parser)
+    ret->post_init_ = [](in_context_base* mapping, parser_state* /*parser_ptr*/)
     {
       auto object = static_cast<in_context_impl<type, Config>*>(mapping);
       auto parent = static_cast<in_context_impl<Class, Config>*>(object->parent_);
@@ -534,7 +528,7 @@ public:
   {
     using type      = std::pair<typename class_type::key_type, typename class_type::mapped_type>;
     auto ret        = parser->template create<in_context_impl<type, Config>>();
-    ret->post_init_ = [](in_context_base* mapping, parser_state* parser)
+    ret->post_init_ = [](in_context_base* mapping, parser_state* /*parser_ptr*/)
     {
       auto object = static_cast<in_context_impl<type, Config>*>(mapping);
       auto parent = static_cast<in_context_impl<Class, Config>*>(object->parent_);
@@ -549,25 +543,25 @@ public:
     using tclass_type    = std::decay_t<TClassType>;
     in_context_base* ret = nullptr;
     for_each_field(
-     [&]<typename Decl>(tclass_type& obj, Decl const& decl, auto)
+     [&]<typename Decl>(tclass_type& /*lobj*/, Decl const& decl, auto)
      {
        if (decl.template cache_key<transform_type>() == key)
        {
-         using value_t = typename Decl::MemTy;
+         using mem_value_type = typename Decl::MemTy;
 
-         ret             = parser->template create<in_context_impl<value_t, Config>>();
-         ret->post_init_ = [](in_context_base* mapping, parser_state* parser)
+         ret             = parser->template create<in_context_impl<mem_value_type, Config>>();
+         ret->post_init_ = [](in_context_base* mapping, parser_state* /*parser_ptr*/)
          {
-           auto object = static_cast<in_context_impl<value_t, Config>*>(mapping);
+           auto object = static_cast<in_context_impl<mem_value_type, Config>*>(mapping);
            auto parent = static_cast<Base*>(object->parent_);
-           Decl decl;
+           Decl ldecl;
            if constexpr (PointerLike<typename Base::class_type> || OptionalLike<typename Base::class_type>)
            {
-             decl.value(*parent->get(), std::move(object->get()));
+             ldecl.value(*parent->get(), std::move(object->get()));
            }
            else
            {
-             decl.value(parent->get(), std::move(object->get()));
+             ldecl.value(parent->get(), std::move(object->get()));
            }
          };
        }

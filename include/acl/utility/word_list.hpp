@@ -19,10 +19,10 @@ public:
   class iterator
   {
   public:
-    iterator(view string) noexcept : location_(0), word_(0), object_(string) {}
-    iterator(view string, uint32_t loc, uint32_t word) noexcept : location_(loc), word_(word), object_(string) {}
-    iterator(const iterator& it) noexcept : location_(it.location_), word_(it.word_), object_(it.object_) {}
-    iterator(iterator&& it) noexcept : location_(it.location_), word_(it.word_), object_(it.object_) {}
+    iterator(view string) noexcept : object_(string), location_(0), word_(0) {}
+    iterator(view string, uint32_t loc, uint32_t word) noexcept : object_(string), location_(loc), word_(word) {}
+    iterator(const iterator& it) noexcept : object_(it.object_), location_(it.location_), word_(it.word_) {}
+    iterator(iterator&& it) noexcept : object_(it.object_), location_(it.location_), word_(it.word_) {}
     ~iterator() noexcept = default;
 
     auto operator=(const iterator& it) -> iterator&
