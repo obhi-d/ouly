@@ -19,6 +19,7 @@ struct in_context_base
 {
   using post_init_fn          = void (*)(in_context_base*, parser_state*);
   in_context_base* parent_    = nullptr;
+  in_context_base* proxy_     = nullptr;
   post_init_fn     post_init_ = nullptr;
   uint32_t         xvalue_    = 0;
 
@@ -200,6 +201,11 @@ public:
     }
 
     post_read(obj_);
+    if (proxy_ != nullptr)
+    {
+      parser->destroy(proxy_);
+    }
+
     if (parent_ != nullptr)
     {
       parser->destroy(this);
@@ -226,11 +232,29 @@ public:
     {
       return read_tuple(parser);
     }
+    else if constexpr (Convertible<class_type>)
+    {
+      return read_convertible_container(parser);
+    }
     else
     {
       throw visitor_error(visitor_error::type_is_not_an_array);
     }
     return nullptr;
+  }
+
+  auto read_convertible_container(parser_state* parser) -> in_context_base*
+  {
+    if (proxy_ == nullptr)
+    {
+      using value_type = convertible_to_type<class_type>;
+      proxy_           = parser->template create<in_context_impl<value_type, Config>>();
+    }
+    if (proxy_ == nullptr)
+    {
+      throw visitor_error(visitor_error::type_is_not_an_array);
+    }
+    return proxy_->add_item(parser);
   }
 
   template <typename TClassType>

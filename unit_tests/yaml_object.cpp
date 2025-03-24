@@ -225,12 +225,9 @@ TEST_CASE("yaml_object: Test read map")
 {
   std::string yml = R"(
 map:
-  - key: key1
-    value: 1
-  - key: key2
-    value: 2
-  - key: key3
-    value: 3
+  - [key1, 1]
+  - [key2, 2]
+  - [key3, 3]
 )";
 
   struct TestStructMap
@@ -398,10 +395,10 @@ root:
       - item1
       - item2
   child2:
-    - key: key1
-      value: value1
-    - key: key2
-      value: value2
+    - [key1, value1]
+    - 
+      - key2
+      - value2
 )";
 
   struct TestStructComplex
@@ -552,11 +549,7 @@ extra_field: "should be ignored"
   };
 
   TestStructExtraField ts;
-  acl::yml::from_string(ts, yml);
-
-  REQUIRE(ts.a == 100);
-  REQUIRE(ts.b == 200);
-  REQUIRE(ts.c == "value");
+  REQUIRE_THROWS_AS(acl::yml::from_string(ts, yml), acl::visitor_error);
 }
 
 TEST_CASE("yaml_object: Test read of unexpected type")
@@ -761,47 +754,32 @@ level1:
   struct Level4
   {
     int value;
-
-    static constexpr auto reflect() noexcept
-    {
-      return acl::bind(acl::bind<"value", &Level4::value>());
-    }
   };
 
   struct Level3
   {
     Level4 level4;
-
-    static constexpr auto reflect() noexcept
-    {
-      return acl::bind(acl::bind<"level4", &Level3::level4>());
-    }
   };
 
   struct Level2
   {
     Level3 level3;
-
-    static constexpr auto reflect() noexcept
-    {
-      return acl::bind(acl::bind<"level3", &Level2::level3>());
-    }
   };
 
   struct Level1
   {
     Level2 level2;
-
-    static constexpr auto reflect() noexcept
-    {
-      return acl::bind(acl::bind<"level2", &Level1::level2>());
-    }
   };
 
-  Level1 ts;
+  struct Level0
+  {
+    Level1 level1;
+  };
+
+  Level0 ts;
   acl::yml::from_string(ts, yml);
 
-  REQUIRE(ts.level2.level3.level4.value == 42);
+  REQUIRE(ts.level1.level2.level3.level4.value == 42);
 }
 
 TEST_CASE("yaml_object: Test read sequence of maps")

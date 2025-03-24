@@ -141,13 +141,13 @@ TEST_CASE("Validate string functions", "[string_utils]")
   REQUIRE(acl::trim_trailing(std::string("  \t\nAbc")) == "  \t\nAbc");
   REQUIRE(acl::trim_trailing(std::string("Abc\t \n   ")) == "Abc");
 
-  REQUIRE(acl::trim(" \t\n Abc\t \n   ") == "Abc");
+  REQUIRE(acl::trim_view(" \t\n Abc\t \n   ") == "Abc");
   REQUIRE(acl::trim_leading(" \t \nAbc") == "Abc");
   REQUIRE(acl::trim_leading("Abc   \t\n") == "Abc   \t\n");
   REQUIRE(acl::trim_trailing("  \t\nAbc") == "  \t\nAbc");
   REQUIRE(acl::trim_trailing("Abc\t \n   ") == "Abc");
 
-  REQUIRE(acl::trim(" \t\n Abc\t \n   ") == "Abc");
+  REQUIRE(acl::trim_view(" \t\n Abc\t \n   ") == "Abc");
   REQUIRE(acl::is_ascii(" \t\n Abc\t \n   ") == true);
 
   std::string_view              text_wall = "a long wall of text\tthat will be\t wrapped into multiple lines ";
