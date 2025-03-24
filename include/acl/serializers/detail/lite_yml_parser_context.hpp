@@ -24,6 +24,7 @@ struct in_context_base
   uint32_t         xvalue_         = 0;
   bool             is_proxy_       = false;
   bool             is_post_inited_ = false;
+  bool             has_value_      = false;
 
   in_context_base() noexcept                                 = default;
   in_context_base(const in_context_base&)                    = default;
@@ -109,6 +110,14 @@ public:
 
   void end_array() final
   {
+
+    if (context_ != nullptr)
+    {
+      if (!context_->has_value_)
+      {
+        pop();
+      }
+    }
     pop();
   }
 
@@ -139,6 +148,7 @@ public:
 
   void set_value(std::string_view slice) final
   {
+    context_->has_value_ = true;
     context_->set_value(this, slice);
     pop();
   }
@@ -238,6 +248,11 @@ public:
 
   void set_value(parser_state* parser, std::string_view slice) final
   {
+    has_value_ = true;
+    if (parent_ != nullptr)
+    {
+      parent_->has_value_ = true;
+    }
     read_value(obj_, parser, slice);
   }
 
@@ -538,8 +553,9 @@ public:
     {
       auto object = static_cast<in_context_impl<type, Config>*>(mapping);
       auto parent = static_cast<in_context_impl<Class, Config>*>(object->parent_);
-      if (parent->xvalue_ < std::size(parent->get()))
+      if (parent->xvalue_ < std::size(parent->get()) && object->has_value_)
       {
+        parent->has_value_               = true;
         parent->get()[parent->xvalue_++] = std::move(object->get());
       }
     };
@@ -555,7 +571,11 @@ public:
     {
       auto object = static_cast<in_context_impl<type, Config>*>(mapping);
       auto parent = static_cast<in_context_impl<Class, Config>*>(object->parent_);
-      parent->get().emplace_back(std::move(object->get()));
+      if (object->has_value_)
+      {
+        parent->has_value_ = true;
+        parent->get().emplace_back(std::move(object->get()));
+      }
     };
     return ret;
   }
@@ -569,7 +589,11 @@ public:
     {
       auto object = static_cast<in_context_impl<type, Config>*>(mapping);
       auto parent = static_cast<in_context_impl<Class, Config>*>(object->parent_);
-      parent->get().emplace(std::move(object->get()));
+      if (object->has_value_)
+      {
+        parent->has_value_ = true;
+        parent->get().emplace(std::move(object->get()));
+      }
     };
     return ret;
   }
@@ -583,7 +607,11 @@ public:
     {
       auto object = static_cast<in_context_impl<type, Config>*>(mapping);
       auto parent = static_cast<in_context_impl<Class, Config>*>(object->parent_);
-      parent->get().emplace(std::move(object->get()));
+      if (object->has_value_)
+      {
+        parent->has_value_ = true;
+        parent->get().emplace(std::move(object->get()));
+      }
     };
     return ret;
   }
@@ -614,6 +642,8 @@ public:
            {
              ldecl.value(parent->get(), std::move(object->get()));
            }
+
+           parent->has_value_ = true;
          };
        }
      },
@@ -641,6 +671,7 @@ public:
     {
       get_field_ref<I>(parent->get()) = std::move(object->get());
     }
+    parent->has_value_ = true;
   };
 
   template <typename Base, typename TClassType, std::size_t I>

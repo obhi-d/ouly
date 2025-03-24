@@ -983,4 +983,79 @@ TEST_CASE("yaml_object: Test read complex custom type2")
   REQUIRE(ts2 == ts);
 }
 
+struct IntArray
+{
+  std::vector<uint16_t> values;
+  inline auto           operator<=>(IntArray const&) const = default;
+};
+
+template <typename T>
+struct ArrayOfArrays
+{
+  std::vector<T> items;
+  inline auto    operator<=>(ArrayOfArrays<T> const&) const = default;
+};
+
+using ArrayOfIntArrays = ArrayOfArrays<IntArray>;
+
+TEST_CASE("yaml_object: Test read array of complex struct with an empty array in the middle")
+{
+  ArrayOfIntArrays ts;
+
+  ts.items.resize(3);
+  ts.items[0].values = {};
+  ts.items[1].values = {1, 2, 3};
+  ts.items[2].values = {4, 5, 6};
+
+  std::string yml = acl::yml::to_string(ts);
+
+  ArrayOfIntArrays ts2;
+  acl::yml::from_string(ts2, yml);
+
+  REQUIRE(ts2 == ts);
+}
+
+using ArrayOfArrayOfArrayOfInts = ArrayOfArrays<ArrayOfArrays<ArrayOfArrays<IntArray>>>;
+
+TEST_CASE("yaml_object: Test read nested array of arrays with empty array in the middle")
+{
+  ArrayOfArrayOfArrayOfInts ts;
+
+  ts.items.resize(3);
+  for (auto& item : ts.items)
+  {
+    item.items.resize(3);
+    for (auto& item2 : item.items)
+    {
+      item2.items.resize(3);
+      item2.items[0].values = {};
+      item2.items[1].values = {1, 2, 3};
+      item2.items[2].values = {4, 5, 6};
+    }
+  }
+
+  std::string yml = acl::yml::to_string(ts);
+
+  ArrayOfArrayOfArrayOfInts ts2;
+  acl::yml::from_string(ts2, yml);
+
+  REQUIRE(ts2 == ts);
+}
+
+TEST_CASE("yaml_object: Test read nested array of arrays with empty array in the middle of nested level 1")
+{
+  ArrayOfArrayOfArrayOfInts ts;
+
+  ts.items.resize(3);
+  ts.items[1].items.resize(3);
+  ts.items[1].items[0].items.resize(3);
+  ts.items[1].items[2].items.resize(3);
+
+  std::string yml = acl::yml::to_string(ts);
+
+  ArrayOfArrayOfArrayOfInts ts2;
+  acl::yml::from_string(ts2, yml);
+
+  REQUIRE(ts2 == ts);
+}
 // NOLINTEND

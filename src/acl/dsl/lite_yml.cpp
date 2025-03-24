@@ -381,6 +381,7 @@ void lite_stream::close_until(uint16_t new_indent, container_type type)
       ctx_->end_object();
     }
     indent_stack_.pop_back();
+    state_ = parse_state::none;
   }
 }
 
@@ -398,6 +399,7 @@ void lite_stream::close_context(uint16_t new_indent)
       ctx_->end_object();
     }
     indent_stack_.pop_back();
+    state_ = parse_state::none;
   }
 }
 
