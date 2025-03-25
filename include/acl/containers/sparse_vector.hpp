@@ -1,6 +1,6 @@
 #pragma once
 
-#include "podvector.hpp"
+#include "acl/allocators/detail/custom_allocator.hpp"
 #include "acl/utility/type_traits.hpp"
 #include "acl/utility/utils.hpp"
 #include <functional>
@@ -991,8 +991,8 @@ private:
     return dst;
   }
 
-  podvector<storage*, Config> items_;
-  size_type                   length_ = 0;
+  std::vector<storage*> items_;
+  size_type             length_ = 0;
 };
 
 namespace detail

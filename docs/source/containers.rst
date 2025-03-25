@@ -99,24 +99,6 @@ Example usage::
 	board.set<int>("counter", 42);
 	int value = board.get<int>("counter");
 
-POD Vector
----------
-
-A vector optimized for POD (Plain Old Data) types.
-
-Key features:
-
-- Optimized for trivially copyable types
-- STL-compatible interface
-- Custom allocator support
-- Efficient bulk operations
-- Move semantics support
-
-Example usage::
-
-	podvector<int> vec;
-	vec.resize(100);
-	vec.push_back(42);
 
 
 .. autodoxygenindex::

@@ -2,12 +2,13 @@
 #pragma once
 
 #include "acl/allocators/default_allocator.hpp"
-#include "acl/containers/podvector.hpp"
+#include "acl/allocators/detail/custom_allocator.hpp"
 #include "acl/ecs/entity.hpp"
 #include "acl/utility/config.hpp"
 #include "acl/utility/type_traits.hpp"
 #include "acl/utility/utils.hpp"
 #include <limits>
+#include <vector>
 
 namespace acl::ecs
 {
@@ -402,9 +403,9 @@ private:
     }
   }
 
-  podvector<storage*, allocator_type> items_;
-  size_type                           length_  = 0;
-  size_type                           max_lnk_ = 0;
+  std::vector<storage*> items_;
+  size_type             length_  = 0;
+  size_type             max_lnk_ = 0;
 };
 
 } // namespace acl::ecs

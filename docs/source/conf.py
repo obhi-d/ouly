@@ -34,7 +34,7 @@ breathe_projects_source = {
     ]),
     "containers": ("../../include/acl/containers", [
         "array_types.hpp", "basic_queue.hpp", "blackboard.hpp", "index_map.hpp", "indirection.hpp", 
-        "intrusive_list.hpp", "podvector.hpp", "rbtree.hpp", "small_vector.hpp", "soavector.hpp", 
+        "intrusive_list.hpp", "rbtree.hpp", "small_vector.hpp", "soavector.hpp", 
         "sparse_table.hpp", "sparse_vector.hpp", "table.hpp", "vlist.hpp"
     ]),
     "dsl": ("../../include/acl/dsl", [

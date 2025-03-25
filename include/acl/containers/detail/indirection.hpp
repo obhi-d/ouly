@@ -1,6 +1,5 @@
 #pragma once
 #include "acl/allocators/allocator.hpp"
-#include "acl/containers/podvector.hpp"
 #include "acl/containers/sparse_vector.hpp"
 #include "acl/utility/type_traits.hpp"
 #include "acl/utility/utils.hpp"

@@ -9,7 +9,6 @@
 #include "acl/containers/blackboard.hpp"
 #include "acl/containers/index_map.hpp"
 #include "acl/containers/intrusive_list.hpp"
-#include "acl/containers/podvector.hpp"
 #include "acl/containers/small_vector.hpp"
 #include "acl/containers/soavector.hpp"
 #include "acl/containers/sparse_vector.hpp"

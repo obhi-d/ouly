@@ -3,7 +3,6 @@
 //
 #pragma once
 #include "acl/allocators/linear_allocator.hpp"
-#include "acl/containers/podvector.hpp"
 #include <limits>
 
 namespace acl
@@ -260,9 +259,9 @@ private:
     return static_cast<std::uint8_t*>(arenas_[id].buffer_) + offset;
   }
 
-  podvector<arena, underlying_allocator> arenas_;
-  size_type                              current_arena_ = 0;
-  size_type                              k_arena_size_  = default_arena_size;
+  std::vector<arena> arenas_;
+  size_type          current_arena_ = 0;
+  size_type          k_arena_size_  = default_arena_size;
 
 public:
 };

@@ -1,6 +1,5 @@
 #pragma once
 #include "acl/allocators/default_allocator.hpp"
-#include "acl/containers/podvector.hpp"
 #include "acl/utility/common.hpp"
 #include "acl/utility/utils.hpp"
 #include <type_traits>
@@ -45,8 +44,8 @@ class table
     std::uint32_t valids_ = 0;
   };
 
-  using vector   = std::conditional_t<IsPOD, podvector<T>, acl::vector<T>>;
-  using freepool = std::conditional_t<IsPOD, free_idx, podvector<std::uint32_t>>;
+  using vector   = std::vector<T>;
+  using freepool = std::conditional_t<IsPOD, free_idx, std::vector<std::uint32_t>>;
 
 public:
   table() noexcept = default;

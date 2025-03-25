@@ -278,9 +278,9 @@ private:
   auto commit(size_type size, size_type const* found) -> uint32_t;
 
   // Free blocks
-  acl::detail::ca_arena_entries arena_entries_;
-  acl::detail::ca_block_entries block_entries_;
-  acl::detail::ca_arena_list    arenas_;
+  acl::detail::ca_arena_entries arena_entries_{};
+  acl::detail::ca_block_entries block_entries_{};
+  acl::detail::ca_arena_list    arenas_{};
 
   std::vector<size_type> sizes_;
   std::vector<uint32_t>  free_ordering_;

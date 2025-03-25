@@ -1,7 +1,6 @@
 #pragma once
 
 #include "acl/containers/detail/indirection.hpp"
-#include "acl/containers/podvector.hpp"
 #include "acl/utility/type_traits.hpp"
 #include "acl/utility/utils.hpp"
 #include <memory>
@@ -542,11 +541,11 @@ private:
     return (r && acl::detail::is_valid(r));
   }
 
-  podvector<storage*, allocator_type> items_;
-  self_index                          self_;
-  size_type                           length_    = 0;
-  size_type                           extents_   = 1;
-  size_type                           free_slot_ = null_v;
+  std::vector<storage*> items_;
+  self_index            self_;
+  size_type             length_    = 0;
+  size_type             extents_   = 1;
+  size_type             free_slot_ = null_v;
 };
 
 } // namespace acl

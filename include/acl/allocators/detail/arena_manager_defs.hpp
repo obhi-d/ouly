@@ -55,6 +55,8 @@ struct defrag_stats
     return std::format("Defrag memory move merges: {}\nDefrag arenas removed: {}", total_mem_move_merge_,
                        total_arenas_removed_);
 #endif
+#else
+    return "";
 #endif
   }
 };
