@@ -135,9 +135,10 @@ TEST_CASE("yaml_output: Test write map")
    {{"key1", 100}, {"key2", 200}, {"key3", 300}}
   };
   auto yml = acl::yml::to_string(mt);
-  REQUIRE(yml.find("- key1\n  - 100") != std::string::npos);
-  REQUIRE(yml.find("- key2\n  - 200") != std::string::npos);
-  REQUIRE(yml.find("- key3\n  - 300") != std::string::npos);
+
+  REQUIRE(yml.find("- - key1\n   - 100") != std::string::npos);
+  REQUIRE(yml.find("- - key2\n   - 200") != std::string::npos);
+  REQUIRE(yml.find("- - key3\n   - 300") != std::string::npos);
 }
 
 TEST_CASE("yaml_output: Test write empty array")
