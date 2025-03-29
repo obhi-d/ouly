@@ -60,9 +60,9 @@ public:
     clear();
   }
 
-  void set_context(in_context_base* context) noexcept
+  void set_context(in_context_base* ctx) noexcept
   {
-    context_ = context;
+    context_ = ctx;
   }
 
   [[nodiscard]] auto get_stored_value() const noexcept -> uint32_t
