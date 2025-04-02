@@ -51,25 +51,25 @@ public:
 
   binary_output_serializer(acl::detail::field_visitor_tag /*unused*/, binary_output_serializer& ser,
                            std::string_view /*key*/)
-      : serializer_{ser.serializer_}, may_fast_path_(ser.may_fast_path_), type_{type::field}
+      : serializer_{ser.serializer_}, type_{type::field}, may_fast_path_(ser.may_fast_path_)
   {
     // No-op
   }
 
   binary_output_serializer(acl::detail::field_visitor_tag /*unused*/, binary_output_serializer& ser, size_t /*index*/)
-      : serializer_{ser.serializer_}, may_fast_path_(ser.may_fast_path_), type_{type::field}
+      : serializer_{ser.serializer_}, type_{type::field}, may_fast_path_(ser.may_fast_path_)
   {
     // No-op
   }
 
   binary_output_serializer(acl::detail::object_visitor_tag /*unused*/, binary_output_serializer& ser)
-      : serializer_{ser.serializer_}, may_fast_path_(ser.may_fast_path_), type_{type::object}
+      : serializer_{ser.serializer_}, type_{type::object}, may_fast_path_(ser.may_fast_path_)
   {
     // No-op
   }
 
   binary_output_serializer(acl::detail::array_visitor_tag /*unused*/, binary_output_serializer& ser)
-      : serializer_{ser.serializer_}, may_fast_path_(ser.may_fast_path_), type_{type::array}
+      : serializer_{ser.serializer_}, type_{type::array}, may_fast_path_(ser.may_fast_path_)
   {
     // No-op
   }

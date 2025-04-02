@@ -60,25 +60,25 @@ public:
   ~binary_input_serializer() noexcept = default;
 
   binary_input_serializer(acl::detail::field_visitor_tag /*unused*/, binary_input_serializer& ser, std::string_view key)
-      : serializer_{ser.serializer_}, object_id_(ser.object_id_), may_fast_path_(ser.may_fast_path_), type_{type::field}
+      : serializer_{ser.serializer_}, object_id_(ser.object_id_), type_{type::field}, may_fast_path_(ser.may_fast_path_)
   {
     // No-op
   }
 
   binary_input_serializer(acl::detail::field_visitor_tag /*unused*/, binary_input_serializer& ser, size_t /*index*/)
-      : serializer_{ser.serializer_}, object_id_(ser.object_id_), may_fast_path_(ser.may_fast_path_), type_{type::field}
+      : serializer_{ser.serializer_}, object_id_(ser.object_id_), type_{type::field}, may_fast_path_(ser.may_fast_path_)
   {
     // No-op
   }
 
   binary_input_serializer(acl::detail::object_visitor_tag /*unused*/, binary_input_serializer& ser)
-      : serializer_{ser.serializer_}, may_fast_path_(ser.may_fast_path_), type_{type::object}
+      : serializer_{ser.serializer_}, type_{type::object}, may_fast_path_(ser.may_fast_path_)
   {
     // No-op
   }
 
   binary_input_serializer(acl::detail::array_visitor_tag /*unused*/, binary_input_serializer& ser)
-      : serializer_{ser.serializer_}, object_id_(ser.object_id_), may_fast_path_(ser.may_fast_path_), type_{type::array}
+      : serializer_{ser.serializer_}, object_id_(ser.object_id_), type_{type::array}, may_fast_path_(ser.may_fast_path_)
   {
     // No-op
   }
