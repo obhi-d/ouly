@@ -7,6 +7,7 @@
 #include "acl/allocators/strat/greedy_v1.hpp"
 #include "catch2/catch_all.hpp"
 #include <iostream>
+#include <random>
 #include <unordered_set>
 
 // NOLINTBEGIN

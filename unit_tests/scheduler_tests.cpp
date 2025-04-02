@@ -1,6 +1,7 @@
 #include "acl/scheduler/parallel_for.hpp"
 #include "acl/scheduler/scheduler.hpp"
 #include "catch2/catch_all.hpp"
+#include <numeric>
 #include <ranges>
 #include <string>
 

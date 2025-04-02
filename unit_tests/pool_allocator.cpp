@@ -1,6 +1,7 @@
 #include "acl/allocators/pool_allocator.hpp"
 #include "acl/allocators/std_allocator_wrapper.hpp"
 #include "catch2/catch_all.hpp"
+#include <random>
 
 // NOLINTBEGIN
 TEST_CASE("Validate pool_allocator", "[pool_allocator]")
