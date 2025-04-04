@@ -1,4 +1,3 @@
-
 #pragma once
 
 #include "acl/utility/from_chars.hpp"
@@ -69,6 +68,14 @@ concept ProgramArgArrayType = requires(V a) {
 } && !std::same_as<V, std::basic_string<typename S::value_type>>;
 
 template <typename StringType = std::string_view>
+/**
+ * @brief A utility class for parsing and managing program arguments.
+ *
+ * This class provides methods to parse command-line arguments, define argument declarations,
+ * and retrieve argument values with optional type casting.
+ *
+ * @tparam StringType The string type used for argument names and values (default is std::string_view).
+ */
 class program_args
 {
   using value_type             = std::any;

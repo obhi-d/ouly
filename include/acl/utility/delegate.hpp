@@ -1,4 +1,3 @@
-
 #pragma once
 
 #include "acl/utility/common.hpp"
@@ -56,6 +55,16 @@
  */
 namespace acl
 {
+/**
+ * @brief A lightweight delegate implementation with small object optimization.
+ *
+ * This class provides a mechanism to store and invoke callable objects, including
+ * free functions, member functions, and lambdas, with support for small object optimization.
+ *
+ * @tparam SmallSize The size threshold for small object optimization.
+ * @tparam Ret The return type of the callable.
+ * @tparam Args The argument types for the callable.
+ */
 template <size_t SmallSize, typename>
 class basic_delegate;
 
@@ -102,7 +111,7 @@ class basic_delegate<SmallSize, Ret(Args...)>
   static auto invoke_member_function(basic_delegate& d, Args... args) -> Ret
   {
     using C = typename M::class_type;
-    using F = typename M::function_type;
+    // using F = typename M::function_type;
 
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     auto data = *reinterpret_cast<C**>(d.buffer_ + sizeof(delegate_fn));
@@ -135,7 +144,7 @@ class basic_delegate<SmallSize, Ret(Args...)>
   static auto p_invoke_member_function(basic_delegate& d, Args... args) -> Ret
   {
     using C = typename M::class_type;
-    using F = typename M::function_type;
+    // using F = typename M::function_type;
 
     auto data =
      // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
@@ -288,8 +297,8 @@ public:
   template <auto M>
   static auto bind(typename acl::member_function<M>::class_type& instance) -> basic_delegate
   {
-    using C = typename acl::member_function<M>::class_type;
-    using F = typename acl::member_function<M>::function_type;
+    // using C = typename acl::member_function<M>::class_type;
+    // using F = typename acl::member_function<M>::function_type;
 
     basic_delegate r;
     r.construct(&invoke_member_function<acl::member_function<M>>, &instance);
@@ -359,8 +368,8 @@ public:
   template <auto M, typename P>
   static auto pbind(typename acl::member_function<M>::class_type& instance, P&& p) -> basic_delegate
   {
-    using C = typename acl::member_function<M>::class_type;
-    using F = typename acl::member_function<M>::function_type;
+    // using C = typename acl::member_function<M>::class_type;
+    // using F = typename acl::member_function<M>::function_type;
     basic_delegate r;
     r.pconstruct(&p_invoke_member_function<acl::member_function<M>, std::decay_t<P>>, &instance, std::forward<P>(p));
     return r;
@@ -374,7 +383,7 @@ public:
     requires(!acl::member_function<F>::is_member_function_traits)
   static auto pbind(P&& arg) -> basic_delegate
   {
-    using DecayedP = std::decay_t<P>;
+    // using DecayedP = std::decay_t<P>;
     basic_delegate r;
 
     r.pconstruct(&invoke_free_function_by_binding<F>, std::forward<P>(arg));

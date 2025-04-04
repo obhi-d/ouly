@@ -1,4 +1,3 @@
-
 #pragma once
 
 #include <algorithm>
@@ -8,6 +7,14 @@
 namespace acl
 {
 
+/**
+ * @brief A compile-time string literal utility.
+ *
+ * This struct provides functionality for working with string literals at compile time,
+ * including hashing and conversion to string views.
+ *
+ * @tparam N The size of the string literal, including the null terminator.
+ */
 template <std::size_t N>
 struct string_literal
 {

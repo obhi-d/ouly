@@ -1,9 +1,14 @@
-
 #pragma once
 
 #include "acl/reflection/detail/deduced_types.hpp"
 #include "acl/utility/string_literal.hpp"
 
+/**
+ * @brief Helper classes for binding member pointers and getter/setter functions.
+ *
+ * This namespace provides utilities for working with member pointers and
+ * getter/setter functions, including caching keys and managing offsets.
+ */
 namespace acl::detail
 {
 template <string_literal Name, typename Class, typename M>

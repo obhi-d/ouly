@@ -68,6 +68,15 @@ private:
 public:
   basic_queue() noexcept = default;
 
+  basic_queue(allocator_type const& alloc) noexcept : allocator_type(alloc) {}
+
+  basic_queue(basic_queue const& other, allocator_type const& alloc)
+      : allocator_type(alloc), head_(other.head_), tail_(other.tail_), free_(other.free_), front_(other.front_),
+        back_(other.back_)
+  {
+    copy(other);
+  }
+
   basic_queue(basic_queue const& other)
     requires(std::is_copy_constructible_v<Ty>)
   {

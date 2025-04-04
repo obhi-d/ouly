@@ -1,4 +1,3 @@
-
 #pragma once
 #include "acl/scheduler/detail/worker.hpp"
 #include "acl/utility/config.hpp"
@@ -211,17 +210,20 @@ public:
   }
 
   /**
-   * @brief Submits a work item from one worker to another within a workgroup
+   * @brief Submits a callable lambda to be executed by a worker thread
    *
-   * @tparam Lambda A callable type that can be invoked with acl::worker_context const&
-   * @param src Source worker ID from which the work is submitted
-   * @param dst Destination worker ID to which the work is submitted
-   * @param group Workgroup ID to which this work item belongs
-   * @param data Callable object to be executed on the destination worker
+   * @tparam Lambda Callable type to be executed by the worker thread
+   * @param src Source worker ID initiating the work submission
+   * @param dst Destination worker ID that will execute the work
+   * @param group Workgroup identifier for the submitted work
+   * @param data The callable lambda to execute
    *
-   * @note This function is noexcept and will not throw exceptions
+   * @note This function is marked noexcept and will not throw exceptions
+   * @note The Lambda must accept a worker_context parameter
    *
-   * @requires Lambda must satisfy the Callable concept with acl::worker_context const&
+   * This function binds the provided lambda with the specified workgroup and creates
+   * a work item that will be executed by the destination worker. It provides a
+   * convenient way to schedule arbitrary code execution on worker threads.
    */
   template <typename Lambda>
     requires(acl::detail::Callable<Lambda, acl::worker_context const&>)
@@ -261,6 +263,7 @@ public:
    * @param dst Destination worker ID
    * @param group Workgroup ID to associate with the work item
    *
+   * @note This function is marked noexcept and will not throw exceptions
    * @note This is a convenience overload that automatically creates a work item
    *       using the provided member function pointer and workgroup.
    */

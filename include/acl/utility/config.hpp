@@ -1,4 +1,3 @@
-
 #pragma once
 
 #include <cassert>
@@ -40,6 +39,14 @@ inline static constexpr bool debug = false;
 #endif // defined(__x86_64__)
 
 /**
+ * @file config.hpp
+ * @brief Provides configuration utilities and macros for the ACL library.
+ *
+ * This file defines macros and configuration options that control the behavior
+ * of the library, such as debug settings and platform-specific configurations.
+ */
+
+/**
  * Before including any config.hpp, if ACL_API is defined from a dll to exp
  */
 #ifndef ACL_API
@@ -49,6 +56,13 @@ inline static constexpr bool debug = false;
 namespace acl
 {
 
+/**
+ * @brief Configuration template for combining multiple configurations.
+ *
+ * This template allows combining multiple configuration traits into a single
+ * configuration object.
+ * @tparam Config Variadic template for configuration traits.
+ */
 template <typename... Config>
 struct config : public Config...
 {};

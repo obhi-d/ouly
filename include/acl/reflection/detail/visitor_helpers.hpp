@@ -1,5 +1,13 @@
-
 #pragma once
+
+/**
+ * @file visitor_helpers.hpp
+ * @brief Provides helper functions for implementing visitor patterns.
+ *
+ * This file contains utility functions and templates for processing objects
+ * using visitors, including support for various type categories such as
+ * containers, tuples, and variants.
+ */
 
 #include "acl/reflection/detail/aggregate.hpp"
 #include "acl/reflection/detail/base_concepts.hpp"
@@ -30,6 +38,18 @@ struct object_visitor_tag
 struct array_visitor_tag
 {};
 
+/**
+ * @brief Processes a single field of an object using a visitor.
+ *
+ * This function handles the visitation of a single field, invoking the
+ * appropriate visitor methods based on the visitor type (reader or writer).
+ * @tparam Class The type of the object containing the field.
+ * @tparam Visitor The type of the visitor.
+ * @tparam Decl The type of the field declaration.
+ * @param obj The object containing the field.
+ * @param visitor The visitor to use.
+ * @param decl The field declaration.
+ */
 template <typename Class, typename Visitor, typename Decl>
 void process_field(Class& obj, Visitor& visitor, Decl const& decl)
 {
@@ -54,6 +74,16 @@ void process_field(Class& obj, Visitor& visitor, Decl const& decl)
   }
 }
 
+/**
+ * @brief Visits an explicitly reflected object.
+ *
+ * This function processes an object that has been explicitly marked for
+ * reflection, invoking the appropriate visitor methods for each field.
+ * @tparam Class The type of the object being visited.
+ * @tparam Visitor The type of the visitor.
+ * @param obj The object to visit.
+ * @param visitor The visitor to use.
+ */
 template <typename Class, typename Visitor>
 void visit_explicitly_reflected(Class& obj, Visitor& visitor)
 {

@@ -7,16 +7,30 @@
 
 namespace acl::detail
 {
+/**
+ * @brief Template specialization for defining reference types
+ *
+ * This struct defines the reference type for a given type T,
+ * which is typically a reference to T.
+ *
+ * @tparam T The type for which to define the reference type
+ */
 template <typename T>
 struct reference_type
 {
-  using type = T&;
+  using type = T&; ///< Reference type is a reference to T
 };
 
+/**
+ * @brief Template specialization for void reference type
+ *
+ * Since you cannot have a reference to void in C++, this
+ * specialization defines the reference type for void as void*.
+ */
 template <>
 struct reference_type<void>
 {
-  using type = void*;
+  using type = void*; ///< Reference type for void is void*
 };
 
 // Pointer compression, should not be used unless you are sure

@@ -1,4 +1,3 @@
-
 #pragma once
 
 #include <compare>
@@ -74,35 +73,97 @@ public:
     return 0;
   }();
 
+  /**
+   * @brief Default constructor that initializes the entity to null
+   */
   constexpr basic_entity() noexcept                      = default;
   basic_entity(basic_entity&&)                           = default;
   auto operator=(basic_entity&&) -> basic_entity&        = default;
   constexpr basic_entity(basic_entity const& i) noexcept = default;
-  constexpr explicit basic_entity(size_type i) noexcept : i_(i) {}
-  constexpr explicit basic_entity(size_type i, size_type revision) noexcept
+
+  /**
+   * @brief Constructs an entity with the specified ID value
+   *
+   * @param id The raw ID value for the entity
+   */
+  constexpr explicit basic_entity(size_type id) noexcept : i_(id) {}
+
+  /**
+   * @brief Constructs an entity from an index and optional revision
+   *
+   * @param index The entity index
+   * @param revision The entity revision (ignored if RevisionBits is 0)
+   */
+  constexpr basic_entity(size_type index, size_type revision) noexcept
     requires(nb_revision_bits > 0)
-      : i_(revision << nb_usable_bits | i)
+      : i_(revision << nb_usable_bits | index)
   {}
   ~basic_entity() noexcept = default;
 
-  constexpr auto operator=(basic_entity const& i) noexcept -> basic_entity& = default;
-
-  constexpr explicit operator size_type() const noexcept
+  /**
+   * @brief Gets the raw entity ID value
+   *
+   * @return The raw entity ID containing both index and revision (if enabled)
+   */
+  [[nodiscard]] constexpr auto value() const noexcept -> size_type
   {
-    return value();
+    return i_;
   }
 
-  constexpr explicit operator bool() const noexcept
+  /**
+   * @brief Gets the entity index part of the ID
+   *
+   * @return The index part of the entity ID (without revision bits)
+   */
+
+  constexpr auto get() const noexcept -> size_type
   {
-    return value() != null_v;
+    if constexpr (nb_revision_bits > 0)
+    {
+      return (i_ & index_mask_v);
+    }
+    else
+    {
+      return i_;
+    }
   }
 
+  /**
+   * @brief Checks if this entity is valid (not null)
+   *
+   * @return true if the entity is valid, false if it's null
+   */
+  [[nodiscard]] constexpr explicit operator bool() const noexcept
+  {
+    return i_ != null_v;
+  }
+
+  /**
+   * @brief Checks if this entity is null
+   *
+   * @return true if the entity is null, false if it's valid
+   */
+  [[nodiscard]] constexpr auto is_null() const noexcept -> bool
+  {
+    return i_ == null_v;
+  }
+
+  /**
+   * @brief Gets the revision part of the ID
+   *
+   * @return The revision part of the entity ID (if RevisionBits > 0)
+   */
   constexpr auto revision() const noexcept -> size_type
     requires(nb_revision_bits > 0)
   {
     return i_ >> nb_usable_bits;
   }
 
+  /**
+   * @brief Gets the revised entity with incremented revision
+   *
+   * @return A new entity with the incremented revision
+   */
   constexpr auto revised() const noexcept -> basic_entity
     requires(nb_revision_bits > 0)
   {
@@ -121,24 +182,55 @@ public:
     return basic_entity(i_);
   }
 
-  constexpr auto get() const noexcept -> size_type
+  /**
+   * @brief Sets the revision of this entity to a specific value
+   *
+   * @param rev The new revision value to set
+   * @note Only available if RevisionBits > 0
+   */
+  constexpr void set_revision(size_type rev) noexcept
+    requires(nb_revision_bits > 0)
   {
-    if constexpr (nb_revision_bits > 0)
+    i_ = (i_ & index_mask_v) | ((rev << nb_usable_bits) & revision_mask_v);
+  }
+
+  /**
+   * @brief Increments the entity's revision counter
+   *
+   * Increases the revision by 1, wrapping around if it exceeds the maximum
+   * value that can be stored in the revision bits.
+   *
+   * @note Only available if RevisionBits > 0
+   */
+  constexpr void bump_revision() noexcept
+    requires(nb_revision_bits > 0)
+  {
+    i_ += version_inc_v;
+    if ((i_ & revision_mask_v) == 0)
     {
-      return (i_ & index_mask_v);
-    }
-    else
-    {
-      return i_;
+      i_ |= version_inc_v;
     }
   }
 
-  constexpr auto value() const noexcept -> size_type
+  /**
+   * @brief Creates a null entity
+   *
+   * @return A basic_entity with the null value
+   */
+  [[nodiscard]] static constexpr auto null() noexcept -> basic_entity
   {
-    return i_;
+    return basic_entity{null_v};
   }
 
-  auto operator<=>(basic_entity const&) const noexcept = default;
+  constexpr explicit operator size_type() const noexcept
+  {
+    return value();
+  }
+
+  /**
+   * @brief Comparison operators for entity objects
+   */
+  constexpr auto operator<=>(basic_entity const&) const noexcept = default;
 
 private:
   size_type i_ = null_v;

@@ -1,5 +1,13 @@
-
 #pragma once
+
+/**
+ * @file visitor.hpp
+ * @brief Provides utilities for visiting and processing objects using visitors.
+ *
+ * This file defines the Visitor concept and related utilities for traversing
+ * and processing objects of various types using compile-time type detection.
+ */
+
 #include "acl/reflection/detail/field_helpers.hpp"
 #include <exception>
 #include <format>
@@ -13,7 +21,15 @@ struct writer_tag
 
 using continue_token = bool;
 
-/**  Visitor concept is not enforced as some visitors may not need to implement all functions */
+/**
+ * @brief Concept for defining a visitor.
+ *
+ * A visitor is a callable object that implements specific methods for processing
+ * objects of a given type. This concept is used to enforce the required interface
+ * for visitors.
+ * @tparam T The visitor type.
+ * @tparam Class The class type being visited.
+ */
 template <typename T, typename Class>
 concept Visitor = requires(T& visitor, Class& obj) {
   { visitor.begin_object(obj) } -> std::same_as<bool>;

@@ -1,4 +1,3 @@
-
 #pragma once
 #include "acl/containers/small_vector.hpp"
 #include <cassert>
@@ -21,6 +20,12 @@ struct string_slice
 constexpr uint32_t small_buffer_size = 8;
 using string_slice_array             = acl::small_vector<string_slice, small_buffer_size>;
 
+/**
+ * @brief Base class for all parser contexts in the YAML parsing system
+ *
+ * This abstract class defines the interface for context objects used during YAML parsing.
+ * Each derived context handles different parsing states and element types.
+ */
 class context
 {
 public:
@@ -30,12 +35,44 @@ public:
   auto operator=(const context&) -> context&     = default;
   auto operator=(context&&) noexcept -> context& = delete;
   virtual ~context() noexcept                    = default;
-  virtual void begin_array()                     = 0;
-  virtual void end_array()                       = 0;
-  virtual void begin_object()                    = 0;
-  virtual void end_object()                      = 0;
-  virtual void begin_new_array_item()            = 0;
-  virtual void set_key(std::string_view slice)   = 0;
+
+  /**
+   * @brief Called when a new array begins in the YAML document
+   */
+  virtual void begin_array() = 0;
+
+  /**
+   * @brief Called when an array ends in the YAML document
+   */
+  virtual void end_array() = 0;
+
+  /**
+   * @brief Called when a new object begins in the YAML document
+   */
+  virtual void begin_object() = 0;
+
+  /**
+   * @brief Called when an object ends in the YAML document
+   */
+  virtual void end_object() = 0;
+
+  /**
+   * @brief Called when a new array item is encountered
+   */
+  virtual void begin_new_array_item() = 0;
+
+  /**
+   * @brief Called when a key is encountered in a mapping
+   *
+   * @param slice The key as a string view
+   */
+  virtual void set_key(std::string_view slice) = 0;
+
+  /**
+   * @brief Called when a scalar value is encountered
+   *
+   * @param slice The value as a string view
+   */
   virtual void set_value(std::string_view slice) = 0;
 };
 

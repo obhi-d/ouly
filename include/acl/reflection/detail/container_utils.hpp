@@ -1,8 +1,13 @@
-
 #pragma once
 
 #include "acl/reflection/detail/deduced_types.hpp"
 
+/**
+ * @brief Utility functions for container operations.
+ *
+ * This namespace provides helper functions for common container operations,
+ * such as emplacing, reserving, and resizing elements in a container.
+ */
 namespace acl::detail
 {
 

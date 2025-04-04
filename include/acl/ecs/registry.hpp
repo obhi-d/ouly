@@ -1,4 +1,3 @@
-
 #pragma once
 
 #include "acl/ecs/detail/registry_defs.hpp"
@@ -11,11 +10,13 @@ namespace acl::ecs
 {
 
 /**
- * @brief This class stores a list of reusable links, and allows for vector allocating objects on a seperate container
- * based on the links. This class also stores link revisions that are updated when links are deleted, and allows for
- * verification if links are still alive.
- * @tparam Ty
- * @tparam SizeType
+ * @brief A registry for managing entities in an Entity Component System (ECS).
+ *
+ * This class provides functionality for creating, erasing, and iterating over entities,
+ * with support for revision tracking and thread-safe operations.
+ *
+ * @tparam EntityTy The type of entity managed by the registry.
+ * @tparam CounterType The counter type used for thread-safe operations (default is acl::detail::counter).
  */
 template <typename EntityTy, template <typename S> class CounterType = acl::detail::counter>
 class basic_registry : acl::detail::revision_table<typename EntityTy::revision_type>

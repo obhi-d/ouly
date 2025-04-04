@@ -15,16 +15,23 @@ namespace acl::detail
 {
 class parser_state;
 
+/**
+ * @brief Base class for context objects in the YAML parsing system
+ *
+ * This abstract base class defines the interface for tracking parser state
+ * during YAML document parsing. Derived contexts handle specific element types
+ * and maintain parent-child relationships in the parsing hierarchy.
+ */
 struct in_context_base
 {
   using post_init_fn               = void (*)(in_context_base*, parser_state*);
-  in_context_base* parent_         = nullptr;
-  in_context_base* proxy_          = nullptr;
-  post_init_fn     post_init_      = nullptr;
-  uint32_t         xvalue_         = 0;
-  bool             is_proxy_       = false;
-  bool             is_post_inited_ = false;
-  bool             has_value_      = false;
+  in_context_base* parent_         = nullptr; ///< Parent context in the hierarchy
+  in_context_base* proxy_          = nullptr; ///< Proxy context for type conversion
+  post_init_fn     post_init_      = nullptr; ///< Function called after initialization
+  uint32_t         xvalue_         = 0;       ///< Utility value used by contexts
+  bool             is_proxy_       = false;   ///< Whether this is a proxy context
+  bool             is_post_inited_ = false;   ///< Whether post-initialization has been performed
+  bool             has_value_      = false;   ///< Whether the context has a value
 
   in_context_base() noexcept                                 = default;
   in_context_base(const in_context_base&)                    = default;
@@ -32,44 +39,113 @@ struct in_context_base
   auto operator=(const in_context_base&) -> in_context_base& = default;
   auto operator=(in_context_base&&) -> in_context_base&      = delete;
 
+  /**
+   * @brief Constructs a context with a specified parent
+   *
+   * @param parent Pointer to the parent context
+   */
   in_context_base(in_context_base* parent) noexcept : parent_(parent) {}
 
+  /**
+   * @brief Handles a key in the YAML document
+   *
+   * @param parser The parser state
+   * @param ikey The key as a string view
+   * @return A new context for the associated value, or null
+   */
   virtual auto set_key(parser_state* parser, std::string_view ikey) -> in_context_base* = 0;
-  virtual void set_value(parser_state* parser, std::string_view slice)                  = 0;
-  virtual void post_init_object(parser_state* parser)                                   = 0;
-  virtual auto add_item(parser_state* parser) -> in_context_base*                       = 0;
-  virtual ~in_context_base() noexcept                                                   = default;
+
+  /**
+   * @brief Handles a scalar value in the YAML document
+   *
+   * @param parser The parser state
+   * @param slice The value as a string view
+   */
+  virtual void set_value(parser_state* parser, std::string_view slice) = 0;
+
+  /**
+   * @brief Performs post-initialization tasks after an object is fully parsed
+   *
+   * @param parser The parser state
+   */
+  virtual void post_init_object(parser_state* parser) = 0;
+
+  /**
+   * @brief Adds a new item to a sequence context
+   *
+   * @param parser The parser state
+   * @return A new context for the array item
+   */
+  virtual auto add_item(parser_state* parser) -> in_context_base* = 0;
+
+  /**
+   * @brief Virtual destructor for proper cleanup
+   */
+  virtual ~in_context_base() noexcept = default;
 };
 
+/**
+ * @brief Main parser state that manages the YAML parsing process
+ *
+ * This class maintains the current parsing state, manages a memory arena for
+ * context objects, and implements the YAML context interface. It handles the
+ * parsing of YAML documents into C++ objects through context handlers.
+ */
 class parser_state final : public acl::yml::context
 {
-  acl::yml::lite_stream         stream_;
-  acl::linear_arena_allocator<> allocator_;
-  in_context_base*              context_ = nullptr;
+  acl::yml::lite_stream         stream_;            ///< The YAML stream being parsed
+  acl::linear_arena_allocator<> allocator_;         ///< Allocator for context objects
+  in_context_base*              context_ = nullptr; ///< Current parsing context
 
 public:
   auto operator=(const parser_state&) -> parser_state& = delete;
   auto operator=(parser_state&&) -> parser_state&      = delete;
   parser_state(const parser_state&)                    = delete;
   parser_state(parser_state&&)                         = delete;
+
+  /**
+   * @brief Constructs a parser state for a YAML content string
+   *
+   * @param content The YAML content to parse
+   */
   parser_state(std::string_view content) noexcept
       : stream_(content, this), allocator_(cfg::default_lite_yml_parser_buffer_size)
   {}
+
+  /**
+   * @brief Destroys the parser state and cleans up any resources
+   */
   ~parser_state() noexcept final
   {
     clear();
   }
 
+  /**
+   * @brief Sets the current context
+   *
+   * @param ctx The new context to use
+   */
   void set_context(in_context_base* ctx) noexcept
   {
     context_ = ctx;
   }
 
+  /**
+   * @brief Retrieves the stored value from the current context
+   *
+   * @return The stored value
+   */
   [[nodiscard]] auto get_stored_value() const noexcept -> uint32_t
   {
     return context_->xvalue_;
   }
 
+  /**
+   * @brief Parses YAML content using the specified handler
+   *
+   * @tparam C Type of the handler/context
+   * @param handler The handler to use for parsing
+   */
   template <typename C>
   void parse(C& handler)
   {
@@ -77,6 +153,14 @@ public:
     stream_.parse();
   }
 
+  /**
+   * @brief Creates a new context object in the arena
+   *
+   * @tparam Context The type of context to create
+   * @tparam Args Argument types for the context constructor
+   * @param args Arguments to pass to the context constructor
+   * @return Pointer to the newly created context
+   */
   template <typename Context, typename... Args>
   auto create(Args&&... args) -> Context*
   {
@@ -85,6 +169,12 @@ public:
     return std::construct_at(reinterpret_cast<Context*>(cursor), context_, std::forward<Args>(args)...);
   }
 
+  /**
+   * @brief Pops the current context from the stack
+   *
+   * Handles proxy contexts by traversing up to a non-proxy parent.
+   * Calls post_init_object on the context being popped.
+   */
   void pop()
   {
     if (context_ != nullptr)
@@ -99,6 +189,12 @@ public:
     }
   }
 
+  /**
+   * @brief Destroys a context object and releases its memory
+   *
+   * @tparam Context The type of context to destroy
+   * @param ptr Pointer to the context to destroy
+   */
   template <typename Context>
   void destroy(Context* ptr)
   {
@@ -106,11 +202,20 @@ public:
     allocator_.deallocate(ptr, sizeof(Context), alignof(Context));
   }
 
+  // YAML context interface implementation
+
+  /**
+   * @brief Called when a new array begins in the YAML document
+   */
   void begin_array() final {}
 
+  /**
+   * @brief Called when an array ends in the YAML document
+   *
+   * Handles proper context cleanup for arrays
+   */
   void end_array() final
   {
-
     if (context_ != nullptr)
     {
       if (!context_->has_value_)
@@ -121,13 +226,22 @@ public:
     pop();
   }
 
+  /**
+   * @brief Called when a new object begins in the YAML document
+   */
   void begin_object() final {}
 
+  /**
+   * @brief Called when an object ends in the YAML document
+   */
   void end_object() final
   {
     pop();
   }
 
+  /**
+   * @brief Clears all contexts and resets the parser state
+   */
   void clear()
   {
     while (context_ != nullptr)
@@ -136,16 +250,31 @@ public:
     }
   }
 
+  /**
+   * @brief Called when a new array item is encountered
+   *
+   * Creates a new context for the array item
+   */
   void begin_new_array_item() final
   {
     context_ = context_->add_item(this);
   }
 
+  /**
+   * @brief Called when a key is encountered in a mapping
+   *
+   * @param ikey The key as a string view
+   */
   void set_key(std::string_view ikey) final
   {
     context_ = context_->set_key(this, ikey);
   }
 
+  /**
+   * @brief Called when a scalar value is encountered
+   *
+   * @param slice The value as a string view
+   */
   void set_value(std::string_view slice) final
   {
     context_->has_value_ = true;

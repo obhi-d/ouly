@@ -1,4 +1,3 @@
-
 #pragma once
 
 #include "acl/utility/nullable_optional.hpp"
@@ -149,10 +148,47 @@ private:
 
 using worker_context_opt = acl::nullable_optional<worker_context>;
 
+/**
+ * @brief A worker context descriptor for the scheduler system
+ *
+ * This class describes a worker thread within the scheduling system,
+ * including its relationships to other workers and group associations.
+ */
 class worker_desc
 {
 public:
   worker_desc(worker_id id, uint32_t mask) noexcept : index_(id), group_mask_(mask) {}
+
+  /**
+   * @brief Get the number of friend workers that can cooperate with this worker
+   *
+   * @return The count of friend workers
+   */
+  [[nodiscard]] auto get_friend_worker_count() const noexcept -> uint32_t
+  {
+    return friend_worker_count_;
+  }
+
+  /**
+   * @brief Get the starting index of friend workers
+   *
+   * @return The index of the first friend worker
+   */
+  [[nodiscard]] auto get_friend_worker_start() const noexcept -> uint32_t
+  {
+    return friend_worker_start_;
+  }
+
+  /**
+   * @brief Get the worker's ID
+   *
+   * @return The worker's ID
+   */
+  [[nodiscard]] auto id() const noexcept -> worker_id
+  {
+    return index_;
+  }
+
   /**
    * @brief Retruns the current worker id
    */
@@ -161,9 +197,25 @@ public:
     return index_;
   }
 
+  /**
+   * @brief Check if the worker is a member of a specific group
+   *
+   * @param group The group ID to check
+   * @return True if the worker is a member of the specified group
+   */
   [[nodiscard]] auto belongs_to(workgroup_id group) const noexcept -> bool
   {
     return (group_mask_ & (1U << group.get_index())) != 0U;
+  }
+
+  /**
+   * @brief Get the worker's group mask
+   *
+   * @return The group mask of the worker
+   */
+  [[nodiscard]] auto get_group_mask() const noexcept -> uint32_t
+  {
+    return group_mask_;
   }
 
   auto operator<=>(worker_desc const&) const noexcept = default;

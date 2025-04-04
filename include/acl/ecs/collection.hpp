@@ -1,4 +1,3 @@
-
 #pragma once
 
 #include "acl/allocators/default_allocator.hpp"
@@ -12,6 +11,16 @@
 
 namespace acl::ecs
 {
+
+/**
+ * @brief A collection for managing entities in an Entity Component System (ECS).
+ *
+ * This class provides functionality for iterating over entities and managing
+ * their storage in a memory-efficient manner.
+ *
+ * @tparam EntityTy The type of entity managed by the collection.
+ * @tparam Config Configuration options for the collection.
+ */
 
 /**
  * @brief A collection class for managing entities with optional revision tracking

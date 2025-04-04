@@ -1,11 +1,24 @@
-
 #pragma once
+/**
+ * @file lite_yml_writer_context.hpp
+ * @brief Provides utilities for writing YAML content in a lightweight manner.
+ *
+ * This file defines classes and methods for managing YAML writer state and
+ * generating YAML content with proper indentation and formatting.
+ */
+
 #include "acl/reflection/reflection.hpp"
 #include "acl/utility/type_traits.hpp"
 
 namespace acl::detail
 {
 
+/**
+ * @brief Manages the state of a YAML writer.
+ *
+ * This class provides methods for handling indentation, array entries, and
+ * map entries while writing YAML content.
+ */
 class writer_state
 {
   std::string stream_;

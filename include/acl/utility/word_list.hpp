@@ -1,4 +1,3 @@
-
 #pragma once
 
 #include <algorithm>
@@ -10,6 +9,15 @@
 
 namespace acl
 {
+/**
+ * @brief A utility class for managing word lists with customizable delimiters.
+ *
+ * This class provides methods to append words to a list, calculate the length of the list,
+ * and manage word lists as strings with a specified delimiter.
+ *
+ * @tparam TChar The character type used for the word list (default is char).
+ * @tparam Delimiter The delimiter character used to separate words in the list (default is 0).
+ */
 template <typename TChar = char, TChar Delimiter = 0>
 class word_list
 {

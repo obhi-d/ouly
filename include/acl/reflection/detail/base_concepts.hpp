@@ -6,6 +6,12 @@
 #include <type_traits>
 #include <variant>
 
+/**
+ * @brief Concepts for reflection and type traits.
+ *
+ * This namespace defines various concepts for working with containers, tuples,
+ * variants, and other types in the context of reflection and type traits.
+ */
 namespace acl::detail
 {
 

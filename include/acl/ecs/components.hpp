@@ -1,4 +1,3 @@
-
 #pragma once
 
 #include "acl/containers/detail/indirection.hpp"
@@ -9,11 +8,14 @@
 namespace acl::ecs
 {
 /**
- * @brief A container class for managing components in an Entity Component System (ECS)
+ * @brief A container for managing components in an Entity Component System (ECS).
  *
- * @tparam Ty The type of component being stored
- * @tparam EntityTy The entity type used for identification
- * @tparam Config Configuration config for the component storage
+ * This class provides efficient storage and management of components, supporting
+ * various storage strategies and custom configurations.
+ *
+ * @tparam Ty The type of component being stored.
+ * @tparam EntityTy The entity type used for identification.
+ * @tparam Config Configuration options for the component storage.
  *
  * This class provides a efficient storage and management system for components in an ECS.
  * It supports both sparse and dense storage strategies, direct mapping, and self-indexing
