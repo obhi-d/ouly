@@ -3,6 +3,8 @@
 #include <acl/serializers/serializers.hpp>
 #include <cstddef>
 #include <cstring>
+#include <istream>
+#include <ostream>
 #include <span>
 #include <vector>
 
@@ -46,7 +48,7 @@ public:
    */
   void write(std::byte const* sdata, std::size_t size)
   {
-    stream.insert(stream.end(), sdata, sdata + size);
+    stream_.insert(stream_.end(), sdata, sdata + size);
   }
 
   /**
@@ -56,7 +58,7 @@ public:
    */
   [[nodiscard]] auto get_string() const -> binary_stream_view
   {
-    return stream;
+    return stream_;
   }
 
   /**
@@ -66,7 +68,7 @@ public:
    */
   auto release() -> binary_stream
   {
-    return std::move(stream);
+    return std::move(stream_);
   }
 
   /**
@@ -88,7 +90,7 @@ public:
    */
   [[nodiscard]] auto data() const -> std::byte const*
   {
-    return reinterpret_cast<std::byte const*>(stream.data());
+    return stream_.data();
   }
 
   /**
@@ -98,11 +100,11 @@ public:
    */
   [[nodiscard]] auto size() const -> std::size_t
   {
-    return stream.size();
+    return stream_.size();
   }
 
 private:
-  binary_stream stream; ///< The underlying binary data storage
+  binary_stream stream_; ///< The underlying binary data storage
 };
 
 /**
@@ -120,14 +122,14 @@ public:
    * @param data Pointer to the binary data
    * @param size Number of bytes in the data
    */
-  binary_input_stream(std::byte const* data, std::size_t size) : stream(reinterpret_cast<uint8_t const*>(data), size) {}
+  binary_input_stream(std::byte const* data, std::size_t size) : stream_(data, size) {}
 
   /**
    * @brief Constructs a stream from a binary_stream_view
    *
    * @param str View of the binary data to read from
    */
-  binary_input_stream(binary_stream_view str) : stream(str) {}
+  binary_input_stream(binary_stream_view str) : stream_(str) {}
 
   /**
    * @brief Reads binary data from the stream into a buffer
@@ -137,8 +139,8 @@ public:
    */
   void read(std::byte* sdata, std::size_t size)
   {
-    std::memcpy(sdata, stream.data(), size);
-    stream.remove_prefix(size);
+    std::memcpy(sdata, stream_.data(), size);
+    stream_ = stream_.subspan(size);
   }
 
   /**
@@ -148,7 +150,7 @@ public:
    */
   void skip(std::size_t size)
   {
-    stream.remove_prefix(size);
+    stream_ = stream_.subspan(size);
   }
 
   /**
@@ -156,9 +158,9 @@ public:
    *
    * @return A copy of the remaining binary data
    */
-  [[nodiscard]] auto get_string() const -> binary_stream
+  [[nodiscard]] auto get_string() const -> binary_stream_view
   {
-    return stream;
+    return stream_;
   }
 
   /**
@@ -180,7 +182,7 @@ public:
    */
   [[nodiscard]] auto data() const -> std::byte const*
   {
-    return reinterpret_cast<std::byte const*>(stream.data());
+    return stream_.data();
   }
 
   /**
@@ -190,11 +192,108 @@ public:
    */
   [[nodiscard]] auto size() const -> std::size_t
   {
-    return stream.size();
+    return stream_.size();
   }
 
 private:
-  binary_stream_view stream; ///< The underlying binary data view
+  binary_stream_view stream_; ///< The underlying binary data view
 };
 
+/**
+ * @brief A stream adapter for writing binary data to std::ostream
+ *
+ * This class provides serialization capabilities using a standard output stream
+ * as the underlying storage mechanism.
+ */
+class binary_ostream
+{
+public:
+  /**
+   * @brief Constructs a binary output stream adapter
+   *
+   * @param os Reference to the output stream to write to
+   */
+  explicit binary_ostream(std::ostream& os) : os_(&os) {}
+
+  /**
+   * @brief Writes raw binary data to the stream
+   *
+   * @param sdata Pointer to the source data
+   * @param size Number of bytes to write
+   */
+  void write(std::byte const* sdata, std::size_t size)
+  {
+    // NOLINTNEXTLINE
+    os_->write(reinterpret_cast<char const*>(sdata), static_cast<std::streamsize>(size));
+  }
+
+  /**
+   * @brief Writes a value to the stream using the global serialization functions
+   *
+   * @tparam T Type of the value to write
+   * @param value The value to write to the stream
+   */
+  template <typename T>
+  void stream_out(T const& value)
+  {
+    acl::write(*this, value);
+  }
+
+private:
+  std::ostream* os_ = nullptr; ///< The underlying output stream
+};
+
+/**
+ * @brief A stream adapter for reading binary data from std::istream
+ *
+ * This class provides deserialization capabilities using a standard input stream
+ * as the data source.
+ */
+class binary_istream
+{
+public:
+  /**
+   * @brief Constructs a binary input stream adapter
+   *
+   * @param is Reference to the input stream to read from
+   */
+  explicit binary_istream(std::istream& is) : is_(&is) {}
+
+  /**
+   * @brief Reads binary data from the stream into a buffer
+   *
+   * @param sdata Pointer to the destination buffer
+   * @param size Number of bytes to read
+   */
+  void read(std::byte* sdata, std::size_t size)
+  {
+    // NOLINTNEXTLINE
+    is_->read(reinterpret_cast<char*>(sdata), static_cast<std::streamsize>(size));
+  }
+
+  /**
+   * @brief Skips a specified number of bytes in the stream
+   *
+   * @param size Number of bytes to skip
+   */
+  void skip(std::size_t size)
+  {
+    is_->ignore(static_cast<std::streamsize>(size));
+  }
+
+  /**
+   * @brief Reads a value from the stream using the global deserialization functions
+   *
+   * @tparam T Type of the value to read
+   * @param value Reference to the variable that will receive the deserialized value
+   */
+  template <typename T>
+  void stream_in(T& value)
+  {
+    acl::read(*this, value);
+  }
+
+private:
+  std::istream* is_ = nullptr; ///< The underlying input stream
+};
 } // namespace acl

@@ -2,6 +2,7 @@
 #include "acl/containers/array_types.hpp"
 #include "acl/reflection/detail/base_concepts.hpp"
 #include "acl/reflection/reflection.hpp"
+#include "acl/serializers/binary_stream.hpp"
 #include "acl/serializers/config.hpp"
 #include "acl/serializers/serializers.hpp"
 #include "acl/utility/from_chars.hpp"
@@ -721,4 +722,5 @@ TEMPLATE_TEST_CASE("stream: SerializableClass", "[stream][optional]", big_endian
   REQUIRE(read[1].get() == 12);
   REQUIRE(read[2].get() == 13);
 }
+
 // NOLINTEND
