@@ -93,7 +93,9 @@ public:
     other.back_  = 0;
   }
 
-  auto operator=(basic_queue const& other) -> basic_queue& requires(std::is_copy_constructible_v<Ty>) {
+  auto operator=(basic_queue const& other) -> basic_queue&
+    requires(std::is_copy_constructible_v<Ty>)
+  {
     if (this == &other)
     {
       return *this;
@@ -104,6 +106,10 @@ public:
 
   auto operator=(basic_queue&& other) noexcept -> basic_queue&
   {
+    if (this == &other)
+    {
+      return *this;
+    }
     clear();
     free_chain(free_);
 

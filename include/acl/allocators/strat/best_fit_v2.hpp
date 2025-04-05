@@ -198,7 +198,11 @@ protected:
   {
     while (size > 2)
     {
-      ACL_BINARY_SEARCH_STEP;
+      {
+        const size_type* const middle = it + (size >> 1);
+        size                          = (size + 1) >> 1;
+        it                            = *middle < key ? middle : it;
+      };
     }
     it += size > 1 && (*it < key);
     it += size > 0 && (*it < key);
@@ -207,9 +211,17 @@ protected:
 
   static auto mini1(size_type const* it, size_t size, size_type key) noexcept
   {
+    if (size == 0U)
+    {
+      return it;
+    }
     while (true)
     {
-      ACL_BINARY_SEARCH_STEP;
+      {
+        const size_type* const middle = it + (size >> 1);
+        size                          = (size + 1) >> 1;
+        it                            = *middle < key ? middle : it;
+      };
       if (size <= 2)
       {
         break;
@@ -223,6 +235,10 @@ protected:
 
   static auto mini2(size_type const* it, size_t size, size_type key) noexcept
   {
+    if (size == 0U)
+    {
+      return it;
+    }
     while (true)
     {
       ACL_BINARY_SEARCH_STEP;

@@ -1,5 +1,6 @@
 
 #include "acl/allocators/coalescing_arena_allocator.hpp"
+#include <cstddef>
 
 namespace acl
 {
@@ -66,7 +67,7 @@ void coalescing_arena_allocator::reinsert_left(size_t of, size_type size, std::u
   else
   {
     auto it = mini2_it(sizes_.data(), of, size);
-    if (it != of)
+    if (it != static_cast<signed>(of))
     {
       std::size_t count = of - it;
       {
@@ -203,12 +204,12 @@ void coalescing_arena_allocator::grow_free_node(std::uint32_t block, size_type n
 {
 
   auto it = mini2_it(sizes_.data(), sizes_.size(), block_entries_.sizes_[block]);
-  for (auto end = static_cast<uint32_t>(free_ordering_.size()); it != end && free_ordering_[it] != block; ++it)
+  for (auto end = static_cast<decltype(it)>(free_ordering_.size()); it != end && free_ordering_[it] != block; ++it)
   {
     ;
   }
 
-  assert(it != static_cast<uint32_t>(free_ordering_.size()));
+  assert(it != static_cast<signed>(free_ordering_.size()));
   block_entries_.sizes_[block] = newsize;
   reinsert_right(it, newsize, block);
 }
@@ -219,23 +220,25 @@ void coalescing_arena_allocator::replace_and_grow(std::uint32_t right, std::uint
   block_entries_.sizes_[node] = new_size;
 
   auto it = mini2_it(sizes_.data(), sizes_.size(), size);
-  for (auto end = static_cast<uint32_t>(free_ordering_.size()); it != end && free_ordering_[it] != right; ++it)
+  for (auto end = static_cast<decltype(it)>(free_ordering_.size()); it != end && free_ordering_[it] != right; ++it)
   {
     ;
   }
 
-  assert(it != static_cast<uint32_t>(free_ordering_.size()));
+  assert(it != static_cast<signed>(free_ordering_.size()));
   reinsert_right(it, new_size, node);
 }
 
 void coalescing_arena_allocator::erase(std::uint32_t node)
 {
   auto it = mini2_it(sizes_.data(), sizes_.size(), block_entries_.sizes_[node]);
-  for (auto end = static_cast<uint32_t>(free_ordering_.size()); it != end && free_ordering_[it] != node; ++it)
+  for (auto end = static_cast<uint32_t>(free_ordering_.size());
+       it != static_cast<signed>(end) && free_ordering_[it] != node; ++it)
   {
     ;
   }
-  assert(it != static_cast<uint32_t>(free_ordering_.size()));
+
+  assert(it != static_cast<signed>(free_ordering_.size()));
   free_ordering_.erase(it + free_ordering_.begin());
   sizes_.erase(it + sizes_.begin());
 }

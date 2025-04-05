@@ -107,7 +107,7 @@ private:
     inline_storage ldata_ = {};
     heap_storage   hdata_;
 
-    data_store() noexcept : ldata_() {}
+    data_store() : ldata_() {}
   };
 
   struct tail_type : std::true_type
@@ -116,10 +116,10 @@ private:
   };
 
 public:
-  constexpr small_vector() noexcept = default;
-  constexpr explicit small_vector(const allocator_type& alloc) noexcept : allocator_type(alloc) {}
+  constexpr small_vector() = default;
+  constexpr explicit small_vector(const allocator_type& alloc) : allocator_type(alloc) {}
 
-  constexpr explicit small_vector(size_type n) noexcept
+  constexpr explicit small_vector(size_type n)
   {
     resize(n);
   }
@@ -131,14 +131,13 @@ public:
   }
 
   template <class InputIterator>
-  constexpr small_vector(InputIterator first, InputIterator last,
-                         const allocator_type& alloc = allocator_type()) noexcept
+  constexpr small_vector(InputIterator first, InputIterator last, const allocator_type& alloc = allocator_type())
       : allocator_type(alloc)
   {
     construct_from_range(first, last, std::is_integral<InputIterator>());
   }
 
-  constexpr small_vector(const small_vector& other) noexcept : allocator_type((allocator_type const&)other)
+  constexpr small_vector(const small_vector& other) : allocator_type((allocator_type const&)other)
   {
     if (other.size() > inline_capacity)
     {
@@ -153,7 +152,7 @@ public:
     *this = std::move(other);
   }
 
-  constexpr small_vector(const small_vector& other, const allocator_type& alloc) noexcept : allocator_type(alloc)
+  constexpr small_vector(const small_vector& other, const allocator_type& alloc) : allocator_type(alloc)
   {
     if (other.size() > inline_capacity)
     {
@@ -163,11 +162,11 @@ public:
     copy_construct(std::begin(other), std::end(other), get_data());
   }
 
-  constexpr small_vector(small_vector&& other, const allocator_type& alloc) noexcept : allocator_type(alloc)
+  constexpr small_vector(small_vector&& other, const allocator_type& alloc) : allocator_type(alloc)
   {
     *this = std::move(other);
   };
-  constexpr small_vector(std::initializer_list<Ty> other, const allocator_type& alloc = allocator_type()) noexcept
+  constexpr small_vector(std::initializer_list<Ty> other, const allocator_type& alloc = allocator_type())
       : allocator_type(alloc)
   {
     if (other.size() > inline_capacity)
@@ -183,19 +182,27 @@ public:
     clear();
   }
 
-  constexpr auto operator=(const small_vector& other) noexcept -> small_vector&
+  constexpr auto operator=(const small_vector& other) -> small_vector&
   {
+    if (this == &other)
+    {
+      return *this;
+    }
     assign_copy(other, propagate_allocator_on_copy());
     return *this;
   }
 
   constexpr auto operator=(small_vector&& other) noexcept -> small_vector&
   {
+    if (this == &other)
+    {
+      return *this;
+    }
     assign_move(other, propagate_allocator_on_move());
     return *this;
   }
 
-  constexpr auto operator=(std::initializer_list<Ty> other) noexcept -> small_vector&
+  constexpr auto operator=(std::initializer_list<Ty> other) -> small_vector&
   {
     clear();
     resize_fill(other.size(), std::false_type());
@@ -205,7 +212,7 @@ public:
   }
 
   template <class InputIterator>
-  constexpr void assign(InputIterator first, InputIterator last) noexcept
+  constexpr void assign(InputIterator first, InputIterator last)
   {
     auto xsize = static_cast<size_type>(std::distance(first, last));
     clear();
@@ -213,113 +220,113 @@ public:
     copy_construct(first, last, get_data());
   }
 
-  constexpr void assign(size_type n, const Ty& value) noexcept
+  constexpr void assign(size_type n, const Ty& value)
   {
     clear();
     resize(n, value);
     std::uninitialized_fill_n(data(), n, value);
   }
 
-  constexpr void assign(std::initializer_list<Ty> other) noexcept
+  constexpr void assign(std::initializer_list<Ty> other)
   {
     clear();
     resize(static_cast<size_type>(other.size()));
     copy_construct(std::begin(other), std::end(other), get_data());
   }
 
-  [[nodiscard]] constexpr auto get_allocator() const noexcept -> allocator_type
+  [[nodiscard]] constexpr auto get_allocator() const -> allocator_type
   {
     return *this;
   }
 
   // iterators:
-  constexpr auto begin() noexcept -> iterator
+  constexpr auto begin() -> iterator
   {
     return get_data();
   }
 
-  [[nodiscard]] constexpr auto begin() const noexcept -> const_iterator
+  [[nodiscard]] constexpr auto begin() const -> const_iterator
   {
     return get_data();
   }
 
-  constexpr auto end() noexcept -> iterator
+  constexpr auto end() -> iterator
   {
     return get_data() + size();
   }
 
-  [[nodiscard]] constexpr auto end() const noexcept -> const_iterator
+  [[nodiscard]] constexpr auto end() const -> const_iterator
   {
     return get_data() + size();
   }
 
-  constexpr auto rbegin() noexcept -> reverse_iterator
+  constexpr auto rbegin() -> reverse_iterator
   {
     return reverse_iterator(end());
   }
 
-  [[nodiscard]] constexpr auto rbegin() const noexcept -> const_reverse_iterator
+  [[nodiscard]] constexpr auto rbegin() const -> const_reverse_iterator
   {
     return const_reverse_iterator(end());
   }
 
-  constexpr auto rend() noexcept -> reverse_iterator
+  constexpr auto rend() -> reverse_iterator
   {
     return reverse_iterator(begin());
   }
 
-  [[nodiscard]] constexpr auto rend() const noexcept -> const_reverse_iterator
+  [[nodiscard]] constexpr auto rend() const -> const_reverse_iterator
   {
     return const_reverse_iterator(begin());
   }
 
-  [[nodiscard]] constexpr auto cbegin() const noexcept -> const_iterator
+  [[nodiscard]] constexpr auto cbegin() const -> const_iterator
   {
     return begin();
   }
 
-  [[nodiscard]] constexpr auto cend() const noexcept -> const_iterator
+  [[nodiscard]] constexpr auto cend() const -> const_iterator
   {
     return end();
   }
 
-  [[nodiscard]] constexpr auto crbegin() const noexcept -> const_reverse_iterator
+  [[nodiscard]] constexpr auto crbegin() const -> const_reverse_iterator
   {
     return rbegin();
   }
 
-  [[nodiscard]] constexpr auto crend() const noexcept -> const_reverse_iterator
+  [[nodiscard]] constexpr auto crend() const -> const_reverse_iterator
   {
     return rend();
   }
 
   // capacity:
-  [[nodiscard]] constexpr auto size() const noexcept -> size_type
+  [[nodiscard]] constexpr auto size() const -> size_type
   {
     return size_;
   }
 
-  [[nodiscard]] constexpr auto max_size() const noexcept -> size_type
+  [[nodiscard]] constexpr auto max_size() const -> size_type
   {
     return allocator_type::max_size();
   }
 
-  constexpr void resize(size_type size) noexcept
+  constexpr void resize(size_type size)
   {
     resize_fill(size, value_type());
   }
 
-  constexpr void resize(size_type size, const Ty& value) noexcept
+  constexpr void resize(size_type size, const Ty& value)
   {
     resize_fill(size, value);
   }
 
-  [[nodiscard]] constexpr auto capacity() const noexcept -> size_type
+  [[nodiscard]] constexpr auto capacity() const -> size_type
   {
     return is_inlined() ? inline_capacity : data_store_.hdata_.capacity_;
   }
 
-  [[nodiscard]] constexpr auto empty() const noexcept -> bool
+  [[nodiscard]] constexpr auto empty() const -> bool
   {
     return size() == 0;
   }
@@ -327,7 +334,7 @@ public:
   /**
    * @brief Use resize to really reserve space
    */
-  constexpr void reserve(size_type n) noexcept
+  constexpr void reserve(size_type n)
   {
     if (is_inlined())
     {
@@ -339,7 +346,7 @@ public:
     }
   }
 
-  constexpr void shrink_to_fit() noexcept
+  constexpr void shrink_to_fit()
   {
     if (is_inlined())
     {
@@ -354,13 +361,13 @@ public:
   }
 
   // element access:
-  constexpr auto operator[](size_type n) noexcept -> reference
+  constexpr auto operator[](size_type n) -> reference
   {
     assert(n < size());
     return get_data()[n];
   }
 
-  constexpr auto operator[](size_type n) const noexcept -> const_reference
+  constexpr auto operator[](size_type n) const -> const_reference
   {
     assert(n < size());
     return get_data()[n];
@@ -372,7 +379,7 @@ public:
     return get_data()[n];
   }
 
-  [[nodiscard]] constexpr auto at(size_type n) const noexcept -> const_reference
+  [[nodiscard]] constexpr auto at(size_type n) const -> const_reference
   {
     assert(n < size());
     return get_data()[n];
@@ -383,7 +390,7 @@ public:
     return at(0);
   }
 
-  [[nodiscard]] constexpr auto front() const noexcept -> const_reference
+  [[nodiscard]] constexpr auto front() const -> const_reference
   {
     return at(0);
   }
@@ -393,49 +400,78 @@ public:
     return at(size() - 1);
   }
 
-  [[nodiscard]] constexpr auto back() const noexcept -> const_reference
+  [[nodiscard]] constexpr auto back() const -> const_reference
   {
     return at(size() - 1);
   }
 
   // data access
-  constexpr auto data() noexcept -> Ty*
+  constexpr auto data() -> Ty*
   {
     return get_data();
   }
 
-  [[nodiscard]] constexpr auto data() const noexcept -> const Ty*
+  [[nodiscard]] constexpr auto data() const -> const Ty*
   {
     return get_data();
   }
 
   // modifiers:
   template <class... Args>
-  constexpr auto emplace_back(Args&&... args) noexcept -> Ty&
+  constexpr auto emplace_back(Args&&... args) -> Ty&
   {
-    auto cur_size = size();
-    if (capacity() <= cur_size)
+    auto new_size = size_ + 1;
+    if (capacity() <= size_)
     {
-      unchecked_reserve_in_heap(cur_size + std::max<size_type>(cur_size >> 1, 1));
+      auto [ldata, copy] = heap_allocate_and_copy(new_size + (size_ >> 1));
+      auto data          = copy.pdata_->template as<Ty>();
+      auto ptr           = data + size_;
+
+      std::construct_at(ptr, std::forward<Args>(args)...);
+
+      if constexpr (has_pod || std::is_trivially_copyable_v<Ty>)
+      {
+        std::memcpy(data, ldata, size_ * sizeof(Ty));
+      }
+      else
+      {
+        std::uninitialized_move(ldata, ldata + size_, data);
+      }
+
+      if constexpr (!has_trivial_dtor && !has_trivially_destroyed_on_move)
+      {
+        std::destroy_n(ldata, size_);
+      }
+
+      if (!is_inlined())
+      {
+        acl::deallocate(*this, data_store_.hdata_.pdata_, data_store_.hdata_.capacity_ * sizeof(storage),
+                        alignarg<storage>);
+      }
+
+      size_              = new_size;
+      data_store_.hdata_ = copy;
+
+      return *ptr;
     }
 
-    size_    = cur_size + 1;
-    auto ptr = get_data() + cur_size;
+    auto ptr = get_data() + size_;
+    size_    = new_size;
     std::construct_at(ptr, std::forward<Args>(args)...);
     return *ptr;
   }
 
-  constexpr void push_back(const Ty& other) noexcept
+  constexpr void push_back(const Ty& other)
   {
     emplace_back(other);
   }
 
-  constexpr void push_back(Ty&& other) noexcept
+  constexpr void push_back(Ty&& other)
   {
     emplace_back(std::move(other));
   }
 
-  constexpr void pop_back() noexcept
+  constexpr void pop_back()
   {
     assert(size() > 0);
 
@@ -454,7 +490,7 @@ public:
   }
 
   template <class... Args>
-  constexpr auto emplace(const_iterator position, Args&&... args) noexcept -> iterator
+  constexpr auto emplace(const_iterator position, Args&&... args) -> iterator
   {
     size_type pos = insert_hole(position);
     auto      ptr = get_data() + pos;
@@ -462,28 +498,28 @@ public:
     return ptr;
   }
 
-  constexpr auto insert(const_iterator position, const Ty& other) noexcept -> iterator
+  constexpr auto insert(const_iterator position, const Ty& other) -> iterator
   {
     return emplace(position, other);
   }
 
-  constexpr auto insert(const_iterator position, Ty&& other) noexcept -> iterator
+  constexpr auto insert(const_iterator position, Ty&& other) -> iterator
   {
     return emplace(position, std::move(other));
   }
 
-  constexpr auto insert(const_iterator position, size_type n, const Ty& other) noexcept -> iterator
+  constexpr auto insert(const_iterator position, size_type n, const Ty& other) -> iterator
   {
     return insert_range(position, n, other, std::true_type());
   }
 
   template <class InputIterator>
-  constexpr auto insert(const_iterator position, InputIterator first, InputIterator last) noexcept -> iterator
+  constexpr auto insert(const_iterator position, InputIterator first, InputIterator last) -> iterator
   {
     return insert_range(position, first, last, std::is_integral<InputIterator>());
   }
 
-  constexpr auto insert(const_iterator position, std::initializer_list<Ty> other) noexcept -> iterator
+  constexpr auto insert(const_iterator position, std::initializer_list<Ty> other) -> iterator
   {
     size_type pos = insert_hole(position, static_cast<size_type>(other.size()));
     auto      ptr = get_data() + pos;
@@ -491,7 +527,7 @@ public:
     return ptr;
   }
 
-  constexpr auto erase(const_iterator position) noexcept -> iterator
+  constexpr auto erase(const_iterator position) -> iterator
   {
     assert(position < end());
     auto data = get_data();
@@ -528,7 +564,7 @@ public:
     return pos;
   }
 
-  constexpr auto erase(const_iterator first, const_iterator last) noexcept -> iterator
+  constexpr auto erase(const_iterator first, const_iterator last) -> iterator
   {
     assert(last < end());
     auto dist      = static_cast<std::uint32_t>(std::distance(first, last));
@@ -573,7 +609,7 @@ public:
     swap(other, propagate_allocator_on_swap());
   }
 
-  constexpr void clear() noexcept
+  constexpr void clear()
   {
     clear_data();
   }
@@ -589,7 +625,7 @@ public:
   }
 
 private:
-  constexpr auto resize_no_fill(size_type size) noexcept -> Ty*
+  constexpr auto resize_no_fill(size_type size) -> Ty*
   {
     if (size <= inline_capacity)
     {
@@ -608,7 +644,7 @@ private:
   }
 
   template <typename Tail = std::false_type>
-  constexpr void resize_fill(size_type size, Tail const& tail) noexcept
+  constexpr void resize_fill(size_type size, Tail const& tail)
   {
     auto data_ptr = resize_no_fill(size);
     if (size > size_)
@@ -631,13 +667,20 @@ private:
     return is_inlined() ? data_store_.ldata_.data()->template as<Ty>() : data_store_.hdata_.pdata_->template as<Ty>();
   }
 
-  constexpr void unchecked_reserve_in_heap(size_type n)
+  constexpr auto heap_allocate_and_copy(size_type n) -> std::pair<Ty*, heap_storage>
   {
     heap_storage copy;
     copy.capacity_ = n;
     copy.pdata_    = acl::allocate<storage>(*this, n * sizeof(storage), alignarg<storage>);
     auto ldata     = data();
-    auto data      = copy.pdata_->template as<Ty>();
+
+    return {ldata, copy};
+  }
+
+  constexpr void unchecked_reserve_in_heap(size_type n)
+  {
+    auto [ldata, copy] = heap_allocate_and_copy(n);
+    auto data          = copy.pdata_->template as<Ty>();
     if constexpr (has_pod || std::is_trivially_copyable_v<Ty>)
     {
       std::memcpy(data, ldata, size_ * sizeof(Ty));
@@ -645,11 +688,13 @@ private:
     else
     {
       std::uninitialized_move(ldata, ldata + size_, data);
-      if constexpr (!has_trivial_dtor && !has_trivially_destroyed_on_move)
-      {
-        std::destroy_n(ldata, size_);
-      }
     }
+
+    if constexpr (!has_trivial_dtor && !has_trivially_destroyed_on_move)
+    {
+      std::destroy_n(ldata, size_);
+    }
+
     if (!is_inlined())
     {
       acl::deallocate(*this, data_store_.hdata_.pdata_, data_store_.hdata_.capacity_ * sizeof(storage),
@@ -658,7 +703,7 @@ private:
     data_store_.hdata_ = copy;
   }
 
-  constexpr void unchecked_reserve_in_heap(size_type n, size_type at_position, size_type holes) noexcept
+  constexpr void unchecked_reserve_in_heap(size_type n, size_type at_position, size_type holes)
   {
     heap_storage copy;
     copy.capacity_ = n;
@@ -687,7 +732,7 @@ private:
     data_store_.hdata_ = copy;
   }
 
-  constexpr void clear_data() noexcept
+  constexpr void clear_data()
   {
     if (empty())
     {
@@ -792,6 +837,7 @@ private:
       if constexpr (!has_trivial_dtor && !has_trivially_destroyed_on_move)
       {
         assert(src_it <= dst_it);
+        auto dst_it = src_it + min_ctor;
         for (; src_it != dst_it; ++src_it)
         {
           std::destroy_at(src_it);
@@ -800,7 +846,7 @@ private:
     }
   }
 
-  constexpr auto insert_hole(const_iterator pos, size_type n = 1) noexcept -> size_type
+  constexpr auto insert_hole(const_iterator pos, size_type n = 1) -> size_type
   {
     auto      ldata  = get_data();
     auto      p_dist = static_cast<size_type>(std::distance<const Ty*>(ldata, pos));
@@ -819,7 +865,7 @@ private:
     return p_dist;
   }
 
-  constexpr auto assign_copy(const small_vector& other, std::false_type /*unused*/) noexcept -> small_vector&
+  constexpr auto assign_copy(const small_vector& other, std::false_type /*unused*/) -> small_vector&
   {
     clear();
     if (capacity() < other.size())
@@ -839,7 +885,7 @@ private:
     return *this;
   }
 
-  constexpr auto assign_copy(const small_vector& other, std::true_type /*unused*/) noexcept -> small_vector&
+  constexpr auto assign_copy(const small_vector& other, std::true_type /*unused*/) -> small_vector&
   {
     clear();
     allocator_type::operator=(static_cast<const allocator_type&>(other));
@@ -861,7 +907,7 @@ private:
     return *this;
   }
 
-  constexpr auto assign_move(small_vector& other, std::false_type /*unused*/) noexcept -> small_vector&
+  constexpr auto assign_move(small_vector& other, std::false_type /*unused*/) -> small_vector&
   {
     if (allocator_is_always_equal::value ||
         static_cast<const allocator_type&>(other) == static_cast<const allocator_type&>(*this))
@@ -904,7 +950,7 @@ private:
     return *this;
   }
 
-  constexpr auto assign_move(small_vector& other, std::true_type /*unused*/) noexcept -> small_vector&
+  constexpr auto assign_move(small_vector& other, std::true_type /*unused*/) -> small_vector&
   {
     clear();
 
@@ -931,7 +977,7 @@ private:
   }
 
   template <typename InputIt>
-  constexpr void copy_construct(InputIt first, InputIt last, pointer dest) noexcept
+  constexpr void copy_construct(InputIt first, InputIt last, pointer dest)
   {
     if constexpr (std::is_same_v<pointer, InputIt> && (has_pod || std::is_trivially_copyable_v<Ty>))
     {
@@ -998,39 +1044,39 @@ private:
     lhs.swap(rhs);
   }
 
-  constexpr friend auto operator==(const small_vector& first, const small_vector& second) noexcept -> bool
+  constexpr friend auto operator==(const small_vector& first, const small_vector& second) -> bool
   {
     return first.size_ == second.size_ && std::equal(first.begin(), first.end(), second.begin());
   }
 
-  constexpr friend auto operator<(const small_vector& first, const small_vector& second) noexcept -> bool
+  constexpr friend auto operator<(const small_vector& first, const small_vector& second) -> bool
   {
     return std::lexicographical_compare(first.begin(), first.end(), second.begin(), second.end());
   }
 
-  constexpr friend auto operator!=(const small_vector& first, const small_vector& second) noexcept -> bool
+  constexpr friend auto operator!=(const small_vector& first, const small_vector& second) -> bool
   {
     return !(first == second);
   }
 
-  constexpr friend auto operator>(const small_vector& first, const small_vector& second) noexcept -> bool
+  constexpr friend auto operator>(const small_vector& first, const small_vector& second) -> bool
   {
     return std::lexicographical_compare(second.begin(), second.end(), first.begin(), first.end());
   }
 
-  constexpr friend auto operator>=(const small_vector& first, const small_vector& second) noexcept -> bool
+  constexpr friend auto operator>=(const small_vector& first, const small_vector& second) -> bool
   {
     return !std::lexicographical_compare(first.begin(), first.end(), second.begin(), second.end());
   }
 
-  constexpr friend auto operator<=(const small_vector& first, const small_vector& second) noexcept -> bool
+  constexpr friend auto operator<=(const small_vector& first, const small_vector& second) -> bool
   {
     return !std::lexicographical_compare(second.begin(), second.end(), first.begin(), first.end());
   }
 
   template <class InputIterator>
   constexpr auto insert_range(const_iterator position, InputIterator first, InputIterator last,
-                              std::false_type /*unused*/) noexcept -> iterator
+                              std::false_type /*unused*/) -> iterator
   {
     size_type pos   = insert_hole(position, static_cast<size_type>(std::distance(first, last)));
     auto      ldata = data();
@@ -1038,8 +1084,8 @@ private:
     return ldata + pos;
   }
 
-  constexpr auto insert_range(const_iterator position, size_type n, const Ty& other,
-                              std::true_type /*unused*/) noexcept -> iterator
+  constexpr auto insert_range(const_iterator position, size_type n, const Ty& other, std::true_type /*unused*/)
+   -> iterator
   {
     size_type pos   = insert_hole(position, n);
     auto      ldata = data();
@@ -1048,13 +1094,13 @@ private:
   }
 
   template <class InputIterator>
-  constexpr void construct_from_range(InputIterator first, InputIterator last, std::false_type /*unused*/) noexcept
+  constexpr void construct_from_range(InputIterator first, InputIterator last, std::false_type /*unused*/)
   {
     resize_fill(static_cast<size_type>(std::distance(first, last)), std::false_type{});
     std::uninitialized_copy(first, last, data());
   }
 
-  constexpr void construct_from_range(size_type n, const Ty& value, std::true_type /*unused*/) noexcept
+  constexpr void construct_from_range(size_type n, const Ty& value, std::true_type /*unused*/)
   {
     resize_fill(n, std::false_type{});
     std::uninitialized_fill_n(data(), n, value);

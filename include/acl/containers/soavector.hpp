@@ -259,7 +259,9 @@ public:
   soavector(soavector&& x, const allocator_type& alloc) noexcept
       : allocator_type(alloc), data_(std::move(x.data_)), size_(x.size_), capacity_(x.capacity_)
   {
-    std::memset(&x, 0, sizeof(x));
+    x.data_     = {};
+    x.size_     = 0;
+    x.capacity_ = 0;
   };
 
   soavector(soavector const& x, allocator_type const& alloc) noexcept
@@ -284,12 +286,19 @@ public:
 
   auto operator=(const soavector& x) noexcept -> soavector&
   {
-    assign_copy(x, propagate_allocator_on_copy());
+    if (this != &x)
+    {
+      assign_copy(x, propagate_allocator_on_copy());
+    }
     return *this;
   }
 
   auto operator=(soavector&& x) noexcept -> soavector&
   {
+    if (this == &x)
+    {
+      return *this;
+    }
     assign_move(x, propagate_allocator_on_move());
     return *this;
   }

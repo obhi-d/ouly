@@ -77,6 +77,8 @@ struct destroy_tracker
   }
   destroy_tracker& operator=(destroy_tracker&& other) noexcept
   {
+    if (this == &other)
+      return *this;
     if (ref)
       ref->tracking--;
     ref       = other.ref;
@@ -85,6 +87,8 @@ struct destroy_tracker
   }
   destroy_tracker& operator=(destroy_tracker const& other) noexcept
   {
+    if (this == &other)
+      return *this;
     if (ref)
       ref->tracking--;
     ref = other.ref;

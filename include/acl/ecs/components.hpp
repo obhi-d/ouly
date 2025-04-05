@@ -156,6 +156,10 @@ public:
 
   auto operator=(components&& other) noexcept -> components&
   {
+    if (this == &other)
+    {
+      return *this;
+    }
     clear();
     shrink_to_fit();
 
@@ -165,7 +169,13 @@ public:
     return *this;
   }
 
-  auto operator=(components const& other) noexcept -> components& requires(std::is_copy_constructible_v<value_type>) {
+  auto operator=(components const& other) noexcept -> components&
+    requires(std::is_copy_constructible_v<value_type>)
+  {
+    if (this == &other)
+    {
+      return *this;
+    }
     clear();
     shrink_to_fit();
 

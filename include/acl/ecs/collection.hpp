@@ -95,6 +95,10 @@ public:
 
   auto operator=(collection const& other) noexcept -> collection&
   {
+    if (this == &other)
+    {
+      return *this;
+    }
     constexpr auto bit_page_size = sizeof(storage) * (pool_size >> 3);
     constexpr auto haz_page_size = sizeof(storage) * pool_size;
 

@@ -117,7 +117,9 @@ class intrusive_list
       return *item_;
     }
 
-    auto operator++() noexcept -> auto& requires(is_dlist) {
+    auto operator++() noexcept -> auto&
+      requires(is_dlist)
+    {
       assert(item_);
       item_ = traits::prev(*item_);
       return *this;
@@ -177,6 +179,10 @@ public:
   auto operator=(intrusive_list const&) -> intrusive_list& = delete;
   auto operator=(intrusive_list&& other) noexcept -> intrusive_list&
   {
+    if (this == &other)
+    {
+      return *this;
+    }
     data_.head_ = other.data_.head_;
     if constexpr (CacheTail)
     {
@@ -261,7 +267,11 @@ public:
     return *data_.head_;
   }
 
-  auto back() noexcept -> value_type& requires(CacheTail) { return *data_.tail_; }
+  auto back() noexcept -> value_type&
+    requires(CacheTail)
+  {
+    return *data_.tail_;
+  }
 
   auto front() const noexcept -> value_type const&
   {

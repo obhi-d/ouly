@@ -1,8 +1,8 @@
 
-#include "test_common.hpp"
-#include "acl/allocators/linear_allocator.hpp"
 #include "acl/containers/small_vector.hpp"
+#include "acl/allocators/linear_allocator.hpp"
 #include "catch2/catch_all.hpp"
+#include "test_common.hpp"
 #include <compare>
 #include <utility>
 
@@ -411,4 +411,19 @@ TEST_CASE("small_vector: erase", "[small_vector][erase]")
   REQUIRE(v1.is_inlined());
 }
 
+TEST_CASE("small_vector: capacity full self insertion", "[small_vector][default]")
+{
+  acl::small_vector<std::string, 4> v1;
+  v1.push_back("failure");
+  v1.push_back("1");
+  v1.push_back("2");
+  v1.push_back("3");
+  v1.push_back(v1[0]);
+
+  REQUIRE(v1.size() == 5);
+
+  REQUIRE(v1[3] == "3");
+  REQUIRE(v1.back() == "failure");
+  REQUIRE(v1.at(0) == "failure");
+}
 // NOLINTEND

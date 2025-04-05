@@ -30,6 +30,10 @@ public:
 
   auto operator=(dynamic_array&& other) noexcept -> dynamic_array&
   {
+    if (this == &other)
+    {
+      return *this;
+    }
     clear();
     data_        = other.data_;
     count_       = other.count_;

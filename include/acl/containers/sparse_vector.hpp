@@ -80,9 +80,15 @@ private:
     return reinterpret_cast<value_type*>(src);
   }
 
-  constexpr static auto cast(storage& src) -> value_type& requires(std::is_same_v<storage, value_type>) { return src; }
+  constexpr static auto cast(storage& src) -> value_type&
+    requires(std::is_same_v<storage, value_type>)
+  {
+    return src;
+  }
 
-  constexpr static auto cast(storage& src) -> value_type& requires(!std::is_same_v<storage, value_type>) {
+  constexpr static auto cast(storage& src) -> value_type&
+    requires(!std::is_same_v<storage, value_type>)
+  {
     // NOLINTNEXTLINE
     return reinterpret_cast<value_type&>(src);
   }
@@ -145,6 +151,10 @@ public:
 
   auto operator=(sparse_vector&& other) noexcept -> sparse_vector&
   {
+    if (this == &other)
+    {
+      return *this;
+    }
     clear();
     (base_type&)* this = std::move((base_type&)other);
     items_             = std::move(other.items_);
@@ -154,52 +164,56 @@ public:
   }
 
   // NOLINTNEXTLINE
-  auto operator=(sparse_vector const& other) noexcept
-   -> sparse_vector& requires(std::is_copy_constructible_v<value_type>) {
-     clear();
-     items_.resize(other.items_.size());
-     for (size_type i = 0; i < items_.size(); ++i)
-     {
-       auto const src_storage = other.items_[i];
-       if (src_storage)
-       {
-         items_[i] = acl::allocate<storage>(*this, allocate_bytes, alignarg<Ty>);
+  auto operator=(sparse_vector const& other) noexcept -> sparse_vector&
+    requires(std::is_copy_constructible_v<value_type>)
+  {
+    if (this != &other)
+    {
+      clear();
+      items_.resize(other.items_.size());
+      for (size_type i = 0; i < items_.size(); ++i)
+      {
+        auto const src_storage = other.items_[i];
+        if (src_storage)
+        {
+          items_[i] = acl::allocate<storage>(*this, allocate_bytes, alignarg<Ty>);
 
-         if (src_storage)
-         {
-           if constexpr (std::is_trivially_copyable_v<Ty> || has_pod)
-           {
-             std::memcpy(items_[i], src_storage, allocate_bytes);
-           }
-           else
-           {
-             if constexpr (has_pool_tracking)
-             {
-               pool_occupation(i) = other.pool_occupation(i);
-             }
-             for (size_type e = 0; e < pool_size; ++e)
-             {
-               auto const& src = cast(src_storage[e]);
-               auto&       dst = cast(items_[i][e]);
+          if (src_storage)
+          {
+            if constexpr (std::is_trivially_copyable_v<Ty> || has_pod)
+            {
+              std::memcpy(items_[i], src_storage, allocate_bytes);
+            }
+            else
+            {
+              if constexpr (has_pool_tracking)
+              {
+                pool_occupation(i) = other.pool_occupation(i);
+              }
+              for (size_type e = 0; e < pool_size; ++e)
+              {
+                auto const& src = cast(src_storage[e]);
+                auto&       dst = cast(items_[i][e]);
 
-               if (!is_null(src))
-               {
-                 std::construct_at(&dst, src);
-               }
-             }
-           }
-         }
-       }
-       else
-       {
-         items_[i] = nullptr;
-       }
-     }
+                if (!is_null(src))
+                {
+                  std::construct_at(&dst, src);
+                }
+              }
+            }
+          }
+        }
+        else
+        {
+          items_[i] = nullptr;
+        }
+      }
 
-     static_cast<base_type&>(*this) = static_cast<base_type const&>(other);
-     length_                        = other.length_;
-     return *this;
-   }
+      static_cast<base_type&>(*this) = static_cast<base_type const&>(other);
+      length_                        = other.length_;
+    }
+    return *this;
+  }
 
   /**
    * @brief Lambda called for each element
@@ -654,6 +668,7 @@ public:
     return block < items_.size() && items_[block] ? &cast(items_[block][idx & pool_mod]) : nullptr;
   }
 
+  auto get_or(size_type idx, Ty&& other) const noexcept -> Ty const& = delete;
   auto get_or(size_type idx, Ty const& other) const noexcept -> Ty const&
   {
     auto block = (idx >> pool_mul);
@@ -813,7 +828,9 @@ private:
     }
   }
 
-  auto pool_occupation(storage* p) noexcept -> uint32_t& requires(has_pool_tracking) {
+  auto pool_occupation(storage* p) noexcept -> uint32_t&
+    requires(has_pool_tracking)
+  {
     // NOLINTNEXTLINE
     return *reinterpret_cast<uint32_t*>(reinterpret_cast<std::uint8_t*>(p) + pool_bytes);
   }
@@ -825,8 +842,11 @@ private:
     return *reinterpret_cast<uint32_t*>(reinterpret_cast<std::uint8_t const*>(p) + pool_bytes);
   }
 
-  auto pool_occupation(size_type p) noexcept
-   -> uint32_t& requires(has_pool_tracking) { return pool_occupation(items_[p]); }
+  auto pool_occupation(size_type p) noexcept -> uint32_t&
+    requires(has_pool_tracking)
+  {
+    return pool_occupation(items_[p]);
+  }
 
   auto pool_occupation(size_type p) const noexcept -> uint32_t
     requires(has_pool_tracking)
