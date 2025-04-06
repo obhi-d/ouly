@@ -151,10 +151,10 @@ public:
       return *this;
     }
     clear();
-    (base_type&)* this = std::move((base_type&)other);
-    items_             = std::move(other.items_);
-    length_            = other.length_;
-    other.length_      = 0;
+    static_cast<base_type&>(*this) = std::move(static_cast<base_type&>(other));
+    items_                         = std::move(other.items_);
+    length_                        = other.length_;
+    other.length_                  = 0;
     return *this;
   }
 
@@ -703,7 +703,7 @@ public:
   {
   public:
     data_view() noexcept = default;
-    data_view(VTy* const* items_, size_type block_count_) noexcept : items_(items_), block_count_(block_count_) {}
+    data_view(VTy* const* items, size_type block_count) noexcept : items_(items), block_count_(block_count) {}
 
     auto contains(index_t i) const noexcept -> bool
     {

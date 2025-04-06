@@ -12,7 +12,7 @@ class blocking_event
 {
 
 public:
-  blocking_event(bool set) noexcept : semaphore_((std::ptrdiff_t)set) {}
+  blocking_event(bool set) noexcept : semaphore_(static_cast<std::ptrdiff_t>(set)) {}
   blocking_event() noexcept : semaphore_(0) {}
 
   void wait()
@@ -33,7 +33,7 @@ class scheduler;
 class busywork_event
 {
 public:
-  busywork_event(bool set) noexcept : semaphore_((std::ptrdiff_t)set) {}
+  busywork_event(bool set) noexcept : semaphore_(static_cast<std::ptrdiff_t>(set)) {}
   busywork_event() noexcept : semaphore_(0) {}
 
   ACL_API void wait(worker_id worker, scheduler& s);

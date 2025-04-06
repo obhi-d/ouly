@@ -126,7 +126,7 @@ concept OptionalLike = requires(Class o) {
   typename Class::value_type;
   o.emplace(std::declval<typename Class::value_type>());
   o.has_value();
-  (bool)o;
+  static_cast<bool>(o);
   { o.has_value() } -> std::same_as<bool>;
   o.reset();
   { (*o) } -> std::same_as<std::add_lvalue_reference_t<typename Class::value_type>>;
@@ -153,7 +153,7 @@ concept MapLike = requires(Class t) {
 template <typename Class>
 concept IsSmartPointer = requires(Class o) {
   typename Class::element_type;
-  (bool)o;
+  static_cast<bool>(o);
   { (*o) } -> std::same_as<std::add_lvalue_reference_t<typename Class::element_type>>;
   { o.operator->() } -> std::same_as<typename Class::element_type*>;
 };

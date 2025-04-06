@@ -25,7 +25,7 @@ public:
 
   static constexpr auto key() noexcept -> std::string_view
   {
-    return (std::string_view)Name;
+    return static_cast<std::string_view>(Name);
   }
 
   template <typename TransformType>

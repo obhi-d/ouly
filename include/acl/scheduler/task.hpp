@@ -39,7 +39,7 @@ struct co_task : public acl::detail::co_task<R, acl::detail::promise_type<co_tas
   auto operator=(co_task const&) -> co_task& = delete;
   auto operator=(co_task&& other) noexcept -> co_task&
   {
-    (super&)(*this) = std::move<super>(other);
+    static_cast<super&>(*this) = std::move<super>(other);
     return *this;
   }
 };
@@ -58,12 +58,12 @@ struct co_sequence : public acl::detail::co_task<R, acl::detail::sequence_promis
   co_sequence() noexcept          = default;
   co_sequence(const co_sequence&) = delete;
   co_sequence(handle h) : super(h) {}
-  co_sequence(co_sequence&& other) noexcept : super(std::move<super>((super&&)other)) {}
+  co_sequence(co_sequence&& other) noexcept : super(std::move<super>(static_cast<super&&>(other))) {}
   ~co_sequence() noexcept                            = default;
   auto operator=(co_sequence const&) -> co_sequence& = delete;
   auto operator=(co_sequence&& other) noexcept -> co_sequence&
   {
-    (super&)(*this) = std::move<super>((super&&)other);
+    static_cast<super&>(*this) = std::move<super>(static_cast<super&&>(other));
     return *this;
   }
 };

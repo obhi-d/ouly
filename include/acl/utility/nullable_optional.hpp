@@ -46,7 +46,7 @@ struct nullable_optional
 
   explicit operator bool() const noexcept
   {
-    return std::any_of((uint8_t*)&bytes_, ((uint8_t*)&bytes_) + sizeof(bytes_),
+    return std::any_of(bytes_.data(), bytes_.data() + bytes_.size(),
                        [](uint8_t nonZero)
                        {
                          return nonZero;

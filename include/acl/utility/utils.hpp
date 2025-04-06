@@ -93,7 +93,7 @@ constexpr SizeType high_bit_mask_v = (static_cast<SizeType>(0x80) << ((sizeof(Si
 template <typename SizeType>
 constexpr auto log2(SizeType val) -> SizeType
 {
-  return val ? 1 + log2(val >> 1) : -1;
+  return val ? 1 + log2(val >> 1) : static_cast<SizeType>(-1);
 }
 
 template <typename SizeType>

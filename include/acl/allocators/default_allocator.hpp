@@ -51,7 +51,7 @@ struct ACL_EMPTY_BASES default_allocator
   {
     if constexpr (alignment)
     {
-      return tracker::when_allocate(::operator new(size, std::align_val_t{(std::size_t)alignment}), size);
+      return tracker::when_allocate(::operator new(size, std::align_val_t{static_cast<std::size_t>(alignment)}), size);
     }
     else
     {
@@ -73,7 +73,7 @@ struct ACL_EMPTY_BASES default_allocator
     void* fixup = tracker::when_deallocate(addr, size);
     if constexpr (alignment)
     {
-      ::operator delete(fixup, std::align_val_t{(std::size_t)alignment});
+      ::operator delete(fixup, std::align_val_t{static_cast<std::size_t>(alignment)});
     }
     else
     {

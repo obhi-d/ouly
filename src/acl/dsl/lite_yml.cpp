@@ -266,6 +266,7 @@ void lite_stream::process_token(token tok)
       collect_block_scalar();
     }
     break;
+  case token_type::eof:
   default:
     break;
   }

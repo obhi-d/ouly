@@ -29,10 +29,10 @@ struct allocator_wrapper : public acl::detail::allocator_common<T>, public UA
 
   allocator_wrapper() noexcept = default;
   template <typename U>
-  allocator_wrapper(allocator_wrapper<U, UA> const& other) : UA((UA const&)other)
+  allocator_wrapper(allocator_wrapper<U, UA> const& other) : UA(static_cast<UA const&>(other))
   {}
   template <typename U>
-  allocator_wrapper(allocator_wrapper<U, UA>&& other) : UA(std::move((UA&)other)) // NOLINT
+  allocator_wrapper(allocator_wrapper<U, UA>&& other) : UA(static_cast<UA&&>(other)) // NOLINT
   {}
 
   [[nodiscard]] auto allocate(size_type cnt) const -> pointer

@@ -41,7 +41,7 @@ void microexpr_state::skip_white() noexcept
   auto tok_pos = content_.find_first_not_of(" \t\r\n", read_);
   if (tok_pos != std::string_view::npos)
   {
-    read_ = (uint32_t)tok_pos;
+    read_ = static_cast<uint32_t>(tok_pos);
   }
 }
 
@@ -240,7 +240,7 @@ auto microexpr_state::unary() -> int64_t
     if (std::isdigit(oper) != 0)
     {
       auto token = read_token();
-      read_ += (uint32_t)token.length();
+      read_ += static_cast<uint32_t>(token.length());
       uint64_t value = 0;
 
       from_chars(token, value);
@@ -252,13 +252,13 @@ auto microexpr_state::unary() -> int64_t
       read_++;
       skip_white();
       auto token = read_token();
-      read_ += (uint32_t)token.length();
+      read_ += static_cast<uint32_t>(token.length());
       return static_cast<int64_t>((*ctx_)(token).has_value());
     }
     if ((isalpha(oper) != 0) || oper == '_')
     {
       auto token = read_token();
-      read_ += (uint32_t)token.length();
+      read_ += static_cast<uint32_t>(token.length());
       auto value = (*ctx_)(token);
       return value.has_value() ? value.value() : 0;
     }

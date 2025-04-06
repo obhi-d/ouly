@@ -78,7 +78,8 @@ struct timer_t
       if (timer_ != nullptr)
       {
         auto end = std::chrono::high_resolution_clock::now();
-        timer_->elapsed_time_ += std::chrono::duration_cast<std::chrono::microseconds>(end - start_).count();
+        timer_->elapsed_time_ +=
+         static_cast<unsigned>(std::chrono::duration_cast<std::chrono::microseconds>(end - start_).count());
       }
     }
 
@@ -165,7 +166,7 @@ struct statistics_impl<TagArg, Base, acl::cfg::memory_stat_type::e_compute_atomi
     line += "\n";
     std::stringstream ss;
     ss << line;
-    ss << "Stats for: " << (std::string_view)acl::type_name<TagArg>() << "\n";
+    ss << "Stats for: " << static_cast<std::string_view>(acl::type_name<TagArg>()) << "\n";
     ss << line;
     ss << "Arenas allocated: " << arenas_allocated_.load() << "\n"
        << "Peak allocation: " << peak_allocation_.load() << "\n"
@@ -259,7 +260,7 @@ struct statistics_impl<TagArg, Base, acl::cfg::memory_stat_type::e_compute> : pu
     line += "\n";
     std::stringstream ss;
     ss << line;
-    ss << "Stats for: " << (std::string_view)acl::type_name<TagArg>() << "\n";
+    ss << "Stats for: " << static_cast<std::string_view>(acl::type_name<TagArg>()) << "\n";
     ss << line;
     ss << "Arenas allocated: " << arenas_allocated_ << "\n"
        << "Peak allocation: " << peak_allocation_ << "\n"

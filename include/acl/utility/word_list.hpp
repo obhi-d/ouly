@@ -196,9 +196,10 @@ public:
   static auto find(view this_param, view what) -> iterator
   {
     size_t it = this_param.find(what);
-    return it == type::npos ? iterator(this_param, (uint32_t)this_param.length(), 0)
-                            : iterator(this_param, (uint32_t)it,
-                                       (uint32_t)std::count(this_param.begin(), this_param.begin() + it, Delimiter));
+    return it == type::npos
+            ? iterator(this_param, static_cast<uint32_t>(this_param.length()), 0)
+            : iterator(this_param, static_cast<uint32_t>(it),
+                       static_cast<uint32_t>(std::count(this_param.begin(), this_param.begin() + it, Delimiter)));
   }
 };
 

@@ -9,7 +9,7 @@
 template <typename IntTy>
 inline IntTy range_rand(IntTy iBeg, IntTy iEnd)
 {
-  return static_cast<IntTy>(iBeg + (((double)rand() / (double)RAND_MAX) * (iEnd - iBeg)));
+  return static_cast<IntTy>(iBeg + ((static_cast<double>(rand()) / static_cast<double>(RAND_MAX)) * (iEnd - iBeg)));
 }
 
 struct pod

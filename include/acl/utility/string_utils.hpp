@@ -162,7 +162,7 @@ auto regex_replace(std::basic_string<CharT> const& s, const std::basic_regex<Cha
 inline auto indent(int32_t amt) -> std::string
 {
   std::string s;
-  s.resize(amt, ' ');
+  s.resize(static_cast<size_t>(amt), ' ');
   return s;
 }
 
@@ -222,7 +222,7 @@ ACL_API auto format_name(std::string const& str) -> std::string;
  */
 inline auto hash(std::string_view v, uint32_t seed = acl::wyhash32_default_prime_seed)
 {
-  return acl::wyhash32(seed)(v.data(), (uint32_t)v.length());
+  return acl::wyhash32(seed)(v.data(), static_cast<uint32_t>(v.length()));
 }
 
 /**
@@ -448,4 +448,6 @@ auto is_number(const StringType& s) -> bool
                                     }) == s.end();
 }
 
+auto format_snake_case(const std::string& str) -> std::string;
+auto format_camel_case(const std::string& str) -> std::string;
 } // namespace acl

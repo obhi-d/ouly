@@ -137,7 +137,7 @@ public:
     construct_from_range(first, last, std::is_integral<InputIterator>());
   }
 
-  constexpr small_vector(const small_vector& other) : allocator_type((allocator_type const&)other)
+  constexpr small_vector(const small_vector& other) : allocator_type(static_cast<allocator_type const&>(other))
   {
     if (other.size() > inline_capacity)
     {
@@ -147,7 +147,8 @@ public:
     copy_construct(std::begin(other), std::end(other), get_data());
   }
 
-  constexpr small_vector(small_vector&& other) noexcept : allocator_type(std::move((allocator_type&)other))
+  constexpr small_vector(small_vector&& other) noexcept
+      : allocator_type(std::move(static_cast<allocator_type&&>(other)))
   {
     *this = std::move(other);
   }
@@ -909,8 +910,8 @@ private:
       if constexpr (!has_trivial_dtor && !has_trivially_destroyed_on_move)
       {
         assert(src_it <= dst_it);
-        auto dst_it = src_it + min_ctor;
-        for (; src_it != dst_it; ++src_it)
+        auto next_dst_it = src_it + min_ctor;
+        for (; src_it != next_dst_it; ++src_it)
         {
           std::destroy_at(src_it);
         }

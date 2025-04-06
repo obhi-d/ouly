@@ -1,8 +1,17 @@
 #pragma once
+// Disable -Werror=old-style-cast for wyhash
+// NOLINTBEGIN(cppcoreguidelines-avoid-c-arrays)
+// NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma GCC diagnostic ignored "-Wconversion"
 #include "external/wyhash.h"
 #define WYHASH_FINAL_VERSION_3
 #include "external/wyhash32.h"
 #include "external/wyhash32.hpp"
+#pragma GCC diagnostic pop
+// NOLINTEND(cppcoreguidelines-avoid-magic-numbers)
+// NOLINTEND(cppcoreguidelines-avoid-c-arrays)
 #include <compare>
 #include <cstdint>
 

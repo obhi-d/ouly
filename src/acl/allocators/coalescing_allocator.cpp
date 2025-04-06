@@ -106,7 +106,7 @@ void coalescing_allocator::deallocate(size_type offset, size_type size)
   }
   else
   {
-    auto idx = std::distance((size_type const*)offsets_.data(), it);
+    auto idx = static_cast<size_type>(std::distance(static_cast<size_type const*>(offsets_.data()), it));
     if (offsets_[idx - 1] + sizes_[idx - 1] == offset)
     {
       sizes_[idx - 1] += size;

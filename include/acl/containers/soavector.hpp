@@ -815,11 +815,11 @@ private:
   {
     if constexpr (requires { acl::detail::get_field_ref<I>(std::forward<T&&>(tup)); })
     {
-      return acl::detail::get_field_ref<I>(std::forward<T&&>(tup));
+      return acl::detail::get_field_ref<I>(std::forward<T>(tup));
     }
     else
     {
-      return std::get<I>(std::forward<T&&>(tup));
+      return std::get<I>(std::forward<T>(tup));
     }
   }
 

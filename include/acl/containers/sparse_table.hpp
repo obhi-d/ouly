@@ -95,15 +95,15 @@ public:
     }
     clear_data();
 
-    (allocator_type&)* this = std::move((allocator_type&)other);
-    items_                  = std::move(other.items_);
-    self_                   = std::move(other.self_);
-    length_                 = other.length_;
-    extents_                = other.extents_;
-    free_slot_              = other.free_slot_;
-    other.length_           = 0;
-    other.extents_          = 1;
-    other.free_slot_        = null_v;
+    static_cast<allocator_type&>(*this) = std::move(static_cast<allocator_type&>(other));
+    items_                              = std::move(other.items_);
+    self_                               = std::move(other.self_);
+    length_                             = other.length_;
+    extents_                            = other.extents_;
+    free_slot_                          = other.free_slot_;
+    other.length_                       = 0;
+    other.extents_                      = 1;
+    other.free_slot_                    = null_v;
     return *this;
   }
 

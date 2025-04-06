@@ -27,7 +27,7 @@ auto coalescing_arena_allocator::add_arena(size_type size, bool empty) -> std::p
 
 auto coalescing_arena_allocator::commit(size_type size, size_type const* found) -> std::uint32_t
 {
-  auto          free_idx  = std::distance((size_type const*)sizes_.data(), found);
+  auto          free_idx  = static_cast<size_type>(std::distance(static_cast<size_type const*>(sizes_.data()), found));
   std::uint32_t free_node = free_ordering_[free_idx];
 
   // Marker
@@ -66,8 +66,8 @@ void coalescing_arena_allocator::reinsert_left(size_t of, size_type size, std::u
   }
   else
   {
-    auto it = mini2_it(sizes_.data(), of, size);
-    if (it != static_cast<signed>(of))
+    auto it = static_cast<size_type>(mini2_it(sizes_.data(), of, size));
+    if (it != of)
     {
       std::size_t count = of - it;
       {
@@ -203,13 +203,13 @@ void coalescing_arena_allocator::add_free(std::uint32_t node)
 void coalescing_arena_allocator::grow_free_node(std::uint32_t block, size_type newsize)
 {
 
-  auto it = mini2_it(sizes_.data(), sizes_.size(), block_entries_.sizes_[block]);
+  auto it = static_cast<size_type>(mini2_it(sizes_.data(), sizes_.size(), block_entries_.sizes_[block]));
   for (auto end = static_cast<decltype(it)>(free_ordering_.size()); it != end && free_ordering_[it] != block; ++it)
   {
     ;
   }
 
-  assert(it != static_cast<signed>(free_ordering_.size()));
+  assert(it != free_ordering_.size());
   block_entries_.sizes_[block] = newsize;
   reinsert_right(it, newsize, block);
 }
@@ -219,26 +219,25 @@ void coalescing_arena_allocator::replace_and_grow(std::uint32_t right, std::uint
   size_type size              = block_entries_.sizes_[right];
   block_entries_.sizes_[node] = new_size;
 
-  auto it = mini2_it(sizes_.data(), sizes_.size(), size);
-  for (auto end = static_cast<decltype(it)>(free_ordering_.size()); it != end && free_ordering_[it] != right; ++it)
+  auto it = static_cast<size_type>(mini2_it(sizes_.data(), sizes_.size(), size));
+  for (auto end = free_ordering_.size(); it != end && free_ordering_[it] != right; ++it)
   {
     ;
   }
 
-  assert(it != static_cast<signed>(free_ordering_.size()));
+  assert(it != free_ordering_.size());
   reinsert_right(it, new_size, node);
 }
 
 void coalescing_arena_allocator::erase(std::uint32_t node)
 {
-  auto it = mini2_it(sizes_.data(), sizes_.size(), block_entries_.sizes_[node]);
-  for (auto end = static_cast<uint32_t>(free_ordering_.size());
-       it != static_cast<signed>(end) && free_ordering_[it] != node; ++it)
+  auto it = static_cast<size_type>(mini2_it(sizes_.data(), sizes_.size(), block_entries_.sizes_[node]));
+  for (auto end = free_ordering_.size(); it != end && free_ordering_[it] != node; ++it)
   {
     ;
   }
 
-  assert(it != static_cast<signed>(free_ordering_.size()));
+  assert(it != free_ordering_.size());
   free_ordering_.erase(it + free_ordering_.begin());
   sizes_.erase(it + sizes_.begin());
 }
@@ -253,7 +252,7 @@ void coalescing_arena_allocator::reinsert_right(size_t of, size_type size, std::
   }
   else
   {
-    auto it = mini2_it(sizes_.data() + next, sizes_.size() - next, size);
+    auto it = static_cast<size_type>(mini2_it(sizes_.data() + next, sizes_.size() - next, size));
     if (it != 0)
     {
       std::size_t count = it;

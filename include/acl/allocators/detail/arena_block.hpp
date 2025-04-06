@@ -74,21 +74,22 @@ struct block
 
   ~block() noexcept = default;
 
-  [[nodiscard]] auto adjusted_block() const -> std::pair<size_type, size_type>
+  static constexpr size_type one = 1;
+  [[nodiscard]] auto         adjusted_block() const -> std::pair<size_type, size_type>
   {
-    size_type alignment_mask = ((size_type)1U << (size_type)alignment_) - (size_type)1U;
+    size_type alignment_mask = (one << static_cast<size_type>(alignment_)) - one;
     return std::make_pair<size_type>((offset_ + alignment_mask) & ~alignment_mask, size_ - alignment_mask);
   }
 
   [[nodiscard]] auto adjusted_size() const -> size_type
   {
-    size_type alignment_mask = ((size_type)1U << (size_type)alignment_) - (size_type)1U;
+    size_type alignment_mask = (one << static_cast<size_type>(alignment_)) - one;
     return size_ - alignment_mask;
   }
 
   [[nodiscard]] auto adjusted_offset() const -> size_type
   {
-    size_type alignment_mask = ((size_type)1U << (size_type)alignment_) - (size_type)1U;
+    size_type alignment_mask = (one << static_cast<size_type>(alignment_)) - one;
     return (offset_ + alignment_mask) & ~alignment_mask;
   }
 

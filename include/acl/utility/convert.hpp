@@ -38,13 +38,13 @@ struct index_transform
 template <typename T>
   requires(requires {
     T(std::declval<std::string_view>());
-    (std::string_view) std::declval<T const>();
+    static_cast<std::string_view>(std::declval<T const>());
   })
 struct convert<T>
 {
   static auto to_type(T const& ref) -> std::string_view
   {
-    return (std::string_view)ref;
+    return static_cast<std::string_view>(ref);
   }
 
   static auto from_type(T& ref, std::string_view v) -> void
@@ -56,13 +56,13 @@ struct convert<T>
 template <typename T>
   requires(requires {
     T(std::declval<std::string_view>());
-    (std::string) std::declval<T const>();
+    static_cast<std::string>(std::declval<T const>());
   })
 struct convert<T>
 {
   static auto to_type(T const& ref) -> std::string
   {
-    return (std::string)ref;
+    return static_cast<std::string>(ref);
   }
 
   static auto from_type(T& ref, std::string_view v) -> void
@@ -158,7 +158,7 @@ struct remove_first
   constexpr static auto transform(std::string_view name) -> std::string
   {
     std::string result{name};
-    auto        pos = result.find((std::string_view)Target);
+    auto        pos = result.find(static_cast<std::string_view>(Target));
     if (pos != std::string::npos)
     {
       result.erase(pos, Target.length);
@@ -175,7 +175,7 @@ struct remove_last
   constexpr static auto transform(std::string_view name) -> std::string
   {
     std::string result{name};
-    auto        pos = result.rfind((std::string_view)Target);
+    auto        pos = result.rfind(static_cast<std::string_view>(Target));
     if (pos != std::string::npos)
     {
       result.erase(pos, Target.length);
@@ -223,9 +223,9 @@ struct replace_all
   {
     std::string result{name};
     size_t      pos = 0;
-    while ((pos = result.find((std::string_view)From, pos)) != std::string::npos)
+    while ((pos = result.find(static_cast<std::string_view>(From), pos)) != std::string::npos)
     {
-      result.replace(pos, From.length, (std::string_view)To);
+      result.replace(pos, From.length, static_cast<std::string_view>(To));
       pos += To.length;
     }
     return result;
