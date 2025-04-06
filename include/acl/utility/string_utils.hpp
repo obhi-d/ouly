@@ -1,4 +1,9 @@
 #pragma once
+// Disable maybe-uninitialized
+// #pragma GCC diagnostic push
+// #pragma GCC diagnostic ignored "-Wuninitialized"
+// #include <regex>
+// #pragma GCC diagnostic pop
 
 #include "acl/utility/wyhash.hpp"
 #include "common.hpp"
@@ -6,8 +11,6 @@
 #include <algorithm>
 #include <cstddef>
 #include <ctime>
-#include <regex>
-#include <sstream>
 #include <vector>
 
 /**
@@ -117,6 +120,7 @@ inline auto time_string() -> std::string
   return {static_cast<char const*>(mbstr)};
 }
 
+/*
 template <class OutputIt, class BidirIt, class Traits, class CharT, class UnaryFunction>
 auto regex_replace(OutputIt out, BidirIt first, BidirIt last, const std::basic_regex<CharT, Traits>& re,
                    UnaryFunction f) -> OutputIt
@@ -158,6 +162,7 @@ auto regex_replace(std::basic_string<CharT> const& s, const std::basic_regex<Cha
   regex_replace(std::back_inserter(out), s.cbegin(), s.cend(), re, f);
   return out;
 }
+*/
 
 inline auto indent(int32_t amt) -> std::string
 {

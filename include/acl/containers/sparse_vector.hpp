@@ -844,7 +844,7 @@ private:
     return pool_occupation(items_[p]);
   }
 
-  void validate(size_type idx) const noexcept
+  void validate([[maybe_unused]] size_type idx) const noexcept
   {
     assert(contains(idx));
   }

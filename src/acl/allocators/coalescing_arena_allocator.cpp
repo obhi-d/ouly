@@ -282,7 +282,7 @@ void coalescing_arena_allocator::reinsert_right(size_t of, size_type size, std::
 
 void coalescing_arena_allocator::validate_integrity() const
 {
-  uint32_t counted_free_nodes = 0;
+  [[maybe_unused]] uint32_t counted_free_nodes = 0;
   for (auto arena_it = arenas_.begin(arena_entries_), arena_end_it = arenas_.end(arena_entries_);
        arena_it != arena_end_it; ++arena_it)
   {
@@ -304,8 +304,8 @@ void coalescing_arena_allocator::validate_integrity() const
   for (auto arena_it = arenas_.begin(arena_entries_), arena_end_it = arenas_.end(arena_entries_);
        arena_it != arena_end_it; ++arena_it)
   {
-    const auto& arena           = *arena_it;
-    size_type   expected_offset = 0;
+    const auto&                arena           = *arena_it;
+    [[maybe_unused]] size_type expected_offset = 0;
 
     for (auto blk_it = arena.blocks_.begin(block_entries_), blk_end_it = arena.blocks_.end(block_entries_);
          blk_it != blk_end_it; ++blk_it)
@@ -322,7 +322,7 @@ void coalescing_arena_allocator::validate_integrity() const
     assert(sizes_[i - 1] <= sizes_[i]);
   }
 
-  size_type sz = 0;
+  [[maybe_unused]] size_type sz = 0;
   // NOLINTNEXTLINE
   for (size_t free_idx = 0; free_idx < free_ordering_.size(); ++free_idx)
   {

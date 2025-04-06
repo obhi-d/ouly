@@ -119,9 +119,9 @@ TEST_CASE("scheduler: Simplest ParallelFor")
   acl::parallel_for(
    [&parallel_sum](int a, [[maybe_unused]] acl::worker_context const& c)
    {
-     auto id = acl::worker_id::get();
+     [[maybe_unused]] auto id = acl::worker_id::get();
      assert(id.get_index() < 16);
-     auto ctx = acl::worker_context::get(acl::default_workgroup_id);
+     [[maybe_unused]] auto ctx = acl::worker_context::get(acl::default_workgroup_id);
      assert(ctx.get_worker().get_index() < 16);
      assert(ctx.get_group_offset() < 16);
      parallel_sum += a;

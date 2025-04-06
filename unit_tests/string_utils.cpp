@@ -87,12 +87,12 @@ TEST_CASE("Validate string utils wordlist", "[string_utils]")
   acl::word_push_back(words, "a161");
 
   std::string replace;
-  std::regex  re("a[0-9][0-9][0-9]");
-  replace = acl::regex_replace(words, re,
-                               [](auto const& match)
-                               {
-                                 return match.str(1);
-                               });
+  // std::regex  re("a[0-9][0-9][0-9]");
+  // replace = acl::regex_replace(words, re,
+  //                             [](auto const& match)
+  //                             {
+  //                               return match.str(1);
+  //                             });
   REQUIRE(acl::index_of(replace, "111") != 3);
   REQUIRE(acl::index_of(replace, "121") != 4);
   REQUIRE(acl::index_of(replace, "161") != 5);

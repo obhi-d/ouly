@@ -75,8 +75,8 @@ struct alloc_mem_manager
       auto& src = backup_allocs_[i];
       auto& dst = allocs_[i];
 
-      auto source_data = backup_arenas_[src.arena_].data() + src.offset_;
-      auto dest_data   = arenas_[dst.arena_].data() + dst.offset_;
+      [[maybe_unused]] auto source_data = backup_arenas_[src.arena_].data() + src.offset_;
+      [[maybe_unused]] auto dest_data   = arenas_[dst.arena_].data() + dst.offset_;
       assert(!std::memcmp(source_data, dest_data, src.size_));
     }
 

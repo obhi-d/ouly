@@ -445,7 +445,7 @@ public:
       }
       else
       {
-        acl::detail::convertible_to_type<tclass_type> value;
+        acl::detail::convertible_to_type<tclass_type> value = {};
         read_value(value, parser, slice);
         acl::convert<tclass_type>::from_type(obj, value);
       }

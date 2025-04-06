@@ -130,8 +130,8 @@ public:
   template <CoalescingMemoryManager M, typename Alignment = acl::alignment<>, typename Dedicated = std::false_type>
   auto allocate(size_type size, M& manager, Alignment alignment = {}, Dedicated /*unused*/ = {}) -> ca_allocation
   {
-    auto measure = statistics::report_allocate(size);
-    auto vsize   = alignment ? size + static_cast<size_type>(alignment) : size;
+    [[maybe_unused]] auto measure = statistics::report_allocate(size);
+    auto                  vsize   = alignment ? size + static_cast<size_type>(alignment) : size;
 
     if (Dedicated::value || vsize >= arena_size_)
     {
