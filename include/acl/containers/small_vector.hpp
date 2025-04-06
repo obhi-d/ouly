@@ -214,24 +214,96 @@ public:
   template <class InputIterator>
   constexpr void assign(InputIterator first, InputIterator last)
   {
-    auto xsize = static_cast<size_type>(std::distance(first, last));
-    clear();
-    resize(xsize);
-    copy_construct(first, last, get_data());
+    auto n = static_cast<size_type>(std::distance(first, last));
+    if (n > capacity())
+    {
+      // Reserve space in heap to do the copy first, then clear the old data and assign the iterator range
+      // then free
+      auto [ldata, copy] = heap_allocate(n);
+      // initialize
+      std::uninitialized_copy(first, last, copy.pdata_->template as<Ty>());
+
+      if constexpr (!has_trivial_dtor && !has_trivially_destroyed_on_move)
+      {
+        std::destroy_n(ldata, size_);
+      }
+
+      if (!is_inlined())
+      {
+        acl::deallocate(*this, data_store_.hdata_.pdata_, data_store_.hdata_.capacity_ * sizeof(storage),
+                        alignarg<storage>);
+      }
+
+      data_store_.hdata_ = copy;
+      size_              = n;
+    }
+    else if (n > size_)
+    {
+      // Copy until size_, then construct the rest
+      auto ptr = get_data();
+      std::copy(first, first + size_, ptr);
+      std::uninitialized_copy(first + size_, last, ptr + size_);
+      size_ = n;
+    }
+    else
+    {
+      auto ptr = get_data();
+      std::copy(first, last, ptr);
+      resize(n);
+    }
+    shrink_to_fit();
   }
 
   constexpr void assign(size_type n, const Ty& value)
   {
-    clear();
-    resize(n, value);
-    std::uninitialized_fill_n(data(), n, value);
+    if (n > capacity())
+    {
+      // Reserve space in heap to do the copy first, then clear the old data and assign the iterator range
+      // then free
+      auto [ldata, copy] = heap_allocate(n);
+      // initialize
+      std::uninitialized_fill_n(copy.pdata_->template as<Ty>(), n, value);
+
+      if constexpr (!has_trivial_dtor && !has_trivially_destroyed_on_move)
+      {
+        std::destroy_n(ldata, size_);
+      }
+
+      if (!is_inlined())
+      {
+        acl::deallocate(*this, data_store_.hdata_.pdata_, data_store_.hdata_.capacity_ * sizeof(storage),
+                        alignarg<storage>);
+      }
+
+      data_store_.hdata_ = copy;
+      size_              = n;
+    }
+    else if (n > size_)
+    {
+      // Copy until size_, then construct the rest
+      auto ptr = get_data();
+      std::fill_n(ptr, size_, value);
+      std::uninitialized_fill_n(ptr + size_, n - size_, value);
+      size_ = n;
+    }
+    else
+    {
+      auto ptr = get_data();
+      std::fill_n(ptr, n, value);
+      resize(n);
+    }
+    shrink_to_fit();
   }
 
   constexpr void assign(std::initializer_list<Ty> other)
   {
-    clear();
-    resize(static_cast<size_type>(other.size()));
-    copy_construct(std::begin(other), std::end(other), get_data());
+    assign(other.begin(), other.end());
+  }
+
+  template <typename R>
+  constexpr void assign_range(R&& rg)
+  {
+    assign(std::begin(std::forward<R>(rg)), std::end(std::forward<R>(rg)));
   }
 
   [[nodiscard]] constexpr auto get_allocator() const -> allocator_type
@@ -423,7 +495,7 @@ public:
     auto new_size = size_ + 1;
     if (capacity() <= size_)
     {
-      auto [ldata, copy] = heap_allocate_and_copy(new_size + (size_ >> 1));
+      auto [ldata, copy] = heap_allocate(new_size + (size_ >> 1));
       auto data          = copy.pdata_->template as<Ty>();
       auto ptr           = data + size_;
 
@@ -667,7 +739,7 @@ private:
     return is_inlined() ? data_store_.ldata_.data()->template as<Ty>() : data_store_.hdata_.pdata_->template as<Ty>();
   }
 
-  constexpr auto heap_allocate_and_copy(size_type n) -> std::pair<Ty*, heap_storage>
+  constexpr auto heap_allocate(size_type n) -> std::pair<Ty*, heap_storage>
   {
     heap_storage copy;
     copy.capacity_ = n;
@@ -679,7 +751,7 @@ private:
 
   constexpr void unchecked_reserve_in_heap(size_type n)
   {
-    auto [ldata, copy] = heap_allocate_and_copy(n);
+    auto [ldata, copy] = heap_allocate(n);
     auto data          = copy.pdata_->template as<Ty>();
     if constexpr (has_pod || std::is_trivially_copyable_v<Ty>)
     {
