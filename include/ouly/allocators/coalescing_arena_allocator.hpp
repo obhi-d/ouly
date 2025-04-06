@@ -64,6 +64,9 @@ using coalescing_arena_allocator_base = ouly::detail::statistics<ouly::detail::c
  * It supports coalescing of free blocks to reduce fragmentation. The allocator tracks block
  * sizes, offsets and arena assignments.
  *
+ * @note This class is meant for doing virtual allocations, for example when doing GPU memory
+ * management. It is not meant to be used as a general purpose allocator.
+ *
  * Key features:
  * - Supports variable sized allocations
  * - Coalesces adjacent free blocks

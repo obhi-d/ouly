@@ -362,7 +362,7 @@ ctest
 ## 📚 Documentation
 
 For detailed documentation, please visit:
-[OULY Documentation](https://ouly-container-and-utility-library.readthedocs.io/en/latest/)
+[OULY Documentation](https://ouly-optimized-utility-library.readthedocs.io/en/latest/)
 
 ## 📖 Quick Example
 
