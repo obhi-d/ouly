@@ -84,8 +84,7 @@ public:
   }
   ~sparse_table()
   {
-    clear();
-    shrink_to_fit();
+    clear_data();
   }
 
   auto operator=(sparse_table&& other) noexcept -> sparse_table&
@@ -94,8 +93,7 @@ public:
     {
       return *this;
     }
-    clear();
-    shrink_to_fit();
+    clear_data();
 
     (allocator_type&)* this = std::move((allocator_type&)other);
     items_                  = std::move(other.items_);
@@ -109,45 +107,43 @@ public:
     return *this;
   }
 
-  auto operator=(sparse_table const& other) noexcept -> sparse_table&
-    requires(std::is_copy_constructible_v<value_type>)
-  {
-    if (this != &other)
-    {
-      clear();
-      shrink_to_fit();
+  auto operator=(sparse_table const& other) noexcept
+   -> sparse_table& requires(std::is_copy_constructible_v<value_type>) {
+     if (this != &other)
+     {
+       clear_data();
 
-      static_cast<allocator_type&>(*this) = static_cast<allocator_type const&>(other);
-      items_.resize(other.items_.size());
-      for (auto& data : items_)
-      {
-        data = acl::allocate<storage>(*this, sizeof(storage) * pool_size);
-      }
+       static_cast<allocator_type&>(*this) = static_cast<allocator_type const&>(other);
+       items_.resize(other.items_.size());
+       for (auto& data : items_)
+       {
+         data = acl::allocate<storage>(*this, sizeof(storage) * pool_size);
+       }
 
-      for (size_type first = 1; first != other.extents_; ++first)
-      {
-        // NOLINTNEXTLINE
-        auto const& src = reinterpret_cast<value_type const&>(other.item_at_idx(first));
-        // NOLINTNEXTLINE
-        auto& dst = reinterpret_cast<value_type&>(item_at_idx(first));
+       for (size_type first = 1; first != other.extents_; ++first)
+       {
+         // NOLINTNEXTLINE
+         auto const& src = reinterpret_cast<value_type const&>(other.item_at_idx(first));
+         // NOLINTNEXTLINE
+         auto& dst = reinterpret_cast<value_type&>(item_at_idx(first));
 
-        auto ref = other.get_ref_at_idx(first);
-        if (is_valid_ref(ref))
-        {
-          std::construct_at(&dst, src);
-        }
-        if constexpr (has_self_index)
-        {
-          set_ref_at_idx(first, ref);
-        }
-      }
-      self_      = other.self_;
-      extents_   = other.extents_;
-      length_    = other.length_;
-      free_slot_ = other.free_slot_;
-    }
-    return *this;
-  }
+         auto ref = other.get_ref_at_idx(first);
+         if (is_valid_ref(ref))
+         {
+           std::construct_at(&dst, src);
+         }
+         if constexpr (has_self_index)
+         {
+           set_ref_at_idx(first, ref);
+         }
+       }
+       self_      = other.self_;
+       extents_   = other.extents_;
+       length_    = other.length_;
+       free_slot_ = other.free_slot_;
+     }
+     return *this;
+   }
 
   /**
    * @brief Lambda called for each element
@@ -547,6 +543,13 @@ private:
   static auto is_valid_ref(size_type r) -> bool
   {
     return (r && acl::detail::is_valid(r));
+  }
+
+  void clear_data()
+  {
+    clear();
+    extents_ = 0;
+    shrink_to_fit();
   }
 
   std::vector<storage*> items_;

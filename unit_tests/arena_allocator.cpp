@@ -133,7 +133,7 @@ void run_test(unsigned int seed)
     {
       // acl::fixed_alloc_desc<std::uint32_t, TestType::min_granularity> desc(generator(gen) *
       // TestType::min_granularity,
-      //                                                                      static_cast<std::uint32_t>(mgr.allocs_.size()),
+      // static_cast<std::uint32_t>(mgr.allocs_.size()),
       //                                                                      acl::alloc_option_bits::f_defrag);
       if (biased_dice(gen))
         allocator.defragment();
