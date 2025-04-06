@@ -3,7 +3,7 @@
 
 # User specific
 CMakeLists.txt.user
-
+compile_commands.json
 # Compiled Object files
 *.slo
 *.lo
