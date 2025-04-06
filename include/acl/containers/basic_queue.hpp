@@ -93,9 +93,7 @@ public:
     other.back_  = 0;
   }
 
-  auto operator=(basic_queue const& other) -> basic_queue&
-    requires(std::is_copy_constructible_v<Ty>)
-  {
+  auto operator=(basic_queue const& other) -> basic_queue& requires(std::is_copy_constructible_v<Ty>) {
     if (this == &other)
     {
       return *this;
@@ -192,11 +190,11 @@ public:
        });
     }
 
-    if (head_)
+    if (tail_)
     {
-      head_->next_ = free_;
+      tail_->next_ = free_;
+      free_        = head_;
     }
-    free_ = head_;
     head_ = tail_ = nullptr;
     front_ = back_ = 0;
   }

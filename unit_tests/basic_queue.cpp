@@ -1,4 +1,5 @@
 #include "acl/containers/basic_queue.hpp"
+#include "acl/utility/config.hpp"
 #include "catch2/catch_all.hpp"
 #include <string>
 
@@ -45,6 +46,59 @@ TEST_CASE("Validate basic_queue", "[basic_queue]")
 
   queue.clear();
   CHECK(queue.empty() == true);
+}
+
+TEST_CASE("Check for leaks in basic_queue", "[basic_queue]")
+{
+  int object_count = 0;
+  struct leak_track
+  {
+    int& object_counter;
+
+    leak_track(int& counter) : object_counter(counter)
+    {
+      ++object_counter;
+    }
+    ~leak_track()
+    {
+      --object_counter;
+    }
+    leak_track(leak_track const& other) : object_counter(other.object_counter)
+    {
+      ++object_counter;
+    }
+    leak_track(leak_track&& other) : object_counter(other.object_counter)
+    {
+      ++object_counter;
+    }
+    leak_track& operator=(leak_track const& other)
+    {
+      if (this == &other)
+        return *this;
+      object_counter = other.object_counter;
+      return *this;
+    }
+    leak_track& operator=(leak_track&& other)
+    {
+      if (this == &other)
+        return *this;
+      object_counter = other.object_counter;
+      return *this;
+    }
+  };
+
+  acl::basic_queue<leak_track, acl::config<acl::cfg::pool_size<4>>> queue;
+
+  for (uint32_t i = 0; i < 10; ++i)
+    queue.emplace_back(object_count);
+
+  CHECK(object_count == 10);
+  queue.pop_front();
+  CHECK(object_count == 9);
+
+  queue.clear();
+  CHECK(queue.empty() == true);
+  CHECK(object_count == 0);
 }
 
 TEST_CASE("Validate basic_queue initialization", "[basic_queue]")

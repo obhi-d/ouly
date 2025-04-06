@@ -131,3 +131,12 @@ install(
 )
 
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+
+if (ACL_EXPORT_CC_TO_SRC_DIR)
+add_custom_target(copy_compile_commands ALL
+  COMMAND ${CMAKE_COMMAND} -E create_symlink
+    ${PROJECT_BINARY_DIR}/compile_commands.json
+    ${CMAKE_SOURCE_DIR}/compile_commands.json
+)
+endif()

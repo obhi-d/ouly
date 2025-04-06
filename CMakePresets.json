@@ -12,7 +12,8 @@
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
         "ASAN_ENABLED": "ON",
-        "ACL_BUILD_TESTS": "ON"
+        "ACL_BUILD_TESTS": "ON",
+        "ACL_EXPORT_CC_TO_SRC_DIR": "ON"
       },
       "vendor": {
         "microsoft.com/VisualStudioSettings/CMake/1.0": {
@@ -50,7 +51,8 @@
         "CMAKE_EXPORT_COMPILE_COMMANDS": true,
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
-        "ACL_BUILD_TESTS": "ON"
+        "ACL_BUILD_TESTS": "ON",
+        "ACL_EXPORT_CC_TO_SRC_DIR": "ON"
       },
       "vendor": {
         "microsoft.com/VisualStudioSettings/CMake/1.0": {
