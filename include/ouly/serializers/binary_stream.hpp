@@ -139,6 +139,10 @@ public:
    */
   void read(std::byte* sdata, std::size_t size)
   {
+    if (size > stream_.size())
+    {
+      throw std::out_of_range("Not enough data in the stream");
+    }
     std::memcpy(sdata, stream_.data(), size);
     stream_ = stream_.subspan(size);
   }
@@ -150,6 +154,10 @@ public:
    */
   void skip(std::size_t size)
   {
+    if (size > stream_.size())
+    {
+      throw std::out_of_range("Not enough data in the stream");
+    }
     stream_ = stream_.subspan(size);
   }
 
@@ -269,6 +277,10 @@ public:
   {
     // NOLINTNEXTLINE
     is_->read(reinterpret_cast<char*>(sdata), static_cast<std::streamsize>(size));
+    if (is_->gcount() != static_cast<std::streamsize>(size))
+    {
+      throw std::out_of_range("Not enough data in the stream");
+    }
   }
 
   /**
@@ -279,6 +291,10 @@ public:
   void skip(std::size_t size)
   {
     is_->ignore(static_cast<std::streamsize>(size));
+    if (is_->gcount() != static_cast<std::streamsize>(size))
+    {
+      throw std::out_of_range("Not enough data in the stream");
+    }
   }
 
   /**
