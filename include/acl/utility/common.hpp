@@ -40,7 +40,7 @@ namespace acl
 {
 constexpr std::uint32_t safety_offset = alignof(void*);
 
-inline void print_debug_info(std::string const& s)
+inline void print_debug_info(std::string const& /*s*/)
 {
   /*ignored*/
 }

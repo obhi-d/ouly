@@ -59,7 +59,8 @@ public:
   binary_input_serializer(Stream& ser) : serializer_{&ser} {}
   ~binary_input_serializer() noexcept = default;
 
-  binary_input_serializer(acl::detail::field_visitor_tag /*unused*/, binary_input_serializer& ser, std::string_view key)
+  binary_input_serializer(acl::detail::field_visitor_tag /*unused*/, binary_input_serializer& ser,
+                          [[maybe_unused]] std::string_view key)
       : serializer_{ser.serializer_}, object_id_(ser.object_id_), type_{type::field}, may_fast_path_(ser.may_fast_path_)
   {
     // No-op
@@ -84,7 +85,7 @@ public:
   }
 
   template <typename Class>
-  auto can_visit(Class& obj) -> continue_token
+  auto can_visit([[maybe_unused]] Class& obj) -> continue_token
   {
     if (!may_fast_path_)
     {
@@ -225,7 +226,7 @@ private:
 
 struct empty_input_streamer
 {
-  static void read(std::byte* data, size_t s) {}
+  static void read([[maybe_unused]] std::byte* data, [[maybe_unused]] size_t s) {}
 };
 
 } // namespace acl::detail

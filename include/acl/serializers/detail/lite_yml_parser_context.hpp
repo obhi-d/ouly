@@ -608,7 +608,7 @@ public:
   }
 
   template <typename TClassType>
-  static auto read_variant_type(TClassType& obj, parser_state* parser)
+  static auto read_variant_type([[maybe_unused]] TClassType& obj, parser_state* parser)
   {
     auto mapping        = parser->template create<in_context_impl<std::string_view, Config>>();
     mapping->post_init_ = [](in_context_base* mapping_base, parser_state* /* parser_ptr */)
@@ -620,7 +620,7 @@ public:
   }
 
   template <typename TClassType, std::size_t const I>
-  static auto read_variant_at(TClassType& obj, parser_state* parser)
+  static auto read_variant_at([[maybe_unused]] TClassType& obj, parser_state* parser)
   {
     using type = std::variant_alternative_t<I, TClassType>;
 
@@ -787,7 +787,7 @@ public:
   }
 
   template <typename Base, typename TClassType, std::size_t I>
-  static void post_init_aggregate(in_context_base* mapping, parser_state* parser)
+  static void post_init_aggregate(in_context_base* mapping, [[maybe_unused]] parser_state* parser)
   {
     using type  = field_type<I, TClassType>;
     auto object = static_cast<in_context_impl<type, Config>*>(mapping);
@@ -818,7 +818,7 @@ public:
   }
 
   template <typename Base, typename TClassType>
-  static auto read_aggregate(TClassType& obj, parser_state* parser, std::string_view field_key)
+  static auto read_aggregate([[maybe_unused]] TClassType& obj, parser_state* parser, std::string_view field_key)
   {
     using tclass_type = std::decay_t<TClassType>;
 

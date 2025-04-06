@@ -1,8 +1,8 @@
-#include "test_common.hpp"
 #include "acl/ecs/collection.hpp"
 #include "acl/ecs/components.hpp"
 #include "acl/ecs/registry.hpp"
 #include "catch2/catch_all.hpp"
+#include "test_common.hpp"
 #include <string>
 #include <unordered_map>
 
@@ -180,7 +180,7 @@ TEST_CASE("registry: random test", "[components][nontrivial]")
 TEST_CASE("components: validate named objects", "[rlink_object_table][nontrivial]")
 {
   using container = acl::ecs::rxregistry<>;
-  using clink     = acl::ecs::rxregistry<>::type;
+  // using clink     = acl::ecs::rxregistry<>::type;
 
   acl::ecs::components<std::string, acl::ecs::rxentity<>> names;
 
@@ -330,7 +330,7 @@ TEST_CASE("collection: validate collection", "[packed_table][emplace]")
 
   std::uint32_t value = 0;
   collection.for_each(data,
-                      [&](auto link, auto const& v)
+                      [&](auto /*link*/, auto const& v)
                       {
                         value += v;
                       });
@@ -342,7 +342,7 @@ TEST_CASE("collection: validate collection", "[packed_table][emplace]")
 
   collection.erase(e20);
   collection.for_each(data,
-                      [&](auto link, auto const& v)
+                      [&](auto /*link*/, auto const& v)
                       {
                         value -= v;
                       });

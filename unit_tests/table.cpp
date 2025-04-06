@@ -1,6 +1,6 @@
 
-#include "acl/containers/soavector.hpp"
 #include "acl/containers/table.hpp"
+#include "acl/containers/soavector.hpp"
 #include "catch2/catch_all.hpp"
 #include <string>
 
@@ -21,15 +21,15 @@ TEST_CASE("table: Validate table emplace", "[table][emplace]")
 
 TEST_CASE("table: Validate table erase", "[table][erase]")
 {
-  using pack = acl::pack<int, bool, std::string>;
+  // using pack = acl::pack<int, bool, std::string>;
   acl::table<std::string> v1;
 
-  auto a1 = v1.emplace("first");
-  auto a2 = v1.emplace("second");
-  auto a3 = v1.emplace("third");
-  auto a4 = v1.emplace("fourth");
-  auto a5 = v1.emplace("fifth");
-  auto a6 = v1.emplace("sixth");
+  auto                  a1 = v1.emplace("first");
+  [[maybe_unused]] auto a2 = v1.emplace("second");
+  auto                  a3 = v1.emplace("third");
+  auto                  a4 = v1.emplace("fourth");
+  [[maybe_unused]] auto a5 = v1.emplace("fifth");
+  auto                  a6 = v1.emplace("sixth");
 
   v1.erase(a1);
   REQUIRE(a1 == v1.emplace("first"));

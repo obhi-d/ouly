@@ -55,8 +55,6 @@ public:
     std::uint32_t free_node = *found;
     auto&         blk       = bank.blocks_[block_link(free_node)];
     // Marker
-    size_type     offset    = blk.offset_;
-    std::uint32_t arena_num = blk.arena_;
 
     blk.is_free_ = false;
 
@@ -192,7 +190,7 @@ public:
   }
 
   template <typename Owner>
-  void init(Owner const& owner)
+  void init([[maybe_unused]] Owner const& owner)
   {}
 
 protected:

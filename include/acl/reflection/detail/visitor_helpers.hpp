@@ -499,7 +499,7 @@ void visit_optional(Class const& obj, Visitor& visitor)
 }
 
 template <typename Class, typename Visitor>
-void visit_monostate(Class& obj, Visitor& visitor)
+void visit_monostate([[maybe_unused]] Class& obj, Visitor& visitor)
 {
   if constexpr (is_writer<Visitor>)
   {

@@ -253,7 +253,7 @@ public:
    */
   arena_allocator(size_type i_arena_size, arena_manager& i_manager) noexcept
     requires(has_memory_mgr)
-      : mgr_(&i_manager), arena_size_(i_arena_size)
+      : arena_size_(i_arena_size), mgr_(&i_manager)
   {
     ibank_.strat_.init(*this);
   }
@@ -340,11 +340,11 @@ public:
    * 4. Returns empty alloc_info if allocation fails
    */
   template <typename Alignment = alignment<>, typename Dedicated = std::false_type>
-  auto allocate(size_type isize, Alignment i_alignment = {}, std::uint32_t huser = {},
-                Dedicated /*unused*/ = {}) -> alloc_info
+  auto allocate(size_type isize, Alignment i_alignment = {}, std::uint32_t huser = {}, Dedicated /*unused*/ = {})
+   -> alloc_info
   {
-    auto measure = this->statistics::report_allocate(isize);
-    auto size    = isize + static_cast<size_type>(i_alignment);
+    [[maybe_unused]] auto measure = this->statistics::report_allocate(isize);
+    auto                  size    = isize + static_cast<size_type>(i_alignment);
 
     if (Dedicated::value || size >= arena_size_)
     {
@@ -417,8 +417,8 @@ public:
    */
   void deallocate(std::uint32_t node)
   {
-    auto& blk     = ibank_.bank_.blocks()[block_link(node)];
-    auto  measure = this->statistics::report_deallocate(blk.size());
+    auto&                 blk     = ibank_.bank_.blocks()[block_link(node)];
+    [[maybe_unused]] auto measure = this->statistics::report_deallocate(blk.size());
 
     enum
     {
@@ -600,7 +600,6 @@ public:
     requires(can_defragment)
   {
     mgr_->begin_defragment(*this);
-    std::uint32_t arena_id = ibank_.bank_.arena_order_.first_;
     // refresh all banks
     remap_data refresh;
     refresh.strat_.init(*this);
@@ -698,8 +697,8 @@ private:
     return ret;
   }
 
-  static auto add_arena(remap_data& ibank, std::uint32_t handle, size_type iarena_size,
-                        bool iempty) -> std::pair<std::uint32_t, std::uint32_t>
+  static auto add_arena(remap_data& ibank, std::uint32_t handle, size_type iarena_size, bool iempty)
+   -> std::pair<std::uint32_t, std::uint32_t>
   {
 
     std::uint32_t arena_id  = ibank.bank_.arenas().emplace();

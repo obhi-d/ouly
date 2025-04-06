@@ -5,8 +5,8 @@
 struct arg_formatter
 {
   std::string text;
-  inline void operator()(acl::program_document_type type, std::string_view, std::string_view,
-                         std::string_view           txt) noexcept
+  inline void operator()([[maybe_unused]] acl::program_document_type type, std::string_view, std::string_view,
+                         std::string_view                            txt) noexcept
   {
     text += txt;
   }

@@ -113,7 +113,7 @@ private:
     return other == config::null_v;
   }
 
-  static constexpr auto is_null(value_type const& other) noexcept -> bool
+  static constexpr auto is_null(value_type const& /*other*/) noexcept -> bool
     requires(!has_null_value && !has_null_method)
   {
     return false;
@@ -568,7 +568,7 @@ public:
   {
     assert(length_ < idx);
     auto block = idx >> pool_mul;
-    auto index = idx & pool_mod;
+    // auto index = idx & pool_mod;
 
     ensure_block(block);
 
@@ -973,7 +973,6 @@ private:
   static void for_each_value(Store* store, size_type block, size_type start, size_type end, Lambda lambda,
                              Check /*unused*/) noexcept
   {
-    constexpr auto arity = function_traits<std::remove_reference_t<Lambda>>::arity;
     if (store)
     {
       for (size_type e = start; e < end; ++e)

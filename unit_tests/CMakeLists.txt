@@ -79,6 +79,27 @@ function(add_unit_test)
             target_link_options(${target_name} PUBLIC -fsanitize=address)
         endif()
     endif()
+
+    # Add all warning flags
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+        target_compile_options(${target_name} PRIVATE /W4 /WX)
+    else()
+        target_compile_options(
+            ${target_name}
+            PRIVATE
+                -Wall
+                -Wextra
+                -pedantic
+                -Werror
+        )
+        if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+            target_compile_options(
+                ${target_name}
+                PRIVATE
+                    -Wno-unknown-warning-option
+            )
+        endif() 
+    endif()
 endfunction(add_unit_test)
 
 add_unit_test(NAME name_deduction FILES "name_deduction.cpp" SANITIZE)

@@ -287,8 +287,7 @@ void coalescing_arena_allocator::validate_integrity() const
   for (auto arena_it = arenas_.begin(arena_entries_), arena_end_it = arenas_.end(arena_entries_);
        arena_it != arena_end_it; ++arena_it)
   {
-    const auto& arena           = *arena_it;
-    bool        arena_allocated = false;
+    const auto& arena = *arena_it;
 
     for (auto blk_it = arena.blocks_.begin(block_entries_), blk_end_it = arena.blocks_.end(block_entries_);
          blk_it != blk_end_it; ++blk_it)
@@ -307,7 +306,6 @@ void coalescing_arena_allocator::validate_integrity() const
        arena_it != arena_end_it; ++arena_it)
   {
     const auto& arena           = *arena_it;
-    bool        arena_allocated = false;
     size_type   expected_offset = 0;
 
     for (auto blk_it = arena.blocks_.begin(block_entries_), blk_end_it = arena.blocks_.end(block_entries_);

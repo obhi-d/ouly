@@ -102,9 +102,6 @@ public:
   {
     auto& blk = bank.blocks_[block_link(found.value_)];
     // Marker
-    size_type     offset    = blk.offset_;
-    std::uint32_t arena_num = blk.arena_;
-
     blk.is_free_ = false;
 
     auto remaining = blk.size_ - size;
@@ -173,7 +170,7 @@ public:
   }
 
   template <typename Owner>
-  void init(Owner const& owner)
+  void init([[maybe_unused]] Owner const& owner)
   {}
 
 private:

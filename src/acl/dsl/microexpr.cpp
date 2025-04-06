@@ -200,8 +200,7 @@ auto microexpr_state::binary() -> int64_t
 
 auto microexpr_state::read_token() const -> std::string_view
 {
-  std::string_view ret;
-  uint32_t         token = read_;
+  uint32_t token = read_;
   while (token < content_.size() && (std::isalnum(content_[token]) != 0))
   {
     token++;

@@ -60,14 +60,14 @@ struct alloc_mem_manager
   }
 
   template <typename Allocator>
-  void begin_defragment(Allocator& allocator)
+  void begin_defragment([[maybe_unused]] Allocator& allocator)
   {
     backup_arenas_ = arenas_;
     backup_allocs_ = allocs_;
   }
 
   template <typename Allocator>
-  void end_defragment(Allocator& allocator)
+  void end_defragment([[maybe_unused]] Allocator& allocator)
   {
     // assert validity
     for (std::size_t i = 0; i < allocs_.size(); ++i)
@@ -169,9 +169,9 @@ TEST_CASE("arena_allocator without memory manager", "[arena_allocator][default]"
   allocator.deallocate(loc);
   auto [tloc, toffset] = allocator.allocate(256);
   REQUIRE(toffset == 0);
-  auto [sloc, soffset] = allocator.allocate(256);
-  auto [uloc, uoffset] = allocator.allocate(256);
-  auto [vloc, voffset] = allocator.allocate(256);
+  [[maybe_unused]] auto [sloc, soffset] = allocator.allocate(256);
+  auto [uloc, uoffset]                  = allocator.allocate(256);
+  auto [vloc, voffset]                  = allocator.allocate(256);
   REQUIRE(vloc == allocator.null());
   auto [wloc, woffset] = allocator.allocate(256);
   REQUIRE(wloc == allocator.null());

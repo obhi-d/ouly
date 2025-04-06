@@ -38,7 +38,7 @@ public:
   auto operator=(greedy_v0 const&) -> greedy_v0&     = default;
   auto operator=(greedy_v0&&) noexcept -> greedy_v0& = default;
 
-  [[nodiscard]] auto try_allocate(bank_data& bank, size_type size) -> optional_addr
+  [[nodiscard]] auto try_allocate([[maybe_unused]] bank_data& bank, size_type size) -> optional_addr
   {
     for (uint32_t i = 0, en = static_cast<uint32_t>(free_list_.size()); i < en; ++i)
     {
@@ -59,8 +59,6 @@ public:
     auto  block     = free_node.second;
     auto& blk       = bank.blocks_[block];
     // Marker
-    size_type     offset    = blk.offset_;
-    std::uint32_t arena_num = blk.arena_;
 
     blk.is_free_ = false;
 
@@ -165,7 +163,7 @@ public:
   }
 
   template <typename Owner>
-  void init(Owner const& owner)
+  void init([[maybe_unused]] Owner const& owner)
   {}
 
 protected:

@@ -1,5 +1,4 @@
 
-#include "test_common.hpp"
 #include "acl/allocators/allocator.hpp"
 #include "acl/allocators/default_allocator.hpp"
 #include "acl/allocators/std_allocator_wrapper.hpp"
@@ -12,6 +11,7 @@
 #include "acl/utility/wyhash.hpp"
 #include "acl/utility/zip_view.hpp"
 #include "catch2/catch_all.hpp"
+#include "test_common.hpp"
 #include <span>
 
 // NOLINTBEGIN
@@ -310,7 +310,7 @@ TEST_CASE("Test index_map", "[index_map]")
   {
     if (i != map.null)
     {
-      REQUIRE(i == data[it++]);
+      REQUIRE(i == static_cast<unsigned>(data[it++]));
     }
   }
 
@@ -318,7 +318,7 @@ TEST_CASE("Test index_map", "[index_map]")
   {
     if (*r != map.null)
     {
-      REQUIRE(*r == data[--it]);
+      REQUIRE(*r == static_cast<unsigned>(data[--it]));
     }
   }
 }

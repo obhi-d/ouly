@@ -141,12 +141,12 @@ struct ca_block_accessor
     return bank.ordering_[node_id];
   }
 
-  static auto get(ca_block_entries const& bank, std::uint32_t node) -> value_type
+  static auto get([[maybe_unused]] ca_block_entries const& bank, std::uint32_t node) -> value_type
   {
     return node;
   }
 
-  static auto get(ca_block_entries& bank, std::uint32_t& node) -> value_type&
+  static auto get([[maybe_unused]] ca_block_entries& bank, std::uint32_t& node) -> value_type&
   {
     return node;
   }

@@ -45,6 +45,32 @@ add_library(
 
 set_property(TARGET ${ACL_TARGET_NAME} PROPERTY CXX_STANDARD 20)
 
+# Add all warning flags
+if (MSVC)
+    target_compile_options(
+        ${ACL_TARGET_NAME}
+        PRIVATE
+            /W4
+            /WX
+    )
+else()
+    target_compile_options(
+        ${ACL_TARGET_NAME}
+        PRIVATE
+            -Wall
+            -Wextra
+            -pedantic
+            -Werror
+    )
+    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        target_compile_options(
+            ${ACL_TARGET_NAME}
+            PRIVATE
+                -Wno-unknown-warning-option
+        )
+    endif()
+endif()
+
 message(STATUS "Using ${CMAKE_CXX_COMPILER} version ${CMAKE_CXX_COMPILER_VERSION}")
 # Check if Windows, skip clang-tidy in which case
 if(NOT MSVC)

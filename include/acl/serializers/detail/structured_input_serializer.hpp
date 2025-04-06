@@ -3,12 +3,12 @@
 //
 #pragma once
 
-#include "acl/reflection/visitor.hpp"
 #include "acl/reflection/detail/container_utils.hpp"
 #include "acl/reflection/detail/derived_concepts.hpp"
 #include "acl/reflection/detail/visitor_helpers.hpp"
 #include "acl/reflection/reflection.hpp"
 #include "acl/reflection/type_name.hpp"
+#include "acl/reflection/visitor.hpp"
 #include "acl/reflection/visitor_impl.hpp"
 #include "acl/utility/detail/concepts.hpp"
 
@@ -78,7 +78,7 @@ public:
   }
 
   template <typename Class>
-  auto can_visit(Class& obj) -> continue_token
+  auto can_visit([[maybe_unused]] Class& obj) -> continue_token
   {
     return serializer_.has_value();
   }

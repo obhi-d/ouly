@@ -90,7 +90,7 @@ TEST_CASE("scheduler: Range ParallelFor")
   std::atomic_int value;
   for (uint32_t i = 0; i < 1024; ++i)
     acl::parallel_for(
-     [&value](int a, int b, acl::worker_context const& wc)
+     [&value](int a, int b, [[maybe_unused]] acl::worker_context const& wc)
      {
        value.fetch_add(b - a);
      },
@@ -117,7 +117,7 @@ TEST_CASE("scheduler: Simplest ParallelFor")
 
   std::atomic_int64_t parallel_sum = 0;
   acl::parallel_for(
-   [&parallel_sum](int a, acl::worker_context const& c)
+   [&parallel_sum](int a, [[maybe_unused]] acl::worker_context const& c)
    {
      auto id = acl::worker_id::get();
      assert(id.get_index() < 16);
@@ -132,7 +132,7 @@ TEST_CASE("scheduler: Simplest ParallelFor")
 
   parallel_sum = 0;
   acl::parallel_for(
-   [&parallel_sum](auto start, auto end, acl::worker_context const& c)
+   [&parallel_sum](auto start, auto end, [[maybe_unused]] acl::worker_context const& c)
    {
      for (auto it = start; it != end; ++it)
        parallel_sum += *it;

@@ -384,7 +384,7 @@ inline void word_wrap(L line_accept, uint32_t width, std::string_view line, uint
   uint32_t nb_tabs    = 0;
 
   tokenize(
-   [&](std::size_t token_start, std::size_t token_end, char token) -> response
+   [&](std::size_t /*token_start*/, std::size_t token_end, char token) -> response
    {
      if (token == '\t')
      {

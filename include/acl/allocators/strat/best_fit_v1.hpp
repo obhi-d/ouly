@@ -64,9 +64,6 @@ public:
     std::uint32_t free_node = *found;
     auto&         blk       = bank.blocks_[block_link(free_node)];
     // Marker
-    size_type     offset    = blk.offset_;
-    std::uint32_t arena_num = blk.arena_;
-
     blk.is_free_ = false;
 
     auto remaining = blk.size_ - size;
@@ -169,7 +166,7 @@ public:
   }
 
   template <typename Owner>
-  void init(Owner const& owner)
+  void init([[maybe_unused]] Owner const& owner)
   {}
 
 protected:
@@ -260,9 +257,9 @@ protected:
     else
     {
       auto it = find_free_it(blocks, free_ordering_.data(), of, size);
-      if (it != of)
+      if (static_cast<unsigned>(it) != of)
       {
-        std::size_t count = of - it;
+        std::size_t count = of - static_cast<unsigned>(it);
 
         {
           auto src  = free_ordering_.data() + it;

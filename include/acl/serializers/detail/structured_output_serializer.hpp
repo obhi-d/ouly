@@ -87,7 +87,7 @@ public:
   }
 
   structured_output_serializer(acl::detail::field_visitor_tag /*unused*/, structured_output_serializer& ser,
-                               size_t index)
+                               [[maybe_unused]] size_t index)
       : serializer_{ser.serializer_}, type_{type::field}
   {
     if (ser.first_)
@@ -119,7 +119,7 @@ public:
   }
 
   template <typename Class>
-  auto can_visit(Class const& obj) -> continue_token
+  auto can_visit([[maybe_unused]] Class const& obj) -> continue_token
   {
     return true;
   }

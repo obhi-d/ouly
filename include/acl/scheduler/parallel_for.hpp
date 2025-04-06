@@ -62,7 +62,7 @@ template <typename Iterator, typename L>
 struct parallel_for_data
 {
   parallel_for_data(L& lambda, Iterator f, uint32_t task_count) noexcept
-      : lambda_instance_(lambda), first_(f), counter_(static_cast<ptrdiff_t>(task_count))
+      : first_(f), counter_(static_cast<ptrdiff_t>(task_count)), lambda_instance_(lambda)
   {}
 
   Iterator                  first_;

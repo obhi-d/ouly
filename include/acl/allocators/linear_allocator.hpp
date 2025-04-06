@@ -133,7 +133,7 @@ public:
   template <typename Alignment = alignment<>>
   void deallocate(address i_data, size_type i_size, Alignment i_alignment = {})
   {
-    auto measure = statistics::report_deallocate(i_size);
+    [[maybe_unused]] auto measure = statistics::report_deallocate(i_size);
 
     // merge back?
     size_type new_left_over = left_over_ + i_size;

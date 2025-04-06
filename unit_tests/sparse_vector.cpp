@@ -1,7 +1,7 @@
 
-#include "test_common.hpp"
 #include "acl/containers/sparse_vector.hpp"
 #include "catch2/catch_all.hpp"
+#include "test_common.hpp"
 #include <string>
 
 // NOLINTBEGIN
@@ -233,7 +233,6 @@ TEST_CASE("sparse_vector: unordered_merge", "[sparse_vector][unordered_merge]")
 
     v1.unordered_merge(std::move(v2));
 
-    uint32_t start = 0;
     v1.for_each(
      [&](std::string const& v)
      {

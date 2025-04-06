@@ -145,7 +145,7 @@ TEST_CASE("yaml_output: Test write empty array")
 {
   struct ArrayTest
   {
-    std::array<int, 3> a;
+    std::array<int, 3> a = {0, 0, 0};
   };
   ArrayTest at;
   auto      yml = acl::yml::to_string(at);

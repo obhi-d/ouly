@@ -100,7 +100,7 @@ class basic_delegate<SmallSize, Ret(Args...)>
 
   // Helper to call free functions
   template <auto F>
-  static auto invoke_free_function_by_binding(basic_delegate& d, Args... args) -> Ret
+  static auto invoke_free_function_by_binding(basic_delegate& /*d*/, Args... args) -> Ret
   {
     // Retrieve the stored function and cast it back to its original type
     return F(std::forward<Args>(args)...);

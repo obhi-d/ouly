@@ -14,7 +14,7 @@ struct dummy_debug_tracer
   struct backtrace
   {
     template <typename Stream>
-    friend auto operator<<(Stream& s, const backtrace& me) -> Stream&
+    friend auto operator<<(Stream& s, const backtrace& /*me*/) -> Stream&
     {
       s << "Unknown";
       return s;

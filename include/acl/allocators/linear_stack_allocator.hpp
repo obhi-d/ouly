@@ -41,7 +41,7 @@ public:
       mv.marker_.arena_ = std::numeric_limits<size_type>::max();
       return *this;
     }
-    scoped_rewind(linear_stack_allocator& r) : ref_(&r), marker_(r.get_rewind_point()) {}
+    scoped_rewind(linear_stack_allocator& r) : marker_(r.get_rewind_point()), ref_(&r) {}
     ~scoped_rewind()
     {
       if (marker_.arena_ != std::numeric_limits<size_type>::max())
@@ -113,7 +113,7 @@ public:
   [[nodiscard]] auto allocate(size_type i_size, Alignment i_alignment = {}) -> address
   {
 
-    auto measure = statistics::report_allocate(i_size);
+    [[maybe_unused]] auto measure = statistics::report_allocate(i_size);
     // assert
     auto fixup = i_alignment - 1;
     // make sure you allocate enough space

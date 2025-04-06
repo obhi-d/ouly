@@ -62,6 +62,6 @@ auto format_name(const std::string& str) -> std::string
   return format_camel_case(str);
 }
 
-inline void encode(std::string& enc, utf32 c) {}
+inline void encode(std::string& /*enc*/, utf32 /*c*/) {}
 
 } // namespace acl

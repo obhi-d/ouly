@@ -136,7 +136,6 @@ auto scheduler::get_work(worker_id thread) noexcept -> acl::detail::work_item
 
 void scheduler::wake_up(worker_id thread) noexcept
 {
-  bool sleeping = true;
   if (!wake_status_[thread.get_index()].exchange(true))
   {
     wake_events_[thread.get_index()].notify();
@@ -163,8 +162,7 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
 
     for (uint32_t i = g.start_thread_idx_, end = g.thread_count_ + i; i < end; ++i)
     {
-      auto& worker = workers_[i];
-      auto& range  = group_ranges_[i];
+      auto& range = group_ranges_[i];
       range.mask_ |= 1U << group;
       range.priority_order_[range.count_++] = static_cast<uint8_t>(group);
     }
@@ -305,14 +303,12 @@ void scheduler::submit(worker_id src, worker_id dst, acl::detail::work_item work
   }
 }
 
-void scheduler::submit(worker_id src, workgroup_id dst, acl::detail::work_item work)
+void scheduler::submit([[maybe_unused]] worker_id src, workgroup_id dst, acl::detail::work_item work)
 {
-  auto& wg     = workgroups_[dst.get_index()];
-  auto& worker = workers_[src.get_index()];
+  auto& wg = workgroups_[dst.get_index()];
 
   for (uint32_t i = wg.start_thread_idx_, end = i + wg.thread_count_; i != end; ++i)
   {
-    bool sleeping = true;
     if (!wake_status_[i].exchange(true))
     {
       local_work_[i] = work;

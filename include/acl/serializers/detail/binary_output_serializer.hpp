@@ -75,7 +75,7 @@ public:
   }
 
   template <typename Class>
-  auto can_visit(Class const& obj) -> continue_token
+  auto can_visit([[maybe_unused]] Class const& obj) -> continue_token
   {
     if (!may_fast_path_)
     {
@@ -185,7 +185,7 @@ private:
 
 struct empty_output_streamer
 {
-  void write(std::byte* data, size_t s) {}
+  void write([[maybe_unused]] std::byte* data, [[maybe_unused]] size_t s) {}
 };
 
 } // namespace acl::detail

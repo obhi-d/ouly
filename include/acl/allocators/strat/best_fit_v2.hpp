@@ -50,7 +50,7 @@ public:
   auto operator=(best_fit_v2 const&) -> best_fit_v2&     = default;
   auto operator=(best_fit_v2&&) noexcept -> best_fit_v2& = default;
 
-  [[nodiscard]] auto try_allocate(bank_data& bank, size_type size) noexcept -> optional_addr
+  [[nodiscard]] auto try_allocate([[maybe_unused]] bank_data& bank, size_type size) noexcept -> optional_addr
   {
     if (sizes_.empty() || sizes_.back() < size)
     {
@@ -65,9 +65,6 @@ public:
     std::uint32_t free_node = free_ordering_[free_idx];
     auto&         blk       = bank.blocks_[block_link(free_node)];
     // Marker
-    size_type     offset    = blk.offset_;
-    std::uint32_t arena_num = blk.arena_;
-
     blk.is_free_ = false;
 
     auto remaining = *found - size;
@@ -179,7 +176,7 @@ public:
   }
 
   template <typename Owner>
-  void init(Owner const& owner)
+  void init([[maybe_unused]] Owner const& owner)
   {}
 
 protected:
@@ -280,7 +277,7 @@ protected:
     return (it < (sizes_.data() + sizes_.size())) ? optional_addr(it) : optional_addr(nullptr);
   }
 
-  void reinsert_left(block_bank& blocks, size_t of, size_type size, std::uint32_t node) noexcept
+  void reinsert_left([[maybe_unused]] block_bank& blocks, size_t of, size_type size, std::uint32_t node) noexcept
   {
     if (of == 0U)
     {
@@ -290,9 +287,9 @@ protected:
     else
     {
       auto it = find_free_it(sizes_.data(), of, size);
-      if (it != of)
+      if (static_cast<unsigned>(it) != of)
       {
-        std::size_t count = of - it;
+        std::size_t count = of - static_cast<unsigned>(it);
         {
           auto src  = sizes_.data() + it;
           auto dest = src + 1;
@@ -315,7 +312,7 @@ protected:
     }
   }
 
-  void reinsert_right(block_bank& blocks, size_t of, size_type size, std::uint32_t node)
+  void reinsert_right([[maybe_unused]] block_bank& blocks, size_t of, size_type size, std::uint32_t node)
   {
     auto next = of + 1;
     if (next == sizes_.size())

@@ -397,9 +397,8 @@ private:
   std::unique_ptr<acl::detail::wake_event[]>  wake_events_;
   std::vector<std::thread>                    threads_;
 
-  uint32_t         worker_count_         = 0;
-  uint32_t         logical_task_divisor_ = default_logical_task_divisior;
-  std::atomic_bool stop_                 = false;
+  uint32_t         worker_count_ = 0;
+  std::atomic_bool stop_         = false;
 };
 
 /**

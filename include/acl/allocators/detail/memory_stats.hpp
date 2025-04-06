@@ -99,15 +99,15 @@ struct statistics_impl
 {
 
   void        print() {}
-  static auto report_new_arena(std::uint32_t count = 1) -> std::false_type
+  static auto report_new_arena(std::uint32_t /*count*/ = 1) -> std::false_type
   {
     return std::false_type{};
   }
-  static auto report_allocate(std::size_t size) -> std::false_type
+  static auto report_allocate(std::size_t /*size*/) -> std::false_type
   {
     return std::false_type{};
   }
-  static auto report_deallocate(std::size_t size) -> std::false_type
+  static auto report_deallocate(std::size_t /*size*/) -> std::false_type
   {
     return std::false_type{};
   }

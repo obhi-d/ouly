@@ -32,7 +32,7 @@ public:
 
   template <typename... Args>
   pool_allocator(size_type i_atom_size, size_type i_atom_count, Args&&... i_args)
-      : k_atom_size_(i_atom_size), k_atom_count_(i_atom_count), statistics(std::forward<Args>(i_args)...)
+      : statistics(std::forward<Args>(i_args)...), k_atom_count_(i_atom_count), k_atom_size_(i_atom_size)
   {}
 
   pool_allocator(pool_allocator const& i_other) = delete;
@@ -90,8 +90,8 @@ public:
       return underlying_allocator::allocate(size_value, alignment);
     }
 
-    address ret_value;
-    auto    measure = statistics::report_allocate(size_value);
+    address               ret_value;
+    [[maybe_unused]] auto measure = statistics::report_allocate(size_value);
 
     if (i_count == 1)
     {
@@ -149,7 +149,7 @@ public:
     }
     else
     {
-      auto measure = statistics::report_deallocate(size_value);
+      [[maybe_unused]] auto measure = statistics::report_deallocate(size_value);
       if (i_count == 1)
       {
         release(i_ptr);
@@ -505,7 +505,7 @@ private:
     std::uint32_t count = 0;
     arena_linker  a_first(linked_arenas_);
     a_first.for_each(
-     [&](address i_value, size_type size_value)
+     [&]([[maybe_unused]] address i_value, [[maybe_unused]] size_type size_value)
      {
        count++;
      },
