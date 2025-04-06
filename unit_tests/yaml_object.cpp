@@ -1,5 +1,5 @@
-﻿#include "acl/serializers/lite_yml.hpp"
-#include "catch2/catch_all.hpp"
+﻿#include "catch2/catch_all.hpp"
+#include "ouly/serializers/lite_yml.hpp"
 #include <array>
 #include <map>
 #include <memory>
@@ -17,8 +17,8 @@ struct TestStruct
 
   static constexpr auto reflect() noexcept
   {
-    return acl::bind(acl::bind<"a", &TestStruct::a>(), acl::bind<"b", &TestStruct::b>(),
-                     acl::bind<"c", &TestStruct::c>());
+    return ouly::bind(ouly::bind<"a", &TestStruct::a>(), ouly::bind<"b", &TestStruct::b>(),
+                      ouly::bind<"c", &TestStruct::c>());
   }
 };
 
@@ -31,7 +31,7 @@ c: "value"
 )";
 
   TestStruct ts;
-  acl::yml::from_string(ts, yml);
+  ouly::yml::from_string(ts, yml);
 
   REQUIRE(ts.a == 100);
   REQUIRE(ts.b == 200.0);
@@ -46,8 +46,8 @@ struct TestStruct2
   TestStruct            d;
   static constexpr auto reflect() noexcept
   {
-    return acl::bind(acl::bind<"a", &TestStruct2::a>(), acl::bind<"b", &TestStruct2::b>(),
-                     acl::bind<"c", &TestStruct2::c>(), acl::bind<"d", &TestStruct2::d>());
+    return ouly::bind(ouly::bind<"a", &TestStruct2::a>(), ouly::bind<"b", &TestStruct2::b>(),
+                      ouly::bind<"c", &TestStruct2::c>(), ouly::bind<"d", &TestStruct2::d>());
   }
 };
 
@@ -63,7 +63,7 @@ d:
   c: "value2"
 )";
   TestStruct2 ts;
-  acl::yml::from_string(ts, yml);
+  ouly::yml::from_string(ts, yml);
   REQUIRE(ts.a == 100);
   REQUIRE(ts.b == 200.0);
   REQUIRE(ts.c == "value");
@@ -85,12 +85,12 @@ numbers:
     std::vector<int>      numbers;
     static constexpr auto reflect() noexcept
     {
-      return acl::bind(acl::bind<"numbers", &TestStructVector::numbers>());
+      return ouly::bind(ouly::bind<"numbers", &TestStructVector::numbers>());
     }
   };
 
   TestStructVector ts;
-  acl::yml::from_string(ts, yml);
+  ouly::yml::from_string(ts, yml);
 
   REQUIRE(ts.numbers.size() == 3);
   REQUIRE(ts.numbers[0] == 1);
@@ -112,14 +112,14 @@ value: 42
     std::optional<int>    value;
     static constexpr auto reflect() noexcept
     {
-      return acl::bind(acl::bind<"value", &TestStructOptional::value>());
+      return ouly::bind(ouly::bind<"value", &TestStructOptional::value>());
     }
   };
 
   // Test with value present
   {
     TestStructOptional ts;
-    acl::yml::from_string(ts, yaml_present);
+    ouly::yml::from_string(ts, yaml_present);
     REQUIRE(ts.value.has_value());
     REQUIRE(ts.value.value() == 42);
   }
@@ -127,7 +127,7 @@ value: 42
   // Test with value absent
   {
     TestStructOptional ts;
-    acl::yml::from_string(ts, yaml_absent);
+    ouly::yml::from_string(ts, yaml_absent);
     REQUIRE(!ts.value.has_value());
   }
 }
@@ -150,12 +150,12 @@ color: 1
     Color                 color;
     static constexpr auto reflect() noexcept
     {
-      return acl::bind(acl::bind<"color", &TestStructEnum::color>());
+      return ouly::bind(ouly::bind<"color", &TestStructEnum::color>());
     }
   };
 
   TestStructEnum ts;
-  acl::yml::from_string(ts, yml);
+  ouly::yml::from_string(ts, yml);
 
   REQUIRE(ts.color == Color::Green);
 }
@@ -175,14 +175,14 @@ value: null
     std::unique_ptr<int>  value;
     static constexpr auto reflect() noexcept
     {
-      return acl::bind(acl::bind<"value", &TestStructPointer::value>());
+      return ouly::bind(ouly::bind<"value", &TestStructPointer::value>());
     }
   };
 
   // Test with value present
   {
     TestStructPointer ts;
-    acl::yml::from_string(ts, yaml_present);
+    ouly::yml::from_string(ts, yaml_present);
     REQUIRE(ts.value != nullptr);
     REQUIRE(*ts.value == 42);
   }
@@ -190,7 +190,7 @@ value: null
   // Test with value null
   {
     TestStructPointer ts;
-    acl::yml::from_string(ts, yaml_null);
+    ouly::yml::from_string(ts, yaml_null);
     REQUIRE(ts.value == nullptr);
   }
 }
@@ -209,12 +209,12 @@ tuple:
     std::tuple<int, std::string, double> tuple;
     static constexpr auto                reflect() noexcept
     {
-      return acl::bind(acl::bind<"tuple", &TestStructTuple::tuple>());
+      return ouly::bind(ouly::bind<"tuple", &TestStructTuple::tuple>());
     }
   };
 
   TestStructTuple ts;
-  acl::yml::from_string(ts, yml);
+  ouly::yml::from_string(ts, yml);
 
   REQUIRE(std::get<0>(ts.tuple) == 1);
   REQUIRE(std::get<1>(ts.tuple) == "string");
@@ -235,12 +235,12 @@ map:
     std::map<std::string, int> map;
     static constexpr auto      reflect() noexcept
     {
-      return acl::bind(acl::bind<"map", &TestStructMap::map>());
+      return ouly::bind(ouly::bind<"map", &TestStructMap::map>());
     }
   };
 
   TestStructMap ts;
-  acl::yml::from_string(ts, yml);
+  ouly::yml::from_string(ts, yml);
 
   REQUIRE(ts.map.size() == 3);
   REQUIRE(ts.map["key1"] == 1);
@@ -262,12 +262,12 @@ array:
     std::array<int, 3>    array;
     static constexpr auto reflect() noexcept
     {
-      return acl::bind(acl::bind<"array", &TestStructArray::array>());
+      return ouly::bind(ouly::bind<"array", &TestStructArray::array>());
     }
   };
 
   TestStructArray ts;
-  acl::yml::from_string(ts, yml);
+  ouly::yml::from_string(ts, yml);
 
   REQUIRE(ts.array[0] == 10);
   REQUIRE(ts.array[1] == 20);
@@ -285,12 +285,12 @@ array: [10, 20, 30]
     std::array<int, 3>    array;
     static constexpr auto reflect() noexcept
     {
-      return acl::bind(acl::bind<"array", &TestStructArray::array>());
+      return ouly::bind(ouly::bind<"array", &TestStructArray::array>());
     }
   };
 
   TestStructArray ts;
-  acl::yml::from_string(ts, yml);
+  ouly::yml::from_string(ts, yml);
 
   REQUIRE(ts.array[0] == 10);
   REQUIRE(ts.array[1] == 20);
@@ -310,12 +310,12 @@ flag2: false
     bool                  flag2;
     static constexpr auto reflect() noexcept
     {
-      return acl::bind(acl::bind<"flag1", &TestStructBool::flag1>(), acl::bind<"flag2", &TestStructBool::flag2>());
+      return ouly::bind(ouly::bind<"flag1", &TestStructBool::flag1>(), ouly::bind<"flag2", &TestStructBool::flag2>());
     }
   };
 
   TestStructBool ts;
-  acl::yml::from_string(ts, yml);
+  ouly::yml::from_string(ts, yml);
 
   REQUIRE(ts.flag1 == true);
   REQUIRE(ts.flag2 == false);
@@ -342,20 +342,20 @@ var:
     VarType               var;
     static constexpr auto reflect() noexcept
     {
-      return acl::bind(acl::bind<"var", &TestStructVariant::var>());
+      return ouly::bind(ouly::bind<"var", &TestStructVariant::var>());
     }
   };
 
   {
     TestStructVariant ts;
-    acl::yml::from_string(ts, yaml_int);
+    ouly::yml::from_string(ts, yaml_int);
     REQUIRE(std::holds_alternative<int>(ts.var));
     REQUIRE(std::get<int>(ts.var) == 42);
   }
 
   {
     TestStructVariant ts;
-    acl::yml::from_string(ts, yaml_string);
+    ouly::yml::from_string(ts, yaml_string);
     REQUIRE(std::holds_alternative<std::string>(ts.var));
     REQUIRE(std::get<std::string>(ts.var) == "hello");
   }
@@ -377,13 +377,13 @@ c: "value
 
     static constexpr auto reflect() noexcept
     {
-      return acl::bind(acl::bind<"a", &TestStructInvalid::a>(), acl::bind<"b", &TestStructInvalid::b>(),
-                       acl::bind<"c", &TestStructInvalid::c>());
+      return ouly::bind(ouly::bind<"a", &TestStructInvalid::a>(), ouly::bind<"b", &TestStructInvalid::b>(),
+                        ouly::bind<"c", &TestStructInvalid::c>());
     }
   };
 
   TestStructInvalid ts;
-  REQUIRE_THROWS_AS(acl::yml::from_string(ts, yml), std::runtime_error);
+  REQUIRE_THROWS_AS(ouly::yml::from_string(ts, yml), std::runtime_error);
 }
 
 TEST_CASE("yaml_object: Test read complex nested structure")
@@ -409,7 +409,7 @@ root:
 
       static constexpr auto reflect() noexcept
       {
-        return acl::bind(acl::bind<"grandchild", &Child1::grandchild>());
+        return ouly::bind(ouly::bind<"grandchild", &Child1::grandchild>());
       }
     };
 
@@ -418,8 +418,8 @@ root:
 
     static constexpr auto reflect() noexcept
     {
-      return acl::bind(acl::bind<"child1", &TestStructComplex::child1>(),
-                       acl::bind<"child2", &TestStructComplex::child2>());
+      return ouly::bind(ouly::bind<"child1", &TestStructComplex::child1>(),
+                        ouly::bind<"child2", &TestStructComplex::child2>());
     }
   };
 
@@ -429,12 +429,12 @@ root:
 
     static constexpr auto reflect() noexcept
     {
-      return acl::bind(acl::bind<"root", &Root::root>());
+      return ouly::bind(ouly::bind<"root", &Root::root>());
     }
   };
 
   Root ts;
-  acl::yml::from_string(ts, yml);
+  ouly::yml::from_string(ts, yml);
 
   REQUIRE(ts.root.child1.grandchild.size() == 2);
   REQUIRE(ts.root.child1.grandchild[0] == "item1");
@@ -463,13 +463,13 @@ folded_block: >
 
     static constexpr auto reflect() noexcept
     {
-      return acl::bind(acl::bind<"literal_block", &TestStructBlockScalar::literal_block>(),
-                       acl::bind<"folded_block", &TestStructBlockScalar::folded_block>());
+      return ouly::bind(ouly::bind<"literal_block", &TestStructBlockScalar::literal_block>(),
+                        ouly::bind<"folded_block", &TestStructBlockScalar::folded_block>());
     }
   };
 
   TestStructBlockScalar ts;
-  acl::yml::from_string(ts, yml);
+  ouly::yml::from_string(ts, yml);
 
   REQUIRE(ts.literal_block == "This is a block of text\nthat spans multiple lines.");
   REQUIRE(ts.folded_block == "This is another block that folds newlines into spaces.");
@@ -490,12 +490,12 @@ list:
 
     static constexpr auto reflect() noexcept
     {
-      return acl::bind(acl::bind<"list", &TestStructUnexpectedToken::list>());
+      return ouly::bind(ouly::bind<"list", &TestStructUnexpectedToken::list>());
     }
   };
 
   TestStructUnexpectedToken ts;
-  REQUIRE_THROWS_AS(acl::yml::from_string(ts, yml), std::runtime_error);
+  REQUIRE_THROWS_AS(ouly::yml::from_string(ts, yml), std::runtime_error);
 }
 
 TEST_CASE("yaml_object: Test read with missing key")
@@ -513,13 +513,13 @@ c: "value"
 
     static constexpr auto reflect() noexcept
     {
-      return acl::bind(acl::bind<"a", &TestStructMissingKey::a>(), acl::bind<"b", &TestStructMissingKey::b>(),
-                       acl::bind<"c", &TestStructMissingKey::c>());
+      return ouly::bind(ouly::bind<"a", &TestStructMissingKey::a>(), ouly::bind<"b", &TestStructMissingKey::b>(),
+                        ouly::bind<"c", &TestStructMissingKey::c>());
     }
   };
 
   TestStructMissingKey ts;
-  acl::yml::from_string(ts, yml);
+  ouly::yml::from_string(ts, yml);
 
   REQUIRE(ts.a == 100);
   REQUIRE(ts.b == -100); // value untouched
@@ -543,13 +543,13 @@ extra_field: "should be ignored"
 
     static constexpr auto reflect() noexcept
     {
-      return acl::bind(acl::bind<"a", &TestStructExtraField::a>(), acl::bind<"b", &TestStructExtraField::b>(),
-                       acl::bind<"c", &TestStructExtraField::c>());
+      return ouly::bind(ouly::bind<"a", &TestStructExtraField::a>(), ouly::bind<"b", &TestStructExtraField::b>(),
+                        ouly::bind<"c", &TestStructExtraField::c>());
     }
   };
 
   TestStructExtraField ts;
-  REQUIRE_THROWS_AS(acl::yml::from_string(ts, yml), acl::visitor_error);
+  REQUIRE_THROWS_AS(ouly::yml::from_string(ts, yml), ouly::visitor_error);
 }
 
 TEST_CASE("yaml_object: Test read of unexpected type")
@@ -564,12 +564,12 @@ number: "not_a_number"
 
     static constexpr auto reflect() noexcept
     {
-      return acl::bind(acl::bind<"number", &TestStructUnexpectedType::number>());
+      return ouly::bind(ouly::bind<"number", &TestStructUnexpectedType::number>());
     }
   };
 
   TestStructUnexpectedType ts;
-  REQUIRE_THROWS_AS(acl::yml::from_string(ts, yml), std::runtime_error);
+  REQUIRE_THROWS_AS(ouly::yml::from_string(ts, yml), std::runtime_error);
 }
 
 TEST_CASE("yaml_object: Test read recursive structures")
@@ -590,7 +590,7 @@ node:
 
     static constexpr auto reflect() noexcept
     {
-      return acl::bind(acl::bind<"value", &Node::value>(), acl::bind<"next", &Node::next>());
+      return ouly::bind(ouly::bind<"value", &Node::value>(), ouly::bind<"next", &Node::next>());
     }
   };
 
@@ -600,12 +600,12 @@ node:
 
     static constexpr auto reflect() noexcept
     {
-      return acl::bind(acl::bind<"node", &TestStructRecursive::node>());
+      return ouly::bind(ouly::bind<"node", &TestStructRecursive::node>());
     }
   };
 
   TestStructRecursive ts;
-  acl::yml::from_string(ts, yml);
+  ouly::yml::from_string(ts, yml);
 
   REQUIRE(ts.node.value == 1);
   REQUIRE(ts.node.next->value == 2);
@@ -625,12 +625,12 @@ value: "string_instead_of_int"
 
     static constexpr auto reflect() noexcept
     {
-      return acl::bind(acl::bind<"value", &TestStructTypeCast::value>());
+      return ouly::bind(ouly::bind<"value", &TestStructTypeCast::value>());
     }
   };
 
   TestStructTypeCast ts;
-  REQUIRE_THROWS_AS(acl::yml::from_string(ts, yml), std::runtime_error);
+  REQUIRE_THROWS_AS(ouly::yml::from_string(ts, yml), std::runtime_error);
 }
 
 TEST_CASE("yaml_object: Test read with empty YAML")
@@ -643,12 +643,12 @@ TEST_CASE("yaml_object: Test read with empty YAML")
 
     static constexpr auto reflect() noexcept
     {
-      return acl::bind(acl::bind<"a", &TestStructEmpty::a>());
+      return ouly::bind(ouly::bind<"a", &TestStructEmpty::a>());
     }
   };
 
   TestStructEmpty ts;
-  acl::yml::from_string(ts, yml);
+  ouly::yml::from_string(ts, yml);
 
   // Since YAML is empty, the value should remain default-initialized
   REQUIRE(ts.a == -1);
@@ -666,12 +666,12 @@ value: null
 
     static constexpr auto reflect() noexcept
     {
-      return acl::bind(acl::bind<"value", &TestStructNull::value>());
+      return ouly::bind(ouly::bind<"value", &TestStructNull::value>());
     }
   };
 
   TestStructNull ts;
-  acl::yml::from_string(ts, yml);
+  ouly::yml::from_string(ts, yml);
 
   // The optional should not be set
   REQUIRE(!ts.value.has_value());
@@ -693,14 +693,14 @@ uint_max: 18446744073709551615
 
     static constexpr auto reflect() noexcept
     {
-      return acl::bind(acl::bind<"int_max", &TestStructLargeNumbers::int_max>(),
-                       acl::bind<"int_min", &TestStructLargeNumbers::int_min>(),
-                       acl::bind<"uint_max", &TestStructLargeNumbers::uint_max>());
+      return ouly::bind(ouly::bind<"int_max", &TestStructLargeNumbers::int_max>(),
+                        ouly::bind<"int_min", &TestStructLargeNumbers::int_min>(),
+                        ouly::bind<"uint_max", &TestStructLargeNumbers::uint_max>());
     }
   };
 
   TestStructLargeNumbers ts;
-  acl::yml::from_string(ts, yml);
+  ouly::yml::from_string(ts, yml);
 
   REQUIRE(ts.int_max == INT64_MAX);
   REQUIRE(ts.int_min == INT64_MIN);
@@ -723,14 +723,14 @@ not_a_number: .nan
 
     static constexpr auto reflect() noexcept
     {
-      return acl::bind(acl::bind<"positive_infinity", &TestStructFloatEdgeCases::positive_infinity>(),
-                       acl::bind<"negative_infinity", &TestStructFloatEdgeCases::negative_infinity>(),
-                       acl::bind<"not_a_number", &TestStructFloatEdgeCases::not_a_number>());
+      return ouly::bind(ouly::bind<"positive_infinity", &TestStructFloatEdgeCases::positive_infinity>(),
+                        ouly::bind<"negative_infinity", &TestStructFloatEdgeCases::negative_infinity>(),
+                        ouly::bind<"not_a_number", &TestStructFloatEdgeCases::not_a_number>());
     }
   };
 
   TestStructFloatEdgeCases ts;
-  acl::yml::from_string(ts, yml);
+  ouly::yml::from_string(ts, yml);
 
   REQUIRE(std::isinf(ts.positive_infinity));
   REQUIRE(ts.positive_infinity > 0);
@@ -777,7 +777,7 @@ level1:
   };
 
   Level0 ts;
-  acl::yml::from_string(ts, yml);
+  ouly::yml::from_string(ts, yml);
 
   REQUIRE(ts.level1.level2.level3.level4.value == 42);
 }
@@ -800,14 +800,14 @@ TEST_CASE("yaml_object: Test read sequence of maps")
 
     static constexpr auto reflect() noexcept
     {
-      return acl::bind(acl::bind<"name", &Item::name>(), acl::bind<"value", &Item::value>());
+      return ouly::bind(ouly::bind<"name", &Item::name>(), ouly::bind<"value", &Item::value>());
     }
   };
 
   using ItemsList = std::vector<Item>;
   ItemsList items;
 
-  acl::yml::from_string(items, yml);
+  ouly::yml::from_string(items, yml);
 
   REQUIRE(items.size() == 3);
   REQUIRE(items[0].name == "Item1");
@@ -831,12 +831,12 @@ a: 2
 
     static constexpr auto reflect() noexcept
     {
-      return acl::bind(acl::bind<"a", &TestStructDuplicateKeys::a>());
+      return ouly::bind(ouly::bind<"a", &TestStructDuplicateKeys::a>());
     }
   };
 
   TestStructDuplicateKeys ts;
-  acl::yml::from_string(ts, yml);
+  ouly::yml::from_string(ts, yml);
 
   // Expect the last value to override
   REQUIRE(ts.a == 2);
@@ -850,7 +850,7 @@ struct float3
 };
 
 template <>
-struct acl::convert<float3>
+struct ouly::convert<float3>
 {
   // NOLINTNEXTLINE
   static auto to_type(float3 const& ref) -> std::array<float, 3>
@@ -881,10 +881,10 @@ TEST_CASE("yaml_object: Test read custom type")
   ts.vec.x        = 42.0f;
   ts.vec.y        = 43.0f;
   ts.vec.z        = 44.0f;
-  std::string yml = acl::yml::to_string(ts);
+  std::string yml = ouly::yml::to_string(ts);
 
   TestStructCustomType ts2;
-  acl::yml::from_string(ts2, yml);
+  ouly::yml::from_string(ts2, yml);
 
   REQUIRE(ts2.vec.x == 42.0f);
   REQUIRE(ts2.vec.y == 43.0f);
@@ -921,10 +921,10 @@ TEST_CASE("yaml_object: Test read complex custom type1")
   ts.indices[1] = 61;
   ts.indices[2] = 62;
 
-  std::string yml = acl::yml::to_string(ts);
+  std::string yml = ouly::yml::to_string(ts);
 
   TestStructCustomType ts2;
-  acl::yml::from_string(ts2, yml);
+  ouly::yml::from_string(ts2, yml);
 
   REQUIRE(ts2 == ts);
 }
@@ -975,10 +975,10 @@ TEST_CASE("yaml_object: Test read complex custom type2")
   ts.indices[1] = 61;
   ts.indices[2] = 62;
 
-  std::string yml = acl::yml::to_string(ts);
+  std::string yml = ouly::yml::to_string(ts);
 
   TestStructCustomType ts2;
-  acl::yml::from_string(ts2, yml);
+  ouly::yml::from_string(ts2, yml);
 
   REQUIRE(ts2 == ts);
 }
@@ -1007,10 +1007,10 @@ TEST_CASE("yaml_object: Test read array of complex struct with an empty array in
   ts.items[1].values = {1, 2, 3};
   ts.items[2].values = {4, 5, 6};
 
-  std::string yml = acl::yml::to_string(ts);
+  std::string yml = ouly::yml::to_string(ts);
 
   ArrayOfIntArrays ts2;
-  acl::yml::from_string(ts2, yml);
+  ouly::yml::from_string(ts2, yml);
 
   REQUIRE(ts2 == ts);
 }
@@ -1034,10 +1034,10 @@ TEST_CASE("yaml_object: Test read nested array of arrays with empty array in the
     }
   }
 
-  std::string yml = acl::yml::to_string(ts);
+  std::string yml = ouly::yml::to_string(ts);
 
   ArrayOfArrayOfArrayOfInts ts2;
-  acl::yml::from_string(ts2, yml);
+  ouly::yml::from_string(ts2, yml);
 
   REQUIRE(ts2 == ts);
 }
@@ -1051,10 +1051,10 @@ TEST_CASE("yaml_object: Test read nested array of arrays with empty array in the
   ts.items[1].items[0].items.resize(3);
   ts.items[1].items[2].items.resize(3);
 
-  std::string yml = acl::yml::to_string(ts);
+  std::string yml = ouly::yml::to_string(ts);
 
   ArrayOfArrayOfArrayOfInts ts2;
-  acl::yml::from_string(ts2, yml);
+  ouly::yml::from_string(ts2, yml);
 
   REQUIRE(ts2 == ts);
 }

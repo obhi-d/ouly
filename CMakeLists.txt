@@ -1,27 +1,27 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(acl VERSION 0.1.21 LANGUAGES CXX)
+project(ouly VERSION 0.1.21 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 
 option(
-    ACL_BUILD_TESTS
+    OULY_BUILD_TESTS
     "Build the unit tests when BUILD_TESTING is enabled."
     OFF
 )
 option(ASAN_ENABLED "Build this target with AddressSanitizer" OFF)
-option(ACL_REC_STATS "No stats for allocator" OFF)
-option(ACL_USE_SSE2 "Math library should use SSE2." OFF)
-option(ACL_USE_SSE3 "Math library should use SSE3." OFF)
-option(ACL_USE_AVX "Math library should use AVX." OFF)
-option(ACL_TEST_COVERAGE "Build test coverage." OFF)
+option(OULY_REC_STATS "No stats for allocator" OFF)
+option(OULY_USE_SSE2 "Math library should use SSE2." OFF)
+option(OULY_USE_SSE3 "Math library should use SSE3." OFF)
+option(OULY_USE_AVX "Math library should use AVX." OFF)
+option(OULY_TEST_COVERAGE "Build test coverage." OFF)
 
-set(ACL_BISON_EXE "bison" CACHE STRING "Bison execuatable")
-set(ACL_FLEX_EXE "flex" CACHE STRING "Flex executable")
+set(OULY_BISON_EXE "bison" CACHE STRING "Bison execuatable")
+set(OULY_FLEX_EXE "flex" CACHE STRING "Flex executable")
 
 ##
 ## CONFIGURATION
 ##
-set(ACL_TARGET_NAME ${PROJECT_NAME})
+set(OULY_TARGET_NAME ${PROJECT_NAME})
 
 include(GNUInstallDirs)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -33,29 +33,29 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # endif()
 
 add_library(
-    ${ACL_TARGET_NAME}
-    "src/acl/allocators/coalescing_allocator.cpp"
-    "src/acl/allocators/coalescing_arena_allocator.cpp"
-    "src/acl/dsl/lite_yml.cpp"
-    "src/acl/dsl/microexpr.cpp"
-    "src/acl/scheduler/scheduler.cpp"
-    "src/acl/scheduler/event_types.cpp"
-    "src/acl/utility/string_utils.cpp"
+    ${OULY_TARGET_NAME}
+    "src/ouly/allocators/coalescing_allocator.cpp"
+    "src/ouly/allocators/coalescing_arena_allocator.cpp"
+    "src/ouly/dsl/lite_yml.cpp"
+    "src/ouly/dsl/microexpr.cpp"
+    "src/ouly/scheduler/scheduler.cpp"
+    "src/ouly/scheduler/event_types.cpp"
+    "src/ouly/utility/string_utils.cpp"
 )
 
-set_property(TARGET ${ACL_TARGET_NAME} PROPERTY CXX_STANDARD 20)
+set_property(TARGET ${OULY_TARGET_NAME} PROPERTY CXX_STANDARD 20)
 
 # Add all warning flags
 if (MSVC)
     target_compile_options(
-        ${ACL_TARGET_NAME}
+        ${OULY_TARGET_NAME}
         PRIVATE
             /W4
             /WX
     )
 else()
     target_compile_options(
-        ${ACL_TARGET_NAME}
+        ${OULY_TARGET_NAME}
         PRIVATE
             -Wall
             -Wextra
@@ -84,7 +84,7 @@ else()
     )
     if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         target_compile_options(
-            ${ACL_TARGET_NAME}
+            ${OULY_TARGET_NAME}
             PRIVATE
                 -Wno-unknown-warning-option
         )
@@ -100,32 +100,32 @@ if(NOT MSVC)
   if(CLANG_TIDY_EXE)
       set(CLANG_TIDY_COMMAND "${CLANG_TIDY_EXE}")
       set_target_properties(
-          ${ACL_TARGET_NAME}
+          ${OULY_TARGET_NAME}
           PROPERTIES CXX_CLANG_TIDY "${CLANG_TIDY_COMMAND}"
       )
   endif()
 
 endif()
 
-add_library(${PROJECT_NAME}::${ACL_TARGET_NAME} ALIAS ${ACL_TARGET_NAME})
+add_library(${PROJECT_NAME}::${OULY_TARGET_NAME} ALIAS ${OULY_TARGET_NAME})
 
 if(MSVC)
     target_sources(
-        ${ACL_TARGET_NAME}
+        ${OULY_TARGET_NAME}
         PUBLIC
-            $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/natvis/acl/containers.natvis>
+            $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/natvis/ouly/containers.natvis>
     )
 endif()
 
 target_include_directories(
-    ${ACL_TARGET_NAME}
+    ${OULY_TARGET_NAME}
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
-if(ACL_REC_STATS)
-    target_compile_definitions(${ACL_TARGET_NAME} PUBLIC -DACL_REC_STATS)
+if(OULY_REC_STATS)
+    target_compile_definitions(${OULY_TARGET_NAME} PUBLIC -DOULY_REC_STATS)
 endif()
 
 ##
@@ -133,7 +133,7 @@ endif()
 ##
 include(CTest) #adds option BUILD_TESTING (default ON)
 
-if(BUILD_TESTING AND ACL_BUILD_TESTS)
+if(BUILD_TESTING AND OULY_BUILD_TESTS)
     enable_testing()
     add_subdirectory(unit_tests)
 endif()
@@ -179,7 +179,7 @@ install(
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 
-if (ACL_EXPORT_CC_TO_SRC_DIR)
+if (OULY_EXPORT_CC_TO_SRC_DIR)
 add_custom_target(copy_compile_commands ALL
   COMMAND ${CMAKE_COMMAND} -E create_symlink
     ${PROJECT_BINARY_DIR}/compile_commands.json

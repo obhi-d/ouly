@@ -1,21 +1,21 @@
 
-#include "acl/containers/array_types.hpp"
 #include "catch2/catch_all.hpp"
+#include "ouly/containers/array_types.hpp"
 #include <string>
 
 // NOLINTBEGIN
 TEST_CASE("dynamic_array: Validate use of dynamic_array")
 {
-  acl::dynamic_array<std::string> table;
+  ouly::dynamic_array<std::string> table;
 
-  table = acl::dynamic_array<std::string>(10, "something");
+  table = ouly::dynamic_array<std::string>(10, "something");
   for (auto& t : table)
     REQUIRE(t == "something");
-  table = acl::dynamic_array<std::string>(10, "something_else");
+  table = ouly::dynamic_array<std::string>(10, "something_else");
   for (auto& t : table)
     REQUIRE(t == "something_else");
 
-  auto other = acl::dynamic_array<std::string>(10, "second");
+  auto other = ouly::dynamic_array<std::string>(10, "second");
   for (auto& t : other)
     REQUIRE(t == "second");
   table = other;
@@ -27,7 +27,7 @@ TEST_CASE("dynamic_array: Validate use of dynamic_array")
 
 TEST_CASE("dynamic_array: Validate use of fixed size  dynamic_array")
 {
-  using darray = acl::fixed_array<std::string, 10>;
+  using darray = ouly::fixed_array<std::string, 10>;
   darray table;
 
   table = darray(10, "something");

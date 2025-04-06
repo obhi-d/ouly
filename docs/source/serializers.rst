@@ -1,7 +1,7 @@
 Serialization
 ========================
 
-The ACL library provides a flexible serialization system that supports multiple formats including YAML and binary. The serialization system is based on concepts that allow implementing custom serializers.
+The OULY library provides a flexible serialization system that supports multiple formats including YAML and binary. The serialization system is based on concepts that allow implementing custom serializers.
 
 Core Components
 ========================
@@ -50,11 +50,11 @@ Example:
 	Person person{"John", 30};
 	
 	// Serialize to YAML
-	std::string yaml = acl::yaml::to_string(person);
+	std::string yaml = ouly::yaml::to_string(person);
 
 	// Deserialize from YAML
 	Person loaded;
-	acl::yaml::from_string(loaded, yaml);
+	ouly::yaml::from_string(loaded, yaml);
 
 Binary Serialization
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -2,7 +2,7 @@
 Allocators
 ==========
 
-ACL provides several allocator implementations to suit different memory management needs:
+OULY provides several allocator implementations to suit different memory management needs:
 
 Linear Allocator 
 ---------------

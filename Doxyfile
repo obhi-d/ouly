@@ -40,9 +40,9 @@ DOXYFILE_ENCODING      = UTF-8
 # double-quotes, unless you are using Doxywizard) that should identify the
 # project for which the documentation is generated. This name is used in the
 # title of most generated pages and in a few other places.
-# The default value is: ACL
+# The default value is: OULY
 
-PROJECT_NAME           = "ACL"
+PROJECT_NAME           = "OULY"
 
 # The PROJECT_NUMBER tag can be used to enter a project or revision number. This
 # could be handy for archiving the generated documentation or if some version
@@ -54,7 +54,7 @@ PROJECT_NUMBER         = 001
 # for a project that appears at the top of each page and should give viewer a
 # quick idea about the purpose of the project. Keep the description short.
 
-PROJECT_BRIEF          = "ACL is a C++ library with various containers and algorithms."
+PROJECT_BRIEF          = "OULY is a C++ library with various containers and algorithms."
 
 # With the PROJECT_LOGO tag one can specify a logo or an icon that is included
 # in the documentation. The maximum height of the logo should not exceed 55
@@ -1091,8 +1091,8 @@ EXCLUDE_PATTERNS       =
 # The EXCLUDE_SYMBOLS tag can be used to specify one or more symbol names
 # (namespaces, classes, functions, etc.) that should be excluded from the
 # output. The symbol name can be a fully qualified name, a word, or if the
-# wildcard * is used, a substring. Examples: ANamespace, AClass,
-# ANamespace::AClass, ANamespace::*Test
+# wildcard * is used, a substring. Examples: ANamespace, Oulyass,
+# ANamespace::Oulyass, ANamespace::*Test
 
 EXCLUDE_SYMBOLS        =
 

@@ -1,7 +1,7 @@
 
-#include "acl/containers/small_vector.hpp"
-#include "acl/allocators/linear_allocator.hpp"
+#include "ouly/containers/small_vector.hpp"
 #include "catch2/catch_all.hpp"
+#include "ouly/allocators/linear_allocator.hpp"
 #include "test_common.hpp"
 #include <compare>
 #include <utility>
@@ -9,7 +9,7 @@
 // NOLINTBEGIN
 TEST_CASE("small_vector: Validate small_vector emplace", "[small_vector][emplace]")
 {
-  acl::small_vector<pod> v1, v2;
+  ouly::small_vector<pod> v1, v2;
   v1.emplace_back(pod{45, 66});
   v1.emplace_back(pod{425, 166});
   v2.emplace_back(pod{45, 66});
@@ -21,7 +21,7 @@ TEST_CASE("small_vector: Validate small_vector emplace", "[small_vector][emplace
 
 TEST_CASE("small_vector: Validate small_vector assign", "[small_vector][assign]")
 {
-  acl::small_vector<pod> v1, v2;
+  ouly::small_vector<pod> v1, v2;
   v1.assign({
    pod{std::rand(), std::rand()},
    pod{std::rand(), std::rand()}
@@ -46,7 +46,7 @@ TEST_CASE("small_vector: Validate small_vector assign", "[small_vector][assign]"
 
 TEST_CASE("small_vector: Validate small_vector insert", "[small_vector][insert]")
 {
-  acl::small_vector<pod> v1;
+  ouly::small_vector<pod> v1;
   v1.insert(v1.end(), pod{100, 200});
   v1.insert(v1.end(), {
                        pod{300, 400},
@@ -54,7 +54,7 @@ TEST_CASE("small_vector: Validate small_vector insert", "[small_vector][insert]"
                        pod{255, 111}
   });
 
-  acl::small_vector<pod> v2 = {
+  ouly::small_vector<pod> v2 = {
    pod{100, 200},
    pod{300, 400},
    pod{500, 600},
@@ -68,7 +68,7 @@ TEST_CASE("small_vector: Validate small_vector insert", "[small_vector][insert]"
 
 TEST_CASE("small_vector: Validate small_vector erase", "[small_vector][erase]")
 {
-  acl::small_vector<pod> v1;
+  ouly::small_vector<pod> v1;
   v1.insert(v1.end(), {
                        pod{100, 200},
                        pod{300, 400},
@@ -90,7 +90,7 @@ TEST_CASE("small_vector: Validate small_vector erase", "[small_vector][erase]")
   });
   v1.erase(v1.begin(), v1.begin() + 3);
   REQUIRE(v1.size() == 4);
-  acl::small_vector other = {
+  ouly::small_vector other = {
    pod{100, 200},
    pod{300, 400},
    pod{500, 600},
@@ -103,7 +103,7 @@ TEST_CASE("small_vector: size construct", "[small_vector][construct]")
 {
   auto test_size = [](uint32_t size, bool inlined)
   {
-    auto v1 = acl::small_vector<std::string, 5>(size);
+    auto v1 = ouly::small_vector<std::string, 5>(size);
     REQUIRE(v1.size() == size);
     for (uint32_t i = 0; i < size; ++i)
       v1[i] = to_lstring(i);
@@ -121,7 +121,7 @@ TEST_CASE("small_vector: size and value construct", "[small_vector][construct]")
   auto test_size = [](uint32_t size, bool inlined)
   {
     auto s  = to_lstring(size);
-    auto v1 = acl::small_vector<std::string, 5>(size, s);
+    auto v1 = ouly::small_vector<std::string, 5>(size, s);
     for (uint32_t i = 0; i < size; ++i)
       REQUIRE(v1[i] == s);
     REQUIRE(v1.is_inlined() == inlined);
@@ -138,7 +138,7 @@ TEST_CASE("small_vector: construct from range", "[small_vector][construct]")
     std::vector<std::string> values;
     for (uint32_t i = 0; i < size; ++i)
       values.emplace_back(to_lstring(i));
-    auto v1 = acl::small_vector<std::string, 5>(values.begin(), values.end());
+    auto v1 = ouly::small_vector<std::string, 5>(values.begin(), values.end());
     for (uint32_t i = 0; i < size; ++i)
       REQUIRE(v1[i] == values[i]);
     REQUIRE(v1.is_inlined() == inlined);
@@ -152,10 +152,10 @@ TEST_CASE("small_vector: copy ctor", "[small_vector][construct]")
 {
   auto test_size = [](uint32_t size, bool inlined)
   {
-    acl::small_vector<std::string, 5> values;
+    ouly::small_vector<std::string, 5> values;
     for (uint32_t i = 0; i < size; ++i)
       values.emplace_back(to_lstring(i));
-    auto v1 = acl::small_vector<std::string, 5>(values);
+    auto v1 = ouly::small_vector<std::string, 5>(values);
     for (uint32_t i = 0; i < size; ++i)
       REQUIRE(v1[i] == values[i]);
     REQUIRE(v1.is_inlined() == inlined);
@@ -169,11 +169,11 @@ TEST_CASE("small_vector: move ctor", "[small_vector][construct]")
 {
   auto test_size = [](uint32_t size, bool inlined)
   {
-    acl::small_vector<std::string, 5> values;
+    ouly::small_vector<std::string, 5> values;
     for (uint32_t i = 0; i < size; ++i)
       values.emplace_back(to_lstring(i));
-    auto v1 = acl::small_vector<std::string, 5>(values);
-    auto v2 = acl::small_vector<std::string, 5>(std::move(v1));
+    auto v1 = ouly::small_vector<std::string, 5>(values);
+    auto v2 = ouly::small_vector<std::string, 5>(std::move(v1));
     for (uint32_t i = 0; i < size; ++i)
       REQUIRE(v2[i] == values[i]);
     REQUIRE(v2.is_inlined() == inlined);
@@ -188,13 +188,13 @@ TEST_CASE("small_vector: copy/move ctor with linear_allocator", "[small_vector][
 {
   auto test_size = [](uint32_t size, bool inlined)
   {
-    using type = acl::small_vector<std::string, 5>;
+    using type = ouly::small_vector<std::string, 5>;
     type values;
     for (uint32_t i = 0; i < size; ++i)
       values.emplace_back(to_lstring(i));
-    auto v1 = type(values, acl::default_allocator<>());
+    auto v1 = type(values, ouly::default_allocator<>());
     auto v2 = type(std::move(v1));
-    auto v3 = type(std::move(v2), acl::default_allocator<>());
+    auto v3 = type(std::move(v2), ouly::default_allocator<>());
     REQUIRE(v1.empty() == true);
     REQUIRE(v2.empty() == true);
     for (uint32_t i = 0; i < size; ++i)
@@ -213,7 +213,7 @@ TEST_CASE("small_vector: initializer", "[small_vector][construct]")
 {
   auto test_size = []<uint32_t... I>(std::integer_sequence<uint32_t, I...> seq, bool inlined)
   {
-    using type  = acl::small_vector<std::string, 5>;
+    using type  = ouly::small_vector<std::string, 5>;
     type inited = {to_lstring(I)...};
     type values;
     for (uint32_t i = 0; i < seq.size(); ++i)
@@ -233,7 +233,7 @@ TEST_CASE("small_vector: shrink to fit", "[small_vector][shrink_to_fit]")
 {
   tracker a, b, c, d, e, f;
 
-  acl::small_vector<destroy_tracker, 4> v1;
+  ouly::small_vector<destroy_tracker, 4> v1;
   v1.push_back(destroy_tracker(a));
   v1.push_back(destroy_tracker(b));
   v1.push_back(destroy_tracker(c));
@@ -266,7 +266,7 @@ TEST_CASE("small_vector: insert", "[small_vector][insert]")
 {
   tracker a('a'), b('b'), c('c'), d('d'), e('e'), f('f'), g('g'), h('h');
 
-  acl::small_vector<destroy_tracker, 4> v1;
+  ouly::small_vector<destroy_tracker, 4> v1;
 
   v1.insert(v1.cend(), destroy_tracker(c));
   REQUIRE(v1.size() == 1);
@@ -364,7 +364,7 @@ TEST_CASE("small_vector: erase", "[small_vector][erase]")
 {
   tracker a('a'), b('b'), c('c'), d('d'), e('e'), f('f'), g('g'), h('h');
 
-  acl::small_vector<destroy_tracker, 4> v1;
+  ouly::small_vector<destroy_tracker, 4> v1;
   v1.push_back(destroy_tracker(a));
   v1.push_back(destroy_tracker(b));
   v1.push_back(destroy_tracker(c));
@@ -413,7 +413,7 @@ TEST_CASE("small_vector: erase", "[small_vector][erase]")
 
 TEST_CASE("small_vector: capacity full self insertion", "[small_vector][default]")
 {
-  acl::small_vector<std::string, 4> v1;
+  ouly::small_vector<std::string, 4> v1;
   v1.push_back("failure");
   v1.push_back("1");
   v1.push_back("2");

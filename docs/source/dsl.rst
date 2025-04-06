@@ -1,7 +1,7 @@
 Domain Specific Languages
 ========================
 
-The ACL library provides powerful tools for handling domain-specific languages (DSL) and configuration.
+The OULY library provides powerful tools for handling domain-specific languages (DSL) and configuration.
 
 Micro Expression Evaluator
 -------------------------
@@ -21,7 +21,7 @@ Basic usage::
 	auto ctx = [](std::string_view macro) -> std::optional<int> {
 		// Return macro definition or std::nullopt if undefined
 	};
-	acl::microexpr evaluator(std::move(ctx));
+	ouly::microexpr evaluator(std::move(ctx));
 	bool result = evaluator.evaluate("$(MACRO_A) && !$(MACRO_B)");
 
 YAML Parser
@@ -40,7 +40,7 @@ Features:
 
 The parser uses a context interface that can be implemented to handle YAML events::
 
-	class MyContext : public acl::yaml::context {
+	class MyContext : public ouly::yaml::context {
 		void begin_array() override { /* ... */ }
 		void end_array() override { /* ... */ }
 		void begin_key(std::string_view key) override { /* ... */ }

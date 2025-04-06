@@ -1,6 +1,6 @@
 
-#include "acl/dsl/microexpr.hpp"
 #include "catch2/catch_all.hpp"
+#include "ouly/dsl/microexpr.hpp"
 #include <unordered_map>
 
 // NOLINTBEGIN
@@ -14,7 +14,7 @@ TEST_CASE("Validate basic expressions", "[microexpr]")
    { "FIFTH",  2},
   };
 
-  acl::microexpr expr(
+  ouly::microexpr expr(
    [&table](std::string_view v) -> std::optional<int>
    {
      auto it = table.find(v);

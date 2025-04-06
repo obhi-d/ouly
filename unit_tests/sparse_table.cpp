@@ -1,6 +1,6 @@
-#include "test_common.hpp"
-#include "acl/containers/sparse_table.hpp"
+#include "ouly/containers/sparse_table.hpp"
 #include "catch2/catch_all.hpp"
+#include "test_common.hpp"
 #include <iomanip>
 #include <iostream>
 #include <string>
@@ -11,7 +11,7 @@
 // NOLINTBEGIN
 TEST_CASE("sparse_table: Validate sparse_table emplace", "[sparse_table][emplace]")
 {
-  acl::sparse_table<int> table;
+  ouly::sparse_table<int> table;
 
   auto e10 = table.emplace(10);
   auto e20 = table.emplace(20);
@@ -24,7 +24,7 @@ TEST_CASE("sparse_table: Validate sparse_table emplace", "[sparse_table][emplace
 
 TEST_CASE("sparse_table: Custom block size", "[sparse_table][page_size]")
 {
-  acl::sparse_table<std::string> table;
+  ouly::sparse_table<std::string> table;
 
   auto e1 = table.emplace("something");
   auto e2 = table.emplace("in");
@@ -38,7 +38,7 @@ TEST_CASE("sparse_table: Custom block size", "[sparse_table][page_size]")
 
 TEST_CASE("sparse_table: Erase pages when done", "[sparse_table][shrink_to_fit]")
 {
-  acl::sparse_table<std::string> table;
+  ouly::sparse_table<std::string> table;
 
   auto e1 = table.emplace("something");
   auto e2 = table.emplace("in");
@@ -54,7 +54,7 @@ TEST_CASE("sparse_table: Erase pages when done", "[sparse_table][shrink_to_fit]"
 
 TEST_CASE("sparse_table: Copy when copyable", "[sparse_table][assignment]")
 {
-  acl::sparse_table<std::string> table, table2;
+  ouly::sparse_table<std::string> table, table2;
 
   auto e1 = table.emplace("something");
   auto e2 = table.emplace("in");
@@ -72,7 +72,7 @@ TEST_CASE("sparse_table: Copy when copyable", "[sparse_table][assignment]")
 
 TEST_CASE("sparse_table: Random test", "[sparse_table][random]")
 {
-  acl::sparse_table<std::string> cont;
+  ouly::sparse_table<std::string> cont;
 
   std::uint32_t last_offset = 0;
   for (int times = 0; times < 4; times++)
@@ -89,14 +89,14 @@ TEST_CASE("sparse_table: Random test", "[sparse_table][random]")
     std::unordered_set<std::string>   erase;
     std::unordered_set<std::uint32_t> choose;
     cont.for_each(
-     [&](acl::sparse_table<std::string>::link link, std::string& el)
+     [&](ouly::sparse_table<std::string>::link link, std::string& el)
      {
        if (range_rand<std::uint32_t>(0, 100) > 50)
          choose.emplace(link.value());
      });
     for (auto& e : choose)
     {
-      auto l = acl::sparse_table<std::string>::link(e);
+      auto l = ouly::sparse_table<std::string>::link(e);
       erase.emplace(cont[l]);
       cont.erase(l);
     }
@@ -104,7 +104,7 @@ TEST_CASE("sparse_table: Random test", "[sparse_table][random]")
     REQUIRE(cont.size() == (count + prev) - static_cast<std::uint32_t>(erase.size()));
 
     cont.for_each(
-     [&](acl::sparse_table<std::string>::link link, std::string& el)
+     [&](ouly::sparse_table<std::string>::link link, std::string& el)
      {
        REQUIRE(erase.find(cont.at(link)) == erase.end());
      });
@@ -114,18 +114,18 @@ TEST_CASE("sparse_table: Random test", "[sparse_table][random]")
 struct selfref_2
 {
   std::uint32_t value = 0;
-  std::uint32_t self  = acl::link<selfref_2>::null_v;
+  std::uint32_t self  = ouly::link<selfref_2>::null_v;
 
   selfref_2(std::uint32_t v) : value(v) {}
 };
 
 template <>
-struct acl::default_config<selfref_2> : public acl::cfg::self_index_member<&selfref_2::self>
+struct ouly::default_config<selfref_2> : public ouly::cfg::self_index_member<&selfref_2::self>
 {};
 
 TEST_CASE("sparse_table: Test selfref", "[sparse_table][backref]")
 {
-  acl::sparse_table<selfref_2> table;
+  ouly::sparse_table<selfref_2> table;
 
   auto e10 = table.emplace(10);
 
@@ -143,7 +143,7 @@ TEST_CASE("sparse_table: Test selfref", "[sparse_table][backref]")
 
 TEST_CASE("sparse_table: Validate replace", "[sparse_table][replace]")
 {
-  acl::sparse_table<int> table1;
+  ouly::sparse_table<int> table1;
 
   auto e10 = table1.emplace(5);
   auto e20 = table1.emplace(7);

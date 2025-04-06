@@ -1,14 +1,14 @@
 
-#include "acl/containers/table.hpp"
-#include "acl/containers/soavector.hpp"
+#include "ouly/containers/table.hpp"
 #include "catch2/catch_all.hpp"
+#include "ouly/containers/soavector.hpp"
 #include <string>
 
 // NOLINTBEGIN
 
 TEST_CASE("table: Validate table emplace", "[table][emplace]")
 {
-  acl::table<std::string> v1;
+  ouly::table<std::string> v1;
 
   auto a1 = v1.emplace("first");
   auto a2 = v1.emplace("second");
@@ -21,8 +21,8 @@ TEST_CASE("table: Validate table emplace", "[table][emplace]")
 
 TEST_CASE("table: Validate table erase", "[table][erase]")
 {
-  // using pack = acl::pack<int, bool, std::string>;
-  acl::table<std::string> v1;
+  // using pack = ouly::pack<int, bool, std::string>;
+  ouly::table<std::string> v1;
 
   auto                  a1 = v1.emplace("first");
   [[maybe_unused]] auto a2 = v1.emplace("second");

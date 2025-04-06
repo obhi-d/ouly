@@ -6,7 +6,7 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'acl'
+project = 'ouly'
 copyright = '2025, obhi-d'
 author = 'obhi-d'
 release = '0.0.1'
@@ -19,11 +19,11 @@ extensions = [
 ]
 
 breathe_projects = {
-    "ACL": "../xml"
+    "OULY": "../xml"
 }
-breathe_default_project = "ACL"
+breathe_default_project = "OULY"
 breathe_projects_source = {
-    "allocators": ("../../include/acl/allocators", [
+    "allocators": ("../../include/ouly/allocators", [
         "allocator.hpp", "arena_allocator.hpp", "arena_options.hpp", "best_fit_options.hpp", 
         "coalescing_allocator.hpp", "coalescing_arena_allocator.hpp", "default_allocator.hpp", 
         "linear_allocator.hpp", "linear_arena_allocator.hpp", 
@@ -32,27 +32,27 @@ breathe_projects_source = {
         "strat_best_fit_v0.hpp", "strat_best_fit_v1.hpp", "strat_best_fit_v2.hpp", 
         "strat_greedy_v0.hpp", "strat_greedy_v1.hpp"
     ]),
-    "containers": ("../../include/acl/containers", [
+    "containers": ("../../include/ouly/containers", [
         "array_types.hpp", "basic_queue.hpp", "blackboard.hpp", "index_map.hpp", "indirection.hpp", 
         "intrusive_list.hpp", "rbtree.hpp", "small_vector.hpp", "soavector.hpp", 
         "sparse_table.hpp", "sparse_vector.hpp", "table.hpp", "vlist.hpp"
     ]),
-    "dsl": ("../../include/acl/dsl", [
+    "dsl": ("../../include/ouly/dsl", [
         "microexpr.hpp", "yaml.hpp"
     ]),
-    "ecs": ("../../include/acl/ecs", [
+    "ecs": ("../../include/ouly/ecs", [
         "collection.hpp", "components.hpp", "entity.hpp", "registry.hpp"
     ]),
-    "scheduler": ("../../include/acl/scheduler", [
+    "scheduler": ("../../include/ouly/scheduler", [
         "awaiters.hpp", "event_types.hpp", "parallel_for.hpp", "promise_type.hpp", "scheduler.hpp", 
         "spin_lock.hpp", "task.hpp", "worker.hpp", "worker_context.hpp"
     ]),
-    "serializers": ("../../include/acl/serializers", [
+    "serializers": ("../../include/ouly/serializers", [
         "binary_input_serializer.hpp", "binary_output_serializer.hpp", "binary_serializer.hpp", 
         "input_serializer.hpp", "output_serializer.hpp", "yaml_input_serializer.hpp", 
         "yaml_output_serializer.hpp"
     ]),
-    "utils": ("../../include/acl/utils", [
+    "utils": ("../../include/ouly/utils", [
         "common.hpp", "config.hpp", "delegate.hpp", "error_codes.hpp", "external/komihash.h", 
         "external/wyhash.h", "external/wyhash32.h", "external/wyhash32.hpp", "integer_range.hpp", 
         "intrusive_ptr.hpp", "komihash.hpp", "nullable_optional.hpp", "program_args.hpp", 

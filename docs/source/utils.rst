@@ -1,7 +1,7 @@
 Utility Classes
 ==============
 
-This section describes the utility classes provided by ACL (Abstract Core Library).
+This section describes the utility classes provided by OULY (Abstract Core Library).
 
 Integer Range
 ------------
@@ -39,7 +39,7 @@ Projected View
 
 .. code-block:: cpp
 
-	template <auto M, typename C = typename acl::opt::member<M>::class_type>
+	template <auto M, typename C = typename ouly::opt::member<M>::class_type>
 	class projected_view;
 
 Key features:

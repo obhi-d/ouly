@@ -1,13 +1,13 @@
 
-#include "acl/containers/array_types.hpp"
-#include "acl/reflection/detail/base_concepts.hpp"
-#include "acl/reflection/reflection.hpp"
-#include "acl/serializers/binary_stream.hpp"
-#include "acl/serializers/config.hpp"
-#include "acl/serializers/serializers.hpp"
-#include "acl/utility/from_chars.hpp"
 #include "catch2/catch_all.hpp"
 #include "catch2/catch_test_macros.hpp"
+#include "ouly/containers/array_types.hpp"
+#include "ouly/reflection/detail/base_concepts.hpp"
+#include "ouly/reflection/reflection.hpp"
+#include "ouly/serializers/binary_stream.hpp"
+#include "ouly/serializers/config.hpp"
+#include "ouly/serializers/serializers.hpp"
+#include "ouly/utility/from_chars.hpp"
 #include <algorithm>
 #include <array>
 #include <charconv>
@@ -64,10 +64,10 @@ struct ReflTestFriend
 };
 
 template <>
-auto acl::reflect<ReflTestFriend>() noexcept
+auto ouly::reflect<ReflTestFriend>() noexcept
 {
-  return acl::bind(acl::bind<"a", &ReflTestFriend::a>(), acl::bind<"b", &ReflTestFriend::b>(),
-                   acl::bind<"et", &ReflTestFriend::et>());
+  return ouly::bind(ouly::bind<"a", &ReflTestFriend::a>(), ouly::bind<"b", &ReflTestFriend::b>(),
+                    ouly::bind<"et", &ReflTestFriend::et>());
 }
 
 struct little_endian
@@ -89,10 +89,10 @@ TEMPLATE_TEST_CASE("stream: Test valid stream with reflect outside", "[stream]",
 
   write.et = EnumTest::value1;
 
-  acl::write<TestType::value>(stream, write);
-  acl::read<TestType::value>(stream, read);
+  ouly::write<TestType::value>(stream, write);
+  ouly::read<TestType::value>(stream, read);
   REQUIRE(read == write);
-  REQUIRE_THROWS(acl::read<TestType::value>(stream, read));
+  REQUIRE_THROWS(ouly::read<TestType::value>(stream, read));
 }
 
 class ReflTestClass
@@ -111,7 +111,7 @@ public:
   }
   static auto reflect() noexcept
   {
-    return acl::bind(acl::bind<"a", &ReflTestClass::a>(), acl::bind<"b", &ReflTestClass::b>());
+    return ouly::bind(ouly::bind<"a", &ReflTestClass::a>(), ouly::bind<"b", &ReflTestClass::b>());
   }
 
   inline auto operator<=>(ReflTestClass const&) const noexcept = default;
@@ -124,10 +124,10 @@ TEMPLATE_TEST_CASE("stream: Test valid stream with reflect member", "[stream]", 
   FileData      data;
   auto          stream = Stream(data);
 
-  acl::write<TestType::value>(stream, write);
-  acl::read<TestType::value>(stream, read);
+  ouly::write<TestType::value>(stream, write);
+  ouly::read<TestType::value>(stream, read);
   REQUIRE(read == write);
-  REQUIRE_THROWS(acl::read<TestType::value>(stream, read));
+  REQUIRE_THROWS(ouly::read<TestType::value>(stream, read));
 }
 
 struct ReflTestMember
@@ -137,7 +137,7 @@ struct ReflTestMember
 
   static auto reflect() noexcept
   {
-    return acl::bind(acl::bind<"first", &ReflTestMember::first>(), acl::bind<"second", &ReflTestMember::second>());
+    return ouly::bind(ouly::bind<"first", &ReflTestMember::first>(), ouly::bind<"second", &ReflTestMember::second>());
   }
 
   inline auto operator<=>(ReflTestMember const&) const noexcept = default;
@@ -150,10 +150,10 @@ TEMPLATE_TEST_CASE("stream: Test compound object", "[stream][compound]", big_end
   FileData       data;
   auto           stream = Stream(data);
 
-  acl::write<TestType::value>(stream, write);
-  acl::read<TestType::value>(stream, read);
+  ouly::write<TestType::value>(stream, write);
+  ouly::read<TestType::value>(stream, read);
   REQUIRE(read == write);
-  REQUIRE_THROWS(acl::read<TestType::value>(stream, read));
+  REQUIRE_THROWS(ouly::read<TestType::value>(stream, read));
 }
 
 struct ReflTestClass2
@@ -164,8 +164,8 @@ struct ReflTestClass2
 
   static auto reflect() noexcept
   {
-    return acl::bind(acl::bind<"first", &ReflTestClass2::first>(), acl::bind<"second", &ReflTestClass2::second>(),
-                     acl::bind<"long", &ReflTestClass2::long_string>());
+    return ouly::bind(ouly::bind<"first", &ReflTestClass2::first>(), ouly::bind<"second", &ReflTestClass2::second>(),
+                      ouly::bind<"long", &ReflTestClass2::long_string>());
   }
 
   inline auto operator<=>(ReflTestClass2 const&) const noexcept = default;
@@ -181,10 +181,10 @@ TEMPLATE_TEST_CASE("stream: Test compound object with simple member", "[stream][
   write.second          = "compound";
   write.long_string     = "a very long string to avoid short object optimization";
 
-  acl::write<TestType::value>(stream, write);
-  acl::read<TestType::value>(stream, read);
+  ouly::write<TestType::value>(stream, write);
+  ouly::read<TestType::value>(stream, read);
   REQUIRE(read == write);
-  REQUIRE_THROWS(acl::read<TestType::value>(stream, read));
+  REQUIRE_THROWS(ouly::read<TestType::value>(stream, read));
 }
 
 TEMPLATE_TEST_CASE("stream: Test pair", "[stream][pair]", big_endian, little_endian)
@@ -193,10 +193,10 @@ TEMPLATE_TEST_CASE("stream: Test pair", "[stream][pair]", big_endian, little_end
   std::pair<ReflTestMember, std::string> write  = {ReflTestMember(), "a random string"}, read;
   auto                                   stream = Stream(data);
 
-  acl::write<TestType::value>(stream, write);
-  acl::read<TestType::value>(stream, read);
+  ouly::write<TestType::value>(stream, write);
+  ouly::read<TestType::value>(stream, read);
   REQUIRE(read == write);
-  REQUIRE_THROWS(acl::read<TestType::value>(stream, read));
+  REQUIRE_THROWS(ouly::read<TestType::value>(stream, read));
 }
 
 TEMPLATE_TEST_CASE("stream: TupleLike ", "[stream][tuple]", big_endian, little_endian)
@@ -207,10 +207,10 @@ TEMPLATE_TEST_CASE("stream: TupleLike ", "[stream][tuple]", big_endian, little_e
   type read;
   auto stream = Stream(data);
 
-  acl::write<TestType::value>(stream, write);
-  acl::read<TestType::value>(stream, read);
+  ouly::write<TestType::value>(stream, write);
+  ouly::read<TestType::value>(stream, read);
   REQUIRE(read == write);
-  REQUIRE_THROWS(acl::read<TestType::value>(stream, read));
+  REQUIRE_THROWS(ouly::read<TestType::value>(stream, read));
 }
 
 TEMPLATE_TEST_CASE("stream: StringMapLike ", "[stream][map]", big_endian, little_endian)
@@ -230,11 +230,11 @@ TEMPLATE_TEST_CASE("stream: StringMapLike ", "[stream][map]", big_endian, little
 
   type read;
 
-  acl::write<TestType::value>(stream, write);
-  acl::read<TestType::value>(stream, read);
+  ouly::write<TestType::value>(stream, write);
+  ouly::read<TestType::value>(stream, read);
 
   REQUIRE(read == write);
-  REQUIRE_THROWS(acl::read<TestType::value>(stream, read));
+  REQUIRE_THROWS(ouly::read<TestType::value>(stream, read));
 }
 
 TEMPLATE_TEST_CASE("stream: ArrayLike", "[stream][map]", big_endian, little_endian)
@@ -254,11 +254,11 @@ TEMPLATE_TEST_CASE("stream: ArrayLike", "[stream][map]", big_endian, little_endi
 
   type read;
 
-  acl::write<TestType::value>(stream, write);
-  acl::read<TestType::value>(stream, read);
+  ouly::write<TestType::value>(stream, write);
+  ouly::read<TestType::value>(stream, read);
 
   REQUIRE(read == write);
-  REQUIRE_THROWS(acl::read<TestType::value>(stream, read));
+  REQUIRE_THROWS(ouly::read<TestType::value>(stream, read));
 }
 
 TEMPLATE_TEST_CASE("stream: LinearArrayLike", "[stream][array]", big_endian, little_endian)
@@ -266,21 +266,21 @@ TEMPLATE_TEST_CASE("stream: LinearArrayLike", "[stream][array]", big_endian, lit
   FileData data;
   auto     stream = Stream(data);
 
-  using type = acl::dynamic_array<int>;
+  using type = ouly::dynamic_array<int>;
   type write = {43, 34, 2344, 3432, 34};
   type read;
 
-  acl::write<TestType::value>(stream, write);
-  acl::read<TestType::value>(stream, read);
+  ouly::write<TestType::value>(stream, write);
+  ouly::read<TestType::value>(stream, read);
 
   REQUIRE(read == write);
-  REQUIRE_THROWS(acl::read<TestType::value>(stream, read));
+  REQUIRE_THROWS(ouly::read<TestType::value>(stream, read));
 }
 
 template <>
-constexpr uint32_t acl::cfg::magic_type_header<std::array<int, 5>> = 0x12345678;
+constexpr uint32_t ouly::cfg::magic_type_header<std::array<int, 5>> = 0x12345678;
 template <>
-constexpr uint32_t acl::cfg::magic_type_header<std::array<int, 10>> = 0x664411;
+constexpr uint32_t ouly::cfg::magic_type_header<std::array<int, 10>> = 0x664411;
 
 TEMPLATE_TEST_CASE("stream: Invalid LinearArrayLike", "[stream][array]", big_endian, little_endian)
 {
@@ -291,8 +291,8 @@ TEMPLATE_TEST_CASE("stream: Invalid LinearArrayLike", "[stream][array]", big_end
   type                write = {43, 34, 2344, 3432, 34};
   std::array<int, 10> read;
 
-  acl::write<TestType::value>(stream, write);
-  REQUIRE_THROWS(acl::read<TestType::value>(stream, read));
+  ouly::write<TestType::value>(stream, write);
+  REQUIRE_THROWS(ouly::read<TestType::value>(stream, read));
 }
 
 TEMPLATE_TEST_CASE("stream: ArrayLike", "[stream][array]", big_endian, little_endian)
@@ -304,11 +304,11 @@ TEMPLATE_TEST_CASE("stream: ArrayLike", "[stream][array]", big_endian, little_en
   type write = {"var{43}", "var{false}", "var{34}", "some string", "", "var{true}"};
   type read;
 
-  acl::write<TestType::value>(stream, write);
-  acl::read<TestType::value>(stream, read);
+  ouly::write<TestType::value>(stream, write);
+  ouly::read<TestType::value>(stream, read);
 
   REQUIRE(read == write);
-  REQUIRE_THROWS(acl::read<TestType::value>(stream, read));
+  REQUIRE_THROWS(ouly::read<TestType::value>(stream, read));
 }
 
 TEMPLATE_TEST_CASE("stream: ArrayLike with Fastpath", "[stream][array]", big_endian, little_endian)
@@ -320,11 +320,11 @@ TEMPLATE_TEST_CASE("stream: ArrayLike with Fastpath", "[stream][array]", big_end
   type write = {19, 99, 2, 19, 44, 21333696};
   type read;
 
-  acl::write<TestType::value>(stream, write);
-  acl::read<TestType::value>(stream, read);
+  ouly::write<TestType::value>(stream, write);
+  ouly::read<TestType::value>(stream, read);
 
   REQUIRE(read == write);
-  REQUIRE_THROWS(acl::read<TestType::value>(stream, read));
+  REQUIRE_THROWS(ouly::read<TestType::value>(stream, read));
 }
 
 TEMPLATE_TEST_CASE("stream: VariantLike", "[stream][variant]", big_endian, little_endian)
@@ -337,17 +337,17 @@ TEMPLATE_TEST_CASE("stream: VariantLike", "[stream][variant]", big_endian, littl
   type write = {var{43}, var{false}, var{34}, var{"some string"}, var{5543}, var{true}};
   type read;
 
-  acl::write<TestType::value>(stream, write);
-  acl::read<TestType::value>(stream, read);
+  ouly::write<TestType::value>(stream, write);
+  ouly::read<TestType::value>(stream, read);
 
   REQUIRE(read == write);
-  REQUIRE_THROWS(acl::read<TestType::value>(stream, read));
+  REQUIRE_THROWS(ouly::read<TestType::value>(stream, read));
 }
 
 template <>
-constexpr uint32_t acl::cfg::magic_type_header<std::vector<std::variant<int, bool, std::string>>> = 0x12345678;
+constexpr uint32_t ouly::cfg::magic_type_header<std::vector<std::variant<int, bool, std::string>>> = 0x12345678;
 template <>
-constexpr uint32_t acl::cfg::magic_type_header<std::vector<int>> = 0x664411;
+constexpr uint32_t ouly::cfg::magic_type_header<std::vector<int>> = 0x664411;
 
 TEMPLATE_TEST_CASE("stream: Invalid VariantLike ", "[stream][variant]", big_endian, little_endian)
 {
@@ -359,8 +359,8 @@ TEMPLATE_TEST_CASE("stream: Invalid VariantLike ", "[stream][variant]", big_endi
   type             write = {var{43}, var{false}, var{34}, var{"some string"}, var{5543}, var{true}};
   std::vector<int> read;
 
-  acl::write<TestType::value>(stream, write);
-  REQUIRE_THROWS(acl::read<TestType::value>(stream, read));
+  ouly::write<TestType::value>(stream, write);
+  REQUIRE_THROWS(ouly::read<TestType::value>(stream, read));
 }
 
 struct ConstructedSV
@@ -369,7 +369,7 @@ struct ConstructedSV
   ConstructedSV() noexcept = default;
   explicit ConstructedSV(std::string_view sv)
   {
-    acl::from_chars(sv, id);
+    ouly::from_chars(sv, id);
   }
 
   inline explicit operator std::string() const noexcept
@@ -385,15 +385,15 @@ TEMPLATE_TEST_CASE("stream: ConstructedFromStringView", "[stream][string]", big_
   FileData data;
   auto     stream = Stream(data);
 
-  using type = acl::dynamic_array<ConstructedSV>;
+  using type = ouly::dynamic_array<ConstructedSV>;
   type write = {"10", "11", "12", "13"};
   type read;
 
-  acl::write<TestType::value>(stream, write);
-  acl::read<TestType::value>(stream, read);
+  ouly::write<TestType::value>(stream, write);
+  ouly::read<TestType::value>(stream, read);
 
   REQUIRE(read == write);
-  REQUIRE_THROWS(acl::read<TestType::value>(stream, read));
+  REQUIRE_THROWS(ouly::read<TestType::value>(stream, read));
 }
 
 struct TransformSV
@@ -406,7 +406,7 @@ struct TransformSV
 };
 
 template <>
-struct acl::convert<TransformSV>
+struct ouly::convert<TransformSV>
 {
   static std::string to_type(TransformSV const& r)
   {
@@ -415,26 +415,26 @@ struct acl::convert<TransformSV>
 
   static void from_type(TransformSV& r, std::string_view sv)
   {
-    acl::from_chars(sv, r.id);
+    ouly::from_chars(sv, r.id);
   }
 };
 
-static_assert(acl::detail::Convertible<TransformSV>, "Type not convertible");
+static_assert(ouly::detail::Convertible<TransformSV>, "Type not convertible");
 
 TEMPLATE_TEST_CASE("stream: TransformFromString", "[stream][string]", big_endian, little_endian)
 {
   FileData data;
   auto     stream = Stream(data);
 
-  using type = acl::dynamic_array<TransformSV>;
+  using type = ouly::dynamic_array<TransformSV>;
   type write = {TransformSV(11), TransformSV(100), TransformSV(13), TransformSV(300)};
   type read;
 
-  acl::write<TestType::value>(stream, write);
-  acl::read<TestType::value>(stream, read);
+  ouly::write<TestType::value>(stream, write);
+  ouly::read<TestType::value>(stream, read);
 
   REQUIRE(read == write);
-  REQUIRE_THROWS(acl::read<TestType::value>(stream, read));
+  REQUIRE_THROWS(ouly::read<TestType::value>(stream, read));
 }
 
 struct TransformInt
@@ -447,7 +447,7 @@ struct TransformInt
 };
 
 template <>
-struct acl::convert<TransformInt>
+struct ouly::convert<TransformInt>
 {
   static int to_type(TransformInt const& r)
   {
@@ -460,22 +460,22 @@ struct acl::convert<TransformInt>
   }
 };
 
-static_assert(acl::detail::Convertible<TransformInt>, "Type not convertible");
+static_assert(ouly::detail::Convertible<TransformInt>, "Type not convertible");
 
 TEMPLATE_TEST_CASE("stream: TransformFromInt", "[stream][int]", big_endian, little_endian)
 {
   FileData data;
   auto     stream = Stream(data);
 
-  using type = acl::dynamic_array<TransformInt>;
+  using type = ouly::dynamic_array<TransformInt>;
   type write = {TransformInt(11), TransformInt(100), TransformInt(13), TransformInt(300)};
   type read;
 
-  acl::write<TestType::value>(stream, write);
-  acl::read<TestType::value>(stream, read);
+  ouly::write<TestType::value>(stream, write);
+  ouly::read<TestType::value>(stream, read);
 
   REQUIRE(read == write);
-  REQUIRE_THROWS(acl::read<TestType::value>(stream, read));
+  REQUIRE_THROWS(ouly::read<TestType::value>(stream, read));
 }
 
 struct TransformIntInt
@@ -488,7 +488,7 @@ struct TransformIntInt
 };
 
 template <>
-struct acl::convert<TransformIntInt>
+struct ouly::convert<TransformIntInt>
 {
   static TransformInt to_type(TransformIntInt const& r)
   {
@@ -501,22 +501,22 @@ struct acl::convert<TransformIntInt>
   }
 };
 
-static_assert(acl::detail::Convertible<TransformIntInt>, "Type not convertible");
+static_assert(ouly::detail::Convertible<TransformIntInt>, "Type not convertible");
 
 TEMPLATE_TEST_CASE("stream: TransformFromIntInt", "[stream][intint]", big_endian, little_endian)
 {
   FileData data;
   auto     stream = Stream(data);
 
-  using type = acl::dynamic_array<TransformIntInt>;
+  using type = ouly::dynamic_array<TransformIntInt>;
   type write = {TransformIntInt(11), TransformIntInt(100), TransformIntInt(13), TransformIntInt(300)};
   type read;
 
-  acl::write<TestType::value>(stream, write);
-  acl::read<TestType::value>(stream, read);
+  ouly::write<TestType::value>(stream, write);
+  ouly::read<TestType::value>(stream, read);
 
   REQUIRE(read == write);
-  REQUIRE_THROWS(acl::read<TestType::value>(stream, read));
+  REQUIRE_THROWS(ouly::read<TestType::value>(stream, read));
 }
 
 TEMPLATE_TEST_CASE("stream: BoolLike", "[stream][bool]", big_endian, little_endian)
@@ -528,11 +528,11 @@ TEMPLATE_TEST_CASE("stream: BoolLike", "[stream][bool]", big_endian, little_endi
   type write = {true, false, false, true};
   type read;
 
-  acl::write<TestType::value>(stream, write);
-  acl::read<TestType::value>(stream, read);
+  ouly::write<TestType::value>(stream, write);
+  ouly::read<TestType::value>(stream, read);
 
   REQUIRE(read == write);
-  REQUIRE_THROWS(acl::read<TestType::value>(stream, read));
+  REQUIRE_THROWS(ouly::read<TestType::value>(stream, read));
 }
 
 TEMPLATE_TEST_CASE("stream: BoolLike Invalid", "[stream][bool]", big_endian, little_endian)
@@ -544,8 +544,8 @@ TEMPLATE_TEST_CASE("stream: BoolLike Invalid", "[stream][bool]", big_endian, lit
   type             write = {true, false, false, true};
   std::vector<int> read;
 
-  acl::write<TestType::value>(stream, write);
-  REQUIRE_THROWS(acl::read<TestType::value>(stream, read));
+  ouly::write<TestType::value>(stream, write);
+  REQUIRE_THROWS(ouly::read<TestType::value>(stream, read));
 }
 
 TEMPLATE_TEST_CASE("stream: SignedIntLike", "[stream][int]", big_endian, little_endian)
@@ -557,17 +557,17 @@ TEMPLATE_TEST_CASE("stream: SignedIntLike", "[stream][int]", big_endian, little_
   type write = {-434, 2, 65, -53};
   type read;
 
-  acl::write<TestType::value>(stream, write);
-  acl::read<TestType::value>(stream, read);
+  ouly::write<TestType::value>(stream, write);
+  ouly::read<TestType::value>(stream, read);
 
   REQUIRE(read == write);
-  REQUIRE_THROWS(acl::read<TestType::value>(stream, read));
+  REQUIRE_THROWS(ouly::read<TestType::value>(stream, read));
 }
 
 template <>
-constexpr uint32_t acl::cfg::magic_type_header<std::array<std::int64_t, 4>> = 0x12345678;
+constexpr uint32_t ouly::cfg::magic_type_header<std::array<std::int64_t, 4>> = 0x12345678;
 template <>
-constexpr uint32_t acl::cfg::magic_type_header<std::array<bool, 4>> = 0x664411;
+constexpr uint32_t ouly::cfg::magic_type_header<std::array<bool, 4>> = 0x664411;
 
 TEMPLATE_TEST_CASE("stream: SignedIntLike Invalid", "[stream][int]", big_endian, little_endian)
 {
@@ -578,8 +578,8 @@ TEMPLATE_TEST_CASE("stream: SignedIntLike Invalid", "[stream][int]", big_endian,
   type                write = {-434, 2, 65, -53};
   std::array<bool, 4> read;
 
-  acl::write<TestType::value>(stream, write);
-  REQUIRE_THROWS(acl::read<TestType::value>(stream, read));
+  ouly::write<TestType::value>(stream, write);
+  REQUIRE_THROWS(ouly::read<TestType::value>(stream, read));
 }
 
 TEMPLATE_TEST_CASE("stream: FloatLike", "[stream][float]", big_endian, little_endian)
@@ -591,15 +591,15 @@ TEMPLATE_TEST_CASE("stream: FloatLike", "[stream][float]", big_endian, little_en
   type write = {434.442f, 757.10f, 10.745f, 424.40f};
   type read  = {};
 
-  acl::write<TestType::value>(stream, write);
-  acl::read<TestType::value>(stream, read);
+  ouly::write<TestType::value>(stream, write);
+  ouly::read<TestType::value>(stream, read);
 
   REQUIRE(read[0] == Catch::Approx(434.442f));
   REQUIRE(read[1] == Catch::Approx(757.10f));
   REQUIRE(read[2] == Catch::Approx(10.745f));
   REQUIRE(read[3] == Catch::Approx(424.40f));
 
-  REQUIRE_THROWS(acl::read<TestType::value>(stream, read));
+  REQUIRE_THROWS(ouly::read<TestType::value>(stream, read));
 }
 
 TEMPLATE_TEST_CASE("stream: PointerLike", "[stream][pointer]", big_endian, little_endian)
@@ -621,8 +621,8 @@ TEMPLATE_TEST_CASE("stream: PointerLike", "[stream][pointer]", big_endian, littl
   write.a = std::make_shared<std::string>("shared");
   write.b = std::make_unique<std::string>("unique");
 
-  acl::write<TestType::value>(stream, write);
-  acl::read<TestType::value>(stream, read);
+  ouly::write<TestType::value>(stream, write);
+  ouly::read<TestType::value>(stream, read);
 
   REQUIRE(read.a);
   REQUIRE(read.b);
@@ -646,8 +646,8 @@ TEMPLATE_TEST_CASE("stream: NullPointerLike", "[stream][pointer]", big_endian, l
   type write;
   type read;
 
-  acl::write<TestType::value>(stream, write);
-  acl::read<TestType::value>(stream, read);
+  ouly::write<TestType::value>(stream, write);
+  ouly::read<TestType::value>(stream, read);
 
   REQUIRE(!read.a);
   REQUIRE(!read.b);
@@ -670,8 +670,8 @@ TEMPLATE_TEST_CASE("stream: OptionalLike", "[stream][optional]", big_endian, lit
   write.a = "something";
   type read;
 
-  acl::write<TestType::value>(stream, write);
-  acl::read<TestType::value>(stream, read);
+  ouly::write<TestType::value>(stream, write);
+  ouly::read<TestType::value>(stream, read);
 
   REQUIRE(read.a);
   REQUIRE(!read.b);
@@ -714,8 +714,8 @@ TEMPLATE_TEST_CASE("stream: SerializableClass", "[stream][optional]", big_endian
 
   type read;
 
-  acl::write<TestType::value>(stream, write);
-  acl::read<TestType::value>(stream, read);
+  ouly::write<TestType::value>(stream, write);
+  ouly::read<TestType::value>(stream, read);
 
   REQUIRE(read.size() == 3);
   REQUIRE(read[0].get() == 10);

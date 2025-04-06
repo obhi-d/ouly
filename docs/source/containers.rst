@@ -1,7 +1,7 @@
 Containers
 ==========
 
-ACL provides several container types optimized for different use cases.
+OULY provides several container types optimized for different use cases.
 
 Basic Queue
 ----------
@@ -74,7 +74,7 @@ Key features:
 Example usage::
 
 	struct Node {
-		acl::list_hook hook;
+		ouly::list_hook hook;
 		// ... other data
 	};
 	

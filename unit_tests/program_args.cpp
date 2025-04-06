@@ -1,12 +1,12 @@
-#include "acl/utility/program_args.hpp"
+#include "ouly/utility/program_args.hpp"
 #include "catch2/catch_all.hpp"
 
 // NOLINTBEGIN
 struct arg_formatter
 {
   std::string text;
-  inline void operator()([[maybe_unused]] acl::program_document_type type, std::string_view, std::string_view,
-                         std::string_view                            txt) noexcept
+  inline void operator()([[maybe_unused]] ouly::program_document_type type, std::string_view, std::string_view,
+                         std::string_view                             txt) noexcept
   {
     text += txt;
   }
@@ -17,8 +17,8 @@ TEST_CASE("Validate program args creation and destruction", "[program_args][basi
   char                 buffer[] = "arg=1";
   std::array<char*, 1> args     = {buffer};
 
-  acl::program_args<> pgargs;
-  arg_formatter       argfmt;
+  ouly::program_args<> pgargs;
+  arg_formatter        argfmt;
   pgargs.parse_args(1, args.data());
 
   REQUIRE(pgargs.decl<int>("arg").doc("help_int").value() == 1);
@@ -30,8 +30,8 @@ TEST_CASE("Validate program args switches", "[program_args][switches]")
 {
   const char* arg_set[] = {"--help", "--one=foo", "-2=bar"};
 
-  acl::program_args pgargs;
-  arg_formatter     argfmt;
+  ouly::program_args pgargs;
+  arg_formatter      argfmt;
   pgargs.parse_args(3, arg_set);
 
   pgargs.doc("settings");
@@ -54,7 +54,7 @@ TEST_CASE("Validate program args sink", "[program_args][sink]")
 {
   const char* arg_set[] = {"--help", "--one=foo", "-2=100"};
 
-  acl::program_args pgargs;
+  ouly::program_args pgargs;
   pgargs.parse_args(3, arg_set);
   struct sink
   {
@@ -70,16 +70,16 @@ TEST_CASE("Validate program args sink", "[program_args][sink]")
   auto        arg_len = pgargs.get_max_arg_length();
   std::string arg_doc;
   pgargs.doc(
-   [arg_len, &arg_doc](acl::program_document_type doc_type, std::string_view type, std::string_view flag,
+   [arg_len, &arg_doc](ouly::program_document_type doc_type, std::string_view type, std::string_view flag,
                        std::string_view desc)
    {
      switch (doc_type)
      {
-     case acl::program_document_type::brief_doc:
+     case ouly::program_document_type::brief_doc:
        break;
-     case acl::program_document_type::full_doc:
+     case ouly::program_document_type::full_doc:
        break;
-     case acl::program_document_type::arg_doc:
+     case ouly::program_document_type::arg_doc:
        arg_doc += type;
        arg_doc += ", ";
        arg_doc += flag;
@@ -101,8 +101,8 @@ TEST_CASE("Validate program args vector access", "[program_args][sink]")
 {
   const char* arg_set[] = {"--help", "--one=foo", "-2=100", "--result=result"};
 
-  std::string       result;
-  acl::program_args pgargs;
+  std::string        result;
+  ouly::program_args pgargs;
   pgargs.parse_args(4, arg_set);
   struct sink
   {
@@ -127,7 +127,7 @@ TEST_CASE("Validate program args vector", "[program_args][vector]")
 {
   const char* arg_set[] = {"--help", "--flag", "--one=[foo, bar, 2]", "-2=[100, 20, 30]", "-c=[3.4, 4.1, 6.1]"};
 
-  acl::program_args pgargs;
+  ouly::program_args pgargs;
   pgargs.parse_args(5, arg_set);
 
   bool                          help   = false;
@@ -156,7 +156,7 @@ TEST_CASE("Validate program args parse failure", "[program_args][failure]")
 {
   const char* arg_set[] = {"--help", "--flag", "--one=foo", "-2=[100, 20, 30", "-c=3.4, 4.1, 6.1]"};
 
-  acl::program_args pgargs;
+  ouly::program_args pgargs;
   pgargs.parse_args(5, arg_set);
 
   bool                          help   = false;

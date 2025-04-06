@@ -1,4 +1,4 @@
-project(acl_general_tests)
+project(ouly_general_tests)
 
 set(CMAKE_UNITY_BUILD OFF)
 include(FetchContent)
@@ -47,14 +47,14 @@ function(add_unit_test)
     add_executable(${target_name} ${unit_test_FILES} "validity_main.cpp")
     target_link_libraries(
         ${target_name}
-        acl::acl
+        ouly::ouly
         Catch2::Catch2
         FastFloat::fast_float
         ${unit_test_LINK_LIBS}
     )
     target_compile_definitions(
         ${target_name}
-        PUBLIC -DACL_REC_STATS -DACL_THROW_ON_ERROR ${unit_test_DEFINES}
+        PUBLIC -DOULY_REC_STATS -DOULY_THROW_ON_ERROR ${unit_test_DEFINES}
     )
     target_compile_options(
         ${target_name}
@@ -126,7 +126,7 @@ add_unit_test(NAME linear_allocator FILES "linear_allocator.cpp" SANITIZE)
 add_unit_test(NAME scheduler FILES "scheduler_tests.cpp" SANITIZE)
 add_unit_test(NAME microexpr FILES "microexpr_tests.cpp" SANITIZE)
 add_unit_test(NAME coalescing_allocator FILES "coalescing_allocator.cpp" SANITIZE)
-add_executable(acl-bench "bench_arena_allocator.cpp" "bench_main.cpp")
+add_executable(ouly-bench "bench_arena_allocator.cpp" "bench_main.cpp")
 
-target_link_libraries(acl-bench acl::acl nanobench::nanobench)
-target_compile_features(acl-bench PRIVATE cxx_std_20)
+target_link_libraries(ouly-bench ouly::ouly nanobench::nanobench)
+target_compile_features(ouly-bench PRIVATE cxx_std_20)

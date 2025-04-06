@@ -1,6 +1,6 @@
-#include "acl/containers/basic_queue.hpp"
-#include "acl/utility/config.hpp"
+#include "ouly/containers/basic_queue.hpp"
 #include "catch2/catch_all.hpp"
+#include "ouly/utility/config.hpp"
 #include <string>
 
 // NOLINTBEGIN
@@ -12,8 +12,8 @@ struct string_traits
 
 TEST_CASE("Check basic_queue empty", "[basic_queue]")
 {
-  acl::basic_queue<std::string, string_traits> queue;
-  bool                                         exception = false;
+  ouly::basic_queue<std::string, string_traits> queue;
+  bool                                          exception = false;
   try
   {
     queue.pop_front();
@@ -28,7 +28,7 @@ TEST_CASE("Check basic_queue empty", "[basic_queue]")
 
 TEST_CASE("Validate basic_queue", "[basic_queue]")
 {
-  acl::basic_queue<std::string, string_traits> queue;
+  ouly::basic_queue<std::string, string_traits> queue;
 
   for (uint32_t i = 0; i < 100; ++i)
     queue.emplace_back(std::to_string(i));
@@ -87,7 +87,7 @@ TEST_CASE("Check for leaks in basic_queue", "[basic_queue]")
     }
   };
 
-  acl::basic_queue<leak_track, acl::config<acl::cfg::pool_size<4>>> queue;
+  ouly::basic_queue<leak_track, ouly::config<ouly::cfg::pool_size<4>>> queue;
 
   for (uint32_t i = 0; i < 10; ++i)
     queue.emplace_back(object_count);
@@ -103,8 +103,8 @@ TEST_CASE("Check for leaks in basic_queue", "[basic_queue]")
 
 TEST_CASE("Validate basic_queue initialization", "[basic_queue]")
 {
-  acl::basic_queue<std::string, string_traits> queue1;
-  acl::basic_queue<std::string, string_traits> queue2;
+  ouly::basic_queue<std::string, string_traits> queue1;
+  ouly::basic_queue<std::string, string_traits> queue2;
 
   for (uint32_t i = 0; i < 100; ++i)
     queue1.emplace_back(std::to_string(i));
@@ -134,7 +134,7 @@ TEST_CASE("Validate basic_queue initialization", "[basic_queue]")
   for (uint32_t i = 0; i < 100; ++i)
     queue1.emplace_back(std::to_string(i));
 
-  acl::basic_queue<std::string, string_traits> queue3 = std::move(queue1);
+  ouly::basic_queue<std::string, string_traits> queue3 = std::move(queue1);
 
   CHECK(queue1.empty() == true);
 
@@ -149,7 +149,7 @@ TEST_CASE("Validate basic_queue initialization", "[basic_queue]")
   for (uint32_t i = 0; i < 100; ++i)
     queue3.emplace_back(std::to_string(i));
 
-  acl::basic_queue<std::string, string_traits> queue4 = queue3;
+  ouly::basic_queue<std::string, string_traits> queue4 = queue3;
 
   CHECK(queue3.empty() == false);
 

@@ -1,7 +1,7 @@
 Scheduler Documentation
 ==========================
 
-The ACL scheduler provides a flexible and efficient task scheduling system for concurrent programming. It enables organizing work into logical groups and executing tasks across multiple worker threads.
+The OULY scheduler provides a flexible and efficient task scheduling system for concurrent programming. It enables organizing work into logical groups and executing tasks across multiple worker threads.
 
 Core Components
 --------------
@@ -40,18 +40,18 @@ Basic Usage
 .. code-block:: cpp
 
 	// Create scheduler and workgroups
-	acl::scheduler scheduler;
-	scheduler.create_group(acl::workgroup_id(0), 0, 16);  // 16 workers starting at index 0
+	ouly::scheduler scheduler;
+	scheduler.create_group(ouly::workgroup_id(0), 0, 16);  // 16 workers starting at index 0
 	
 	// Begin execution
 	scheduler.begin_execution();
 
 	// Submit coroutine task
 	auto task = some_coroutine();
-	scheduler.submit(acl::main_worker_id, acl::default_workgroup_id, task);
+	scheduler.submit(ouly::main_worker_id, ouly::default_workgroup_id, task);
 
 	// Submit lambda task
-	scheduler.submit(worker_id, group_id, [](acl::worker_context const& ctx) {
+	scheduler.submit(worker_id, group_id, [](ouly::worker_context const& ctx) {
 		// Task work here
 	});
 

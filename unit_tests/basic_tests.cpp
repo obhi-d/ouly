@@ -1,16 +1,16 @@
 
-#include "acl/allocators/allocator.hpp"
-#include "acl/allocators/default_allocator.hpp"
-#include "acl/allocators/std_allocator_wrapper.hpp"
-#include "acl/containers/index_map.hpp"
-#include "acl/containers/sparse_table.hpp"
-#include "acl/utility/delegate.hpp"
-#include "acl/utility/intrusive_ptr.hpp"
-#include "acl/utility/komihash.hpp"
-#include "acl/utility/tagged_ptr.hpp"
-#include "acl/utility/wyhash.hpp"
-#include "acl/utility/zip_view.hpp"
 #include "catch2/catch_all.hpp"
+#include "ouly/allocators/allocator.hpp"
+#include "ouly/allocators/default_allocator.hpp"
+#include "ouly/allocators/std_allocator_wrapper.hpp"
+#include "ouly/containers/index_map.hpp"
+#include "ouly/containers/sparse_table.hpp"
+#include "ouly/utility/delegate.hpp"
+#include "ouly/utility/intrusive_ptr.hpp"
+#include "ouly/utility/komihash.hpp"
+#include "ouly/utility/tagged_ptr.hpp"
+#include "ouly/utility/wyhash.hpp"
+#include "ouly/utility/zip_view.hpp"
 #include "test_common.hpp"
 #include <span>
 
@@ -105,9 +105,9 @@ TEST_CASE("Validate smart pointer", "[intrusive_ptr]")
 {
   int check = 0;
 
-  acl::intrusive_ptr<myClass> ptr;
+  ouly::intrusive_ptr<myClass> ptr;
   CHECK(ptr == nullptr);
-  ptr = acl::intrusive_ptr<myClass>(new myClass(check));
+  ptr = ouly::intrusive_ptr<myClass>(new myClass(check));
   CHECK(ptr != nullptr);
   CHECK(ptr.use_count() == 1);
   auto copy = ptr;
@@ -118,8 +118,8 @@ TEST_CASE("Validate smart pointer", "[intrusive_ptr]")
   ptr = std::move(copy);
   CHECK(ptr.use_count() == 1);
   // Static cast
-  acl::intrusive_ptr<myBase> base  = acl::static_pointer_cast<myBase>(ptr);
-  acl::intrusive_ptr<myBase> base2 = ptr;
+  ouly::intrusive_ptr<myBase> base  = ouly::static_pointer_cast<myBase>(ptr);
+  ouly::intrusive_ptr<myBase> base2 = ptr;
   CHECK(ptr.use_count() == 3);
 
   base.reset();
@@ -132,22 +132,22 @@ TEST_CASE("Validate smart pointer", "[intrusive_ptr]")
 TEST_CASE("Validate general_allocator", "[general_allocator]")
 {
 
-  using namespace acl;
-  using allocator_t   = default_allocator<acl::config<acl::cfg::compute_stats>>;
+  using namespace ouly;
+  using allocator_t   = default_allocator<ouly::config<ouly::cfg::compute_stats>>;
   using std_allocator = allocator_wrapper<int, allocator_t>;
   [[maybe_unused]] std_allocator allocator;
 
-  allocator_t::address data = allocator_t::allocate(256, acl::alignment<64>());
+  allocator_t::address data = allocator_t::allocate(256, ouly::alignment<64>());
   CHECK((reinterpret_cast<std::uintptr_t>(data) & 63) == 0);
-  allocator_t::deallocate(data, 256, acl::alignment<64>());
+  allocator_t::deallocate(data, 256, ouly::alignment<64>());
   // Should be fine to free nullptr
   allocator_t::deallocate(nullptr, 0, {});
 }
 
 TEST_CASE("Validate tagged_ptr", "[tagged_ptr]")
 {
-  using namespace acl;
-  acl::detail::tagged_ptr<std::string> tagged_string;
+  using namespace ouly;
+  ouly::detail::tagged_ptr<std::string> tagged_string;
 
   std::string my_string = "This is my string";
   std::string copy      = my_string;
@@ -164,20 +164,20 @@ TEST_CASE("Validate tagged_ptr", "[tagged_ptr]")
   CHECK(tagged_string.get_ptr() == &my_string);
   CHECK(*tagged_string.get_ptr() == copy);
 
-  auto second = acl::detail::tagged_ptr(&my_string, 2);
+  auto second = ouly::detail::tagged_ptr(&my_string, 2);
   CHECK((tagged_string == second) == true);
 
   tagged_string.set(&my_string, tagged_string.get_next_tag());
   CHECK(tagged_string != second);
 
-  acl::detail::tagged_ptr<std::void_t<>> null = nullptr;
+  ouly::detail::tagged_ptr<std::void_t<>> null = nullptr;
   CHECK(!null);
 }
 
 TEST_CASE("Validate compressed_ptr", "[compressed_ptr]")
 {
-  using namespace acl;
-  acl::detail::compressed_ptr<std::string> tagged_string;
+  using namespace ouly;
+  ouly::detail::compressed_ptr<std::string> tagged_string;
 
   std::string my_string = "This is my string";
   std::string copy      = my_string;
@@ -194,13 +194,13 @@ TEST_CASE("Validate compressed_ptr", "[compressed_ptr]")
   CHECK(tagged_string.get_ptr() == &my_string);
   CHECK(*tagged_string.get_ptr() == copy);
 
-  auto second = acl::detail::compressed_ptr(&my_string, 2);
+  auto second = ouly::detail::compressed_ptr(&my_string, 2);
   CHECK((tagged_string == second) == true);
 
   tagged_string.set(&my_string, tagged_string.get_next_tag());
   CHECK(tagged_string != second);
 
-  acl::detail::compressed_ptr<std::void_t<>> null = nullptr;
+  ouly::detail::compressed_ptr<std::void_t<>> null = nullptr;
   CHECK(!null);
 }
 
@@ -208,7 +208,7 @@ TEST_CASE("Validate Hash: wyhash", "[hash]")
 {
   constexpr std::string_view cs = "A long string whose hash we are about to find out !";
   std::string                s{cs};
-  acl::wyhash32              wyh32;
+  ouly::wyhash32             wyh32;
 
   auto value32 = wyh32(s.c_str(), s.length());
   REQUIRE(value32 != 0);
@@ -216,12 +216,12 @@ TEST_CASE("Validate Hash: wyhash", "[hash]")
   auto new_value32 = wyh32(s.c_str(), s.length());
   REQUIRE(value32 != new_value32);
 
-  constexpr auto constval = acl::wyhash32::make(cs.data(), cs.size());
+  constexpr auto constval = ouly::wyhash32::make(cs.data(), cs.size());
   REQUIRE(value32 == constval);
 
   REQUIRE(wyh32() == new_value32);
 
-  acl::wyhash64 wyh64;
+  ouly::wyhash64 wyh64;
 
   auto value64 = wyh64(s.c_str(), s.length());
   REQUIRE(value64 != 0);
@@ -234,8 +234,8 @@ TEST_CASE("Validate Hash: wyhash", "[hash]")
 
 TEST_CASE("Validate Hash: komihash", "[hash]")
 {
-  std::string     s = "A long string whose hash we are about to find out !";
-  acl::komihash64 k64;
+  std::string      s = "A long string whose hash we are about to find out !";
+  ouly::komihash64 k64;
 
   auto value = k64(s.c_str(), s.length());
   REQUIRE(value != 0);
@@ -245,7 +245,7 @@ TEST_CASE("Validate Hash: komihash", "[hash]")
 
   REQUIRE(k64() == new_value);
 
-  acl::komihash64_stream k64s;
+  ouly::komihash64_stream k64s;
 
   k64s(s.c_str(), s.length());
   k64s(s.c_str(), s.length());
@@ -255,7 +255,7 @@ TEST_CASE("Validate Hash: komihash", "[hash]")
 
 TEST_CASE("Test index_map", "[index_map]")
 {
-  acl::index_map<uint32_t, 5> map;
+  ouly::index_map<uint32_t, 5> map;
 
   REQUIRE(map.empty() == true);
   map[24] = 5;
@@ -325,8 +325,8 @@ TEST_CASE("Test index_map", "[index_map]")
 
 TEST_CASE("Test index_map fuzz test", "[index_map]")
 {
-  acl::index_map<uint32_t, 64> map;
-  std::vector<uint32_t>        full_map;
+  ouly::index_map<uint32_t, 64> map;
+  std::vector<uint32_t>         full_map;
 
   uint32_t fixed_seed = Catch::rngSeed();
 
@@ -359,7 +359,7 @@ TEST_CASE("Test zip_view", "[zip_view]")
     integers.emplace_back(i * 10);
   }
   int start = 0;
-  for (auto&& [val, ints] : acl::zip(strings, integers))
+  for (auto&& [val, ints] : ouly::zip(strings, integers))
   {
     REQUIRE(val == std::to_string(start) + "-item");
     REQUIRE(ints == start * 10);
@@ -367,7 +367,7 @@ TEST_CASE("Test zip_view", "[zip_view]")
   }
 
   start = 0;
-  for (auto&& [val, ints] : acl::zip(std::span(strings), std::span(integers)))
+  for (auto&& [val, ints] : ouly::zip(std::span(strings), std::span(integers)))
   {
     REQUIRE(val == std::to_string(start) + "-item");
     REQUIRE(ints == start * 10);
@@ -397,7 +397,7 @@ public:
   int def = 0;
 };
 
-using test_delegate_t = acl::delegate<int(int, int)>;
+using test_delegate_t = ouly::delegate<int(int, int)>;
 TEST_CASE("Test free function delegate", "[delegate]")
 {
   auto del = test_delegate_t::bind<free_function>();
@@ -457,7 +457,7 @@ TEST_CASE("Test move semantics", "[delegate]")
   auto del = test_delegate_t::bind(lambda);
 
   // Move the delegate to another instance
-  acl::delegate<int(int, int)> moved = std::move(del);
+  ouly::delegate<int(int, int)> moved = std::move(del);
 
   REQUIRE(static_cast<bool>(moved) == true);
   REQUIRE(moved(5, 6) == 30); // Ensure the moved delegate still works
@@ -468,7 +468,7 @@ TEST_CASE("Test move semantics", "[delegate]")
 
 TEST_CASE("Test empty delegate behavior", "[delegate]")
 {
-  acl::delegate<int(int, int)> del;
+  ouly::delegate<int(int, int)> del;
   REQUIRE(static_cast<bool>(del) == false); // Delegate should be empty initially
 }
 
@@ -480,7 +480,7 @@ TEST_CASE("Test direct delegate behavior", "[delegate]")
     return a + b + value;
   };
 
-  acl::delegate<int(int, int)> del = test_delegate_t::bind(lambda, 20);
+  ouly::delegate<int(int, int)> del = test_delegate_t::bind(lambda, 20);
 
   REQUIRE(static_cast<bool>(del) == true);
   REQUIRE(del(10, 5) == 35);
@@ -494,7 +494,7 @@ TEST_CASE("Test tuple expand delegate behavior", "[delegate]")
     return a + b + value1 + value2;
   };
 
-  acl::delegate<int(int, int)> del = test_delegate_t::bind(lambda, acl::tuple<int const, int const>{7, 13});
+  ouly::delegate<int(int, int)> del = test_delegate_t::bind(lambda, ouly::tuple<int const, int const>{7, 13});
 
   REQUIRE(static_cast<bool>(del) == true);
   REQUIRE(del(10, 5) == 35);

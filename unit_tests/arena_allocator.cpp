@@ -1,11 +1,11 @@
-#include "acl/allocators/arena_allocator.hpp"
-#include "acl/allocators/strat/best_fit_tree.hpp"
-#include "acl/allocators/strat/best_fit_v0.hpp"
-#include "acl/allocators/strat/best_fit_v1.hpp"
-#include "acl/allocators/strat/best_fit_v2.hpp"
-#include "acl/allocators/strat/greedy_v0.hpp"
-#include "acl/allocators/strat/greedy_v1.hpp"
+#include "ouly/allocators/arena_allocator.hpp"
 #include "catch2/catch_all.hpp"
+#include "ouly/allocators/strat/best_fit_tree.hpp"
+#include "ouly/allocators/strat/best_fit_v0.hpp"
+#include "ouly/allocators/strat/best_fit_v1.hpp"
+#include "ouly/allocators/strat/best_fit_v2.hpp"
+#include "ouly/allocators/strat/greedy_v0.hpp"
+#include "ouly/allocators/strat/greedy_v1.hpp"
 #include <iostream>
 #include <random>
 #include <unordered_set>
@@ -13,7 +13,7 @@
 // NOLINTBEGIN
 struct alloc_mem_manager
 {
-  using arena_data_t = acl::vector<char>;
+  using arena_data_t = ouly::vector<char>;
   struct allocation
   {
     std::uint32_t arena_;
@@ -25,11 +25,11 @@ struct alloc_mem_manager
         : arena_(iarena), alloc_id_(ialloc), offset_(ioffset), size_(isize)
     {}
   };
-  acl::vector<arena_data_t>  arenas_;
-  acl::vector<arena_data_t>  backup_arenas_;
-  acl::vector<allocation>    allocs_;
-  acl::vector<allocation>    backup_allocs_;
-  acl::vector<std::uint32_t> valids_;
+  ouly::vector<arena_data_t>  arenas_;
+  ouly::vector<arena_data_t>  backup_arenas_;
+  ouly::vector<allocation>    allocs_;
+  ouly::vector<allocation>    backup_allocs_;
+  ouly::vector<std::uint32_t> valids_;
 
   bool drop_arena([[maybe_unused]] std::uint32_t id)
   {
@@ -84,7 +84,7 @@ struct alloc_mem_manager
     backup_arenas_.shrink_to_fit();
     backup_allocs_.clear();
     backup_allocs_.shrink_to_fit();
-#ifdef ACL_VALIDITY_CHECKS
+#ifdef OULY_VALIDITY_CHECKS
     allocator.validate_integrity();
 #endif
   }
@@ -109,13 +109,13 @@ template <typename TestType>
 void run_test(unsigned int seed)
 {
   using allocator_t =
-   acl::arena_allocator<acl::config<acl::cfg::strategy<TestType>, acl::cfg::manager<alloc_mem_manager>,
-                                    acl::cfg::basic_size_type<uint32_t>, acl::cfg::compute_stats>>;
+   ouly::arena_allocator<ouly::config<ouly::cfg::strategy<TestType>, ouly::cfg::manager<alloc_mem_manager>,
+                                      ouly::cfg::basic_size_type<uint32_t>, ouly::cfg::compute_stats>>;
 
   // static_assert(allocator_t::can_defragment, "Has defragment");
 
   static_assert(std::same_as<alloc_mem_manager, typename allocator_t::arena_manager>, "Managers are not equal");
-  std::cout << " Seed : " << (std::string_view)acl::type_name<TestType>() << " : " << seed << std::endl;
+  std::cout << " Seed : " << (std::string_view)ouly::type_name<TestType>() << " : " << seed << std::endl;
   std::minstd_rand                        gen(seed);
   std::bernoulli_distribution             dice(0.7);
   std::bernoulli_distribution             biased_dice(0.05);
@@ -131,10 +131,10 @@ void run_test(unsigned int seed)
   {
     if (dice(gen) || mgr.valids_.size() == 0)
     {
-      // acl::fixed_alloc_desc<std::uint32_t, TestType::min_granularity> desc(generator(gen) *
+      // ouly::fixed_alloc_desc<std::uint32_t, TestType::min_granularity> desc(generator(gen) *
       // TestType::min_granularity,
       // static_cast<std::uint32_t>(mgr.allocs_.size()),
-      //                                                                      acl::alloc_option_bits::f_defrag);
+      //                                                                      ouly::alloc_option_bits::f_defrag);
       if (biased_dice(gen))
         allocator.defragment();
       auto huser                     = static_cast<std::uint32_t>(mgr.allocs_.size());
@@ -153,7 +153,7 @@ void run_test(unsigned int seed)
       mgr.allocs_[handle].size_ = 0;
       mgr.valids_.erase(mgr.valids_.begin() + chosen);
     }
-#ifdef ACL_VALIDITY_CHECKS
+#ifdef OULY_VALIDITY_CHECKS
     allocator.validate_integrity();
 #endif
   }
@@ -161,7 +161,7 @@ void run_test(unsigned int seed)
 
 TEST_CASE("arena_allocator without memory manager", "[arena_allocator][default]")
 {
-  acl::arena_allocator<> allocator(1024);
+  ouly::arena_allocator<> allocator(1024);
   auto [loc, offset_] = allocator.allocate(256);
   REQUIRE(offset_ == 0);
   auto [nloc, noffset] = allocator.allocate(256);
@@ -182,11 +182,13 @@ TEST_CASE("arena_allocator without memory manager", "[arena_allocator][default]"
 
 TEMPLATE_TEST_CASE("Validate arena_allocator", "[arena_allocator.strat]",
 
-                   (acl::strat::best_fit_v1<acl::cfg::bsearch_min2>), (acl::strat::best_fit_v1<acl::cfg::bsearch_min0>),
-                   (acl::strat::best_fit_v1<acl::cfg::bsearch_min1>), (acl::strat::best_fit_v2<acl::cfg::bsearch_min0>),
-                   (acl::strat::best_fit_v2<acl::cfg::bsearch_min1>), (acl::strat::best_fit_v2<acl::cfg::bsearch_min2>),
-                   (acl::strat::greedy_v1<>), (acl::strat::greedy_v0<>), (acl::strat::best_fit_tree<>),
-                   (acl::strat::best_fit_v0<>)
+                   (ouly::strat::best_fit_v1<ouly::cfg::bsearch_min2>),
+                   (ouly::strat::best_fit_v1<ouly::cfg::bsearch_min0>),
+                   (ouly::strat::best_fit_v1<ouly::cfg::bsearch_min1>),
+                   (ouly::strat::best_fit_v2<ouly::cfg::bsearch_min0>),
+                   (ouly::strat::best_fit_v2<ouly::cfg::bsearch_min1>),
+                   (ouly::strat::best_fit_v2<ouly::cfg::bsearch_min2>), (ouly::strat::greedy_v1<>),
+                   (ouly::strat::greedy_v0<>), (ouly::strat::best_fit_tree<>), (ouly::strat::best_fit_v0<>)
 
 )
 {
@@ -196,11 +198,13 @@ TEMPLATE_TEST_CASE("Validate arena_allocator", "[arena_allocator.strat]",
 
 TEMPLATE_TEST_CASE("Validate arena_allocator : 1542249547 init bug", "[arena_allocator.strat]",
 
-                   (acl::strat::best_fit_v1<acl::cfg::bsearch_min2>), (acl::strat::best_fit_v1<acl::cfg::bsearch_min0>),
-                   (acl::strat::best_fit_v1<acl::cfg::bsearch_min1>), (acl::strat::best_fit_v2<acl::cfg::bsearch_min0>),
-                   (acl::strat::best_fit_v2<acl::cfg::bsearch_min1>), (acl::strat::best_fit_v2<acl::cfg::bsearch_min2>),
-                   (acl::strat::greedy_v1<>), (acl::strat::greedy_v0<>), (acl::strat::best_fit_tree<>),
-                   (acl::strat::best_fit_v0<>)
+                   (ouly::strat::best_fit_v1<ouly::cfg::bsearch_min2>),
+                   (ouly::strat::best_fit_v1<ouly::cfg::bsearch_min0>),
+                   (ouly::strat::best_fit_v1<ouly::cfg::bsearch_min1>),
+                   (ouly::strat::best_fit_v2<ouly::cfg::bsearch_min0>),
+                   (ouly::strat::best_fit_v2<ouly::cfg::bsearch_min1>),
+                   (ouly::strat::best_fit_v2<ouly::cfg::bsearch_min2>), (ouly::strat::greedy_v1<>),
+                   (ouly::strat::greedy_v0<>), (ouly::strat::best_fit_tree<>), (ouly::strat::best_fit_v0<>)
 
 )
 {

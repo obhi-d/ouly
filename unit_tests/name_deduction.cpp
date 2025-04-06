@@ -1,6 +1,6 @@
-#include "acl/reflection/detail/base_concepts.hpp"
-#include "acl/reflection/visitor.hpp"
 #include "catch2/catch_all.hpp"
+#include "ouly/reflection/detail/base_concepts.hpp"
+#include "ouly/reflection/visitor.hpp"
 #include <iostream>
 
 TEST_CASE("Member name inside function")
@@ -14,10 +14,10 @@ TEST_CASE("Member name inside function")
   auto fn = []<typename T>(T&& xobj) constexpr noexcept -> decltype(auto)
   {
     auto&& [obj] = std::forward<T>(xobj);
-    return acl::detail::field_ref{std::forward<decltype(obj)>(obj)};
+    return ouly::detail::field_ref{std::forward<decltype(obj)>(obj)};
   };
-  auto constexpr fref = fn(acl::detail::xobj<TestStruct>);
-  REQUIRE((std::string_view)acl::detail::deduce_field_name<TestStruct, fref>() == "variable"sv);
+  auto constexpr fref = fn(ouly::detail::xobj<TestStruct>);
+  REQUIRE((std::string_view)ouly::detail::deduce_field_name<TestStruct, fref>() == "variable"sv);
 }
 
 struct TestStruct
@@ -32,10 +32,10 @@ TEST_CASE("Member name outside function")
   auto fn = []<typename T>(T&& xobj) constexpr noexcept -> decltype(auto)
   {
     auto&& [obj] = std::forward<T>(xobj);
-    return acl::detail::field_ref{std::forward<decltype(obj)>(obj)};
+    return ouly::detail::field_ref{std::forward<decltype(obj)>(obj)};
   };
-  auto constexpr fref = fn(acl::detail::xobj<TestStruct>);
-  REQUIRE((std::string_view)acl::detail::deduce_field_name<TestStruct, fref>() == "variable"sv);
+  auto constexpr fref = fn(ouly::detail::xobj<TestStruct>);
+  REQUIRE((std::string_view)ouly::detail::deduce_field_name<TestStruct, fref>() == "variable"sv);
 }
 
 TEST_CASE("Nested member name inside function")
@@ -52,10 +52,10 @@ TEST_CASE("Nested member name inside function")
   auto fn = []<typename T>(T&& xobj) constexpr noexcept -> decltype(auto)
   {
     auto&& [obj] = std::forward<T>(xobj);
-    return acl::detail::field_ref{std::forward<decltype(obj)>(obj)};
+    return ouly::detail::field_ref{std::forward<decltype(obj)>(obj)};
   };
-  auto constexpr fref = fn(acl::detail::xobj<NestedTestStruct::Internal>);
-  REQUIRE((std::string_view)acl::detail::deduce_field_name<NestedTestStruct::Internal, fref>() == "variable"sv);
+  auto constexpr fref = fn(ouly::detail::xobj<NestedTestStruct::Internal>);
+  REQUIRE((std::string_view)ouly::detail::deduce_field_name<NestedTestStruct::Internal, fref>() == "variable"sv);
 }
 
 struct NestedTestStruct
@@ -73,8 +73,8 @@ TEST_CASE("Nested member name outside function")
   auto fn = []<typename T>(T&& xobj) constexpr noexcept -> decltype(auto)
   {
     auto&& [obj] = std::forward<T>(xobj);
-    return acl::detail::field_ref{std::forward<decltype(obj)>(obj)};
+    return ouly::detail::field_ref{std::forward<decltype(obj)>(obj)};
   };
-  auto constexpr fref = fn(acl::detail::xobj<NestedTestStruct::Internal>);
-  REQUIRE((std::string_view)acl::detail::deduce_field_name<NestedTestStruct::Internal, fref>() == "variable"sv);
+  auto constexpr fref = fn(ouly::detail::xobj<NestedTestStruct::Internal>);
+  REQUIRE((std::string_view)ouly::detail::deduce_field_name<NestedTestStruct::Internal, fref>() == "variable"sv);
 }

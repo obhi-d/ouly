@@ -1,6 +1,6 @@
-#include "acl/scheduler/parallel_for.hpp"
-#include "acl/scheduler/scheduler.hpp"
 #include "catch2/catch_all.hpp"
+#include "ouly/scheduler/parallel_for.hpp"
+#include "ouly/scheduler/scheduler.hpp"
 #include <numeric>
 #include <ranges>
 #include <string>
@@ -8,21 +8,21 @@
 // NOLINTBEGIN
 TEST_CASE("scheduler: Construction")
 {
-  acl::scheduler scheduler;
-  scheduler.create_group(acl::workgroup_id(0), 0, 16);
-  scheduler.create_group(acl::workgroup_id(1), 16, 2);
+  ouly::scheduler scheduler;
+  scheduler.create_group(ouly::workgroup_id(0), 0, 16);
+  scheduler.create_group(ouly::workgroup_id(1), 16, 2);
 
   struct executor
   {
     std::array<uint32_t, 18>              executed = {0};
     std::array<std::vector<uint32_t>, 18> accumulate;
 
-    void execute(acl::worker_context const& id)
+    void execute(ouly::worker_context const& id)
     {
       executed[id.get_worker().get_index()]++;
     }
 
-    void execute2(acl::worker_context const& id, uint32_t n)
+    void execute2(ouly::worker_context const& id, uint32_t n)
     {
       [[maybe_unused]] auto& scheduler = id.get_scheduler();
       accumulate[id.get_worker().get_index()].push_back(n);
@@ -57,8 +57,8 @@ TEST_CASE("scheduler: Construction")
   scheduler.begin_execution();
   executor instance;
   for (uint32_t i = 0; i < 1024; ++i)
-    acl::async<&executor::execute>(acl::worker_context::get(acl::default_workgroup_id), acl::workgroup_id(i % 2),
-                                   instance);
+    ouly::async<&executor::execute>(ouly::worker_context::get(ouly::default_workgroup_id), ouly::workgroup_id(i % 2),
+                                    instance);
   scheduler.end_execution();
 
   auto sum = instance.sum();
@@ -67,11 +67,11 @@ TEST_CASE("scheduler: Construction")
   scheduler.begin_execution();
   executor instance2;
   for (uint32_t i = 0; i < 1024; ++i)
-    acl::async(acl::worker_context::get(acl::default_workgroup_id), acl::workgroup_id(i % 2),
-               [&instance2, i](acl::worker_context const& ctx)
-               {
-                 instance2.execute2(ctx, i);
-               });
+    ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), ouly::workgroup_id(i % 2),
+                [&instance2, i](ouly::worker_context const& ctx)
+                {
+                  instance2.execute2(ctx, i);
+                });
   scheduler.end_execution();
 
   REQUIRE(instance2.sum() == 1023 * 512);
@@ -79,29 +79,29 @@ TEST_CASE("scheduler: Construction")
 
 TEST_CASE("scheduler: Range ParallelFor")
 {
-  acl::scheduler scheduler;
-  scheduler.create_group(acl::workgroup_id(0), 0, 16);
-  scheduler.create_group(acl::workgroup_id(1), 16, 2);
+  ouly::scheduler scheduler;
+  scheduler.create_group(ouly::workgroup_id(0), 0, 16);
+  scheduler.create_group(ouly::workgroup_id(1), 16, 2);
 
-  auto zero = acl::integer_range(0, 0);
+  auto zero = ouly::integer_range(0, 0);
   REQUIRE(zero.empty());
 
   scheduler.begin_execution();
   std::atomic_int value;
   for (uint32_t i = 0; i < 1024; ++i)
-    acl::parallel_for(
-     [&value](int a, int b, [[maybe_unused]] acl::worker_context const& wc)
+    ouly::parallel_for(
+     [&value](int a, int b, [[maybe_unused]] ouly::worker_context const& wc)
      {
        value.fetch_add(b - a);
      },
-     acl::integer_range(0, 2048), acl::default_workgroup_id);
+     ouly::integer_range(0, 2048), ouly::default_workgroup_id);
   scheduler.end_execution();
 }
 
 TEST_CASE("scheduler: Simplest ParallelFor")
 {
-  acl::scheduler scheduler;
-  scheduler.create_group(acl::workgroup_id(0), 0, 16);
+  ouly::scheduler scheduler;
+  scheduler.create_group(ouly::workgroup_id(0), 0, 16);
 
   scheduler.begin_execution();
 
@@ -116,35 +116,35 @@ TEST_CASE("scheduler: Simplest ParallelFor")
   }
 
   std::atomic_int64_t parallel_sum = 0;
-  acl::parallel_for(
-   [&parallel_sum](int a, [[maybe_unused]] acl::worker_context const& c)
+  ouly::parallel_for(
+   [&parallel_sum](int a, [[maybe_unused]] ouly::worker_context const& c)
    {
-     [[maybe_unused]] auto id = acl::worker_id::get();
+     [[maybe_unused]] auto id = ouly::worker_id::get();
      assert(id.get_index() < 16);
-     [[maybe_unused]] auto ctx = acl::worker_context::get(acl::default_workgroup_id);
+     [[maybe_unused]] auto ctx = ouly::worker_context::get(ouly::default_workgroup_id);
      assert(ctx.get_worker().get_index() < 16);
      assert(ctx.get_group_offset() < 16);
      parallel_sum += a;
    },
-   std::span(list.begin(), list.end()), acl::default_workgroup_id);
+   std::span(list.begin(), list.end()), ouly::default_workgroup_id);
 
   REQUIRE(parallel_sum.load() == sum);
 
   parallel_sum = 0;
-  acl::parallel_for(
-   [&parallel_sum](auto start, auto end, [[maybe_unused]] acl::worker_context const& c)
+  ouly::parallel_for(
+   [&parallel_sum](auto start, auto end, [[maybe_unused]] ouly::worker_context const& c)
    {
      for (auto it = start; it != end; ++it)
        parallel_sum += *it;
    },
-   std::span(list.begin(), list.end()), acl::default_workgroup_id);
+   std::span(list.begin(), list.end()), ouly::default_workgroup_id);
 
   REQUIRE(parallel_sum.load() == sum);
 
   scheduler.end_execution();
 }
 
-acl::co_task<std::string> continue_string()
+ouly::co_task<std::string> continue_string()
 {
   std::string        continue_string;
   constexpr uint32_t nb_elements = 1000;
@@ -156,7 +156,7 @@ acl::co_task<std::string> continue_string()
   co_return continue_string;
 }
 
-acl::co_task<std::string> create_string(acl::co_task<std::string>& tunein)
+ouly::co_task<std::string> create_string(ouly::co_task<std::string>& tunein)
 {
   std::string basic_string = "basic";
   co_await tunein;
@@ -166,16 +166,16 @@ acl::co_task<std::string> create_string(acl::co_task<std::string>& tunein)
 
 TEST_CASE("scheduler: Test co_task")
 {
-  acl::scheduler scheduler;
-  scheduler.create_group(acl::workgroup_id(0), 0, 16);
+  ouly::scheduler scheduler;
+  scheduler.create_group(ouly::workgroup_id(0), 0, 16);
 
   scheduler.begin_execution();
 
   auto task        = continue_string();
   auto string_task = create_string(task);
 
-  acl::async(acl::worker_context::get(acl::default_workgroup_id), acl::default_workgroup_id, task);
-  scheduler.submit(acl::main_worker_id, acl::default_workgroup_id, string_task);
+  ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), ouly::default_workgroup_id, task);
+  scheduler.submit(ouly::main_worker_id, ouly::default_workgroup_id, string_task);
 
   std::string        continue_string = "basic";
   constexpr uint32_t nb_elements     = 1000;
@@ -189,7 +189,7 @@ TEST_CASE("scheduler: Test co_task")
   scheduler.end_execution();
 }
 
-acl::co_sequence<std::string> create_string_seq(acl::co_task<std::string>& tunein)
+ouly::co_sequence<std::string> create_string_seq(ouly::co_task<std::string>& tunein)
 {
   std::string basic_string = "basic";
   co_await tunein;
@@ -199,17 +199,17 @@ acl::co_sequence<std::string> create_string_seq(acl::co_task<std::string>& tunei
 
 TEST_CASE("scheduler: Test co_sequence")
 {
-  acl::scheduler scheduler;
-  scheduler.create_group(acl::workgroup_id(0), 0, 2);
+  ouly::scheduler scheduler;
+  scheduler.create_group(ouly::workgroup_id(0), 0, 2);
 
   scheduler.begin_execution();
 
   auto task        = continue_string();
   auto string_task = create_string_seq(task);
 
-  acl::co_sequence<std::string> move_string_task = std::move(string_task);
+  ouly::co_sequence<std::string> move_string_task = std::move(string_task);
 
-  scheduler.submit(acl::main_worker_id, acl::default_workgroup_id, task);
+  scheduler.submit(ouly::main_worker_id, ouly::default_workgroup_id, task);
 
   std::string        continue_string = "basic";
   constexpr uint32_t nb_elements     = 1000;
@@ -218,12 +218,12 @@ TEST_CASE("scheduler: Test co_sequence")
     continue_string += "-i-" + std::to_string(i);
   }
 
-  auto result = move_string_task.sync_wait_result(acl::main_worker_id, scheduler);
+  auto result = move_string_task.sync_wait_result(ouly::main_worker_id, scheduler);
   REQUIRE(result == continue_string);
   scheduler.end_execution();
 }
 
-acl::co_task<void> work_on(std::vector<uint32_t>& id, std::mutex& lck, uint32_t worker)
+ouly::co_task<void> work_on(std::vector<uint32_t>& id, std::mutex& lck, uint32_t worker)
 {
   auto lock = std::scoped_lock(lck);
   id.push_back(worker);
@@ -232,12 +232,12 @@ acl::co_task<void> work_on(std::vector<uint32_t>& id, std::mutex& lck, uint32_t 
 
 TEST_CASE("scheduler: Test submit_to")
 {
-  acl::scheduler scheduler;
-  auto           wg_default = acl::workgroup_id(0);
-  auto           wg_game    = acl::workgroup_id(1);
-  auto           wg_log     = acl::workgroup_id(2);
-  auto           wg_render  = acl::workgroup_id(3);
-  auto           wg_stream  = acl::workgroup_id(4);
+  ouly::scheduler scheduler;
+  auto            wg_default = ouly::workgroup_id(0);
+  auto            wg_game    = ouly::workgroup_id(1);
+  auto            wg_log     = ouly::workgroup_id(2);
+  auto            wg_render  = ouly::workgroup_id(3);
+  auto            wg_stream  = ouly::workgroup_id(4);
 
   scheduler.create_group(wg_default, 0, 32);
   scheduler.create_group(wg_game, 0, 16);
@@ -252,7 +252,7 @@ TEST_CASE("scheduler: Test submit_to")
   std::atomic_int stream_  = 0;
 
   scheduler.begin_execution(
-   [&](acl::worker_desc desc)
+   [&](ouly::worker_desc desc)
    {
      if (desc.belongs_to(wg_default))
        default_++;
@@ -272,13 +272,13 @@ TEST_CASE("scheduler: Test submit_to")
   REQUIRE(render_.load() == 4);
   REQUIRE(stream_.load() == 2);
 
-  std::vector<acl::co_task<void>> tasks;
-  std::vector<uint32_t>           collection;
-  std::mutex                      lock;
+  std::vector<ouly::co_task<void>> tasks;
+  std::vector<uint32_t>            collection;
+  std::mutex                       lock;
   for (uint32_t i = 0, end = scheduler.get_worker_count(); i < end; ++i)
   {
     tasks.emplace_back(work_on(collection, lock, i));
-    scheduler.submit(acl::main_worker_id, acl::worker_id(i), acl::default_workgroup_id, tasks[i]);
+    scheduler.submit(ouly::main_worker_id, ouly::worker_id(i), ouly::default_workgroup_id, tasks[i]);
   }
 
   for (uint32_t i = 0, end = scheduler.get_worker_count(); i < end; ++i)

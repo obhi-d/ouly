@@ -1,7 +1,7 @@
-#include "acl/ecs/collection.hpp"
-#include "acl/ecs/components.hpp"
-#include "acl/ecs/registry.hpp"
 #include "catch2/catch_all.hpp"
+#include "ouly/ecs/collection.hpp"
+#include "ouly/ecs/components.hpp"
+#include "ouly/ecs/registry.hpp"
 #include "test_common.hpp"
 #include <string>
 #include <unordered_map>
@@ -21,9 +21,9 @@ struct link_traits_2
 
 TEST_CASE("component: emplace_at", "[components][void]")
 {
-  acl::ecs::registry<>      registry;
-  auto                      e1 = registry.emplace();
-  acl::ecs::components<int> table;
+  ouly::ecs::registry<>      registry;
+  auto                       e1 = registry.emplace();
+  ouly::ecs::components<int> table;
   table.set_max(registry.max_size());
   table.emplace_at(e1, 100);
   REQUIRE(table.at(e1) == 100);
@@ -31,8 +31,8 @@ TEST_CASE("component: emplace_at", "[components][void]")
 
 TEMPLATE_TEST_CASE("components: validate pod with pool traits", "[components][trivial]", link_traits_1, link_traits_2)
 {
-  acl::ecs::rxregistry<>                                    registry;
-  acl::ecs::components<int, acl::ecs::rxentity<>, TestType> table;
+  ouly::ecs::rxregistry<>                                     registry;
+  ouly::ecs::components<int, ouly::ecs::rxentity<>, TestType> table;
 
   auto e1 = registry.emplace();
   auto e2 = registry.emplace();
@@ -70,8 +70,8 @@ TEMPLATE_TEST_CASE("components: validate pod with pool traits", "[components][tr
 TEMPLATE_TEST_CASE("components: validate non-pod with pool traits", "[components][nontrivial]", link_traits_1,
                    link_traits_2)
 {
-  acl::ecs::rxregistry<>                                            registry;
-  acl::ecs::components<std::string, acl::ecs::rxentity<>, TestType> table;
+  ouly::ecs::rxregistry<>                                             registry;
+  ouly::ecs::components<std::string, ouly::ecs::rxentity<>, TestType> table;
 
   auto e1 = registry.emplace();
   auto e2 = registry.emplace();
@@ -108,7 +108,7 @@ TEMPLATE_TEST_CASE("components: validate non-pod with pool traits", "[components
 
 TEST_CASE("components: emplace", "[components][nontrivial]")
 {
-  acl::ecs::rxregistry<>   string_reg;
+  ouly::ecs::rxregistry<>  string_reg;
   std::vector<std::string> string_values;
 
   auto first  = string_reg.emplace();
@@ -139,10 +139,10 @@ TEST_CASE("components: emplace", "[components][nontrivial]")
 
 TEST_CASE("registry: random test", "[components][nontrivial]")
 {
-  using clink = acl::ecs::rxentity<>;
-  acl::ecs::rxregistry<> string_reg;
-  std::vector<clink>     clink_goes_my_bones;
-  std::vector<clink>     deleted_ones;
+  using clink = ouly::ecs::rxentity<>;
+  ouly::ecs::rxregistry<> string_reg;
+  std::vector<clink>      clink_goes_my_bones;
+  std::vector<clink>      deleted_ones;
 
   uint32_t fixed_seed = Catch::rngSeed();
 
@@ -179,10 +179,10 @@ TEST_CASE("registry: random test", "[components][nontrivial]")
 
 TEST_CASE("components: validate named objects", "[rlink_object_table][nontrivial]")
 {
-  using container = acl::ecs::rxregistry<>;
-  // using clink     = acl::ecs::rxregistry<>::type;
+  using container = ouly::ecs::rxregistry<>;
+  // using clink     = ouly::ecs::rxregistry<>::type;
 
-  acl::ecs::components<std::string, acl::ecs::rxentity<>> names;
+  ouly::ecs::components<std::string, ouly::ecs::rxentity<>> names;
 
   container reg;
 
@@ -255,10 +255,10 @@ TEST_CASE("components: validate named objects", "[rlink_object_table][nontrivial
 
 TEST_CASE("rlink_object_table: fuzz", "[rlink_object_table][nontrivial]")
 {
-  using container = acl::ecs::rxregistry<>;
-  using clink     = acl::ecs::rxregistry<>::type;
+  using container = ouly::ecs::rxregistry<>;
+  using clink     = ouly::ecs::rxregistry<>::type;
 
-  acl::ecs::components<std::string, acl::ecs::rxentity<>> names;
+  ouly::ecs::components<std::string, ouly::ecs::rxentity<>> names;
 
   std::vector<clink>                        bones;
   std::vector<clink>                        deleted;
@@ -310,11 +310,11 @@ TEST_CASE("rlink_object_table: fuzz", "[rlink_object_table][nontrivial]")
 
 TEST_CASE("collection: validate collection", "[packed_table][emplace]")
 {
-  static_assert(acl::config<acl::cfg::pool_size<>>::pool_size_v == 4096, "Default pool size");
-  static_assert(acl::detail::log2(acl::config<acl::cfg::pool_size<>>::pool_size_v) == 12, "Default pool size");
-  acl::ecs::rxregistry<>                                                        registry;
-  acl::ecs::collection<acl::ecs::rxentity<>>                                    collection;
-  acl::ecs::components<int, acl::ecs::rxentity<>, acl::cfg::use_direct_mapping> data;
+  static_assert(ouly::config<ouly::cfg::pool_size<>>::pool_size_v == 4096, "Default pool size");
+  static_assert(ouly::detail::log2(ouly::config<ouly::cfg::pool_size<>>::pool_size_v) == 12, "Default pool size");
+  ouly::ecs::rxregistry<>                                                          registry;
+  ouly::ecs::collection<ouly::ecs::rxentity<>>                                     collection;
+  ouly::ecs::components<int, ouly::ecs::rxentity<>, ouly::cfg::use_direct_mapping> data;
 
   auto e10 = registry.emplace();
   auto e20 = registry.emplace();

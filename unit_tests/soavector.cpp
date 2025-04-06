@@ -1,4 +1,4 @@
-#include "acl/containers/soavector.hpp"
+#include "ouly/containers/soavector.hpp"
 #include "catch2/catch_all.hpp"
 #include "test_common.hpp"
 #include <string>
@@ -13,11 +13,11 @@ TEST_CASE("soavector: Validate soavector emplace", "[soavector][emplace]")
     std::string s;
   };
 
-  acl::soavector<pack> v1;
+  ouly::soavector<pack> v1;
   v1.emplace_back(100, true, "first");
   v1.emplace_back(200, false, "second");
   v1.emplace_back(300, false, "third");
-  acl::soavector<pack> v2 = {
+  ouly::soavector<pack> v2 = {
    {100,  true,  "first"},
    {200, false, "second"},
    {300, false,  "third"}
@@ -35,7 +35,7 @@ TEST_CASE("soavector: Validate soavector assign", "[soavector][assign]")
     std::string s;
   };
 
-  acl::soavector<pack> v1, v2;
+  ouly::soavector<pack> v1, v2;
 
   for (std::uint32_t i = 0; i < 1000; ++i)
     v1.emplace_back(std::rand(), std::rand() > 10000, std::to_string(std::rand()));
@@ -67,7 +67,7 @@ TEST_CASE("soavector: Validate soavector insert", "[soavector][insert]")
     std::string s;
   };
 
-  acl::soavector<pack> v1;
+  ouly::soavector<pack> v1;
 
   auto saved = pack{std::rand(), std::rand() > 10000, std::to_string(std::rand())};
   v1.insert(v1.size(), saved);
@@ -100,7 +100,7 @@ TEST_CASE("soavector: Validate soavector erase", "[soavector][erase]")
     std::string s;
   };
 
-  acl::soavector<pack> v1;
+  ouly::soavector<pack> v1;
 
   std::array<pack, 10> saved;
   for (std::uint32_t i = 0; i < 10; ++i)
@@ -135,18 +135,18 @@ struct TestStruct
 
 TEST_CASE("soavector: Basic operations", "[soavector]")
 {
-  acl::soavector<TestStruct> vec;
+  ouly::soavector<TestStruct> vec;
 
   SECTION("Constructor and size")
   {
     REQUIRE(vec.empty());
     REQUIRE(vec.size() == 0);
 
-    acl::soavector<TestStruct> vec2(5);
+    ouly::soavector<TestStruct> vec2(5);
     REQUIRE(vec2.size() == 5);
 
-    TestStruct                 val{1, 2.0f, "test"};
-    acl::soavector<TestStruct> vec3(3, val);
+    TestStruct                  val{1, 2.0f, "test"};
+    ouly::soavector<TestStruct> vec3(3, val);
     REQUIRE(vec3.size() == 3);
     REQUIRE(vec3[0].get().x == 1);
   }
@@ -196,7 +196,7 @@ TEST_CASE("soavector: Basic operations", "[soavector]")
 
 TEST_CASE("soavector: Memory operations", "[soavector]")
 {
-  acl::soavector<TestStruct> vec;
+  ouly::soavector<TestStruct> vec;
 
   SECTION("Reserve and capacity")
   {
@@ -233,7 +233,7 @@ TEST_CASE("soavector: Memory operations", "[soavector]")
 
 TEST_CASE("soavector: Copy and move operations", "[soavector]")
 {
-  acl::soavector<TestStruct> vec;
+  ouly::soavector<TestStruct> vec;
   vec.push_back({1, 1.0f, "one"});
   vec.push_back({2, 2.0f, "two"});
 
@@ -252,14 +252,14 @@ TEST_CASE("soavector: Copy and move operations", "[soavector]")
 
   SECTION("Copy assignment")
   {
-    acl::soavector<TestStruct> vec2;
+    ouly::soavector<TestStruct> vec2;
     vec2 = vec;
     REQUIRE(vec2 == vec);
   }
 
   SECTION("Move assignment")
   {
-    acl::soavector<TestStruct> vec2;
+    ouly::soavector<TestStruct> vec2;
     vec2 = std::move(vec);
     REQUIRE(vec2.size() == 2);
     REQUIRE(vec.empty());
@@ -268,7 +268,7 @@ TEST_CASE("soavector: Copy and move operations", "[soavector]")
 
 TEST_CASE("soavector: Modifiers", "[soavector]")
 {
-  acl::soavector<TestStruct> vec;
+  ouly::soavector<TestStruct> vec;
 
   SECTION("Emplace operations")
   {
@@ -312,8 +312,8 @@ TEST_CASE("soavector: Modifiers", "[soavector]")
 
 TEST_CASE("soavector: Comparison operators", "[soavector]")
 {
-  acl::soavector<TestStruct> vec1;
-  acl::soavector<TestStruct> vec2;
+  ouly::soavector<TestStruct> vec1;
+  ouly::soavector<TestStruct> vec2;
 
   vec1.push_back({1, 1.0f, "one"});
   vec2.push_back({1, 1.0f, "one"});

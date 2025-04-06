@@ -1,6 +1,6 @@
-#include "acl/allocators/coalescing_allocator.hpp"
-#include "acl/allocators/coalescing_arena_allocator.hpp"
+#include "ouly/allocators/coalescing_allocator.hpp"
 #include "catch2/catch_all.hpp"
+#include "ouly/allocators/coalescing_arena_allocator.hpp"
 #include <iostream>
 #include <random>
 #include <unordered_set>
@@ -11,12 +11,12 @@ struct alloc_mem_manager
   using arena_data_t = std::vector<char>;
   struct allocation
   {
-    acl::allocation_id alloc_id_;
-    acl::arena_id      arena_;
-    std::size_t        offset_;
-    std::size_t        size_ = 0;
-    allocation()             = default;
-    allocation(acl::allocation_id id, acl::arena_id arena_, std::size_t ioffset, std::size_t isize)
+    ouly::allocation_id alloc_id_;
+    ouly::arena_id      arena_;
+    std::size_t         offset_;
+    std::size_t         size_ = 0;
+    allocation()              = default;
+    allocation(ouly::allocation_id id, ouly::arena_id arena_, std::size_t ioffset, std::size_t isize)
         : alloc_id_(id), arena_(arena_), offset_(ioffset), size_(isize)
     {}
   };
@@ -41,7 +41,7 @@ struct alloc_mem_manager
       arenas_[l.arena_.get()][s + l.offset_] = static_cast<char>(generator(gen));
   }
 
-  void add([[maybe_unused]] acl::arena_id id, [[maybe_unused]] uint32_t size_)
+  void add([[maybe_unused]] ouly::arena_id id, [[maybe_unused]] uint32_t size_)
   {
     arena_data_t arena_;
     arena_.resize(size_, 0x17);
@@ -52,7 +52,7 @@ struct alloc_mem_manager
     arena_count_++;
   }
 
-  void remove(acl::arena_id h)
+  void remove(ouly::arena_id h)
   {
     arenas_[h.get()].clear();
     arenas_[h.get()].shrink_to_fit();
@@ -81,9 +81,9 @@ TEST_CASE("coalescing_arena_allocator all tests", "[coalescing_arena_allocator][
     e_allocate,
     e_deallocate
   };
-  constexpr uint32_t              page_size = 10000;
-  alloc_mem_manager               mgr;
-  acl::coalescing_arena_allocator allocator;
+  constexpr uint32_t               page_size = 10000;
+  alloc_mem_manager                mgr;
+  ouly::coalescing_arena_allocator allocator;
   allocator.set_arena_size(page_size);
 
   for (std::uint32_t allocs_ = 0; allocs_ < 10000; ++allocs_)
@@ -108,8 +108,8 @@ TEST_CASE("coalescing_arena_allocator all tests", "[coalescing_arena_allocator][
 
 TEST_CASE("coalescing_arena_allocator dedictated arena_ tests", "[coalescing_arena_allocator][default]")
 {
-  acl::coalescing_arena_allocator allocator;
-  constexpr uint32_t              page_size = 100;
+  ouly::coalescing_arena_allocator allocator;
+  constexpr uint32_t               page_size = 100;
 
   allocator.set_arena_size(page_size);
   REQUIRE(allocator.get_arena_size() == page_size);
@@ -134,8 +134,8 @@ TEST_CASE("coalescing_arena_allocator dedictated arena_ tests", "[coalescing_are
 
 TEST_CASE("coalescing_allocator without memory manager", "[coalescing_allocator][default]")
 {
-  acl::coalescing_allocator allocator;
-  auto                      offset_ = allocator.allocate(256);
+  ouly::coalescing_allocator allocator;
+  auto                       offset_ = allocator.allocate(256);
   REQUIRE(offset_ == 0);
   auto noffset = allocator.allocate(256);
   REQUIRE(offset_ + 256 == noffset);

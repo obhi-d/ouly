@@ -1,7 +1,7 @@
 
 #pragma once
-#include "acl/utility/config.hpp"
-#include "acl/utility/type_traits.hpp"
+#include "ouly/utility/config.hpp"
+#include "ouly/utility/type_traits.hpp"
 #include <compare>
 #include <string>
 
@@ -20,7 +20,7 @@ struct pod
 };
 
 template <>
-struct acl::default_config<std::string>
+struct ouly::default_config<std::string>
 {
   static constexpr std::uint32_t pool_size_v       = 2;
   static constexpr std::uint32_t index_pool_size_v = 2;

@@ -2,7 +2,7 @@ import gdb
 import itertools
 
 class SmallVectorPrinter:
-    """Pretty printer for acl::small_vector<T, N>"""
+    """Pretty printer for ouly::small_vector<T, N>"""
 
     def __init__(self, val):
         self.val = val
@@ -50,7 +50,7 @@ class SmallVectorPrinter:
 
 def lookup_pretty_printer(value):
     """Register small_vector pretty-printers with objfile"""
-    if value.type.name  and value.type.name.startswith('acl::small_vector'):
+    if value.type.name  and value.type.name.startswith('ouly::small_vector'):
         return SmallVectorPrinter(value)
     return None
 # Auto-load when script is imported directly into GDB
