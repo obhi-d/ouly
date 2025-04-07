@@ -49,7 +49,7 @@ jobs:
                --directory . \
                --base-directory ${{ github.workspace }} \
                --output-file coverage.info \
-               --no-external --ignore-errors inconsistent,inconsistent
+               --no-external --ignore-errors inconsistent,mismatch
           lcov --remove coverage.info '/usr/*' '*/_deps/*' '*/catch2-src/*' --output-file coverage.info --ignore-errors unused
       
       # Upload the generated coverage report to Coveralls.io
