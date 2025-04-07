@@ -7,7 +7,7 @@ on:
     branches: [ "main" ]
 
 env:
-  BUILD_TYPE: Release
+  BUILD_TYPE: Debug # Use Debug build for coverage; Release often optimizes out code
   
 jobs:
   build_and_test:
@@ -17,7 +17,16 @@ jobs:
       - uses: actions/checkout@v4
       - uses: lukka/get-cmake@latest
 
+      # Install necessary build tools and lcov
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lcov # Install lcov here
+        
       - name: Configure and Build
+        # NOTE: Ensure your CMakeLists.txt adds '--coverage' flags for CXX and Linker when DOULY_TEST_COVERAGE=ON
+        # e.g., target_compile_options(your_target PRIVATE --coverage)
+        #       target_link_libraries(your_target PRIVATE --coverage)
         run: |
           cmake -B ${{ github.workspace }}/build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DOULY_BUILD_TESTS=ON -DOULY_TEST_COVERAGE=ON
           cmake --build ${{ github.workspace }}/build --config ${{ env.BUILD_TYPE }}
@@ -25,21 +34,40 @@ jobs:
         env:
           CC: gcc-14
           CXX: g++-14        
-          
+
       - name: Test
-        working-directory: ${{ github.workspace }}/build/unit_tests
-        run: ctest -C ${{ env.BUILD_TYPE }}
+        working-directory: ${{ github.workspace }}/build/unit_tests # Run tests from build dir usually
+        run: ctest -C ${{ env.BUILD_TYPE }} --output-on-failure # Run ctest from build directory
       
-      # Generate LCOV report (assumes coverage data was generated during tests)
+      # Generate LCOV report
       - name: Generate LCOV Coverage Report
-        working-directory: ${{ github.workspace }}/build/unit_tests
+        working-directory: ${{ github.workspace }}/build/unit_tests # Run lcov from build directory
         run: |
-          # Capture coverage data from the build directory into a file named coverage.info
-          lcov --capture --directory ${{github.workspace}}/include --directory ${{github.workspace}}/src -d . --no-external --output-file coverage.info
+          # Capture coverage data. Point -d to the build directory containing .gcno files
+          # Point --directory to source/include roots
+          lcov --capture \
+               --directory ${{github.workspace}}/include --directory ${{github.workspace}}/src \
+               --base-directory ${{ github.workspace }} \
+               --output-file coverage.info \
+               --no-external
+          lcov --remove coverage.info '/usr/*' '*/catch2-src/*' --output-file coverage.info
       
       # Upload the generated coverage report to Coveralls.io
       - name: Upload Coverage to Coveralls
         uses: coverallsapp/github-action@v2
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          file: build/unit_test/coverage.info
+          # The path is relative to the GITHUB_WORKSPACE root
+          file: ./build/unit_tests/coverage.info 
+          # Optionally add flags if you have multiple jobs reporting coverage
+          # flag-name: run-${{ matrix.os }} 
+          # parallel: true # Set to true if running parallel jobs
+
+# Optional step if using parallel jobs in Coveralls
+# finish:
+#   needs: build_and_test # Or whatever your job name(s) are
+#   runs-on: ubuntu-latest
+#   steps:
+#   - name: Coveralls Finished
+#     uses: coverallsapp/github-action@v2
+#     with:
+#       parallel-finished: true
