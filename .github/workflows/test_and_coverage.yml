@@ -21,7 +21,7 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y lcov # Install lcov here
+          sudo apt-get install -y gcov lcov # Install lcov here
         
       - name: Configure and Build
         # NOTE: Ensure your CMakeLists.txt adds '--coverage' flags for CXX and Linker when DOULY_TEST_COVERAGE=ON
@@ -45,7 +45,7 @@ jobs:
         run: |
           # Capture coverage data. Point -d to the build directory containing .gcno files
           # Point --directory to source/include roots
-          lcov --capture \
+          lcov --gcov-tool gcov-14 --capture \
                --directory . \
                --base-directory ${{ github.workspace }} \
                --output-file coverage.info \
