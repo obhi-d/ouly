@@ -7,51 +7,35 @@ on:
     branches: [ "main" ]
 
 env:
-  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Release
   
 jobs:
   build_and_test:
-    # The CMake configure and build commands are platform agnostic and should work equally well on Windows or Mac.
-    # You can convert this to a matrix build if you need cross-platform coverage.
-    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
-    - uses: lukka/get-cmake@latest
+      - uses: actions/checkout@v4
+      - uses: lukka/get-cmake@latest
 
-    - name: Install lcov & gcc
-      run:  |
-            sudo add-apt-repository "deb http://archive.ubuntu.com/ubuntu/ noble main universe"
-            sudo apt update
-            sudo apt install gcc-14 g++-14 lcov
-
-    - name: Configure and Build
-      # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
-      # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run: |
-           cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DOULY_BUILD_TESTS=ON -DOULY_TEST_COVERAGE=ON
-           cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
-
-      shell: bash
-      env:
-        CC: gcc-14
-        CXX: g++-14
+      - name: Configure and Build
+        run: |
+          cmake -B ${{ github.workspace }}/build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DOULY_BUILD_TESTS=ON -DOULY_TEST_COVERAGE=ON
+          cmake --build ${{ github.workspace }}/build --config ${{ env.BUILD_TYPE }}
+        shell: bash
         
-    - name: Test
-      working-directory: ${{github.workspace}}/build/unit_tests
-      # Execute tests defined by the CMake configuration.
-      # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-      run: ctest -C ${{env.BUILD_TYPE}}
-
-    # TODO fix gcc not generating cov data
-    # - name: Run lcov
-    #   working-directory: ${{github.workspace}}/build/unit_tests
-    #   run: lcov -c --directory ${{github.workspace}}/include --directory ${{github.workspace}}/src -d . --no-external -o lcov.info --gcov-tool /usr/bin/gcov-14
-
-    # - name: Coverage
-    #   uses: coverallsapp/github-action@v2
-    #   with:
-    #     path-to-lcov: ${{github.workspace}}/build/unit_tests/lcov.info
+      - name: Test
+        working-directory: ${{ github.workspace }}/build/unit_tests
+        run: ctest -C ${{ env.BUILD_TYPE }}
       
+      # Generate LCOV report (assumes coverage data was generated during tests)
+      - name: Generate LCOV Coverage Report
+        working-directory: ${{ github.workspace }}/build/unit_tests
+        run: |
+          # Capture coverage data from the build directory into a file named coverage.info
+          lcov --capture --directory ${{github.workspace}}/include --directory ${{github.workspace}}/src -d . --no-external --output-file coverage.info
+      
+      # Upload the generated coverage report to Coveralls.io
+      - name: Upload Coverage to Coveralls
+        uses: coverallsapp/github-action@v2
+        with:
+          file: build/unit_test/coverage.info
