@@ -21,7 +21,7 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcov lcov # Install lcov here
+          sudo apt-get install -y lcov # Install lcov here
         
       - name: Configure and Build
         # NOTE: Ensure your CMakeLists.txt adds '--coverage' flags for CXX and Linker when DOULY_TEST_COVERAGE=ON
