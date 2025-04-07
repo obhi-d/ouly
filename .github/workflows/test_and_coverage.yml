@@ -46,11 +46,11 @@ jobs:
           # Capture coverage data. Point -d to the build directory containing .gcno files
           # Point --directory to source/include roots
           lcov --capture \
-               --directory ${{github.workspace}}/include --directory ${{github.workspace}}/src \
+               --directory . \
                --base-directory ${{ github.workspace }} \
                --output-file coverage.info \
-               --no-external
-          lcov --remove coverage.info '/usr/*' '*/catch2-src/*' --output-file coverage.info
+               --no-external --ignore-errors inconsistent,inconsistent
+          lcov --remove coverage.info '/usr/*' '*/_deps/*' '*/catch2-src/*' --output-file coverage.info --ignore-errors unused
       
       # Upload the generated coverage report to Coveralls.io
       - name: Upload Coverage to Coveralls
