@@ -8,6 +8,7 @@ on:
 
 env:
   BUILD_TYPE: Debug # Use Debug build for coverage; Release often optimizes out code
+  CODECOV_TOKEN: ${{ vars.CODECOV_TOKEN }}
   
 jobs:
   build_and_test:
@@ -51,23 +52,6 @@ jobs:
                --output-file coverage.info \
                --no-external --ignore-errors inconsistent,mismatch
           lcov --remove coverage.info '/usr/*' '*/_deps/*' '*/catch2-src/*' --output-file coverage.info --ignore-errors unused
-      
-      # Upload the generated coverage report to Coveralls.io
-      - name: Upload Coverage to Coveralls
-        uses: coverallsapp/github-action@v2
-        with:
-          # The path is relative to the GITHUB_WORKSPACE root
-          file: ./build/unit_tests/coverage.info 
-          # Optionally add flags if you have multiple jobs reporting coverage
-          # flag-name: run-${{ matrix.os }} 
-          # parallel: true # Set to true if running parallel jobs
-
-# Optional step if using parallel jobs in Coveralls
-# finish:
-#   needs: build_and_test # Or whatever your job name(s) are
-#   runs-on: ubuntu-latest
-#   steps:
-#   - name: Coveralls Finished
-#     uses: coverallsapp/github-action@v2
-#     with:
-#       parallel-finished: true
+          # Upload coverage report to Codecov
+          bash <(curl -s https://codecov.io/bash) -t ${CODECOV_TOKEN} -f coverage.info
+        
