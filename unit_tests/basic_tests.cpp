@@ -462,10 +462,14 @@ TEST_CASE("Test tuple expand delegate behavior", "[delegate]")
     auto [value1, value2] = data.args<int const, int const>();
     return a + b + value1 + value2;
   };
+#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wmissing-braces"
+#endif
   ouly::delegate<int(int, int)> del = test_delegate_t::bind(lambda, ouly::tuple<int const, int const>{7, 13});
+#ifdef __clang__
 #pragma clang diagnostic pop
+#endif
   REQUIRE(static_cast<bool>(del) == true);
   REQUIRE(del(10, 5) == 35);
 }
