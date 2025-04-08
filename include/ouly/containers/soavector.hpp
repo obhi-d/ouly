@@ -813,7 +813,7 @@ private:
   template <std::size_t I, typename T>
   static auto get_ref(T&& tup) -> auto&
   {
-    if constexpr (requires { ouly::detail::get_field_ref<I>(std::forward<T&&>(tup)); })
+    if constexpr (requires { ouly::detail::get_field_ref<I>(std::forward<T &&>(tup)); })
     {
       return ouly::detail::get_field_ref<I>(std::forward<T>(tup));
     }
@@ -889,8 +889,9 @@ private:
   }
 
   template <typename It, typename Arg>
-  static void copy_fill_n(It it, It end_it, size_type count, Arg&& arg)
+  static void copy_fill_n(It it, size_type count, Arg&& arg)
   {
+    It end_it = it + count;
     for (; it != end_it; ++it)
     {
       *it = std::forward<Arg>(arg);

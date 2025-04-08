@@ -56,7 +56,7 @@ public:
   void clear()
   {
     std::for_each(lookup_.begin(), lookup_.end(),
-                  [this](auto& el)
+                  [](auto& el)
                   {
                     if (el.second.destructor_)
                     {
@@ -84,7 +84,11 @@ public:
   }
 
   template <typename T>
-  auto get() noexcept -> T& requires(is_type_indexed) { return get<T>(std::type_index(typeid(T))); }
+  auto get() noexcept -> T&
+    requires(is_type_indexed)
+  {
+    return get<T>(std::type_index(typeid(T)));
+  }
 
   template <typename T>
   auto get(key_type v) const noexcept -> T const&
@@ -131,8 +135,11 @@ public:
    *
    */
   template <typename T, typename... Args>
-  auto emplace(Args&&... args) noexcept
-   -> T& requires(is_type_indexed) { return emplace<T>(std::type_index(typeid(T)), std::forward<Args>(args)...); }
+  auto emplace(Args&&... args) noexcept -> T&
+    requires(is_type_indexed)
+  {
+    return emplace<T>(std::type_index(typeid(T)), std::forward<Args>(args)...);
+  }
 
   template <typename T, typename... Args>
   auto emplace(key_type k, Args&&... args) noexcept -> T&

@@ -138,7 +138,7 @@ public:
     free_ordering_.erase(it + free_ordering_.begin());
   }
 
-  auto total_free_nodes(block_bank const& blocks) const noexcept -> std::uint32_t
+  auto total_free_nodes(block_bank const& /*blocks*/) const noexcept -> std::uint32_t
   {
     return static_cast<std::uint32_t>(free_ordering_.size());
   }

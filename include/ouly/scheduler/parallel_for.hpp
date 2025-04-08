@@ -87,6 +87,7 @@ void launch_parallel_tasks(L& lambda, auto range, uint32_t work_count, uint32_t 
     scheduler.submit(this_context.get_worker(), this_context.get_workgroup(),
                      [instance = &pfor_instance, start = begin, end = next](worker_context const& wc)
                      {
+                       (void)(end); // Avoid unused variable warning
                        if constexpr (ouly::detail::RangeExcuter<L, iterator_t>)
                        {
                          instance->lambda_instance_.get()(instance->first_ + start, instance->first_ + end, wc);

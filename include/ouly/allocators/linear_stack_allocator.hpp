@@ -172,7 +172,7 @@ public:
   }
 
   template <typename Alignment = alignment<>>
-  void deallocate(address i_data, size_type i_size, Alignment i_alignment = {})
+  void deallocate(address /*i_data*/, size_type /*i_size*/, Alignment /*i_alignment*/ = {})
   {
     // does not support deallocate, only rewinds are supported
   }

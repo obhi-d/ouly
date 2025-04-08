@@ -67,11 +67,11 @@ TEST_CASE("Validate program args sink", "[program_args][sink]")
   pgargs.sink(sink_.one, "one", "", "one documentation");
   pgargs.sink(sink_.two, "two", "2", "two documentation");
   pgargs.sink(sink_.flag, "flag", "3", "three documentation");
-  auto        arg_len = pgargs.get_max_arg_length();
+  auto arg_len = pgargs.get_max_arg_length();
+  REQUIRE(arg_len >= 4);
   std::string arg_doc;
   pgargs.doc(
-   [arg_len, &arg_doc](ouly::program_document_type doc_type, std::string_view type, std::string_view flag,
-                       std::string_view desc)
+   [&arg_doc](ouly::program_document_type doc_type, std::string_view type, std::string_view flag, std::string_view desc)
    {
      switch (doc_type)
      {

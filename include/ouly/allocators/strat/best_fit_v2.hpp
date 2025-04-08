@@ -142,12 +142,12 @@ public:
     sizes_.erase(it + sizes_.begin());
   }
 
-  auto total_free_nodes(block_bank const& blocks) const noexcept -> std::uint32_t
+  auto total_free_nodes(block_bank const& /*blocks*/) const noexcept -> std::uint32_t
   {
     return static_cast<std::uint32_t>(free_ordering_.size());
   }
 
-  auto total_free_size(block_bank const& blocks) const noexcept -> size_type
+  auto total_free_size(block_bank const& /*blocks*/) const noexcept -> size_type
   {
     size_type sz = 0;
     for (auto fn : sizes_)

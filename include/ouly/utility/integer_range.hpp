@@ -8,36 +8,36 @@ template <typename I>
 class integer_range
 {
 public:
-  using difference_type    = I;
-  integer_range() noexcept = default;
-  integer_range(I vbegin, I vend) noexcept : begin_(vbegin), end_(vend) {}
+  using difference_type              = I;
+  constexpr integer_range() noexcept = default;
+  constexpr integer_range(I vbegin, I vend) noexcept : begin_(vbegin), end_(vend) {}
 
-  void begin(I v) noexcept
+  constexpr void begin(I v) noexcept
   {
     begin_ = v;
   }
 
-  void end(I v) noexcept
+  constexpr void end(I v) noexcept
   {
     end_ = v;
   }
 
-  auto begin() const noexcept -> I
+  constexpr auto begin() const noexcept -> I
   {
     return begin_;
   }
 
-  auto end() const noexcept -> I
+  constexpr auto end() const noexcept -> I
   {
     return end_;
   }
 
-  auto size() const noexcept -> I
+  constexpr auto size() const noexcept -> I
   {
     return end_ - begin_;
   }
 
-  [[nodiscard]] auto empty() const noexcept -> bool
+  [[nodiscard]] constexpr auto empty() const noexcept -> bool
   {
     return begin_ == end_;
   }

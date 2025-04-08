@@ -41,12 +41,12 @@ concept Visitor = requires(T& visitor, Class& obj) {
   { visitor.is_null() } -> std::same_as<bool>;
   { visitor.null() } -> std::same_as<void>;
   {
-    visitor.read_string([](std::string_view s) {})
+    visitor.read_string([](std::string_view) {})
   } -> std::same_as<void>;
   { visitor.write_string(std::string_view{}) } -> std::same_as<void>;
   { visitor.value(obj) } -> std::same_as<void>;
   {
-    visitor.for_each_map_entry(obj, [](std::string_view key) {})
+    visitor.for_each_map_entry(obj, [](std::string_view /*key*/) {})
   } -> std::same_as<void>;
   {
     visitor.for_each_array_entry(obj, []() {})

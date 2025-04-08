@@ -124,7 +124,7 @@ public:
     free_slot_       = idx;
   }
 
-  auto total_free_nodes(block_bank const& blocks) const -> std::uint32_t
+  auto total_free_nodes(block_bank const& /*blocks*/) const -> std::uint32_t
   {
     uint32_t count = 0;
     for (auto fn : free_list_)
@@ -137,7 +137,7 @@ public:
     return count;
   }
 
-  auto total_free_size(block_bank const& blocks) const -> size_type
+  auto total_free_size(block_bank const& /*blocks*/) const -> size_type
   {
     size_type sz = 0;
     for (auto fn : free_list_)

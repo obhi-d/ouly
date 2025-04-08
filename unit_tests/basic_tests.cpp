@@ -5,6 +5,7 @@
 #include "ouly/allocators/std_allocator_wrapper.hpp"
 #include "ouly/containers/index_map.hpp"
 #include "ouly/containers/sparse_table.hpp"
+#include "ouly/reflection/visitor.hpp"
 #include "ouly/utility/delegate.hpp"
 #include "ouly/utility/intrusive_ptr.hpp"
 #include "ouly/utility/komihash.hpp"
@@ -27,38 +28,6 @@ static inline auto mini0(size_t const* it, size_t size, size_t key) noexcept
 {
   while (size > 2)
     BINARY_SEARCH_STEP;
-  it += static_cast<size_t>(size > 1 && (*it < key));
-  it += static_cast<size_t>(size > 0 && (*it < key));
-  return it;
-}
-
-static inline auto mini1(size_t const* it, size_t size, size_t key) noexcept
-{
-  while (true)
-  {
-    BINARY_SEARCH_STEP;
-    if (size <= 2)
-    {
-      break;
-    }
-  }
-  it += static_cast<size_t>(size > 1 && (*it < key));
-  it += static_cast<size_t>(size > 0 && (*it < key));
-  return it;
-}
-
-static inline auto mini2(size_t const* it, size_t size, size_t key) noexcept
-{
-  while (true)
-  {
-    BINARY_SEARCH_STEP;
-    BINARY_SEARCH_STEP;
-    if (size <= 2)
-    {
-      break;
-    }
-  }
-
   it += static_cast<size_t>(size > 1 && (*it < key));
   it += static_cast<size_t>(size > 0 && (*it < key));
   return it;
@@ -493,11 +462,63 @@ TEST_CASE("Test tuple expand delegate behavior", "[delegate]")
     auto [value1, value2] = data.args<int const, int const>();
     return a + b + value1 + value2;
   };
-
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmissing-braces"
   ouly::delegate<int(int, int)> del = test_delegate_t::bind(lambda, ouly::tuple<int const, int const>{7, 13});
-
+#pragma clang diagnostic pop
   REQUIRE(static_cast<bool>(del) == true);
   REQUIRE(del(10, 5) == 35);
 }
 
+std::string throw_error(ouly::visitor_error::code code)
+{
+  try
+  {
+    throw ouly::visitor_error(code);
+  }
+  catch (const ouly::visitor_error& e)
+  {
+    return e.what();
+  }
+}
+
+TEST_CASE("Test visitor error codes and strings", "[visitor]")
+{
+  /*
+
+    case invalid_tuple:
+      return "Invalid tuple";
+    case invalid_container:
+      return "Invalid container";
+    case invalid_variant:
+      return "Invalid variant";
+    case invalid_variant_type:
+      return "Invalid variant type";
+    case invalid_aggregate:
+      return "Invalid aggregate";
+    case invalid_null_sentinel:
+      return "Invalid null sentinel";
+    case invalid_value:
+      return "Invalid value";
+    case invalid_key:
+      return "Invalid key";
+    case type_is_not_an_object:
+      return "Type is not an object";
+    case type_is_not_an_array:
+      return "Type is not an array";
+    default:
+      return "Unknown visitor error";
+   */
+  REQUIRE(throw_error(ouly::visitor_error::code::invalid_tuple) == "Invalid tuple");
+  REQUIRE(throw_error(ouly::visitor_error::code::invalid_container) == "Invalid container");
+  REQUIRE(throw_error(ouly::visitor_error::code::invalid_variant) == "Invalid variant");
+  REQUIRE(throw_error(ouly::visitor_error::code::invalid_variant_type) == "Invalid variant type");
+  REQUIRE(throw_error(ouly::visitor_error::code::invalid_aggregate) == "Invalid aggregate");
+  REQUIRE(throw_error(ouly::visitor_error::code::invalid_null_sentinel) == "Invalid null sentinel");
+  REQUIRE(throw_error(ouly::visitor_error::code::invalid_value) == "Invalid value");
+  REQUIRE(throw_error(ouly::visitor_error::code::invalid_key) == "Invalid key");
+  REQUIRE(throw_error(ouly::visitor_error::code::type_is_not_an_object) == "Type is not an object");
+  REQUIRE(throw_error(ouly::visitor_error::code::type_is_not_an_array) == "Type is not an array");
+  REQUIRE(throw_error(ouly::visitor_error::code::unknown) == "Unknown visitor error");
+}
 // NOLINTEND

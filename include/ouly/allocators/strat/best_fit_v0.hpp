@@ -162,7 +162,7 @@ public:
     free_ordering_.erase(it);
   }
 
-  auto total_free_nodes(block_bank const& blocks) const -> std::uint32_t
+  auto total_free_nodes(block_bank const& /*blocks*/) const -> std::uint32_t
   {
     return static_cast<std::uint32_t>(free_ordering_.size());
   }

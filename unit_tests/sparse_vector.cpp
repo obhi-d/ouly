@@ -200,7 +200,7 @@ TEST_CASE("sparse_vector: for_each", "[sparse_vector][for_each]")
     uint32_t start = stop / range_rand<std::uint32_t>(2, 200);
     uint32_t end   = stop / range_rand<std::uint32_t>(1, 2);
     v1.for_each(
-     [&start, end](std::string const& v)
+     [&start](std::string const& v)
      {
        REQUIRE(v == std::to_string(start++));
      },

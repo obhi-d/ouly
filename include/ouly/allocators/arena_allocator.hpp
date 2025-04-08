@@ -536,8 +536,7 @@ public:
               arena_end_it = ibank_.bank_.arena_order_.end(ibank_.bank_.arenas());
          arena_it != arena_end_it; ++arena_it)
     {
-      auto const& arena           = *arena_it;
-      bool        arena_allocated = false;
+      auto const& arena = *arena_it;
 
       for (auto blk_it     = arena.block_order().begin(ibank_.bank_.blocks()),
                 blk_end_it = arena.block_order().end(ibank_.bank_.blocks());
@@ -560,7 +559,6 @@ public:
          arena_it != arena_end_it; ++arena_it)
     {
       auto const& arena           = *arena_it;
-      bool        arena_allocated = false;
       size_type   expected_offset = 0;
 
       for (auto blk_it     = arena.block_order().begin(ibank_.bank_.blocks()),
