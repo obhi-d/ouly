@@ -2,27 +2,6 @@
   "version": 2,
   "configurePresets": [
     {
-      "name": "third-party-debug",
-      "displayName": "ThirdParty Debug",
-      "description": "Build as a third-party debug library.",
-      "binaryDir": "${sourceDir}/build/${presetName}",
-      "generator": "Ninja",
-      "cacheVariables": {
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-        "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_INSTALL_PREFIX": "${sourceDir}/../../Source/Ouly",
-        "OULY_BUILD_TESTS": "OFF",
-        "OULY_EXPORT_CC_TO_SRC_DIR": "OFF"
-      },
-      "vendor": {
-        "microsoft.com/VisualStudioSettings/CMake/1.0": {
-          "hostOS": [
-            "Windows"
-          ]
-        }
-      }
-    },
-    {
       "name": "third-party-release",
       "displayName": "ThirdParty Release",
       "description": "Build as a third-party release library.",
@@ -38,7 +17,9 @@
       "vendor": {
         "microsoft.com/VisualStudioSettings/CMake/1.0": {
           "hostOS": [
-            "Windows"
+            "Windows",
+            "Linux",
+            "macOS"
           ]
         }
       }
@@ -235,13 +216,17 @@
           ]
         }
       }
+    },
+    {
+      "name": "third-party-release",
+      "description": "",
+      "displayName": "",
+      "inherits": [
+        "third-party-release"
+      ]
     }
   ],
   "buildPresets": [
-    {
-      "name": "third-party-debug",
-      "configurePreset": "third-party-debug"
-    },
     {
       "name": "third-party-release",
       "configurePreset": "third-party-release"
