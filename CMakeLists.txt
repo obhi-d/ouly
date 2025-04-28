@@ -113,7 +113,7 @@ if(MSVC)
     target_sources(
         ${OULY_TARGET_NAME}
         PUBLIC
-            $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/natvis/ouly/containers.natvis>
+            $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/debug_helpers/containers.natvis>
     )
 endif()
 

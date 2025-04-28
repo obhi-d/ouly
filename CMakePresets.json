@@ -2,6 +2,48 @@
   "version": 2,
   "configurePresets": [
     {
+      "name": "third-party-debug",
+      "displayName": "ThirdParty Debug",
+      "description": "Build as a third-party debug library.",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/../../Source/Ouly",
+        "OULY_BUILD_TESTS": "OFF",
+        "OULY_EXPORT_CC_TO_SRC_DIR": "OFF"
+      },
+      "vendor": {
+        "microsoft.com/VisualStudioSettings/CMake/1.0": {
+          "hostOS": [
+            "Windows"
+          ]
+        }
+      }
+    },
+    {
+      "name": "third-party-release",
+      "displayName": "ThirdParty Release",
+      "description": "Build as a third-party release library.",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/../../Source/Ouly",
+        "OULY_BUILD_TESTS": "OFF",
+        "OULY_EXPORT_CC_TO_SRC_DIR": "OFF"
+      },
+      "vendor": {
+        "microsoft.com/VisualStudioSettings/CMake/1.0": {
+          "hostOS": [
+            "Windows"
+          ]
+        }
+      }
+    },
+    {
       "name": "linux-default",
       "displayName": "Linux Debug",
       "description": "Target the Windows Subsystem for Linux (WSL) or a remote Linux system.",
@@ -196,6 +238,14 @@
     }
   ],
   "buildPresets": [
+    {
+      "name": "third-party-debug",
+      "configurePreset": "third-party-debug"
+    },
+    {
+      "name": "third-party-release",
+      "configurePreset": "third-party-release"
+    },
     {
       "name": "windows-default",
       "configurePreset": "windows-default"
