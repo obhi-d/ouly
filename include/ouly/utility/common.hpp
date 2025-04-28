@@ -26,7 +26,7 @@
 #define OULY_API
 #endif
 
-#if _DEBUG
+#ifdef _DEBUG
 #define OULY_VALIDITY_CHECKS
 #endif
 
