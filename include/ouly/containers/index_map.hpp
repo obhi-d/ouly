@@ -71,7 +71,7 @@ public:
   {
     if constexpr (OffsetLimit > 0)
     {
-      return ((idx - data_.min_offset_) < data_.indices_.size());
+      return (static_cast<size_t>(idx - data_.min_offset_) < data_.indices_.size());
     }
     else
     {
