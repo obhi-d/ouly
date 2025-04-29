@@ -7,5 +7,5 @@
 
 #ifndef OULY_ASSERT
 #include <cassert>
-#define OULY_ASSERT(x) assert(x)
+#define OULY_ASSERT assert
 #endif
