@@ -1,5 +1,6 @@
+// SPDX-License-Identifier: MIT
 #pragma once
-#include <cassert>
+#include "ouly/utility/user_config.hpp"
 #include <compare>
 #include <optional>
 #include <type_traits>
@@ -52,13 +53,13 @@ struct optional_ref
 
   constexpr auto operator*() const noexcept -> value_type&
   {
-    assert(value_);
+    OULY_ASSERT(value_);
     return *value_;
   }
 
   constexpr auto get() const noexcept -> value_type&
   {
-    assert(value_);
+    OULY_ASSERT(value_);
     return *value_;
   }
 
@@ -74,7 +75,7 @@ struct optional_ref
 
   constexpr explicit operator value_type&() const noexcept
   {
-    assert(value_);
+    OULY_ASSERT(value_);
     return *value_;
   }
 
@@ -85,13 +86,13 @@ struct optional_ref
 
   [[nodiscard]] constexpr auto value() -> value_type&
   {
-    assert(value_);
+    OULY_ASSERT(value_);
     return *value_;
   }
 
   [[nodiscard]] constexpr auto value() const -> value_type const&
   {
-    assert(value_);
+    OULY_ASSERT(value_);
     return *value_;
   }
 

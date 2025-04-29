@@ -1,7 +1,8 @@
+// SPDX-License-Identifier: MIT
 #pragma once
+#include "ouly/utility/user_config.hpp"
 
 #include "ouly/scheduler/detail/coro_state.hpp"
-#include <cassert>
 
 namespace ouly
 {
@@ -40,9 +41,9 @@ public:
 
   auto await_suspend(std::coroutine_handle<> awaiting_coro) noexcept -> bool
   {
-    assert(awaiting_coro);
+    OULY_ASSERT(awaiting_coro);
     ouly::detail::coro_state& state = coro_.promise();
-    assert(!state.continuation_);
+    OULY_ASSERT(!state.continuation_);
     // set continuation
     state.continuation_ = awaiting_coro;
     return !state.continuation_state_.exchange(true);
@@ -53,7 +54,7 @@ public:
     if (!coro_)
     {
       // .. terminate ?
-      assert(false && "Invalid state!");
+      OULY_ASSERT(false && "Invalid state!");
     }
     return coro_.promise().result();
   }

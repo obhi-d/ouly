@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #pragma once
 
 #include "ouly/allocators/default_allocator.hpp"
@@ -72,7 +73,7 @@ public:
 
   auto operator=(linear_allocator&& other) noexcept -> linear_allocator&
   {
-    assert(k_arena_size_ == other.k_arena_size_);
+    OULY_ASSERT(k_arena_size_ == other.k_arena_size_);
     buffer_          = other.buffer_;
     left_over_       = other.left_over_;
     other.buffer_    = nullptr;
@@ -99,7 +100,7 @@ public:
       i_size += i_alignment;
     }
 
-    assert(left_over_ >= i_size);
+    OULY_ASSERT(left_over_ >= i_size);
     size_type offset = k_arena_size_ - left_over_;
     left_over_ -= i_size;
     if (i_alignment)

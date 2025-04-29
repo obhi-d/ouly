@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #pragma once
 
 #include "ouly/allocators/allocator.hpp"
@@ -7,7 +8,7 @@
 #include "ouly/containers/detail/blackboard_defs.hpp"
 #include "ouly/utility/config.hpp"
 #include "ouly/utility/utils.hpp"
-#include <cassert>
+#include "ouly/utility/user_config.hpp"
 #include <cstdint>
 #include <memory>
 
@@ -101,7 +102,7 @@ public:
   auto get(key_type k) noexcept -> T&
   {
     auto it = lookup_.find(k);
-    assert(it != lookup_.end());
+    OULY_ASSERT(it != lookup_.end());
     // NOLINTNEXTLINE
     return *reinterpret_cast<T*>(it->second.data_);
   }

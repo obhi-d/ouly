@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #pragma once
 
 #include "ouly/containers/detail/indirection.hpp"
@@ -505,14 +506,14 @@ public:
     {
       for (size_type first = 0, last = size(); first < last; ++first)
       {
-        assert(keys_.get(entity_type(get_ref_at_idx(first)).get()) == first);
+        OULY_ASSERT(keys_.get(entity_type(get_ref_at_idx(first)).get()) == first);
       }
 
       for (size_type i = 0; i < keys_.size(); ++i)
       {
         if (keys_.contains(i))
         {
-          assert(keys_.get(i) < values_.size());
+          OULY_ASSERT(keys_.get(i) < values_.size());
         }
       }
     }
@@ -634,14 +635,14 @@ private:
   {
     if constexpr (has_direct_mapping)
     {
-      assert(get_if(values_, l.get()));
+      OULY_ASSERT(get_if(values_, l.get()));
     }
     else
     {
       auto lnk  = l.get();
       auto idx  = keys_.get(lnk);
       auto self = get_ref_at_idx(idx);
-      assert(self == l.value());
+      OULY_ASSERT(self == l.value());
     }
   }
 

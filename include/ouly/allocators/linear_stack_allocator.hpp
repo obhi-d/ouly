@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 //
 // Created by obhi on 11/17/20.
 //
@@ -77,7 +78,7 @@ public:
 
   auto operator=(linear_stack_allocator&& other) noexcept -> linear_stack_allocator&
   {
-    assert(k_arena_size_ == other.k_arena_size_);
+    OULY_ASSERT(k_arena_size_ == other.k_arena_size_);
     arenas_              = std::move(other.arenas_);
     current_arena_       = other.current_arena_;
     other.current_arena_ = 0;

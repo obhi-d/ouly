@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /*
  * small_vector.hpp
  *
@@ -12,7 +13,7 @@
 #include "ouly/utility/type_traits.hpp"
 #include "ouly/utility/utils.hpp"
 #include <array>
-#include <cassert>
+#include "ouly/utility/user_config.hpp"
 #include <cstdint>
 #include <cstring>
 #include <memory>
@@ -41,7 +42,7 @@ namespace ouly
  * - O(1) access to elements
  * - O(1) addition/removal at the end
  * - O(n) insertion/removal in the middle
- * - No heap allocation for small arrays (≤ N elements)
+ * - No heap allocation for small arrays ( N elements)
  *
  * Memory guarantees:
  * - Elements are stored contiguously
@@ -436,25 +437,25 @@ public:
   // element access:
   constexpr auto operator[](size_type n) -> reference
   {
-    assert(n < size());
+    OULY_ASSERT(n < size());
     return get_data()[n];
   }
 
   constexpr auto operator[](size_type n) const -> const_reference
   {
-    assert(n < size());
+    OULY_ASSERT(n < size());
     return get_data()[n];
   }
 
   constexpr auto at(size_type n) -> reference
   {
-    assert(n < size());
+    OULY_ASSERT(n < size());
     return get_data()[n];
   }
 
   [[nodiscard]] constexpr auto at(size_type n) const -> const_reference
   {
-    assert(n < size());
+    OULY_ASSERT(n < size());
     return get_data()[n];
   }
 
@@ -546,7 +547,7 @@ public:
 
   constexpr void pop_back()
   {
-    assert(size() > 0);
+    OULY_ASSERT(size() > 0);
 
     auto last = size_--;
     if (size_ <= inline_capacity && last > inline_capacity)
@@ -602,7 +603,7 @@ public:
 
   constexpr auto erase(const_iterator position) -> iterator
   {
-    assert(position < end());
+    OULY_ASSERT(position < end());
     auto data = get_data();
     auto last = size_--;
     auto pos  = const_cast<iterator>(position); // NOLINT
@@ -639,7 +640,7 @@ public:
 
   constexpr auto erase(const_iterator first, const_iterator last) -> iterator
   {
-    assert(last < end());
+    OULY_ASSERT(last < end());
     auto dist      = static_cast<std::uint32_t>(std::distance(first, last));
     auto first_pos = const_cast<iterator>(first); // NOLINT
     auto last_pos  = const_cast<iterator>(last);  // NOLINT
@@ -905,11 +906,11 @@ private:
       {
         *(--dst_it) = std::move(*(--src_it));
       }
-      assert(src_it == src);
+      OULY_ASSERT(src_it == src);
 
       if constexpr (!has_trivial_dtor && !has_trivially_destroyed_on_move)
       {
-        assert(src_it <= dst_it);
+        OULY_ASSERT(src_it <= dst_it);
         auto next_dst_it = src_it + min_ctor;
         for (; src_it != next_dst_it; ++src_it)
         {

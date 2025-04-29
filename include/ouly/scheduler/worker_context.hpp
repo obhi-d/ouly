@@ -1,7 +1,8 @@
+// SPDX-License-Identifier: MIT
 #pragma once
+#include "ouly/utility/user_config.hpp"
 
 #include "ouly/utility/nullable_optional.hpp"
-#include <cassert>
 #include <compare>
 #include <cstdint>
 #include <limits>
@@ -110,7 +111,7 @@ public:
 
   [[nodiscard]] auto get_scheduler() const -> scheduler&
   {
-    assert(owner_);
+    OULY_ASSERT(owner_);
     return *owner_;
   }
 

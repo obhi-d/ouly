@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 //
 // Created by obhi on 9/18/20.
 //
@@ -14,7 +15,7 @@
 #include "ouly/serializers/config.hpp"
 
 #include <bit>
-#include <cassert>
+#include "ouly/utility/user_config.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <type_traits>
@@ -213,13 +214,13 @@ private:
 
   auto get() -> auto&
   {
-    assert(serializer_ != nullptr);
+    OULY_ASSERT(serializer_ != nullptr);
     return *serializer_;
   }
 
   auto get() const -> auto const&
   {
-    assert(serializer_ != nullptr);
+    OULY_ASSERT(serializer_ != nullptr);
     return *serializer_;
   }
 };

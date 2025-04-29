@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #pragma once
 
 #include "ouly/allocators/linear_arena_allocator.hpp"

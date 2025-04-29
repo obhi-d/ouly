@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #pragma once
 
 #include "ouly/allocators/linear_allocator.hpp"
@@ -74,7 +75,7 @@ public:
 
   auto operator=(linear_arena_allocator&& other) noexcept -> linear_arena_allocator&
   {
-    assert(k_arena_size_ == other.k_arena_size_);
+    OULY_ASSERT(k_arena_size_ == other.k_arena_size_);
     arenas_              = std::move(other.arenas_);
     current_arena_       = other.current_arena_;
     other.current_arena_ = 0;

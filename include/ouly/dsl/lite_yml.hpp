@@ -1,6 +1,7 @@
+// SPDX-License-Identifier: MIT
 #pragma once
 #include "ouly/containers/small_vector.hpp"
-#include <cassert>
+#include "ouly/utility/user_config.hpp"
 #include <cstdint>
 #include <format>
 #include <stdexcept>

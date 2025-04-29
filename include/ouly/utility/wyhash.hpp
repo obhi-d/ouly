@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #pragma once
 // Disable -Werror=old-style-cast for wyhash
 // NOLINTBEGIN(cppcoreguidelines-avoid-c-arrays)

@@ -1,6 +1,7 @@
+// SPDX-License-Identifier: MIT
 #pragma once
 #include "config.hpp"
-#include <cassert>
+#include "ouly/utility/user_config.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -102,7 +103,7 @@ constexpr auto hazard_idx(SizeType val, std::uint8_t spl) -> SizeType
   if constexpr (ouly::debug)
   {
     constexpr SizeType bit_count = 8;
-    assert(val < (static_cast<SizeType>(1) << ((sizeof(SizeType) - 1) * 8)));
+    OULY_ASSERT(val < (static_cast<SizeType>(1) << ((sizeof(SizeType) - 1) * 8)));
     return (static_cast<SizeType>(spl) << ((sizeof(SizeType) - 1) * bit_count)) | val;
   }
   else

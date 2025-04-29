@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #pragma once
 
 #include "ouly/allocators/config.hpp"
@@ -53,7 +54,7 @@ public:
 
   auto commit(bank_data& bank, size_type size, optional_addr found) -> std::uint32_t
   {
-    assert(found.value_ < static_cast<uint32_t>(free_list_.size()));
+    OULY_ASSERT(found.value_ < static_cast<uint32_t>(free_list_.size()));
 
     auto& free_node = free_list_[found.value_];
     auto  block     = free_node.second;
@@ -156,8 +157,8 @@ public:
       if (fn.first)
       {
         auto& blk = blocks[fn.second];
-        assert(blk.size() == fn.first);
-        assert(blk.reserved32_ == i);
+        OULY_ASSERT(blk.size() == fn.first);
+        OULY_ASSERT(blk.reserved32_ == i);
       }
     }
   }

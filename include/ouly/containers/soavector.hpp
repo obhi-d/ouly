@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #pragma once
 #include "ouly/allocators/allocator.hpp"
 #include "ouly/allocators/default_allocator.hpp"
@@ -6,7 +7,7 @@
 #include "ouly/reflection/detail/field_helpers.hpp"
 #include "ouly/utility/type_traits.hpp"
 #include "ouly/utility/utils.hpp"
-#include <cassert>
+#include "ouly/utility/user_config.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -592,67 +593,67 @@ public:
 
   auto front() -> reference
   {
-    assert(!empty());
+    OULY_ASSERT(!empty());
     return get<reference>(index_seq, 0);
   }
 
   auto front() const -> const_reference
   {
-    assert(!empty());
+    OULY_ASSERT(!empty());
     return get<const_reference>(index_seq, 0);
   }
 
   auto back() -> reference
   {
-    assert(!empty());
+    OULY_ASSERT(!empty());
     return get<reference>(index_seq, size_ - 1);
   }
 
   auto back() const -> const_reference
   {
-    assert(!empty());
+    OULY_ASSERT(!empty());
     return get<const_reference>(index_seq, size_ - 1);
   }
 
   template <std::size_t I>
   auto at(size_type n) -> ireference<I>
   {
-    assert(n < size_);
+    OULY_ASSERT(n < size_);
     return std::get<I>(data_)[n];
   }
 
   template <std::size_t I>
   auto at(size_type n) const -> iconst_reference<I>
   {
-    assert(n < size_);
+    OULY_ASSERT(n < size_);
     return std::get<I>(data_)[n];
   }
 
   template <std::size_t I>
   auto front() -> ireference<I>
   {
-    assert(0 < size_);
+    OULY_ASSERT(0 < size_);
     return std::get<I>(data_)[0];
   }
 
   template <std::size_t I>
   auto front() const -> iconst_reference<I>
   {
-    assert(0 < size_);
+    OULY_ASSERT(0 < size_);
     return std::get<I>(data_)[0];
   }
 
   template <std::size_t I>
   auto back() -> ireference<I>
   {
-    assert(0 < size_);
+    OULY_ASSERT(0 < size_);
     return std::get<I>(data_)[size_ - 1];
   }
 
   template <std::size_t I>
   auto back() const -> iconst_reference<I>
   {
-    assert(0 < size_);
+    OULY_ASSERT(0 < size_);
     return std::get<I>(data_)[size_ - 1];
   }
 
@@ -693,7 +694,7 @@ public:
 
   void pop_back()
   {
-    assert(size_);
+    OULY_ASSERT(size_);
     destroy_at(--size_, index_seq);
   }
 
@@ -736,7 +737,7 @@ public:
   template <typename Ty>
   void erase_at(Ty* data, size_type first, size_type last)
   {
-    assert(last < size());
+    OULY_ASSERT(last < size());
     if constexpr (std::is_trivially_copyable_v<Ty>)
     {
       std::memmove(data + first, data + last, (size_ - last) * sizeof(Ty));
@@ -772,7 +773,7 @@ public:
 
   auto erase(size_type position) -> size_type
   {
-    assert(position < size());
+    OULY_ASSERT(position < size());
     erase_at(position, index_seq);
     size_--;
     return position;
@@ -780,7 +781,7 @@ public:
 
   auto erase(size_type first, size_type last) -> size_type
   {
-    assert(last < size());
+    OULY_ASSERT(last < size());
     erase_at(first, last, index_seq);
     size_ -= (last - first);
     return first;

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 
 #pragma once
 
@@ -219,7 +220,7 @@ void parallel_for(L&& lambda, FwIt range, worker_id current, workgroup_id workgr
 {
   auto const& this_context = s.get_context(current, workgroup);
   // Assert this context belongs to the work group selected for submission
-  assert(
+  OULY_ASSERT(
    this_context.belongs_to(workgroup) &&
    "Current worker does not belong to the work group for 'parallel_for' submission and thus cannot execute the task.");
   parallel_for(std::forward<L>(lambda), range, this_context, tt);

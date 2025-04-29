@@ -1,4 +1,5 @@
-﻿#pragma once
+// SPDX-License-Identifier: MIT
+#pragma once
 
 #include "ouly/utility/common.hpp"
 
@@ -641,7 +642,7 @@ public:
 
   void erase(container& cont, std::uint32_t iz)
   {
-    assert(iz != Tombstone);
+    OULY_ASSERT(iz != Tombstone);
 
     node_it z(cont, iz);
     node_it y                = z;
@@ -747,7 +748,7 @@ public:
     in_order_traversal(blocks,
                        [&last](node_type const& n)
                        {
-                         assert(last <= Accessor::value(n));
+                         OULY_ASSERT(last <= Accessor::value(n));
                          last = Accessor::value(n);
                        });
 
@@ -761,7 +762,7 @@ public:
       return;
     }
     auto& n = Accessor::node(blocks, node);
-    assert(Accessor::links(n).parent_ == parent);
+    OULY_ASSERT(Accessor::links(n).parent_ == parent);
     validate_parents(blocks, node, Accessor::links(n).left_);
     validate_parents(blocks, node, Accessor::links(n).right_);
   }

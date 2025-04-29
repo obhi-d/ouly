@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 
 #pragma once
 #include <ouly/allocators/allocator.hpp>
@@ -50,20 +51,20 @@ public:
   template <typename Alignment = alignment<>>
   [[nodiscard]] auto allocate(size_type i_size, Alignment i_alignment = {}) -> address
   {
-    assert(allocator_ != nullptr);
+    OULY_ASSERT(allocator_ != nullptr);
     return allocator_->allocate(i_size, i_alignment);
   }
 
   template <typename Alignment = alignment<>>
   [[nodiscard]] auto zero_allocate(size_type i_size, Alignment i_alignment = {}) -> address
   {
-    assert(allocator_ != nullptr);
+    OULY_ASSERT(allocator_ != nullptr);
     return allocator_->zero_allocate(i_size, i_alignment);
   }
   template <typename Alignment = alignment<>>
   void deallocate(address i_data, size_type i_size, Alignment i_alignment = {})
   {
-    assert(allocator_ != nullptr);
+    OULY_ASSERT(allocator_ != nullptr);
     allocator_->deallocate(i_data, i_size, i_alignment);
   }
 

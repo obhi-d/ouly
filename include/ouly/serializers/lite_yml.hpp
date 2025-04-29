@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 
 #pragma once
 #include "ouly/dsl/lite_yml.hpp"

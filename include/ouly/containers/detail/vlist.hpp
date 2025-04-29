@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #pragma once
 #include "ouly/utility/common.hpp"
 #include <functional>
@@ -104,13 +105,13 @@ public:
 
     [[nodiscard]] auto prev() const -> std::uint32_t
     {
-      // assert(index < owner.size());
+      // OULY_ASSERT(index < owner.size());
       return Accessor::node(owner_.get(), index_).prev_;
     }
 
     [[nodiscard]] auto next() const -> std::uint32_t
     {
-      // assert(index < owner.size());
+      // OULY_ASSERT(index < owner.size());
       return Accessor::node(owner_.get(), index_).next_;
     }
 
@@ -192,7 +193,7 @@ public:
 
   void insert_after(container& cont, std::uint32_t loc, std::uint32_t node)
   {
-    assert(loc != 0);
+    OULY_ASSERT(loc != 0);
     auto& l_node = Accessor::node(cont, node);
     auto& l_loc  = Accessor::node(cont, loc);
 
@@ -204,7 +205,7 @@ public:
     else
     {
       last_ = node;
-      assert(l_node.next_ == 0);
+      OULY_ASSERT(l_node.next_ == 0);
     }
     l_node.prev_ = loc;
     l_loc.next_  = node;
@@ -230,7 +231,7 @@ public:
       else
       {
         first_ = node;
-        assert(l_node.prev_ == 0);
+        OULY_ASSERT(l_node.prev_ == 0);
       }
 
       l_loc.prev_  = node;

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #pragma once
 // NOLINTBEGIN
 // Author: Wang Yi <godspeed_china@yeah.net>

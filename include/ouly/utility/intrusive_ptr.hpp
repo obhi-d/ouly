@@ -1,7 +1,8 @@
+// SPDX-License-Identifier: MIT
 
 #pragma once
 
-#include <cassert>
+#include "ouly/utility/user_config.hpp"
 #include <compare>
 #include <concepts>
 #include <memory>
@@ -149,13 +150,13 @@ public:
 
   auto operator->() const noexcept -> T*
   {
-    assert(self_);
+    OULY_ASSERT(self_);
     return self_;
   }
 
   operator T&() const noexcept
   {
-    assert(self_);
+    OULY_ASSERT(self_);
     return *self_;
   }
 

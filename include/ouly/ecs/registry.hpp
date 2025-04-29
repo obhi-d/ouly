@@ -1,9 +1,10 @@
+// SPDX-License-Identifier: MIT
 #pragma once
 
 #include "ouly/ecs/detail/registry_defs.hpp"
 #include "ouly/ecs/entity.hpp"
 #include <algorithm>
-#include <cassert>
+#include "ouly/utility/user_config.hpp"
 #include <span>
 
 namespace ouly::ecs
@@ -89,7 +90,7 @@ public:
       {
         base::revisions_.resize(idx + 1);
       }
-      assert(l.revision() == base::revisions_[idx]);
+      OULY_ASSERT(l.revision() == base::revisions_[idx]);
       base::revisions_[idx]++;
     }
 
@@ -144,7 +145,7 @@ public:
         {
           base::revisions_.resize(idx + 1);
         }
-        assert(l.revision() == base::revisions_[idx]);
+        OULY_ASSERT(l.revision() == base::revisions_[idx]);
         base::revisions_[idx]++;
       }
     }

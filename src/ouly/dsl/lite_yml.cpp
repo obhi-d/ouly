@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 
 #include "ouly/dsl/lite_yml.hpp"
 

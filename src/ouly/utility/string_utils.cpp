@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 
 #include "ouly/utility/string_utils.hpp"
 #include <stdexcept>

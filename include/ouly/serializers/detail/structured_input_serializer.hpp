@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 //
 // Created by obhi on 9/18/20.
 //
@@ -12,7 +13,7 @@
 #include "ouly/reflection/visitor_impl.hpp"
 #include "ouly/utility/detail/concepts.hpp"
 
-#include <cassert>
+#include "ouly/utility/user_config.hpp"
 
 namespace ouly::detail
 {
@@ -180,7 +181,7 @@ public:
 private:
   auto get() -> Stream&
   {
-    assert(serializer_.has_value());
+    OULY_ASSERT(serializer_.has_value());
     return *serializer_;
   }
 };

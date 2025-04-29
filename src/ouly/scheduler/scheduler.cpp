@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 
 #include "ouly/scheduler/scheduler.hpp"
 #include "ouly/scheduler/task.hpp"
@@ -89,7 +90,7 @@ inline auto scheduler::work(worker_id thread) noexcept -> bool
   {
     return false;
   }
-  assert(&workers_[thread.get_index()].contexts_[wrk.get_compressed_data<workgroup_id>().get_index()].get_scheduler() ==
+  OULY_ASSERT(&workers_[thread.get_index()].contexts_[wrk.get_compressed_data<workgroup_id>().get_index()].get_scheduler() ==
          this);
   do_work(thread, wrk);
   return true;

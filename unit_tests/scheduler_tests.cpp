@@ -120,10 +120,10 @@ TEST_CASE("scheduler: Simplest ParallelFor")
    [&parallel_sum](int a, [[maybe_unused]] ouly::worker_context const& c)
    {
      [[maybe_unused]] auto id = ouly::worker_id::get();
-     assert(id.get_index() < 16);
+     OULY_ASSERT(id.get_index() < 16);
      [[maybe_unused]] auto ctx = ouly::worker_context::get(ouly::default_workgroup_id);
-     assert(ctx.get_worker().get_index() < 16);
-     assert(ctx.get_group_offset() < 16);
+     OULY_ASSERT(ctx.get_worker().get_index() < 16);
+     OULY_ASSERT(ctx.get_group_offset() < 16);
      parallel_sum += a;
    },
    std::span(list.begin(), list.end()), ouly::default_workgroup_id);

@@ -1,8 +1,9 @@
+// SPDX-License-Identifier: MIT
 #pragma once
 
 #include "ouly/allocators/default_allocator.hpp"
 #include <algorithm>
-#include <cassert>
+#include "ouly/utility/user_config.hpp"
 #include <cstdint>
 #include <memory>
 #include <type_traits>
@@ -105,13 +106,13 @@ public:
 
   auto operator[](std::size_t i) noexcept -> T&
   {
-    assert(i < count_);
+    OULY_ASSERT(i < count_);
     return data_[i];
   }
 
   auto operator[](std::size_t i) const noexcept -> T const&
   {
-    assert(i < count_);
+    OULY_ASSERT(i < count_);
     return data_[i];
   }
 
@@ -279,13 +280,13 @@ public:
 
   auto operator[](std::size_t i) noexcept -> T&
   {
-    assert(i < count);
+    OULY_ASSERT(i < count);
     return data_[i];
   }
 
   auto operator[](std::size_t i) const noexcept -> T const&
   {
-    assert(i < count);
+    OULY_ASSERT(i < count);
     return data_[i];
   }
 

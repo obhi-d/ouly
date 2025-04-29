@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #pragma once
 
 #include "ouly/utility/common.hpp"
@@ -446,7 +447,7 @@ public:
   auto operator()(Args... args) -> Ret
   {
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    assert(*reinterpret_cast<delegate_fn*>(buffer_));
+    OULY_ASSERT(*reinterpret_cast<delegate_fn*>(buffer_));
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     return ((*reinterpret_cast<delegate_fn*>(buffer_)))(*this, std::forward<Args>(args)...);
   }

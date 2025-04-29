@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #pragma once
 #include "ouly/scheduler/detail/worker.hpp"
 #include "ouly/utility/config.hpp"

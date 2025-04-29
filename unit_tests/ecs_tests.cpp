@@ -167,7 +167,7 @@ TEST_CASE("registry: random test", "[components][nontrivial]")
    {
      auto test = clink(index, string_reg.get_revision(index));
      auto it   = std::ranges::find(deleted_ones, test);
-     assert(std::ranges::find(clink_goes_my_bones, test) != clink_goes_my_bones.end());
+     OULY_ASSERT(std::ranges::find(clink_goes_my_bones, test) != clink_goes_my_bones.end());
      REQUIRE(it == deleted_ones.end());
    });
 

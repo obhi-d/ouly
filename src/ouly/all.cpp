@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 
 #include "ouly/allocators/alignment.hpp"
 #include "ouly/allocators/allocator.hpp"

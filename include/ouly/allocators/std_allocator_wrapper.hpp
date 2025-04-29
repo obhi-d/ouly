@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 
 #pragma once
 
@@ -91,14 +92,14 @@ struct allocator_ref : public ouly::detail::allocator_common<T>
 
   [[nodiscard]] auto allocate(size_type cnt) const -> pointer
   {
-    assert(ref_);
+    OULY_ASSERT(ref_);
     auto ret = static_cast<pointer>(ref_->allocate(static_cast<size_type>(sizeof(T) * cnt), alignarg<T>));
     return ret;
   }
 
   void deallocate(pointer p, size_type cnt) const
   {
-    assert(ref_);
+    OULY_ASSERT(ref_);
     ref_->deallocate(p, static_cast<size_type>(sizeof(T) * cnt), alignarg<T>);
   }
 

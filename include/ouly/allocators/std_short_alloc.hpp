@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #pragma once
 // The MIT License (MIT)
 //
@@ -21,7 +22,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <cassert>
+#include "ouly/utility/user_config.hpp"
 #include <cstddef>
 
 namespace ouly
@@ -74,7 +75,7 @@ template <std::size_t ReqAlign>
 [[nodiscard]] auto arena<N, Alignment>::allocate(std::size_t n) -> void*
 {
   static_assert(ReqAlign <= Alignment, "alignment is too small for this arena");
-  assert(pointer_in_buffer(ptr_) && "std_short_alloc has outlived arena");
+  OULY_ASSERT(pointer_in_buffer(ptr_) && "std_short_alloc has outlived arena");
   auto const aligned_n = align_up(n);
   if (static_cast<decltype(aligned_n)>(buf_ + N - ptr_) >= aligned_n)
   {
@@ -93,7 +94,7 @@ template <std::size_t N, std::size_t Alignment>
 void arena<N, Alignment>::deallocate(void* ptr, std::size_t n) noexcept
 {
   auto* p = static_cast<char*>(ptr);
-  assert(pointer_in_buffer(ptr_) && "std_short_alloc has outlived arena");
+  OULY_ASSERT(pointer_in_buffer(ptr_) && "std_short_alloc has outlived arena");
   if (pointer_in_buffer(p))
   {
     n = align_up(n);

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 
 #pragma once
 
@@ -25,7 +26,7 @@ public:
 
   static void unhandled_exception() noexcept
   {
-    assert(0 && "Coroutine throwing! Terminate!");
+    OULY_ASSERT(0 && "Coroutine throwing! Terminate!");
   }
 };
 
@@ -157,7 +158,7 @@ struct sync_waiter
     }
     static void unhandled_exception() noexcept
     {
-      assert(0 && "Coroutine throwing! Terminate!");
+      OULY_ASSERT(0 && "Coroutine throwing! Terminate!");
     }
     void return_void() noexcept {}
 

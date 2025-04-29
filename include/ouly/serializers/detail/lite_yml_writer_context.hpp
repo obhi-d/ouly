@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #pragma once
 /**
  * @file lite_yml_writer_context.hpp

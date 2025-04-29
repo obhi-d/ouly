@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 
 #pragma once
 #include "ouly/reflection/detail/aggregate.hpp"

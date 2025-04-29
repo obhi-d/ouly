@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #pragma once
 #include "ouly/containers/small_vector.hpp"
 #include <cstdint>

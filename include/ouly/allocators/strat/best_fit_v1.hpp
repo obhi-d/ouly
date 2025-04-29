@@ -1,4 +1,5 @@
-﻿#pragma once
+// SPDX-License-Identifier: MIT
+#pragma once
 
 #include "ouly/allocators/config.hpp"
 #include "ouly/allocators/detail/arena.hpp"
@@ -107,7 +108,7 @@ public:
       ;
     }
 
-    assert(it != static_cast<uint32_t>(free_ordering_.size()));
+    OULY_ASSERT(it != static_cast<uint32_t>(free_ordering_.size()));
     blk.size_ = newsize;
     reinsert_right(blocks, it, newsize, block);
   }
@@ -122,7 +123,7 @@ public:
       ;
     }
 
-    assert(it != static_cast<uint32_t>(free_ordering_.size()));
+    OULY_ASSERT(it != static_cast<uint32_t>(free_ordering_.size()));
     blocks[block_link(new_block)].size_ = new_size;
     reinsert_right(blocks, it, new_size, new_block);
   }
@@ -134,7 +135,7 @@ public:
     {
       ;
     }
-    assert(it != static_cast<uint32_t>(free_ordering_.size()));
+    OULY_ASSERT(it != static_cast<uint32_t>(free_ordering_.size()));
     free_ordering_.erase(it + free_ordering_.begin());
   }
 
@@ -148,7 +149,7 @@ public:
     size_type sz = 0;
     for (auto fn : free_ordering_)
     {
-      assert(blocks[block_link(fn)].is_free_);
+      OULY_ASSERT(blocks[block_link(fn)].is_free_);
       sz += blocks[block_link(fn)].size_;
     }
 
@@ -160,7 +161,7 @@ public:
     size_type sz = 0;
     for (auto fn : free_ordering_)
     {
-      assert(sz <= blocks[block_link(fn)].size_);
+      OULY_ASSERT(sz <= blocks[block_link(fn)].size_);
       sz = blocks[block_link(fn)].size_;
     }
   }

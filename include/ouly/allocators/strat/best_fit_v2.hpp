@@ -1,4 +1,5 @@
-﻿#pragma once
+// SPDX-License-Identifier: MIT
+#pragma once
 
 #include "ouly/allocators/config.hpp"
 #include "ouly/allocators/detail/arena.hpp"
@@ -110,7 +111,7 @@ public:
       ;
     }
 
-    assert(it != static_cast<uint32_t>(free_ordering_.size()));
+    OULY_ASSERT(it != static_cast<uint32_t>(free_ordering_.size()));
     blk.size_ = newsize;
     reinsert_right(blocks, it, newsize, block);
   }
@@ -126,7 +127,7 @@ public:
       ;
     }
 
-    assert(it != static_cast<uint32_t>(free_ordering_.size()));
+    OULY_ASSERT(it != static_cast<uint32_t>(free_ordering_.size()));
     reinsert_right(blocks, it, new_size, new_block);
   }
 
@@ -137,7 +138,7 @@ public:
     {
       ;
     }
-    assert(it != static_cast<uint32_t>(free_ordering_.size()));
+    OULY_ASSERT(it != static_cast<uint32_t>(free_ordering_.size()));
     free_ordering_.erase(it + free_ordering_.begin());
     sizes_.erase(it + sizes_.begin());
   }
@@ -161,16 +162,16 @@ public:
   void validate_integrity(block_bank const& blocks) const noexcept
   {
     size_type sz = 0;
-    assert(free_ordering_.size() == sizes_.size());
+    OULY_ASSERT(free_ordering_.size() == sizes_.size());
     for (size_t i = 1; i < sizes_.size(); ++i)
     {
-      assert(sizes_[i - 1] <= sizes_[i]);
+      OULY_ASSERT(sizes_[i - 1] <= sizes_[i]);
     }
     for (size_t i = 0; i < free_ordering_.size(); ++i)
     {
       auto fn = free_ordering_[i];
-      assert(sz <= blocks[block_link(fn)].size_);
-      assert(blocks[block_link(fn)].size_ == sizes_[i]);
+      OULY_ASSERT(sz <= blocks[block_link(fn)].size_);
+      OULY_ASSERT(blocks[block_link(fn)].size_ == sizes_[i]);
       sz = blocks[block_link(fn)].size_;
     }
   }

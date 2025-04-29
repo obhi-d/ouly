@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #pragma once
 
 #include "ouly/allocators/allocator.hpp"
@@ -156,7 +157,7 @@ public:
 
   auto pop_front_unsafe() noexcept -> Ty
   {
-    assert(!empty());
+    OULY_ASSERT(!empty());
 
     Ty ret = std::move(*head_->data_[front_].template as<Ty>());
 

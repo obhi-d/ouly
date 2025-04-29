@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 
 #pragma once
 
@@ -10,7 +11,7 @@
 #include "ouly/utility/config.hpp"
 #include "ouly/utility/convert.hpp"
 #include "ouly/utility/type_traits.hpp"
-#include <cassert>
+#include "ouly/utility/user_config.hpp"
 #include <string_view>
 
 namespace ouly::detail
@@ -172,13 +173,13 @@ private:
 
   auto get() -> auto&
   {
-    assert(serializer_ != nullptr);
+    OULY_ASSERT(serializer_ != nullptr);
     return *serializer_;
   }
 
   auto get() const -> auto const&
   {
-    assert(serializer_ != nullptr);
+    OULY_ASSERT(serializer_ != nullptr);
     return *serializer_;
   }
 };

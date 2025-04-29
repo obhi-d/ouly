@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 
 #include "ouly/scheduler/event_types.hpp"
 #include "ouly/scheduler/scheduler.hpp"

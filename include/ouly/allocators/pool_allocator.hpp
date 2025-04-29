@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #pragma once
 
 #include "ouly/allocators/default_allocator.hpp"
@@ -51,8 +52,8 @@ public:
   {
     arrays_ = (std::move(i_other.arrays_));
     solo_   = std::move(i_other.solo_);
-    assert(k_atom_count_ == i_other.k_atom_count_);
-    assert(k_atom_size_ == i_other.k_atom_size_);
+    OULY_ASSERT(k_atom_count_ == i_other.k_atom_count_);
+    OULY_ASSERT(k_atom_size_ == i_other.k_atom_size_);
     linked_arenas_ = std::move(i_other.linked_arenas_);
     return *this;
   }
@@ -371,7 +372,7 @@ private:
       len = arrays_.length();
     }
 
-    assert(len >= i_count);
+    OULY_ASSERT(len >= i_count);
     std::uint8_t* ptr       = arrays_.get_value();
     std::uint8_t* head      = ptr + (i_count * k_atom_size_);
     size_type     left_over = len - i_count;

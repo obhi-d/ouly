@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #pragma once
 
 #include "ouly/allocators/detail/custom_allocator.hpp"
@@ -520,7 +521,7 @@ public:
 
   void pop_back()
   {
-    assert(length_ > 0);
+    OULY_ASSERT(length_ > 0);
     if constexpr (ouly::debug)
     {
       validate(length_ - 1);
@@ -553,7 +554,7 @@ public:
 
   void shrink(size_type idx) noexcept
   {
-    assert(length_ > idx);
+    OULY_ASSERT(length_ > idx);
     if constexpr (!std::is_trivially_destructible_v<value_type> && !has_pod)
     {
       for (size_type i = idx; i < length_; ++i)
@@ -566,7 +567,7 @@ public:
 
   void grow(size_type idx) noexcept
   {
-    assert(length_ < idx);
+    OULY_ASSERT(length_ < idx);
     auto block = idx >> pool_mul;
     // auto index = idx & pool_mod;
 
@@ -620,13 +621,13 @@ public:
 
   auto at(size_type l) noexcept -> value_type&
   {
-    assert(l < length_);
+    OULY_ASSERT(l < length_);
     return item_at(l);
   }
 
   auto at(size_type l) const noexcept -> value_type const&
   {
-    assert(l < length_);
+    OULY_ASSERT(l < length_);
     return item_at(l);
   }
 
@@ -712,7 +713,7 @@ public:
 
     auto operator[](index_t i) const noexcept -> VTy&
     {
-      assert(contains(i));
+      OULY_ASSERT(contains(i));
       return items_[i.block_][i.item_];
     }
 
@@ -741,7 +742,7 @@ public:
     auto operator[](uint32_t i) const noexcept -> VTy&
     {
       auto block = (i >> pool_mul);
-      assert(block < block_count_);
+      OULY_ASSERT(block < block_count_);
       return items_[block][i & pool_mod];
     }
 
@@ -846,7 +847,7 @@ private:
 
   void validate([[maybe_unused]] size_type idx) const noexcept
   {
-    assert(contains(idx));
+    OULY_ASSERT(contains(idx));
   }
 
   auto item_at(size_type idx) noexcept -> auto&
@@ -921,7 +922,7 @@ private:
     auto bstart     = start >> pool_mul;
     auto bend       = end >> pool_mul;
     auto item_start = start & pool_mod;
-    assert(bstart <= bend);
+    OULY_ASSERT(bstart <= bend);
     constexpr auto arity = function_traits<std::remove_reference_t<Lambda>>::arity;
     for (size_type block = bstart; block != bend; ++block)
     {

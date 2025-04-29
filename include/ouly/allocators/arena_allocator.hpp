@@ -1,4 +1,5 @@
-﻿#pragma once
+// SPDX-License-Identifier: MIT
+#pragma once
 
 #include "ouly/allocators/config.hpp"
 #include "ouly/allocators/detail/arena.hpp"
@@ -550,9 +551,9 @@ public:
       }
     }
 
-    assert(total_free_nodes == ibank_.strat_.total_free_nodes(ibank_.bank_.blocks()));
+    OULY_ASSERT(total_free_nodes == ibank_.strat_.total_free_nodes(ibank_.bank_.blocks()));
     auto total = ibank_.strat_.total_free_size(ibank_.bank_.blocks());
-    assert(total == ibank_.bank_.free_size_);
+    OULY_ASSERT(total == ibank_.bank_.free_size_);
 
     for (auto arena_it     = ibank_.bank_.arena_order_.begin(ibank_.bank_.arenas()),
               arena_end_it = ibank_.bank_.arena_order_.end(ibank_.bank_.arenas());
@@ -566,7 +567,7 @@ public:
            blk_it != blk_end_it; ++blk_it)
       {
         auto const& blk = *blk_it;
-        assert(blk.offset_ == expected_offset);
+        OULY_ASSERT(blk.offset_ == expected_offset);
         expected_offset += blk.size();
       }
     }
@@ -626,7 +627,7 @@ public:
             ta                                    = refresh.strat_.try_allocate(refresh.bank_, blk.size());
             arena_allocated                       = true;
           }
-          assert(ta);
+          OULY_ASSERT(ta);
 
           auto  new_blk_id = refresh.strat_.commit(refresh.bank_, blk.size(), ta);
           auto& new_blk    = refresh.bank_.blocks()[block_link(new_blk_id)];

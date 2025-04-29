@@ -90,7 +90,7 @@ TEST_CASE("Validate pool_allocator with alignment", "[pool_allocator]")
        allocator.allocate(r.count * sizeof(trivial_object), ouly::alignarg<trivial_object>));
 
       records.push_back(r);
-      assert(validate());
+      OULY_ASSERT(validate());
       CHECK(validate());
     }
     else
@@ -100,7 +100,7 @@ TEST_CASE("Validate pool_allocator with alignment", "[pool_allocator]")
       allocator.deallocate(records[chosen].data, records[chosen].count * sizeof(trivial_object),
                            ouly::alignarg<trivial_object>);
       records.erase(records.begin() + chosen);
-      assert(validate());
+      OULY_ASSERT(validate());
       CHECK(validate());
     }
   }

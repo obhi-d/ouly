@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+
+#include "ouly/utility/user_config.hpp"
 
 #include "ouly/allocators/coalescing_allocator.hpp"
 
@@ -74,7 +77,7 @@ auto coalescing_allocator::allocate(size_type size) -> coalescing_allocator::siz
 
 void coalescing_allocator::deallocate(size_type offset, size_type size)
 {
-  assert(!offsets_.empty());
+  OULY_ASSERT(!offsets_.empty());
 
   const auto* it = mini2(offsets_.data(), offsets_.size(), offset);
 

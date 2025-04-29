@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #pragma once
 
 #include "ouly/allocators/default_allocator.hpp"
@@ -318,7 +319,7 @@ private:
     auto block = hazard_page(nb >> pool_mul);
     auto index = nb & pool_mod;
 
-    assert(items_[block][index] == hz);
+    OULY_ASSERT(items_[block][index] == hz);
   }
 
   auto bit_page(size_type p) const noexcept -> size_type

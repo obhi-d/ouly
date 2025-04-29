@@ -77,7 +77,7 @@ struct alloc_mem_manager
 
       [[maybe_unused]] auto source_data = backup_arenas_[src.arena_].data() + src.offset_;
       [[maybe_unused]] auto dest_data   = arenas_[dst.arena_].data() + dst.offset_;
-      assert(!std::memcmp(source_data, dest_data, src.size_));
+      OULY_ASSERT(!std::memcmp(source_data, dest_data, src.size_));
     }
 
     backup_arenas_.clear();
@@ -100,8 +100,8 @@ struct alloc_mem_manager
   void move_memory([[maybe_unused]] std::uint32_t src_arena, [[maybe_unused]] std::uint32_t dst_arena,
                    [[maybe_unused]] std::size_t from, [[maybe_unused]] std::size_t to, std::size_t size_)
   {
-    assert(arenas_[dst_arena].size() >= to + size_);
-    assert(arenas_[src_arena].size() >= from + size_);
+    OULY_ASSERT(arenas_[dst_arena].size() >= to + size_);
+    OULY_ASSERT(arenas_[src_arena].size() >= from + size_);
     std::memmove(arenas_[dst_arena].data() + to, arenas_[src_arena].data() + from, size_);
   }
 };

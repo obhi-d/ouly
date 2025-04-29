@@ -1,4 +1,5 @@
-﻿#pragma once
+// SPDX-License-Identifier: MIT
+#pragma once
 
 #include "ouly/allocators/config.hpp"
 #include "ouly/allocators/detail/arena.hpp"
@@ -101,7 +102,7 @@ public:
       {
         it++;
       }
-      assert(it < end);
+      OULY_ASSERT(it < end);
     }
     else
     {
@@ -126,7 +127,7 @@ public:
       {
         it++;
       }
-      assert(it < end);
+      OULY_ASSERT(it < end);
     }
     else
     {
@@ -150,7 +151,7 @@ public:
       {
         it++;
       }
-      assert(it < end);
+      OULY_ASSERT(it < end);
     }
     else
     {
@@ -172,7 +173,7 @@ public:
     size_type sz = 0;
     for (auto fn : free_ordering_)
     {
-      assert(blocks[block_link(fn)].is_free_);
+      OULY_ASSERT(blocks[block_link(fn)].is_free_);
       sz += blocks[block_link(fn)].size_;
     }
 
@@ -184,7 +185,7 @@ public:
     size_type sz = 0;
     for (auto fn : free_ordering_)
     {
-      assert(sz <= blocks[block_link(fn)].size_);
+      OULY_ASSERT(sz <= blocks[block_link(fn)].size_);
       sz = blocks[block_link(fn)].size_;
     }
   }

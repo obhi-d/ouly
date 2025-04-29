@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #pragma once
 // Disable maybe-uninitialized
 // #pragma GCC diagnostic push
@@ -5,7 +6,9 @@
 // #include <regex>
 // #pragma GCC diagnostic pop
 
-#include "common.hpp"
+#include "ouly/utility/user_config.hpp"
+
+#include "ouly/utility/common.hpp"
 #include "ouly/utility/wyhash.hpp"
 #include "word_list.hpp"
 #include <algorithm>
@@ -179,7 +182,7 @@ inline auto indent(int32_t amt) -> std::string
 inline auto replace_first(std::string& source, std::string_view search, std::string_view replace, size_t start_pos = 0)
  -> bool
 {
-  assert(!search.empty());
+  OULY_ASSERT(!search.empty());
 
   if (size_t b = source.find(search, start_pos); b != std::string::npos)
   {

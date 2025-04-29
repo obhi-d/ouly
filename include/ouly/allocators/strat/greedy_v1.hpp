@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #pragma once
 
 #include "ouly/allocators/config.hpp"
@@ -98,7 +99,7 @@ public:
   {
     auto  hblock = block_link(block);
     auto& blk    = blocks[hblock];
-    assert(blk.list_.prev_ == 0);
+    OULY_ASSERT(blk.list_.prev_ == 0);
     blk.list_.next_ = head_;
     if (head_ != 0U)
     {
@@ -146,7 +147,7 @@ public:
     while (i != 0U)
     {
       auto const& blk = blocks[block_link(i)];
-      assert(blk.size_);
+      OULY_ASSERT(blk.size_);
       count++;
       i = blk.list_.next_;
     }
@@ -173,8 +174,8 @@ public:
     while (i != 0U)
     {
       auto const& blk = blocks[block_link(i)];
-      assert(blk.is_free_);
-      assert(blk.list_.prev_ == p);
+      OULY_ASSERT(blk.is_free_);
+      OULY_ASSERT(blk.list_.prev_ == p);
       p = i;
       i = blk.list_.next_;
     }

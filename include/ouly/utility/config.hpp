@@ -1,6 +1,7 @@
+// SPDX-License-Identifier: MIT
 #pragma once
 
-#include <cassert>
+#include "ouly/utility/user_config.hpp"
 #include <cstdint>
 
 #if !defined(NDEBUG) || defined(_DEBUG)
@@ -22,7 +23,7 @@ inline static constexpr bool debug = false;
 #define OULY_POTENTIAL_EMPTY_MEMBER [[no_unique_address]]
 #endif
 
-#include <cassert>
+#include "ouly/utility/user_config.hpp"
 #include <cstdio>
 #include <cstdlib>
 

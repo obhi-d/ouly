@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #pragma once
 
 #include "ouly/containers/detail/indirection.hpp"
@@ -277,7 +278,7 @@ public:
   {
     if constexpr (ouly::debug)
     {
-      assert(contains(point));
+      OULY_ASSERT(contains(point));
     }
 
     at(point) = std::move(args);
@@ -397,7 +398,7 @@ public:
 
   auto contains(link l) const noexcept -> bool
   {
-    assert(is_valid_ref(l.value()));
+    OULY_ASSERT(is_valid_ref(l.value()));
     auto idx = ouly::detail::index_val(l.value());
     return idx < extents_ && (l.value() == get_ref_at_idx(idx));
   }
@@ -412,7 +413,7 @@ private:
   {
     auto idx  = ouly::detail::index_val(l);
     auto self = get_ref_at_idx(idx);
-    assert(self == l);
+    OULY_ASSERT(self == l);
   }
 
   auto get_ref_at_idx(size_type idx) const noexcept

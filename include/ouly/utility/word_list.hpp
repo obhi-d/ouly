@@ -1,7 +1,8 @@
+// SPDX-License-Identifier: MIT
 #pragma once
 
 #include <algorithm>
-#include <cassert>
+#include "ouly/utility/user_config.hpp"
 #include <cstdint>
 #include <limits>
 #include <string>
@@ -35,7 +36,7 @@ public:
 
     auto operator=(const iterator& it) -> iterator&
     {
-      assert(object_.data() == it.object_.data());
+      OULY_ASSERT(object_.data() == it.object_.data());
       word_     = it.word_;
       location_ = it.location_;
       return *this;
@@ -43,7 +44,7 @@ public:
 
     auto operator=(iterator&& it) noexcept -> iterator&
     {
-      assert(object_.data() == object_.data());
+      OULY_ASSERT(object_.data() == object_.data());
       word_     = it.word_;
       location_ = it.location_;
       return *this;

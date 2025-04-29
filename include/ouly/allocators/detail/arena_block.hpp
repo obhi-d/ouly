@@ -1,4 +1,5 @@
-﻿#pragma once
+// SPDX-License-Identifier: MIT
+#pragma once
 #include "ouly/containers/detail/vlist.hpp"
 #include "ouly/containers/sparse_table.hpp"
 #include <utility>

@@ -1,9 +1,10 @@
+// SPDX-License-Identifier: MIT
 
 #pragma once
 
 #include "ouly/containers/detail/intrusive_list_defs.hpp"
 #include "ouly/utility/config.hpp"
-#include <cassert>
+#include "ouly/utility/user_config.hpp"
 #include <compare>
 #include <cstdint>
 #include <iterator>
@@ -67,26 +68,26 @@ class intrusive_list
 
     auto operator->() const noexcept
     {
-      assert(item_);
+      OULY_ASSERT(item_);
       return item_;
     }
 
     auto operator*() const noexcept -> auto&
     {
-      assert(item_);
+      OULY_ASSERT(item_);
       return *item_;
     }
 
     auto operator++() noexcept -> auto&
     {
-      assert(item_);
+      OULY_ASSERT(item_);
       item_ = traits::next(*item_);
       return *this;
     }
 
     auto operator++(int) noexcept
     {
-      assert(item_);
+      OULY_ASSERT(item_);
       auto old = *this;
       item_    = traits::next(*item_);
       return old;
@@ -107,18 +108,18 @@ class intrusive_list
 
     auto operator->() const noexcept
     {
-      assert(item_);
+      OULY_ASSERT(item_);
       return item_;
     }
 
     auto operator*() const noexcept -> auto&
     {
-      assert(item_);
+      OULY_ASSERT(item_);
       return *item_;
     }
 
     auto operator++() noexcept -> auto& requires(is_dlist) {
-      assert(item_);
+      OULY_ASSERT(item_);
       item_ = traits::prev(*item_);
       return *this;
     }
@@ -126,7 +127,7 @@ class intrusive_list
     auto operator++(int) noexcept
       requires(is_dlist)
     {
-      assert(item_);
+      OULY_ASSERT(item_);
       auto old = *this;
       item_    = traits::prev(*item_);
       return old;

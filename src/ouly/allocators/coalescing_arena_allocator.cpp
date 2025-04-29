@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 
 #include "ouly/allocators/coalescing_arena_allocator.hpp"
 #include <cstddef>
@@ -118,7 +119,7 @@ auto coalescing_arena_allocator::deallocate(allocation_id id) -> arena_id
 
   // last index is not used
   arena.free_size_ += size;
-  assert(arena.free_size_ <= arena.size_);
+  OULY_ASSERT(arena.free_size_ <= arena.size_);
   std::uint32_t left   = 0;
   std::uint32_t right  = 0;
   std::uint32_t merges = 0;
@@ -209,7 +210,7 @@ void coalescing_arena_allocator::grow_free_node(std::uint32_t block, size_type n
     ;
   }
 
-  assert(it != free_ordering_.size());
+  OULY_ASSERT(it != free_ordering_.size());
   block_entries_.sizes_[block] = newsize;
   reinsert_right(it, newsize, block);
 }
@@ -225,7 +226,7 @@ void coalescing_arena_allocator::replace_and_grow(std::uint32_t right, std::uint
     ;
   }
 
-  assert(it != free_ordering_.size());
+  OULY_ASSERT(it != free_ordering_.size());
   reinsert_right(it, new_size, node);
 }
 
@@ -237,7 +238,7 @@ void coalescing_arena_allocator::erase(std::uint32_t node)
     ;
   }
 
-  assert(it != free_ordering_.size());
+  OULY_ASSERT(it != free_ordering_.size());
   free_ordering_.erase(it + free_ordering_.begin());
   sizes_.erase(it + sizes_.begin());
 }
@@ -299,7 +300,7 @@ void coalescing_arena_allocator::validate_integrity() const
     }
   }
 
-  assert(counted_free_nodes == total_free_nodes());
+  OULY_ASSERT(counted_free_nodes == total_free_nodes());
 
   for (auto arena_it = arenas_.begin(arena_entries_), arena_end_it = arenas_.end(arena_entries_);
        arena_it != arena_end_it; ++arena_it)
@@ -311,15 +312,15 @@ void coalescing_arena_allocator::validate_integrity() const
          blk_it != blk_end_it; ++blk_it)
     {
       auto blk = *blk_it;
-      assert(block_entries_.offsets_[blk] == expected_offset);
+      OULY_ASSERT(block_entries_.offsets_[blk] == expected_offset);
       expected_offset += block_entries_.sizes_[blk];
     }
   }
 
-  assert(free_ordering_.size() == sizes_.size());
+  OULY_ASSERT(free_ordering_.size() == sizes_.size());
   for (size_t i = 1; i < sizes_.size(); ++i)
   {
-    assert(sizes_[i - 1] <= sizes_[i]);
+    OULY_ASSERT(sizes_[i - 1] <= sizes_[i]);
   }
 
   [[maybe_unused]] size_type sz = 0;
@@ -327,8 +328,8 @@ void coalescing_arena_allocator::validate_integrity() const
   for (size_t free_idx = 0; free_idx < free_ordering_.size(); ++free_idx)
   {
     auto fn = free_ordering_[free_idx];
-    assert(sz <= block_entries_.sizes_[fn]);
-    assert(block_entries_.sizes_[fn] == sizes_[free_idx]);
+    OULY_ASSERT(sz <= block_entries_.sizes_[fn]);
+    OULY_ASSERT(block_entries_.sizes_[fn] == sizes_[free_idx]);
     // NOLINTNEXTLINE
     sz = block_entries_.sizes_[fn];
   }

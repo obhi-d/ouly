@@ -1,4 +1,5 @@
-﻿#pragma once
+// SPDX-License-Identifier: MIT
+#pragma once
 #include "ouly/allocators/default_allocator.hpp"
 #include "ouly/allocators/detail/arena_block.hpp"
 #include "ouly/containers/table.hpp"
