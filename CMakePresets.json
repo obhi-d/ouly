@@ -216,14 +216,6 @@
           ]
         }
       }
-    },
-    {
-      "name": "third-party-release",
-      "description": "",
-      "displayName": "",
-      "inherits": [
-        "third-party-release"
-      ]
     }
   ],
   "buildPresets": [
