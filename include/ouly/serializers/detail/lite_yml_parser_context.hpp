@@ -404,7 +404,6 @@ public:
     {
       throw visitor_error(visitor_error::type_is_not_an_array);
     }
-    return nullptr;
   }
 
   auto read_convertible_container(parser_state* parser) -> in_context_base*
