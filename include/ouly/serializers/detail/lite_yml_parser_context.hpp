@@ -804,17 +804,17 @@ public:
   };
 
   template <typename Base, typename TClassType, std::size_t I>
-  static auto read_aggregate_field(parser_state* parser, std::string_view field_key, auto const& field_names)
-   -> in_context_base*
+  static inline void get_aggregate_field(in_context_base*& ret, parser_state* parser, std::string_view field_key,
+                                         auto const& field_names)
   {
+    if (ret)
+      return;
     if (std::get<I>(field_names) == field_key)
     {
       using type      = field_type<I, TClassType>;
-      auto ret        = parser->template create<in_context_impl<type, Config>>();
+      ret             = parser->template create<in_context_impl<type, Config>>();
       ret->post_init_ = &post_init_aggregate<Base, TClassType, I>;
-      return ret;
     }
-    return nullptr;
   }
 
   template <typename Base, typename TClassType>
@@ -827,7 +827,7 @@ public:
 
     [&]<std::size_t... I>(std::index_sequence<I...>, std::string_view key)
     {
-      ((ret || (ret = read_aggregate_field<Base, tclass_type, I>(parser, key, field_names))), ...);
+      (get_aggregate_field<Base, tclass_type, I>(ret, parser, key, field_names), ...);
     }(std::make_index_sequence<std::tuple_size_v<std::decay_t<decltype(field_names)>>>(), field_key);
 
     if (ret == nullptr)
