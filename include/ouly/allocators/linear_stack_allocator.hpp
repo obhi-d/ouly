@@ -68,9 +68,9 @@ public:
 
   ~linear_stack_allocator() noexcept
   {
-    for (auto& arena : arenas_)
+    for (auto& arena_entry : arenas_)
     {
-      underlying_allocator::deallocate(arena.buffer_, arena.arena_size_);
+      underlying_allocator::deallocate(arena_entry.buffer_, arena_entry.arena_size_);
     }
   }
 
