@@ -4,13 +4,13 @@
 #include "ouly/scheduler/task.hpp"
 #include <latch>
 #if defined(_MSC_VER)
-#include <intrin.h> // _mm_pause / __yield / YieldProcessor
-#else
-#include <immintrin.h> // x86 GCC/Clang
-#if defined(__arm__) || defined(__aarch64__)
+#include <intrin.h>                            // _mm_pause / __yield / YieldProcessor
+#elif defined(__i386__) || defined(__x86_64__) // 32- & 64-bit x86
+#include <immintrin.h>                         // x86 GCC/Clang
+#elif defined(__arm__) || defined(__aarch64__)
 #include <arm_acle.h> // __builtin_arm_yield (GCC/Clang ≥ 9)
 #endif
-#endif
+
 namespace ouly
 {
 

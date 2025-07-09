@@ -674,7 +674,7 @@ TEST_CASE("scheduler: Memory Layout and Cache Optimization Verification")
     {
       ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), ouly::worker_id(worker_id),
                   ouly::default_workgroup_id,
-                  [&counters, worker_id, iterations_per_worker](ouly::worker_context const&)
+                  [&counters, worker_id](ouly::worker_context const&)
                   {
                     // Intensive counter updates that would cause false sharing if not properly aligned
                     for (int i = 0; i < iterations_per_worker; ++i)
