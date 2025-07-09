@@ -146,6 +146,67 @@ inline auto scheduler::work(worker_id thread) noexcept -> bool
   return true;
 }
 
+namespace
+{
+// Adaptive work stealing strategy to reduce contention
+class adaptive_work_stealer
+{
+private:
+  thread_local static uint32_t                              recent_failures;
+  thread_local static uint32_t                              success_streak;
+  thread_local static std::chrono::steady_clock::time_point last_success;
+
+public:
+  static void record_success() noexcept
+  {
+    success_streak++;
+    recent_failures = std::max(0U, recent_failures - 2); // Decay failure count
+    last_success    = std::chrono::steady_clock::now();
+  }
+
+  static void record_failure() noexcept
+  {
+    recent_failures++;
+    success_streak = 0;
+  }
+
+  static auto get_adaptive_delay() noexcept -> uint32_t
+  {
+    constexpr uint32_t max_base_delay  = 64U;
+    constexpr uint32_t max_total_delay = 256U;
+
+    // Exponential backoff based on recent failures, capped at reasonable maximum
+    uint32_t base_delay = std::min(recent_failures * 2, max_base_delay);
+
+    // If we haven't had success recently, increase delay more aggressively
+    auto now                = std::chrono::steady_clock::now();
+    auto time_since_success = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_success);
+
+    constexpr auto threshold = std::chrono::milliseconds(10);
+    if (time_since_success > threshold)
+    {
+      base_delay *= 2;
+    }
+
+    return std::min(base_delay, max_total_delay);
+  }
+
+  static auto should_yield() noexcept -> bool
+  {
+    constexpr uint32_t high_failure_threshold   = 10;
+    constexpr uint32_t medium_failure_threshold = 5;
+
+    return recent_failures > high_failure_threshold ||
+           (recent_failures > medium_failure_threshold && success_streak == 0);
+  }
+};
+
+thread_local uint32_t                              adaptive_work_stealer::recent_failures = 0;
+thread_local uint32_t                              adaptive_work_stealer::success_streak  = 0;
+thread_local std::chrono::steady_clock::time_point adaptive_work_stealer::last_success =
+ std::chrono::steady_clock::now();
+} // namespace
+
 // NOLINTNEXTLINE
 auto scheduler::get_work(worker_id thread) noexcept -> ouly::detail::work_item
 {
@@ -182,6 +243,7 @@ auto scheduler::get_work(worker_id thread) noexcept -> ouly::detail::work_item
         {
           auto item = my_queue.second.pop_front_unsafe();
           my_queue.first.unlock();
+          adaptive_work_stealer::record_success();
           return item;
         }
         my_queue.first.unlock();
@@ -199,6 +261,7 @@ auto scheduler::get_work(worker_id thread) noexcept -> ouly::detail::work_item
       {
         auto item = work_list.second.pop_front_unsafe();
         work_list.first.unlock();
+        adaptive_work_stealer::record_success();
         return item;
       }
       work_list.first.unlock();
@@ -250,19 +313,31 @@ auto scheduler::get_work(worker_id thread) noexcept -> ouly::detail::work_item
           // Steal from the front (FIFO) for task ordering consistency
           auto item = victim_queue.second.pop_front_unsafe();
           victim_queue.first.unlock();
+          adaptive_work_stealer::record_success();
           return item;
         }
         victim_queue.first.unlock();
       }
 
-      // Micro-backoff to reduce contention - only on failed attempts
+      // Micro-backoff to reduce contention - use adaptive strategy
       if (steal_attempts > 2)
       {
-        // Exponential backoff: 1, 2, 4 cycles
-        for (uint32_t delay = 1U << std::min(steal_attempts - 2, 3U); delay > 0; --delay)
+        // Use adaptive delay instead of fixed exponential backoff
+        uint32_t adaptive_delay = adaptive_work_stealer::get_adaptive_delay();
+
+        if (adaptive_work_stealer::should_yield())
         {
-          pause_exec();
+          std::this_thread::yield();
         }
+        else
+        {
+          for (uint32_t delay = adaptive_delay; delay > 0; --delay)
+          {
+            pause_exec();
+          }
+        }
+
+        adaptive_work_stealer::record_failure();
       }
     }
   }
@@ -575,10 +650,28 @@ auto scheduler::create_group(uint32_t thread_offset, uint32_t thread_count, uint
 
 void scheduler::clear_group(workgroup_id group)
 {
-  workgroups_[group.get_index()].start_thread_idx_  = 0;
-  workgroups_[group.get_index()].thread_count_      = 0;
-  workgroups_[group.get_index()].push_offset_.get() = 0;
-  workgroups_[group.get_index()].work_queues_       = nullptr;
+  auto& wg = workgroups_[group.get_index()];
+
+  // Store the thread count before clearing for proper cleanup
+  uint32_t old_thread_count = wg.thread_count_;
+
+  // Safely clear the workgroup by ensuring all operations are complete
+  wg.start_thread_idx_ = 0;
+  wg.thread_count_     = 0;
+  wg.push_offset_.get().store(0, std::memory_order_release);
+
+  // Clean up work queues safely
+  if (wg.work_queues_ != nullptr)
+  {
+    // Destroy each work queue properly using the correct type
+    for (uint32_t i = 0; i < old_thread_count; ++i)
+    {
+      using queue_type = ouly::detail::async_work_queue;
+      wg.work_queues_[i].~queue_type();
+    }
+    ::operator delete[](wg.work_queues_, std::align_val_t{detail::cache_line_size});
+    wg.work_queues_ = nullptr;
+  }
 }
 
 } // namespace ouly
