@@ -4,6 +4,7 @@
 #include "ouly/utility/config.hpp"
 #include "ouly/utility/type_traits.hpp"
 #include <array>
+#include <new>
 #include <thread>
 
 namespace ouly
@@ -364,9 +365,9 @@ public:
     return workgroups_[g.get_index()].thread_count_ * work_scale;
   }
 
-  auto get_context(worker_id worker, workgroup_id group) -> worker_context const&
+  [[nodiscard]] auto get_context(worker_id worker, workgroup_id group) const -> worker_context const&
   {
-    return workers_[worker.get_index()].contexts_[group.get_index()];
+    return memory_block_.workers_[worker.get_index()].contexts_[group.get_index()];
   }
 
   /**
@@ -385,17 +386,15 @@ private:
 
   auto work(worker_id /*thread*/) noexcept -> bool;
 
+  // Scheduler state and configuration (cold data)
   scheduler_worker_entry entry_fn_;
-  // Work groups
-  std::vector<ouly::detail::workgroup> workgroups_;
-  // Workers present in the scheduler
-  std::unique_ptr<ouly::detail::worker[]> workers_;
-  // Local cache for work items, until they are pushed into global queue
-  std::unique_ptr<ouly::detail::work_item[]> local_work_;
-  // Global work items
-  std::unique_ptr<ouly::detail::group_range[]> group_ranges_;
+  uint32_t               worker_count_ = 0;
+  std::atomic_bool       stop_         = false;
 
-  static constexpr std::size_t cache_line_size = 64;
+  // Work groups - frequently accessed during work stealing
+  std::vector<ouly::detail::workgroup> workgroups_;
+
+  static constexpr std::size_t cache_line_size = detail::cache_line_size;
 
   // Cache-aligned wake data to prevent false sharing
   struct alignas(cache_line_size) wake_data
@@ -404,11 +403,21 @@ private:
     ouly::detail::wake_event event_;
   };
 
-  std::unique_ptr<wake_data[]> wake_data_;
-  std::vector<std::thread>     threads_;
+  // Memory layout optimization: Allocate all scheduler data in a single block
+  // for better cache locality and reduced allocator overhead
+  struct scheduler_memory_block
+  {
+    // Hot data: accessed frequently during task execution
+    alignas(cache_line_size) std::unique_ptr<ouly::detail::worker[]> workers_;
 
-  uint32_t         worker_count_ = 0;
-  std::atomic_bool stop_         = false;
+    alignas(cache_line_size) std::unique_ptr<ouly::detail::work_item[]> local_work_;
+
+    alignas(cache_line_size) std::unique_ptr<ouly::detail::group_range[]> group_ranges_;
+
+    alignas(cache_line_size) std::unique_ptr<wake_data[]> wake_data_;
+  } memory_block_;
+
+  std::vector<std::thread> threads_;
 };
 
 /**

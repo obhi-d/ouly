@@ -10,34 +10,10 @@ option(
 )
 option(ASAN_ENABLED "Build this target with AddressSanitizer" OFF)
 option(OULY_REC_STATS "No stats for allocator" OFF)
-option(OULY_USE_TBB "Should use TBB as scheduler." ON)
-option(OULY_FETCH_TBB "Should use TBB as scheduler." ON)
 option(OULY_TEST_COVERAGE "Build test coverage." OFF)
 
 set(OULY_BISON_EXE "bison" CACHE STRING "Bison execuatable")
 set(OULY_FLEX_EXE "flex" CACHE STRING "Flex executable")
-
-message("TBB is ${OULY_USE_TBB}.")
-
-if (OULY_USE_TBB)
- # Try to find TBB, if it is not available fetch content
-    if (NOT OULY_FETCH_TBB)
-        find_package(TBB 2022.2.0)
-    else()
-        include(FetchContent)
-        FetchContent_Declare(
-            tbb
-            GIT_REPOSITORY https://github.com/uxlfoundation/oneTBB.git
-            GIT_TAG v2022.2.0
-            GIT_SHALLOW TRUE
-            GIT_PROGRESS TRUE
-        )
-        set(TBB_TEST OFF CACHE BOOL "Disable TBB tests")
-        set(TBB_INSTALL ON CACHE BOOL "Install TBB")
-        set(TBB_STRICT ON CACHE BOOL "Enable strict TBB mode")
-        FetchContent_MakeAvailable(tbb)
-    endif()
-endif(OULY_USE_TBB)
 
 ##
 ## CONFIGURATION
@@ -60,17 +36,11 @@ add_library(
     "src/ouly/dsl/lite_yml.cpp"
     "src/ouly/dsl/microexpr.cpp"
     "src/ouly/scheduler/scheduler.cpp"
-    "src/ouly/scheduler/tbb_scheduler.cpp"
     "src/ouly/scheduler/event_types.cpp"
     "src/ouly/utility/string_utils.cpp"
 )
 
 set_property(TARGET ${OULY_TARGET_NAME} PROPERTY CXX_STANDARD 20)
-if (OULY_USE_TBB)
- target_link_libraries(${OULY_TARGET_NAME} PUBLIC TBB::tbb)
-else()
- target_compile_definitions(${OULY_TARGET_NAME} PUBLIC -DOULY_NO_TBB)
-endif()
 
 # Add all warning flags
 if (MSVC)

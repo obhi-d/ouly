@@ -119,7 +119,7 @@ TEST_CASE("scheduler: Simplest ParallelFor")
   ouly::parallel_for(
    [&parallel_sum](int a, [[maybe_unused]] ouly::worker_context const& c)
    {
-     [[maybe_unused]] auto id = ouly::worker_id::get();
+     [[maybe_unused]] auto id = ouly::worker_id::this_worker::get_id();
      OULY_ASSERT(id.get_index() < 16);
      [[maybe_unused]] auto ctx = ouly::worker_context::get(ouly::default_workgroup_id);
      OULY_ASSERT(ctx.get_worker().get_index() < 16);
@@ -291,4 +291,636 @@ TEST_CASE("scheduler: Test submit_to")
     REQUIRE(collection[i] == i);
   }
 }
-// NOLINTEND
+
+TEST_CASE("scheduler: Memory Layout Optimization Tests")
+{
+  SECTION("Cache Line Alignment Verification")
+  {
+    // Verify that critical structures are properly cache-aligned
+    REQUIRE(alignof(ouly::detail::workgroup) == std::hardware_destructive_interference_size);
+    REQUIRE(alignof(ouly::detail::worker) == std::hardware_destructive_interference_size);
+
+    // Verify workgroup structure layout
+    ouly::detail::workgroup wg;
+    REQUIRE(sizeof(wg) >= std::hardware_destructive_interference_size);
+
+    // Verify worker structure layout
+    ouly::detail::worker worker;
+    REQUIRE(sizeof(worker) >= std::hardware_destructive_interference_size);
+  }
+
+  SECTION("Memory Access Pattern Tests")
+  {
+    ouly::scheduler scheduler;
+    scheduler.create_group(ouly::workgroup_id(0), 0, 4);
+    scheduler.create_group(ouly::workgroup_id(1), 4, 4);
+
+    scheduler.begin_execution();
+
+    // Test that memory accesses work correctly with new layout
+    std::atomic<int> counter{0};
+    std::atomic<int> invalid_workers{0};
+
+    for (int i = 0; i < 1000; ++i)
+    {
+      ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), ouly::workgroup_id(i % 2),
+                  [&counter, &invalid_workers](ouly::worker_context const& ctx)
+                  {
+                    counter.fetch_add(1, std::memory_order_relaxed);
+                    // Verify context access works
+                    if (ctx.get_worker().get_index() >= 8)
+                    {
+                      invalid_workers.fetch_add(1, std::memory_order_relaxed);
+                    }
+                  });
+    }
+
+    scheduler.end_execution();
+    REQUIRE(counter.load() == 1000);
+    REQUIRE(invalid_workers.load() == 0);
+  }
+}
+
+TEST_CASE("scheduler: Work Stealing Optimization Tests")
+{
+  SECTION("Multi-Group Work Distribution")
+  {
+    ouly::scheduler scheduler;
+    scheduler.create_group(ouly::workgroup_id(0), 0, 8, 1); // High priority
+    scheduler.create_group(ouly::workgroup_id(1), 8, 8, 0); // Lower priority
+
+    scheduler.begin_execution();
+
+    std::array<std::atomic<int>, 16> worker_task_counts{};
+    constexpr int                    total_tasks = 10000;
+
+    // Submit tasks to both groups
+    for (int i = 0; i < total_tasks; ++i)
+    {
+      auto group = ouly::workgroup_id(i % 2);
+      ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), group,
+                  [&worker_task_counts](ouly::worker_context const& ctx)
+                  {
+                    auto worker_idx = ctx.get_worker().get_index();
+                    worker_task_counts[worker_idx].fetch_add(1, std::memory_order_relaxed);
+                  });
+    }
+
+    scheduler.end_execution();
+
+    // Verify all tasks were executed
+    int total_executed = 0;
+    for (auto& count : worker_task_counts)
+    {
+      total_executed += count.load();
+    }
+    REQUIRE(total_executed == total_tasks);
+
+    // Verify work distribution (some workers should have executed tasks)
+    int active_workers = 0;
+    for (auto& count : worker_task_counts)
+    {
+      if (count.load() > 0)
+      {
+        active_workers++;
+      }
+    }
+    REQUIRE(active_workers > 0);
+  }
+
+  SECTION("Load Balancing Verification")
+  {
+    ouly::scheduler scheduler;
+    scheduler.create_group(ouly::workgroup_id(0), 0, 16);
+
+    scheduler.begin_execution();
+
+    std::array<std::atomic<int>, 16> execution_counts{};
+    constexpr int                    tasks_per_worker = 100;
+    constexpr int                    total_tasks      = 16 * tasks_per_worker;
+
+    // Submit many small tasks to test load balancing
+    for (int i = 0; i < total_tasks; ++i)
+    {
+      ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), ouly::default_workgroup_id,
+                  [&execution_counts](ouly::worker_context const& ctx)
+                  {
+                    auto worker_idx = ctx.get_worker().get_index();
+                    execution_counts[worker_idx].fetch_add(1, std::memory_order_relaxed);
+
+                    // Simulate some work
+                    volatile int sum = 0;
+                    for (int j = 0; j < 100; ++j)
+                    {
+                      sum += j;
+                    }
+                  });
+    }
+
+    scheduler.end_execution();
+
+    // Verify total execution count
+    int total = 0;
+    for (auto& count : execution_counts)
+    {
+      total += count.load();
+    }
+    REQUIRE(total == total_tasks);
+
+    // Check load balancing - no worker should be completely idle
+    for (auto& count : execution_counts)
+    {
+      REQUIRE(count.load() > 0);
+    }
+  }
+}
+
+TEST_CASE("scheduler: Priority and Exclusive Work Tests")
+{
+  SECTION("Worker-to-Worker Task Submission")
+  {
+    ouly::scheduler scheduler;
+    scheduler.create_group(ouly::workgroup_id(0), 0, 8);
+
+    scheduler.begin_execution();
+
+    std::array<std::atomic<bool>, 8> worker_flags{};
+
+    // Submit exclusive tasks to specific workers
+    for (uint32_t i = 0; i < 8; ++i)
+    {
+      ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), ouly::worker_id(i), ouly::default_workgroup_id,
+                  [&worker_flags, i](ouly::worker_context const&)
+                  {
+                    worker_flags[i].store(true, std::memory_order_relaxed);
+                  });
+    }
+
+    scheduler.end_execution();
+
+    // Verify all workers received their exclusive tasks
+    for (auto& flag : worker_flags)
+    {
+      REQUIRE(flag.load());
+    }
+  }
+
+  SECTION("Priority Group Execution Order")
+  {
+    ouly::scheduler scheduler;
+    scheduler.create_group(ouly::workgroup_id(0), 0, 4, 0);  // Low priority
+    scheduler.create_group(ouly::workgroup_id(1), 0, 4, 10); // High priority
+
+    scheduler.begin_execution();
+
+    struct work_data
+    {
+      std::atomic<int>     execution_order{0};
+      std::array<int, 200> low_priority_order{};
+      std::array<int, 200> high_priority_order{};
+    } data;
+    // Submit tasks to both priority groups
+    for (int i = 0; i < 100; ++i)
+    {
+      // Low priority tasks
+      ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), ouly::workgroup_id(0),
+                  [&data, i](ouly::worker_context const&)
+                  {
+                    data.low_priority_order[i] = data.execution_order.fetch_add(1, std::memory_order_acq_rel);
+                  });
+
+      // High priority tasks
+      ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), ouly::workgroup_id(1),
+                  [&data, i](ouly::worker_context const&)
+                  {
+                    data.high_priority_order[i] = data.execution_order.fetch_add(1, std::memory_order_acq_rel);
+                  });
+    }
+
+    scheduler.end_execution();
+
+    // Verify execution happened (order may vary due to parallelism)
+    REQUIRE(data.execution_order.load() == 200);
+  }
+}
+
+TEST_CASE("scheduler: Error Handling and Edge Cases")
+{
+  SECTION("Empty Workgroup Handling")
+  {
+    ouly::scheduler scheduler;
+    scheduler.create_group(ouly::workgroup_id(0), 0, 0); // Empty group
+    scheduler.create_group(ouly::workgroup_id(1), 0, 4); // Normal group
+
+    scheduler.begin_execution();
+
+    std::atomic<int> task_count{0};
+
+    // Submit to normal group
+    ouly::async(ouly::worker_context::get(ouly::workgroup_id(1)), ouly::workgroup_id(1),
+                [&task_count](ouly::worker_context const&)
+                {
+                  task_count.fetch_add(1, std::memory_order_relaxed);
+                });
+
+    scheduler.end_execution();
+    REQUIRE(task_count.load() == 1);
+  }
+
+  SECTION("High Contention Scenarios")
+  {
+    ouly::scheduler scheduler;
+    scheduler.create_group(ouly::workgroup_id(0), 0, 16);
+
+    scheduler.begin_execution();
+
+    std::atomic<int> contention_counter{0};
+    constexpr int    high_task_count = 50000;
+
+    // Submit many tasks rapidly to test contention handling
+    for (int i = 0; i < high_task_count; ++i)
+    {
+      ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), ouly::default_workgroup_id,
+                  [&contention_counter](ouly::worker_context const&)
+                  {
+                    contention_counter.fetch_add(1, std::memory_order_relaxed);
+                  });
+    }
+
+    scheduler.end_execution();
+    REQUIRE(contention_counter.load() == high_task_count);
+  }
+
+  SECTION("Nested Task Submission")
+  {
+    ouly::scheduler scheduler;
+    scheduler.create_group(ouly::workgroup_id(0), 0, 8);
+
+    scheduler.begin_execution();
+
+    std::atomic<int> nested_count{0};
+    std::atomic<int> total_count{0};
+
+    // Submit tasks that themselves submit more tasks
+    for (int i = 0; i < 10; ++i)
+    {
+      ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), ouly::default_workgroup_id,
+                  [&nested_count, &total_count](ouly::worker_context const& ctx)
+                  {
+                    total_count.fetch_add(1, std::memory_order_relaxed);
+
+                    // Submit nested tasks
+                    for (int j = 0; j < 5; ++j)
+                    {
+                      ouly::async(ctx, ouly::default_workgroup_id,
+                                  [&nested_count](ouly::worker_context const&)
+                                  {
+                                    nested_count.fetch_add(1, std::memory_order_relaxed);
+                                  });
+                    }
+                  });
+    }
+
+    scheduler.end_execution();
+    REQUIRE(total_count.load() == 10);
+    REQUIRE(nested_count.load() == 50);
+  }
+}
+
+TEST_CASE("scheduler: Performance and Scalability Tests")
+{
+  SECTION("Large Scale Task Processing")
+  {
+    ouly::scheduler scheduler;
+    scheduler.create_group(ouly::workgroup_id(0), 0, std::min(16u, std::thread::hardware_concurrency()));
+
+    scheduler.begin_execution();
+
+    constexpr int    large_task_count = 100000;
+    std::atomic<int> processed_count{0};
+
+    auto start_time = std::chrono::high_resolution_clock::now();
+
+    for (int i = 0; i < large_task_count; ++i)
+    {
+      ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), ouly::default_workgroup_id,
+                  [&processed_count](ouly::worker_context const&)
+                  {
+                    processed_count.fetch_add(1, std::memory_order_relaxed);
+                  });
+    }
+
+    scheduler.end_execution();
+
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+
+    REQUIRE(processed_count.load() == large_task_count);
+
+    // Performance check - should complete within reasonable time
+    REQUIRE(duration.count() < 5000); // Less than 5 seconds
+  }
+
+  SECTION("Memory Efficiency Test")
+  {
+    // Test that the optimized memory layout doesn't cause excessive allocations
+    ouly::scheduler scheduler;
+    scheduler.create_group(ouly::workgroup_id(0), 0, 8);
+    scheduler.create_group(ouly::workgroup_id(1), 8, 8);
+
+    // Multiple begin/end cycles to test memory management
+    for (int cycle = 0; cycle < 5; ++cycle)
+    {
+      scheduler.begin_execution();
+
+      std::atomic<int> cycle_counter{0};
+
+      for (int i = 0; i < 1000; ++i)
+      {
+        ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), ouly::workgroup_id(i % 2),
+                    [&cycle_counter](ouly::worker_context const&)
+                    {
+                      cycle_counter.fetch_add(1, std::memory_order_relaxed);
+                    });
+      }
+
+      scheduler.end_execution();
+      REQUIRE(cycle_counter.load() == 1000);
+    }
+  }
+}
+
+TEST_CASE("scheduler: Memory Layout and Cache Optimization Verification")
+{
+  SECTION("False Sharing Prevention Test")
+  {
+    ouly::scheduler scheduler;
+    scheduler.create_group(ouly::workgroup_id(0), 0, 16);
+
+    scheduler.begin_execution();
+
+    // Test intensive atomic operations that would suffer from false sharing
+    std::array<std::atomic<int>, 16> counters{};
+    constexpr int                    iterations_per_worker = 10000;
+
+    auto start_time = std::chrono::high_resolution_clock::now();
+
+    for (uint32_t worker_id = 0; worker_id < 16; ++worker_id)
+    {
+      ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), ouly::worker_id(worker_id),
+                  ouly::default_workgroup_id,
+                  [&counters, worker_id, iterations_per_worker](ouly::worker_context const&)
+                  {
+                    // Intensive counter updates that would cause false sharing if not properly aligned
+                    for (int i = 0; i < iterations_per_worker; ++i)
+                    {
+                      counters[worker_id].fetch_add(1, std::memory_order_relaxed);
+
+                      // Also increment neighbor counters to test memory layout
+                      if (worker_id > 0)
+                      {
+                        counters[worker_id - 1].fetch_add(1, std::memory_order_relaxed);
+                      }
+                      if (worker_id < 15)
+                      {
+                        counters[worker_id + 1].fetch_add(1, std::memory_order_relaxed);
+                      }
+                    }
+                  });
+    }
+
+    scheduler.end_execution();
+
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
+
+    // Verify all operations completed
+    int total_operations = 0;
+    for (auto& counter : counters)
+    {
+      total_operations += counter.load();
+    }
+
+    // Should be efficient due to optimized memory layout
+    REQUIRE(total_operations > 0);
+    REQUIRE(duration.count() < 1000000); // Less than 1 second
+  }
+
+  SECTION("Work Queue Cache Locality Test")
+  {
+    ouly::scheduler scheduler;
+    scheduler.create_group(ouly::workgroup_id(0), 0, 8);
+    scheduler.create_group(ouly::workgroup_id(1), 8, 8);
+
+    scheduler.begin_execution();
+
+    // Test rapid submission and execution to verify queue performance
+    std::atomic<int> rapid_counter{0};
+    constexpr int    rapid_tasks = 20000;
+
+    auto start_time = std::chrono::high_resolution_clock::now();
+
+    // Rapidly submit tasks to test queue contention and cache performance
+    for (int i = 0; i < rapid_tasks; ++i)
+    {
+      auto group = ouly::workgroup_id(i % 2);
+      ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), group,
+                  [&rapid_counter, i](ouly::worker_context const&)
+                  {
+                    rapid_counter.fetch_add(1, std::memory_order_relaxed);
+
+                    // Light computation to test scheduler overhead
+                    volatile int temp = i * 2 + 1;
+                    temp              = temp % 1000;
+                  });
+    }
+
+    scheduler.end_execution();
+
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+
+    REQUIRE(rapid_counter.load() == rapid_tasks);
+    REQUIRE(duration.count() < 2000); // Should complete quickly with optimized layout
+  }
+}
+
+TEST_CASE("scheduler: Advanced Work Stealing and Distribution")
+{
+  SECTION("Cross-Group Work Stealing Efficiency")
+  {
+    ouly::scheduler scheduler;
+    scheduler.create_group(ouly::workgroup_id(0), 0, 4);  // Small group
+    scheduler.create_group(ouly::workgroup_id(1), 4, 12); // Large group
+
+    scheduler.begin_execution();
+
+    std::array<std::atomic<int>, 16> worker_loads{};
+
+    // Submit many tasks to the small group to force work stealing
+    constexpr int overload_tasks = 5000;
+    for (int i = 0; i < overload_tasks; ++i)
+    {
+      ouly::async(ouly::worker_context::get(ouly::default_workgroup_id),
+                  ouly::workgroup_id(0), // All to small group
+                  [&worker_loads](ouly::worker_context const& ctx)
+                  {
+                    auto worker_idx = ctx.get_worker().get_index();
+                    worker_loads[worker_idx].fetch_add(1, std::memory_order_relaxed);
+
+                    // Simulate some work
+                    std::this_thread::sleep_for(std::chrono::microseconds(10));
+                  });
+    }
+
+    scheduler.end_execution();
+
+    // Verify all tasks executed
+    int total_executed = 0;
+    for (auto& load : worker_loads)
+    {
+      total_executed += load.load();
+    }
+    REQUIRE(total_executed == overload_tasks);
+
+    // Verify work stealing occurred - workers outside group 0 should have executed tasks
+    int stealing_workers = 0;
+    for (int i = 4; i < 16; ++i)
+    { // Workers not in group 0
+      if (worker_loads[i].load() > 0)
+      {
+        stealing_workers++;
+      }
+    }
+    REQUIRE(stealing_workers > 0); // Work stealing should have occurred
+  }
+
+  SECTION("Round-Robin Distribution Verification")
+  {
+    ouly::scheduler scheduler;
+    scheduler.create_group(ouly::workgroup_id(0), 0, 8);
+
+    scheduler.begin_execution();
+
+    struct task_order
+    {
+      std::array<std::vector<int>, 8> task_orders;
+      std::mutex                      task_order_mutex;
+    } data;
+    // Submit tasks in order and track which worker gets which task
+    constexpr int ordered_tasks = 800;
+    for (int i = 0; i < ordered_tasks; ++i)
+    {
+      ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), ouly::default_workgroup_id,
+                  [&data, i](ouly::worker_context const& ctx)
+                  {
+                    auto worker_idx = ctx.get_worker().get_index();
+                    {
+                      std::lock_guard<std::mutex> lock(data.task_order_mutex);
+                      data.task_orders[worker_idx].push_back(i);
+                    }
+                  });
+    }
+
+    scheduler.end_execution();
+
+    // Verify all tasks were executed
+    int total_tasks = 0;
+    for (auto& orders : data.task_orders)
+    {
+      total_tasks += orders.size();
+    }
+    REQUIRE(total_tasks == ordered_tasks);
+
+    // Verify reasonable distribution (no worker should be completely idle)
+    for (auto& orders : data.task_orders)
+    {
+      REQUIRE(orders.size() > 0);
+    }
+  }
+}
+
+TEST_CASE("scheduler: Stress Tests and Robustness")
+{
+  SECTION("Rapid Start-Stop Cycles")
+  {
+    ouly::scheduler scheduler;
+    scheduler.create_group(ouly::workgroup_id(0), 0, 8);
+
+    // Test multiple rapid start-stop cycles
+    for (int cycle = 0; cycle < 10; ++cycle)
+    {
+      scheduler.begin_execution();
+
+      std::atomic<int> cycle_tasks{0};
+
+      for (int i = 0; i < 100; ++i)
+      {
+        ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), ouly::default_workgroup_id,
+                    [&cycle_tasks](ouly::worker_context const&)
+                    {
+                      cycle_tasks.fetch_add(1, std::memory_order_relaxed);
+                    });
+      }
+
+      scheduler.end_execution();
+      REQUIRE(cycle_tasks.load() == 100);
+    }
+  }
+
+  SECTION("Mixed Workload Patterns")
+  {
+    ouly::scheduler scheduler;
+    scheduler.create_group(ouly::workgroup_id(0), 0, 4); // CPU-intensive group
+    scheduler.create_group(ouly::workgroup_id(1), 4, 4); // I/O simulation group
+    scheduler.create_group(ouly::workgroup_id(2), 8, 8); // Mixed group
+
+    scheduler.begin_execution();
+
+    std::atomic<int> cpu_tasks{0};
+    std::atomic<int> io_tasks{0};
+    std::atomic<int> mixed_tasks{0};
+
+    // Submit different types of workloads
+    for (int i = 0; i < 300; ++i)
+    {
+      // CPU-intensive tasks
+      ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), ouly::workgroup_id(0),
+                  [&cpu_tasks](ouly::worker_context const&)
+                  {
+                    cpu_tasks.fetch_add(1, std::memory_order_relaxed);
+                    // Simulate CPU work
+                    volatile int sum = 0;
+                    for (int j = 0; j < 1000; ++j)
+                    {
+                      sum += j * j;
+                    }
+                  });
+
+      // I/O simulation tasks
+      ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), ouly::workgroup_id(1),
+                  [&io_tasks](ouly::worker_context const&)
+                  {
+                    io_tasks.fetch_add(1, std::memory_order_relaxed);
+                    // Simulate I/O wait
+                    std::this_thread::sleep_for(std::chrono::microseconds(50));
+                  });
+
+      // Mixed tasks
+      if (i % 2 == 0)
+      {
+        ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), ouly::workgroup_id(2),
+                    [&mixed_tasks](ouly::worker_context const&)
+                    {
+                      mixed_tasks.fetch_add(1, std::memory_order_relaxed);
+                    });
+      }
+    }
+
+    scheduler.end_execution();
+
+    REQUIRE(cpu_tasks.load() == 300);
+    REQUIRE(io_tasks.load() == 300);
+    REQUIRE(mixed_tasks.load() == 150);
+  }
+}

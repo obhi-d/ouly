@@ -34,10 +34,16 @@ public:
     return index_ != std::numeric_limits<uint32_t>::max();
   }
 
-  /**
-   * @brief Returns the worker id for the current thread
-   */
-  static auto get() noexcept -> worker_id const&;
+  struct this_worker
+  {
+    /**
+     * @brief Returns the worker id for the current thread
+     */
+    /**
+     * @brief Returns the worker id for the current thread
+     */
+    static auto get_id() noexcept -> worker_id const&;
+  };
 
   auto operator<=>(worker_id const&) const noexcept = default;
 
@@ -90,7 +96,7 @@ public:
   worker_context() noexcept = default;
   worker_context(scheduler& s, void* user_context, worker_id id, workgroup_id group, uint32_t mask,
                  uint32_t offset) noexcept
-      : owner_(&s), user_context_(user_context), index_(id), group_id_(group), group_mask_(mask), group_offset_(offset)
+      : group_id_(group), index_(id), owner_(&s), user_context_(user_context), group_mask_(mask), group_offset_(offset)
   {}
 
   /**
@@ -139,10 +145,10 @@ public:
   auto operator<=>(worker_context const&) const noexcept = default;
 
 private:
+  workgroup_id group_id_;
+  worker_id    index_;
   scheduler*   owner_        = nullptr;
   void*        user_context_ = nullptr;
-  worker_id    index_;
-  workgroup_id group_id_;
   uint32_t     group_mask_   = 0;
   uint32_t     group_offset_ = 0;
 };
