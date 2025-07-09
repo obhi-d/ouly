@@ -2,15 +2,15 @@
 
 #pragma once
 
-#include <array>
+#include "ouly/utility/config.hpp"
 #include <atomic>
+#include <concepts>
 #include <cstddef>
 
 namespace ouly::detail
 {
 
-static constexpr std::size_t cache_line_size = 64; /*std::hardware_destructive_interference_size*/
-;
+static constexpr std::size_t cache_line_size = OULY_CACHE_LINE_SIZE; /*std::hardware_destructive_interference_size*/
 
 // Simple padding structure to prevent false sharing
 template <typename T>
