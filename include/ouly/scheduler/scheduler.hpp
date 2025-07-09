@@ -406,13 +406,10 @@ private:
   struct scheduler_memory_block
   {
     // Hot data: accessed frequently during task execution
-    alignas(cache_line_size) std::unique_ptr<ouly::detail::worker[]> workers_;
-
-    alignas(cache_line_size) std::unique_ptr<ouly::detail::work_item[]> local_work_;
-
-    alignas(cache_line_size) std::unique_ptr<ouly::detail::group_range[]> group_ranges_;
-
-    alignas(cache_line_size) std::unique_ptr<wake_data[]> wake_data_;
+    std::unique_ptr<ouly::detail::worker[]>      workers_;
+    std::unique_ptr<ouly::detail::work_item[]>   local_work_;
+    std::unique_ptr<ouly::detail::group_range[]> group_ranges_;
+    std::unique_ptr<wake_data[]>                 wake_data_;
   } memory_block_;
 
   // TODO: Possibly optimize the workgroup data structure by flattening the false sharing data,
