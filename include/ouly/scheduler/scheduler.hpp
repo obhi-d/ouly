@@ -394,9 +394,18 @@ private:
   std::unique_ptr<ouly::detail::work_item[]> local_work_;
   // Global work items
   std::unique_ptr<ouly::detail::group_range[]> group_ranges_;
-  std::unique_ptr<std::atomic_bool[]>          wake_status_;
-  std::unique_ptr<ouly::detail::wake_event[]>  wake_events_;
-  std::vector<std::thread>                     threads_;
+
+  static constexpr std::size_t cache_line_size = 64;
+
+  // Cache-aligned wake data to prevent false sharing
+  struct alignas(cache_line_size) wake_data
+  {
+    std::atomic_bool         status_{false};
+    ouly::detail::wake_event event_;
+  };
+
+  std::unique_ptr<wake_data[]> wake_data_;
+  std::vector<std::thread>     threads_;
 
   uint32_t         worker_count_ = 0;
   std::atomic_bool stop_         = false;

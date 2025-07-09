@@ -76,8 +76,8 @@ void scheduler::run(worker_id thread)
       break;
     }
 
-    wake_status_[thread.get_index()].store(false);
-    wake_events_[thread.get_index()].wait();
+    wake_data_[thread.get_index()].status_.store(false, std::memory_order_relaxed);
+    wake_data_[thread.get_index()].event_.wait();
   }
 
   workers_[thread.get_index()].quitting_.store(true);
@@ -90,8 +90,9 @@ inline auto scheduler::work(worker_id thread) noexcept -> bool
   {
     return false;
   }
-  OULY_ASSERT(&workers_[thread.get_index()].contexts_[wrk.get_compressed_data<workgroup_id>().get_index()].get_scheduler() ==
-         this);
+  OULY_ASSERT(
+   &workers_[thread.get_index()].contexts_[wrk.get_compressed_data<workgroup_id>().get_index()].get_scheduler() ==
+   this);
   do_work(thread, wrk);
   return true;
 }
@@ -137,10 +138,10 @@ auto scheduler::get_work(worker_id thread) noexcept -> ouly::detail::work_item
 
 void scheduler::wake_up(worker_id thread) noexcept
 {
-  if (!wake_status_[thread.get_index()].exchange(true))
+  auto& wake = wake_data_[thread.get_index()];
+  if (!wake.status_.exchange(true, std::memory_order_acq_rel))
   {
-    wake_events_[thread.get_index()].notify();
-    return;
+    wake.event_.notify();
   }
 }
 
@@ -149,9 +150,7 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
   local_work_   = std::make_unique<ouly::detail::work_item[]>(worker_count_);
   workers_      = std::make_unique<ouly::detail::worker[]>(worker_count_);
   group_ranges_ = std::make_unique<ouly::detail::group_range[]>(worker_count_);
-  wake_status_  = std::make_unique<std::atomic_bool[]>(worker_count_);
-  wake_events_  = std::make_unique<ouly::detail::wake_event[]>(worker_count_);
-  workers_      = std::make_unique<ouly::detail::worker[]>(worker_count_);
+  wake_data_    = std::make_unique<wake_data[]>(worker_count_);
 
   threads_.reserve(worker_count_ - 1);
 
@@ -189,7 +188,7 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
       worker.contexts_[g] = worker_context(*this, user_context, worker_id(w), workgroup_id(g), group_ranges_[w].mask_,
                                            w - workgroups_[g].start_thread_idx_);
     }
-    wake_status_[w].store(true);
+    wake_data_[w].status_.store(true, std::memory_order_relaxed);
   }
 
   stop_              = false;
@@ -297,9 +296,9 @@ void scheduler::submit(worker_id src, worker_id dst, ouly::detail::work_item wor
       auto  lck    = std::scoped_lock(worker.exlusive_items_.first);
       worker.exlusive_items_.second.emplace_back(std::move(work));
     }
-    if (!wake_status_[dst.get_index()].exchange(true))
+    if (!wake_data_[dst.get_index()].status_.exchange(true, std::memory_order_acq_rel))
     {
-      wake_events_[dst.get_index()].notify();
+      wake_data_[dst.get_index()].event_.notify();
     }
   }
 }
@@ -310,10 +309,10 @@ void scheduler::submit([[maybe_unused]] worker_id src, workgroup_id dst, ouly::d
 
   for (uint32_t i = wg.start_thread_idx_, end = i + wg.thread_count_; i != end; ++i)
   {
-    if (!wake_status_[i].exchange(true))
+    if (!wake_data_[i].status_.exchange(true, std::memory_order_acq_rel))
     {
       local_work_[i] = work;
-      wake_events_[i].notify();
+      wake_data_[i].event_.notify();
       return;
     }
   }
@@ -330,9 +329,9 @@ void scheduler::submit([[maybe_unused]] worker_id src, workgroup_id dst, ouly::d
         queue.second.emplace_back(std::move(work));
         queue.first.unlock();
         q += wg.start_thread_idx_;
-        if (!wake_status_[q].exchange(true))
+        if (!wake_data_[q].status_.exchange(true, std::memory_order_acq_rel))
         {
-          wake_events_[q].notify();
+          wake_data_[q].event_.notify();
         }
         return;
       }

@@ -31,12 +31,10 @@ if (OULY_USE_TBB)
             GIT_TAG v2022.2.0
             GIT_SHALLOW TRUE
             GIT_PROGRESS TRUE
-            CMAKE_ARGS
-                -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-                -DTBB_TEST=OFF
-                -DTBB_INSTALL=ON
-                -DTBB_STRICT=ON
         )
+        set(TBB_TEST OFF CACHE BOOL "Disable TBB tests")
+        set(TBB_INSTALL ON CACHE BOOL "Install TBB")
+        set(TBB_STRICT ON CACHE BOOL "Enable strict TBB mode")
         FetchContent_MakeAvailable(tbb)
     endif()
 endif(OULY_USE_TBB)
@@ -62,6 +60,7 @@ add_library(
     "src/ouly/dsl/lite_yml.cpp"
     "src/ouly/dsl/microexpr.cpp"
     "src/ouly/scheduler/scheduler.cpp"
+    "src/ouly/scheduler/tbb_scheduler.cpp"
     "src/ouly/scheduler/event_types.cpp"
     "src/ouly/utility/string_utils.cpp"
 )
