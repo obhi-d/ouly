@@ -436,11 +436,10 @@ void scheduler::take_ownership() noexcept
 // NOLINTNEXTLINE
 void scheduler::finish_pending_tasks() noexcept
 {
-  constexpr uint32_t max_iterations  = 1000; // Prevent infinite loops
-  constexpr uint32_t yield_interval  = 10;   // Yield every N iterations
+  constexpr uint32_t yield_interval  = 10; // Yield every N iterations
   uint32_t           iteration_count = 0;
 
-  while (iteration_count < max_iterations)
+  while (true)
   {
     bool has_work = false;
 
@@ -484,6 +483,11 @@ void scheduler::finish_pending_tasks() noexcept
         }
         has_work = true;
       }
+    }
+
+    if (has_work)
+    {
+      busy_work(worker_id(0)); // Process local work first
     }
 
     // Check exclusive worker items efficiently

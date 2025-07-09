@@ -72,53 +72,131 @@ struct parallel_for_data
 };
 
 template <typename L>
-void launch_parallel_tasks(L& lambda, auto range, uint32_t work_count, uint32_t fixed_batch_size, uint32_t count,
+void launch_parallel_tasks(L& lambda, auto range, uint32_t work_count, uint32_t /*fixed_batch_size*/, uint32_t count,
                            worker_context const& this_context)
 {
   auto& scheduler = this_context.get_scheduler();
 
-  using iterator_t                                   = decltype(std::begin(range));
-  using size_type                                    = uint32_t;
-  constexpr bool                   is_range_executor = ouly::detail::RangeExcuter<L, iterator_t>;
-  parallel_for_data<iterator_t, L> pfor_instance(lambda, std::begin(range), work_count - 1);
-  size_type                        begin = 0;
-  for (size_type i = 1; i < work_count; ++i)
+  using iterator_t = decltype(std::begin(range));
+
+  // Optimized work distribution: ensure current thread gets meaningful work
+  // and reduce the number of parallel tasks to prevent over-subscription
+  const uint32_t available_workers    = scheduler.get_worker_count(this_context.get_workgroup());
+  const uint32_t effective_work_count = std::min(work_count, available_workers);
+  const uint32_t parallel_tasks       = effective_work_count > 1 ? effective_work_count - 1 : 0;
+
+  if (parallel_tasks == 0)
   {
-    auto next = std::min(begin + fixed_batch_size, count);
-    scheduler.submit(this_context.get_worker(), this_context.get_workgroup(),
-                     [instance = &pfor_instance, start = begin, end = next](worker_context const& wc)
-                     {
-                       (void)(end); // Avoid unused variable warning
-                       if constexpr (ouly::detail::RangeExcuter<L, iterator_t>)
-                       {
-                         instance->lambda_instance_.get()(instance->first_ + start, instance->first_ + end, wc);
-                       }
-                       else
-                       {
-                         if constexpr (std::is_integral_v<std::decay_t<decltype(instance->first_)>>)
-                         {
-                           instance->lambda_instance_.get()((instance->first_ + start), wc);
-                         }
-                         else
-                         {
-                           instance->lambda_instance_.get()(*(instance->first_ + start), wc);
-                         }
-                       }
-                       instance->counter_.count_down();
-                     });
-    begin = next;
+    execute_sequential(lambda, range, this_context);
+    return;
   }
 
-  // Work before wait
+  parallel_for_data<iterator_t, L> pfor_instance(lambda, std::begin(range), parallel_tasks);
+
+  // Better work distribution: ensure each task gets roughly equal work
+  uint32_t current_pos = submit_parallel_tasks(pfor_instance, effective_work_count, count, this_context);
+
+  // Current thread processes the remaining work
+  execute_remaining_work(lambda, range, current_pos, count, this_context);
+
+  // Cooperative wait: instead of blocking, yield to process other work
+  cooperative_wait(pfor_instance.counter_, this_context);
+}
+
+template <typename L>
+void execute_sequential(L& lambda, auto range, worker_context const& this_context)
+{
+  using iterator_t                 = decltype(std::begin(range));
+  constexpr bool is_range_executor = ouly::detail::RangeExcuter<L, iterator_t>;
+
+  if constexpr (is_range_executor)
   {
-    auto next = std::min(begin + fixed_batch_size, count);
-    if constexpr (is_range_executor)
+    lambda(std::begin(range), std::end(range), this_context);
+  }
+  else
+  {
+    for (auto it = std::begin(range), end = std::end(range); it != end; ++it)
     {
-      lambda(std::begin(range) + begin, std::begin(range) + next, this_context);
+      if constexpr (std::is_integral_v<std::decay_t<decltype(it)>>)
+      {
+        lambda(it, this_context);
+      }
+      else
+      {
+        lambda(*it, this_context);
+      }
+    }
+  }
+}
+
+template <typename L, typename Iterator>
+auto submit_parallel_tasks(parallel_for_data<Iterator, L>& pfor_instance, uint32_t effective_work_count, uint32_t count,
+                           worker_context const& this_context) -> uint32_t
+{
+  auto&          scheduler          = this_context.get_scheduler();
+  const uint32_t parallel_tasks     = effective_work_count - 1;
+  const uint32_t base_work_per_task = count / effective_work_count;
+  const uint32_t extra_work         = count % effective_work_count;
+
+  uint32_t current_pos = 0;
+  for (uint32_t i = 0; i < parallel_tasks; ++i)
+  {
+    // Give some tasks one extra element to handle remainder
+    const uint32_t current_task_work = base_work_per_task + (i < extra_work ? 1 : 0);
+    const uint32_t task_end          = current_pos + current_task_work;
+
+    scheduler.submit(this_context.get_worker(), this_context.get_workgroup(),
+                     create_task_lambda(pfor_instance, current_pos, task_end));
+    current_pos = task_end;
+  }
+  return current_pos;
+}
+
+template <typename L, typename Iterator>
+auto create_task_lambda(parallel_for_data<Iterator, L>& pfor_instance, uint32_t start, uint32_t end)
+{
+  return [instance = &pfor_instance, start, end](worker_context const& wc)
+  {
+    using iterator_t = Iterator;
+    if constexpr (ouly::detail::RangeExcuter<L, iterator_t>)
+    {
+      instance->lambda_instance_.get()(instance->first_ + start, instance->first_ + end, wc);
     }
     else
     {
-      for (auto it = std::begin(range) + begin, end = std::begin(range) + next; it != end; ++it)
+      for (auto pos = start; pos < end; ++pos)
+      {
+        if constexpr (std::is_integral_v<std::decay_t<decltype(instance->first_)>>)
+        {
+          instance->lambda_instance_.get()((instance->first_ + pos), wc);
+        }
+        else
+        {
+          instance->lambda_instance_.get()(*(instance->first_ + pos), wc);
+        }
+      }
+    }
+    instance->counter_.count_down();
+  };
+}
+
+template <typename L>
+void execute_remaining_work(L& lambda, auto range, uint32_t current_pos, uint32_t count,
+                            worker_context const& this_context)
+{
+  using iterator_t                 = decltype(std::begin(range));
+  constexpr bool is_range_executor = ouly::detail::RangeExcuter<L, iterator_t>;
+
+  const uint32_t remaining_work = count - current_pos;
+  if (remaining_work > 0)
+  {
+    if constexpr (is_range_executor)
+    {
+      lambda(std::begin(range) + current_pos, std::begin(range) + count, this_context);
+    }
+    else
+    {
+      for (auto it = std::begin(range) + current_pos, end = std::begin(range) + count; it != end; ++it)
       {
         if constexpr (std::is_integral_v<std::decay_t<decltype(it)>>)
         {
@@ -131,8 +209,19 @@ void launch_parallel_tasks(L& lambda, auto range, uint32_t work_count, uint32_t 
       }
     }
   }
+}
 
-  pfor_instance.counter_.wait();
+void cooperative_wait(std::latch& counter, worker_context const& this_context)
+{
+  auto& scheduler = this_context.get_scheduler();
+  while (!counter.try_wait())
+  {
+    // Try to do other work while waiting for parallel tasks to complete
+    scheduler.busy_work(this_context.get_worker());
+
+    // Brief pause to avoid spinning too aggressively
+    std::this_thread::yield();
+  }
 }
 
 template <typename L, typename FwIt, typename TaskTr = default_task_traits>
