@@ -490,14 +490,18 @@ void scheduler::finish_pending_tasks() noexcept
   synchronizer_ = std::make_shared<worker_synchronizer>(worker_count_);
   stop_         = true;
 
-  for (uint32_t thread = 1; thread < worker_count_; ++thread)
-  {
-    // Wake up each worker to finish their tasks
-    wake_up(worker_id(thread));
-  }
-
   synchronizer_->job_board_freeze_ack_.count_down();
-  synchronizer_->job_board_freeze_ack_.wait();
+  while (!synchronizer_->job_board_freeze_ack_.try_wait())
+  {
+    for (uint32_t thread = 1; thread < worker_count_; ++thread)
+    {
+      // Wake up each worker to finish their tasks
+      wake_up(worker_id(thread));
+    }
+
+    // Wait for all workers to acknowledge freeze
+    pause_exec();
+  }
 
   bool retry = true;
   while (retry)
