@@ -85,7 +85,7 @@ inline void scheduler::do_work(worker_id thread, ouly::detail::work_item& work) 
 void scheduler::busy_work(worker_id thread) noexcept
 {
   // Fast path: Check local work first
-  auto& lw = memory_block_.local_work_[thread.get_index()];
+  auto& lw = memory_block_.local_work_[thread.get_index()].work_item_;
   if (lw)
   {
     do_work(thread, lw);
@@ -117,7 +117,7 @@ void scheduler::run(worker_id thread)
   while (true)
   {
     {
-      auto& lw = memory_block_.local_work_[thread.get_index()];
+      auto& lw = memory_block_.local_work_[thread.get_index()].work_item_;
       if (lw)
       {
         do_work(thread, lw);
@@ -155,7 +155,7 @@ inline void scheduler::finalize_worker(worker_id thread) noexcept
   {
     retry = false;
     {
-      auto& lw = memory_block_.local_work_[thread.get_index()];
+      auto& lw = memory_block_.local_work_[thread.get_index()].work_item_;
       if (lw)
       {
         do_work(thread, lw);
@@ -405,7 +405,7 @@ void scheduler::wake_up(worker_id thread) noexcept
 
 void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_context)
 {
-  memory_block_.local_work_   = std::make_unique<ouly::detail::work_item[]>(worker_count_);
+  memory_block_.local_work_   = std::make_unique<local_work_buffer[]>(worker_count_);
   memory_block_.workers_      = std::make_unique<ouly::detail::worker[]>(worker_count_);
   memory_block_.group_ranges_ = std::make_unique<ouly::detail::group_range[]>(worker_count_);
   memory_block_.wake_data_    = std::make_unique<wake_data[]>(worker_count_);
@@ -636,7 +636,7 @@ void scheduler::submit([[maybe_unused]] worker_id src, workgroup_id dst, ouly::d
   {
     if (!memory_block_.wake_data_[i].status_.exchange(true, std::memory_order_acq_rel))
     {
-      memory_block_.local_work_[i] = work;
+      memory_block_.local_work_[i].work_item_ = std::move(work);
       memory_block_.wake_data_[i].event_.notify();
       return;
     }

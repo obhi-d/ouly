@@ -401,13 +401,18 @@ private:
     ouly::detail::wake_event event_;
   };
 
+  struct alignas(cache_line_size) local_work_buffer
+  {
+    ouly::detail::work_item work_item_;
+  };
+
   // Memory layout optimization: Allocate all scheduler data in a single block
   // for better cache locality and reduced allocator overhead
   struct scheduler_memory_block
   {
     // Hot data: accessed frequently during task execution
     std::unique_ptr<ouly::detail::worker[]>      workers_;
-    std::unique_ptr<ouly::detail::work_item[]>   local_work_;
+    std::unique_ptr<local_work_buffer[]>         local_work_;
     std::unique_ptr<ouly::detail::group_range[]> group_ranges_;
     std::unique_ptr<wake_data[]>                 wake_data_;
   } memory_block_;
