@@ -382,14 +382,19 @@ private:
   inline void do_work(worker_id /*thread*/, ouly::detail::work_item& /*work*/) noexcept;
   void        wake_up(worker_id /*thread*/) noexcept;
   void        run(worker_id /*thread*/);
+  void        finalize_worker(worker_id /*thread*/) noexcept;
   auto        get_work(worker_id /*thread*/) noexcept -> ouly::detail::work_item;
 
   auto work(worker_id /*thread*/) noexcept -> bool;
+
+  struct worker_synchronizer;
 
   // Scheduler state and configuration (cold data)
   scheduler_worker_entry entry_fn_;
   uint32_t               worker_count_ = 0;
   std::atomic_bool       stop_         = false;
+
+  std::shared_ptr<worker_synchronizer> synchronizer_ = nullptr;
 
   // Work groups - frequently accessed during work stealing
   std::vector<ouly::detail::workgroup> workgroups_;

@@ -130,10 +130,12 @@ public:
   {
     clear();
     free_chain(free_);
+    free_ = nullptr;
+    head_ = tail_ = nullptr;
   }
 
   template <typename... Args>
-  auto emplace_back(Args&&... args) noexcept -> auto&
+  auto emplace_back(Args&&... args) -> auto&
   {
     if (back_ >= pool_size || !tail_)
     {
@@ -191,7 +193,7 @@ public:
        });
     }
 
-    if (tail_)
+    if (!empty())
     {
       tail_->next_ = free_;
       free_        = head_;
@@ -271,8 +273,9 @@ private:
     head_    = head_->next_;
     h->next_ = free_;
     free_    = h;
-    if (head_ == nullptr)
+    if (h == tail_)
     {
+      head_  = nullptr;
       tail_  = nullptr;
       front_ = 0;
       back_  = 0;

@@ -57,6 +57,16 @@ auto worker_id::this_worker::get_id() noexcept -> worker_id const&
   return g_worker_id;
 }
 
+struct scheduler::worker_synchronizer
+{
+  std::latch job_board_freeze_ack_;
+  std::latch job_board_exhausted_ack_;
+
+  worker_synchronizer(ptrdiff_t worker_count) noexcept
+      : job_board_freeze_ack_(worker_count), job_board_exhausted_ack_(worker_count)
+  {}
+};
+
 scheduler::~scheduler() noexcept
 {
   if (!stop_.load())
@@ -129,7 +139,45 @@ void scheduler::run(worker_id thread)
     memory_block_.wake_data_[thread.get_index()].event_.wait();
   }
 
-  memory_block_.workers_[thread.get_index()].quitting_.store(true);
+  if (synchronizer_ != nullptr)
+  {
+    synchronizer_->job_board_freeze_ack_.count_down();
+    synchronizer_->job_board_freeze_ack_.wait();
+  }
+
+  finalize_worker(thread);
+}
+
+inline void scheduler::finalize_worker(worker_id thread) noexcept
+{
+  bool retry = true;
+  while (retry)
+  {
+    retry = false;
+    {
+      auto& lw = memory_block_.local_work_[thread.get_index()];
+      if (lw)
+      {
+        do_work(thread, lw);
+        lw    = nullptr;
+        retry = true; // Retry if local work was executed
+      }
+    }
+
+    while (work(thread))
+    {
+      retry = true; // Retry if work was executed
+    }
+  }
+
+  if (synchronizer_ != nullptr)
+  {
+    synchronizer_->job_board_exhausted_ack_.count_down();
+    synchronizer_->job_board_exhausted_ack_.wait();
+  }
+
+  g_worker    = nullptr;
+  g_worker_id = {};
 }
 
 inline auto scheduler::work(worker_id thread) noexcept -> bool
@@ -146,7 +194,7 @@ inline auto scheduler::work(worker_id thread) noexcept -> bool
   return true;
 }
 
-namespace
+namespace detail
 {
 // Adaptive work stealing strategy to reduce contention
 class adaptive_work_stealer
@@ -205,7 +253,7 @@ thread_local uint32_t                              adaptive_work_stealer::recent
 thread_local uint32_t                              adaptive_work_stealer::success_streak  = 0;
 thread_local std::chrono::steady_clock::time_point adaptive_work_stealer::last_success =
  std::chrono::steady_clock::now();
-} // namespace
+} // namespace detail
 
 // NOLINTNEXTLINE
 auto scheduler::get_work(worker_id thread) noexcept -> ouly::detail::work_item
@@ -243,7 +291,7 @@ auto scheduler::get_work(worker_id thread) noexcept -> ouly::detail::work_item
         {
           auto item = my_queue.second.pop_front_unsafe();
           my_queue.first.unlock();
-          adaptive_work_stealer::record_success();
+          detail::adaptive_work_stealer::record_success();
           return item;
         }
         my_queue.first.unlock();
@@ -261,7 +309,7 @@ auto scheduler::get_work(worker_id thread) noexcept -> ouly::detail::work_item
       {
         auto item = work_list.second.pop_front_unsafe();
         work_list.first.unlock();
-        adaptive_work_stealer::record_success();
+        detail::adaptive_work_stealer::record_success();
         return item;
       }
       work_list.first.unlock();
@@ -313,7 +361,7 @@ auto scheduler::get_work(worker_id thread) noexcept -> ouly::detail::work_item
           // Steal from the front (FIFO) for task ordering consistency
           auto item = victim_queue.second.pop_front_unsafe();
           victim_queue.first.unlock();
-          adaptive_work_stealer::record_success();
+          detail::adaptive_work_stealer::record_success();
           return item;
         }
         victim_queue.first.unlock();
@@ -323,9 +371,9 @@ auto scheduler::get_work(worker_id thread) noexcept -> ouly::detail::work_item
       if (steal_attempts > 2)
       {
         // Use adaptive delay instead of fixed exponential backoff
-        uint32_t adaptive_delay = adaptive_work_stealer::get_adaptive_delay();
+        uint32_t adaptive_delay = detail::adaptive_work_stealer::get_adaptive_delay();
 
-        if (adaptive_work_stealer::should_yield())
+        if (detail::adaptive_work_stealer::should_yield())
         {
           std::this_thread::yield();
         }
@@ -337,7 +385,7 @@ auto scheduler::get_work(worker_id thread) noexcept -> ouly::detail::work_item
           }
         }
 
-        adaptive_work_stealer::record_failure();
+        detail::adaptive_work_stealer::record_failure();
       }
     }
   }
@@ -439,8 +487,22 @@ void scheduler::finish_pending_tasks() noexcept
   constexpr uint32_t yield_interval  = 10; // Yield every N iterations
   uint32_t           iteration_count = 0;
 
-  while (true)
+  synchronizer_ = std::make_shared<worker_synchronizer>(worker_count_);
+  stop_         = true;
+
+  for (uint32_t thread = 1; thread < worker_count_; ++thread)
   {
+    // Wake up each worker to finish their tasks
+    wake_up(worker_id(thread));
+  }
+
+  synchronizer_->job_board_freeze_ack_.count_down();
+  synchronizer_->job_board_freeze_ack_.wait();
+
+  bool retry = true;
+  while (retry)
+  {
+    retry         = false;
     bool has_work = false;
 
     // Check workgroup queues efficiently
@@ -462,12 +524,14 @@ void scheduler::finish_pending_tasks() noexcept
 
           if (queue_has_work)
           {
+            retry          = true; // Found work in this group, retry the loop
             group_has_work = true;
             break; // Found work in this group, no need to check other queues
           }
         }
         else
         {
+          retry = true;
           // If queue is locked, assume it has work (conservative approach)
           group_has_work = true;
           break;
@@ -511,6 +575,7 @@ void scheduler::finish_pending_tasks() noexcept
       {
         wake_up(worker_id(w));
         has_work = true;
+        retry    = true; // Retry if we found work in any worker queue
       }
     }
 
@@ -527,18 +592,16 @@ void scheduler::finish_pending_tasks() noexcept
       std::this_thread::yield();
     }
   }
+
+  synchronizer_->job_board_exhausted_ack_.count_down();
+  synchronizer_->job_board_exhausted_ack_.wait();
 }
 
 void scheduler::end_execution()
 {
   finish_pending_tasks();
-  stop_ = true;
   for (uint32_t thread = 1; thread < worker_count_; ++thread)
   {
-    while (!memory_block_.workers_[thread].quitting_.load())
-    {
-      wake_up(worker_id(thread));
-    }
     threads_[thread - 1].join();
   }
   threads_.clear();
@@ -622,8 +685,10 @@ void scheduler::submit([[maybe_unused]] worker_id src, workgroup_id dst, ouly::d
   // Fallback: force submission to the first queue if all retries failed
   // This ensures work is never lost, though it may cause temporary contention
   auto& fallback_queue = wg.work_queues_[0];
-  auto  lck            = std::scoped_lock(fallback_queue.first);
-  fallback_queue.second.emplace_back(std::move(work));
+  {
+    auto lck = std::scoped_lock(fallback_queue.first);
+    fallback_queue.second.emplace_back(std::move(work));
+  }
 
   auto thread_idx = wg.start_thread_idx_;
   if (!memory_block_.wake_data_[thread_idx].status_.exchange(true, std::memory_order_acq_rel))

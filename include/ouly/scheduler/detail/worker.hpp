@@ -83,6 +83,7 @@ struct alignas(detail::cache_line_size) workgroup
         work_queues_[i].~async_work_queue();
       }
       ::operator delete[](work_queues_, std::align_val_t{detail::cache_line_size});
+      work_queues_ = nullptr; // Prevent dangling pointer
     }
   }
 
@@ -171,9 +172,6 @@ struct alignas(detail::cache_line_size) worker
   // Context per work group - accessed during work execution
   // Pointer is stable, actual contexts allocated separately for better locality
   std::unique_ptr<worker_context[]> contexts_;
-
-  // Cold data: Infrequently accessed status
-  std::atomic_bool quitting_ = false;
 
   worker_id id_ = worker_id{0};
 };
