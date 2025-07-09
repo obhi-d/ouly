@@ -11,13 +11,7 @@
 #endif
 
 #ifndef OULY_CACHE_LINE_SIZE
-#if defined(__x86_64__) || defined(__i386__)
-#define OULY_CACHE_LINE_SIZE 64
-#elif defined(__aarch64__) || defined(__arm__)
-#define OULY_CACHE_LINE_SIZE 64
-#elif defined(__riscv)
-#define OULY_CACHE_LINE_SIZE 64
+constexpr unsigned int ouly_cache_line_size = 64;
 #else
-#define OULY_CACHE_LINE_SIZE 64 // Default fallback
-#endif
+constexpr unsigned int ouly_cache_line_size = OULY_CACHE_LINE_SIZE;
 #endif

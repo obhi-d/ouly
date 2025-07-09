@@ -10,7 +10,7 @@
 namespace ouly::detail
 {
 
-static constexpr std::size_t cache_line_size = OULY_CACHE_LINE_SIZE; /*std::hardware_destructive_interference_size*/
+static constexpr std::size_t cache_line_size = ouly_cache_line_size; /*std::hardware_destructive_interference_size*/
 
 // Simple padding structure to prevent false sharing
 template <typename T>
