@@ -389,15 +389,8 @@ private:
 
   struct worker_synchronizer;
 
-  // Scheduler state and configuration (cold data)
-  scheduler_worker_entry entry_fn_;
-  uint32_t               worker_count_ = 0;
-  std::atomic_bool       stop_         = false;
-
-  std::shared_ptr<worker_synchronizer> synchronizer_ = nullptr;
-
-  // Work groups - frequently accessed during work stealing
-  std::vector<ouly::detail::workgroup> workgroups_;
+  uint32_t         worker_count_ = 0;
+  std::atomic_bool stop_         = false;
 
   static constexpr std::size_t cache_line_size = detail::cache_line_size;
 
@@ -422,7 +415,17 @@ private:
     alignas(cache_line_size) std::unique_ptr<wake_data[]> wake_data_;
   } memory_block_;
 
+  // TODO: Possibly optimize the workgroup data structure by flattening the false sharing data,
+  // and relying on fixed list instead of a vector.
+  // Work groups - frequently accessed during work stealing
+  std::vector<ouly::detail::workgroup> workgroups_;
+
+  std::shared_ptr<worker_synchronizer> synchronizer_ = nullptr;
+
   std::vector<std::thread> threads_;
+
+  // Scheduler state and configuration (cold data)
+  scheduler_worker_entry entry_fn_;
 };
 
 /**
