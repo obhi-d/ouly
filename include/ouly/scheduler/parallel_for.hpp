@@ -211,7 +211,7 @@ void execute_remaining_work(L& lambda, auto range, uint32_t current_pos, uint32_
   }
 }
 
-void cooperative_wait(std::latch& counter, worker_context const& this_context)
+inline void cooperative_wait(std::latch& counter, worker_context const& this_context)
 {
   auto& scheduler = this_context.get_scheduler();
   while (!counter.try_wait())
