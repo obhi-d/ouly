@@ -57,6 +57,7 @@ struct alignas(cache_line_size) cache_optimized_data
 
     padded_layout(T&& val)
       requires(std::move_constructible<T>)
+
         : value_(std::move(val))
     {}
   };

@@ -395,26 +395,15 @@ private:
   static constexpr std::size_t cache_line_size = detail::cache_line_size;
 
   // Cache-aligned wake data to prevent false sharing
-  struct alignas(cache_line_size) wake_data
+  struct wake_data
   {
     std::atomic_bool         status_{false};
     ouly::detail::wake_event event_;
-
-    
-    static constexpr size_t member_size  = sizeof(std::atomic_bool) + sizeof(ouly::detail::wake_event);
-    static constexpr size_t padding_size = detail::cache_line_size - member_size;
-
-    std::array<std::byte, padding_size> padding_{};
   };
 
   struct local_work_buffer
   {
     ouly::detail::work_item work_item_;
-
-    static constexpr size_t member_size  = sizeof(ouly::detail::work_item);
-    static constexpr size_t padding_size = detail::cache_line_size - member_size;
-
-    std::array<std::byte, padding_size> padding_{};
   };
   
   using aligned_workgroup         = detail::cache_optimized_data<ouly::detail::workgroup>;
