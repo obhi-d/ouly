@@ -47,9 +47,9 @@ public:
   template <typename L>
   void for_each_entry(L&& lambda) const
   {
-    for (auto const& value : value.get())
+    for (auto const& entry : value.get())
     {
-      auto stream = Stream(owner, value);
+      auto stream = Stream(owner, entry);
       lambda(stream);
     }
   }

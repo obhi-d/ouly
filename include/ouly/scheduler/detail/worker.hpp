@@ -36,8 +36,11 @@ using work_queue       = ouly::basic_queue<work_item, work_queue_traits>;
 using async_work_queue = std::pair<ouly::spin_lock, work_queue>;
 
 // Optimized workgroup structure with separated hot and cold data
-struct alignas(detail::cache_line_size) workgroup
+struct workgroup
 {
+  // Atomic push offset gets its own cache line to prevent false sharing
+  std::atomic<uint32_t> push_offset_{0U};
+
   // Hot data cache line 1: Most frequently accessed during work stealing and submission
   uint32_t thread_count_     = 0; // Read frequently during work stealing
   uint32_t start_thread_idx_ = 0; // Read frequently during queue indexing
@@ -47,9 +50,6 @@ struct alignas(detail::cache_line_size) workgroup
 
   // Cold data: Configuration set once during initialization
   uint32_t priority_ = 0;
-
-  // Atomic push offset gets its own cache line to prevent false sharing
-  cache_optimized_data<std::atomic<uint32_t>> push_offset_{0U};
 
   auto create_group(uint32_t start, uint32_t count, uint32_t priority) noexcept -> uint32_t
   {
@@ -69,7 +69,7 @@ struct alignas(detail::cache_line_size) workgroup
     thread_count_     = count;
     start_thread_idx_ = start;
     this->priority_   = priority;
-    push_offset_.get().store(0, std::memory_order_relaxed);
+    push_offset_.store(0, std::memory_order_relaxed);
     return start + count;
   }
 
@@ -89,8 +89,9 @@ struct alignas(detail::cache_line_size) workgroup
 
   // Move semantics for workgroup management
   workgroup(workgroup&& other) noexcept
-      : thread_count_(other.thread_count_), start_thread_idx_(other.start_thread_idx_),
-        work_queues_(other.work_queues_), priority_(other.priority_), push_offset_(other.push_offset_.get().load())
+      : push_offset_(other.push_offset_.load()), thread_count_(other.thread_count_),
+        start_thread_idx_(other.start_thread_idx_),
+        work_queues_(other.work_queues_), priority_(other.priority_)
   {
     other.work_queues_  = nullptr;
     other.thread_count_ = 0;
@@ -111,7 +112,7 @@ struct alignas(detail::cache_line_size) workgroup
 
       thread_count_     = other.thread_count_;
       start_thread_idx_ = other.start_thread_idx_;
-      push_offset_.get().store(other.push_offset_.get().load());
+      push_offset_.store(other.push_offset_.load());
       work_queues_ = other.work_queues_;
       priority_    = other.priority_;
 
@@ -162,8 +163,9 @@ struct group_range
   }
 };
 
+
 // Cache-aligned worker structure optimized for memory access patterns
-struct alignas(detail::cache_line_size) worker
+struct worker
 {
   // Exclusive work items queue - frequently accessed during task submission/execution
   // Aligned to prevent false sharing with worker ID

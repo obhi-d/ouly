@@ -150,7 +150,6 @@ public:
 
   void validate_integrity(block_bank const& blocks) const
   {
-    size_type sz = 0;
     for (uint32_t i = 0, en = (uint32_t)free_list_.size(); i < en; ++i)
     {
       auto fn = free_list_[i];

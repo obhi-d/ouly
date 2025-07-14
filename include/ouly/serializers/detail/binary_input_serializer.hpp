@@ -139,16 +139,18 @@ public:
       {
         get().skip((count - std::size(obj)) * sizeof(typename Class::value_type));
       }
-      return;
     }
-    else if constexpr (!ouly::detail::ContainerCanAppendValue<Class>)
+    else 
     {
-      ouly::detail::resize(obj, count);
-    }
+      if constexpr (!ouly::detail::ContainerCanAppendValue<Class>)
+      {
+        ouly::detail::resize(obj, count);
+      }
 
-    for (size_type i = 0; i < count; ++i)
-    {
-      fn(*this);
+      for (size_type i = 0; i < count; ++i)
+      {
+        fn(*this);
+      }
     }
   }
 

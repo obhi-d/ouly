@@ -116,7 +116,10 @@ public:
     {
       return data_.min_offset_;
     }
-    return 0;
+    else
+    {
+      return 0;
+    }
   }
 
   [[nodiscard]] auto empty() const noexcept -> bool

@@ -614,7 +614,7 @@ public:
     mapping->post_init_ = [](in_context_base* mapping_base, parser_state* /* parser_ptr */)
     {
       auto object              = static_cast<in_context_impl<std::string_view, Config>*>(mapping_base);
-      object->parent_->xvalue_ = ouly::index_transform<class_type>::to_index(object->get());
+      object->parent_->xvalue_ = static_cast<uint32_t>(ouly::index_transform<class_type>::to_index(object->get()));
     };
     return mapping;
   }

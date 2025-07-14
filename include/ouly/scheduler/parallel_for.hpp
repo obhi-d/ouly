@@ -242,7 +242,7 @@ void parallel_for(L lambda, FwIt range, worker_context const& this_context, Task
     {
       return count;
     }
-    if (traits::fixed_batch_size)
+    if constexpr (traits::fixed_batch_size > 0)
     {
       return (count + traits::fixed_batch_size - 1) / traits::fixed_batch_size;
     }

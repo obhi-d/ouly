@@ -326,7 +326,7 @@ private:
   static auto convert_to(StringType const& sv) noexcept -> std::optional<V>
   {
     V vector;
-    using value_type = typename V::value_type;
+    using v_value_type = typename V::value_type;
     auto start       = sv.find_first_of('[');
     auto end         = sv.find_first_of(']');
     if (start != sv.npos && end != sv.npos)
@@ -339,7 +339,7 @@ private:
         {
           break;
         }
-        auto val = convert_to<value_type>(sv.substr(start, word_end - start));
+        auto val = convert_to<v_value_type>(sv.substr(start, word_end - start));
         if (!val)
         {
           return {};

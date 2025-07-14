@@ -488,7 +488,7 @@ public:
     size_type sz = 0;
     for (auto it = first; it != end; ++it)
     {
-      sz += it->items_.size();
+      sz += static_cast<size_type>(it->items_.size());
     }
 
     items_.reserve(sz);
@@ -756,12 +756,12 @@ public:
 
   auto view() const noexcept
   {
-    return readonly_view(items_.data(), items_.size());
+    return readonly_view(items_.data(), static_cast<size_type>(items_.size()));
   }
 
   auto view() noexcept
   {
-    return readwrite_view(items_.data(), items_.size());
+    return readwrite_view(items_.data(), static_cast<size_type>(items_.size()));
   }
 
 private:

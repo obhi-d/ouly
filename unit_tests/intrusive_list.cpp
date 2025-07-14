@@ -186,11 +186,11 @@ TEMPLATE_TEST_CASE("Validate intrusive_list append_front", "[intrusive_list][app
   {
     il2.append_front(std::move(il));
 
-    auto b = arr.rbegin();
+    auto rbeg = arr.rbegin();
     for (auto& i : il2)
     {
-      REQUIRE(&i == &(*b));
-      b++;
+      REQUIRE(&i == &(*rbeg));
+      rbeg++;
     }
     REQUIRE(il2.size() == 4);
     REQUIRE(il.size() == 0);
@@ -204,13 +204,13 @@ TEMPLATE_TEST_CASE("Validate intrusive_list append_front", "[intrusive_list][app
 
   il2.append_front(std::move(il));
   auto i = il2.begin();
-  for (auto b = arr2.rbegin(), e = arr2.rend(); b != e; ++b, ++i)
+  for (auto rbeg = arr2.rbegin(), e = arr2.rend(); rbeg != e; ++rbeg, ++i)
   {
-    REQUIRE(&(*i) == &(*b));
+    REQUIRE(&(*i) == &(*rbeg));
   }
-  for (auto b = arr.rbegin(), e = arr.rend(); b != e; ++b, ++i)
+  for (auto rbeg = arr.rbegin(), e = arr.rend(); rbeg != e; ++rbeg, ++i)
   {
-    REQUIRE(&(*i) == &(*b));
+    REQUIRE(&(*i) == &(*rbeg));
   }
   REQUIRE(il2.size() == 8);
 }
@@ -240,11 +240,11 @@ TEMPLATE_TEST_CASE("Validate intrusive_list append_back", "[intrusive_list][appe
   {
     il2.append_back(std::move(il));
 
-    auto b = arr.rbegin();
+    auto rbeg = arr.rbegin();
     for (auto& i : il2)
     {
-      REQUIRE(&i == &(*b));
-      b++;
+      REQUIRE(&i == &(*rbeg));
+      rbeg++;
     }
     REQUIRE(il2.size() == 4);
     REQUIRE(il.size() == 0);
@@ -258,13 +258,13 @@ TEMPLATE_TEST_CASE("Validate intrusive_list append_back", "[intrusive_list][appe
 
   il2.append_back(std::move(il));
   auto i = il2.begin();
-  for (auto b = arr.rbegin(), e = arr.rend(); b != e; ++b, ++i)
+  for (auto rbeg = arr.rbegin(), e = arr.rend(); rbeg != e; ++rbeg, ++i)
   {
-    REQUIRE(&(*i) == &(*b));
+    REQUIRE(&(*i) == &(*rbeg));
   }
-  for (auto b = arr2.rbegin(), e = arr2.rend(); b != e; ++b, ++i)
+  for (auto rbeg = arr2.rbegin(), e = arr2.rend(); rbeg != e; ++rbeg, ++i)
   {
-    REQUIRE(&(*i) == &(*b));
+    REQUIRE(&(*i) == &(*rbeg));
   }
   REQUIRE(il2.size() == 8);
 }

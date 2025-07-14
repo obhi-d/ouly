@@ -134,10 +134,11 @@ public:
   template <CoalescingMemoryManager M, typename Alignment = ouly::alignment<>, typename Dedicated = std::false_type>
   auto allocate(size_type size, M& manager, Alignment alignment = {}, Dedicated /*unused*/ = {}) -> ca_allocation
   {
-    [[maybe_unused]] auto measure = statistics::report_allocate(size);
-    auto                  vsize   = alignment ? size + static_cast<size_type>(alignment) : size;
+    [[maybe_unused]] auto measure      = statistics::report_allocate(size);
+    auto                  vsize        = alignment ? size + static_cast<size_type>(alignment) : size;
+    bool                  is_dedicated = Dedicated::value || vsize >= arena_size_;
 
-    if (Dedicated::value || vsize >= arena_size_)
+    if (is_dedicated)
     {
       auto [arena, block] = add_arena_filled(vsize, manager);
       return ca_allocation{.offset_ = 0, .id_ = block, .arena_ = arena};

@@ -316,7 +316,7 @@ void visit_variant(Class& obj, Visitor& visitor)
         visit(variant_index_str, field_visitor);
         variant_index = static_cast<uint8_t>(index_transform<type>::to_index(variant_index_str));
       }
-      catch (visitor_error const& e)
+      catch ([[maybe_unused]] visitor_error const& e)
       {
         visit(variant_index, field_visitor);
       }

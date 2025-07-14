@@ -346,7 +346,7 @@ public:
    */
   [[nodiscard]] auto get_worker_count(workgroup_id g) const noexcept -> uint32_t
   {
-    return workgroups_[g.get_index()].thread_count_;
+    return workgroups_[g.get_index()].get().thread_count_;
   }
 
   /**
@@ -354,7 +354,7 @@ public:
    */
   [[nodiscard]] auto get_worker_start_idx(workgroup_id g) const noexcept -> uint32_t
   {
-    return workgroups_[g.get_index()].start_thread_idx_;
+    return workgroups_[g.get_index()].get().start_thread_idx_;
   }
 
   /**
@@ -362,12 +362,12 @@ public:
    */
   [[nodiscard]] auto get_logical_divisor(workgroup_id g) const noexcept -> uint32_t
   {
-    return workgroups_[g.get_index()].thread_count_ * work_scale;
+    return workgroups_[g.get_index()].get().thread_count_ * work_scale;
   }
 
   [[nodiscard]] auto get_context(worker_id worker, workgroup_id group) const -> worker_context const&
   {
-    return memory_block_.workers_[worker.get_index()].contexts_[group.get_index()];
+    return memory_block_.workers_[worker.get_index()].get().contexts_[group.get_index()];
   }
 
   /**
@@ -399,28 +399,44 @@ private:
   {
     std::atomic_bool         status_{false};
     ouly::detail::wake_event event_;
+
+    
+    static constexpr size_t member_size  = sizeof(std::atomic_bool) + sizeof(ouly::detail::wake_event);
+    static constexpr size_t padding_size = detail::cache_line_size - member_size;
+
+    std::array<std::byte, padding_size> padding_{};
   };
 
-  struct alignas(cache_line_size) local_work_buffer
+  struct local_work_buffer
   {
     ouly::detail::work_item work_item_;
+
+    static constexpr size_t member_size  = sizeof(ouly::detail::work_item);
+    static constexpr size_t padding_size = detail::cache_line_size - member_size;
+
+    std::array<std::byte, padding_size> padding_{};
   };
+  
+  using aligned_workgroup         = detail::cache_optimized_data<ouly::detail::workgroup>;
+  using aligned_worker            = detail::cache_optimized_data<ouly::detail::worker>;
+  using aligned_local_work_buffer = detail::cache_optimized_data<local_work_buffer>;
+  using aligned_wake_data         = detail::cache_optimized_data<wake_data>;
 
   // Memory layout optimization: Allocate all scheduler data in a single block
   // for better cache locality and reduced allocator overhead
   struct scheduler_memory_block
   {
     // Hot data: accessed frequently during task execution
-    std::unique_ptr<ouly::detail::worker[]>      workers_;
-    std::unique_ptr<local_work_buffer[]>         local_work_;
+    std::unique_ptr<aligned_worker[]>            workers_;
+    std::unique_ptr<aligned_local_work_buffer[]> local_work_;
     std::unique_ptr<ouly::detail::group_range[]> group_ranges_;
-    std::unique_ptr<wake_data[]>                 wake_data_;
+    std::unique_ptr<aligned_wake_data[]>         wake_data_;
   } memory_block_;
 
   // TODO: Possibly optimize the workgroup data structure by flattening the false sharing data,
   // and relying on fixed list instead of a vector.
   // Work groups - frequently accessed during work stealing
-  std::vector<ouly::detail::workgroup> workgroups_;
+  std::vector<aligned_workgroup> workgroups_;
 
   std::shared_ptr<worker_synchronizer> synchronizer_ = nullptr;
 

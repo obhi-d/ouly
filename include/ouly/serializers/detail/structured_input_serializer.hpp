@@ -14,6 +14,7 @@
 #include "ouly/utility/detail/concepts.hpp"
 
 #include "ouly/utility/user_config.hpp"
+#include <optional>
 
 namespace ouly::detail
 {
@@ -120,7 +121,7 @@ public:
          fn(visitor);
        });
     }
-    catch (visitor_error const& e)
+    catch ([[maybe_unused]] visitor_error const& e)
     {
       obj = {};
       throw;
@@ -170,7 +171,7 @@ public:
     {
       throw visitor_error(visitor_error::invalid_value);
     }
-    obj = *value;
+    obj = static_cast<Class>(*value);
   }
 
   [[nodiscard]] auto is_null() -> bool

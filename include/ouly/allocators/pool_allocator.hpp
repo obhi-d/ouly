@@ -67,22 +67,28 @@ public:
   [[nodiscard]] auto allocate(size_type size_value, Alignment alignment = {}) -> address
   {
     constexpr auto alignment_value = (size_t)alignment;
-    auto           fixup           = alignment_value - 1;
-    if (alignment_value && ((k_atom_size_ < alignment_value) || (k_atom_size_ & fixup)))
+    constexpr auto fixup           = alignment_value - 1;
+    if constexpr (alignment_value)
     {
-      size_value += alignment_value + 4;
+      if ((k_atom_size_ < alignment_value) || (k_atom_size_ & fixup))
+      {
+        size_value += alignment_value + 4;
+      }
     }
 
     size_type i_count = (size_value + k_atom_size_ - 1) / k_atom_size_;
 
     if constexpr (ouly::detail::HasComputeStats<Config>)
     {
-      if (alignment_value && ((k_atom_size_ < alignment_value) || (k_atom_size_ & fixup)))
+      if constexpr (alignment_value)
       {
-        // Account for the missing atoms
-        auto      real_size = size_value - alignment_value - 4;
-        size_type count     = (real_size + k_atom_size_ - 1) / k_atom_size_;
-        this->statistics::pad_atoms(static_cast<std::uint32_t>(i_count - count));
+        if ((k_atom_size_ < alignment_value) || (k_atom_size_ & fixup))
+        {
+          // Account for the missing atoms
+          auto      real_size = size_value - alignment_value - 4;
+          size_type count     = (real_size + k_atom_size_ - 1) / k_atom_size_;
+          this->statistics::pad_atoms(static_cast<std::uint32_t>(i_count - count));
+        }
       }
     }
 
@@ -103,15 +109,18 @@ public:
       ret_value = consume(i_count);
     }
 
-    if (alignment_value && ((k_atom_size_ < alignment_value) || (k_atom_size_ & fixup)))
+    if constexpr (alignment_value)
     {
-      // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-      auto pointer = reinterpret_cast<std::uintptr_t>(ret_value);
-      auto ret     = ((pointer + 4 + static_cast<std::uintptr_t>(fixup)) & ~static_cast<std::uintptr_t>(fixup));
-      // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast, performance-no-int-to-ptr)
-      *(reinterpret_cast<std::uint32_t*>(ret) - 1) = static_cast<std::uint32_t>(ret - pointer);
-      // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-      return reinterpret_cast<address>(ret);
+      if ((k_atom_size_ < alignment_value) || (k_atom_size_ & fixup))
+      {
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+        auto pointer = reinterpret_cast<std::uintptr_t>(ret_value);
+        auto ret     = ((pointer + 4 + static_cast<std::uintptr_t>(fixup)) & ~static_cast<std::uintptr_t>(fixup));
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast, performance-no-int-to-ptr)
+        *(reinterpret_cast<std::uint32_t*>(ret) - 1) = static_cast<std::uint32_t>(ret - pointer);
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+        return reinterpret_cast<address>(ret);
+      }
     }
     return ret_value;
   }
@@ -120,22 +129,25 @@ public:
   void deallocate(address i_ptr, size_type size_value, Alignment alignment = {})
   {
     constexpr auto alignment_value = (size_t)alignment;
-    auto           fixup           = alignment_value - 1;
+    constexpr auto           fixup           = alignment_value - 1;
     address        orig_ptr        = i_ptr;
-    if (alignment_value && ((k_atom_size_ < alignment_value) || (k_atom_size_ & fixup)))
+    if constexpr (alignment_value)
     {
-      size_value += alignment_value + 4;
-      // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-      std::uint32_t off_by = *(reinterpret_cast<std::uint32_t*>(i_ptr) - 1);
-      // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-      i_ptr = reinterpret_cast<address>(reinterpret_cast<std::uint8_t*>(i_ptr) - off_by);
+      if ((k_atom_size_ < alignment_value) || (k_atom_size_ & fixup))
+      {
+        size_value += alignment_value + 4;
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+        std::uint32_t off_by = *(reinterpret_cast<std::uint32_t*>(i_ptr) - 1);
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+        i_ptr = reinterpret_cast<address>(reinterpret_cast<std::uint8_t*>(i_ptr) - off_by);
+      }
     }
 
     size_type i_count = (size_value + k_atom_size_ - 1) / k_atom_size_;
 
-    if constexpr (ouly::detail::HasComputeStats<Config>)
+    if constexpr (ouly::detail::HasComputeStats<Config> && alignment_value)
     {
-      if (alignment_value && ((k_atom_size_ < alignment_value) || (k_atom_size_ & fixup)))
+      if ((k_atom_size_ < alignment_value) || (k_atom_size_ & fixup))
       {
         // Account for the missing atoms
         auto      real_size = size_value - alignment_value - 4;
@@ -498,7 +510,10 @@ private:
     {
       return this->statistics::padding_atoms_count();
     }
-    return 0;
+    else
+    {
+      return 0;
+    }
   }
 
   [[nodiscard]] auto get_total_arena_count() const -> std::uint32_t

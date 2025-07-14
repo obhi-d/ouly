@@ -45,9 +45,9 @@ TEST_CASE("scheduler: Construction")
       {
         for (auto v : r)
         {
-          auto r = std::find(result.begin(), result.end(), v);
-          if (r != result.end())
-            result.erase(r);
+          auto res = std::find(result.begin(), result.end(), v);
+          if (res != result.end())
+            result.erase(res);
         }
       }
       return result;
@@ -297,15 +297,17 @@ TEST_CASE("scheduler: Memory Layout Optimization Tests")
   SECTION("Cache Line Alignment Verification")
   {
     // Verify that critical structures are properly cache-aligned
-    REQUIRE(alignof(ouly::detail::workgroup) == std::hardware_destructive_interference_size);
-    REQUIRE(alignof(ouly::detail::worker) == std::hardware_destructive_interference_size);
+    REQUIRE(alignof(ouly::detail::cache_optimized_data<ouly::detail::workgroup>) ==
+            std::hardware_destructive_interference_size);
+    REQUIRE(alignof(ouly::detail::cache_optimized_data<ouly::detail::worker>) ==
+            std::hardware_destructive_interference_size);
 
     // Verify workgroup structure layout
-    ouly::detail::workgroup wg;
+    ouly::detail::cache_optimized_data<ouly::detail::workgroup> wg;
     REQUIRE(sizeof(wg) >= std::hardware_destructive_interference_size);
 
     // Verify worker structure layout
-    ouly::detail::worker worker;
+    ouly::detail::cache_optimized_data<ouly::detail::worker> worker;
     REQUIRE(sizeof(worker) >= std::hardware_destructive_interference_size);
   }
 
@@ -844,7 +846,7 @@ TEST_CASE("scheduler: Advanced Work Stealing and Distribution")
     int total_tasks = 0;
     for (auto& orders : data.task_orders)
     {
-      total_tasks += orders.size();
+      total_tasks += static_cast<int>(orders.size());
     }
     REQUIRE(total_tasks == ordered_tasks);
 

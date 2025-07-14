@@ -983,7 +983,7 @@ private:
 
   constexpr auto assign_move(small_vector& other, std::false_type /*unused*/) -> small_vector&
   {
-    if (allocator_is_always_equal::value ||
+    if constexpr (allocator_is_always_equal::value ||
         static_cast<const allocator_type&>(other) == static_cast<const allocator_type&>(*this))
     {
       clear();

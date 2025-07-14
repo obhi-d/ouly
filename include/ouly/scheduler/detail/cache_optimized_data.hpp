@@ -16,8 +16,52 @@ static constexpr std::size_t cache_line_size = ouly_cache_line_size; /*std::hard
 template <typename T>
 struct alignas(cache_line_size) cache_optimized_data
 {
-  T         value_;
-  std::byte padding_[cache_line_size - sizeof(T)] = {};
+  struct plain_layout
+  {
+    T value_ = {};
+
+    template <typename... Args>
+    plain_layout(Args&&... args)
+      requires(std::constructible_from<T, Args...>)
+        : value_(std::forward<Args>(args)...)
+    {}
+
+    plain_layout() = default;
+    plain_layout(const T& val)
+      requires(std::copy_constructible<T>)
+        : value_(val)
+    {}
+
+    plain_layout(T&& val)
+      requires(std::move_constructible<T>)
+        : value_(std::move(val))
+    {}
+  };
+
+  struct padded_layout
+  {
+    T         value_ = {};
+    std::byte padding_[cache_line_size - sizeof(T)] = {};
+
+    template <typename... Args>
+    padded_layout(Args&&... args)
+      requires(std::constructible_from<T, Args...>)
+        : value_(std::forward<Args>(args)...)
+    {}
+
+    padded_layout() = default;
+    padded_layout(const T& val)
+      requires(std::copy_constructible<T>)
+        : value_(val)
+    {}
+
+    padded_layout(T&& val)
+      requires(std::move_constructible<T>)
+        : value_(std::move(val))
+    {}
+  };
+
+  std::conditional_t<sizeof(T) < cache_line_size, padded_layout, plain_layout> value_;
 
   template <typename... Args>
   cache_optimized_data(Args&&... args)
@@ -38,22 +82,22 @@ struct alignas(cache_line_size) cache_optimized_data
 
   [[nodiscard]] auto get() -> T&
   {
-    return value_;
+    return value_.value_;
   }
 
   [[nodiscard]] auto get() const -> const T&
   {
-    return value_;
+    return value_.value_;
   }
 
   explicit operator T&()
   {
-    return value_;
+    return value_.value_;
   }
 
   explicit operator const T&() const
   {
-    return value_;
+    return value_.value_;
   }
 };
 

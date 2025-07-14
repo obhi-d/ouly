@@ -107,19 +107,20 @@ public:
     // First time entering a fast path container
     may_fast_path_ = may_fast_path;
 
-    size_type count = std::size(obj);
+    size_type count = static_cast<size_type>(std::size(obj));
     visit(count);
 
     if constexpr (may_fast_path && has_fast_path)
     {
       // NOLINTNEXTLINE
       get().write(reinterpret_cast<std::byte const*>(std::data(obj)), sizeof(typename Class::value_type) * count);
-      return;
     }
-
-    for (auto const& value : obj)
+    else
     {
-      fn(value, *this);
+      for (auto const& value : obj)
+      {
+        fn(value, *this);
+      }
     }
   }
 

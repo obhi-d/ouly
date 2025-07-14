@@ -1132,7 +1132,7 @@ private:
 
   auto assign_move(soavector& x, std::false_type /*unused*/) -> soavector&
   {
-    if (allocator_is_always_equal::value ||
+    if constexpr (allocator_is_always_equal::value ||
         static_cast<const allocator_type&>(x) == static_cast<const allocator_type&>(*this))
     {
       destroy_and_deallocate();
