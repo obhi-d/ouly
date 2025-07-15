@@ -33,6 +33,8 @@ add_library(
     ${OULY_TARGET_NAME}
     "src/ouly/allocators/coalescing_allocator.cpp"
     "src/ouly/allocators/coalescing_arena_allocator.cpp"
+    "src/ouly/allocators/ts_shared_linear_allocator.cpp"
+    "src/ouly/allocators/ts_thread_local_allocator.cpp"
     "src/ouly/dsl/lite_yml.cpp"
     "src/ouly/dsl/microexpr.cpp"
     "src/ouly/scheduler/scheduler.cpp"

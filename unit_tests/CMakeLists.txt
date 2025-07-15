@@ -125,6 +125,7 @@ add_unit_test(NAME pool_allocator FILES "pool_allocator.cpp" SANITIZE)
 add_unit_test(NAME linear_allocator FILES "linear_allocator.cpp" SANITIZE)
 add_unit_test(NAME scheduler FILES "scheduler_tests.cpp" SANITIZE)
 add_unit_test(NAME microexpr FILES "microexpr_tests.cpp" SANITIZE)
+add_unit_test(NAME thread_safe_allocators FILES "thread_safe_allocators.cpp" SANITIZE)
 add_unit_test(NAME coalescing_allocator FILES "coalescing_allocator.cpp" SANITIZE)
 add_executable(ouly-bench "bench_arena_allocator.cpp" "bench_main.cpp")
 
