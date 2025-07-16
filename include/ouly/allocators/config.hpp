@@ -9,6 +9,7 @@
 namespace ouly::cfg
 {
 inline static constexpr bool coalescing_allocator_large_size = false;
+inline static constexpr bool prefetch_next_allocation        = false; // TODO make it a config per allocator
 
 struct track_memory
 {

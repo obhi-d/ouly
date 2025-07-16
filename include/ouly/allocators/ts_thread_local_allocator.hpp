@@ -157,16 +157,6 @@ private:
   };
 
   /**
-   * @brief Align a size value up to the allocator's alignment boundary
-   * @param value Size to align
-   * @return Aligned size (multiple of alignment)
-   */
-  static constexpr auto align_up(std::size_t value) noexcept -> std::size_t
-  {
-    return (value + alignment - 1U) & ~(alignment - 1U);
-  }
-
-  /**
    * @brief Create a new arena with specified payload size
    * @param payload_size Size of the data portion in bytes
    * @return Pointer to newly created arena

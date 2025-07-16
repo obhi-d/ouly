@@ -1,5 +1,7 @@
 
 #include "ouly/allocators/ts_thread_local_allocator.hpp"
+#include "ouly/allocators/config.hpp"
+#include "ouly/utility/common.hpp"
 
 namespace ouly
 {
@@ -8,17 +10,33 @@ thread_local ts_thread_local_allocator::arena_t* ts_thread_local_allocator::loca
 /** Fast-path: bump-pointer allocation on the calling thread’s current arena_t. */
 auto ts_thread_local_allocator::allocate(std::size_t size) noexcept -> void*
 {
-  size = align_up(size);
+  // Skip alignment if already aligned (common case for POD types)
+  size = is_aligned(size) ? size : align_up(size);
 
   arena_t* page = local_page;
-  if ((page != nullptr) && page->generation_ == generation_.load(std::memory_order_relaxed))
+  if (page != nullptr) [[likely]]
   {
-    auto offset = page->used_;
-    if (offset + size <= page->size_)
+    // Cache the generation locally to avoid repeated atomic loads
+    const auto current_generation = generation_.load(std::memory_order_relaxed);
+    if (page->generation_ == current_generation) [[likely]]
     {
-      void* result = &page->data_[0] + offset;
-      page->used_ += size;
-      return result; // **zero synchronisation**
+      auto offset = page->used_;
+      if (offset + size <= page->size_) [[likely]]
+      {
+        void* result = &page->data_[0] + offset;
+        page->used_  = offset + size; // Slightly faster than +=
+
+        if constexpr (ouly::cfg::prefetch_next_allocation)
+        {
+          // Prefetch the next allocation location if there's room (typical cache line size)
+          constexpr std::size_t cache_line_size = 64;
+          if (offset + size + cache_line_size <= page->size_) [[likely]]
+          {
+            prefetch_for_write(&page->data_[0] + offset + size);
+          }
+        }
+        return result; // **zero synchronisation**
+      }
     }
   }
 

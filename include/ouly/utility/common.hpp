@@ -6,6 +6,10 @@
 #include <cstring>
 #include <string>
 
+#ifdef _MSC_VER
+#include <xmmintrin.h>
+#endif
+
 #if defined(_MSC_VER)
 #include <intrin.h>
 #define OULY_EXPORT      __declspec(dllexport)
@@ -50,4 +54,40 @@ constexpr void typed_static_assert()
 {
   static_assert(B, "static assert failed - check below ->");
 }
+
+/**
+ * @brief Prefetch memory for better cache performance
+ * @param addr Memory address to prefetch
+ */
+inline void prefetch_for_write(void* addr) noexcept
+{
+#if defined(__GNUC__) || defined(__clang__)
+  __builtin_prefetch(addr, 1, 3); // prefetch for write, high temporal locality
+#elif defined(_MSC_VER)
+  _mm_prefetch(static_cast<const char*>(addr), _MM_HINT_WRITE);
+#endif
+}
+
+/**
+ * @brief Align a size value up to the allocator's alignment boundary
+ * @param value Size to align
+ * @return Aligned size (multiple of alignment)
+ */
+template <std::size_t Alignment = alignof(std::max_align_t)>
+static constexpr auto align_up(std::size_t value) noexcept -> std::size_t
+{
+  return (value + Alignment - 1U) & ~(Alignment - 1U);
+}
+
+/**
+ * @brief Check if a size is already aligned
+ * @param value Size to check
+ * @return true if already aligned, false otherwise
+ */
+template <std::size_t Alignment = alignof(std::max_align_t)>
+static constexpr auto is_aligned(std::size_t value) noexcept -> bool
+{
+  return (value & (Alignment - 1U)) == 0;
+}
+
 } // namespace ouly
