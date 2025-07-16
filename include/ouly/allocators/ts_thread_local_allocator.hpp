@@ -4,10 +4,12 @@
  */
 #pragma once
 
+#include "ouly/utility/common.hpp"
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <mutex>
+#include <utility>
 
 namespace ouly
 {
@@ -38,7 +40,7 @@ namespace ouly
  * @warning reset() must be called when no worker threads are calling allocate()
  * @warning All allocated memory becomes invalid after reset() or release()
  */
-class ts_thread_local_allocator
+class OULY_API ts_thread_local_allocator
 {
 public:
   /** @brief Default page size for new arenas (1 MiB) */

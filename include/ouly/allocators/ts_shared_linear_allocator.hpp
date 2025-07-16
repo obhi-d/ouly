@@ -4,10 +4,12 @@
  */
 #pragma once
 
+#include "ouly/utility/common.hpp"
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <mutex>
+#include <utility>
 
 namespace ouly
 {
@@ -42,7 +44,7 @@ namespace ouly
  * @warning reset() and release() must be called from a single thread
  * @warning All allocated memory becomes invalid after reset() or release()
  */
-class ts_shared_linear_allocator
+class OULY_API ts_shared_linear_allocator
 {
 public:
   /** @brief Default page size for new arenas (1 MiB) */
