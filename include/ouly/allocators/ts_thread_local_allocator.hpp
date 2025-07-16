@@ -101,7 +101,7 @@ public:
    */
   ~ts_thread_local_allocator() noexcept
   {
-    reset(); // free everything that might still be hanging around
+    release(); // free everything that might still be hanging around
   }
 
   /**
