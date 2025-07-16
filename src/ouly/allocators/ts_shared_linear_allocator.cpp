@@ -77,7 +77,7 @@ void ts_shared_linear_allocator::reset() noexcept
   if (page_list_tail_ != nullptr)
   {
     page_list_tail_->next_ = available_pages_;
-    available_pages_       = page_list_tail_;
+    available_pages_       = page_list_head_;
   }
   page_list_tail_ = nullptr;
   page_list_head_ = nullptr;
