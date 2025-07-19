@@ -50,8 +50,7 @@ jobs:
                --directory . \
                --base-directory ${{ github.workspace }} \
                --output-file coverage.info \
-               --no-external --ignore-errors inconsistent,mismatch
+               --no-external --ignore-errors mismatch,mismatch
           lcov --remove coverage.info '/usr/*' '*/_deps/*' '*/catch2-src/*' --output-file coverage.info --ignore-errors unused
           # Upload coverage report to Codecov
           bash <(curl -s https://codecov.io/bash) -t ${CODECOV_TOKEN} -f coverage.info
-        
