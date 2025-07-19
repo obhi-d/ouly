@@ -64,7 +64,7 @@ inline void prefetch_for_write(void* addr) noexcept
 #if defined(__GNUC__) || defined(__clang__)
   __builtin_prefetch(addr, 1, 3); // prefetch for write, high temporal locality
 #elif defined(_MSC_VER)
-  _mm_prefetch(static_cast<const char*>(addr), _MM_HINT_WRITE);
+  _mm_prefetch(static_cast<const char*>(addr), 0);
 #endif
 }
 
