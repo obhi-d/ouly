@@ -38,10 +38,11 @@ struct alignas(cache_line_size) cache_optimized_data
     {}
   };
 
+  constexpr static size_t padding_size = cache_line_size - (sizeof(T) % cache_line_size);
   struct padded_layout
   {
-    T         value_ = {};
-    std::byte padding_[cache_line_size - sizeof(T)] = {};
+    T         value_                 = {};
+    std::byte padding_[padding_size] = {};
 
     template <typename... Args>
     padded_layout(Args&&... args)
@@ -62,7 +63,7 @@ struct alignas(cache_line_size) cache_optimized_data
     {}
   };
 
-  std::conditional_t<sizeof(T) < cache_line_size, padded_layout, plain_layout> value_;
+  std::conditional_t<padding_size != 0, padded_layout, plain_layout> value_;
 
   template <typename... Args>
   cache_optimized_data(Args&&... args)
@@ -105,5 +106,12 @@ struct alignas(cache_line_size) cache_optimized_data
 // Atomic type with cache line alignment to prevent false sharing
 template <typename T>
 using cache_aligned_atomic = cache_optimized_data<std::atomic<T>>;
+
+template <typename T>
+struct cache_aligned_padding
+{
+  static constexpr size_t padding_size = cache_line_size - (sizeof(T) % cache_line_size);
+  std::byte padding_[padding_size] = {};
+};
 
 } // namespace ouly::detail

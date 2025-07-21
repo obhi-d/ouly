@@ -401,14 +401,13 @@ private:
     ouly::detail::wake_event event_;
   };
 
-  struct local_work_buffer
+  struct aligned_atomic
   {
-    ouly::detail::work_item work_item_;
+    alignas(cache_line_size) std::atomic<uint32_t> value_{0};
+    detail::cache_aligned_padding<std::atomic<uint32_t>> padding_;
   };
-  
-  using aligned_workgroup         = detail::cache_optimized_data<ouly::detail::workgroup>;
+
   using aligned_worker            = detail::cache_optimized_data<ouly::detail::worker>;
-  using aligned_local_work_buffer = detail::cache_optimized_data<local_work_buffer>;
   using aligned_wake_data         = detail::cache_optimized_data<wake_data>;
 
   // Memory layout optimization: Allocate all scheduler data in a single block
@@ -417,15 +416,13 @@ private:
   {
     // Hot data: accessed frequently during task execution
     std::unique_ptr<aligned_worker[]>            workers_;
-    std::unique_ptr<aligned_local_work_buffer[]> local_work_;
     std::unique_ptr<ouly::detail::group_range[]> group_ranges_;
     std::unique_ptr<aligned_wake_data[]>         wake_data_;
   } memory_block_;
 
-  // TODO: Possibly optimize the workgroup data structure by flattening the false sharing data,
-  // and relying on fixed list instead of a vector.
   // Work groups - frequently accessed during work stealing
-  std::vector<aligned_workgroup> workgroups_;
+  std::vector<ouly::detail::workgroup> workgroups_;
+  std::vector<aligned_atomic>          workgroup_push_offsets_;
 
   std::shared_ptr<worker_synchronizer> synchronizer_ = nullptr;
 

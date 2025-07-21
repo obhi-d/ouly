@@ -14,7 +14,8 @@
  * Defines a basic_delegate object with a memory store to store a function pointer and its capture inline allocated.
  */
 /**
- * @brief A type-safe, lightweight delegate implementation with small object optimization.
+ * @brief A type-safe, lightweight delegate implementation with small object optimization. The captured objects are
+ * expected to be trivially destructible.
  *
  * @tparam SmallSize The size in bytes reserved for small object optimization
  * @tparam Ret Return type of the delegate function
@@ -57,7 +58,8 @@
 namespace ouly
 {
 /**
- * @brief A lightweight delegate implementation with small object optimization.
+ * @brief A lightweight delegate implementation with small object optimization. The captured objects are expected to be
+ * trivially destructible.
  *
  * This class provides a mechanism to store and invoke callable objects, including
  * free functions, member functions, and lambdas, with support for small object optimization.

@@ -98,6 +98,17 @@ constexpr auto log2(SizeType val) -> SizeType
 }
 
 template <typename SizeType>
+constexpr auto next_pow2(SizeType val) -> SizeType
+{
+  if (val == 0)
+    return 1;
+  --val;
+  for (SizeType i = 1; i < sizeof(SizeType) * 8; i <<= 1)
+    val |= val >> i;
+  return ++val;
+}
+
+template <typename SizeType>
 constexpr auto hazard_idx(SizeType val, std::uint8_t spl) -> SizeType
 {
   if constexpr (ouly::debug)

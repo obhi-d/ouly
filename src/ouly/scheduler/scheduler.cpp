@@ -662,7 +662,7 @@ void scheduler::submit([[maybe_unused]] worker_id src, workgroup_id dst, ouly::d
 
     for (uint32_t i = 0, end = wg.thread_count_; i < end; ++i)
     {
-      uint32_t q     = (current_offset + i) & (wg.thread_count_ - 1);
+      uint32_t q     = (current_offset + i) % (wg.thread_count_);
       auto&    queue = wg.work_queues_[q];
 
       if (queue.first.try_lock())
