@@ -16,7 +16,7 @@ namespace ouly
 
 // Always-inline to keep the call zero-overhead in tight loops
 #ifndef _MSC_VER
-[[gnu::always_inline]] 
+[[gnu::always_inline]]
 #endif
 inline void pause_exec() noexcept
 {
@@ -49,6 +49,18 @@ inline void pause_exec() noexcept
 thread_local ouly::detail::worker const* g_worker = nullptr;
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 thread_local ouly::worker_id g_worker_id = {};
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+thread_local uint32_t g_random_seed = 0;
+
+// LCG constants for fast PRNG
+static constexpr uint32_t lcg_multiplier    = 1664525U;
+static constexpr uint32_t lcg_increment     = 1013904223U;
+static constexpr uint32_t initial_seed_mask = 0xAAAAAAAAU;
+
+auto update_seed() -> uint32_t
+{
+  return (g_random_seed = (g_random_seed * lcg_multiplier + lcg_increment) & initial_seed_mask);
+}
 
 auto worker_context::get(workgroup_id group) noexcept -> worker_context const&
 {
@@ -81,21 +93,13 @@ scheduler::~scheduler() noexcept
 // NOLINTNEXTLINE
 inline void scheduler::do_work(worker_id thread, ouly::detail::work_item& work) noexcept
 {
-  work(
-   memory_block_.workers_[thread.get_index()].get().contexts_[work.get_compressed_data<ouly::workgroup_id>().get_index()]);
+  work(memory_block_.workers_[thread.get_index()]
+        .get()
+        .contexts_[work.get_compressed_data<ouly::workgroup_id>().get_index()]);
 }
 
 void scheduler::busy_work(worker_id thread) noexcept
 {
-  // Fast path: Check local work first
-  auto& lw = memory_block_.local_work_[thread.get_index()].get().work_item_;
-  if (lw)
-  {
-    do_work(thread, lw);
-    lw = nullptr;
-    return;
-  }
-
   // Optimized work stealing with limited attempts
   constexpr uint32_t max_busy_attempts = 3;
   for (uint32_t attempt = 0; attempt < max_busy_attempts; ++attempt)
@@ -115,19 +119,15 @@ void scheduler::run(worker_id thread)
   g_worker    = &memory_block_.workers_[thread.get_index()].get();
   g_worker_id = thread;
 
+  // LCG constants for fast PRNG
+
+  // Random seed for randomized stealing - use thread index and a simple counter for variety
+  g_random_seed = thread.get_index() ^ initial_seed_mask;
+
   entry_fn_(worker_desc(thread, memory_block_.group_ranges_[thread.get_index()].mask_));
 
   while (true)
   {
-    {
-      auto& lw = memory_block_.local_work_[thread.get_index()].get().work_item_;
-      if (lw)
-      {
-        do_work(thread, lw);
-        lw = nullptr;
-      }
-    }
-
     while (work(thread))
     {
       ;
@@ -153,24 +153,8 @@ void scheduler::run(worker_id thread)
 
 inline void scheduler::finalize_worker(worker_id thread) noexcept
 {
-  bool retry = true;
-  while (retry)
+  while (work(thread))
   {
-    retry = false;
-    {
-      auto& lw = memory_block_.local_work_[thread.get_index()].get().work_item_;
-      if (lw)
-      {
-        do_work(thread, lw);
-        lw    = nullptr;
-        retry = true; // Retry if local work was executed
-      }
-    }
-
-    while (work(thread))
-    {
-      retry = true; // Retry if work was executed
-    }
   }
 
   if (synchronizer_ != nullptr)
@@ -185,8 +169,8 @@ inline void scheduler::finalize_worker(worker_id thread) noexcept
 
 inline auto scheduler::work(worker_id thread) noexcept -> bool
 {
-  auto wrk = get_work(thread);
-  if (!wrk)
+  ouly::detail::work_item wrk;
+  if (!get_work(thread, wrk))
   {
     return false;
   }
@@ -259,142 +243,103 @@ thread_local std::chrono::steady_clock::time_point adaptive_work_stealer::last_s
  std::chrono::steady_clock::now();
 } // namespace detail
 
-// NOLINTNEXTLINE
-auto scheduler::get_work(worker_id thread) noexcept -> ouly::detail::work_item
+// Work stealing implementation
+auto scheduler::try_steal_work(worker_id thread, ouly::detail::work_item& work) noexcept -> bool
 {
-  auto const  thread_idx = thread.get_index();
-  auto const& range      = memory_block_.group_ranges_[thread_idx];
+  uint32_t start_index  = update_seed() % worker_count_;
+  uint32_t thread_index = thread.get_index();
 
-  // LCG constants for fast PRNG
-  static constexpr uint32_t lcg_multiplier    = 1664525U;
-  static constexpr uint32_t lcg_increment     = 1013904223U;
-  static constexpr uint32_t initial_seed_mask = 0xAAAAAAAAU;
-
-  // Random seed for randomized stealing - use thread index and a simple counter for variety
-  static thread_local uint32_t steal_seed = thread_idx ^ initial_seed_mask;
-
-  // First, try to get work from own queues (highest priority)
-  for (uint32_t start = 0; start < range.count_; ++start)
+  // Try to steal from other workers' local queues
+  for (uint32_t attempt = 0; attempt < worker_count_ - 1; ++attempt)
   {
-    auto  group_id = range.priority_order_[start];
-    auto& group    = workgroups_[group_id].get();
+    uint32_t target_index = (start_index + attempt) % worker_count_;
 
-    if (group.thread_count_ == 0)
+    // Skip our own thread
+    if (target_index == thread_index)
     {
       continue;
     }
 
-    auto const my_queue_idx = thread_idx - group.start_thread_idx_;
-    if (my_queue_idx < group.thread_count_)
+    auto& target_worker = memory_block_.workers_[target_index].get();
+
+    // Try to steal from target worker's local queue
+    if (target_worker.local_work_queue_.pop(work))
     {
-      auto& my_queue = group.work_queues_[my_queue_idx];
-      // Use try_lock with immediate return to minimize contention
-      if (my_queue.first.try_lock())
-      {
-        if (!my_queue.second.empty())
-        {
-          auto item = my_queue.second.pop_front_unsafe();
-          my_queue.first.unlock();
-          detail::adaptive_work_stealer::record_success();
-          return item;
-        }
-        my_queue.first.unlock();
-      }
+      return true;
     }
   }
 
-  // Then try exclusive items (medium priority)
+  // Try to steal from workgroup queues that this thread doesn't belong to
+  auto& range = memory_block_.group_ranges_[thread_index];
+  for (uint32_t group_idx = 0; group_idx < workgroups_.size(); ++group_idx)
   {
-    auto& worker    = memory_block_.workers_[thread_idx].get();
-    auto& work_list = worker.exclusive_items_;
-    if (work_list.first.try_lock())
+    // Skip workgroups this thread already checked
+    if ((range.mask_ & (1U << group_idx)) != 0)
     {
-      if (!work_list.second.empty())
-      {
-        auto item = work_list.second.pop_front_unsafe();
-        work_list.first.unlock();
-        detail::adaptive_work_stealer::record_success();
-        return item;
-      }
-      work_list.first.unlock();
+      continue;
+    }
+
+    auto& workgroup = workgroups_[group_idx];
+    if (workgroup.pop_item(work))
+    {
+      return true;
     }
   }
 
-  // Finally, try work stealing with optimized strategy (lowest priority)
-  uint32_t           steal_attempts     = 0;
-  constexpr uint32_t max_steal_attempts = 8; // Limit attempts to prevent excessive spinning
+  return false;
+}
 
-  for (uint32_t group_idx = 0; group_idx < range.count_ && steal_attempts < max_steal_attempts; ++group_idx)
+// NOLINTNEXTLINE
+auto scheduler::get_work(worker_id thread, ouly::detail::work_item& work) noexcept -> bool
+{
+  auto& worker = memory_block_.workers_[thread.get_index()].get();
+  auto& range  = memory_block_.group_ranges_[thread.get_index()];
+
+  // Priority 1: Check local worker queue first (exclusive work items have highest priority)
+  if (worker.pop_item(work))
   {
-    auto  group_id = range.priority_order_[group_idx];
-    auto& group    = workgroups_[group_id].get();
+    detail::adaptive_work_stealer::record_success();
+    return true;
+  }
 
-    if (group.thread_count_ <= 1)
+  // Priority 2: Check workgroups in priority order
+  for (uint32_t i = 0; i < range.count_; ++i)
+  {
+    uint32_t group_idx = range.priority_order_[i];
+    auto&    workgroup = workgroups_[group_idx];
+
+    if (workgroup.pop_item(work))
     {
-      continue; // Skip single-worker groups
-    }
-
-    // Randomized victim selection to reduce contention hot spots
-    steal_seed              = steal_seed * lcg_multiplier + lcg_increment;
-    auto const queue_count  = group.thread_count_;
-    auto const random_start = steal_seed % queue_count;
-
-    // Try up to queue_count/2 victims to balance thoroughness vs performance
-    auto const max_victims = std::min(queue_count, (queue_count + 1) / 2);
-
-    for (uint32_t victim_offset = 0; victim_offset < max_victims && steal_attempts < max_steal_attempts;
-         ++victim_offset)
-    {
-      auto const victim_idx   = (random_start + victim_offset) % queue_count;
-      auto&      victim_queue = group.work_queues_[victim_idx];
-
-      // Skip our own queue in stealing phase
-      if (victim_idx == (thread_idx - group.start_thread_idx_))
-      {
-        continue;
-      }
-
-      ++steal_attempts;
-
-      // Use try_lock to avoid blocking - if we can't get the lock immediately,
-      // the queue is likely busy and we should try elsewhere
-      if (victim_queue.first.try_lock())
-      {
-        if (!victim_queue.second.empty())
-        {
-          // Steal from the front (FIFO) for task ordering consistency
-          auto item = victim_queue.second.pop_front_unsafe();
-          victim_queue.first.unlock();
-          detail::adaptive_work_stealer::record_success();
-          return item;
-        }
-        victim_queue.first.unlock();
-      }
-
-      // Micro-backoff to reduce contention - use adaptive strategy
-      if (steal_attempts > 2)
-      {
-        // Use adaptive delay instead of fixed exponential backoff
-        uint32_t adaptive_delay = detail::adaptive_work_stealer::get_adaptive_delay();
-
-        if (detail::adaptive_work_stealer::should_yield())
-        {
-          std::this_thread::yield();
-        }
-        else
-        {
-          for (uint32_t delay = adaptive_delay; delay > 0; --delay)
-          {
-            pause_exec();
-          }
-        }
-
-        detail::adaptive_work_stealer::record_failure();
-      }
+      detail::adaptive_work_stealer::record_success();
+      return true;
     }
   }
 
-  return {};
+  // Priority 3: Work stealing from other threads
+  // Try to steal from other workers' local queues
+  if (try_steal_work(thread, work))
+  {
+    detail::adaptive_work_stealer::record_success();
+    return true;
+  }
+
+  detail::adaptive_work_stealer::record_failure();
+
+  // Apply adaptive backoff if work stealing is failing frequently
+  if (detail::adaptive_work_stealer::should_yield())
+  {
+    std::this_thread::yield();
+  }
+  else
+  {
+    uint32_t delay = detail::adaptive_work_stealer::get_adaptive_delay();
+    for (uint32_t i = 0; i < delay; ++i)
+    {
+      pause_exec();
+    }
+  }
+
+  return false; // Empty work item
 }
 
 // NOLINTNEXTLINE
@@ -409,7 +354,6 @@ void scheduler::wake_up(worker_id thread) noexcept
 
 void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_context)
 {
-  memory_block_.local_work_   = std::make_unique<aligned_local_work_buffer[]>(worker_count_);
   memory_block_.workers_      = std::make_unique<aligned_worker[]>(worker_count_);
   memory_block_.group_ranges_ = std::make_unique<ouly::detail::group_range[]>(worker_count_);
   memory_block_.wake_data_    = std::make_unique<aligned_wake_data[]>(worker_count_);
@@ -420,7 +364,7 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
 
   for (uint32_t group = 0; group < wgroup_count; ++group)
   {
-    auto const& g = workgroups_[group].get();
+    auto const& g = workgroups_[group];
 
     for (uint32_t i = g.start_thread_idx_, end = g.thread_count_ + i; i < end; ++i)
     {
@@ -439,16 +383,16 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
     std::sort(range.priority_order_.data(), range.priority_order_.data() + range.count_,
               [&](uint8_t first, uint8_t second)
               {
-                return workgroups_[first].get().priority_ == workgroups_[second].get().priority_
+                return workgroups_[first].priority_ == workgroups_[second].priority_
                         ? first < second
-                        : workgroups_[first].get().priority_ > workgroups_[second].get().priority_;
+                        : workgroups_[first].priority_ > workgroups_[second].priority_;
               });
 
     worker.contexts_ = std::make_unique<worker_context[]>(wgroup_count);
     for (uint32_t g = 0; g < wgroup_count; ++g)
     {
-      worker.contexts_[g] = worker_context(*this, user_context, worker_id(w), workgroup_id(g), memory_block_.group_ranges_[w].mask_,
-                      w - workgroups_[g].get().start_thread_idx_);
+      worker.contexts_[g] = worker_context(*this, user_context, worker_id(w), workgroup_id(g),
+                                           memory_block_.group_ranges_[w].mask_, w - workgroups_[g].start_thread_idx_);
     }
     memory_block_.wake_data_[w].get().status_.store(true, std::memory_order_relaxed);
   }
@@ -514,43 +458,18 @@ void scheduler::finish_pending_tasks() noexcept
     bool has_work = false;
 
     // Check workgroup queues efficiently
-    for (auto& aligned_group : workgroups_)
+    for (auto& workgroup : workgroups_)
     {
-      auto& group = aligned_group.get();
-      if (group.thread_count_ == 0)
+      if (workgroup.thread_count_ == 0)
       {
         continue;
       }
 
-      bool group_has_work = false;
-      // Use try_lock to avoid blocking on busy queues
-      for (uint32_t q = 0; q < group.thread_count_; ++q)
-      {
-        if (group.work_queues_[q].first.try_lock())
-        {
-          bool queue_has_work = !group.work_queues_[q].second.empty();
-          group.work_queues_[q].first.unlock();
-
-          if (queue_has_work)
-          {
-            retry          = true; // Found work in this group, retry the loop
-            group_has_work = true;
-            break; // Found work in this group, no need to check other queues
-          }
-        }
-        else
-        {
-          retry = true;
-          // If queue is locked, assume it has work (conservative approach)
-          group_has_work = true;
-          break;
-        }
-      }
-
-      if (group_has_work)
+      // Check if workgroup has pending work
+      if (!workgroup.local_work_queue_.empty())
       {
         // Wake up all threads in this group
-        for (uint32_t w = group.start_thread_idx_, end = w + group.thread_count_; w < end; ++w)
+        for (uint32_t w = workgroup.start_thread_idx_, end = w + workgroup.thread_count_; w < end; ++w)
         {
           wake_up(worker_id(w));
         }
@@ -566,18 +485,19 @@ void scheduler::finish_pending_tasks() noexcept
     // Check exclusive worker items efficiently
     for (uint32_t w = 0; w < worker_count_; ++w)
     {
-      auto& worker          = memory_block_.workers_[w].get();
-      bool  worker_has_work = false;
+      auto& worker = memory_block_.workers_[w].get();
 
-      if (worker.exclusive_items_.first.try_lock())
+      // Check if worker has pending work in local queue or exclusive items
+      bool worker_has_work = !worker.local_work_queue_.empty();
+
+      if (!worker_has_work)
       {
-        worker_has_work = !worker.exclusive_items_.second.empty();
-        worker.exclusive_items_.first.unlock();
-      }
-      else
-      {
-        // If worker queue is locked, assume it has work
-        worker_has_work = true;
+        // Check exclusive items queue (protected by lock)
+        if (worker.items_.first.try_lock())
+        {
+          worker_has_work = !worker.items_.second.empty();
+          worker.items_.first.unlock();
+        }
       }
 
       if (worker_has_work)
@@ -624,85 +544,59 @@ void scheduler::submit(worker_id src, worker_id dst, ouly::detail::work_item wor
   }
   else
   {
+    auto& target_worker = memory_block_.workers_[dst.get_index()].get();
+
+    // Try to push to target worker's local queue first
+    if (!target_worker.push_item(std::move(work)))
     {
-      auto& worker = memory_block_.workers_[dst.get_index()].get();
-      auto  lck    = std::scoped_lock(worker.exclusive_items_.first);
-      worker.exclusive_items_.second.emplace_back(std::move(work));
+      // If local queue is full, fall back to doing the work on current thread
+      do_work(src, work);
     }
-    if (!memory_block_.wake_data_[dst.get_index()].get().status_.exchange(true, std::memory_order_acq_rel))
+    else
     {
-      memory_block_.wake_data_[dst.get_index()].get().event_.notify();
+      // Wake up the target worker
+      wake_up(dst);
     }
   }
 }
 
 void scheduler::submit([[maybe_unused]] worker_id src, workgroup_id dst, ouly::detail::work_item work)
 {
-  auto& wg = workgroups_[dst.get_index()].get();
+  auto& wg = workgroups_[dst.get_index()];
 
-  // First, try to find an available thread with local work slot
-  for (uint32_t i = wg.start_thread_idx_, end = i + wg.thread_count_; i != end; ++i)
+  // Load balancing: Try to distribute work among threads in the workgroup
+  // Use round-robin assignment to balance load
+  static thread_local std::atomic<uint32_t> round_robin_counter{0};
+  uint32_t start_offset = round_robin_counter.fetch_add(1, std::memory_order_relaxed) % wg.thread_count_;
+
+  // First, try to find an idle thread in the workgroup
+  for (uint32_t attempt = 0; attempt < wg.thread_count_; ++attempt)
   {
-    if (!memory_block_.wake_data_[i].get().status_.exchange(true, std::memory_order_acq_rel))
+    uint32_t worker_offset = (start_offset + attempt) % wg.thread_count_;
+    uint32_t worker_index  = wg.start_thread_idx_ + worker_offset;
+
+    auto& wake_data = memory_block_.wake_data_[worker_index].get();
+
+    // If worker is sleeping, try to assign work directly to it
+    if (!wake_data.status_.load(std::memory_order_acquire))
     {
-      memory_block_.local_work_[i].get().work_item_ = std::move(work);
-      memory_block_.wake_data_[i].get().event_.notify();
-      return;
-    }
-  }
-
-  // If no local work slot available, use round-robin queue assignment with limited retries
-  constexpr uint32_t max_retries = 4; // Prevent infinite spinning
-  uint32_t           retry_count = 0;
-
-  while (retry_count < max_retries)
-  {
-    // Increment push offset for round-robin behavior (simple increment, races are acceptable)
-    auto current_offset = wg.push_offset_.fetch_add(1, std::memory_order_relaxed);
-
-    for (uint32_t i = 0, end = wg.thread_count_; i < end; ++i)
-    {
-      uint32_t q     = (current_offset + i) % (wg.thread_count_);
-      auto&    queue = wg.work_queues_[q];
-
-      if (queue.first.try_lock())
+      auto& target_worker = memory_block_.workers_[worker_index].get();
+      if (target_worker.push_item(std::move(work)))
       {
-        queue.second.emplace_back(std::move(work));
-        queue.first.unlock();
-
-        // Wake up the target thread
-        auto thread_idx = q + wg.start_thread_idx_;
-        if (!memory_block_.wake_data_[thread_idx].get().status_.exchange(true, std::memory_order_acq_rel))
-        {
-          memory_block_.wake_data_[thread_idx].get().event_.notify();
-        }
+        wake_up(worker_id(worker_index));
         return;
       }
     }
+  }
 
-    ++retry_count;
-    // Short backoff between retries to reduce contention
-    if (retry_count < max_retries)
+  // If no idle threads found, push to workgroup shared queue
+  if (!wg.push_item(std::move(work)))
+  {
+    // If workgroup queue is full, wake up all threads in the workgroup
+    for (uint32_t i = wg.start_thread_idx_, end = i + wg.thread_count_; i < end; ++i)
     {
-      for (uint32_t delay = 1U << retry_count; delay > 0; --delay)
-      {
-        pause_exec();
-      }
+      wake_up(worker_id(i));
     }
-  }
-
-  // Fallback: force submission to the first queue if all retries failed
-  // This ensures work is never lost, though it may cause temporary contention
-  auto& fallback_queue = wg.work_queues_[0];
-  {
-    auto lck = std::scoped_lock(fallback_queue.first);
-    fallback_queue.second.emplace_back(std::move(work));
-  }
-
-  auto thread_idx = wg.start_thread_idx_;
-  if (!memory_block_.wake_data_[thread_idx].get().status_.exchange(true, std::memory_order_acq_rel))
-  {
-    memory_block_.wake_data_[thread_idx].get().event_.notify();
   }
 }
 
@@ -714,42 +608,25 @@ void scheduler::create_group(workgroup_id group, uint32_t thread_offset, uint32_
   }
   // thread_count = ouly::next_pow2(thread_count);
   worker_count_ =
-   std::max(workgroups_[group.get_index()].get().create_group(thread_offset, thread_count, priority), worker_count_);
+   std::max(workgroups_[group.get_index()].create_group(thread_offset, thread_count, priority), worker_count_);
 }
 
 auto scheduler::create_group(uint32_t thread_offset, uint32_t thread_count, uint32_t priority) -> workgroup_id
 {
   workgroups_.emplace_back();
   // thread_count = ouly::next_pow2(thread_count);
-  worker_count_ = std::max(workgroups_.back().get().create_group(thread_offset, thread_count, priority), worker_count_);
+  worker_count_ = std::max(workgroups_.back().create_group(thread_offset, thread_count, priority), worker_count_);
   // no empty group found
   return workgroup_id(static_cast<uint32_t>(workgroups_.size() - 1));
 }
 
 void scheduler::clear_group(workgroup_id group)
 {
-  auto& wg = workgroups_[group.get_index()].get();
-
-  // Store the thread count before clearing for proper cleanup
-  uint32_t old_thread_count = wg.thread_count_;
+  auto& wg = workgroups_[group.get_index()];
 
   // Safely clear the workgroup by ensuring all operations are complete
   wg.start_thread_idx_ = 0;
   wg.thread_count_     = 0;
-  wg.push_offset_.store(0, std::memory_order_release);
-
-  // Clean up work queues safely
-  if (wg.work_queues_ != nullptr)
-  {
-    // Destroy each work queue properly using the correct type
-    for (uint32_t i = 0; i < old_thread_count; ++i)
-    {
-      using queue_type = ouly::detail::async_work_queue;
-      wg.work_queues_[i].~queue_type();
-    }
-    ::operator delete[](wg.work_queues_, std::align_val_t{detail::cache_line_size});
-    wg.work_queues_ = nullptr;
-  }
 }
 
 } // namespace ouly

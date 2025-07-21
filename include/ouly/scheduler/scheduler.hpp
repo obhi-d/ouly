@@ -346,7 +346,7 @@ public:
    */
   [[nodiscard]] auto get_worker_count(workgroup_id g) const noexcept -> uint32_t
   {
-    return workgroups_[g.get_index()].get().thread_count_;
+    return workgroups_[g.get_index()].thread_count_;
   }
 
   /**
@@ -354,7 +354,7 @@ public:
    */
   [[nodiscard]] auto get_worker_start_idx(workgroup_id g) const noexcept -> uint32_t
   {
-    return workgroups_[g.get_index()].get().start_thread_idx_;
+    return workgroups_[g.get_index()].start_thread_idx_;
   }
 
   /**
@@ -362,7 +362,7 @@ public:
    */
   [[nodiscard]] auto get_logical_divisor(workgroup_id g) const noexcept -> uint32_t
   {
-    return workgroups_[g.get_index()].get().thread_count_ * work_scale;
+    return workgroups_[g.get_index()].thread_count_ * work_scale;
   }
 
   [[nodiscard]] auto get_context(worker_id worker, workgroup_id group) const -> worker_context const&
@@ -383,7 +383,8 @@ private:
   void        wake_up(worker_id /*thread*/) noexcept;
   void        run(worker_id /*thread*/);
   void        finalize_worker(worker_id /*thread*/) noexcept;
-  auto        get_work(worker_id /*thread*/) noexcept -> ouly::detail::work_item;
+  auto        get_work(worker_id /*thread*/, ouly::detail::work_item& /*work*/) noexcept -> bool;
+  auto        try_steal_work(worker_id /*thread*/, ouly::detail::work_item& /*work*/) noexcept -> bool;
 
   auto work(worker_id /*thread*/) noexcept -> bool;
 
@@ -401,14 +402,8 @@ private:
     ouly::detail::wake_event event_;
   };
 
-  struct aligned_atomic
-  {
-    alignas(cache_line_size) std::atomic<uint32_t> value_{0};
-    detail::cache_aligned_padding<std::atomic<uint32_t>> padding_;
-  };
-
-  using aligned_worker            = detail::cache_optimized_data<ouly::detail::worker>;
-  using aligned_wake_data         = detail::cache_optimized_data<wake_data>;
+  using aligned_worker    = detail::cache_optimized_data<ouly::detail::worker>;
+  using aligned_wake_data = detail::cache_optimized_data<wake_data>;
 
   // Memory layout optimization: Allocate all scheduler data in a single block
   // for better cache locality and reduced allocator overhead
@@ -422,8 +417,6 @@ private:
 
   // Work groups - frequently accessed during work stealing
   std::vector<ouly::detail::workgroup> workgroups_;
-  std::vector<aligned_atomic>          workgroup_push_offsets_;
-
   std::shared_ptr<worker_synchronizer> synchronizer_ = nullptr;
 
   std::vector<std::thread> threads_;

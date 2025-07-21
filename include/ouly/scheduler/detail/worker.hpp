@@ -4,6 +4,7 @@
 
 #include "ouly/allocators/default_allocator.hpp"
 #include "ouly/containers/basic_queue.hpp"
+#include "ouly/scheduler/detail/cache_optimized_data.hpp"
 #include "ouly/scheduler/detail/mpmc_ring.hpp"
 #include "ouly/scheduler/spin_lock.hpp"
 #include "ouly/scheduler/task.hpp"
@@ -21,10 +22,16 @@
 namespace ouly::detail
 {
 
-static constexpr uint32_t max_worker_groups   = 32;
-static constexpr uint32_t max_local_work_item = 32; // 1/2 cache lines
+static constexpr uint32_t max_worker_groups         = 32;
+static constexpr uint32_t max_local_work_item       = 32; // 1/2 cache lines
+static constexpr size_t   max_work_items_per_worker = 64; // Maximum items per worker to prevent excessive memory usage
+using work_item                                     = task_delegate;
 
-using work_item = task_delegate;
+struct aligned_atomic
+{
+  alignas(cache_line_size) std::atomic<uint32_t> value_{0};
+  detail::cache_aligned_padding<std::atomic<uint32_t>> padding_;
+};
 
 struct work_queue_traits
 {
@@ -32,15 +39,20 @@ struct work_queue_traits
   using allocator_t                     = ouly::default_allocator<>;
 };
 
-using work_queue       = ouly::basic_queue<work_item, work_queue_traits>;
-using async_work_queue = std::pair<ouly::spin_lock, work_queue>;
+using basic_work_queue = ouly::basic_queue<work_item, work_queue_traits>;
+using async_work_queue = std::pair<ouly::spin_lock, basic_work_queue>;
+using mpmc_work_ring   = mpmc_ring<work_item, max_work_items_per_worker>;
 
 // Optimized workgroup structure with separated hot and cold data
 struct workgroup
 {
+  alignas(cache_line_size) mpmc_work_ring local_work_queue_;       // Fast path work item queue
+  cache_aligned_padding<mpmc_work_ring> local_work_queue_padding_; // Prevent false sharing
+
   // Hot data cache line 1: Most frequently accessed during work stealing and submission
   uint32_t thread_count_     = 0; // Read frequently during work stealing
   uint32_t start_thread_idx_ = 0; // Read frequently during queue indexing
+  uint32_t end_thread_idx_   = 0; // Read frequently during queue indexing
 
   // Cold data: Configuration set once during initialization
   uint32_t priority_ = 0;
@@ -53,12 +65,11 @@ struct workgroup
     return start + count;
   }
 
-  ~workgroup() noexcept {}
+  ~workgroup() noexcept = default;
 
   // Move semantics for workgroup management
   workgroup(workgroup&& other) noexcept
-      : thread_count_(other.thread_count_),
-        start_thread_idx_(other.start_thread_idx_), priority_(other.priority_)
+      : thread_count_(other.thread_count_), start_thread_idx_(other.start_thread_idx_), priority_(other.priority_)
   {
     other.thread_count_ = 0;
   }
@@ -70,7 +81,7 @@ struct workgroup
 
       thread_count_     = other.thread_count_;
       start_thread_idx_ = other.start_thread_idx_;
-      priority_ = other.priority_;
+      priority_         = other.priority_;
 
       other.thread_count_ = 0;
     }
@@ -80,6 +91,17 @@ struct workgroup
   workgroup() noexcept                           = default;
   workgroup(const workgroup&)                    = delete;
   auto operator=(const workgroup&) -> workgroup& = delete;
+
+  auto push_item(work_item&& item) -> bool
+  {
+    // Try to push to the local work queue first
+    return local_work_queue_.push(std::move(item));
+  }
+
+  auto pop_item(work_item& item) -> bool
+  {
+    return local_work_queue_.pop(item);
+  }
 };
 
 struct wake_event
@@ -118,28 +140,69 @@ struct group_range
   }
 };
 
-static constexpr size_t max_work_items_per_worker = 64; // Maximum items per worker to prevent excessive memory usage
-
-using mpmc_work_ring = mpmc_ring<work_item, max_work_items_per_worker>;
 // Cache-aligned worker structure optimized for memory access patterns
 struct worker
-{  
-  // Fast path work item queue for this worker
-  alignas(cache_line_size) mpmc_work_ring local_work_queue_;
+{
 
+  alignas(cache_line_size) mpmc_work_ring local_work_queue_;       // Fast path work item queue
   cache_aligned_padding<mpmc_work_ring> local_work_queue_padding_; // Prevent false sharing
 
   // Exclusive work items queue - frequently accessed during task submission/execution
   // Aligned to prevent false sharing with worker ID
-  async_work_queue exclusive_items_;
-
-  cache_aligned_padding<async_work_queue> exclusive_items_padding_; // Prevent false sharing
+  async_work_queue                        items_;
+  cache_aligned_padding<async_work_queue> items_padding_; // Prevent false sharing
 
   // Context per work group - accessed during work execution
   // Pointer is stable, actual contexts allocated separately for better locality
   std::unique_ptr<worker_context[]> contexts_;
 
-  worker_id id_ = worker_id{0};
+  worker_id id_                  = worker_id{0};
+  worker_id min_steal_friend_id_ = worker_id{0};
+  worker_id max_steal_friend_id_ = worker_id{0};
+
+  auto push_item(work_item&& item) -> bool
+  {
+    // Try to push to the local work queue first
+    if (local_work_queue_.push(std::move(item)))
+    {
+      return true;
+    }
+
+    // If local queue is full, push to the exclusive items queue
+    {
+      auto& exclusive_queue = items_.first;
+      if (exclusive_queue.try_lock())
+      {
+        items_.second.emplace_back(std::move(item));
+        exclusive_queue.unlock();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  auto pop_item(work_item& item) -> bool
+  {
+    // Try to pop an item from the local work queue
+    if (local_work_queue_.pop(item))
+    {
+      return true;
+    }
+
+    // If the local queue is empty, try to pop from the exclusive items
+    if (items_.first.try_lock())
+    {
+      if (!items_.second.empty())
+      {
+        item = items_.second.pop_front_unsafe();
+        items_.first.unlock();
+        return true;
+      }
+      items_.first.unlock();
+    }
+
+    return false;
+  }
 };
 
 } // namespace ouly::detail

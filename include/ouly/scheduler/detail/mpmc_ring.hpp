@@ -31,13 +31,15 @@ public:
 
   ~mpmc_ring() noexcept = default;
 
-  mpmc_ring(mpmc_ring const&)            = delete;
-  mpmc_ring& operator=(mpmc_ring const&) = delete;
+  mpmc_ring(mpmc_ring const&)                    = delete;
+  auto operator=(mpmc_ring const&) -> mpmc_ring& = delete;
+  mpmc_ring(mpmc_ring&&)                         = delete;
+  auto operator=(mpmc_ring&&) -> mpmc_ring&      = delete;
 
-  bool push(T&& value) noexcept
+  auto push(T&& value) noexcept -> bool
   {
-    node*       node_ptr;
-    std::size_t pos = head_.load(std::memory_order_relaxed);
+    node*       node_ptr = nullptr;
+    std::size_t pos      = head_.load(std::memory_order_relaxed);
     for (;;)
     {
       node_ptr         = &buffer_[pos & mask_];
@@ -66,10 +68,10 @@ public:
   }
 
   template <class... Args>
-  bool emplace(Args&&... args) noexcept(std::is_nothrow_constructible_v<T, Args...>)
+  auto emplace(Args&&... args) noexcept(std::is_nothrow_constructible_v<T, Args...>) -> bool
   {
-    node*       node_ptr;
-    std::size_t pos = head_.load(std::memory_order_relaxed);
+    node*       node_ptr = nullptr;
+    std::size_t pos      = head_.load(std::memory_order_relaxed);
     for (;;)
     {
       node_ptr         = &buffer_[pos & mask_];
@@ -97,7 +99,7 @@ public:
     return true;
   }
 
-  bool pop(T& out) noexcept
+  auto pop(T& out) noexcept -> bool
   {
     node*       node_ptr = {};
     std::size_t pos      = tail_.load(std::memory_order_relaxed);
@@ -123,19 +125,22 @@ public:
       }
     }
 
+    // NOLINTNEXTLINE
     out = std::move(*std::launder(reinterpret_cast<T*>(&node_ptr->storage_)));
     if constexpr (!std::is_trivially_destructible_v<T>)
     {
+      // NOLINTNEXTLINE
       std::destroy_at(std::launder(reinterpret_cast<T*>(&node_ptr->storage_)));
     }
-    node_ptr->sequence_.store(pos + capacity_, std::memory_order_release);
+
+    node_ptr->sequence_.store(pos + capacity_pow2, std::memory_order_release);
     return true;
   }
 
-  bool empty() const noexcept
+  auto empty() const noexcept -> bool
   {
     std::size_t pos      = tail_.load(std::memory_order_acquire);
-    node const* node_ptr = &buffer_[pos & mask_];
+    node const* node_ptr = &buffer_[pos & mask];
     return static_cast<intptr_t>(node_ptr->sequence_.load(std::memory_order_relaxed)) - static_cast<intptr_t>(pos + 1) <
            0;
   }
@@ -143,13 +148,13 @@ public:
 private:
   union node
   {
-    std::atomic<std::size_t>                       sequence_;
-    std::aligned_storage__t<sizeof(T), alignof(T)> storage_;
+    std::atomic<std::size_t>                      sequence_;
+    std::aligned_storage_t<sizeof(T), alignof(T)> storage_;
   };
 
   using node_list_t = std::array<node, capacity_pow2>;
 
-  alignas(cache_line_size) std::atomic < std::size_t >> head_{0};
+  alignas(cache_line_size) std::atomic<std::size_t> head_{0};
   cache_aligned_padding<std::atomic<std::size_t>> head_padding_; // Prevent false sharing
   alignas(cache_line_size) std::atomic<std::size_t> tail_{0};
   cache_aligned_padding<std::atomic<std::size_t>> tail_padding_; // Prevent false sharing
