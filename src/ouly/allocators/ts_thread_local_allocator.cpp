@@ -85,6 +85,10 @@ void ts_thread_local_allocator::reset() noexcept
   auto* page = pages_to_free_;
   while (page != nullptr)
   {
+    if (page->tls_ref_ != nullptr)
+    {
+      *page->tls_ref_ = nullptr; // Clear the thread-local reference
+    }
     arena_t* next = page->next_;
     ::operator delete(page, std::align_val_t{alignof(std::max_align_t)});
     page = next;
@@ -161,8 +165,9 @@ auto ts_thread_local_allocator::allocate_slow_path(std::size_t size) noexcept ->
     page_list_tail_ = page; // first page in the list
   }
 
-  page->next_     = page_list_head_; // insert at the head of the list
-  page_list_head_ = page;            // head of the list, for fast allocation
+  page->next_     = page_list_head_;   // insert at the head of the list
+  page_list_head_ = page;              // head of the list, for fast allocation
+  page->tls_ref_  = &local_page.page_; // Set the thread-local reference
   local_page = {.generation_ = generation_.load(std::memory_order_relaxed), .page_ = page}; // install for this thread
 
   std::size_t offset = page->used_;

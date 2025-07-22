@@ -156,6 +156,8 @@ private:
     std::size_t size_ = 0;       ///< Total bytes available in data_[]
     arena_t*    next_ = nullptr; ///< Intrusive list pointer (for free list)
 
+    arena_t** tls_ref_ = nullptr;
+
     alignas(std::max_align_t) std::byte data_[1] = {}; ///< Flexible array member for allocations
   };
 
