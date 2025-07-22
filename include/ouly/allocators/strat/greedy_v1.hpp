@@ -169,11 +169,11 @@ public:
 
   void validate_integrity(block_bank const& blocks) const
   {
-    uint32_t i = head_;
-    uint32_t p = 0;
+    [[maybe_unused]] uint32_t i = head_;
+    [[maybe_unused]] uint32_t p = 0;
     while (i != 0U)
     {
-      auto const& blk = blocks[block_link(i)];
+      [[maybe_unused]] auto const& blk = blocks[block_link(i)];
       OULY_ASSERT(blk.is_free_);
       OULY_ASSERT(blk.list_.prev_ == p);
       p = i;

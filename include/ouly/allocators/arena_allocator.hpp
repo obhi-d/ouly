@@ -532,7 +532,7 @@ public:
   // validate
   void validate_integrity() const
   {
-    std::uint32_t total_free_nodes = 0;
+    [[maybe_unused]] std::uint32_t total_free_nodes = 0;
     for (auto arena_it     = ibank_.bank_.arena_order_.begin(ibank_.bank_.arenas()),
               arena_end_it = ibank_.bank_.arena_order_.end(ibank_.bank_.arenas());
          arena_it != arena_end_it; ++arena_it)

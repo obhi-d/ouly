@@ -755,13 +755,14 @@ public:
     validate_parents(blocks, Tombstone, root_);
   }
 
-  void validate_parents(container const& blocks, std::uint32_t parent, std::uint32_t node) const
+  void validate_parents([[maybe_unused]] container const& blocks, [[maybe_unused]] std::uint32_t parent,
+                        [[maybe_unused]] std::uint32_t node) const
   {
     if (node == Tombstone)
     {
       return;
     }
-    auto& n = Accessor::node(blocks, node);
+    [[maybe_unused]] auto& n = Accessor::node(blocks, node);
     OULY_ASSERT(Accessor::links(n).parent_ == parent);
     validate_parents(blocks, node, Accessor::links(n).left_);
     validate_parents(blocks, node, Accessor::links(n).right_);
