@@ -393,6 +393,7 @@ private:
   auto work(worker_id /*thread*/) noexcept -> bool;
 
   struct worker_synchronizer;
+  struct tally_publisher;
 
   uint32_t         worker_count_ = 0;
   std::atomic_bool stop_         = false;

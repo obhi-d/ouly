@@ -171,14 +171,6 @@ public:
     return true;
   }
 
-  auto empty() const noexcept -> bool
-  {
-    std::size_t   pos      = tail_.load(std::memory_order_acquire);
-    node_t const* node_ptr = &buffer_[pos & mask];
-    return static_cast<intptr_t>(node_ptr->sequence_.load(std::memory_order_relaxed)) - static_cast<intptr_t>(pos + 1) <
-           0;
-  }
-
 private:
   struct node_t
   {

@@ -26,7 +26,7 @@ inline void pause_exec() noexcept
 {
 #if defined(__i386__) || defined(__x86_64__) // 32- & 64-bit x86
 #if defined(_MSC_VER)
-  _mm_pause(); // MSVC / Intel C++ :contentReference[oaicite:0]{index=0}
+  _mm_pause(); // MSVC / Intel C++
 #else
   __builtin_ia32_pause(); // GCC / Clang
 #endif
@@ -76,17 +76,34 @@ auto worker_id::this_worker::get_id() noexcept -> worker_id const&
   return g_worker_id;
 }
 
+struct scheduler::tally_publisher
+{
+  scheduler* owner_ = nullptr;
+
+  void operator()() const noexcept;
+};
+
 struct scheduler::worker_synchronizer
 {
-  std::latch                          job_board_freeze_ack_;
-  std::barrier<std::function<void()>> published_tally_;
-  std::atomic_int64_t                 tally_{0};
+  std::latch                    job_board_freeze_ack_;
+  std::barrier<tally_publisher> published_tally_;
+  std::atomic_int64_t           tally_{0};
 
-  template <typename L>
-  worker_synchronizer(ptrdiff_t worker_count, L&& completion) noexcept
-      : job_board_freeze_ack_(worker_count), published_tally_(worker_count, std::forward<L>(completion))
+  worker_synchronizer(ptrdiff_t worker_count, scheduler* owner) noexcept
+      : job_board_freeze_ack_(worker_count), published_tally_(worker_count, tally_publisher{owner})
   {}
 };
+
+void scheduler::tally_publisher::operator()() const noexcept
+{
+  // Wait to take stock of the remaining work
+  int64_t total_remaining_tasks = 0;
+  for (uint32_t thread = 0; thread < owner_->worker_count_; ++thread)
+  {
+    total_remaining_tasks += owner_->memory_block_.workers_[thread].get().tally_;
+  }
+  owner_->synchronizer_->tally_.store(total_remaining_tasks, std::memory_order_release);
+}
 
 scheduler::~scheduler() noexcept
 {
@@ -381,7 +398,7 @@ auto scheduler::compute_group_range(uint32_t worker_index) -> bool
   range.steal_range_end_   = 0;
   range.steal_mask_        = 0;
 
-  bool continuous_range = true;
+  int32_t min_out_of_loop = -1;
   for (uint32_t other_w = 0; other_w < worker_count_; ++other_w)
   {
     if (other_w == worker_index)
@@ -399,11 +416,14 @@ auto scheduler::compute_group_range(uint32_t worker_index) -> bool
     }
     else
     {
-      continuous_range = false;
+      min_out_of_loop = std::min(min_out_of_loop, static_cast<int32_t>(other_w));
     }
   }
 
-  return continuous_range;
+  auto range_min = static_cast<int32_t>(range.steal_range_start_);
+  auto range_max = static_cast<int32_t>(range.steal_range_end_);
+  // Check if min_out_of_loop is not inside the start and end of the steal range
+  return (range_min > min_out_of_loop && range_max < min_out_of_loop);
 }
 
 void scheduler::compute_steal_mask(uint32_t worker_index) const
@@ -510,18 +530,7 @@ void scheduler::take_ownership() noexcept
 // NOLINTNEXTLINE
 void scheduler::finish_pending_tasks() noexcept
 {
-  synchronizer_ = std::make_shared<worker_synchronizer>(
-   worker_count_,
-   [this]() noexcept
-   {
-     // Wait to take stock of the remaining work
-     int64_t total_remaining_tasks = 0;
-     for (uint32_t thread = 0; thread < worker_count_; ++thread)
-     {
-       total_remaining_tasks += memory_block_.workers_[thread].get().tally_;
-     }
-     synchronizer_->tally_.store(total_remaining_tasks, std::memory_order_release);
-   });
+  synchronizer_ = std::make_shared<worker_synchronizer>(worker_count_, this);
 
   // First: Signal stop to prevent new task submissions
   stop_.store(true, std::memory_order_seq_cst);

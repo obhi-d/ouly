@@ -141,6 +141,8 @@ public:
    */
   void release() noexcept;
 
+  struct tls_t;
+
 private:
   /**
    * @brief Internal arena structure for memory management
@@ -150,12 +152,11 @@ private:
    */
   struct arena_t
   {
-    std::size_t   used_;       ///< Current bump offset (owned by one thread)
-    std::size_t   size_;       ///< Total bytes available in data_[]
-    std::uint32_t generation_; ///< Frame ID when the arena was created
-    arena_t*      next_;       ///< Intrusive list pointer (for free list)
+    std::size_t used_ = 0;       ///< Current bump offset (owned by one thread)
+    std::size_t size_ = 0;       ///< Total bytes available in data_[]
+    arena_t*    next_ = nullptr; ///< Intrusive list pointer (for free list)
 
-    alignas(std::max_align_t) std::byte data_[1]; ///< Flexible array member for allocations
+    alignas(std::max_align_t) std::byte data_[1] = {}; ///< Flexible array member for allocations
   };
 
   /**
@@ -163,7 +164,7 @@ private:
    * @param payload_size Size of the data portion in bytes
    * @return Pointer to newly created arena
    */
-  auto create_page(std::size_t payload_size) -> arena_t*;
+  static auto create_page(std::size_t payload_size) -> arena_t*;
 
   /**
    * @brief Try to reuse an arena from the free list
@@ -201,9 +202,6 @@ private:
 
   /** @brief Monotonically-increasing frame ID for generation tracking */
   std::atomic<uint32_t> generation_ = {0};
-
-  /** @brief Each thread gets its own current arena pointer */
-  static thread_local arena_t* local_page;
 };
 
 } // namespace ouly

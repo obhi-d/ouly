@@ -5,34 +5,41 @@
 
 namespace ouly
 {
+struct ts_thread_local_allocator::tls_t
+{
+  std::uint32_t                       generation_ = {}; ///< Frame ID when the arena was created
+  ts_thread_local_allocator::arena_t* page_       = {}; ///< Pointer to the current arena
+};
+
 /* Definition of the thread-local variable */
-thread_local ts_thread_local_allocator::arena_t* ts_thread_local_allocator::local_page = nullptr;
+// NOLINTNEXTLINE
+thread_local ts_thread_local_allocator::tls_t local_page = {};
 /** Fast-path: bump-pointer allocation on the calling thread’s current arena_t. */
 auto ts_thread_local_allocator::allocate(std::size_t size) noexcept -> void*
 {
   // Skip alignment if already aligned (common case for POD types)
   size = is_aligned(size) ? size : align_up(size);
 
-  arena_t* page = local_page;
-  if (page != nullptr) [[likely]]
+  auto page = local_page;
+  if (page.page_ != nullptr) [[likely]]
   {
     // Cache the generation locally to avoid repeated atomic loads
     const auto current_generation = generation_.load(std::memory_order_relaxed);
-    if (page->generation_ == current_generation) [[likely]]
+    if (page.generation_ == current_generation) [[likely]]
     {
-      auto offset = page->used_;
-      if (offset + size <= page->size_) [[likely]]
+      auto offset = page.page_->used_;
+      if (offset + size <= page.page_->size_) [[likely]]
       {
-        void* result = &page->data_[0] + offset;
-        page->used_  = offset + size; // Slightly faster than +=
+        void* result      = &page.page_->data_[0] + offset;
+        page.page_->used_ = offset + size; // Slightly faster than +=
 
         if constexpr (ouly::cfg::prefetch_next_allocation)
         {
           // Prefetch the next allocation location if there's room (typical cache line size)
           constexpr std::size_t cache_line_size = 64;
-          if (offset + size + cache_line_size <= page->size_) [[likely]]
+          if (offset + size + cache_line_size <= page.page_->size_) [[likely]]
           {
-            prefetch_for_write(&page->data_[0] + offset + size);
+            prefetch_for_write(&page.page_->data_[0] + offset + size);
           }
         }
         return result; // **zero synchronisation**
@@ -45,8 +52,8 @@ auto ts_thread_local_allocator::allocate(std::size_t size) noexcept -> void*
 auto ts_thread_local_allocator::deallocate(void* ptr, std::size_t size) noexcept -> bool
 {
   size          = align_up(size);
-  arena_t* page = local_page;
-  if ((page == nullptr) || page->generation_ != generation_.load(std::memory_order_relaxed))
+  arena_t* page = local_page.page_;
+  if ((page == nullptr) || local_page.generation_ != generation_.load(std::memory_order_relaxed))
   {
     return false;
   }
@@ -101,11 +108,10 @@ auto ts_thread_local_allocator::create_page(std::size_t payload_size) -> arena_t
   std::size_t total = sizeof(arena_t) + payload_size;
   void*       raw   = ::operator new(total, std::align_val_t{alignof(std::max_align_t)});
 
-  auto* page        = static_cast<arena_t*>(raw);
-  page->used_       = 0;
-  page->size_       = payload_size;
-  page->generation_ = generation_.load(std::memory_order_relaxed);
-  page->next_       = nullptr;
+  auto* page  = static_cast<arena_t*>(raw);
+  page->used_ = 0;
+  page->size_ = payload_size;
+  page->next_ = nullptr;
   return page;
 }
 auto ts_thread_local_allocator::pop_free_list(std::size_t min_payload) -> arena_t*
@@ -128,9 +134,8 @@ auto ts_thread_local_allocator::allocate_slow_path(std::size_t size) noexcept ->
     // we allocate a single large page that is not reused.
     auto* arena =
      static_cast<arena_t*>(::operator new(sizeof(arena_t) + payload, std::align_val_t{alignof(std::max_align_t)}));
-    arena->size_       = payload;
-    arena->used_       = payload;
-    arena->generation_ = generation_.load(std::memory_order_relaxed);
+    arena->size_ = payload;
+    arena->used_ = payload;
 
     std::lock_guard<std::mutex> lg{page_mutex_};
 
@@ -158,7 +163,7 @@ auto ts_thread_local_allocator::allocate_slow_path(std::size_t size) noexcept ->
 
   page->next_     = page_list_head_; // insert at the head of the list
   page_list_head_ = page;            // head of the list, for fast allocation
-  local_page      = page;            // install for this thread
+  local_page = {.generation_ = generation_.load(std::memory_order_relaxed), .page_ = page}; // install for this thread
 
   std::size_t offset = page->used_;
   page->used_ += size;
