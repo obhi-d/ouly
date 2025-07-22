@@ -128,6 +128,16 @@ add_unit_test(NAME microexpr FILES "microexpr_tests.cpp" SANITIZE)
 add_unit_test(NAME thread_safe_allocators FILES "thread_safe_allocators.cpp" SANITIZE)
 add_unit_test(NAME coalescing_allocator FILES "coalescing_allocator.cpp" SANITIZE)
 add_executable(ouly-bench "bench_arena_allocator.cpp" "bench_main.cpp")
+add_executable(ouly-performance-bench "bench_performance.cpp")
 
 target_link_libraries(ouly-bench ouly::ouly nanobench::nanobench)
 target_compile_features(ouly-bench PRIVATE cxx_std_20)
+
+target_link_libraries(ouly-performance-bench ouly::ouly nanobench::nanobench)
+target_compile_features(ouly-performance-bench PRIVATE cxx_std_20)
+target_compile_definitions(ouly-performance-bench PRIVATE -DOULY_REC_STATS -DOULY_THROW_ON_ERROR)
+
+# Performance test target for release builds
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    add_test(NAME performance_benchmarks COMMAND ouly-performance-bench)
+endif()

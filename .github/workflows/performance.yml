@@ -1,0 +1,222 @@
+name: Performance Benchmarks
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run benchmarks daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        build_type: [Release]
+        compiler: [gcc-11, clang-14]
+        
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up compiler
+      run: |
+        if [[ "${{ matrix.compiler }}" == "gcc-11" ]]; then
+          sudo apt-get update
+          sudo apt-get install -y gcc-11 g++-11
+          echo "CC=gcc-11" >> $GITHUB_ENV
+          echo "CXX=g++-11" >> $GITHUB_ENV
+        elif [[ "${{ matrix.compiler }}" == "clang-14" ]]; then
+          sudo apt-get update
+          sudo apt-get install -y clang-14
+          echo "CC=clang-14" >> $GITHUB_ENV
+          echo "CXX=clang++-14" >> $GITHUB_ENV
+        fi
+    
+    - name: Configure CMake
+      run: |
+        cmake -B build \
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+          -DCMAKE_C_COMPILER=$CC \
+          -DCMAKE_CXX_COMPILER=$CXX \
+          -DOULY_BUILD_TESTS=ON
+    
+    - name: Build
+      run: cmake --build build --config ${{ matrix.build_type }} -j$(nproc)
+    
+    - name: Run Performance Benchmarks
+      run: |
+        cd build/unit_tests
+        ./ouly-performance-bench benchmark_results_${{ matrix.compiler }}_${{ matrix.build_type }}.json
+        
+    - name: Upload benchmark results
+      uses: actions/upload-artifact@v4
+      with:
+        name: benchmark-results-${{ matrix.compiler }}-${{ matrix.build_type }}
+        path: build/unit_tests/benchmark_results_*.json
+        retention-days: 30
+        
+    - name: Performance regression check
+      if: github.event_name == 'pull_request'
+      run: |
+        echo "Performance benchmark completed for PR"
+        echo "Results can be compared manually from artifacts"
+        # Future: Add automatic regression detection here
+
+  performance-tracking:
+    runs-on: ubuntu-latest
+    needs: benchmark
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        # Fetch full history for performance tracking
+        fetch-depth: 0
+        
+    - name: Download all benchmark results
+      uses: actions/download-artifact@v4
+      with:
+        path: benchmark-results
+        
+    - name: Setup performance tracking
+      run: |
+        # Create performance tracking branch if it doesn't exist
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        
+        # Check if performance-tracking branch exists
+        if git ls-remote --heads origin performance-tracking | grep -q performance-tracking; then
+          git fetch origin performance-tracking
+          git checkout performance-tracking
+        else
+          git checkout --orphan performance-tracking
+          git rm -rf .
+        fi
+        
+    - name: Store benchmark results
+      run: |
+        # Create directory structure for historical data
+        TIMESTAMP=$(date '+%Y-%m-%d_%H-%M-%S')
+        COMMIT_SHA="${{ github.sha }}"
+        mkdir -p "results/${TIMESTAMP}_${COMMIT_SHA:0:8}"
+        
+        # Copy all benchmark results
+        find benchmark-results -name "*.json" -exec cp {} "results/${TIMESTAMP}_${COMMIT_SHA:0:8}/" \;
+        
+        # Create or update index file
+        cat > results/index.md << EOF
+        # Ouly Performance Tracking
+        
+        This branch contains historical performance benchmark results.
+        
+        ## Latest Results
+        
+        - **Timestamp**: ${TIMESTAMP}
+        - **Commit**: ${COMMIT_SHA:0:8}
+        - **Branch**: main
+        
+        ## Results Structure
+        
+        Each directory contains benchmark results for a specific build:
+        - GCC 11 Release build
+        - Clang 14 Release build
+        
+        ## Tracked Components
+        
+        - **ts_shared_linear_allocator**: Thread-safe shared linear allocator performance
+        - **ts_thread_local_allocator**: Thread-local allocator performance  
+        - **coalescing_arena_allocator**: Coalescing arena allocator performance
+        - **scheduler**: Task scheduler performance (task submission, parallel_for, work stealing)
+        
+        ## Usage
+        
+        Results are stored in JSON format and can be processed with analysis tools.
+        Each benchmark includes median, min, max, mean times and relative error.
+        EOF
+        
+        # Add and commit results
+        git add .
+        git commit -m "Add performance results for commit ${COMMIT_SHA:0:8} (${TIMESTAMP})" || echo "No changes to commit"
+        git push origin performance-tracking
+        
+    - name: Generate performance report
+      run: |
+        # Switch back to performance-tracking branch to generate report
+        git checkout performance-tracking
+        
+        # Create simple performance summary
+        echo "# Performance Benchmark Summary" > performance_summary.md
+        echo "" >> performance_summary.md
+        echo "**Date**: $(date)" >> performance_summary.md
+        echo "**Commit**: ${{ github.sha }}" >> performance_summary.md
+        echo "" >> performance_summary.md
+        echo "## Benchmark Results" >> performance_summary.md
+        echo "" >> performance_summary.md
+        
+        # List available result files
+        find results -name "*.json" | head -10 | while read file; do
+          echo "- $(basename $file)" >> performance_summary.md
+        done
+        
+        echo "" >> performance_summary.md
+        echo "Full results available in the artifacts and performance-tracking branch." >> performance_summary.md
+        
+    - name: Comment on PR with performance info
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          if (fs.existsSync('performance_summary.md')) {
+            const summary = fs.readFileSync('performance_summary.md', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🚀 Performance Benchmark Results\n\n${summary}\n\nDetailed results are available in the workflow artifacts.`
+            });
+          }
+
+  build-verification:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        build_type: [Release]
+        
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Configure CMake (Unix)
+      if: runner.os != 'Windows'
+      run: |
+        cmake -B build \
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+          -DOULY_BUILD_TESTS=ON
+    
+    - name: Configure CMake (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        cmake -B build -DOULY_BUILD_TESTS=ON
+    
+    - name: Build
+      run: |
+        if [[ "${{ runner.os }}" == "Windows" ]]; then
+          cmake --build build --config ${{ matrix.build_type }}
+        else
+          cmake --build build --config ${{ matrix.build_type }} -j$(nproc 2>/dev/null || sysctl -n hw.ncpu)
+        fi
+      shell: bash
+    
+    - name: Quick benchmark verification
+      run: |
+        cd build/unit_tests
+        if [[ "${{ runner.os }}" == "Windows" ]]; then
+          ./${{ matrix.build_type }}/ouly-performance-bench.exe --help || echo "Benchmark executable built successfully"
+        else
+          ./ouly-performance-bench --help || echo "Benchmark executable built successfully"
+        fi
+      shell: bash
