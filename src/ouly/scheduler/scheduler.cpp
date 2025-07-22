@@ -60,8 +60,12 @@ thread_local uint32_t g_random_seed = 0;
 static constexpr uint32_t lcg_multiplier    = 1664525U;
 static constexpr uint32_t lcg_increment     = 1013904223U;
 static constexpr uint32_t initial_seed_mask = 0xAAAAAAAAU;
+namespace detail
+{
+auto update_seed() -> uint32_t;
+}
 
-auto update_seed() -> uint32_t
+auto detail::update_seed() -> uint32_t
 {
   return (g_random_seed = (g_random_seed * lcg_multiplier + lcg_increment) & initial_seed_mask);
 }
@@ -272,7 +276,7 @@ auto scheduler::try_steal_work(worker_id thread, ouly::detail::work_item& work) 
   assert(range.steal_range_start_ <= range.steal_range_end_);
 
   uint32_t steal_range_size = range.steal_range_end_ - range.steal_range_start_;
-  uint32_t start_offset     = update_seed();
+  uint32_t start_offset     = detail::update_seed();
 
   // Try to steal from workers we can steal from (check against steal mask)
   for (uint32_t attempt = 0; attempt < steal_range_size; ++attempt)
@@ -603,10 +607,10 @@ void scheduler::submit_internal([[maybe_unused]] worker_id src, workgroup_id dst
     uint32_t worker_offset = (start_offset + attempt) % wg.thread_count_;
     uint32_t worker_index  = wg.start_thread_idx_ + worker_offset;
 
-    auto& wake_data = memory_block_.wake_data_[worker_index].get();
+    auto& worker_wake_data = memory_block_.wake_data_[worker_index].get();
 
     // If worker is sleeping, try to assign work directly to it
-    if (!wake_data.status_.load(std::memory_order_acquire))
+    if (!worker_wake_data.status_.load(std::memory_order_acquire))
     {
       auto& target_worker = memory_block_.workers_[worker_index].get();
 
@@ -621,7 +625,7 @@ void scheduler::submit_internal([[maybe_unused]] worker_id src, workgroup_id dst
   // If no idle threads found, push to workgroup shared queue
   if (!wg.push_item(work))
   {
-    uint32_t push_offset = update_seed();
+    uint32_t push_offset = detail::update_seed();
     // If workgroup queue is full, wake up all threads in the workgroup
     uint32_t worker_index = wg.start_thread_idx_ + (push_offset % wg.thread_count_);
     // Try to push into this worker
