@@ -1,0 +1,196 @@
+name: Coverity Scan
+
+on:
+  schedule:
+    # Run Coverity scan weekly on Sundays at 2 AM UTC
+    - cron: '0 2 * * 0'
+  workflow_dispatch:
+    # Allow manual triggering
+  push:
+    branches: [ main ]
+    # Only run on main branch pushes, but limit frequency
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/workflows/**'
+      - '!.github/workflows/coverity.yml'
+
+env:
+  # Coverity project settings
+  COVERITY_PROJECT_NAME: "obhi-d/ouly"
+  BUILD_TYPE: Release
+
+jobs:
+  # Job to check if we should skip Coverity due to frequency limits
+  check-frequency:
+    name: Check Scan Frequency
+    runs-on: ubuntu-latest
+    outputs:
+      should-scan: ${{ steps.check.outputs.should-scan }}
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 50  # Get recent commits to check frequency
+
+    - name: Check last Coverity scan
+      id: check
+      shell: bash
+      run: |
+        # For manual runs or scheduled runs, always scan
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]] || [[ "${{ github.event_name }}" == "schedule" ]]; then
+          echo "should-scan=true" >> $GITHUB_OUTPUT
+          echo "Manual or scheduled run - proceeding with scan"
+          exit 0
+        fi
+        
+        # For push events, check if we've scanned recently
+        # Look for commits in the last 24 hours that might have triggered Coverity
+        recent_commits=$(git log --since="24 hours ago" --oneline | wc -l)
+        
+        if [[ $recent_commits -gt 5 ]]; then
+          echo "should-scan=false" >> $GITHUB_OUTPUT
+          echo "Too many recent commits ($recent_commits), skipping to avoid Coverity rate limits"
+        else
+          echo "should-scan=true" >> $GITHUB_OUTPUT
+          echo "Recent commits: $recent_commits - proceeding with scan"
+        fi
+
+  coverity-scan:
+    name: Coverity Scan Analysis
+    runs-on: ubuntu-latest
+    needs: check-frequency
+    if: github.repository == 'obhi-d/ouly' && needs.check-frequency.outputs.should-scan == 'true'
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup CMake and Ninja
+      uses: lukka/get-cmake@latest
+
+    - name: Install dependencies
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-14 g++-14
+
+    - name: Cache Coverity Build Tool
+      id: cache-coverity
+      uses: actions/cache@v4
+      with:
+        path: coverity-linux64
+        key: coverity-linux64-2024.6.0
+        restore-keys: |
+          coverity-linux64-
+
+    - name: Download Coverity Build Tool
+      if: steps.cache-coverity.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        echo "Downloading Coverity Build Tool..."
+        curl -d "token=${{ secrets.COVERITY_SCAN_TOKEN }}&project=${{ env.COVERITY_PROJECT_NAME }}" \
+             -o coverity_tool.tgz \
+             https://scan.coverity.com/download/linux64
+        
+        tar -xzf coverity_tool.tgz
+        mv cov-analysis-linux64-* coverity-linux64
+
+    - name: Configure CMake
+      shell: bash
+      run: |
+        cmake -B build \
+          -G "Ninja" \
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+          -DCMAKE_C_COMPILER=gcc-14 \
+          -DCMAKE_CXX_COMPILER=g++-14 \
+          -DOULY_BUILD_TESTS=ON \
+          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+      env:
+        CC: gcc-14
+        CXX: g++-14
+
+    - name: Build with Coverity
+      shell: bash
+      run: |
+        export PATH=$PWD/coverity-linux64/bin:$PATH
+        
+        # Clean any previous build
+        cmake --build build --target clean || true
+        
+        # Build with Coverity wrapper
+        cov-build --dir cov-int cmake --build build --config ${{ env.BUILD_TYPE }} --parallel
+        
+        echo "Coverity build completed. Contents of cov-int:"
+        ls -la cov-int/
+
+    - name: Submit to Coverity Scan
+      shell: bash
+      run: |
+        # Create archive for submission
+        tar -czf ouly-coverity.tgz cov-int
+        
+        # Get commit info for submission
+        COMMIT_SHA=$(git rev-parse HEAD)
+        COMMIT_MSG=$(git log -1 --pretty=format:"%s" | head -c 100)
+        
+        echo "Submitting to Coverity Scan..."
+        echo "Project: ${{ env.COVERITY_PROJECT_NAME }}"
+        echo "Commit: $COMMIT_SHA"
+        echo "Description: $COMMIT_MSG"
+        
+        curl \
+          --form token="${{ secrets.COVERITY_SCAN_TOKEN }}" \
+          --form email="${{ secrets.COVERITY_SCAN_EMAIL }}" \
+          --form file=@ouly-coverity.tgz \
+          --form version="$COMMIT_SHA" \
+          --form description="$COMMIT_MSG" \
+          https://scan.coverity.com/builds?project=${{ env.COVERITY_PROJECT_NAME }}
+
+    - name: Upload Coverity intermediate files
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverity-intermediate-files
+        path: |
+          cov-int/
+          build/CMakeFiles/
+        retention-days: 7
+
+    - name: Scan Status
+      shell: bash
+      run: |
+        echo "::notice::Coverity Scan completed successfully"
+        echo "Results will be available on the Coverity Scan dashboard in a few minutes"
+        echo "Visit: https://scan.coverity.com/projects/${{ env.COVERITY_PROJECT_NAME }}"
+
+  # Summary job
+  coverity-summary:
+    name: Coverity Summary
+    needs: [check-frequency, coverity-scan]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - name: Summary
+      shell: bash
+      run: |
+        echo "## 🔍 Coverity Scan Summary"
+        echo ""
+        
+        if [[ "${{ needs.check-frequency.outputs.should-scan }}" == "false" ]]; then
+          echo "⏭️ **Scan Skipped**: Too many recent scans to avoid rate limits"
+        elif [[ "${{ needs.coverity-scan.result }}" == "success" ]]; then
+          echo "✅ **Coverity Scan**: COMPLETED"
+          echo "   - Static analysis completed successfully"
+          echo "   - Results will be available on Coverity dashboard shortly"
+        elif [[ "${{ needs.coverity-scan.result }}" == "failure" ]]; then
+          echo "❌ **Coverity Scan**: FAILED"
+          echo "   - Check the logs for details"
+        else
+          echo "❓ **Coverity Scan**: ${{ needs.coverity-scan.result }}"
+        fi
+        
+        echo ""
+        echo "**Dashboard**: https://scan.coverity.com/projects/${{ env.COVERITY_PROJECT_NAME }}"
