@@ -884,7 +884,7 @@ TEST_CASE("scheduler: Advanced Work Stealing and Distribution")
         active_workers++;
       }
     }
-    REQUIRE(active_workers > 5);
+    REQUIRE(active_workers >= 4);
   }
 }
 

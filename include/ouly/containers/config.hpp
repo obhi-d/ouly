@@ -21,7 +21,7 @@ struct name_val_map
  * the hash map implementation and replace std::unordered_map by your own class if it satisfies
  *
  */
-template <template <typename K, typename V> typename H>
+template <template <typename... Args> typename H>
 struct map
 {
   using name_map_type = H<std::type_index, blackboard_offset>;

@@ -44,7 +44,8 @@ jobs:
               os: macos-latest,
               generator: "Ninja",
               cc: "clang",
-              cxx: "clang++"
+              cxx: "clang++",
+              min_clang_version: "17"
             }
 
     steps:
@@ -67,19 +68,26 @@ jobs:
           sudo apt-get install -y clang-18 clang++-18
         fi
 
+    - name: Check and setup macOS Clang
+      if: runner.os == 'macOS'
+      run: |
+        # Check current Clang version
+        clang_version=$(clang --version | head -n1 | grep -o '[0-9]\+\.[0-9]\+' | head -n1 | cut -d. -f1)
+        echo "Current Clang version: $clang_version"
+        
+        if [[ "${{ matrix.config.min_clang_version }}" != "" ]] && [[ $clang_version -lt ${{ matrix.config.min_clang_version }} ]]; then
+          echo "Clang version $clang_version is less than required ${{ matrix.config.min_clang_version }}"
+          echo "Skipping this build as it's not compatible with older Clang versions"
+          exit 1
+        fi
+
     - name: Setup MSVC
       if: runner.os == 'Windows'
       uses: ilammy/msvc-dev-cmd@v1
 
     - name: Configure CMake
       run: |
-        cmake -B ${{ github.workspace }}/build \
-              -G "${{ matrix.config.generator }}" \
-              -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
-              -DCMAKE_C_COMPILER=${{ matrix.config.cc }} \
-              -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }} \
-              -DOULY_BUILD_TESTS=ON \
-              -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+        cmake -B ${{ github.workspace }}/build -G "${{ matrix.config.generator }}" -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DCMAKE_C_COMPILER=${{ matrix.config.cc }} -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }} -DOULY_BUILD_TESTS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
       env:
         CC: ${{ matrix.config.cc }}
         CXX: ${{ matrix.config.cxx }}
@@ -110,14 +118,7 @@ jobs:
 
     - name: Configure CMake with coverage
       run: |
-        cmake -B ${{ github.workspace }}/build \
-              -G "Ninja" \
-              -DCMAKE_BUILD_TYPE=Debug \
-              -DCMAKE_C_COMPILER=gcc-14 \
-              -DCMAKE_CXX_COMPILER=g++-14 \
-              -DOULY_BUILD_TESTS=ON \
-              -DOULY_TEST_COVERAGE=ON \
-              -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+        cmake -B ${{ github.workspace }}/build -G "Ninja" -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=gcc-14 -DCMAKE_CXX_COMPILER=g++-14 -DOULY_BUILD_TESTS=ON -DOULY_TEST_COVERAGE=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
       env:
         CC: gcc-14
         CXX: g++-14
@@ -132,11 +133,7 @@ jobs:
     - name: Generate coverage report
       working-directory: ${{ github.workspace }}/build
       run: |
-        lcov --gcov-tool gcov-14 --capture \
-             --directory . \
-             --base-directory ${{ github.workspace }} \
-             --output-file coverage.info \
-             --no-external --ignore-errors mismatch
+        lcov --gcov-tool gcov-14 --capture --directory . --base-directory ${{ github.workspace }} --output-file coverage.info --no-external --ignore-errors mismatch
         lcov --remove coverage.info '/usr/*' '*/_deps/*' '*/catch2-src/*' --output-file coverage.info --ignore-errors unused
 
     - name: Upload coverage to Codecov
