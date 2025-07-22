@@ -17,12 +17,13 @@ jobs:
       fail-fast: false  # Don't cancel other matrix jobs if one fails
       matrix:
         build_type: [Release]
-        compiler: [gcc-14, clang-17]
+        compiler: [gcc-14, clang-19]
         
     steps:
     - uses: actions/checkout@v4
     
     - name: Set up compiler
+      shell: bash
       run: |
         sudo apt-get update
         if [[ "${{ matrix.compiler }}" == "gcc-14" ]]; then
@@ -30,17 +31,18 @@ jobs:
           sudo apt-get install -y gcc-14 g++-14
           echo "CC=gcc-14" >> $GITHUB_ENV
           echo "CXX=g++-14" >> $GITHUB_ENV
-        elif [[ "${{ matrix.compiler }}" == "clang-17" ]]; then
-          # Install Clang 17 using LLVM script
+        elif [[ "${{ matrix.compiler }}" == "clang-19" ]]; then
+          # Install Clang 19 using LLVM script
           wget https://apt.llvm.org/llvm.sh
           chmod +x llvm.sh
-          sudo ./llvm.sh 17
-          sudo apt-get install -y clang-17 clang++-17
-          echo "CC=clang-17" >> $GITHUB_ENV
-          echo "CXX=clang++-17" >> $GITHUB_ENV
+          sudo ./llvm.sh 19
+          sudo apt-get install -y clang-19 clang++-19
+          echo "CC=clang-19" >> $GITHUB_ENV
+          echo "CXX=clang++-19" >> $GITHUB_ENV
         fi
     
     - name: Configure CMake
+      shell: bash
       run: |
         cmake -B build \
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
@@ -49,9 +51,11 @@ jobs:
           -DOULY_BUILD_TESTS=ON
     
     - name: Build
+      shell: bash
       run: cmake --build build --config ${{ matrix.build_type }} -j$(nproc)
     
     - name: Run Performance Benchmarks
+      shell: bash
       run: |
         cd build/unit_tests
         ./ouly-performance-bench benchmark_results_${{ matrix.compiler }}_${{ matrix.build_type }}.json
@@ -65,6 +69,7 @@ jobs:
         
     - name: Performance regression check
       if: github.event_name == 'pull_request'
+      shell: bash
       run: |
         echo "Performance benchmark completed for PR"
         echo "Results can be compared manually from artifacts"
@@ -87,6 +92,7 @@ jobs:
         path: benchmark-results
         
     - name: Setup performance tracking
+      shell: bash
       run: |
         # Create performance tracking branch if it doesn't exist
         git config user.name "github-actions[bot]"
@@ -102,6 +108,7 @@ jobs:
         fi
         
     - name: Store benchmark results
+      shell: bash
       run: |
         # Create directory structure for historical data
         TIMESTAMP=$(date '+%Y-%m-%d_%H-%M-%S')
@@ -127,7 +134,7 @@ jobs:
         
         Each directory contains benchmark results for a specific build:
         - GCC 14 Release build
-        - Clang 17 Release build
+        - Clang 19 Release build
         
         ## Tracked Components
         
@@ -148,6 +155,7 @@ jobs:
         git push origin performance-tracking
         
     - name: Generate performance report
+      shell: bash
       run: |
         # Switch back to performance-tracking branch to generate report
         git checkout performance-tracking
@@ -200,6 +208,7 @@ jobs:
     - name: Configure CMake (Unix)
       if: runner.os != 'Windows'
       continue-on-error: true  # Allow this step to fail on macOS
+      shell: bash
       run: |
         cmake -B build \
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
@@ -207,12 +216,14 @@ jobs:
     
     - name: Configure CMake (Windows)
       if: runner.os == 'Windows'
+      shell: bash
       run: |
         cmake -B build -DOULY_BUILD_TESTS=ON
     
     - name: Build (Unix)
       if: runner.os != 'Windows'
       continue-on-error: true  # Allow this step to fail on macOS
+      shell: bash
       run: |
         cmake --build build --config ${{ matrix.build_type }} -j$(nproc 2>/dev/null || sysctl -n hw.ncpu)
     
@@ -225,6 +236,7 @@ jobs:
     - name: Quick benchmark verification (Unix)
       if: runner.os != 'Windows'
       continue-on-error: true  # Allow this step to fail on macOS
+      shell: bash
       run: |
         if [ -f "build/unit_tests/ouly-performance-bench" ]; then
           cd build/unit_tests
@@ -245,15 +257,22 @@ jobs:
       shell: bash
       
     - name: Build Status Summary
-      if: always()
+      if: runner.os == 'macOS'
+      shell: bash
       run: |
-        if [[ "${{ runner.os }}" == "macOS" ]]; then
-          echo "::notice::macOS build verification completed. Any failures are expected due to compiler version requirements and do not indicate issues."
-        elif [[ "${{ runner.os }}" == "Windows" ]]; then
-          echo "::notice::Windows build verification completed."
-        else
-          echo "::notice::Linux build verification completed."
-        fi
+        echo "::notice::macOS build verification completed. Any failures are expected due to compiler version requirements and do not indicate issues."
+        
+    - name: Build Status Summary
+      if: runner.os == 'Windows'
+      shell: bash
+      run: |
+        echo "::notice::Windows build verification completed."
+        
+    - name: Build Status Summary
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        echo "::notice::Linux build verification completed."
 
   # Summary job to provide overall workflow status
   workflow-summary:
@@ -263,6 +282,7 @@ jobs:
     
     steps:
     - name: Workflow Summary
+      shell: bash
       run: |
         echo "## 📊 Performance Benchmark Workflow Summary"
         echo ""
