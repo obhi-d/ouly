@@ -99,13 +99,13 @@ public:
   template <CoroutineTask C>
   void submit(worker_id src, workgroup_id group, C const& task_obj) noexcept
   {
-    submit(src, group,
-           ouly::detail::work_item::pbind(
-            [address = task_obj.address()](worker_context const&)
-            {
-              std::coroutine_handle<>::from_address(address).resume();
-            },
-            group));
+    submit_internal(src, group,
+                    ouly::detail::work_item::pbind(
+                     [address = task_obj.address()](worker_context const&)
+                     {
+                       std::coroutine_handle<>::from_address(address).resume();
+                     },
+                     group));
   }
 
   /**
@@ -124,7 +124,7 @@ public:
     requires(ouly::detail::Callable<Lambda, ouly::worker_context const&>)
   void submit(worker_id src, workgroup_id group, Lambda&& data) noexcept
   {
-    submit(src, group, ouly::detail::work_item::pbind(std::forward<Lambda>(data), group));
+    submit_internal(src, group, ouly::detail::work_item::pbind(std::forward<Lambda>(data), group));
   }
 
   /**
@@ -142,7 +142,7 @@ public:
   template <auto M, typename Class>
   void submit(worker_id src, workgroup_id group, Class& ctx) noexcept
   {
-    submit(src, group, ouly::detail::work_item::pbind<M>(ctx, group));
+    submit_internal(src, group, ouly::detail::work_item::pbind<M>(ctx, group));
   }
 
   /**
@@ -158,7 +158,7 @@ public:
   template <auto M>
   void submit(worker_id src, workgroup_id group) noexcept
   {
-    submit(src, group, ouly::detail::work_item::pbind<M>(group));
+    submit_internal(src, group, ouly::detail::work_item::pbind<M>(group));
   }
 
   /**
@@ -179,9 +179,9 @@ public:
   template <typename... Args>
   void submit(worker_id src, workgroup_id group, task_delegate::fnptr callable, Args&&... args) noexcept
   {
-    submit(src, group,
-           ouly::detail::work_item::pbind(callable, std::make_tuple<std::decay_t<Args>...>(std::forward<Args>(args)...),
-                                          group));
+    submit_internal(src, group,
+                    ouly::detail::work_item::pbind(
+                     callable, std::make_tuple<std::decay_t<Args>...>(std::forward<Args>(args)...), group));
   }
 
   /**
@@ -202,13 +202,13 @@ public:
   template <CoroutineTask C>
   void submit(worker_id src, worker_id dst, workgroup_id group, C const& task_obj) noexcept
   {
-    submit(src, dst,
-           ouly::detail::work_item::pbind(
-            [address = task_obj.address()](worker_context const&)
-            {
-              std::coroutine_handle<>::from_address(address).resume();
-            },
-            group));
+    submit_internal(src, dst,
+                    ouly::detail::work_item::pbind(
+                     [address = task_obj.address()](worker_context const&)
+                     {
+                       std::coroutine_handle<>::from_address(address).resume();
+                     },
+                     group));
   }
 
   /**
@@ -231,7 +231,7 @@ public:
     requires(ouly::detail::Callable<Lambda, ouly::worker_context const&>)
   void submit(worker_id src, worker_id dst, workgroup_id group, Lambda&& data) noexcept
   {
-    submit(src, dst, ouly::detail::work_item::pbind(std::forward<Lambda>(data), group));
+    submit_internal(src, dst, ouly::detail::work_item::pbind(std::forward<Lambda>(data), group));
   }
 
   /**
@@ -254,7 +254,7 @@ public:
   template <auto M, typename Class>
   void submit(worker_id src, worker_id dst, workgroup_id group, Class& ctx) noexcept
   {
-    submit(src, dst, ouly::detail::work_item::pbind<M>(ctx, group));
+    submit_internal(src, dst, ouly::detail::work_item::pbind<M>(ctx, group));
   }
 
   /**
@@ -272,7 +272,7 @@ public:
   template <auto M>
   void submit(worker_id src, worker_id dst, workgroup_id group) noexcept
   {
-    submit(src, dst, ouly::detail::work_item::pbind<M>(group));
+    submit_internal(src, dst, ouly::detail::work_item::pbind<M>(group));
   }
 
   template <typename... Args>
@@ -294,20 +294,10 @@ public:
    */
   void submit(worker_id src, worker_id dst, workgroup_id group, task_delegate::fnptr callable, Args&&... args) noexcept
   {
-    submit(src, dst,
-           ouly::detail::work_item::pbind(callable, std::make_tuple<std::decay_t<Args>...>(std::forward<Args>(args)...),
-                                          group));
+    submit_internal(src, dst,
+                    ouly::detail::work_item::pbind(
+                     callable, std::make_tuple<std::decay_t<Args>...>(std::forward<Args>(args)...), group));
   }
-
-  /**
-   * @brief Submit a work for execution in the exclusive worker thread
-   */
-  OULY_API void submit(worker_id src, worker_id dst, ouly::detail::work_item work);
-
-  /**
-   * @brief Submit a work for execution
-   */
-  OULY_API void submit(worker_id src, workgroup_id dst, ouly::detail::work_item work);
 
   /**
    * @brief Begin scheduler execution, group creation is frozen after this call.
@@ -378,13 +368,27 @@ public:
   OULY_API void busy_work(worker_id /*thread*/) noexcept;
 
 private:
+  /**
+   * @brief Submit a work for execution in the exclusive worker thread
+   */
+  OULY_API void submit_internal(worker_id src, worker_id dst, ouly::detail::work_item const& work);
+
+  /**
+   * @brief Submit a work for execution
+   */
+  OULY_API void submit_internal(worker_id src, workgroup_id dst, ouly::detail::work_item const& work);
+
+  void assign_priority_order();
+  auto compute_group_range(uint32_t worker_index) -> bool;
+  void compute_steal_mask(uint32_t worker_index) const;
+
   void        finish_pending_tasks() noexcept;
   inline void do_work(worker_id /*thread*/, ouly::detail::work_item& /*work*/) noexcept;
   void        wake_up(worker_id /*thread*/) noexcept;
   void        run(worker_id /*thread*/);
   void        finalize_worker(worker_id /*thread*/) noexcept;
   auto        get_work(worker_id /*thread*/, ouly::detail::work_item& /*work*/) noexcept -> bool;
-  auto        try_steal_work(worker_id /*thread*/, ouly::detail::work_item& /*work*/) noexcept -> bool;
+  auto        try_steal_work(worker_id /*thread*/, ouly::detail::work_item& /*work*/) const noexcept -> bool;
 
   auto work(worker_id /*thread*/) noexcept -> bool;
 

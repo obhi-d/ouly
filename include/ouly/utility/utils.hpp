@@ -101,10 +101,15 @@ template <typename SizeType>
 constexpr auto next_pow2(SizeType val) -> SizeType
 {
   if (val == 0)
+  {
     return 1;
+  }
   --val;
-  for (SizeType i = 1; i < sizeof(SizeType) * 8; i <<= 1)
+  constexpr uint32_t bit_count = 8;
+  for (SizeType i = 1; i < sizeof(SizeType) * bit_count; i <<= 1)
+  {
     val |= val >> i;
+  }
   return ++val;
 }
 

@@ -5,6 +5,11 @@
 #include "ouly/utility/utils.hpp"
 #include <array>
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4324) // structure was padded due to alignment specifier
+#endif
+
 namespace ouly::detail
 {
 // ---------------------------------------------------------------------
@@ -12,6 +17,35 @@ namespace ouly::detail
 // Capacity must be a power-of-two. Algorithm based on Dmitry Vyukov's
 // bounded MPMC queue (public domain).
 // ---------------------------------------------------------------------
+/*  Multi-producer/multi-consumer bounded queue.
+ *  http://www.1024cores.net/home/lock-free-algorithms/queues/bounded-mpmc-queue
+ *
+ *  Copyright (c) 2010-2011, Dmitry Vyukov. All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions are met:
+ *
+ *     1. Redistributions of source code must retain the above copyright notice,
+ *        this list of conditions and the following disclaimer.
+ *     2. Redistributions in binary form must reproduce the above copyright
+ *        notice, this list of conditions and the following disclaimer in the
+ *        documentation and/or other materials provided with the distribution.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY DMITRY VYUKOV "AS IS" AND ANY EXPRESS OR
+ *  IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ *  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO
+ *  EVENT SHALL DMITRY VYUKOV OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ *  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ *  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ *  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ *  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ *  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ *  The views and conclusions contained in the software and documentation are
+ *  those of the authors and should not be interpreted as representing official
+ *  policies, either expressed or implied, of Dmitry Vyukov.
+ */
 template <typename T, size_t Capacity>
 class mpmc_ring
 {
@@ -38,11 +72,11 @@ public:
 
   auto push(T&& value) noexcept -> bool
   {
-    node*       node_ptr = nullptr;
+    node_t*     node_ptr = nullptr;
     std::size_t pos      = head_.load(std::memory_order_relaxed);
     for (;;)
     {
-      node_ptr         = &buffer_[pos & mask_];
+      node_ptr         = &buffer_[pos & mask];
       std::size_t seq  = node_ptr->sequence_.load(std::memory_order_acquire);
       intptr_t    diff = static_cast<intptr_t>(seq) - static_cast<intptr_t>(pos);
       if (diff == 0)
@@ -70,11 +104,11 @@ public:
   template <class... Args>
   auto emplace(Args&&... args) noexcept(std::is_nothrow_constructible_v<T, Args...>) -> bool
   {
-    node*       node_ptr = nullptr;
+    node_t*     node_ptr = nullptr;
     std::size_t pos      = head_.load(std::memory_order_relaxed);
     for (;;)
     {
-      node_ptr         = &buffer_[pos & mask_];
+      node_ptr         = &buffer_[pos & mask];
       std::size_t seq  = node_ptr->sequence_.load(std::memory_order_acquire);
       intptr_t    diff = static_cast<intptr_t>(seq) - static_cast<intptr_t>(pos);
       if (diff == 0)
@@ -101,11 +135,11 @@ public:
 
   auto pop(T& out) noexcept -> bool
   {
-    node*       node_ptr = {};
+    node_t*     node_ptr = {};
     std::size_t pos      = tail_.load(std::memory_order_relaxed);
     for (;;)
     {
-      node_ptr         = &buffer_[pos & mask_];
+      node_ptr         = &buffer_[pos & mask];
       std::size_t seq  = node_ptr->sequence_.load(std::memory_order_acquire);
       intptr_t    diff = static_cast<intptr_t>(seq) - static_cast<intptr_t>(pos + 1);
       if (diff == 0)
@@ -139,20 +173,20 @@ public:
 
   auto empty() const noexcept -> bool
   {
-    std::size_t pos      = tail_.load(std::memory_order_acquire);
-    node const* node_ptr = &buffer_[pos & mask];
+    std::size_t   pos      = tail_.load(std::memory_order_acquire);
+    node_t const* node_ptr = &buffer_[pos & mask];
     return static_cast<intptr_t>(node_ptr->sequence_.load(std::memory_order_relaxed)) - static_cast<intptr_t>(pos + 1) <
            0;
   }
 
 private:
-  union node
+  struct node_t
   {
-    std::atomic<std::size_t>                      sequence_;
-    std::aligned_storage_t<sizeof(T), alignof(T)> storage_;
+    alignas(cache_line_size) std::atomic<std::size_t> sequence_{0};
+    alignas(alignof(T)) std::byte storage_[sizeof(T)] = {};
   };
 
-  using node_list_t = std::array<node, capacity_pow2>;
+  using node_list_t = std::array<node_t, capacity_pow2>;
 
   alignas(cache_line_size) std::atomic<std::size_t> head_{0};
   cache_aligned_padding<std::atomic<std::size_t>> head_padding_; // Prevent false sharing
@@ -162,3 +196,7 @@ private:
 };
 
 } // namespace ouly::detail
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif

@@ -6,6 +6,31 @@
 #include <string>
 
 // NOLINTBEGIN
+TEST_CASE("scheduler: Single workgroup")
+{
+  ouly::scheduler scheduler;
+  scheduler.create_group(ouly::workgroup_id(0), 0, 1);
+
+  scheduler.begin_execution();
+  {
+    ouly::worker_context ctx = ouly::worker_context::get(ouly::workgroup_id(0));
+    REQUIRE(ctx.get_worker().get_index() == 0);
+  }
+
+  bool result = false;
+  ouly::async(ouly::worker_context::get(ouly::workgroup_id(0)), ouly::workgroup_id(0),
+              [&result](ouly::worker_context const& ctx)
+              {
+                if (ctx.get_worker().get_index() == 0)
+                {
+                  result = true;
+                }
+              });
+  scheduler.end_execution();
+  REQUIRE(result);
+}
+
+// NOLINTBEGIN
 TEST_CASE("scheduler: Construction")
 {
   ouly::scheduler scheduler;
