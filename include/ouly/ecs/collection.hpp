@@ -314,10 +314,10 @@ public:
   }
 
 private:
-  void validate_hazard(size_type nb, std::uint8_t hz) const noexcept
+  void validate_hazard([[maybe_unused]] size_type nb, [[maybe_unused]] std::uint8_t hz) const noexcept
   {
-    auto block = hazard_page(nb >> pool_mul);
-    auto index = nb & pool_mod;
+    [[maybe_unused]] auto block = hazard_page(nb >> pool_mul);
+    [[maybe_unused]] auto index = nb & pool_mod;
 
     OULY_ASSERT(items_[block][index] == hz);
   }
