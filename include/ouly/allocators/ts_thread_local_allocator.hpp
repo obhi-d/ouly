@@ -111,7 +111,7 @@ public:
    * @note Returns nullptr on allocation failure
    * @note Thread-safe with zero synchronization in the fast path
    */
-  auto allocate(std::size_t size) noexcept -> void*;
+  auto allocate(std::size_t size) -> void*;
 
   /**
    * @brief Optional stack-style deallocation for the most recent allocation
@@ -122,7 +122,7 @@ public:
    * @note Safe even with concurrent access from other threads
    * @note Thread-safe - each thread owns its arena
    */
-  auto deallocate(void* ptr, std::size_t size) noexcept -> bool;
+  auto deallocate(void* ptr, std::size_t size) -> bool;
 
   /**
    * @brief Reset all arenas for reuse (end-of-frame cleanup)
@@ -156,8 +156,6 @@ private:
     std::size_t size_ = 0;       ///< Total bytes available in data_[]
     arena_t*    next_ = nullptr; ///< Intrusive list pointer (for free list)
 
-    arena_t** tls_ref_ = nullptr;
-
     alignas(std::max_align_t) std::byte data_[1] = {}; ///< Flexible array member for allocations
   };
 
@@ -180,7 +178,7 @@ private:
    * @param size Aligned size to allocate
    * @return Pointer to allocated memory
    */
-  auto allocate_slow_path(std::size_t size) noexcept -> void*;
+  auto allocate_slow_path(std::size_t size) -> void*;
 
   /* ---------- Data members -------------------------------------------- */
 
@@ -204,6 +202,8 @@ private:
 
   /** @brief Monotonically-increasing frame ID for generation tracking */
   std::atomic<uint32_t> generation_ = {0};
+
+  tls_t* tls_slots_ = nullptr; ///< Thread-local storage for arenas
 };
 
 } // namespace ouly

@@ -2,25 +2,42 @@
 #include "ouly/allocators/ts_thread_local_allocator.hpp"
 #include "ouly/allocators/config.hpp"
 #include "ouly/utility/common.hpp"
+#include <limits>
 
 namespace ouly
 {
 struct ts_thread_local_allocator::tls_t
 {
-  std::uint32_t                       generation_ = {}; ///< Frame ID when the arena was created
-  ts_thread_local_allocator::arena_t* page_       = {}; ///< Pointer to the current arena
+  std::uint32_t generation_ = std::numeric_limits<uint32_t>::max(); ///< Frame ID when the arena was created
+  ts_thread_local_allocator::arena_t* page_        = {};
+  tls_t*                              next_        = nullptr;
+  tls_t**                             head_        = nullptr;
+  tls_t() noexcept                                 = default;
+  tls_t(tls_t&& other) noexcept                    = delete; // Move constructor is deleted
+  tls_t(const tls_t&)                              = delete; // Copy constructor is deleted
+  auto operator=(tls_t&& other) noexcept -> tls_t& = delete; // Move assignment is deleted
+  auto operator=(const tls_t&) -> tls_t&           = delete; // Copy assignment is deleted
+  ~tls_t() noexcept
+  {
+    // Reset the page pointer to null on destruction
+    if (head_ != nullptr)
+    {
+      *head_ = nullptr;
+    }
+    next_ = nullptr; // Clear next pointer
+  }
 };
 
 /* Definition of the thread-local variable */
 // NOLINTNEXTLINE
 thread_local ts_thread_local_allocator::tls_t local_page = {};
 /** Fast-path: bump-pointer allocation on the calling thread’s current arena_t. */
-auto ts_thread_local_allocator::allocate(std::size_t size) noexcept -> void*
+auto ts_thread_local_allocator::allocate(std::size_t size) -> void*
 {
   // Skip alignment if already aligned (common case for POD types)
   size = is_aligned(size) ? size : align_up(size);
 
-  auto page = local_page;
+  auto& page = local_page;
   if (page.page_ != nullptr) [[likely]]
   {
     // Cache the generation locally to avoid repeated atomic loads
@@ -49,7 +66,8 @@ auto ts_thread_local_allocator::allocate(std::size_t size) noexcept -> void*
 
   return allocate_slow_path(size);
 }
-auto ts_thread_local_allocator::deallocate(void* ptr, std::size_t size) noexcept -> bool
+
+auto ts_thread_local_allocator::deallocate(void* ptr, std::size_t size) -> bool
 {
   size          = align_up(size);
   arena_t* page = local_page.page_;
@@ -85,16 +103,25 @@ void ts_thread_local_allocator::reset() noexcept
   auto* page = pages_to_free_;
   while (page != nullptr)
   {
-    if (page->tls_ref_ != nullptr)
-    {
-      *page->tls_ref_ = nullptr; // Clear the thread-local reference
-    }
     arena_t* next = page->next_;
     ::operator delete(page, std::align_val_t{alignof(std::max_align_t)});
     page = next;
   }
+
+  // reset tls slots
+  for (auto* slot = tls_slots_; slot != nullptr;)
+  {
+    auto* next        = slot->next_;
+    slot->page_       = nullptr;                              // reset to null
+    slot->generation_ = std::numeric_limits<uint32_t>::max(); // invalidate
+    slot->head_       = nullptr;                              // Clear the head pointer
+    slot->next_       = nullptr;                              // Clear the next pointer
+    slot              = next;                                 // Move to the next slot
+  }
   pages_to_free_ = nullptr;
+  tls_slots_     = nullptr; // Clear all thread-local storage
 }
+
 void ts_thread_local_allocator::release() noexcept
 {
   reset();
@@ -128,7 +155,7 @@ auto ts_thread_local_allocator::pop_free_list(std::size_t min_payload) -> arena_
   }
   return nullptr;
 }
-auto ts_thread_local_allocator::allocate_slow_path(std::size_t size) noexcept -> void*
+auto ts_thread_local_allocator::allocate_slow_path(std::size_t size) -> void*
 {
   std::size_t payload = std::max(default_page_size_, size);
 
@@ -165,10 +192,24 @@ auto ts_thread_local_allocator::allocate_slow_path(std::size_t size) noexcept ->
     page_list_tail_ = page; // first page in the list
   }
 
-  page->next_     = page_list_head_;   // insert at the head of the list
-  page_list_head_ = page;              // head of the list, for fast allocation
-  page->tls_ref_  = &local_page.page_; // Set the thread-local reference
-  local_page = {.generation_ = generation_.load(std::memory_order_relaxed), .page_ = page}; // install for this thread
+  page->next_     = page_list_head_; // insert at the head of the list
+  page_list_head_ = page;            // head of the list, for fast allocation
+
+  uint32_t gen = generation_.load(std::memory_order_relaxed);
+
+  if (local_page.generation_ != gen)
+  {
+    local_page.generation_ = gen;
+    local_page.next_       = tls_slots_;
+    if (tls_slots_ != nullptr)
+    {
+      tls_slots_->head_ = nullptr; // Update the previous pointer
+    }
+    local_page.head_ = &tls_slots_;
+    tls_slots_       = &local_page;
+  }
+
+  local_page.page_ = page;
 
   std::size_t offset = page->used_;
   page->used_ += size;
