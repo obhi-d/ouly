@@ -2,7 +2,7 @@
 
 <div align="center">
 
-[![Build](https://github.com/obhi-d/ouly/actions/workflows/test_and_coverage.yml/badge.svg)](https://github.com/obhi-d/ouly/actions/workflows/test_and_coverage.yml)
+[![CI](https://github.com/obhi-d/ouly/actions/workflows/ci.yml/badge.svg)](https://github.com/obhi-d/ouly/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/obhi-d/ouly/graph/badge.svg?token=POS8O18G9B)](https://codecov.io/gh/obhi-d/ouly)
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue.svg)](https://isocpp.org/std/the-standard)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)

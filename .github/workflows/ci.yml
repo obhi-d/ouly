@@ -1,0 +1,183 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main", "develop" ]
+  pull_request:
+    branches: [ "main", "develop" ]
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Debug
+
+jobs:
+  build-and-test:
+    name: ${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - {
+              name: "Windows MSVC",
+              os: windows-latest,
+              generator: "Ninja",
+              cc: "cl",
+              cxx: "cl"
+            }
+          - {
+              name: "Ubuntu GCC",
+              os: ubuntu-latest,
+              generator: "Ninja",
+              cc: "gcc-14",
+              cxx: "g++-14"
+            }
+          - {
+              name: "Ubuntu Clang",
+              os: ubuntu-latest,
+              generator: "Ninja", 
+              cc: "clang-18",
+              cxx: "clang++-18"
+            }
+          - {
+              name: "macOS Clang",
+              os: macos-latest,
+              generator: "Ninja",
+              cc: "clang",
+              cxx: "clang++"
+            }
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup CMake and Ninja
+      uses: lukka/get-cmake@latest
+
+    - name: Install Linux dependencies
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        if [[ "${{ matrix.config.cxx }}" == "g++-14" ]]; then
+          sudo apt-get install -y gcc-14 g++-14
+        elif [[ "${{ matrix.config.cxx }}" == "clang++-18" ]]; then
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          sudo ./llvm.sh 18
+          sudo apt-get install -y clang-18 clang++-18
+        fi
+
+    - name: Setup MSVC
+      if: runner.os == 'Windows'
+      uses: ilammy/msvc-dev-cmd@v1
+
+    - name: Configure CMake
+      run: |
+        cmake -B ${{ github.workspace }}/build \
+              -G "${{ matrix.config.generator }}" \
+              -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+              -DCMAKE_C_COMPILER=${{ matrix.config.cc }} \
+              -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }} \
+              -DOULY_BUILD_TESTS=ON \
+              -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+      env:
+        CC: ${{ matrix.config.cc }}
+        CXX: ${{ matrix.config.cxx }}
+
+    - name: Build
+      run: cmake --build ${{ github.workspace }}/build --config ${{ env.BUILD_TYPE }} --parallel
+
+    - name: Test
+      working-directory: ${{ github.workspace }}/build
+      run: ctest -C ${{ env.BUILD_TYPE }} --output-on-failure --parallel
+
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup CMake and Ninja
+      uses: lukka/get-cmake@latest
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-14 g++-14 lcov
+
+    - name: Configure CMake with coverage
+      run: |
+        cmake -B ${{ github.workspace }}/build \
+              -G "Ninja" \
+              -DCMAKE_BUILD_TYPE=Debug \
+              -DCMAKE_C_COMPILER=gcc-14 \
+              -DCMAKE_CXX_COMPILER=g++-14 \
+              -DOULY_BUILD_TESTS=ON \
+              -DOULY_TEST_COVERAGE=ON \
+              -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+      env:
+        CC: gcc-14
+        CXX: g++-14
+
+    - name: Build with coverage
+      run: cmake --build ${{ github.workspace }}/build --config Debug --parallel
+
+    - name: Run tests
+      working-directory: ${{ github.workspace }}/build
+      run: ctest -C Debug --output-on-failure --parallel
+
+    - name: Generate coverage report
+      working-directory: ${{ github.workspace }}/build
+      run: |
+        lcov --gcov-tool gcov-14 --capture \
+             --directory . \
+             --base-directory ${{ github.workspace }} \
+             --output-file coverage.info \
+             --no-external --ignore-errors mismatch
+        lcov --remove coverage.info '/usr/*' '*/_deps/*' '*/catch2-src/*' --output-file coverage.info --ignore-errors unused
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        file: ${{ github.workspace }}/build/coverage.info
+        token: ${{ secrets.CODECOV_TOKEN }}
+        fail_ci_if_error: false
+
+  documentation:
+    name: Documentation
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+
+    - name: Install Doxygen
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y doxygen graphviz
+
+    - name: Install Python dependencies
+      working-directory: ${{ github.workspace }}/docs
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Build documentation
+      working-directory: ${{ github.workspace }}/docs
+      run: make html
+
+    - name: Deploy to GitHub Pages
+      if: github.ref == 'refs/heads/main'
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./docs/_build/html

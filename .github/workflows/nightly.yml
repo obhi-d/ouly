@@ -1,0 +1,89 @@
+name: Nightly
+
+on:
+  schedule:
+    # Run every night at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:  # Allow manual triggering
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  nightly-build:
+    name: Nightly Build - ${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - {
+              name: "Windows MSVC Latest",
+              os: windows-latest,
+              generator: "Ninja",
+              cc: "cl",
+              cxx: "cl"
+            }
+          - {
+              name: "Ubuntu GCC Latest",
+              os: ubuntu-latest,
+              generator: "Ninja",
+              cc: "gcc",
+              cxx: "g++"
+            }
+          - {
+              name: "Ubuntu Clang Latest",
+              os: ubuntu-latest,
+              generator: "Ninja", 
+              cc: "clang",
+              cxx: "clang++"
+            }
+          - {
+              name: "macOS Clang Latest",
+              os: macos-latest,
+              generator: "Ninja",
+              cc: "clang",
+              cxx: "clang++"
+            }
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup CMake and Ninja
+      uses: lukka/get-cmake@latest
+
+    - name: Install Linux dependencies
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential
+
+    - name: Setup MSVC
+      if: runner.os == 'Windows'
+      uses: ilammy/msvc-dev-cmd@v1
+
+    - name: Configure CMake
+      run: |
+        cmake -B ${{ github.workspace }}/build \
+              -G "${{ matrix.config.generator }}" \
+              -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+              -DCMAKE_C_COMPILER=${{ matrix.config.cc }} \
+              -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }} \
+              -DOULY_BUILD_TESTS=ON \
+              -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+      env:
+        CC: ${{ matrix.config.cc }}
+        CXX: ${{ matrix.config.cxx }}
+
+    - name: Build
+      run: cmake --build ${{ github.workspace }}/build --config ${{ env.BUILD_TYPE }} --parallel
+
+    - name: Test
+      working-directory: ${{ github.workspace }}/build
+      run: ctest -C ${{ env.BUILD_TYPE }} --output-on-failure --parallel
+
+    - name: Report Status
+      if: failure()
+      run: |
+        echo "::warning::Nightly build failed for ${{ matrix.config.name }}"
