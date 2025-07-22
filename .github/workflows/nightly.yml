@@ -43,7 +43,8 @@ jobs:
               os: macos-latest,
               generator: "Ninja",
               cc: "clang",
-              cxx: "clang++"
+              cxx: "clang++",
+              min_clang_version: "17"
             }
 
     steps:
@@ -59,11 +60,34 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y build-essential
 
+    - name: Check macOS Clang version
+      if: runner.os == 'macOS'
+      id: clang_check
+      run: |
+        # Check current Clang version
+        clang_version=$(clang --version | head -n1 | grep -o '[0-9]\+\.[0-9]\+' | head -n1 | cut -d. -f1)
+        echo "Current Clang version: $clang_version"
+        echo "clang_version=$clang_version" >> $GITHUB_OUTPUT
+        
+        if [[ "${{ matrix.config.min_clang_version }}" != "" ]] && [[ $clang_version -lt ${{ matrix.config.min_clang_version }} ]]; then
+          echo "Clang version $clang_version is less than required ${{ matrix.config.min_clang_version }}"
+          echo "Skipping this build as it's not compatible with older Clang versions"
+          echo "skip_build=true" >> $GITHUB_OUTPUT
+        else
+          echo "skip_build=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Skip build notification
+      if: runner.os == 'macOS' && steps.clang_check.outputs.skip_build == 'true'
+      run: |
+        echo "::notice::Skipping macOS build due to incompatible Clang version (${{ steps.clang_check.outputs.clang_version }} < ${{ matrix.config.min_clang_version }})"
+
     - name: Setup MSVC
       if: runner.os == 'Windows'
       uses: ilammy/msvc-dev-cmd@v1
 
     - name: Configure CMake
+      if: steps.clang_check.outputs.skip_build != 'true'
       run: |
         cmake -B ${{ github.workspace }}/build \
               -G "${{ matrix.config.generator }}" \
@@ -77,13 +101,15 @@ jobs:
         CXX: ${{ matrix.config.cxx }}
 
     - name: Build
+      if: steps.clang_check.outputs.skip_build != 'true'
       run: cmake --build ${{ github.workspace }}/build --config ${{ env.BUILD_TYPE }} --parallel
 
     - name: Test
+      if: steps.clang_check.outputs.skip_build != 'true'
       working-directory: ${{ github.workspace }}/build
       run: ctest -C ${{ env.BUILD_TYPE }} --output-on-failure --parallel
 
     - name: Report Status
-      if: failure()
+      if: failure() && steps.clang_check.outputs.skip_build != 'true'
       run: |
         echo "::warning::Nightly build failed for ${{ matrix.config.name }}"

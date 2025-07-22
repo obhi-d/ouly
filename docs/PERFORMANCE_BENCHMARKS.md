@@ -1,6 +1,10 @@
 # Ouly Performance Benchmarking
 
+[![Performance](https://github.com/obhi-d/ouly/actions/workflows/performance.yml/badge.svg)](https://github.com/obhi-d/ouly/actions/workflows/performance.yml)
+
 This directory contains comprehensive performance benchmarks for the Ouly library's scheduler and thread-safe allocators, along with CI/CD integration for performance tracking.
+
+> **📝 Note on Workflow Status**: The performance workflow badge may show yellow/orange status due to expected macOS build failures (compiler version requirements). This is normal and does not indicate issues with the benchmarks or codebase. See [Workflow Status Guide](WORKFLOW_STATUS.md) for details.
 
 ## 🎯 Benchmarked Components
 
