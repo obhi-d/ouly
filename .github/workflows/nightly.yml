@@ -28,8 +28,8 @@ jobs:
               name: "Ubuntu GCC Latest",
               os: ubuntu-latest,
               generator: "Ninja",
-              cc: "gcc",
-              cxx: "g++"
+              cc: "gcc-14",
+              cxx: "g++-14"
             }
           - {
               name: "Ubuntu Clang Latest",
@@ -58,7 +58,7 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update
-        sudo apt-get install -y build-essential
+        sudo apt-get install -y build-essential gcc-14 g++-14
 
     - name: Check macOS Clang version
       if: runner.os == 'macOS'
@@ -88,6 +88,7 @@ jobs:
 
     - name: Configure CMake
       if: steps.clang_check.outputs.skip_build != 'true'
+      shell: bash
       run: |
         cmake -B ${{ github.workspace }}/build \
               -G "${{ matrix.config.generator }}" \
@@ -102,11 +103,13 @@ jobs:
 
     - name: Build
       if: steps.clang_check.outputs.skip_build != 'true'
+      shell: bash
       run: cmake --build ${{ github.workspace }}/build --config ${{ env.BUILD_TYPE }} --parallel
 
     - name: Test
       if: steps.clang_check.outputs.skip_build != 'true'
       working-directory: ${{ github.workspace }}/build
+      shell: bash
       run: ctest -C ${{ env.BUILD_TYPE }} --output-on-failure --parallel
 
     - name: Report Status
