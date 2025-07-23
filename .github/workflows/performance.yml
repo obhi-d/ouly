@@ -101,23 +101,30 @@ jobs:
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
         
+        # Create a unique temporary directory to avoid conflicts
+        TEMP_DIR="/tmp/benchmark-results-$(date +%s)-$$"
+        
         # Temporarily move benchmark results to avoid conflicts
         if [ -d "benchmark-results" ]; then
-          mv benchmark-results /tmp/benchmark-results-temp
+          echo "Moving benchmark results to temporary location: $TEMP_DIR"
+          mv benchmark-results "$TEMP_DIR"
         fi
         
         # Check if performance-tracking branch exists
         if git ls-remote --heads origin performance-tracking | grep -q performance-tracking; then
+          echo "Checking out existing performance-tracking branch"
           git fetch origin performance-tracking
           git checkout performance-tracking
         else
+          echo "Creating new performance-tracking branch"
           git checkout --orphan performance-tracking
           git rm -rf .
         fi
         
         # Restore benchmark results
-        if [ -d "/tmp/benchmark-results-temp" ]; then
-          mv /tmp/benchmark-results-temp benchmark-results
+        if [ -d "$TEMP_DIR" ]; then
+          echo "Restoring benchmark results from: $TEMP_DIR"
+          mv "$TEMP_DIR" benchmark-results
         fi
         
     - name: Store benchmark results
