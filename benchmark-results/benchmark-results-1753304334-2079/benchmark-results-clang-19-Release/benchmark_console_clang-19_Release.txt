@@ -1,0 +1,41 @@
+Starting ouly performance benchmarks...
+Benchmarking ts_shared_linear_allocator...
+
+|       ns/allocation |        allocation/s |    err% |     total | Thread-Safe Shared Linear Allocator
+|--------------------:|--------------------:|--------:|----------:|:------------------------------------
+|            4,942.62 |          202,321.85 |    1.0% |      0.01 | `ts_shared_linear single-thread alloc/dealloc`
+|          180,514.53 |            5,539.72 |    1.6% |      0.19 | `ts_shared_linear multi-thread alloc`
+|              359.67 |        2,780,326.41 |    0.2% |      0.00 | `ts_shared_linear reset`
+Benchmarking ts_thread_local_allocator...
+
+|       ns/allocation |        allocation/s |    err% |     total | Thread-Safe Thread Local Allocator
+|--------------------:|--------------------:|--------:|----------:|:-----------------------------------
+|            4,181.40 |          239,154.35 |    1.8% |      0.01 | `ts_thread_local single-thread alloc/dealloc`
+|          168,724.31 |            5,926.83 |    2.8% |      0.18 | `ts_thread_local multi-thread alloc`
+|          135,428.91 |            7,383.95 |    1.0% |      0.14 | `ts_thread_local reset`
+Benchmarking coalescing_arena_allocator...
+
+|       ns/allocation |        allocation/s |    err% |     total | Coalescing Arena Allocator
+|--------------------:|--------------------:|--------:|----------:|:---------------------------
+|           15,187.29 |           65,844.54 |    1.6% |      0.01 | `coalescing_arena alloc/dealloc`
+|            2,923.66 |          342,037.04 |    0.2% |      0.00 | `coalescing_arena fragmentation`
+Benchmarking scheduler...
+
+|             ns/task |              task/s |    err% |     total | Scheduler Performance
+|--------------------:|--------------------:|--------:|----------:|:----------------------
+|          469,674.70 |            2,129.13 |    6.1% |      0.04 | :wavy_dash: `scheduler task_submission` (Unstable with ~9.4 iters. Increase `minEpochIterations` to e.g. 94)
+|          160,924.40 |            6,214.10 |    7.3% |      0.02 | :wavy_dash: `scheduler parallel_for` (Unstable with ~9.5 iters. Increase `minEpochIterations` to e.g. 95)
+|          264,341.60 |            3,782.98 |    2.8% |      0.03 | `scheduler work_stealing`
+|          268,925.00 |            3,718.51 |    4.2% |      0.03 | `scheduler multi_workgroup`
+
+Benchmarks completed successfully!
+
+Generating detailed JSON output...
+
+|        ns/operation |         operation/s |    err% |     total | Ouly Performance Benchmarks
+|--------------------:|--------------------:|--------:|----------:|:----------------------------
+|                6.31 |      158,478,605.39 |    0.0% |      0.00 | `ts_shared_linear_single_thread`
+|                3.91 |      255,754,475.70 |    0.0% |      0.00 | `ts_thread_local_single_thread`
+|              218.41 |        4,578,544.94 |    0.1% |      0.00 | `coalescing_arena_alloc_dealloc`
+|            1,241.52 |          805,464.27 |    4.8% |      0.00 | `scheduler_task_submission`
+Detailed JSON results saved to benchmark_results_clang-19_Release.json
