@@ -223,8 +223,27 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
-        ref: performance-tracking
+        ref: main
         fetch-depth: 0
+        
+    - name: Copy visualization scripts to performance-tracking branch
+      shell: bash
+      run: |
+        # Configure git
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        
+        # Create temporary directory for scripts
+        mkdir -p /tmp/scripts-backup
+        cp -r scripts/ /tmp/scripts-backup/
+        
+        # Switch to performance-tracking branch
+        git fetch origin performance-tracking
+        git checkout performance-tracking
+        
+        # Copy scripts to performance-tracking branch
+        mkdir -p scripts/
+        cp -r /tmp/scripts-backup/* scripts/
         
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -247,14 +266,14 @@ jobs:
         path: visualizations/
         retention-days: 90
         
-    - name: Commit visualizations to performance-tracking branch
+    - name: Commit visualizations and scripts to performance-tracking branch
       run: |
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
         
-        # Add visualizations to the branch
-        git add visualizations/
-        git commit -m "Update performance visualizations for commit ${{ github.sha }}" || echo "No visualization changes to commit"
+        # Add both scripts and visualizations to the branch
+        git add scripts/ visualizations/
+        git commit -m "Update performance visualizations and scripts for commit ${{ github.sha }}" || echo "No visualization changes to commit"
         git push origin performance-tracking
 
   build-verification:
