@@ -97,6 +97,7 @@ show_how_to_visualize() {
     echo "   2. Install dependencies: pip install matplotlib seaborn pandas"
     echo "   3. Generate visualizations: python3 scripts/visualize_performance.py results/"
     echo "   4. Open: performance_visualizations/performance_report.html"
+    echo "   Note: Scripts are automatically copied to performance-tracking branch by CI"
     echo ""
     echo -e "${BLUE}Option 3: View in performance-tracking branch${NC}"
     echo "   1. Switch to branch: git checkout performance-tracking"
