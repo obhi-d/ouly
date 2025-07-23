@@ -98,6 +98,11 @@ jobs:
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
         
+        # Temporarily move benchmark results to avoid conflicts
+        if [ -d "benchmark-results" ]; then
+          mv benchmark-results /tmp/benchmark-results-temp
+        fi
+        
         # Check if performance-tracking branch exists
         if git ls-remote --heads origin performance-tracking | grep -q performance-tracking; then
           git fetch origin performance-tracking
@@ -105,6 +110,11 @@ jobs:
         else
           git checkout --orphan performance-tracking
           git rm -rf .
+        fi
+        
+        # Restore benchmark results
+        if [ -d "/tmp/benchmark-results-temp" ]; then
+          mv /tmp/benchmark-results-temp benchmark-results
         fi
         
     - name: Store benchmark results
