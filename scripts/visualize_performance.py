@@ -48,21 +48,56 @@ def load_benchmark_results(results_dir: Path) -> Dict[str, List[Dict[str, Any]]]
             try:
                 with open(result_file, 'r') as f:
                     data = json.load(f)
+                    
+                # Handle nanobench JSON format
+                if 'results' in data and isinstance(data['results'], list):
+                    # New nanobench format with detailed results
+                    for result in data['results']:
+                        processed_result = {
+                            'timestamp': timestamp,
+                            'file': result_file.name,
+                            'benchmark_name': result.get('name', 'unknown'),
+                            'title': result.get('title', 'Unknown Benchmark'),
+                            'unit': result.get('unit', 'operation'),
+                            'median_time_ns': result.get('median(elapsed)', 0) * 1e9,  # Convert to nanoseconds
+                            'median_time_seconds': result.get('median(elapsed)', 0),
+                            'error_percent': result.get('medianAbsolutePercentError(elapsed)', 0) * 100,
+                            'total_time': result.get('totalTime', 0),
+                            'epochs': result.get('epochs', 0),
+                            'iterations': result.get('epochIterations', 0),
+                            'operations_per_second': 1.0 / result.get('median(elapsed)', 1e-9) if result.get('median(elapsed)', 0) > 0 else 0,
+                            'commit': result_dir.name.split('_')[-1] if '_' in result_dir.name else 'unknown'
+                        }
+                        results[result['name']].append(processed_result)
+                        
+                elif 'components_tested' in data:
+                    # Legacy format - create placeholder entries
+                    for component in data.get('components_tested', []):
+                        processed_result = {
+                            'timestamp': timestamp,
+                            'file': result_file.name,
+                            'benchmark_name': component,
+                            'title': 'Legacy Benchmark',
+                            'unit': 'operation',
+                            'median_time_ns': 0,
+                            'median_time_seconds': 0,
+                            'error_percent': 0,
+                            'total_time': 0,
+                            'epochs': 0,
+                            'iterations': 0,
+                            'operations_per_second': 0,
+                            'commit': result_dir.name.split('_')[-1] if '_' in result_dir.name else 'unknown'
+                        }
+                        results[component].append(processed_result)
                 
                 # Extract compiler info from filename
-                compiler = "unknown"
-                if "gcc" in result_file.name:
-                    compiler = "gcc"
-                elif "clang" in result_file.name:
-                    compiler = "clang"
-                
-                # Enhance data with parsed info
-                data['parsed_timestamp'] = timestamp
-                data['compiler'] = data.get('metadata', {}).get('compiler', compiler)
-                data['commit'] = result_dir.name.split('_')[-1] if '_' in result_dir.name else 'unknown'
-                
-                key = f"{compiler}_Release"
-                results[key].append(data)
+                for result_list in results.values():
+                    if result_list:  # If we have any results
+                        result_list[-1]['compiler'] = "unknown"
+                        if "gcc" in result_file.name:
+                            result_list[-1]['compiler'] = "gcc"
+                        elif "clang" in result_file.name:
+                            result_list[-1]['compiler'] = "clang"
                 
             except (json.JSONDecodeError, KeyError) as e:
                 print(f"Warning: Could not parse {result_file}: {e}")
@@ -89,49 +124,144 @@ def create_performance_timeline(results: Dict[str, List[Dict[str, Any]]], output
     """Create timeline plots showing performance trends over time."""
     setup_plotting()
     
-    # Placeholder data for demonstration
-    dates = [datetime(2025, 7, 20), datetime(2025, 7, 21), datetime(2025, 7, 22), datetime(2025, 7, 23)]
+    if not results:
+        print("No benchmark results found for timeline visualization.")
+        return
     
-    components = {
-        'ts_shared_linear_allocator': {
-            'gcc': [52, 51, 50, 49],
-            'clang': [54, 53, 52, 51]
-        },
-        'scheduler': {
-            'gcc': [22, 21, 20, 19],
-            'clang': [24, 23, 22, 21]
-        }
-    }
+    # Group results by benchmark name for plotting
+    benchmark_data = defaultdict(lambda: defaultdict(list))
     
-    fig, axes = plt.subplots(2, 2, figsize=(15, 10))
-    fig.suptitle('Ouly Performance Timeline', fontsize=16, fontweight='bold')
+    for benchmark_name, result_list in results.items():
+        for result in result_list:
+            compiler = result.get('compiler', 'unknown')
+            benchmark_data[benchmark_name][compiler].append({
+                'timestamp': result['timestamp'],
+                'median_time_ns': result['median_time_ns'],
+                'operations_per_second': result['operations_per_second'],
+                'commit': result['commit']
+            })
     
-    for i, (component, data) in enumerate(components.items()):
-        row = i // 2
-        col = i % 2
-        ax = axes[row, col]
+    # Sort by timestamp
+    for benchmark_name in benchmark_data:
+        for compiler in benchmark_data[benchmark_name]:
+            benchmark_data[benchmark_name][compiler].sort(key=lambda x: x['timestamp'])
+    
+    # Create subplots for each benchmark
+    benchmark_names = list(benchmark_data.keys())
+    n_benchmarks = len(benchmark_names)
+    
+    if n_benchmarks == 0:
+        print("No benchmark data to plot.")
+        return
         
-        for compiler, values in data.items():
-            ax.plot(dates, values, marker='o', label=f'{compiler}', linewidth=2, markersize=6)
+    # Calculate grid layout
+    n_cols = min(2, n_benchmarks)
+    n_rows = (n_benchmarks + n_cols - 1) // n_cols
+    
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(15, 5 * n_rows))
+    if n_benchmarks == 1:
+        axes = [axes]
+    elif n_rows == 1:
+        axes = [axes]
+    else:
+        axes = axes.flatten()
+    
+    fig.suptitle('Ouly Performance Timeline - Median Time per Operation', fontsize=16, fontweight='bold')
+    
+    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd']
+    
+    for i, benchmark_name in enumerate(benchmark_names):
+        if i >= len(axes):
+            break
+            
+        ax = axes[i]
         
-        ax.set_title(f'{component.replace("_", " ").title()}')
+        for j, (compiler, data_points) in enumerate(benchmark_data[benchmark_name].items()):
+            if not data_points:
+                continue
+                
+            timestamps = [dp['timestamp'] for dp in data_points]
+            times_ns = [dp['median_time_ns'] for dp in data_points]
+            
+            if not times_ns or all(t == 0 for t in times_ns):
+                continue
+                
+            color = colors[j % len(colors)]
+            ax.plot(timestamps, times_ns, marker='o', label=f'{compiler}', 
+                   linewidth=2, markersize=6, color=color)
+        
+        ax.set_title(f'{benchmark_name}', fontweight='bold')
+        ax.set_ylabel('Time (nanoseconds)')
         ax.set_xlabel('Date')
-        ax.set_ylabel('Time (ns)')
         ax.legend()
         ax.grid(True, alpha=0.3)
         
         # Format x-axis
-        ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%m/%d'))
         ax.xaxis.set_major_locator(mdates.DayLocator())
         plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
     
-    # Hide unused subplots
-    for i in range(len(components), 4):
-        fig.delaxes(axes.flatten()[i])
+    # Hide extra subplots
+    for i in range(n_benchmarks, len(axes)):
+        axes[i].set_visible(False)
     
     plt.tight_layout()
     plt.savefig(output_dir / 'performance_timeline.png', dpi=300, bbox_inches='tight')
     plt.close()
+    
+    print(f"📈 Performance timeline saved to {output_dir / 'performance_timeline.png'}")
+
+
+def create_performance_comparison(results: Dict[str, List[Dict[str, Any]]], output_dir: Path):
+    """Create bar charts comparing latest performance between benchmarks."""
+    setup_plotting()
+    
+    if not results:
+        print("No benchmark results found for comparison.")
+        return
+    
+    # Get latest results for each benchmark
+    latest_results = {}
+    for benchmark_name, result_list in results.items():
+        if result_list:
+            # Sort by timestamp and get the latest
+            sorted_results = sorted(result_list, key=lambda x: x['timestamp'])
+            latest_results[benchmark_name] = sorted_results[-1]
+    
+    if not latest_results:
+        print("No latest results found for comparison.")
+        return
+    
+    # Prepare data for plotting
+    benchmark_names = list(latest_results.keys())
+    times_ns = [result['median_time_ns'] for result in latest_results.values()]
+    
+    # Create bar chart
+    fig, ax = plt.subplots(figsize=(12, 8))
+    
+    bars = ax.bar(range(len(benchmark_names)), times_ns, color='#2E86AB', alpha=0.8)
+    
+    ax.set_title('Latest Benchmark Performance Comparison', fontsize=16, fontweight='bold')
+    ax.set_xlabel('Benchmark')
+    ax.set_ylabel('Median Time (nanoseconds)')
+    ax.set_xticks(range(len(benchmark_names)))
+    ax.set_xticklabels([name.replace('_', '\n') for name in benchmark_names], rotation=45, ha='right')
+    
+    # Add value labels on bars
+    for bar, time_ns in zip(bars, times_ns):
+        height = bar.get_height()
+        if height > 0:
+            ax.text(bar.get_x() + bar.get_width()/2., height,
+                   f'{height:.1f} ns',
+                   ha='center', va='bottom')
+    
+    ax.grid(True, alpha=0.3, axis='y')
+    plt.tight_layout()
+    plt.savefig(output_dir / 'performance_comparison.png', dpi=300, bbox_inches='tight')
+    plt.close()
+    
+    print(f"📊 Performance comparison saved to {output_dir / 'performance_comparison.png'}")
+
 
 def create_compiler_comparison(results: Dict[str, List[Dict[str, Any]]], output_dir: Path):
     """Create bar charts comparing performance between compilers."""

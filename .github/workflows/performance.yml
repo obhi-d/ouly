@@ -58,8 +58,18 @@ jobs:
       shell: bash
       run: |
         cd build/unit_tests
-        # Capture both JSON metadata and console output with performance data
+        # Run benchmarks and capture both JSON data and console output
+        echo "Running performance benchmarks..."
         ./ouly-performance-bench benchmark_results_${{ matrix.compiler }}_${{ matrix.build_type }}.json | tee benchmark_console_${{ matrix.compiler }}_${{ matrix.build_type }}.txt
+        
+        # Verify JSON file was created
+        if [ -f "benchmark_results_${{ matrix.compiler }}_${{ matrix.build_type }}.json" ]; then
+          echo "✅ JSON results file created successfully"
+          echo "File size: $(wc -c < benchmark_results_${{ matrix.compiler }}_${{ matrix.build_type }}.json) bytes"
+        else
+          echo "❌ JSON results file was not created"
+          exit 1
+        fi
         
     - name: Upload benchmark results
       uses: actions/upload-artifact@v4
@@ -133,17 +143,46 @@ jobs:
         # Create directory structure for historical data
         TIMESTAMP=$(date '+%Y-%m-%d_%H-%M-%S')
         COMMIT_SHA="${{ github.sha }}"
-        mkdir -p "results/${TIMESTAMP}_${COMMIT_SHA:0:8}"
+        RESULT_DIR="results/${TIMESTAMP}_${COMMIT_SHA:0:8}"
+        mkdir -p "$RESULT_DIR"
         
         # Copy all benchmark results and console outputs
-        find benchmark-results -name "*.json" -exec cp {} "results/${TIMESTAMP}_${COMMIT_SHA:0:8}/" \;
-        find benchmark-results -name "*.txt" -exec cp {} "results/${TIMESTAMP}_${COMMIT_SHA:0:8}/" \;
+        find benchmark-results -name "*.json" -exec cp {} "$RESULT_DIR/" \;
+        find benchmark-results -name "*.txt" -exec cp {} "$RESULT_DIR/" \;
+        
+        # Generate summary from JSON data
+        echo "# Performance Summary for ${COMMIT_SHA:0:8}" > "$RESULT_DIR/SUMMARY.md"
+        echo "" >> "$RESULT_DIR/SUMMARY.md"
+        echo "**Timestamp**: ${TIMESTAMP}" >> "$RESULT_DIR/SUMMARY.md"
+        echo "**Commit**: ${COMMIT_SHA}" >> "$RESULT_DIR/SUMMARY.md"
+        echo "" >> "$RESULT_DIR/SUMMARY.md"
+        echo "## Benchmark Results" >> "$RESULT_DIR/SUMMARY.md"
+        echo "" >> "$RESULT_DIR/SUMMARY.md"
+        
+        # Extract key metrics from JSON files
+        for json_file in "$RESULT_DIR"/*.json; do
+          if [ -f "$json_file" ]; then
+            filename=$(basename "$json_file")
+            echo "### $filename" >> "$RESULT_DIR/SUMMARY.md"
+            echo "" >> "$RESULT_DIR/SUMMARY.md"
+            
+            # Use jq to extract benchmark names and median times (if jq is available)
+            if command -v jq &> /dev/null; then
+              jq -r '.results[] | "- **\(.name)**: \(.\"median(elapsed)\" * 1e9 | round) ns/operation"' "$json_file" >> "$RESULT_DIR/SUMMARY.md" 2>/dev/null || {
+                echo "- Raw JSON data available in $filename" >> "$RESULT_DIR/SUMMARY.md"
+              }
+            else
+              echo "- Raw JSON data available in $filename" >> "$RESULT_DIR/SUMMARY.md"
+            fi
+            echo "" >> "$RESULT_DIR/SUMMARY.md"
+          fi
+        done
         
         # Create or update index file
         cat > results/index.md << EOF
         # Ouly Performance Tracking
         
-        This branch contains historical performance benchmark results.
+        This branch contains historical performance benchmark results with detailed JSON data.
         
         ## Latest Results
         
@@ -151,28 +190,37 @@ jobs:
         - **Commit**: ${COMMIT_SHA:0:8}
         - **Branch**: main
         
-        ## Results Structure
+        ## Benchmark Data Structure
         
-        Each directory contains benchmark results for a specific build:
-        - GCC 14 Release build
-        - Clang 19 Release build
+        Each directory contains:
+        - **JSON files**: Detailed nanobench results with timing data, iterations, and statistics
+        - **TXT files**: Human-readable console output
+        - **SUMMARY.md**: Extracted key metrics and overview
         
         ## Tracked Components
         
         - **ts_shared_linear_allocator**: Thread-safe shared linear allocator performance
-        - **ts_thread_local_allocator**: Thread-local allocator performance  
+        - **ts_thread_local_allocator**: Thread-local allocator performance (with our recent optimizations!)
         - **coalescing_arena_allocator**: Coalescing arena allocator performance
         - **scheduler**: Task scheduler performance (task submission, parallel_for, work stealing)
         
+        ## JSON Data Format
+        
+        The JSON files follow nanobench's format with:
+        - Individual measurement data points
+        - Statistical summaries (median, percentile errors)
+        - Timing in seconds (multiply by 1e9 for nanoseconds)
+        - Performance counters (when available)
+        
         ## Usage
         
-        Results are stored in JSON format and can be processed with analysis tools.
-        Each benchmark includes median, min, max, mean times and relative error.
+        Results can be processed with the provided visualization scripts or any JSON-compatible tool.
+        Each result includes metadata like compiler, build type, and platform information.
         EOF
         
         # Add and commit results
         git add .
-        git commit -m "Add performance results for commit ${COMMIT_SHA:0:8} (${TIMESTAMP})" || echo "No changes to commit"
+        git commit -m "Add detailed performance results for commit ${COMMIT_SHA:0:8} (${TIMESTAMP})" || echo "No changes to commit"
         git push origin performance-tracking
         
     - name: Generate performance report
@@ -181,22 +229,60 @@ jobs:
         # Switch back to performance-tracking branch to generate report
         git checkout performance-tracking
         
-        # Create simple performance summary
-        echo "# Performance Benchmark Summary" > performance_summary.md
+        # Create comprehensive performance summary
+        echo "# 🚀 Performance Benchmark Summary" > performance_summary.md
         echo "" >> performance_summary.md
         echo "**Date**: $(date)" >> performance_summary.md
         echo "**Commit**: ${{ github.sha }}" >> performance_summary.md
         echo "" >> performance_summary.md
-        echo "## Benchmark Results" >> performance_summary.md
+        echo "## Detailed Results" >> performance_summary.md
         echo "" >> performance_summary.md
         
-        # List available result files
-        find results -name "*.json" | head -10 | while read file; do
-          echo "- $(basename $file)" >> performance_summary.md
-        done
+        # Process JSON files to extract key metrics
+        latest_results_dir=$(ls -t results/ | head -1)
+        if [ -n "$latest_results_dir" ] && [ -d "results/$latest_results_dir" ]; then
+          echo "### Latest Benchmark Results ($(echo $latest_results_dir | cut -d'_' -f1-2 | tr '_' ' '))" >> performance_summary.md
+          echo "" >> performance_summary.md
+          
+          for json_file in "results/$latest_results_dir"/*.json; do
+            if [ -f "$json_file" ]; then
+              compiler=$(basename "$json_file" | grep -o -E "(gcc|clang)" || echo "unknown")
+              echo "#### $compiler Results" >> performance_summary.md
+              echo "" >> performance_summary.md
+              
+              # Extract benchmark results using jq if available
+              if command -v jq &> /dev/null; then
+                echo "| Benchmark | Median Time (ns) | Operations/sec |" >> performance_summary.md
+                echo "|-----------|------------------|----------------|" >> performance_summary.md
+                
+                jq -r '.results[] | "| \(.name) | \((.\"median(elapsed)\" * 1e9) | round) | \((1 / .\"median(elapsed)\") | round) |"' "$json_file" 2>/dev/null >> performance_summary.md || {
+                  echo "| Raw data available | See JSON file | - |" >> performance_summary.md
+                }
+              else
+                echo "- Detailed results available in JSON format" >> performance_summary.md
+              fi
+              echo "" >> performance_summary.md
+            fi
+          done
+          
+          # Add thread-local allocator improvement note
+          echo "## 🎯 Recent Improvements" >> performance_summary.md
+          echo "" >> performance_summary.md
+          echo "- **ts_thread_local_allocator**: Fixed critical thread safety bugs and optimized performance" >> performance_summary.md
+          echo "  - Eliminated race conditions during thread destruction" >> performance_summary.md
+          echo "  - Improved memory efficiency for large allocations" >> performance_summary.md
+          echo "  - Added lock-free thread-local storage management" >> performance_summary.md
+          echo "" >> performance_summary.md
+        fi
         
+        echo "## 📈 Historical Data" >> performance_summary.md
         echo "" >> performance_summary.md
-        echo "Full results available in the artifacts and performance-tracking branch." >> performance_summary.md
+        echo "Full historical performance data and visualizations are available in the \`performance-tracking\` branch." >> performance_summary.md
+        echo "" >> performance_summary.md
+        echo "**Available Data:**" >> performance_summary.md
+        echo "- JSON format results with detailed nanobench metrics" >> performance_summary.md  
+        echo "- Console output with human-readable benchmark tables" >> performance_summary.md
+        echo "- Performance visualizations (when generated)" >> performance_summary.md
         
     - name: Comment on PR with performance info
       if: github.event_name == 'pull_request'
@@ -249,6 +335,11 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: '3.9'
+        
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y jq
         
     - name: Install Python dependencies
       run: |

@@ -6,15 +6,43 @@
 #include "ouly/scheduler/parallel_for.hpp"
 #include "ouly/scheduler/scheduler.hpp"
 #include <atomic>
-#include <chrono>
 #include <fstream>
-#include <iomanip>
 #include <iostream>
 #include <numeric>
 #include <random>
-#include <sstream>
 #include <thread>
 #include <vector>
+
+// Helper struct for coalescing arena allocator benchmarks
+struct simple_memory_manager
+{
+  std::vector<std::pair<ouly::arena_id, std::vector<uint8_t>>> arenas;
+
+  void add(ouly::arena_id id, ouly::allocation_size_type size)
+  {
+    arenas.emplace_back(id, std::vector<uint8_t>(size));
+  }
+
+  void remove(ouly::arena_id id)
+  {
+    arenas.erase(std::remove_if(arenas.begin(), arenas.end(),
+                                [id](const auto& arena)
+                                {
+                                  return arena.first == id;
+                                }),
+                 arenas.end());
+  }
+
+  auto get_memory(ouly::arena_id id) -> uint8_t*
+  {
+    auto it = std::find_if(arenas.begin(), arenas.end(),
+                           [id](const auto& arena)
+                           {
+                             return arena.first == id;
+                           });
+    return it != arenas.end() ? it->second.data() : nullptr;
+  }
+};
 
 // Memory allocator benchmarks
 void bench_ts_shared_linear_allocator()
@@ -481,57 +509,84 @@ int main(int argc, char* argv[])
       output_file = argv[1];
     }
 
-    // Create comprehensive performance results for CI tracking and graphing
-    std::ofstream file(output_file);
-    file << "{\n";
-    file << "  \"metadata\": {\n";
-    file
-     << "    \"timestamp\": "
-     << std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count()
-     << ",\n";
+    // Create a comprehensive benchmark that includes representative results for JSON output
+    std::cout << "\nGenerating detailed JSON output...\n";
+    ankerl::nanobench::Bench json_bench;
+    json_bench.title("Ouly Performance Benchmarks").unit("operation").warmup(3).epochIterations(100);
 
-    // Get current time as ISO string
-    auto              now    = std::chrono::system_clock::now();
-    auto              time_t = std::chrono::system_clock::to_time_t(now);
-    std::stringstream ss;
-    ss << std::put_time(std::gmtime(&time_t), "%Y-%m-%dT%H:%M:%SZ");
-    file << "    \"iso_timestamp\": \"" << ss.str() << "\",\n";
+    // Run simplified versions of each benchmark for JSON output
+    {
+      ouly::ts_shared_linear_allocator allocator;
+      json_bench.run("ts_shared_linear_single_thread",
+                     [&]
+                     {
+                       void* ptr = allocator.allocate(64);
+                       ankerl::nanobench::doNotOptimizeAway(ptr);
+                       allocator.deallocate(ptr, 64);
+                     });
+    }
 
-    file << "    \"status\": \"completed\",\n";
+    {
+      ouly::ts_thread_local_allocator allocator;
+      json_bench.run("ts_thread_local_single_thread",
+                     [&]
+                     {
+                       void* ptr = allocator.allocate(64);
+                       ankerl::nanobench::doNotOptimizeAway(ptr);
+                       allocator.deallocate(ptr, 64);
+                     });
+      allocator.reset();
+    }
 
-// Get compiler info
-#ifdef __clang__
-    file << "    \"compiler\": \"clang-" << __clang_major__ << "." << __clang_minor__ << "\",\n";
-#elif defined(__GNUC__)
-    file << "    \"compiler\": \"gcc-" << __GNUC__ << "." << __GNUC_MINOR__ << "\",\n";
-#else
-    file << "    \"compiler\": \"unknown\",\n";
-#endif
+    {
+      simple_memory_manager            manager;
+      ouly::coalescing_arena_allocator allocator;
+      allocator.set_arena_size(10000);
+      json_bench.run("coalescing_arena_alloc_dealloc",
+                     [&]
+                     {
+                       auto allocation = allocator.allocate(64, manager);
+                       ankerl::nanobench::doNotOptimizeAway(allocation.get_offset());
+                       allocator.deallocate(allocation.get_allocation_id(), manager);
+                     });
+    }
 
-    file << "    \"build_type\": \"Release\",\n";
+    // Basic scheduler benchmark for JSON
+    {
+      json_bench.run("scheduler_task_submission",
+                     [&]
+                     {
+                       ouly::scheduler scheduler;
+                       scheduler.create_group(ouly::workgroup_id(0), 0, 1);
+                       scheduler.begin_execution();
 
-// Get platform info
-#ifdef _WIN32
-    file << "    \"platform\": \"windows\"\n";
-#elif defined(__APPLE__)
-    file << "    \"platform\": \"macos\"\n";
-#elif defined(__linux__)
-    file << "    \"platform\": \"linux\"\n";
-#else
-    file << "    \"platform\": \"unknown\"\n";
-#endif
+                       std::atomic<int> counter{0};
+                       auto             ctx = ouly::worker_context::get(ouly::workgroup_id(0));
 
-    file << "  },\n";
-    file << "  \"note\": \"Detailed nanobench results captured in console output\",\n";
-    file << "  \"components_tested\": [\n";
-    file << "    \"ts_shared_linear_allocator\",\n";
-    file << "    \"ts_thread_local_allocator\",\n";
-    file << "    \"coalescing_arena_allocator\",\n";
-    file << "    \"scheduler\"\n";
-    file << "  ]\n";
-    file << "}\n";
+                       ouly::async(ctx, ouly::workgroup_id(0),
+                                   [&counter](ouly::worker_context const&)
+                                   {
+                                     counter.fetch_add(1, std::memory_order_relaxed);
+                                   });
 
-    std::cout << "Enhanced results metadata saved to " << output_file << "\n";
+                       scheduler.end_execution();
+                       ankerl::nanobench::doNotOptimizeAway(counter.load());
+                     });
+    }
+
+    // Output comprehensive JSON results
+    std::ofstream json_file(output_file);
+    if (json_file.is_open())
+    {
+      ankerl::nanobench::render(ankerl::nanobench::templates::json(), json_bench, json_file);
+      json_file.close();
+      std::cout << "Detailed JSON results saved to " << output_file << "\n";
+    }
+    else
+    {
+      std::cerr << "Failed to open " << output_file << " for writing\n";
+      return 1;
+    }
   }
   catch (const std::exception& e)
   {
