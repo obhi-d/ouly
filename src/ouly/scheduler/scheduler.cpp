@@ -3,6 +3,7 @@
 #include "ouly/scheduler/scheduler.hpp"
 #include "ouly/scheduler/task.hpp"
 #include "ouly/scheduler/worker_context.hpp"
+#include "ouly/utility/common.hpp"
 #include <atomic>
 #include <barrier>
 #include <cstdint>
@@ -100,10 +101,18 @@ struct scheduler::worker_synchronizer
 
 void scheduler::tally_publisher::operator()() const noexcept
 {
-  // Wait to take stock of the remaining work
-  int64_t total_remaining_tasks = 0;
+  // Cache-friendly sequential access with prefetching
+  int64_t            total_remaining_tasks = 0;
+  constexpr uint32_t prefetch_distance     = 2;
+
   for (uint32_t thread = 0; thread < owner_->worker_count_; ++thread)
   {
+    // Prefetch next worker data to improve cache performance
+    if (thread + prefetch_distance < owner_->worker_count_)
+    {
+      prefetch_for_read(&owner_->memory_block_.workers_[thread + prefetch_distance]);
+    }
+
     total_remaining_tasks += owner_->memory_block_.workers_[thread].get().tally_;
   }
   owner_->synchronizer_->tally_.store(total_remaining_tasks, std::memory_order_release);
@@ -127,18 +136,32 @@ inline void scheduler::do_work(worker_id thread, ouly::detail::work_item& work) 
 
 void scheduler::busy_work(worker_id thread) noexcept
 {
-  // Optimized work stealing with limited attempts
-  constexpr uint32_t max_busy_attempts = 3;
-  for (uint32_t attempt = 0; attempt < max_busy_attempts; ++attempt)
+  // Optimized work stealing with adaptive attempts
+  constexpr uint32_t min_attempts      = 1;
+  constexpr uint32_t max_attempts      = 3;
+  constexpr uint32_t failure_threshold = 5;
+
+  // Use thread_local failure tracking for better performance
+  thread_local uint32_t local_recent_failures = 0;
+  uint32_t              attempts = (local_recent_failures > failure_threshold) ? min_attempts : max_attempts;
+
+  for (uint32_t attempt = 0; attempt < attempts; ++attempt)
   {
-    if (work(thread))
+    if (work(thread)) [[likely]]
     {
+      local_recent_failures = std::max(0U, local_recent_failures - 1);
       return; // Found and executed work
     }
 
-    // Brief pause between attempts to reduce CPU usage
-    pause_exec();
+    // Shorter pause for first attempts, longer for subsequent ones
+    if (attempt < attempts - 1)
+    {
+      pause_exec();
+    }
   }
+
+  // No work found, increment failure count
+  local_recent_failures++;
 }
 
 void scheduler::run(worker_id thread)
@@ -160,7 +183,7 @@ void scheduler::run(worker_id thread)
       ;
     }
 
-    if (stop_.load(std::memory_order_seq_cst))
+    if (stop_.load(std::memory_order_acquire)) [[unlikely]]
     {
       break;
     }
@@ -281,25 +304,52 @@ auto scheduler::get_work(worker_id thread, ouly::detail::work_item& work) noexce
     uint32_t worker_offset = thread.get_index() - workgroup.start_thread_idx_;
 
     // First, try to get work from this worker's own queue in this workgroup
-    if (workgroup.pop_item_from_worker(worker_offset, work))
+    if (workgroup.pop_item_from_worker(worker_offset, work)) [[likely]]
     {
       detail::adaptive_work_stealer::record_success();
       return true;
     }
 
     // Then try to steal from other workers' queues within this workgroup
+    // Start with adjacent workers for better cache locality
     uint32_t start_steal_offset = detail::update_seed() % workgroup.thread_count_;
+
+    // First try nearby workers (cache-friendly)
+    for (uint32_t distance = 1; distance <= workgroup.thread_count_ / 2; ++distance)
+    {
+      // Try both directions from starting point
+      for (int32_t direction = -1; direction <= 1; direction += 2)
+      {
+        auto offset_calc = static_cast<int32_t>(start_steal_offset) + (direction * static_cast<int32_t>(distance));
+        auto target_worker_offset = static_cast<uint32_t>(
+         (offset_calc + static_cast<int32_t>(workgroup.thread_count_)) % static_cast<int32_t>(workgroup.thread_count_));
+
+        // Don't steal from ourselves
+        if (target_worker_offset == worker_offset)
+        {
+          continue;
+        }
+
+        if (workgroup.pop_item_from_worker(target_worker_offset, work)) [[likely]]
+        {
+          detail::adaptive_work_stealer::record_success();
+          return true;
+        }
+      }
+    }
+
+    // If nearby stealing failed, try remaining workers
     for (uint32_t steal_attempt = 0; steal_attempt < workgroup.thread_count_; ++steal_attempt)
     {
       uint32_t target_worker_offset = (start_steal_offset + steal_attempt) % workgroup.thread_count_;
 
-      // Don't steal from ourselves
-      if (target_worker_offset == worker_offset)
+      // Skip if already checked or is self
+      if (target_worker_offset == worker_offset || (steal_attempt <= workgroup.thread_count_ / 2))
       {
         continue;
       }
 
-      if (workgroup.pop_item_from_worker(target_worker_offset, work))
+      if (workgroup.pop_item_from_worker(target_worker_offset, work)) [[unlikely]]
       {
         detail::adaptive_work_stealer::record_success();
         return true;
@@ -508,8 +558,13 @@ void scheduler::submit_internal([[maybe_unused]] worker_id src, workgroup_id dst
     }
   }
 
-  // Try to push to any worker's queue in the workgroup
-  while (true)
+  // Try to push to any worker's queue in the workgroup with exponential backoff
+  uint32_t           retry_count        = 0;
+  constexpr uint32_t max_retries        = 1000;  // Prevent infinite loops
+  constexpr uint32_t max_backoff_shift  = 10U;   // Maximum bit shift for backoff
+  constexpr uint32_t max_backoff_cycles = 1024U; // Maximum backoff cycles
+
+  while (retry_count < max_retries)
   {
     for (uint32_t attempt = 0; attempt < wg.thread_count_; ++attempt)
     {
@@ -521,9 +576,36 @@ void scheduler::submit_internal([[maybe_unused]] worker_id src, workgroup_id dst
         wake_up(worker_id(worker_index));
         return;
       }
+
+      if (worker_index == src.get_index())
+      {
+        busy_work(src);
+      }
+      // Only wake workers every few failed attempts to reduce overhead
+      else if (attempt % 2 == 0)
+      {
+        wake_up(worker_id(worker_index));
+      }
     }
-    // micro-sleep to reduce contention
-    pause_exec();
+
+    // Exponential backoff to reduce contention
+    uint32_t backoff_cycles = std::min(1U << std::min(retry_count, max_backoff_shift), max_backoff_cycles);
+    for (uint32_t i = 0; i < backoff_cycles; ++i)
+    {
+      pause_exec();
+    }
+    retry_count++;
+  }
+
+  // Fallback: try blocking push to own worker's queue
+  uint32_t own_worker_offset = src.get_index() - wg.start_thread_idx_;
+  if (own_worker_offset < wg.thread_count_)
+  {
+    while (!wg.push_item_to_worker(own_worker_offset, work))
+    {
+      // If we can't push, busy work to yield CPU time
+      busy_work(src);
+    }
   }
 }
 

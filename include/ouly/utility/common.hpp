@@ -67,6 +67,18 @@ inline void prefetch_for_write(void* addr) noexcept
   _mm_prefetch(static_cast<const char*>(addr), 0);
 #endif
 }
+/**
+ * @brief Prefetch memory for better cache performance
+ * @param addr Memory address to prefetch
+ */
+inline void prefetch_for_read(void* addr) noexcept
+{
+#if defined(__GNUC__) || defined(__clang__)
+  __builtin_prefetch(addr, 0, 1); // prefetch for read, high temporal locality
+#elif defined(_MSC_VER)
+  _mm_prefetch(static_cast<const char*>(addr), 0);
+#endif
+}
 
 /**
  * @brief Align a size value up to the allocator's alignment boundary

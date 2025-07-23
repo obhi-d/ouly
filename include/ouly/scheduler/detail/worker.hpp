@@ -123,21 +123,6 @@ struct workgroup
     return per_worker_queues_[worker_offset].emplace(item);
   }
 
-  // Block push item to a specific worker's queue within this workgroup
-  void block_push_item_to_worker(uint32_t worker_offset, work_item const& item) const
-  {
-    if (worker_offset >= thread_count_)
-    {
-      return;
-    }
-
-    // Busy wait until we can push the item
-    while (!per_worker_queues_[worker_offset].emplace(item))
-    {
-      std::this_thread::yield();
-    }
-  }
-
   // Pop item from a specific worker's queue within this workgroup
   [[nodiscard]] auto pop_item_from_worker(uint32_t worker_offset, work_item& item) const -> bool
   {

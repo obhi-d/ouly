@@ -9,9 +9,11 @@ namespace ouly
 struct ts_thread_local_allocator::tls_t
 {
   std::uint32_t generation_ = std::numeric_limits<uint32_t>::max(); ///< Frame ID when the arena was created
-  ts_thread_local_allocator::arena_t* page_        = {};
-  tls_t*                              next_        = nullptr;
-  tls_t**                             head_        = nullptr;
+  ts_thread_local_allocator::arena_t* page_   = {};
+  ts_thread_local_allocator*          parent_ = nullptr; ///< Pointer to parent allocator
+  std::atomic<tls_t*>                 next_   = {nullptr};
+  std::atomic<tls_t**>                head_   = {nullptr};
+
   tls_t() noexcept                                 = default;
   tls_t(tls_t&& other) noexcept                    = delete; // Move constructor is deleted
   tls_t(const tls_t&)                              = delete; // Copy constructor is deleted
@@ -19,12 +21,11 @@ struct ts_thread_local_allocator::tls_t
   auto operator=(const tls_t&) -> tls_t&           = delete; // Copy assignment is deleted
   ~tls_t() noexcept
   {
-    // Reset the page pointer to null on destruction
-    if (head_ != nullptr)
+    // Thread-safe cleanup: atomically remove from linked list
+    if (parent_ != nullptr)
     {
-      *head_ = nullptr;
+      ts_thread_local_allocator::remove_tls_slot(this);
     }
-    next_ = nullptr; // Clear next pointer
   }
 };
 
@@ -100,6 +101,7 @@ void ts_thread_local_allocator::reset() noexcept
   page_list_tail_ = nullptr;
   page_list_head_ = nullptr;
 
+  // 3. Free large allocations that were scheduled for deletion
   auto* page = pages_to_free_;
   while (page != nullptr)
   {
@@ -107,19 +109,11 @@ void ts_thread_local_allocator::reset() noexcept
     ::operator delete(page, std::align_val_t{alignof(std::max_align_t)});
     page = next;
   }
-
-  // reset tls slots
-  for (auto* slot = tls_slots_; slot != nullptr;)
-  {
-    auto* next        = slot->next_;
-    slot->page_       = nullptr;                              // reset to null
-    slot->generation_ = std::numeric_limits<uint32_t>::max(); // invalidate
-    slot->head_       = nullptr;                              // Clear the head pointer
-    slot->next_       = nullptr;                              // Clear the next pointer
-    slot              = next;                                 // Move to the next slot
-  }
   pages_to_free_ = nullptr;
-  tls_slots_     = nullptr; // Clear all thread-local storage
+
+  // 4. Reset all TLS slots atomically - no need to traverse since generation was advanced
+  // The threads will invalidate themselves on next allocation attempt
+  tls_slots_.store(nullptr, std::memory_order_release);
 }
 
 void ts_thread_local_allocator::release() noexcept
@@ -166,7 +160,7 @@ auto ts_thread_local_allocator::allocate_slow_path(std::size_t size) -> void*
     auto* arena =
      static_cast<arena_t*>(::operator new(sizeof(arena_t) + payload, std::align_val_t{alignof(std::max_align_t)}));
     arena->size_ = payload;
-    arena->used_ = payload;
+    arena->used_ = size; // Only mark the requested size as used, not the entire payload
 
     std::lock_guard<std::mutex> lg{page_mutex_};
 
@@ -200,13 +194,19 @@ auto ts_thread_local_allocator::allocate_slow_path(std::size_t size) -> void*
   if (local_page.generation_ != gen)
   {
     local_page.generation_ = gen;
-    local_page.next_       = tls_slots_;
-    if (tls_slots_ != nullptr)
+    local_page.parent_     = this;
+
+    // Thread-safe insertion into TLS list using compare-and-swap
+    tls_t* expected_head = tls_slots_.load(std::memory_order_acquire);
+    while (true)
     {
-      tls_slots_->head_ = nullptr; // Update the previous pointer
+      local_page.next_.store(expected_head, std::memory_order_relaxed);
+      if (tls_slots_.compare_exchange_weak(expected_head, &local_page, std::memory_order_release,
+                                           std::memory_order_acquire))
+      {
+        break;
+      }
     }
-    local_page.head_ = &tls_slots_;
-    tls_slots_       = &local_page;
   }
 
   local_page.page_ = page;
@@ -214,5 +214,15 @@ auto ts_thread_local_allocator::allocate_slow_path(std::size_t size) -> void*
   std::size_t offset = page->used_;
   page->used_ += size;
   return &page->data_[0] + offset;
+}
+
+auto ts_thread_local_allocator::remove_tls_slot(tls_t* slot) noexcept -> void
+{
+  // Thread-safe removal from the linked list
+  // Since we can't easily remove from a singly-linked list atomically,
+  // we just clear the slot's data and let reset() handle cleanup
+  slot->page_       = nullptr;
+  slot->generation_ = std::numeric_limits<uint32_t>::max();
+  slot->parent_     = nullptr;
 }
 } // namespace ouly

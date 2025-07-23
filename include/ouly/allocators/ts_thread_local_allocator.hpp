@@ -180,6 +180,12 @@ private:
    */
   auto allocate_slow_path(std::size_t size) -> void*;
 
+  /**
+   * @brief Thread-safe removal of TLS slot during thread destruction
+   * @param slot TLS slot to remove
+   */
+  static auto remove_tls_slot(tls_t* slot) noexcept -> void;
+
   /* ---------- Data members -------------------------------------------- */
 
   /** @brief Default size for new arenas */
@@ -203,7 +209,7 @@ private:
   /** @brief Monotonically-increasing frame ID for generation tracking */
   std::atomic<uint32_t> generation_ = {0};
 
-  tls_t* tls_slots_ = nullptr; ///< Thread-local storage for arenas
+  std::atomic<tls_t*> tls_slots_ = {nullptr}; ///< Thread-local storage for arenas (atomic for thread safety)
 };
 
 } // namespace ouly
