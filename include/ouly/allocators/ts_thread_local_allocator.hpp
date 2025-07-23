@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <mutex>
 #include <utility>
+#include <vector>
 
 namespace ouly
 {
@@ -49,6 +50,7 @@ public:
   /** @brief All allocations are aligned to this boundary */
   static constexpr std::size_t alignment = alignof(std::max_align_t);
 
+  // constexpr static size_t min_thread_local_slots = 32; ///< Minimum number of thread-local slots
   /**
    * @brief Default constructor
    * Uses default_page_size for new arenas
@@ -67,8 +69,10 @@ public:
    */
   ts_thread_local_allocator(ts_thread_local_allocator&& other) noexcept
       : default_page_size_{std::exchange(other.default_page_size_, default_page_size)},
-        available_pages_{std::exchange(other.available_pages_, nullptr)},
-        generation_(other.generation_.exchange(0, std::memory_order_relaxed) + 1)
+        page_list_head_{std::exchange(other.page_list_head_, nullptr)},
+        page_list_tail_{std::exchange(other.page_list_tail_, nullptr)},
+        available_pages_(std::exchange(other.available_pages_, nullptr)),
+        pages_to_free_{std::exchange(other.pages_to_free_, nullptr)}
   {}
 
   /**
@@ -84,8 +88,10 @@ public:
     }
     reset(); // free any existing arenas
     default_page_size_ = std::exchange(other.default_page_size_, default_page_size);
+    page_list_head_    = std::exchange(other.page_list_head_, nullptr);
+    page_list_tail_    = std::exchange(other.page_list_tail_, nullptr);
+    pages_to_free_     = std::exchange(other.pages_to_free_, nullptr);
     available_pages_   = std::exchange(other.available_pages_, nullptr);
-    generation_.store(other.generation_.exchange(0, std::memory_order_relaxed) + 1, std::memory_order_relaxed);
     return *this;
   }
 
@@ -122,7 +128,7 @@ public:
    * @note Safe even with concurrent access from other threads
    * @note Thread-safe - each thread owns its arena
    */
-  auto deallocate(void* ptr, std::size_t size) -> bool;
+  auto deallocate(void* ptr, std::size_t size) const -> bool;
 
   /**
    * @brief Reset all arenas for reuse (end-of-frame cleanup)
@@ -186,6 +192,7 @@ private:
    */
   static auto remove_tls_slot(tls_t* slot) noexcept -> void;
 
+  static auto generate_random_id(void* ptr) -> uintptr_t;
   /* ---------- Data members -------------------------------------------- */
 
   /** @brief Default size for new arenas */
@@ -207,9 +214,7 @@ private:
   arena_t* pages_to_free_ = nullptr;
 
   /** @brief Monotonically-increasing frame ID for generation tracking */
-  std::atomic<uint32_t> generation_ = {0};
-
-  std::atomic<tls_t*> tls_slots_ = {nullptr}; ///< Thread-local storage for arenas (atomic for thread safety)
+  uintptr_t generation_ = {generate_random_id(this)};
 };
 
 } // namespace ouly

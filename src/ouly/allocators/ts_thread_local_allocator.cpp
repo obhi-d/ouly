@@ -2,77 +2,80 @@
 #include "ouly/allocators/ts_thread_local_allocator.hpp"
 #include "ouly/allocators/config.hpp"
 #include "ouly/utility/common.hpp"
+#include <cstdint>
 #include <limits>
 
 namespace ouly
 {
 struct ts_thread_local_allocator::tls_t
 {
-  std::uint32_t generation_ = std::numeric_limits<uint32_t>::max(); ///< Frame ID when the arena was created
-  ts_thread_local_allocator::arena_t* page_   = {};
-  ts_thread_local_allocator*          parent_ = nullptr; ///< Pointer to parent allocator
-  std::atomic<tls_t*>                 next_   = {nullptr};
-  std::atomic<tls_t**>                head_   = {nullptr};
-
-  tls_t() noexcept                                 = default;
-  tls_t(tls_t&& other) noexcept                    = delete; // Move constructor is deleted
-  tls_t(const tls_t&)                              = delete; // Copy constructor is deleted
-  auto operator=(tls_t&& other) noexcept -> tls_t& = delete; // Move assignment is deleted
-  auto operator=(const tls_t&) -> tls_t&           = delete; // Copy assignment is deleted
-  ~tls_t() noexcept
-  {
-    // Thread-safe cleanup: atomically remove from linked list
-    if (parent_ != nullptr)
-    {
-      ts_thread_local_allocator::remove_tls_slot(this);
-    }
-  }
+  uintptr_t generation_ = std::numeric_limits<uintptr_t>::max(); ///< Frame ID when the arena was created
+  arena_t*  page_       = nullptr;                               ///< Pointer to the current arena_t for this thread
 };
-
 /* Definition of the thread-local variable */
 // NOLINTNEXTLINE
 thread_local ts_thread_local_allocator::tls_t local_page = {};
+
+// Generate a 32 bit random id
+auto ts_thread_local_allocator::generate_random_id(void* ptr) -> uintptr_t
+{
+  static std::atomic<uint32_t> next_id{1}; // Start from 1 to avoid zero ID
+  static constexpr uintptr_t   mix = 0x9e3779b97f4a7c15ULL;
+  // NOLINTBEGIN
+  auto a = reinterpret_cast<std::uintptr_t>(ptr);
+  auto b = next_id.fetch_add(1, std::memory_order_relaxed);
+  auto x = a ^ (b + mix);
+  x ^= x >> 12;
+  x ^= x << 25;
+  x ^= x >> 27;
+  // NOLINTEND
+  return x;
+}
+
 /** Fast-path: bump-pointer allocation on the calling thread’s current arena_t. */
 auto ts_thread_local_allocator::allocate(std::size_t size) -> void*
 {
   // Skip alignment if already aligned (common case for POD types)
   size = is_aligned(size) ? size : align_up(size);
+  // Cache the generation locally to avoid repeated atomic loads
+  const auto current_generation = generation_;
 
-  auto& page = local_page;
-  if (page.page_ != nullptr) [[likely]]
+  auto     local_tls_index = local_page;
+  arena_t* page            = nullptr;
+  if (local_tls_index.generation_ == current_generation)
   {
-    // Cache the generation locally to avoid repeated atomic loads
-    const auto current_generation = generation_.load(std::memory_order_relaxed);
-    if (page.generation_ == current_generation) [[likely]]
-    {
-      auto offset = page.page_->used_;
-      if (offset + size <= page.page_->size_) [[likely]]
-      {
-        void* result      = &page.page_->data_[0] + offset;
-        page.page_->used_ = offset + size; // Slightly faster than +=
+    page = local_tls_index.page_;
+  }
 
-        if constexpr (ouly::cfg::prefetch_next_allocation)
+  if (page != nullptr)
+  {
+    auto offset = page->used_;
+    if (offset + size <= page->size_) [[likely]]
+    {
+      void* result = &page->data_[0] + offset;
+      page->used_  = offset + size; // Slightly faster than +=
+
+      if constexpr (ouly::cfg::prefetch_next_allocation)
+      {
+        // Prefetch the next allocation location if there's room (typical cache line size)
+        constexpr std::size_t cache_line_size = 64;
+        if (offset + size + cache_line_size <= page->size_) [[likely]]
         {
-          // Prefetch the next allocation location if there's room (typical cache line size)
-          constexpr std::size_t cache_line_size = 64;
-          if (offset + size + cache_line_size <= page.page_->size_) [[likely]]
-          {
-            prefetch_for_write(&page.page_->data_[0] + offset + size);
-          }
+          prefetch_for_write(&page->data_[0] + offset + size);
         }
-        return result; // **zero synchronisation**
       }
+      return result; // **zero synchronisation**
     }
   }
 
   return allocate_slow_path(size);
 }
 
-auto ts_thread_local_allocator::deallocate(void* ptr, std::size_t size) -> bool
+auto ts_thread_local_allocator::deallocate(void* ptr, std::size_t size) const -> bool
 {
   size          = align_up(size);
   arena_t* page = local_page.page_;
-  if ((page == nullptr) || local_page.generation_ != generation_.load(std::memory_order_relaxed))
+  if ((page == nullptr) || local_page.generation_ != generation_)
   {
     return false;
   }
@@ -85,11 +88,12 @@ auto ts_thread_local_allocator::deallocate(void* ptr, std::size_t size) -> bool
   }
   return false;
 }
+
 void ts_thread_local_allocator::reset() noexcept
 {
   // 1. Advance the generation counter so any stale thread-local pages
   //    will be considered invalid in the next frame.
-  generation_.fetch_add(1, std::memory_order_acq_rel);
+  generation_++;
 
   // 2. Reclaim every arena_t in the global free list.
   std::lock_guard<std::mutex> lg{page_mutex_};
@@ -110,10 +114,6 @@ void ts_thread_local_allocator::reset() noexcept
     page = next;
   }
   pages_to_free_ = nullptr;
-
-  // 4. Reset all TLS slots atomically - no need to traverse since generation was advanced
-  // The threads will invalidate themselves on next allocation attempt
-  tls_slots_.store(nullptr, std::memory_order_release);
 }
 
 void ts_thread_local_allocator::release() noexcept
@@ -189,24 +189,9 @@ auto ts_thread_local_allocator::allocate_slow_path(std::size_t size) -> void*
   page->next_     = page_list_head_; // insert at the head of the list
   page_list_head_ = page;            // head of the list, for fast allocation
 
-  uint32_t gen = generation_.load(std::memory_order_relaxed);
-
-  if (local_page.generation_ != gen)
+  if (local_page.generation_ != generation_)
   {
-    local_page.generation_ = gen;
-    local_page.parent_     = this;
-
-    // Thread-safe insertion into TLS list using compare-and-swap
-    tls_t* expected_head = tls_slots_.load(std::memory_order_acquire);
-    while (true)
-    {
-      local_page.next_.store(expected_head, std::memory_order_relaxed);
-      if (tls_slots_.compare_exchange_weak(expected_head, &local_page, std::memory_order_release,
-                                           std::memory_order_acquire))
-      {
-        break;
-      }
-    }
+    local_page.generation_ = generation_;
   }
 
   local_page.page_ = page;
@@ -223,6 +208,5 @@ auto ts_thread_local_allocator::remove_tls_slot(tls_t* slot) noexcept -> void
   // we just clear the slot's data and let reset() handle cleanup
   slot->page_       = nullptr;
   slot->generation_ = std::numeric_limits<uint32_t>::max();
-  slot->parent_     = nullptr;
 }
 } // namespace ouly
