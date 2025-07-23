@@ -1,0 +1,17 @@
+{
+  "metadata": {
+    "timestamp": 1753260334,
+    "iso_timestamp": "2025-07-23T08:45:34Z",
+    "status": "completed",
+    "compiler": "clang-19.1",
+    "build_type": "Release",
+    "platform": "linux"
+  },
+  "note": "Detailed nanobench results captured in console output",
+  "components_tested": [
+    "ts_shared_linear_allocator",
+    "ts_thread_local_allocator",
+    "coalescing_arena_allocator",
+    "scheduler"
+  ]
+}

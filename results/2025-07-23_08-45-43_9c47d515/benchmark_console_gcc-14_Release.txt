@@ -1,0 +1,32 @@
+Starting ouly performance benchmarks...
+Benchmarking ts_shared_linear_allocator...
+
+|       ns/allocation |        allocation/s |    err% |     total | Thread-Safe Shared Linear Allocator
+|--------------------:|--------------------:|--------:|----------:|:------------------------------------
+|            4,983.39 |          200,666.56 |    1.3% |      0.01 | `ts_shared_linear single-thread alloc/dealloc`
+|          187,992.46 |            5,319.36 |    1.7% |      0.20 | `ts_shared_linear multi-thread alloc`
+|              369.09 |        2,709,366.28 |    0.3% |      0.00 | `ts_shared_linear reset`
+Benchmarking ts_thread_local_allocator...
+
+|       ns/allocation |        allocation/s |    err% |     total | Thread-Safe Thread Local Allocator
+|--------------------:|--------------------:|--------:|----------:|:-----------------------------------
+|            4,804.19 |          208,151.63 |    1.5% |      0.01 | `ts_thread_local single-thread alloc/dealloc`
+|          165,201.07 |            6,053.23 |    0.6% |      0.17 | `ts_thread_local multi-thread alloc`
+|          142,050.74 |            7,039.74 |    2.3% |      0.15 | `ts_thread_local reset`
+Benchmarking coalescing_arena_allocator...
+
+|       ns/allocation |        allocation/s |    err% |     total | Coalescing Arena Allocator
+|--------------------:|--------------------:|--------:|----------:|:---------------------------
+|           15,376.60 |           65,033.88 |    2.7% |      0.01 | `coalescing_arena alloc/dealloc`
+|            3,254.90 |          307,229.10 |    0.4% |      0.00 | `coalescing_arena fragmentation`
+Benchmarking scheduler...
+
+|             ns/task |              task/s |    err% |     total | Scheduler Performance
+|--------------------:|--------------------:|--------:|----------:|:----------------------
+|          341,134.90 |            2,931.39 |    1.8% |      0.03 | `scheduler task_submission`
+|          161,066.60 |            6,208.61 |    2.0% |      0.02 | `scheduler parallel_for`
+|          201,884.30 |            4,953.33 |    2.0% |      0.02 | `scheduler work_stealing`
+|          264,328.00 |            3,783.18 |    3.5% |      0.03 | `scheduler multi_workgroup`
+
+Benchmarks completed successfully!
+Enhanced results metadata saved to benchmark_results_gcc-14_Release.json
