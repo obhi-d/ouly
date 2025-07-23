@@ -319,17 +319,26 @@ jobs:
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
         
-        # Create temporary directory for scripts
+        # Create temporary directory for scripts and verify they exist
         mkdir -p /tmp/scripts-backup
-        cp -r scripts/ /tmp/scripts-backup/
+        if [ -d "scripts/" ]; then
+          cp -r scripts/ /tmp/scripts-backup/
+          echo "✅ Scripts copied to temporary location"
+          ls -la /tmp/scripts-backup/scripts/
+        else
+          echo "❌ Scripts directory not found on main branch"
+          exit 1
+        fi
         
         # Switch to performance-tracking branch
         git fetch origin performance-tracking
         git checkout performance-tracking
         
-        # Copy scripts to performance-tracking branch
+        # Copy scripts to performance-tracking branch and verify
         mkdir -p scripts/
-        cp -r /tmp/scripts-backup/* scripts/
+        cp -r /tmp/scripts-backup/scripts/* scripts/
+        echo "✅ Scripts copied to performance-tracking branch"
+        ls -la scripts/
         
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -347,24 +356,45 @@ jobs:
         pip install matplotlib seaborn pandas numpy
         
     - name: Generate performance visualizations
+      shell: bash
+      continue-on-error: true  # Don't fail the workflow if visualization fails
       run: |
+        # Verify scripts are available before running
+        if [ ! -f "scripts/visualize_performance.py" ]; then
+          echo "❌ visualize_performance.py not found in scripts directory"
+          echo "Available files in scripts/:"
+          ls -la scripts/ || echo "Scripts directory does not exist"
+          echo "::warning::Visualization script not found, skipping visualization generation"
+          exit 0  # Exit gracefully instead of failing
+        fi
+        
+        echo "✅ Found visualization script, running..."
         python3 scripts/visualize_performance.py results/ -o visualizations -v
         
     - name: Upload visualization artifacts
       uses: actions/upload-artifact@v4
+      if: hashFiles('visualizations/**') != ''  # Only upload if visualizations exist
       with:
         name: performance-visualizations
         path: visualizations/
         retention-days: 90
         
     - name: Commit visualizations and scripts to performance-tracking branch
+      shell: bash
       run: |
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
         
-        # Add both scripts and visualizations to the branch
-        git add scripts/ visualizations/
-        git commit -m "Update performance visualizations and scripts for commit ${{ github.sha }}" || echo "No visualization changes to commit"
+        # Add scripts (always available) and visualizations (if they exist)
+        git add scripts/
+        if [ -d "visualizations" ] && [ "$(ls -A visualizations 2>/dev/null)" ]; then
+          git add visualizations/
+          echo "✅ Adding visualizations to commit"
+        else
+          echo "⚠️ No visualizations to commit"
+        fi
+        
+        git commit -m "Update performance visualizations and scripts for commit ${{ github.sha }}" || echo "No changes to commit"
         git push origin performance-tracking
 
   build-verification:
