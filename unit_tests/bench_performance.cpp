@@ -8,9 +8,11 @@
 #include <atomic>
 #include <chrono>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <numeric>
 #include <random>
+#include <sstream>
 #include <thread>
 #include <vector>
 
@@ -472,25 +474,64 @@ int main(int argc, char* argv[])
 
     std::cout << "\nBenchmarks completed successfully!\n";
 
-    // Simple JSON output for CI tracking
+    // Enhanced JSON output for CI tracking and analysis
     std::string output_file = "benchmark_results.json";
     if (argc > 1)
     {
       output_file = argv[1];
     }
 
-    // Create basic performance results for CI tracking
+    // Create comprehensive performance results for CI tracking and graphing
     std::ofstream file(output_file);
     file << "{\n";
+    file << "  \"metadata\": {\n";
     file
-     << "  \"timestamp\": "
+     << "    \"timestamp\": "
      << std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count()
      << ",\n";
-    file << "  \"status\": \"completed\",\n";
-    file << "  \"note\": \"Detailed results available in nanobench output\"\n";
+
+    // Get current time as ISO string
+    auto              now    = std::chrono::system_clock::now();
+    auto              time_t = std::chrono::system_clock::to_time_t(now);
+    std::stringstream ss;
+    ss << std::put_time(std::gmtime(&time_t), "%Y-%m-%dT%H:%M:%SZ");
+    file << "    \"iso_timestamp\": \"" << ss.str() << "\",\n";
+
+    file << "    \"status\": \"completed\",\n";
+
+// Get compiler info
+#ifdef __clang__
+    file << "    \"compiler\": \"clang-" << __clang_major__ << "." << __clang_minor__ << "\",\n";
+#elif defined(__GNUC__)
+    file << "    \"compiler\": \"gcc-" << __GNUC__ << "." << __GNUC_MINOR__ << "\",\n";
+#else
+    file << "    \"compiler\": \"unknown\",\n";
+#endif
+
+    file << "    \"build_type\": \"Release\",\n";
+
+// Get platform info
+#ifdef _WIN32
+    file << "    \"platform\": \"windows\"\n";
+#elif defined(__APPLE__)
+    file << "    \"platform\": \"macos\"\n";
+#elif defined(__linux__)
+    file << "    \"platform\": \"linux\"\n";
+#else
+    file << "    \"platform\": \"unknown\"\n";
+#endif
+
+    file << "  },\n";
+    file << "  \"note\": \"Detailed nanobench results captured in console output\",\n";
+    file << "  \"components_tested\": [\n";
+    file << "    \"ts_shared_linear_allocator\",\n";
+    file << "    \"ts_thread_local_allocator\",\n";
+    file << "    \"coalescing_arena_allocator\",\n";
+    file << "    \"scheduler\"\n";
+    file << "  ]\n";
     file << "}\n";
 
-    std::cout << "Results metadata saved to " << output_file << "\n";
+    std::cout << "Enhanced results metadata saved to " << output_file << "\n";
   }
   catch (const std::exception& e)
   {
