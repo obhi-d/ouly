@@ -1247,7 +1247,7 @@ TEST_CASE("scheduler: Workgroup Stealing Constraints - High Load Validation")
                   // Validate workgroup membership constraints
                   bool valid_execution = false;
 
-                  if (group_id.get_index() == 0 && worker_idx >= 0 && worker_idx < 2)
+                  if (group_id.get_index() == 0 && worker_idx < 2)
                   {
                     valid_execution = true;
                   }
@@ -1352,7 +1352,7 @@ TEST_CASE("scheduler: Workgroup Stealing Constraints - Context Validation")
                     }
 
                     // Validate worker index is in correct range for the workgroup
-                    if (group == 0 && (worker_idx < 0 || worker_idx >= 4))
+                    if (group == 0 && (worker_idx >= 4))
                     {
                       tracker.membership_check_failures.fetch_add(1, std::memory_order_relaxed);
                     }
@@ -1418,7 +1418,7 @@ TEST_CASE("scheduler: Workgroup Stealing Constraints - Priority Groups")
                     // Validate worker belongs to correct priority group
                     bool               valid_assignment = false;
                     constexpr uint32_t group_size       = 4;
-                    if (priority_group == 0 && worker_idx >= 0 && worker_idx < group_size)
+                    if (priority_group == 0 && worker_idx < group_size)
                     {
                       valid_assignment = true;
                     }
