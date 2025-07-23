@@ -1,0 +1,32 @@
+Starting ouly performance benchmarks...
+Benchmarking ts_shared_linear_allocator...
+
+|       ns/allocation |        allocation/s |    err% |     total | Thread-Safe Shared Linear Allocator
+|--------------------:|--------------------:|--------:|----------:|:------------------------------------
+|            5,600.02 |          178,570.79 |    1.7% |      0.01 | `ts_shared_linear single-thread alloc/dealloc`
+|          183,054.22 |            5,462.86 |    3.4% |      0.23 | `ts_shared_linear multi-thread alloc`
+|              366.29 |        2,730,077.26 |    0.5% |      0.00 | `ts_shared_linear reset`
+Benchmarking ts_thread_local_allocator...
+
+|       ns/allocation |        allocation/s |    err% |     total | Thread-Safe Thread Local Allocator
+|--------------------:|--------------------:|--------:|----------:|:-----------------------------------
+|            5,096.58 |          196,210.01 |    1.1% |      0.01 | `ts_thread_local single-thread alloc/dealloc`
+|          159,771.10 |            6,258.95 |    2.1% |      0.22 | `ts_thread_local multi-thread alloc`
+|          139,977.17 |            7,144.02 |    0.9% |      0.14 | `ts_thread_local reset`
+Benchmarking coalescing_arena_allocator...
+
+|       ns/allocation |        allocation/s |    err% |     total | Coalescing Arena Allocator
+|--------------------:|--------------------:|--------:|----------:|:---------------------------
+|           15,374.70 |           65,041.92 |    1.9% |      0.01 | `coalescing_arena alloc/dealloc`
+|            2,977.00 |          335,908.63 |    1.0% |      0.00 | `coalescing_arena fragmentation`
+Benchmarking scheduler...
+
+|             ns/task |              task/s |    err% |     total | Scheduler Performance
+|--------------------:|--------------------:|--------:|----------:|:----------------------
+|          218,073.90 |            4,585.60 |    0.8% |      0.02 | `scheduler task_submission`
+|          163,888.10 |            6,101.72 |    4.1% |      0.02 | `scheduler parallel_for`
+|          183,805.50 |            5,440.53 |    3.0% |      0.02 | `scheduler work_stealing`
+|          246,691.33 |            4,053.65 |    3.9% |      0.03 | `scheduler multi_workgroup`
+
+Benchmarks completed successfully!
+Enhanced results metadata saved to benchmark_results_clang-19_Release.json
