@@ -266,74 +266,45 @@ thread_local uint32_t adaptive_work_stealer::recent_failures = 0;
 thread_local uint32_t adaptive_work_stealer::success_streak  = 0;
 } // namespace detail
 
-// Work stealing implementation
-auto scheduler::try_steal_work(worker_id thread, ouly::detail::work_item& work) const noexcept -> bool
-{
-  uint32_t thread_index = thread.get_index();
-  auto&    range        = memory_block_.group_ranges_[thread_index];
-
-  // Use fallback to range-based approach for simplicity and portability
-  assert(range.steal_range_start_ <= range.steal_range_end_);
-
-  uint32_t steal_range_size = range.steal_range_end_ - range.steal_range_start_;
-  uint32_t start_offset     = detail::update_seed();
-
-  // Try to steal from workers we can steal from (check against steal mask)
-  for (uint32_t attempt = 0; attempt < steal_range_size; ++attempt)
-  {
-    uint32_t target_index = ((start_offset + attempt) % steal_range_size);
-
-    // Check if we can steal from this worker using the steal mask
-    if ((range.steal_mask_ != 0U) &&
-        (target_index >= ouly::detail::max_steal_workers || (range.steal_mask_ & (1ULL << target_index)) == 0))
-    {
-      continue;
-    }
-
-    auto& target_worker = memory_block_.workers_[range.steal_range_start_ + target_index].get();
-
-    // Try to steal from target worker's local queue
-    if (target_worker.local_work_queue_.pop(work))
-    {
-      return true;
-    }
-  }
-
-  return false;
-}
-
 // NOLINTNEXTLINE
 auto scheduler::get_work(worker_id thread, ouly::detail::work_item& work) noexcept -> bool
 {
-  auto& worker = memory_block_.workers_[thread.get_index()].get();
-  auto& range  = memory_block_.group_ranges_[thread.get_index()];
+  auto& range = memory_block_.group_ranges_[thread.get_index()];
 
-  // Priority 1: Check local worker queue first (exclusive work items have highest priority)
-  if (worker.pop_item(work))
-  {
-    detail::adaptive_work_stealer::record_success();
-    return true;
-  }
-
-  // Priority 2: Check workgroups in priority order
+  // Check workgroups in priority order - each worker's queue within each workgroup
   for (uint32_t i = 0; i < range.count_; ++i)
   {
     uint32_t group_idx = range.priority_order_[i];
     auto&    workgroup = workgroups_[group_idx];
 
-    if (workgroup.pop_item(work))
+    // Calculate this worker's offset within the workgroup
+    uint32_t worker_offset = thread.get_index() - workgroup.start_thread_idx_;
+
+    // First, try to get work from this worker's own queue in this workgroup
+    if (workgroup.pop_item_from_worker(worker_offset, work))
     {
       detail::adaptive_work_stealer::record_success();
       return true;
     }
-  }
 
-  // Priority 3: Work stealing from other threads
-  // Try to steal from other workers' local queues
-  if (try_steal_work(thread, work))
-  {
-    detail::adaptive_work_stealer::record_success();
-    return true;
+    // Then try to steal from other workers' queues within this workgroup
+    uint32_t start_steal_offset = detail::update_seed() % workgroup.thread_count_;
+    for (uint32_t steal_attempt = 0; steal_attempt < workgroup.thread_count_; ++steal_attempt)
+    {
+      uint32_t target_worker_offset = (start_steal_offset + steal_attempt) % workgroup.thread_count_;
+
+      // Don't steal from ourselves
+      if (target_worker_offset == worker_offset)
+      {
+        continue;
+      }
+
+      if (workgroup.pop_item_from_worker(target_worker_offset, work))
+      {
+        detail::adaptive_work_stealer::record_success();
+        return true;
+      }
+    }
   }
 
   detail::adaptive_work_stealer::record_failure();
@@ -352,7 +323,7 @@ auto scheduler::get_work(worker_id thread, ouly::detail::work_item& work) noexce
     }
   }
 
-  return false; // Empty work item
+  return false; // No work found
 }
 
 // NOLINTNEXTLINE
@@ -397,64 +368,14 @@ auto scheduler::compute_group_range(uint32_t worker_index) -> bool
                       : workgroups_[first].priority_ > workgroups_[second].priority_;
             });
 
-  // Calculate steal range: find min and max thread indices that share at least one workgroup
-  range.steal_range_start_ = worker_count_;
-  range.steal_range_end_   = 0;
-  range.steal_mask_        = 0;
-
-  int32_t min_out_of_loop = -1;
-  for (uint32_t other_w = 0; other_w < worker_count_; ++other_w)
-  {
-    if (other_w == worker_index)
-    {
-      continue; // Don't steal from self
-    }
-
-    auto& other_range = memory_block_.group_ranges_[other_w];
-
-    // Check if this worker shares any workgroup with the other worker
-    if ((range.mask_ & other_range.mask_) != 0)
-    {
-      range.steal_range_start_ = std::min(range.steal_range_start_, other_w);
-      range.steal_range_end_   = std::max(range.steal_range_end_, other_w + 1);
-    }
-    else
-    {
-      min_out_of_loop = std::min(min_out_of_loop, static_cast<int32_t>(other_w));
-    }
-  }
-
-  auto range_min = static_cast<int32_t>(range.steal_range_start_);
-  auto range_max = static_cast<int32_t>(range.steal_range_end_);
-  // Check if min_out_of_loop is not inside the start and end of the steal range
-  return (range_min > min_out_of_loop && range_max < min_out_of_loop);
+  // No need for complex steal range calculation with new design
+  return true;
 }
 
-void scheduler::compute_steal_mask(uint32_t worker_index) const
+void scheduler::compute_steal_mask([[maybe_unused]] uint32_t worker_index) const
 {
-  auto& range = memory_block_.group_ranges_[worker_index];
-
-  // Compute the steal mask offsetted by the worker's start index
-  for (uint32_t other_w = 0; other_w < worker_count_; ++other_w)
-  {
-    if (other_w == worker_index)
-    {
-      continue; // Don't steal from self
-    }
-
-    auto& other_range = memory_block_.group_ranges_[other_w];
-
-    // Check if this worker shares any workgroup with the other worker
-    if ((range.mask_ & other_range.mask_) != 0)
-    {
-      uint32_t other_w_offset = other_w - range.steal_range_start_;
-      // Set bit for this worker in the steal mask (limit to max_steal_workers)
-      if (other_w_offset < ouly::detail::max_steal_workers)
-      {
-        range.steal_mask_ |= (1ULL << other_w_offset);
-      }
-    }
-  }
+  // No longer needed with the new per-workgroup-per-worker queue design
+  // Work stealing is naturally bounded by workgroup membership
 }
 
 void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_context)
@@ -471,22 +392,8 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
   {
     auto& worker = memory_block_.workers_[worker_index].get();
     worker.id_   = worker_id(worker_index);
-    auto& range  = memory_block_.group_ranges_[worker_index];
 
-    if (compute_group_range(worker_index))
-    {
-      range.steal_mask_ = 0;
-    }
-    else
-    {
-      compute_steal_mask(worker_index);
-    }
-    // If no threads found to steal from, set empty range
-    if (range.steal_range_start_ >= worker_count_)
-    {
-      range.steal_range_start_ = 0;
-      range.steal_range_end_   = 0;
-    }
+    compute_group_range(worker_index);
 
     auto wgroup_count = static_cast<uint32_t>(workgroups_.size());
     worker.contexts_  = std::make_unique<worker_context[]>(wgroup_count);
@@ -572,24 +479,6 @@ void scheduler::end_execution()
   threads_.clear();
 }
 
-void scheduler::submit_internal(worker_id src, worker_id dst, ouly::detail::work_item const& work)
-{
-  if (src == dst)
-  {
-    auto copy = work;
-    do_work(src, copy);
-  }
-  else
-  {
-    memory_block_.workers_[src.get_index()].get().tally_++;
-    auto& target_worker = memory_block_.workers_[dst.get_index()].get();
-
-    target_worker.block_push_item(work);
-    // Wake up the target worker
-    wake_up(dst);
-  }
-}
-
 void scheduler::submit_internal([[maybe_unused]] worker_id src, workgroup_id dst, ouly::detail::work_item const& work)
 {
   memory_block_.workers_[src.get_index()].get().tally_++;
@@ -598,10 +487,9 @@ void scheduler::submit_internal([[maybe_unused]] worker_id src, workgroup_id dst
 
   // Load balancing: Try to distribute work among threads in the workgroup
   // Use round-robin assignment to balance load
-  static thread_local std::atomic<uint32_t> round_robin_counter{0};
-  uint32_t start_offset = round_robin_counter.fetch_add(1, std::memory_order_relaxed) % wg.thread_count_;
+  uint32_t start_offset = detail::update_seed();
 
-  // First, try to find an idle thread in the workgroup
+  // First, try to find an idle thread in the workgroup and push directly to its queue
   for (uint32_t attempt = 0; attempt < wg.thread_count_; ++attempt)
   {
     uint32_t worker_offset = (start_offset + attempt) % wg.thread_count_;
@@ -609,12 +497,10 @@ void scheduler::submit_internal([[maybe_unused]] worker_id src, workgroup_id dst
 
     auto& worker_wake_data = memory_block_.wake_data_[worker_index].get();
 
-    // If worker is sleeping, try to assign work directly to it
+    // If worker is sleeping, try to assign work directly to its workgroup queue
     if (!worker_wake_data.status_.load(std::memory_order_acquire))
     {
-      auto& target_worker = memory_block_.workers_[worker_index].get();
-
-      if (target_worker.push_item(work))
+      if (wg.push_item_to_worker(worker_offset, work))
       {
         wake_up(worker_id(worker_index));
         return;
@@ -622,16 +508,22 @@ void scheduler::submit_internal([[maybe_unused]] worker_id src, workgroup_id dst
     }
   }
 
-  // If no idle threads found, push to workgroup shared queue
-  if (!wg.push_item(work))
+  // Try to push to any worker's queue in the workgroup
+  while (true)
   {
-    uint32_t push_offset = detail::update_seed();
-    // If workgroup queue is full, wake up all threads in the workgroup
-    uint32_t worker_index = wg.start_thread_idx_ + (push_offset % wg.thread_count_);
-    // Try to push into this worker
-    auto& target_worker = memory_block_.workers_[worker_index].get();
-    target_worker.block_push_item(work);
-    wake_up(worker_id(worker_index));
+    for (uint32_t attempt = 0; attempt < wg.thread_count_; ++attempt)
+    {
+      uint32_t worker_offset = (start_offset + attempt) % wg.thread_count_;
+      uint32_t worker_index  = wg.start_thread_idx_ + worker_offset;
+
+      if (wg.push_item_to_worker(worker_offset, work))
+      {
+        wake_up(worker_id(worker_index));
+        return;
+      }
+    }
+    // micro-sleep to reduce contention
+    pause_exec();
   }
 }
 

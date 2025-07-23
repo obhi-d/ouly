@@ -16,6 +16,7 @@
 #include <memory>
 #include <new>
 #include <semaphore>
+#include <thread>
 #include <type_traits>
 #include <utility>
 #ifdef _MSC_VER
@@ -48,13 +49,13 @@ using basic_work_queue = ouly::basic_queue<work_item, work_queue_traits>;
 using async_work_queue = std::pair<ouly::spin_lock, basic_work_queue>;
 using mpmc_work_ring   = mpmc_ring<work_item, max_work_items_per_worker>;
 
-// Optimized workgroup structure with separated hot and cold data
+// Optimized workgroup structure with per-worker queues
 struct workgroup
 {
-  alignas(cache_line_size) mpmc_work_ring local_work_queue_;       // Fast path work item queue
-  cache_aligned_padding<mpmc_work_ring> local_work_queue_padding_; // Prevent false sharing
+  // Per-worker queues within this workgroup - one queue per worker thread
+  std::unique_ptr<mpmc_work_ring[]> per_worker_queues_;
 
-  // Hot data cache line 1: Most frequently accessed during work stealing and submission
+  // Hot data cache line: Most frequently accessed during work stealing and submission
   uint32_t thread_count_     = 0; // Read frequently during work stealing
   uint32_t start_thread_idx_ = 0; // Read frequently during queue indexing
   uint32_t end_thread_idx_   = 0; // Read frequently during queue indexing
@@ -66,7 +67,12 @@ struct workgroup
   {
     thread_count_     = count;
     start_thread_idx_ = start;
+    end_thread_idx_   = start + count;
     this->priority_   = priority;
+
+    // Allocate per-worker queues for this workgroup
+    per_worker_queues_ = std::make_unique<mpmc_work_ring[]>(count);
+
     return start + count;
   }
 
@@ -74,10 +80,13 @@ struct workgroup
 
   // Move semantics for workgroup management
   workgroup(workgroup&& other) noexcept
-      : thread_count_(other.thread_count_), start_thread_idx_(other.start_thread_idx_),
-        end_thread_idx_(other.end_thread_idx_), priority_(other.priority_)
+      : per_worker_queues_(std::move(other.per_worker_queues_)), thread_count_(other.thread_count_),
+        start_thread_idx_(other.start_thread_idx_), end_thread_idx_(other.end_thread_idx_), priority_(other.priority_)
   {
-    other.thread_count_ = 0;
+    other.thread_count_     = 0;
+    other.start_thread_idx_ = 0;
+    other.end_thread_idx_   = 0;
+    other.priority_         = 0;
   }
 
   auto operator=(workgroup&& other) noexcept -> workgroup&
@@ -85,10 +94,11 @@ struct workgroup
     if (this != &other)
     {
       // Move all data members
-      thread_count_     = other.thread_count_;
-      start_thread_idx_ = other.start_thread_idx_;
-      end_thread_idx_   = other.end_thread_idx_;
-      priority_         = other.priority_;
+      per_worker_queues_ = std::move(other.per_worker_queues_);
+      thread_count_      = other.thread_count_;
+      start_thread_idx_  = other.start_thread_idx_;
+      end_thread_idx_    = other.end_thread_idx_;
+      priority_          = other.priority_;
 
       // Reset the source object
       other.thread_count_     = 0;
@@ -103,15 +113,39 @@ struct workgroup
   workgroup(const workgroup&)                    = delete;
   auto operator=(const workgroup&) -> workgroup& = delete;
 
-  auto push_item(work_item const& item) -> bool
+  // Push item to a specific worker's queue within this workgroup
+  [[nodiscard]] auto push_item_to_worker(uint32_t worker_offset, work_item const& item) const -> bool
   {
-    // Try to push to the local work queue first
-    return local_work_queue_.emplace(item);
+    if (worker_offset >= thread_count_)
+    {
+      return false;
+    }
+    return per_worker_queues_[worker_offset].emplace(item);
   }
 
-  auto pop_item(work_item& item) -> bool
+  // Block push item to a specific worker's queue within this workgroup
+  void block_push_item_to_worker(uint32_t worker_offset, work_item const& item) const
   {
-    return local_work_queue_.pop(item);
+    if (worker_offset >= thread_count_)
+    {
+      return;
+    }
+
+    // Busy wait until we can push the item
+    while (!per_worker_queues_[worker_offset].emplace(item))
+    {
+      std::this_thread::yield();
+    }
+  }
+
+  // Pop item from a specific worker's queue within this workgroup
+  [[nodiscard]] auto pop_item_from_worker(uint32_t worker_offset, work_item& item) const -> bool
+  {
+    if (worker_offset >= thread_count_)
+    {
+      return false;
+    }
+    return per_worker_queues_[worker_offset].pop(item);
   }
 };
 
@@ -163,13 +197,6 @@ struct group_range
 // Cache-aligned worker structure optimized for memory access patterns
 struct worker
 {
-
-  alignas(cache_line_size) mpmc_work_ring local_work_queue_; // Fast path work item queue
-
-  // Exclusive work items queue - frequently accessed during task submission/execution
-  // Aligned to prevent false sharing with worker ID
-  alignas(cache_line_size) async_work_queue items_;
-
   // Context per work group - accessed during work execution
   // Pointer is stable, actual contexts allocated separately for better locality
   std::unique_ptr<worker_context[]> contexts_;
@@ -180,61 +207,8 @@ struct worker
 
   int64_t tally_ = 0;
 
-  void block_push_item(work_item const& item) noexcept
-  {
-    // Try to push to the local work queue first
-    if (local_work_queue_.emplace(item))
-    {
-      return;
-    }
-    // Block until we can push the item to the exclusive queue
-    auto scoped_lock = std::scoped_lock(items_.first);
-    items_.second.emplace_back(item);
-  }
-
-  auto push_item(work_item const& item) -> bool
-  {
-    // Try to push to the local work queue first
-    if (local_work_queue_.emplace(item))
-    {
-      return true;
-    }
-
-    // If local queue is full, push to the exclusive items queue
-    {
-      auto& exclusive_queue = items_.first;
-      if (exclusive_queue.try_lock())
-      {
-        items_.second.emplace_back(item);
-        exclusive_queue.unlock();
-        return true;
-      }
-    }
-    return false;
-  }
-
-  auto pop_item(work_item& item) -> bool
-  {
-    // Try to pop an item from the local work queue
-    if (local_work_queue_.pop(item))
-    {
-      return true;
-    }
-
-    // If the local queue is empty, try to pop from the exclusive items
-    if (items_.first.try_lock())
-    {
-      if (!items_.second.empty())
-      {
-        item = items_.second.pop_front_unsafe();
-        items_.first.unlock();
-        return true;
-      }
-      items_.first.unlock();
-    }
-
-    return false;
-  }
+  // No local queues needed - work is organized per workgroup per worker
+  // This eliminates the complexity of multiple queue types and work validation
 };
 
 } // namespace ouly::detail

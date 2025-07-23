@@ -304,18 +304,14 @@ TEST_CASE("scheduler: Test submit_to")
   for (uint32_t i = 0, end = scheduler.get_worker_count(); i < end; ++i)
   {
     tasks.emplace_back(work_on(collection, lock, i));
-    scheduler.submit(ouly::main_worker_id, ouly::worker_id(i), ouly::default_workgroup_id, tasks[i]);
+    scheduler.submit(ouly::main_worker_id, ouly::default_workgroup_id, tasks[i]);
   }
 
   for (uint32_t i = 0, end = scheduler.get_worker_count(); i < end; ++i)
     tasks[i].sync_wait_result();
 
-  std::ranges::sort(collection);
-  for (uint32_t i = 0, end = scheduler.get_worker_count(); i < end; ++i)
-  {
-    REQUIRE(i < collection.size());
-    REQUIRE(collection[i] == i);
-  }
+  // Check if more than 1 worker has been used
+  REQUIRE(collection.size() > 1);
 }
 
 TEST_CASE("scheduler: Memory Layout Optimization Tests")
@@ -469,34 +465,6 @@ TEST_CASE("scheduler: Work Stealing Optimization Tests")
 
 TEST_CASE("scheduler: Priority and Exclusive Work Tests")
 {
-  SECTION("Worker-to-Worker Task Submission")
-  {
-    ouly::scheduler scheduler;
-    scheduler.create_group(ouly::workgroup_id(0), 0, 8);
-
-    scheduler.begin_execution();
-
-    std::array<std::atomic<bool>, 8> worker_flags{};
-
-    // Submit exclusive tasks to specific workers
-    for (uint32_t i = 0; i < 8; ++i)
-    {
-      ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), ouly::worker_id(i), ouly::default_workgroup_id,
-                  [&worker_flags, i](ouly::worker_context const&)
-                  {
-                    worker_flags[i].store(true, std::memory_order_relaxed);
-                  });
-    }
-
-    scheduler.end_execution();
-
-    // Verify all workers received their exclusive tasks
-    for (auto& flag : worker_flags)
-    {
-      REQUIRE(flag.load());
-    }
-  }
-
   SECTION("Priority Group Execution Order")
   {
     ouly::scheduler scheduler;
@@ -699,8 +667,7 @@ TEST_CASE("scheduler: Memory Layout and Cache Optimization Verification")
 
     for (uint32_t worker_id = 0; worker_id < 16; ++worker_id)
     {
-      ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), ouly::worker_id(worker_id),
-                  ouly::default_workgroup_id,
+      ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), ouly::default_workgroup_id,
                   [&counters, worker_id](ouly::worker_context const&)
                   {
                     // Intensive counter updates that would cause false sharing if not properly aligned
