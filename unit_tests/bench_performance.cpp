@@ -13,6 +13,13 @@
 #include <thread>
 #include <vector>
 
+// Include oneTBB headers for comparison benchmarks
+#include <tbb/global_control.h>
+#include <tbb/parallel_for.h>
+#include <tbb/parallel_reduce.h>
+#include <tbb/task_arena.h>
+#include <tbb/tbb.h>
+
 // Helper struct for coalescing arena allocator benchmarks
 struct simple_memory_manager
 {
@@ -489,6 +496,203 @@ void bench_scheduler()
             });
 }
 
+// TBB comparison benchmarks
+void bench_tbb_parallel_for()
+{
+  std::cout << "Benchmarking TBB parallel_for...\n";
+
+  ankerl::nanobench::Bench bench;
+  bench.title("TBB Parallel For").unit("task").warmup(5).epochIterations(10);
+
+  bench.run("tbb parallel_for",
+            [&]
+            {
+              constexpr int    num_elements = 10000;
+              std::vector<int> data(num_elements);
+              std::iota(data.begin(), data.end(), 0);
+
+              // TBB parallel_for
+              tbb::parallel_for(0, num_elements,
+                                [&data](int i)
+                                {
+                                  data[i] *= 2;
+                                  ankerl::nanobench::doNotOptimizeAway(data[i]);
+                                });
+
+              ankerl::nanobench::doNotOptimizeAway(data[0]);
+            });
+}
+
+void bench_tbb_task_arena()
+{
+  std::cout << "Benchmarking TBB task_arena...\n";
+
+  ankerl::nanobench::Bench bench;
+  bench.title("TBB Task Arena").unit("task").warmup(5).epochIterations(10);
+
+  bench.run("tbb task_arena",
+            [&]
+            {
+              constexpr int num_tasks = 1000;
+
+              // Use a task_arena with 4 threads
+              tbb::task_arena arena{4};
+
+              arena.execute(
+               [&]
+               {
+                 tbb::parallel_for(0, num_tasks,
+                                   [](int i)
+                                   {
+                                     // Simple task that does some work
+                                     long long sum = 0;
+                                     for (int j = 0; j < 100; ++j)
+                                     {
+                                       sum += i * j;
+                                     }
+                                     ankerl::nanobench::doNotOptimizeAway(sum);
+                                   });
+               });
+            });
+}
+
+void bench_tbb_global_control()
+{
+  std::cout << "Benchmarking TBB global_control...\n";
+
+  ankerl::nanobench::Bench bench;
+  bench.title("TBB Global Control").unit("task").warmup(5).epochIterations(10);
+
+  bench.run("tbb global_control",
+            [&]
+            {
+              constexpr int num_tasks = 1000;
+
+              // Limit TBB to 4 threads
+              tbb::global_control c(tbb::global_control::max_allowed_parallelism, 4);
+
+              tbb::parallel_for(0, num_tasks,
+                                [](int i)
+                                {
+                                  // Simple task that does some work
+                                  long long sum = 0;
+                                  for (int j = 0; j < 100; ++j)
+                                  {
+                                    sum += i * j;
+                                  }
+                                  ankerl::nanobench::doNotOptimizeAway(sum);
+                                });
+            });
+}
+
+// TBB vs ouly comparison benchmarks
+void bench_tbb_vs_ouly_comparison()
+{
+  std::cout << "Benchmarking TBB vs ouly comparison...\n";
+
+  ankerl::nanobench::Bench bench;
+  bench.title("TBB vs Ouly Scheduler Comparison").unit("operation").warmup(5).epochIterations(50);
+
+  constexpr int    num_tasks = 1000;
+  constexpr size_t data_size = 10000;
+
+  // Task submission comparison
+  bench.run("TBB task_arena submit",
+            [&]
+            {
+              tbb::task_arena  arena(4);
+              std::atomic<int> counter{0};
+
+              arena.execute(
+               [&]
+               {
+                 for (int i = 0; i < num_tasks; ++i)
+                 {
+                   arena.enqueue(
+                    [&counter]()
+                    {
+                      counter.fetch_add(1, std::memory_order_relaxed);
+                    });
+                 }
+               });
+
+              // Wait for completion
+              arena.execute(
+               [&]
+               {
+                 while (counter.load() < num_tasks)
+                 {
+                   std::this_thread::yield();
+                 }
+               });
+
+              ankerl::nanobench::doNotOptimizeAway(counter.load());
+            });
+
+  bench.run("ouly scheduler async",
+            [&]
+            {
+              ouly::scheduler scheduler;
+              scheduler.create_group(ouly::workgroup_id(0), 0, 4);
+              scheduler.begin_execution();
+
+              std::atomic<int> counter{0};
+              auto             ctx = ouly::worker_context::get(ouly::workgroup_id(0));
+
+              for (int i = 0; i < num_tasks; ++i)
+              {
+                ouly::async(ctx, ouly::workgroup_id(0),
+                            [&counter](ouly::worker_context const&)
+                            {
+                              counter.fetch_add(1, std::memory_order_relaxed);
+                            });
+              }
+
+              scheduler.end_execution();
+              ankerl::nanobench::doNotOptimizeAway(counter.load());
+            });
+
+  // Parallel for comparison
+  bench.run("TBB parallel_for",
+            [&]
+            {
+              std::vector<int> data(data_size);
+              std::iota(data.begin(), data.end(), 0);
+
+              tbb::parallel_for(tbb::blocked_range<size_t>(0, data.size()),
+                                [&data](const tbb::blocked_range<size_t>& range)
+                                {
+                                  for (size_t i = range.begin(); i != range.end(); ++i)
+                                  {
+                                    data[i] = data[i] * 2 + 1;
+                                  }
+                                });
+
+              ankerl::nanobench::doNotOptimizeAway(data[0]);
+            });
+
+  bench.run("ouly parallel_for",
+            [&]
+            {
+              ouly::scheduler scheduler;
+              scheduler.create_group(ouly::workgroup_id(0), 0, 4);
+              scheduler.begin_execution();
+
+              std::vector<int> data(data_size);
+              std::iota(data.begin(), data.end(), 0);
+
+              ouly::parallel_for(
+               [](int& value, ouly::worker_context const&)
+               {
+                 value = value * 2 + 1;
+               },
+               std::span(data), ouly::workgroup_id(0));
+
+              scheduler.end_execution();
+              ankerl::nanobench::doNotOptimizeAway(data[0]);
+            });
+}
+
 int main(int argc, char* argv[])
 {
   std::cout << "Starting ouly performance benchmarks...\n";
@@ -499,6 +703,10 @@ int main(int argc, char* argv[])
     bench_ts_thread_local_allocator();
     bench_coalescing_arena_allocator();
     bench_scheduler();
+    bench_tbb_parallel_for();
+    bench_tbb_task_arena();
+    bench_tbb_global_control();
+    bench_tbb_vs_ouly_comparison();
 
     std::cout << "\nBenchmarks completed successfully!\n";
 

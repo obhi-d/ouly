@@ -59,15 +59,29 @@ jobs:
       run: |
         cd build/unit_tests
         # Run benchmarks and capture both JSON data and console output
-        echo "Running performance benchmarks..."
+        echo "Running ouly performance benchmarks..."
         ./ouly-performance-bench benchmark_results_${{ matrix.compiler }}_${{ matrix.build_type }}.json | tee benchmark_console_${{ matrix.compiler }}_${{ matrix.build_type }}.txt
         
-        # Verify JSON file was created
+        echo "Running TBB vs ouly comparison benchmarks..."
+        ./ouly-tbb-comparison-bench tbb_comparison_results_${{ matrix.compiler }}_${{ matrix.build_type }}.json | tee tbb_comparison_console_${{ matrix.compiler }}_${{ matrix.build_type }}.txt
+        
+        # Note: Some test failures in TBB's own test suite are expected and won't affect our benchmarks
+        echo "Note: TBB test compilation failures are expected and do not affect benchmark functionality"
+        
+        # Verify JSON files were created
         if [ -f "benchmark_results_${{ matrix.compiler }}_${{ matrix.build_type }}.json" ]; then
-          echo "✅ JSON results file created successfully"
+          echo "✅ Ouly JSON results file created successfully"
           echo "File size: $(wc -c < benchmark_results_${{ matrix.compiler }}_${{ matrix.build_type }}.json) bytes"
         else
-          echo "❌ JSON results file was not created"
+          echo "❌ Ouly JSON results file was not created"
+          exit 1
+        fi
+        
+        if [ -f "tbb_comparison_results_${{ matrix.compiler }}_${{ matrix.build_type }}.json" ]; then
+          echo "✅ TBB comparison JSON results file created successfully"
+          echo "File size: $(wc -c < tbb_comparison_results_${{ matrix.compiler }}_${{ matrix.build_type }}.json) bytes"
+        else
+          echo "❌ TBB comparison JSON results file was not created"
           exit 1
         fi
         
@@ -78,6 +92,8 @@ jobs:
         path: |
           build/unit_tests/benchmark_results_*.json
           build/unit_tests/benchmark_console_*.txt
+          build/unit_tests/tbb_comparison_results_*.json
+          build/unit_tests/tbb_comparison_console_*.txt
         retention-days: 30
         
     - name: Performance regression check
@@ -203,6 +219,13 @@ jobs:
         - **ts_thread_local_allocator**: Thread-local allocator performance (with our recent optimizations!)
         - **coalescing_arena_allocator**: Coalescing arena allocator performance
         - **scheduler**: Task scheduler performance (task submission, parallel_for, work stealing)
+        - **TBB vs ouly comparison**: Direct performance comparison with oneTBB across:
+          - Task submission and scheduling
+          - Parallel for loops
+          - Parallel reduce operations
+          - Work stealing efficiency
+          - Multi-workgroup vs multi-arena patterns
+          - Memory allocation patterns
         
         ## JSON Data Format
         
@@ -246,8 +269,11 @@ jobs:
           
           for json_file in "results/$latest_results_dir"/*.json; do
             if [ -f "$json_file" ]; then
-              compiler=$(basename "$json_file" | grep -o -E "(gcc|clang)" || echo "unknown")
-              echo "#### $compiler Results" >> performance_summary.md
+              filename=$(basename "$json_file")
+              compiler=$(echo "$filename" | grep -o -E "(gcc|clang)" || echo "unknown")
+              benchmark_type=$(echo "$filename" | grep -q "tbb_comparison" && echo "TBB Comparison" || echo "Ouly Performance")
+              
+              echo "#### $compiler Results - $benchmark_type" >> performance_summary.md
               echo "" >> performance_summary.md
               
               # Extract benchmark results using jq if available
@@ -371,6 +397,31 @@ jobs:
         echo "✅ Found visualization script, running..."
         python3 scripts/visualize_performance.py results/ -o visualizations -v
         
+    - name: Generate PERFORMANCE.md for performance-tracking branch
+      shell: bash
+      continue-on-error: true
+      run: |
+        # Create PERFORMANCE.md with timeline graphs
+        if [ -f "scripts/visualize_performance.py" ] && [ -d "visualizations" ]; then
+          echo "📝 Generating PERFORMANCE.md with embedded timeline graphs..."
+          
+          # Create a dedicated PERFORMANCE.md for the tracking branch
+          mkdir -p performance-docs
+          
+          # Copy visualization images to performance-docs
+          if [ -d "visualizations" ]; then
+            cp visualizations/*.png performance-docs/ 2>/dev/null || true
+          fi
+          
+          # Generate the PERFORMANCE.md with relative image paths
+          python3 scripts/visualize_performance.py results/ -o performance-docs -v
+          
+          echo "✅ PERFORMANCE.md generated in performance-docs/"
+          ls -la performance-docs/
+        else
+          echo "⚠️ Skipping PERFORMANCE.md generation - dependencies not available"
+        fi
+        
     - name: Upload visualization artifacts
       uses: actions/upload-artifact@v4
       if: hashFiles('visualizations/**') != ''  # Only upload if visualizations exist
@@ -394,7 +445,18 @@ jobs:
           echo "⚠️ No visualizations to commit"
         fi
         
-        git commit -m "Update performance visualizations and scripts for commit ${{ github.sha }}" || echo "No changes to commit"
+        # Add PERFORMANCE.md and related docs if they exist
+        if [ -d "performance-docs" ] && [ "$(ls -A performance-docs 2>/dev/null)" ]; then
+          # Copy PERFORMANCE.md to root for easy access
+          cp performance-docs/PERFORMANCE.md . 2>/dev/null || true
+          git add PERFORMANCE.md
+          git add performance-docs/
+          echo "✅ Adding PERFORMANCE.md and documentation to commit"
+        else
+          echo "⚠️ No performance documentation to commit"
+        fi
+        
+        git commit -m "Update performance visualizations, PERFORMANCE.md and scripts for commit ${{ github.sha }}" || echo "No changes to commit"
         git push origin performance-tracking
 
   build-verification:

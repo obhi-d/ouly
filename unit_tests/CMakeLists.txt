@@ -3,6 +3,9 @@ project(ouly_general_tests)
 set(CMAKE_UNITY_BUILD OFF)
 include(FetchContent)
 
+set(TBB_TEST OFF CACHE BOOL "oneTBB: do not build unit tests" FORCE)
+set(TBB_BUILD_TESTS OFF CACHE BOOL "oneTBB: do not build legacy tests" FORCE)
+
 FetchContent_Declare(
     Catch2
     GIT_REPOSITORY https://github.com/catchorg/Catch2.git
@@ -27,10 +30,24 @@ FetchContent_Declare(
     GIT_TAG v8.0.0
 )
 
+FetchContent_Declare(
+    oneTBB
+    GIT_REPOSITORY https://github.com/oneapi-src/oneTBB.git
+    GIT_TAG v2022.2.0
+)
+
+FetchContent_Declare(
+    glm
+    GIT_REPOSITORY https://github.com/g-truc/glm.git
+    GIT_TAG 1.0.1
+)
+
 FetchContent_MakeAvailable(Catch2)
 FetchContent_MakeAvailable(nanobench)
 FetchContent_MakeAvailable(nlohmann_json)
 FetchContent_MakeAvailable(fast_float)
+FetchContent_MakeAvailable(oneTBB)
+FetchContent_MakeAvailable(glm)
 
 function(add_unit_test)
     set(config SKIP_TEST SANITIZE)
@@ -129,15 +146,21 @@ add_unit_test(NAME thread_safe_allocators FILES "thread_safe_allocators.cpp" SAN
 add_unit_test(NAME coalescing_allocator FILES "coalescing_allocator.cpp" SANITIZE)
 add_executable(ouly-bench "bench_arena_allocator.cpp" "bench_main.cpp")
 add_executable(ouly-performance-bench "bench_performance.cpp")
+add_executable(ouly-tbb-comparison-bench "bench_tbb_comparison.cpp")
 
 target_link_libraries(ouly-bench ouly::ouly nanobench::nanobench)
 target_compile_features(ouly-bench PRIVATE cxx_std_20)
 
-target_link_libraries(ouly-performance-bench ouly::ouly nanobench::nanobench)
+target_link_libraries(ouly-performance-bench ouly::ouly nanobench::nanobench TBB::tbb glm::glm)
 target_compile_features(ouly-performance-bench PRIVATE cxx_std_20)
 target_compile_definitions(ouly-performance-bench PRIVATE -DOULY_REC_STATS -DOULY_THROW_ON_ERROR)
+
+target_link_libraries(ouly-tbb-comparison-bench ouly::ouly nanobench::nanobench TBB::tbb glm::glm)
+target_compile_features(ouly-tbb-comparison-bench PRIVATE cxx_std_20)
+target_compile_definitions(ouly-tbb-comparison-bench PRIVATE -DOULY_REC_STATS -DOULY_THROW_ON_ERROR)
 
 # Performance test target for release builds
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
     add_test(NAME performance_benchmarks COMMAND ouly-performance-bench)
+    add_test(NAME tbb_comparison_benchmarks COMMAND ouly-tbb-comparison-bench)
 endif()
