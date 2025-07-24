@@ -108,9 +108,10 @@ jobs:
 
     - name: Test
       if: steps.clang_check.outputs.skip_build != 'true'
-      working-directory: ${{ github.workspace }}/build
       shell: bash
-      run: ctest -C ${{ env.BUILD_TYPE }} --output-on-failure --parallel
+      run: |
+        cd ${{ github.workspace }}/build
+        ctest -C ${{ env.BUILD_TYPE }} --output-on-failure --parallel
 
     - name: Report Status
       if: failure() && steps.clang_check.outputs.skip_build != 'true'
