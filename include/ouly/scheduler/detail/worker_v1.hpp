@@ -1,0 +1,83 @@
+// SPDX-License-Identifier: MIT
+
+#pragma once
+
+#include "ouly/allocators/default_allocator.hpp"
+#include "ouly/containers/basic_queue.hpp"
+#include "ouly/scheduler/detail/cache_optimized_data.hpp"
+#include "ouly/scheduler/detail/mpmc_ring.hpp"
+#include "ouly/scheduler/detail/workgroup_v1.hpp"
+#include "ouly/scheduler/spin_lock.hpp"
+#include "ouly/scheduler/task.hpp"
+#include "ouly/scheduler/worker_context.hpp"
+#include <array>
+#include <cstdint>
+#include <semaphore>
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4324) // structure was padded due to alignment specifier
+#endif
+
+namespace ouly::v1::detail
+{
+
+struct wake_event
+{
+  wake_event() noexcept : semaphore_(0) {}
+
+  void wait() noexcept
+  {
+    semaphore_.acquire();
+  }
+
+  void notify() noexcept
+  {
+    semaphore_.release();
+  }
+
+  std::binary_semaphore semaphore_;
+};
+
+struct group_range
+{
+  std::array<uint8_t, max_worker_groups> priority_order_{};
+  uint32_t                               count_ = 0;
+  uint32_t                               mask_  = 0;
+
+  // Store the range of threads this worker can steal from
+  // This represents threads that belong to at least one shared workgroup
+  uint32_t steal_range_start_ = 0;
+  uint32_t steal_range_end_   = 0;
+
+  // Bitset of threads this worker can steal from (for precise control)
+  // Bit i is set if this worker can steal from worker i
+  uint64_t steal_mask_ = 0;
+
+  group_range() noexcept
+  {
+    priority_order_.fill(std::numeric_limits<uint8_t>::max());
+  }
+};
+
+// Cache-aligned worker structure optimized for memory access patterns
+struct worker
+{
+  // Context per work group - accessed during work execution
+  // Pointer is stable, actual contexts allocated separately for better locality
+  std::unique_ptr<worker_context[]> contexts_;
+
+  worker_id id_                  = worker_id{0};
+  worker_id min_steal_friend_id_ = worker_id{0};
+  worker_id max_steal_friend_id_ = worker_id{0};
+
+  int64_t tally_ = 0;
+
+  // No local queues needed - work is organized per workgroup per worker
+  // This eliminates the complexity of multiple queue types and work validation
+};
+
+} // namespace ouly::v1::detail
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif

@@ -1,6 +1,8 @@
+
 // SPDX-License-Identifier: MIT
 
-#include "ouly/scheduler/scheduler.hpp"
+#include "ouly/scheduler/scheduler_v1.hpp"
+#include "ouly/scheduler/detail/pause.hpp"
 #include "ouly/scheduler/task.hpp"
 #include "ouly/scheduler/worker_context.hpp"
 #include "ouly/utility/common.hpp"
@@ -8,50 +10,12 @@
 #include <barrier>
 #include <cstdint>
 #include <latch>
-#if defined(_MSC_VER)
-#include <intrin.h>                            // _mm_pause / __yield / YieldProcessor
-#elif defined(__i386__) || defined(__x86_64__) // 32- & 64-bit x86
-#include <immintrin.h>                         // x86 GCC/Clang
-#elif defined(__arm__) || defined(__aarch64__)
-#include <arm_acle.h> // __builtin_arm_yield (GCC/Clang ≥ 9)
-#endif
 
-namespace ouly
+namespace ouly::v1
 {
-
-// Always-inline to keep the call zero-overhead in tight loops
-#ifndef _MSC_VER
-[[gnu::always_inline]]
-#endif
-inline void pause_exec() noexcept
-{
-#if defined(__i386__) || defined(__x86_64__) // 32- & 64-bit x86
-#if defined(_MSC_VER)
-  _mm_pause(); // MSVC / Intel C++
-#else
-  __builtin_ia32_pause(); // GCC / Clang
-#endif
-
-#elif defined(__aarch64__) || defined(__arm__) // Arm & AArch64
-#if defined(_MSC_VER)
-  __yield(); // MSVC intrinsic
-#else
-  __builtin_arm_yield(); // ACLE 8.4 intrinsic
-#endif
-
-#elif defined(__riscv) // RISC-V Zihintpause
-  __builtin_riscv_pause(); // GCC/Clang ≥ 13
-
-#elif defined(YieldProcessor) // any Windows target
-  YieldProcessor(); // expands appropriately
-
-#else // last-ditch fallback
-  std::this_thread::yield();
-#endif
-}
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-thread_local ouly::detail::worker const* g_worker = nullptr;
+thread_local detail::worker const* g_worker = nullptr;
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 thread_local ouly::worker_id g_worker_id = {};
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
@@ -61,12 +25,10 @@ thread_local uint32_t g_random_seed = 0;
 static constexpr uint32_t lcg_multiplier    = 1664525U;
 static constexpr uint32_t lcg_increment     = 1013904223U;
 static constexpr uint32_t initial_seed_mask = 0xAAAAAAAAU;
-namespace detail
-{
-auto update_seed() -> uint32_t;
-}
 
-auto detail::update_seed() -> uint32_t
+static auto update_seed() -> uint32_t;
+
+static auto update_seed() -> uint32_t
 {
   return (g_random_seed = (g_random_seed * lcg_multiplier + lcg_increment) & initial_seed_mask);
 }
@@ -127,7 +89,7 @@ scheduler::~scheduler() noexcept
 }
 
 // NOLINTNEXTLINE
-inline void scheduler::do_work(worker_id thread, ouly::detail::work_item& work) noexcept
+inline void scheduler::do_work(worker_id thread, detail::work_item& work) noexcept
 {
   auto& worker = memory_block_.workers_[thread.get_index()].get();
   worker.tally_--;
@@ -229,7 +191,7 @@ inline void scheduler::finalize_worker(worker_id thread) noexcept
 
 inline auto scheduler::work(worker_id thread) noexcept -> bool
 {
-  ouly::detail::work_item available_work;
+  detail::work_item available_work;
   if (!get_work(thread, available_work))
   {
     return false;
@@ -290,7 +252,7 @@ thread_local uint32_t adaptive_work_stealer::success_streak  = 0;
 } // namespace detail
 
 // NOLINTNEXTLINE
-auto scheduler::get_work(worker_id thread, ouly::detail::work_item& work) noexcept -> bool
+auto scheduler::get_work(worker_id thread, detail::work_item& work) noexcept -> bool
 {
   auto& range = memory_block_.group_ranges_[thread.get_index()];
 
@@ -431,7 +393,7 @@ void scheduler::compute_steal_mask([[maybe_unused]] uint32_t worker_index) const
 void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_context)
 {
   memory_block_.workers_      = std::make_unique<aligned_worker[]>(worker_count_);
-  memory_block_.group_ranges_ = std::make_unique<ouly::detail::group_range[]>(worker_count_);
+  memory_block_.group_ranges_ = std::make_unique<detail::group_range[]>(worker_count_);
   memory_block_.wake_data_    = std::make_unique<aligned_wake_data[]>(worker_count_);
 
   threads_.reserve(worker_count_ - 1);
@@ -529,7 +491,7 @@ void scheduler::end_execution()
   threads_.clear();
 }
 
-void scheduler::submit_internal([[maybe_unused]] worker_id src, workgroup_id dst, ouly::detail::work_item const& work)
+void scheduler::submit_internal([[maybe_unused]] worker_id src, workgroup_id dst, detail::work_item const& work)
 {
   memory_block_.workers_[src.get_index()].get().tally_++;
 
@@ -638,4 +600,4 @@ void scheduler::clear_group(workgroup_id group)
   wg.thread_count_     = 0;
 }
 
-} // namespace ouly
+} // namespace ouly::v1

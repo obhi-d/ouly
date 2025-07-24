@@ -181,9 +181,7 @@ private:
   using node_list_t = std::array<node_t, capacity_pow2>;
 
   alignas(cache_line_size) std::atomic<std::size_t> head_{0};
-  cache_aligned_padding<std::atomic<std::size_t>> head_padding_; // Prevent false sharing
   alignas(cache_line_size) std::atomic<std::size_t> tail_{0};
-  cache_aligned_padding<std::atomic<std::size_t>> tail_padding_; // Prevent false sharing
   alignas(cache_line_size) node_list_t buffer_;
 };
 

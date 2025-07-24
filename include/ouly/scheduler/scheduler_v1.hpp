@@ -1,16 +1,18 @@
 // SPDX-License-Identifier: MIT
 #pragma once
-#include "ouly/scheduler/detail/worker.hpp"
+#include "ouly/scheduler/detail/worker_v1.hpp"
+#include "ouly/utility/common.hpp"
 #include "ouly/utility/config.hpp"
 #include "ouly/utility/type_traits.hpp"
 #include <array>
+#include <functional>
 #include <new>
 #include <thread>
 
-namespace ouly
+namespace ouly::v1
 {
 
-using scheduler_worker_entry = std::function<void(worker_desc)>;
+using scheduler_worker_entry = std::function<void(worker_desc const&)>;
 
 static constexpr uint32_t default_logical_task_divisior = 64;
 /**
@@ -66,14 +68,14 @@ static constexpr uint32_t default_logical_task_divisior = 64;
  * @note Work group creation is frozen after begin_execution() is called
  * @note Only one scheduler should be active at a time, use take_ownership() if multiple exist
  */
-class scheduler
+class OULY_API scheduler
 {
 
 public:
   static constexpr uint32_t work_scale = 4;
 
-  OULY_API scheduler() noexcept                  = default;
-  OULY_API scheduler(const scheduler&)           = delete;
+  scheduler() noexcept                           = default;
+  scheduler(const scheduler&)                    = delete;
   scheduler(scheduler&&)                         = delete;
   auto operator=(const scheduler&) -> scheduler& = delete;
   auto operator=(scheduler&&) -> scheduler&      = delete;
@@ -100,7 +102,7 @@ public:
   void submit(worker_id src, workgroup_id group, C const& task_obj) noexcept
   {
     submit_internal(src, group,
-                    ouly::detail::work_item::pbind(
+                    detail::work_item::pbind(
                      [address = task_obj.address()](worker_context const&)
                      {
                        std::coroutine_handle<>::from_address(address).resume();
@@ -124,7 +126,7 @@ public:
     requires(ouly::detail::Callable<Lambda, ouly::worker_context const&>)
   void submit(worker_id src, workgroup_id group, Lambda&& data) noexcept
   {
-    submit_internal(src, group, ouly::detail::work_item::pbind(std::forward<Lambda>(data), group));
+    submit_internal(src, group, detail::work_item::pbind(std::forward<Lambda>(data), group));
   }
 
   /**
@@ -142,7 +144,7 @@ public:
   template <auto M, typename Class>
   void submit(worker_id src, workgroup_id group, Class& ctx) noexcept
   {
-    submit_internal(src, group, ouly::detail::work_item::pbind<M>(ctx, group));
+    submit_internal(src, group, detail::work_item::pbind<M>(ctx, group));
   }
 
   /**
@@ -158,7 +160,7 @@ public:
   template <auto M>
   void submit(worker_id src, workgroup_id group) noexcept
   {
-    submit_internal(src, group, ouly::detail::work_item::pbind<M>(group));
+    submit_internal(src, group, detail::work_item::pbind<M>(group));
   }
 
   /**
@@ -179,21 +181,21 @@ public:
   template <typename... Args>
   void submit(worker_id src, workgroup_id group, task_delegate::fnptr callable, Args&&... args) noexcept
   {
-    submit_internal(src, group,
-                    ouly::detail::work_item::pbind(
-                     callable, std::make_tuple<std::decay_t<Args>...>(std::forward<Args>(args)...), group));
+    submit_internal(
+     src, group,
+     detail::work_item::pbind(callable, std::make_tuple<std::decay_t<Args>...>(std::forward<Args>(args)...), group));
   }
 
   /**
    * @brief Begin scheduler execution, group creation is frozen after this call.
    * @param entry An entry function can be provided that will be executed on all worker threads upon entry.
    */
-  OULY_API void begin_execution(scheduler_worker_entry&& entry = {}, void* user_context = nullptr);
+  void begin_execution(scheduler_worker_entry&& entry = {}, void* user_context = nullptr);
   /**
    * @brief Wait for threads to finish executing and end scheduler execution. Scheduler execution can be restarted
    * using begin_execution. Unlocks scheduler and makes it mutable.
    */
-  OULY_API void end_execution();
+  void end_execution();
 
   /**
    * @brief Get worker count in the scheduler
@@ -206,16 +208,16 @@ public:
   /**
    * @brief Ensure a work-group by id and set a name
    */
-  OULY_API void create_group(workgroup_id group, uint32_t thread_offset, uint32_t thread_count, uint32_t priority = 0);
+  void create_group(workgroup_id group, uint32_t thread_offset, uint32_t thread_count, uint32_t priority = 0);
   /**
    * @brief Get the next available group. Group priority controls if a thread is shared between multiple groups, which
    * group is executed first by the thread
    */
-  OULY_API auto create_group(uint32_t thread_offset, uint32_t thread_count, uint32_t priority = 0) -> workgroup_id;
+  auto create_group(uint32_t thread_offset, uint32_t thread_count, uint32_t priority = 0) -> workgroup_id;
   /**
    * @brief Clear a group, and re-create it
    */
-  OULY_API void clear_group(workgroup_id group);
+  void clear_group(workgroup_id group);
   /**
    * @brief Get worker count in this group
    */
@@ -249,26 +251,26 @@ public:
    * @brief If multiple schedulers are active, this function should be called from main thread before using the
    * scheduler
    */
-  OULY_API void take_ownership() noexcept;
-  OULY_API void busy_work(worker_id /*thread*/) noexcept;
+  void take_ownership() noexcept;
+  void busy_work(worker_id /*thread*/) noexcept;
 
 private:
   /**
    * @brief Submit a work for execution
    */
-  OULY_API void submit_internal(worker_id src, workgroup_id dst, ouly::detail::work_item const& work);
+  void submit_internal(worker_id src, workgroup_id dst, detail::work_item const& work);
 
   void assign_priority_order();
   auto compute_group_range(uint32_t worker_index) -> bool;
   void compute_steal_mask(uint32_t worker_index) const;
 
   void        finish_pending_tasks() noexcept;
-  inline void do_work(worker_id /*thread*/, ouly::detail::work_item& /*work*/) noexcept;
+  inline void do_work(worker_id /*thread*/, detail::work_item& /*work*/) noexcept;
   void        wake_up(worker_id /*thread*/) noexcept;
   void        run(worker_id /*thread*/);
   void        finalize_worker(worker_id /*thread*/) noexcept;
-  auto        get_work(worker_id /*thread*/, ouly::detail::work_item& /*work*/) noexcept -> bool;
-  auto        try_steal_work(worker_id /*thread*/, ouly::detail::work_item& /*work*/) const noexcept -> bool;
+  auto        get_work(worker_id /*thread*/, detail::work_item& /*work*/) noexcept -> bool;
+  auto        try_steal_work(worker_id /*thread*/, detail::work_item& /*work*/) const noexcept -> bool;
 
   auto work(worker_id /*thread*/) noexcept -> bool;
 
@@ -348,4 +350,4 @@ void async(worker_context const& current, workgroup_id submit_group, Args&&... a
   current.get_scheduler().submit<M>(current.get_worker(), submit_group, std::forward<Args>(args)...);
 }
 
-} // namespace ouly
+} // namespace ouly::v1
