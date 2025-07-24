@@ -7,6 +7,7 @@
 #include <fstream>
 #include <iostream>
 #include <numeric>
+#include <span>
 #include <thread>
 #include <vector>
 
