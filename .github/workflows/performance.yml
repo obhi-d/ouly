@@ -447,9 +447,7 @@ jobs:
         
         # Add PERFORMANCE.md and related docs if they exist
         if [ -d "performance-docs" ] && [ "$(ls -A performance-docs 2>/dev/null)" ]; then
-          # Copy PERFORMANCE.md to root for easy access
-          cp performance-docs/PERFORMANCE.md . 2>/dev/null || true
-          git add PERFORMANCE.md
+          # Only add performance-docs directory (contains PERFORMANCE.md with correct image paths)
           git add performance-docs/
           echo "✅ Adding PERFORMANCE.md and documentation to commit"
         else
