@@ -4,8 +4,8 @@ This branch contains historical performance benchmark results with detailed JSON
 
 ## Latest Results
 
-- **Timestamp**: 2025-07-24_02-49-56
-- **Commit**: 78577a99
+- **Timestamp**: 2025-07-24_04-41-30
+- **Commit**: 1348813d
 - **Branch**: main
 
 ## Benchmark Data Structure
@@ -21,6 +21,13 @@ Each directory contains:
 - **ts_thread_local_allocator**: Thread-local allocator performance (with our recent optimizations!)
 - **coalescing_arena_allocator**: Coalescing arena allocator performance
 - **scheduler**: Task scheduler performance (task submission, parallel_for, work stealing)
+- **TBB vs ouly comparison**: Direct performance comparison with oneTBB across:
+  - Task submission and scheduling
+  - Parallel for loops
+  - Parallel reduce operations
+  - Work stealing efficiency
+  - Multi-workgroup vs multi-arena patterns
+  - Memory allocation patterns
 
 ## JSON Data Format
 
