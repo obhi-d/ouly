@@ -1,0 +1,64 @@
+Starting ouly performance benchmarks...
+Benchmarking ts_shared_linear_allocator...
+
+|       ns/allocation |        allocation/s |    err% |     total | Thread-Safe Shared Linear Allocator
+|--------------------:|--------------------:|--------:|----------:|:------------------------------------
+|            5,469.92 |          182,818.03 |    0.9% |      0.01 | `ts_shared_linear single-thread alloc/dealloc`
+|          179,042.42 |            5,585.27 |    1.4% |      0.18 | `ts_shared_linear multi-thread alloc`
+|              368.39 |        2,714,514.51 |    0.4% |      0.00 | `ts_shared_linear reset`
+Benchmarking ts_thread_local_allocator...
+
+|       ns/allocation |        allocation/s |    err% |     total | Thread-Safe Thread Local Allocator
+|--------------------:|--------------------:|--------:|----------:|:-----------------------------------
+|            5,725.61 |          174,653.88 |    1.2% |      0.01 | `ts_thread_local single-thread alloc/dealloc`
+|          167,816.41 |            5,958.89 |    3.0% |      0.19 | `ts_thread_local multi-thread alloc`
+|          136,869.26 |            7,306.24 |    2.4% |      0.14 | `ts_thread_local reset`
+Benchmarking coalescing_arena_allocator...
+
+|       ns/allocation |        allocation/s |    err% |     total | Coalescing Arena Allocator
+|--------------------:|--------------------:|--------:|----------:|:---------------------------
+|           15,210.24 |           65,745.18 |    2.7% |      0.01 | `coalescing_arena alloc/dealloc`
+|            3,596.72 |          278,031.09 |    1.3% |      0.00 | `coalescing_arena fragmentation`
+Benchmarking scheduler...
+
+|             ns/task |              task/s |    err% |     total | Scheduler Performance
+|--------------------:|--------------------:|--------:|----------:|:----------------------
+|          400,952.30 |            2,494.06 |    5.6% |      0.04 | :wavy_dash: `scheduler task_submission` (Unstable with ~9.3 iters. Increase `minEpochIterations` to e.g. 93)
+|          155,565.80 |            6,428.15 |    1.8% |      0.02 | `scheduler parallel_for`
+|          203,556.50 |            4,912.64 |    0.7% |      0.02 | `scheduler work_stealing`
+|          265,707.70 |            3,763.53 |    3.1% |      0.03 | `scheduler multi_workgroup`
+Benchmarking TBB parallel_for...
+
+|             ns/task |              task/s |    err% |     total | TBB Parallel For
+|--------------------:|--------------------:|--------:|----------:|:-----------------
+|           11,510.60 |           86,876.44 |    3.0% |      0.00 | `tbb parallel_for`
+Benchmarking TBB task_arena...
+
+|             ns/task |              task/s |    err% |     total | TBB Task Arena
+|--------------------:|--------------------:|--------:|----------:|:---------------
+|            7,571.20 |          132,079.46 |    5.6% |      0.00 | :wavy_dash: `tbb task_arena` (Unstable with ~29.9 iters. Increase `minEpochIterations` to e.g. 299)
+Benchmarking TBB global_control...
+
+|             ns/task |              task/s |    err% |     total | TBB Global Control
+|--------------------:|--------------------:|--------:|----------:|:-------------------
+|            4,660.70 |          214,560.04 |    1.5% |      0.00 | `tbb global_control`
+Benchmarking TBB vs ouly comparison...
+
+|        ns/operation |         operation/s |    err% |     total | TBB vs Ouly Scheduler Comparison
+|--------------------:|--------------------:|--------:|----------:|:---------------------------------
+|          139,145.54 |            7,186.72 |    0.8% |      0.07 | `TBB task_arena submit`
+|          321,737.12 |            3,108.13 |   21.1% |      0.17 | :wavy_dash: `ouly scheduler async` (Unstable with ~45.6 iters. Increase `minEpochIterations` to e.g. 456)
+|            8,354.46 |          119,696.55 |    4.0% |      0.01 | `TBB parallel_for`
+|          154,983.74 |            6,452.29 |    3.3% |      0.08 | `ouly parallel_for`
+
+Benchmarks completed successfully!
+
+Generating detailed JSON output...
+
+|        ns/operation |         operation/s |    err% |     total | Ouly Performance Benchmarks
+|--------------------:|--------------------:|--------:|----------:|:----------------------------
+|                6.11 |      163,666,121.11 |    0.2% |      0.00 | `ts_shared_linear_single_thread`
+|                4.31 |      232,018,561.48 |    0.0% |      0.00 | `ts_thread_local_single_thread`
+|              219.71 |        4,551,454.19 |    0.3% |      0.00 | `coalescing_arena_alloc_dealloc`
+|            1,115.29 |          896,627.78 |    0.5% |      0.00 | `scheduler_task_submission`
+Detailed JSON results saved to benchmark_results_gcc-14_Release.json
