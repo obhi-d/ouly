@@ -339,8 +339,11 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
   }
 
   workers_[0].current_context_.user_context_ = user_context;
-  g_worker                                   = &workers_[0];
-  g_worker_id                                = worker_id(0);
+  workers_[0].set_workgroup_info(0, workgroup_id(0));
+
+  g_worker    = &workers_[0];
+  g_worker_id = worker_id(0);
+
   entry_fn_(worker_id(0));
 }
 
@@ -487,6 +490,17 @@ void scheduler::busy_work(worker_id thread) noexcept
   {
     if (find_work_for_worker(thread)) [[likely]]
     {
+      if (thread.get_index() == 0)
+      {
+        auto& worker = workers_[0];
+        // reset the context
+        if (worker.assigned_group_ != nullptr)
+        {
+          worker.assigned_group_->exit();
+          worker.assigned_group_ = nullptr;
+        }
+        worker.set_workgroup_info(0, workgroup_id(0));
+      }
       local_recent_failures = std::max(0U, local_recent_failures - 1);
       return; // Found and executed work
     }

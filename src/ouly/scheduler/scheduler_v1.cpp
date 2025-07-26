@@ -89,8 +89,9 @@ inline void scheduler::do_work(workgroup_id id, worker_id thread, detail::v1::wo
 {
   auto& worker = workers_[thread.get_index()].get();
   worker.tally_--;
+  worker.current_context_ = &worker.contexts_[id.get_index()];
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
-  work(worker.contexts_[id.get_index()]);
+  work(*worker.current_context_);
 }
 
 void scheduler::busy_work(worker_id thread) noexcept
@@ -108,6 +109,12 @@ void scheduler::busy_work(worker_id thread) noexcept
   {
     if (work(thread)) [[likely]]
     {
+      if (thread.get_index() == 0)
+      {
+        auto& worker = workers_[0].get();
+        // reset the context
+        worker.current_context_ = &worker.contexts_[0];
+      }
       local_recent_failures = std::max(0U, local_recent_failures - 1);
       return; // Found and executed work
     }
@@ -423,8 +430,11 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
     threads_.emplace_back(&scheduler::run_worker, this, worker_id(thread));
   }
 
-  g_worker    = &workers_[0].get();
-  g_worker_id = worker_id(0);
+  auto& main_worker            = workers_[0].get();
+  g_worker                     = &main_worker;
+  g_worker_id                  = worker_id(0);
+  main_worker.current_context_ = &main_worker.contexts_[0];
+
   entry_fn_(worker_id(0));
 
   start_counter.wait();

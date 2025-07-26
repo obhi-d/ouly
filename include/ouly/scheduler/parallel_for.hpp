@@ -73,6 +73,15 @@ struct parallel_for_data
 };
 
 template <typename L, TaskContext WC>
+void execute_sequential(L& lambda, auto range, WC const& this_context);
+
+template <TaskContext WC, typename L>
+void execute_remaining_work(L& lambda, auto range, uint32_t current_pos, uint32_t count, WC const& this_context);
+
+template <TaskContext WC>
+inline void cooperative_wait(std::latch& counter, WC const& this_context);
+
+template <typename L, TaskContext WC>
 void launch_parallel_tasks(L& lambda, auto range, uint32_t work_count, uint32_t /*fixed_batch_size*/, uint32_t count,
                            WC const& this_context)
 {

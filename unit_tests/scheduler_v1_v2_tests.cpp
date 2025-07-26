@@ -14,6 +14,7 @@
 #include <thread>
 #include <vector>
 
+// NOLINTBEGIN
 // Include GLM for mathematical operations
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -81,8 +82,8 @@ TEMPLATE_TEST_CASE("Basic Task Submission", "[scheduler][template]",
                    (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
                    (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
 {
-  using TestRunner      = TestType;
-  using SchedulerType   = typename TestRunner::scheduler_type;
+  using TestRunner = TestType;
+  // using SchedulerType   = typename TestRunner::scheduler_type;
   using TaskContextType = typename TestRunner::task_context_type;
 
   TestCounter counter;
@@ -112,8 +113,8 @@ TEMPLATE_TEST_CASE("Parallel For Execution", "[scheduler][parallel_for][template
                    (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
                    (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
 {
-  using TestRunner      = TestType;
-  using SchedulerType   = typename TestRunner::scheduler_type;
+  using TestRunner = TestType;
+  // using SchedulerType   = typename TestRunner::scheduler_type;
   using TaskContextType = typename TestRunner::task_context_type;
 
   TestCounter counter;
@@ -153,8 +154,8 @@ TEMPLATE_TEST_CASE("GLM Mathematical Operations", "[scheduler][glm][math][templa
                    (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
                    (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
 {
-  using TestRunner      = TestType;
-  using SchedulerType   = typename TestRunner::scheduler_type;
+  using TestRunner = TestType;
+  // using SchedulerType   = typename TestRunner::scheduler_type;
   using TaskContextType = typename TestRunner::task_context_type;
 
   TestCounter counter;
@@ -165,16 +166,23 @@ TEMPLATE_TEST_CASE("GLM Mathematical Operations", "[scheduler][glm][math][templa
   scheduler.begin_execution();
 
   // Create test vectors for mathematical operations
-  const size_t           vector_count = 50000;
-  std::vector<glm::vec3> vectors(vector_count);
-  std::vector<glm::mat4> matrices(vector_count);
-  std::vector<float>     results(vector_count);
+  static constexpr size_t vector_count = 50000;
+  struct data_holder_t
+  {
+    std::vector<glm::vec3> vectors;
+    std::vector<glm::mat4> matrices;
+    std::vector<float>     results;
+
+    data_holder_t(size_t count) : vectors(count), matrices(count), results(count) {}
+  };
+
+  data_holder_t data_holder(vector_count);
 
   // Initialize test data
   for (size_t i = 0; i < vector_count; ++i)
   {
-    vectors[i]  = glm::vec3(static_cast<float>(i), static_cast<float>(i + 1), static_cast<float>(i + 2));
-    matrices[i] = glm::translate(glm::mat4(1.0f), glm::vec3(static_cast<float>(i)));
+    data_holder.vectors[i]  = glm::vec3(static_cast<float>(i), static_cast<float>(i + 1), static_cast<float>(i + 2));
+    data_holder.matrices[i] = glm::translate(glm::mat4(1.0f), glm::vec3(static_cast<float>(i)));
   }
 
   // Test vector operations using parallel_for
@@ -193,22 +201,22 @@ TEMPLATE_TEST_CASE("GLM Mathematical Operations", "[scheduler][glm][math][templa
      }
      counter.task_count.fetch_add(1, std::memory_order_relaxed);
    },
-   vectors, main_ctx);
+   data_holder.vectors, main_ctx);
 
   // Test matrix operations using tasks
-  for (size_t i = 0; i < matrices.size(); ++i)
+  for (size_t i = 0; i < data_holder.matrices.size(); ++i)
   {
     scheduler.submit(main_ctx, ouly::workgroup_id(0),
-                     [&matrices, &results, &counter, i](TaskContextType const&)
+                     [&data_holder, &counter, i](TaskContextType const&)
                      {
                        // Complex matrix operations
-                       auto& matrix = matrices[i];
+                       auto& matrix = data_holder.matrices[i];
                        matrix       = glm::rotate(matrix, glm::radians(45.0f), glm::vec3(0.0f, 1.0f, 0.0f));
                        matrix       = glm::scale(matrix, glm::vec3(1.1f));
 
                        // Extract some result for verification
-                       glm::vec4 transformed = matrix * glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-                       results[i]            = glm::length(glm::vec3(transformed));
+                       glm::vec4 transformed  = matrix * glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+                       data_holder.results[i] = glm::length(glm::vec3(transformed));
 
                        counter.total_operations.fetch_add(3, std::memory_order_relaxed);
                      });
@@ -217,16 +225,16 @@ TEMPLATE_TEST_CASE("GLM Mathematical Operations", "[scheduler][glm][math][templa
   scheduler.end_execution();
 
   // Verify operations were performed
-  REQUIRE(counter.total_operations.load() >= vector_count * 3 + matrices.size() * 3);
+  REQUIRE(counter.total_operations.load() >= vector_count * 3 + data_holder.matrices.size() * 3);
 
   // Verify some results are non-zero (indicating computation occurred)
   uint32_t non_zero_count = 0;
-  for (const auto& result : results)
+  for (const auto& result : data_holder.results)
   {
     if (result > 0.0f)
       non_zero_count++;
   }
-  REQUIRE(non_zero_count == results.size());
+  REQUIRE(non_zero_count == data_holder.results.size());
 }
 
 // Test heavy computational workload
@@ -234,8 +242,8 @@ TEMPLATE_TEST_CASE("Heavy Computation Stress Test", "[scheduler][stress][templat
                    (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
                    (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
 {
-  using TestRunner      = TestType;
-  using SchedulerType   = typename TestRunner::scheduler_type;
+  using TestRunner = TestType;
+  // using SchedulerType   = typename TestRunner::scheduler_type;
   using TaskContextType = typename TestRunner::task_context_type;
 
   TestCounter counter;
@@ -245,14 +253,14 @@ TEMPLATE_TEST_CASE("Heavy Computation Stress Test", "[scheduler][stress][templat
 
   scheduler.begin_execution();
 
-  const uint32_t task_count            = 1000;
-  const uint32_t computation_intensity = 10000;
+  const uint32_t     task_count            = 1000;
+  constexpr uint32_t computation_intensity = 10000;
 
   // Submit computationally intensive tasks
   for (uint32_t i = 0; i < task_count; ++i)
   {
     scheduler.submit(main_ctx, ouly::workgroup_id(0),
-                     [&counter, computation_intensity, i](TaskContextType const&)
+                     [&counter, i](TaskContextType const&)
                      {
                        // Heavy computation with GLM operations
                        glm::mat4 result(1.0f);
@@ -324,8 +332,8 @@ TEMPLATE_TEST_CASE("Async Helper Functions", "[scheduler][async][template]",
                    (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
                    (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
 {
-  using TestRunner      = TestType;
-  using SchedulerType   = typename TestRunner::scheduler_type;
+  using TestRunner = TestType;
+  // using SchedulerType   = typename TestRunner::scheduler_type;
   using TaskContextType = typename TestRunner::task_context_type;
 
   TestCounter counter;
@@ -353,3 +361,5 @@ TEMPLATE_TEST_CASE("Async Helper Functions", "[scheduler][async][template]",
 
   REQUIRE(counter.task_count.load() == 2);
 }
+
+// NOLINTEND

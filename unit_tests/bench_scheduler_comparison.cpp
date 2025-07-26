@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 #define ANKERL_NANOBENCH_IMPLEMENT
+#define GLM_ENABLE_EXPERIMENTAL
 #include "nanobench.h"
 #include "ouly/scheduler/parallel_for.hpp"
 #include "ouly/scheduler/scheduler.hpp"
