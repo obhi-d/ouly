@@ -88,11 +88,37 @@ void scheduler::submit_internal(task_context const& current, workgroup_id dst,
     if (target_workgroup.push_work_to_worker(current.get_group_offset(), work))
     {
       // Work was successfully pushed, workgroup will advertise availability
+      wake_up_workers(1); // Wake up one worker
       return;
     }
   }
 
   target_workgroup.submit_to_mailbox(work);
+
+  // Add to needy workgroups list for better work distribution
+  needy_workgroups_.push(&target_workgroup);
+  wake_up_workers(1); // Wake up workers to handle the new work
+}
+
+void scheduler::wake_up_workers(uint32_t count) noexcept
+{
+  auto sleeping_count = sleeping_.load(std::memory_order_acquire);
+  auto wake_count     = std::min(count, static_cast<uint32_t>(sleeping_count));
+
+  if (wake_count > 0)
+  {
+    wake_tokens_.fetch_add(static_cast<int32_t>(wake_count), std::memory_order_release);
+
+    // Use notify_all if waking many workers, notify_one for single worker
+    if (wake_count > 1)
+    {
+      work_available_cv_.notify_all();
+    }
+    else
+    {
+      work_available_cv_.notify_one();
+    }
+  }
 }
 
 void scheduler::run_worker(worker_id wid)
@@ -202,10 +228,15 @@ auto scheduler::find_work_for_worker(worker_id wid) noexcept -> bool
     }
   }
 
-  // Priority 2: Check needy workgroups for mailbox work
+  // Priority 2: Check needy workgroups for mailbox work (limit attempts to avoid starvation)
+  static constexpr uint32_t max_needy_attempts = 3;
+  uint32_t                  needy_attempts     = 0;
+
   detail::v2::workgroup* needy_wg = nullptr;
-  while (needy_workgroups_.pop(needy_wg))
+  while (needy_attempts < max_needy_attempts && needy_workgroups_.pop(needy_wg))
   {
+    ++needy_attempts;
+
     if (!enter_context(wid, needy_wg))
     {
       continue; // Failed to enter context, try next needy workgroup
@@ -229,19 +260,24 @@ auto scheduler::find_work_for_worker(worker_id wid) noexcept -> bool
     needy_wg->clear_work_available();
   }
 
-  // Priority 3: Work stealing from any workgroup
-  for (uint32_t i = 0; i < workgroup_count_; ++i)
+  // Priority 3: Work stealing from any workgroup with priority-based selection
+  // Start with higher priority workgroups and overloaded workgroups
+  thread_local uint32_t steal_start_idx = 0;
+
+  for (uint32_t attempt = 0; attempt < workgroup_count_; ++attempt)
   {
-    auto& workgroup = workgroups_[i];
+    uint32_t i         = (steal_start_idx + attempt) % workgroup_count_;
+    auto&    workgroup = workgroups_[i];
+
     if (!workgroup.has_work() || !enter_context(wid, &workgroup))
     {
-      // Skip if no work or already in context
       continue;
     }
 
     detail::v2::work_item work;
     if (workgroup.steal_work(work))
     {
+      steal_start_idx = (i + 1) % workgroup_count_; // Update for next time
       execute_work(wid, work);
       return true;
     }

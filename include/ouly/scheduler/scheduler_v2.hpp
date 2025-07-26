@@ -265,6 +265,11 @@ private:
    */
   void execute_work(worker_id wid, detail::v2::work_item const& work) noexcept;
 
+  /**
+   * @brief Wake up sleeping workers
+   */
+  void wake_up_workers(uint32_t count) noexcept;
+
   /*  */
   void finish_pending_tasks();
   void finalize_worker(worker_id wid);
