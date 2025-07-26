@@ -415,12 +415,13 @@ void run_scheduler_comparison_benchmarks()
   std::cout << "\nBenchmarks completed!\n";
 
   // Save results to file
-  std::ofstream results_file("scheduler_comparison_results.json");
+  std::ofstream results_file("scheduler_comparison_results.txt");
   if (results_file.is_open())
   {
-    results_file << bench.results();
+    // Use nanobench's render method for output
+    bench.render("{{#result}}{{name}}: {{median(elapsed)}} ns/op\n{{/result}}", results_file);
     results_file.close();
-    std::cout << "Results saved to scheduler_comparison_results.json\n";
+    std::cout << "Results saved to scheduler_comparison_results.txt\n";
   }
 }
 
