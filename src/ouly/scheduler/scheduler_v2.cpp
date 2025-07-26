@@ -107,17 +107,7 @@ void scheduler::wake_up_workers(uint32_t count) noexcept
 
   if (wake_count > 0)
   {
-    wake_tokens_.fetch_add(static_cast<int32_t>(wake_count), std::memory_order_release);
-
-    // Use notify_all if waking many workers, notify_one for single worker
-    if (wake_count > 1)
-    {
-      work_available_cv_.notify_all();
-    }
-    else
-    {
-      work_available_cv_.notify_one();
-    }
+    wake_tokens_.release(static_cast<int32_t>(wake_count));
   }
 }
 
@@ -153,23 +143,12 @@ void scheduler::run_worker(worker_id wid)
       // Enter sleep state
       sleeping_.fetch_add(1, std::memory_order_relaxed);
 
-      std::unique_lock<std::mutex> lock(work_available_mutex_);
-      work_available_cv_.wait(lock,
-                              [this]
-                              {
-                                if (stop_.load(std::memory_order_relaxed))
-                                {
-                                  return true; // Exit condition
-                                }
+      wake_tokens_.acquire();
 
-                                if (wake_tokens_.fetch_sub(1, std::memory_order_acquire) < 0)
-                                {
-                                  wake_tokens_.fetch_add(1, std::memory_order_relaxed);
-                                  return false; // No work available
-                                }
-
-                                return true;
-                              });
+      if (stop_.load(std::memory_order_relaxed))
+      {
+        break;
+      }
 
       // Exit sleep state
       sleeping_.fetch_sub(1, std::memory_order_relaxed);
@@ -181,6 +160,8 @@ void scheduler::run_worker(worker_id wid)
     synchronizer_->job_board_freeze_ack_.count_down();
     synchronizer_->job_board_freeze_ack_.wait();
   }
+
+  finalize_worker(wid);
 }
 
 auto scheduler::enter_context(worker_id wid, detail::v2::workgroup* needy_wg) noexcept -> bool
@@ -220,19 +201,13 @@ auto scheduler::find_work_for_worker(worker_id wid) noexcept -> bool
       return true;
     }
 
-    if (worker.assigned_group_->has_work())
+    if (worker.assigned_group_->has_work() && worker.assigned_group_->receive_from_mailbox(work))
     {
-      // Try to get work from mailbox if no work in local queue
-      if (worker.assigned_group_->receive_from_mailbox(work))
-      {
-        execute_work(wid, work);
-        return true;
-      }
+      execute_work(wid, work);
+      return true;
     }
-    else
-    {
-      worker.assigned_group_->clear_work_available();
-    }
+
+    worker.assigned_group_->clear_work_available();
   }
 
   // Priority 2: Check needy workgroups for mailbox work (limit attempts to avoid starvation)
@@ -293,13 +268,12 @@ auto scheduler::find_work_for_worker(worker_id wid) noexcept -> bool
   return false;
 }
 
-void scheduler::execute_work(worker_id wid, detail::v2::work_item const& work) noexcept
+void scheduler::execute_work(worker_id wid, detail::v2::work_item& work) noexcept
 {
   auto& worker = workers_[wid.get_index()];
   worker.tally_--;
   // Create a copy since work_item expects mutable reference
-  auto work_copy = work;
-  work_copy(worker.get_context());
+  work(worker.get_context());
 }
 
 void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_context)
@@ -334,17 +308,19 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
 
   for (uint32_t thread = 1; thread < worker_count_; ++thread)
   {
-    workers_[thread].current_context_.user_context_ = user_context;
+    workers_[thread].current_context_.init(*this, user_context, 0, worker_id(thread));
     threads_.emplace_back(&scheduler::run_worker, this, worker_id(thread));
   }
 
-  workers_[0].current_context_.user_context_ = user_context;
+  workers_[0].current_context_.init(*this, user_context, 0, worker_id(0));
   workers_[0].set_workgroup_info(0, workgroup_id(0));
 
   g_worker    = &workers_[0];
   g_worker_id = worker_id(0);
 
   entry_fn_(worker_id(0));
+  start_counter.wait();
+  entry_fn_ = {}; // Clear entry function after execution starts
 }
 
 void scheduler::end_execution()
@@ -372,16 +348,13 @@ void scheduler::finish_pending_tasks()
   stop_.store(true, std::memory_order_seq_cst);
 
   // Wake up all workers
-  {
-    std::lock_guard<std::mutex> lock(work_available_mutex_);
-    work_available_cv_.notify_all();
-  }
+  wake_tokens_.release(worker_count_);
 
   // Third: Wait for all workers to acknowledge the stop signal
   synchronizer_->job_board_freeze_ack_.count_down();
   while (!synchronizer_->job_board_freeze_ack_.try_wait())
   {
-    work_available_cv_.notify_all();
+    wake_tokens_.release(worker_count_);
     // Wait for all workers to acknowledge freeze
     ouly::detail::pause_exec();
   }

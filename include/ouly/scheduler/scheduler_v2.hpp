@@ -9,11 +9,10 @@
 #include "ouly/utility/type_traits.hpp"
 #include <array>
 #include <atomic>
-#include <condition_variable>
 #include <coroutine>
 #include <cstdint>
-#include <mutex>
 #include <new>
+#include <semaphore>
 #include <thread>
 
 namespace ouly::inline v2
@@ -294,7 +293,7 @@ private:
   /**
    * @brief Execute a work item
    */
-  void execute_work(worker_id wid, detail::v2::work_item const& work) noexcept;
+  void execute_work(worker_id wid, detail::v2::work_item& work) noexcept;
 
   /**
    * @brief Wake up sleeping workers
@@ -313,11 +312,8 @@ private:
   using workgroup_list = ouly::detail::mpmc_ring<ouly::detail::v2::workgroup*, ouly::detail::v2::mpmc_capacity>;
   workgroup_list needy_workgroups_;
 
-  std::condition_variable work_available_cv_;
-  std::mutex              work_available_mutex_;
-
   std::atomic_bool                     stop_{false};
-  std::atomic_int32_t                  wake_tokens_{0}; // Used to wake up workers when work is available
+  std::counting_semaphore<INT_MAX>     wake_tokens_{0}; // Used to wake up workers when work is available
   std::atomic_int32_t                  sleeping_{0};
   std::shared_ptr<worker_synchronizer> synchronizer_ = nullptr;
 

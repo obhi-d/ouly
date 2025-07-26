@@ -316,7 +316,7 @@ auto scheduler::get_work(worker_id thread, ouly::detail::v1::work_item& work) no
       if (workgroup.pop_item_from_worker(target_worker_offset, work)) [[unlikely]]
       {
         detail::adaptive_work_stealer::record_success();
-        return workgroup_id{target_worker_offset};
+        return workgroup_id{group_idx};
       }
     }
   }

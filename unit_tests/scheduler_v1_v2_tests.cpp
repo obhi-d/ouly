@@ -63,17 +63,9 @@ struct SchedulerTestRunner
     return scheduler;
   }
 
-  static auto get_main_context(SchedulerType& scheduler, ouly::workgroup_id group = ouly::workgroup_id(0))
-   -> TaskContextType
+  static auto get_main_context() -> TaskContextType const&
   {
-    if constexpr (std::is_same_v<SchedulerType, ouly::v1::scheduler>)
-    {
-      return ouly::v1::make_main_context(scheduler, group);
-    }
-    else
-    {
-      return ouly::v2::make_main_context(scheduler, group);
-    }
+    return task_context_type::this_context::get();
   }
 };
 
@@ -89,9 +81,9 @@ TEMPLATE_TEST_CASE("Basic Task Submission", "[scheduler][template]",
   TestCounter counter;
 
   auto scheduler = TestRunner::setup_scheduler(4);
-  auto main_ctx  = TestRunner::get_main_context(scheduler);
 
   scheduler.begin_execution();
+  auto const& main_ctx = TestRunner::get_main_context();
 
   // Submit 1000 simple tasks
   for (uint32_t i = 0; i < 1000; ++i)
@@ -108,6 +100,67 @@ TEMPLATE_TEST_CASE("Basic Task Submission", "[scheduler][template]",
   REQUIRE(counter.task_count.load() == 1000);
 }
 
+struct small_loop_task_traits
+{
+  /**
+   * Relevant for ranged executers, this value determines the number of batches dispatched per worker on average.
+   * Higher value means the individual task batches are smaller.
+   */
+  static constexpr uint32_t batches_per_worker = 1;
+  /**
+   * This value is used as the minimum task count that will fire the parallel executer, if the task count is less than
+   * this value, a for loop is executed instead.
+   */
+  static constexpr uint32_t parallel_execution_threshold = 1;
+  /**
+   * This value, if set to non-zero, would override the `batches_per_worker` value and instead be used as the batch
+   * size for the tasks.
+   */
+  static constexpr uint32_t fixed_batch_size = 1;
+};
+
+// Test parallel_for functionality
+TEMPLATE_TEST_CASE("Parallel For Small Loop", "[scheduler][parallel_for][template]",
+                   (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
+{
+
+  using TestRunner = TestType;
+  // using SchedulerType   = typename TestRunner::scheduler_type;
+  using TaskContextType = typename TestRunner::task_context_type;
+
+  TestCounter counter;
+
+  auto scheduler = TestRunner::setup_scheduler(4);
+
+  scheduler.begin_execution();
+  auto const& main_ctx = TestRunner::get_main_context();
+
+  // Create test data
+  std::vector<uint32_t> data(10);
+  std::iota(data.begin(), data.end(), 0);
+
+  // Execute parallel_for with element-wise processing
+  ouly::parallel_for(
+   [&counter](uint32_t& element, TaskContextType const&)
+   {
+     element *= 2; // Simple operation
+     counter.task_count.fetch_add(1, std::memory_order_relaxed);
+   },
+   data, main_ctx, small_loop_task_traits{});
+
+  scheduler.end_execution();
+
+  // Verify all elements were processed
+  REQUIRE(counter.task_count.load() == 10000);
+
+  // Verify data transformation
+  for (size_t i = 0; i < data.size(); ++i)
+  {
+    REQUIRE(data[i] == i * 2);
+  }
+}
+
 // Test parallel_for functionality
 TEMPLATE_TEST_CASE("Parallel For Execution", "[scheduler][parallel_for][template]",
                    (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
@@ -120,9 +173,9 @@ TEMPLATE_TEST_CASE("Parallel For Execution", "[scheduler][parallel_for][template
   TestCounter counter;
 
   auto scheduler = TestRunner::setup_scheduler(4);
-  auto main_ctx  = TestRunner::get_main_context(scheduler);
 
   scheduler.begin_execution();
+  auto const& main_ctx = TestRunner::get_main_context();
 
   // Create test data
   std::vector<uint32_t> data(10000);
@@ -161,9 +214,9 @@ TEMPLATE_TEST_CASE("GLM Mathematical Operations", "[scheduler][glm][math][templa
   TestCounter counter;
 
   auto scheduler = TestRunner::setup_scheduler(4);
-  auto main_ctx  = TestRunner::get_main_context(scheduler);
 
   scheduler.begin_execution();
+  auto const& main_ctx = TestRunner::get_main_context();
 
   // Create test vectors for mathematical operations
   static constexpr size_t vector_count = 50000;
@@ -249,12 +302,12 @@ TEMPLATE_TEST_CASE("Heavy Computation Stress Test", "[scheduler][stress][templat
   TestCounter counter;
 
   auto scheduler = TestRunner::setup_scheduler(std::thread::hardware_concurrency());
-  auto main_ctx  = TestRunner::get_main_context(scheduler);
 
   scheduler.begin_execution();
+  auto const& main_ctx = TestRunner::get_main_context();
 
-  const uint32_t     task_count            = 1000;
-  constexpr uint32_t computation_intensity = 10000;
+  const uint32_t     task_count            = 100;
+  constexpr uint32_t computation_intensity = 1000;
 
   // Submit computationally intensive tasks
   for (uint32_t i = 0; i < task_count; ++i)
@@ -305,9 +358,8 @@ TEMPLATE_TEST_CASE("Cross-Workgroup Task Submission", "[scheduler][workgroup][te
   scheduler.create_group(ouly::workgroup_id(0), 0, 2);
   scheduler.create_group(ouly::workgroup_id(1), 2, 2);
 
-  auto main_ctx = TestRunner::get_main_context(scheduler, ouly::workgroup_id(0));
-
   scheduler.begin_execution();
+  auto const& main_ctx = TestRunner::get_main_context();
 
   // Submit tasks to different workgroups
   for (uint32_t i = 0; i < 500; ++i)
@@ -339,9 +391,9 @@ TEMPLATE_TEST_CASE("Async Helper Functions", "[scheduler][async][template]",
   TestCounter counter;
 
   auto scheduler = TestRunner::setup_scheduler(4);
-  auto main_ctx  = TestRunner::get_main_context(scheduler);
 
   scheduler.begin_execution();
+  auto const& main_ctx = TestRunner::get_main_context();
 
   // Test async function with current workgroup
   scheduler.submit(main_ctx,

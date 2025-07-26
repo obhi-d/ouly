@@ -120,10 +120,11 @@ public:
                 SchedulerType scheduler;
                 scheduler.create_group(ouly::workgroup_id(0), 0, std::thread::hardware_concurrency());
 
-                auto                  main_ctx = get_main_context(scheduler);
                 std::atomic<uint32_t> counter{0};
 
                 scheduler.begin_execution();
+
+                auto const& main_ctx = get_main_context();
 
                 for (uint32_t i = 0; i < task_count; ++i)
                 {
@@ -150,9 +151,9 @@ public:
                 SchedulerType scheduler;
                 scheduler.create_group(ouly::workgroup_id(0), 0, std::thread::hardware_concurrency());
 
-                auto main_ctx = get_main_context(scheduler);
-
                 scheduler.begin_execution();
+
+                auto const& main_ctx = get_main_context();
 
                 ouly::parallel_for(
                  [](glm::vec3& vec, TaskContextType const&)
@@ -177,9 +178,9 @@ public:
                 SchedulerType scheduler;
                 scheduler.create_group(ouly::workgroup_id(0), 0, std::thread::hardware_concurrency());
 
-                auto main_ctx = get_main_context(scheduler);
-
                 scheduler.begin_execution();
+
+                auto const& main_ctx = get_main_context();
 
                 // Matrix operations
                 for (size_t i = 0; i < data.matrices.size(); ++i)
@@ -207,9 +208,9 @@ public:
                 SchedulerType scheduler;
                 scheduler.create_group(ouly::workgroup_id(0), 0, std::thread::hardware_concurrency());
 
-                auto main_ctx = get_main_context(scheduler);
-
                 scheduler.begin_execution();
+
+                auto const& main_ctx = get_main_context();
 
                 ouly::parallel_for(
                  [](auto begin, auto end, TaskContextType const&)
@@ -242,10 +243,11 @@ public:
                 SchedulerType scheduler;
                 scheduler.create_group(ouly::workgroup_id(0), 0, std::thread::hardware_concurrency());
 
-                auto                  main_ctx = get_main_context(scheduler);
                 std::atomic<uint64_t> result{0};
 
                 scheduler.begin_execution();
+
+                auto const& main_ctx = get_main_context();
 
                 for (uint32_t i = 0; i < task_count; ++i)
                 {
@@ -268,17 +270,9 @@ public:
   }
 
 private:
-  static auto get_main_context(SchedulerType& scheduler, ouly::workgroup_id group = ouly::workgroup_id(0))
-   -> TaskContextType
+  static auto get_main_context() -> TaskContextType const&
   {
-    if constexpr (std::is_same_v<SchedulerType, ouly::v1::scheduler>)
-    {
-      return ouly::v1::make_main_context(scheduler, group);
-    }
-    else
-    {
-      return ouly::v2::make_main_context(scheduler, group);
-    }
+    return task_context_type::this_context::get();
   }
 };
 

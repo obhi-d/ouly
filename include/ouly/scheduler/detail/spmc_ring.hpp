@@ -53,17 +53,15 @@ public:
     return true;
   }
 
-  auto pop_front(T& out) noexcept -> bool // owner only
+  auto pop_back(T& out) noexcept -> bool // owner only
   {
-    auto b = bottom_.load(std::memory_order_relaxed) - 1;
-    bottom_.store(b, std::memory_order_relaxed);
-    std::atomic_thread_fence(std::memory_order_seq_cst);
+    auto b = bottom_.fetch_sub(1, std::memory_order_seq_cst) - 1;
     auto t = top_.load(std::memory_order_relaxed);
 
     if (t <= b)
     { // non‑empty
       // NOLINTNEXTLINE
-      out = std::move(*std::launder(reinterpret_cast<T*>(&slot(b))));
+      std::memcpy(&out, &slot(b), sizeof(T));
       if (t == b)
       { // last item, race with steal
         if (!top_.compare_exchange_strong(t, t + 1, std::memory_order_seq_cst, std::memory_order_relaxed))

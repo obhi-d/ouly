@@ -116,7 +116,7 @@ public:
   auto pop_work_from_worker(work_item& out, uint32_t worker_offset) noexcept -> bool
   {
     OULY_ASSERT(std::cmp_less(worker_offset, thread_count_));
-    return work_queues_[worker_offset].pop_front(out);
+    return work_queues_[worker_offset].pop_back(out);
   }
 
   /**

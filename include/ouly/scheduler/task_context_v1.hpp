@@ -27,6 +27,16 @@ public:
       : group_id_(group), index_(id), owner_(&s), user_context_(user_context), group_mask_(mask), group_offset_(offset)
   {}
 
+  void init(scheduler& s, void* user_context, worker_id id, workgroup_id group, uint32_t mask, uint32_t offset) noexcept
+  {
+    group_id_     = group;
+    index_        = id;
+    owner_        = &s;
+    user_context_ = user_context;
+    group_mask_   = mask;
+    group_offset_ = offset;
+  }
+
   /**
    * @brief get the current worker's index relative to the group's thread start offset
    */
