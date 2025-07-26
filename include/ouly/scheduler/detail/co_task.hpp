@@ -4,8 +4,9 @@
 
 #include "ouly/scheduler/detail/get_awaiter.hpp"
 #include "ouly/scheduler/detail/promise_type.hpp"
-#include "ouly/scheduler/event_types.hpp"
-#include "ouly/scheduler/worker_context.hpp"
+#include "ouly/scheduler/worker_context_v1.hpp"
+#include "ouly/scheduler/worker_context_v2.hpp"
+#include <semaphore>
 
 namespace ouly::detail
 {
@@ -81,9 +82,9 @@ public:
    */
   auto sync_wait_result() noexcept -> R
   {
-    blocking_event event;
+    std::binary_semaphore event{0};
     ouly::detail::wait(&event, this);
-    event.wait();
+    event.acquire();
     if constexpr (!std::is_same_v<R, void>)
     {
       return coro_.promise().result();
@@ -94,11 +95,12 @@ public:
    * @brief Returns result after waiting for the task to finish, with a non-blocking event, that tries to do work when
    * this coro is not available
    */
-  auto sync_wait_result(worker_id worker, scheduler& s) noexcept -> R
+  template <WorkContext WC>
+  auto busy_wait_result(WC const& ctx) noexcept -> R
   {
-    busywork_event event;
+    std::binary_semaphore event{0};
     ouly::detail::wait(&event, this);
-    event.wait(worker, s);
+    ctx.busy_wait(event);
     if constexpr (!std::is_same_v<R, void>)
     {
       return coro_.promise().result();

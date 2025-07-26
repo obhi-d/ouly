@@ -3,6 +3,7 @@
 #pragma once
 
 #include "ouly/scheduler/detail/parallel_executer.hpp"
+#include "ouly/scheduler/worker_structs.hpp"
 #include "ouly/utility/integer_range.hpp"
 #include "ouly/utility/type_traits.hpp"
 #include <functional>
@@ -71,9 +72,9 @@ struct parallel_for_data
   std::reference_wrapper<L> lambda_instance_;
 };
 
-template <typename L>
+template <typename L, WorkContext WC>
 void launch_parallel_tasks(L& lambda, auto range, uint32_t work_count, uint32_t /*fixed_batch_size*/, uint32_t count,
-                           worker_context const& this_context)
+                           WC const& this_context)
 {
   auto& scheduler = this_context.get_scheduler();
 
@@ -103,11 +104,11 @@ void launch_parallel_tasks(L& lambda, auto range, uint32_t work_count, uint32_t 
   cooperative_wait(pfor_instance.counter_, this_context);
 }
 
-template <typename L>
-void execute_sequential(L& lambda, auto range, worker_context const& this_context)
+template <typename L, WorkContext WC>
+void execute_sequential(L& lambda, auto range, WC const& this_context)
 {
   using iterator_t                 = decltype(std::begin(range));
-  constexpr bool is_range_executor = ouly::detail::RangeExcuter<L, iterator_t>;
+  constexpr bool is_range_executor = ouly::detail::RangeExecutor<L, iterator_t, WC>;
 
   if constexpr (is_range_executor)
   {
@@ -129,9 +130,9 @@ void execute_sequential(L& lambda, auto range, worker_context const& this_contex
   }
 }
 
-template <typename L, typename Iterator>
+template <typename L, typename Iterator, WorkContext WC>
 auto submit_parallel_tasks(parallel_for_data<Iterator, L>& pfor_instance, uint32_t effective_work_count, uint32_t count,
-                           worker_context const& this_context) -> uint32_t
+                           WC const& this_context) -> uint32_t
 {
   auto&          scheduler          = this_context.get_scheduler();
   const uint32_t parallel_tasks     = effective_work_count - 1;
@@ -145,20 +146,19 @@ auto submit_parallel_tasks(parallel_for_data<Iterator, L>& pfor_instance, uint32
     const uint32_t current_task_work = base_work_per_task + (i < extra_work ? 1 : 0);
     const uint32_t task_end          = current_pos + current_task_work;
 
-    scheduler.submit(this_context.get_worker(), this_context.get_workgroup(),
-                     create_task_lambda(pfor_instance, current_pos, task_end));
+    scheduler.submit(this_context, create_task_lambda<WC>(pfor_instance, current_pos, task_end));
     current_pos = task_end;
   }
   return current_pos;
 }
 
-template <typename L, typename Iterator>
+template <WorkContext WC, typename L, typename Iterator>
 auto create_task_lambda(parallel_for_data<Iterator, L>& pfor_instance, uint32_t start, uint32_t end)
 {
-  return [instance = &pfor_instance, start, end](worker_context const& wc)
+  return [instance = &pfor_instance, start, end](WC const& wc)
   {
     using iterator_t = Iterator;
-    if constexpr (ouly::detail::RangeExcuter<L, iterator_t>)
+    if constexpr (ouly::detail::RangeExecutor<L, iterator_t, WC>)
     {
       instance->lambda_instance_.get()(instance->first_ + start, instance->first_ + end, wc);
     }
@@ -180,12 +180,11 @@ auto create_task_lambda(parallel_for_data<Iterator, L>& pfor_instance, uint32_t 
   };
 }
 
-template <typename L>
-void execute_remaining_work(L& lambda, auto range, uint32_t current_pos, uint32_t count,
-                            worker_context const& this_context)
+template <WorkContext WC, typename L>
+void execute_remaining_work(L& lambda, auto range, uint32_t current_pos, uint32_t count, WC const& this_context)
 {
   using iterator_t                 = decltype(std::begin(range));
-  constexpr bool is_range_executor = ouly::detail::RangeExcuter<L, iterator_t>;
+  constexpr bool is_range_executor = ouly::detail::RangeExecutor<L, iterator_t, WC>;
 
   const uint32_t remaining_work = count - current_pos;
   if (remaining_work > 0)
@@ -211,24 +210,22 @@ void execute_remaining_work(L& lambda, auto range, uint32_t current_pos, uint32_
   }
 }
 
-inline void cooperative_wait(std::latch& counter, worker_context const& this_context)
+template <WorkContext WC>
+inline void cooperative_wait(std::latch& counter, WC const& this_context)
 {
   auto& scheduler = this_context.get_scheduler();
   while (!counter.try_wait())
   {
     // Try to do other work while waiting for parallel tasks to complete
-    scheduler.busy_work(this_context.get_worker());
-
-    // Brief pause to avoid spinning too aggressively
-    std::this_thread::yield();
+    scheduler.busy_work(this_context);
   }
 }
 
-template <typename L, typename FwIt, typename TaskTr = default_task_traits>
-void parallel_for(L lambda, FwIt range, worker_context const& this_context, TaskTr /*unused*/ = {})
+template <typename L, typename FwIt, WorkContext WC, typename TaskTr = default_task_traits>
+void parallel_for(L lambda, FwIt range, WC const& this_context, TaskTr /*unused*/ = {})
 {
   using iterator_t                 = decltype(std::begin(range));
-  constexpr bool is_range_executor = ouly::detail::RangeExcuter<L, iterator_t>;
+  constexpr bool is_range_executor = ouly::detail::RangeExecutor<L, iterator_t, WC>;
   using it_helper                  = ouly::detail::it_size_type<FwIt>;
   using size_type                  = uint32_t; // Range is limited
   using traits                     = ouly::detail::final_task_traits<TaskTr>;
@@ -289,37 +286,6 @@ void parallel_for(L lambda, FwIt range, worker_context const& this_context, Task
   {
     launch_parallel_tasks(lambda, range, work_count, fixed_batch_size, count, this_context);
   }
-}
-
-/**
- *
- * Call this method with either of these lambda functions:
- * ```cpp
- *   lambda(It begin, It end, ouly::worker_context const& context);
- *   lambda(Ty& value_type, ouly::worker_context const& context);
- * ```
- * Depending upon the passed function parameter type, either a batch executor, or a single instance executer will be
- * called.
- *
- * Use TaskTraits to modify the behavior of the execution. Check @class default_task_traits
- *
- */
-template <typename L, typename FwIt, typename TaskTraits = default_task_traits>
-void parallel_for(L&& lambda, FwIt range, worker_id current, workgroup_id workgroup, scheduler& s, TaskTraits tt = {})
-{
-  auto const& this_context = s.get_context(current, workgroup);
-  // Assert this context belongs to the work group selected for submission
-  OULY_ASSERT(
-   this_context.belongs_to(workgroup) &&
-   "Current worker does not belong to the work group for 'parallel_for' submission and thus cannot execute the task.");
-  parallel_for(std::forward<L>(lambda), range, this_context, tt);
-}
-
-template <typename L, typename FwIt, typename TaskTraits = default_task_traits>
-void parallel_for(L&& lambda, FwIt range, workgroup_id workgroup, TaskTraits tt = default_task_traits{})
-{
-  auto const& this_context = worker_context::get(workgroup);
-  parallel_for(std::forward<L>(lambda), range, this_context, tt);
 }
 
 } // namespace ouly

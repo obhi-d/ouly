@@ -173,7 +173,7 @@ template <typename EventType, typename Awaiter>
 auto wait(EventType* event, Awaiter* task) -> sync_waiter
 {
   co_await *task;
-  event->notify();
+  event->release();
   co_return;
 }
 

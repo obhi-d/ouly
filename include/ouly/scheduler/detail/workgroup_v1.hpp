@@ -8,16 +8,10 @@
 #include "ouly/scheduler/spin_lock.hpp"
 #include "ouly/scheduler/task.hpp"
 #include "ouly/scheduler/worker_context_v1.hpp"
-#include "worker.hpp"
 #include <cstdint>
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4324) // structure was padded due to alignment specifier
-#endif
 
 namespace ouly::v1::detail
 {
-static constexpr uint32_t max_worker_groups         = 32;
 static constexpr uint32_t max_local_work_item       = 32; // 1/2 cache lines
 static constexpr size_t   max_work_items_per_worker = 64; // Maximum items per worker to prevent excessive memory usage
 static constexpr uint32_t max_steal_workers         = 64; // Maximum workers that can be tracked in steal mask
@@ -31,7 +25,7 @@ struct work_queue_traits
 
 using basic_work_queue = ouly::basic_queue<work_item, work_queue_traits>;
 using async_work_queue = std::pair<ouly::spin_lock, basic_work_queue>;
-using mpmc_work_ring   = mpmc_ring<work_item, max_work_items_per_worker>;
+using mpmc_work_ring   = ouly::detail::mpmc_ring<work_item, max_work_items_per_worker>;
 
 // Optimized workgroup structure with per-worker queues
 struct workgroup
@@ -119,7 +113,3 @@ struct workgroup
 };
 
 } // namespace ouly::v1::detail
-
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif

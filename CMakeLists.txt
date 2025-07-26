@@ -37,8 +37,8 @@ add_library(
     "src/ouly/allocators/ts_thread_local_allocator.cpp"
     "src/ouly/dsl/lite_yml.cpp"
     "src/ouly/dsl/microexpr.cpp"
-    "src/ouly/scheduler/scheduler.cpp"
-    "src/ouly/scheduler/event_types.cpp"
+    "src/ouly/scheduler/scheduler_v1.cpp"
+    "src/ouly/scheduler/scheduler_v2.cpp"
     "src/ouly/utility/string_utils.cpp"
 )
 

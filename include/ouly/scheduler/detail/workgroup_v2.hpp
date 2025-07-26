@@ -7,15 +7,14 @@
 #include "ouly/scheduler/detail/mpmc_ring.hpp"
 #include "ouly/scheduler/spin_lock.hpp"
 #include "ouly/scheduler/task.hpp"
-#include "ouly/scheduler/worker_context.hpp"
-#include "worker.hpp"
+#include "ouly/scheduler/worker_context_v2.hpp"
 #include <atomic>
 #include <cstdint>
 #include <functional>
 #include <optional>
 #include <vector>
 
-namespace ouly::detail::v2
+namespace ouly::detail::inline v2
 {
 
 static constexpr uint32_t mpmc_capacity = 256;
@@ -203,4 +202,4 @@ private:
   uint32_t priority_     = 0;
 };
 
-} // namespace ouly::detail::v2
+} // namespace ouly::detail::inline v2

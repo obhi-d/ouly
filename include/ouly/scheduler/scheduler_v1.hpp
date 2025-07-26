@@ -7,12 +7,11 @@
 #include <array>
 #include <functional>
 #include <new>
+#include <semaphore>
 #include <thread>
 
 namespace ouly::v1
 {
-
-using scheduler_worker_entry = std::function<void(worker_desc const&)>;
 
 static constexpr uint32_t default_logical_task_divisior = 64;
 /**
@@ -99,9 +98,9 @@ public:
    * @see worker_context
    */
   template <CoroutineTask C>
-  void submit(worker_id src, workgroup_id group, C const& task_obj) noexcept
+  void submit(worker_context const& src, workgroup_id group, C const& task_obj) noexcept
   {
-    submit_internal(src, group,
+    submit_internal(src.get_worker(), group,
                     detail::work_item::pbind(
                      [address = task_obj.address()](worker_context const&)
                      {
@@ -124,9 +123,9 @@ public:
    */
   template <typename Lambda>
     requires(ouly::detail::Callable<Lambda, ouly::worker_context const&>)
-  void submit(worker_id src, workgroup_id group, Lambda&& data) noexcept
+  void submit(worker_context const& src, workgroup_id group, Lambda&& data) noexcept
   {
-    submit_internal(src, group, detail::work_item::pbind(std::forward<Lambda>(data), group));
+    submit_internal(src.get_worker(), group, detail::work_item::pbind(std::forward<Lambda>(data), group));
   }
 
   /**
@@ -142,9 +141,9 @@ public:
    * @note The function is noexcept and will not throw exceptions
    */
   template <auto M, typename Class>
-  void submit(worker_id src, workgroup_id group, Class& ctx) noexcept
+  void submit(worker_context const& src, workgroup_id group, Class& ctx) noexcept
   {
-    submit_internal(src, group, detail::work_item::pbind<M>(ctx, group));
+    submit_internal(src.get_worker(), group, detail::work_item::pbind<M>(ctx, group));
   }
 
   /**
@@ -158,9 +157,9 @@ public:
    *       using the member function pointer and workgroup.
    */
   template <auto M>
-  void submit(worker_id src, workgroup_id group) noexcept
+  void submit(worker_context const& src, workgroup_id group) noexcept
   {
-    submit_internal(src, group, detail::work_item::pbind<M>(group));
+    submit_internal(src.get_worker(), group, detail::work_item::pbind<M>(group));
   }
 
   /**
@@ -179,10 +178,10 @@ public:
    * the workers in the target workgroup.
    */
   template <typename... Args>
-  void submit(worker_id src, workgroup_id group, task_delegate::fnptr callable, Args&&... args) noexcept
+  void submit(worker_context const& src, workgroup_id group, task_delegate::fnptr callable, Args&&... args) noexcept
   {
     submit_internal(
-     src, group,
+     src.get_worker(), group,
      detail::work_item::pbind(callable, std::make_tuple<std::decay_t<Args>...>(std::forward<Args>(args)...), group));
   }
 
@@ -242,9 +241,9 @@ public:
     return workgroups_[g.get_index()].thread_count_ * work_scale;
   }
 
-  [[nodiscard]] auto get_context(worker_id worker, workgroup_id group) const -> worker_context const&
+  [[nodiscard]] auto get_context(worker_context const& wctx, workgroup_id group) const -> worker_context const&
   {
-    return memory_block_.workers_[worker.get_index()].get().contexts_[group.get_index()];
+    return memory_block_.workers_[wctx.get_worker().get_index()].get().contexts_[group.get_index()];
   }
 
   /**
@@ -280,30 +279,30 @@ private:
   uint32_t         worker_count_ = 0;
   std::atomic_bool stop_         = false;
 
-  static constexpr std::size_t cache_line_size = detail::cache_line_size;
+  static constexpr std::size_t cache_line_size = ouly::detail::cache_line_size;
 
   // Cache-aligned wake data to prevent false sharing
   struct wake_data
   {
-    std::atomic_bool         status_{false};
-    ouly::detail::wake_event event_;
+    std::atomic_bool      status_{false};
+    std::binary_semaphore event_{0};
   };
 
-  using aligned_worker    = detail::cache_optimized_data<ouly::detail::worker>;
-  using aligned_wake_data = detail::cache_optimized_data<wake_data>;
+  using aligned_worker    = ouly::detail::cache_optimized_data<detail::worker>;
+  using aligned_wake_data = ouly::detail::cache_optimized_data<wake_data>;
 
   // Memory layout optimization: Allocate all scheduler data in a single block
   // for better cache locality and reduced allocator overhead
   struct scheduler_memory_block
   {
     // Hot data: accessed frequently during task execution
-    std::unique_ptr<aligned_worker[]>            workers_;
-    std::unique_ptr<ouly::detail::group_range[]> group_ranges_;
-    std::unique_ptr<aligned_wake_data[]>         wake_data_;
+    std::unique_ptr<aligned_worker[]>      workers_;
+    std::unique_ptr<detail::group_range[]> group_ranges_;
+    std::unique_ptr<aligned_wake_data[]>   wake_data_;
   } memory_block_;
 
   // Work groups - frequently accessed during work stealing
-  std::vector<ouly::detail::workgroup> workgroups_;
+  std::vector<detail::workgroup>       workgroups_;
   std::shared_ptr<worker_synchronizer> synchronizer_ = nullptr;
 
   std::vector<std::thread> threads_;

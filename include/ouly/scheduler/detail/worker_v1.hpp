@@ -9,34 +9,13 @@
 #include "ouly/scheduler/detail/workgroup_v1.hpp"
 #include "ouly/scheduler/spin_lock.hpp"
 #include "ouly/scheduler/task.hpp"
-#include "ouly/scheduler/worker_context.hpp"
+#include "ouly/scheduler/worker_context_v1.hpp"
 #include <array>
 #include <cstdint>
-#include <semaphore>
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4324) // structure was padded due to alignment specifier
-#endif
 
 namespace ouly::v1::detail
 {
-
-struct wake_event
-{
-  wake_event() noexcept : semaphore_(0) {}
-
-  void wait() noexcept
-  {
-    semaphore_.acquire();
-  }
-
-  void notify() noexcept
-  {
-    semaphore_.release();
-  }
-
-  std::binary_semaphore semaphore_;
-};
+static constexpr uint32_t max_worker_groups = 32;
 
 struct group_range
 {
@@ -77,7 +56,3 @@ struct worker
 };
 
 } // namespace ouly::v1::detail
-
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif

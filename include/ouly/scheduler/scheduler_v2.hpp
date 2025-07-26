@@ -56,13 +56,13 @@ public:
    * @param task_obj The task object containing the coroutine to be resumed
    */
   template <CoroutineTask C>
-  void submit(worker_id src, workgroup_id group, C const& task_obj) noexcept
+  void submit(worker_context const& current, workgroup_id group, C const& task_obj) noexcept
   {
     auto work_fn = [address = task_obj.address()](worker_context const&)
     {
       std::coroutine_handle<>::from_address(address).resume();
     };
-    submit_internal(src, group, std::move(work_fn));
+    submit_internal(current, group, std::move(work_fn));
   }
 
   /**
@@ -74,9 +74,9 @@ public:
    */
   template <typename Lambda>
     requires(ouly::detail::Callable<Lambda, ouly::worker_context const&>)
-  void submit(worker_id src, workgroup_id group, Lambda&& data) noexcept
+  void submit(worker_context const& current, workgroup_id group, Lambda&& data) noexcept
   {
-    submit_internal(src, group, std::forward<Lambda>(data));
+    submit_internal(current, group, detail::work_item::pbind(std::forward<Lambda>(data), group));
   }
 
   /**
@@ -88,13 +88,9 @@ public:
    * @param ctx Reference to the context object
    */
   template <auto M, typename Class>
-  void submit(worker_id src, workgroup_id group, Class& ctx) noexcept
+  void submit(worker_context const& current, workgroup_id group, Class& ctx) noexcept
   {
-    auto work_fn = [&ctx](worker_context const& worker_ctx)
-    {
-      (ctx.*M)(worker_ctx);
-    };
-    submit_internal(src, group, std::move(work_fn));
+    submit_internal(current, group, detail::work_item::pbind<M>(ctx, group));
   }
 
   /**
@@ -104,13 +100,9 @@ public:
    * @param group Workgroup ID for the submitted work
    */
   template <auto M>
-  void submit(worker_id src, workgroup_id group) noexcept
+  void submit(worker_context const& current, workgroup_id group) noexcept
   {
-    auto work_fn = [](worker_context const& worker_ctx)
-    {
-      M(worker_ctx);
-    };
-    submit_internal(src, group, std::move(work_fn));
+    submit_internal(current, group, detail::work_item::pbind<M>(group));
   }
 
   /**
@@ -122,14 +114,12 @@ public:
    * @param args Arguments to be forwarded to the callable
    */
   template <typename... Args>
-  void submit(worker_id src, workgroup_id group, void (*callable)(worker_context const&, Args...),
+  void submit(worker_context const& current, workgroup_id group, void (*callable)(worker_context const&, Args...),
               Args&&... args) noexcept
   {
-    auto work_fn = [callable, args...](worker_context const& worker_ctx)
-    {
-      callable(worker_ctx, args...);
-    };
-    submit_internal(src, group, std::move(work_fn));
+    submit_internal(
+     current, group,
+     detail::work_item::pbind(callable, std::make_tuple<std::decay_t<Args>...>(std::forward<Args>(args)...), group));
   }
 
   /**

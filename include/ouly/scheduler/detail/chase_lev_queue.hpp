@@ -103,12 +103,8 @@ public:
       }
       return true;
     }
-    else
-    {
-      // Empty queue
-      bottom_.store(b + 1, std::memory_order_relaxed);
-    }
-
+    // Empty queue
+    bottom_.store(b + 1, std::memory_order_relaxed);
     return false;
   }
 

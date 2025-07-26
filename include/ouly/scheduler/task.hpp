@@ -2,7 +2,6 @@
 #pragma once
 
 #include "ouly/scheduler/detail/co_task.hpp"
-#include "ouly/scheduler/event_types.hpp"
 #include "ouly/utility/delegate.hpp"
 #include <concepts>
 

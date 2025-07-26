@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 #include "ouly/utility/user_config.hpp"
-
-#include "ouly/utility/nullable_optional.hpp"
 #include <compare>
 #include <cstdint>
 #include <functional>
 #include <limits>
+#include <semaphore>
 
-namespace ouly::detail
+namespace ouly
 {
 class scheduler;
 /**
@@ -87,86 +86,15 @@ private:
 
 static constexpr workgroup_id default_workgroup_id = workgroup_id(0);
 
-/**
- * @brief A worker context descriptor for the scheduler system
- *
- * This class describes a worker thread within the scheduling system,
- * including its relationships to other workers and group associations.
- */
-class worker_desc
-{
-public:
-  worker_desc(worker_id id, uint32_t mask) noexcept : index_(id), group_mask_(mask) {}
+using scheduler_worker_entry = std::function<void(worker_id const&)>;
 
-  /**
-   * @brief Get the number of friend workers that can cooperate with this worker
-   *
-   * @return The count of friend workers
-   */
-  [[nodiscard]] auto get_friend_worker_count() const noexcept -> uint32_t
-  {
-    return friend_worker_count_;
-  }
-
-  /**
-   * @brief Get the starting index of friend workers
-   *
-   * @return The index of the first friend worker
-   */
-  [[nodiscard]] auto get_friend_worker_start() const noexcept -> uint32_t
-  {
-    return friend_worker_start_;
-  }
-
-  /**
-   * @brief Get the worker's ID
-   *
-   * @return The worker's ID
-   */
-  [[nodiscard]] auto id() const noexcept -> worker_id
-  {
-    return index_;
-  }
-
-  /**
-   * @brief Retruns the current worker id
-   */
-  [[nodiscard]] auto get_worker() const noexcept -> worker_id
-  {
-    return index_;
-  }
-
-  /**
-   * @brief Check if the worker is a member of a specific group
-   *
-   * @param group The group ID to check
-   * @return True if the worker is a member of the specified group
-   */
-  [[nodiscard]] auto belongs_to(workgroup_id group) const noexcept -> bool
-  {
-    return (group_mask_ & (1U << group.get_index())) != 0U;
-  }
-
-  /**
-   * @brief Get the worker's group mask
-   *
-   * @return The group mask of the worker
-   */
-  [[nodiscard]] auto get_group_mask() const noexcept -> uint32_t
-  {
-    return group_mask_;
-  }
-
-  auto operator<=>(worker_desc const&) const noexcept = default;
-
-private:
-  uint32_t friend_worker_count_ = 0;
-  uint32_t friend_worker_start_ = std::numeric_limits<uint32_t>::max();
-
-  worker_id index_;
-  uint32_t  group_mask_ = 0;
+template <typename T>
+concept WorkContext = requires(const T& ctx) {
+  { ctx.get_worker() } -> std::convertible_to<worker_id>;
+  { ctx.get_scheduler() } -> std::convertible_to<scheduler&>;
+  { ctx.get_group_offset() } -> std::convertible_to<uint32_t>;
+  { ctx.template get_user_context<void>() } -> std::convertible_to<void*>;
+  { T::get(ctx.get_workgroup()) } -> std::convertible_to<const T&>;
+  { ctx.busy_wait(std::declval<std::binary_semaphore&>()) } -> std::same_as<void>;
 };
-
-using scheduler_worker_entry = std::function<void(worker_desc const&)>;
-using worker_desc            = detail::worker_desc;
-} // namespace ouly::detail
+} // namespace ouly

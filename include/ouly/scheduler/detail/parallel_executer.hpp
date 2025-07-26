@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 
-#include "ouly/scheduler/scheduler.hpp"
+#include "ouly/scheduler/scheduler_v1.hpp"
+#include "ouly/scheduler/scheduler_v2.hpp"
 #include "ouly/scheduler/task_traits.hpp"
 #include <iterator>
 
 namespace ouly::detail
 {
 
-template <typename L, typename It>
-concept RangeExcuter = requires(L l, It range, worker_context const& wc) { l(range, range, wc); };
+template <typename L, typename It, typename WC>
+concept RangeExecutor = requires(L l, It range, WC const& wc) { l(range, range, wc); };
 template <typename I>
 concept HasIteratorDiff = requires(I s) {
   { s.size() } -> std::integral;
