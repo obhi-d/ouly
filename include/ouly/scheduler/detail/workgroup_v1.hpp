@@ -3,7 +3,6 @@
 #include "ouly/allocators/default_allocator.hpp"
 #include "ouly/containers/basic_queue.hpp"
 #include "ouly/scheduler/detail/cache_optimized_data.hpp"
-#include "ouly/scheduler/detail/chase_lev_queue.hpp"
 #include "ouly/scheduler/detail/mpmc_ring.hpp"
 #include "ouly/scheduler/spin_lock.hpp"
 #include "ouly/scheduler/task.hpp"

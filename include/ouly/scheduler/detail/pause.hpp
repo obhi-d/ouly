@@ -8,7 +8,13 @@
 #include <intrin.h> // For _mm_pause() intrinsic
 #endif
 #else
-#include <immintrin.h> // For __builtin_ia32_pause() intrinsic
+#if (defined(__i386__) || defined(__x86_64__))   // 32- & 64-bit x86
+#include <immintrin.h>                           // For __builtin_ia32_pause() intrinsic
+#elif (defined(__aarch64__) || defined(__arm__)) // Arm & AArch64
+#include <arm_acle.h>                            // For __builtin_arm_yield() intrinsic
+#elif defined(__riscv)                           // RISC-V
+#include <riscv_acle.h>                          // For __builtin_riscv_pause() intrinsic
+#endif
 #endif
 
 namespace ouly::detail

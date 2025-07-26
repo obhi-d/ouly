@@ -136,6 +136,12 @@ public:
     head_ = tail_ = nullptr;
   }
 
+  void push_back(value_type const& item)
+    requires(std::is_copy_constructible_v<Ty>)
+  {
+    emplace_back(item);
+  }
+
   template <typename... Args>
   auto emplace_back(Args&&... args) -> auto&
   {
@@ -179,9 +185,29 @@ public:
     return ret;
   }
 
+  auto pop_front(Ty& out) -> bool
+  {
+    if (empty())
+    {
+      return false;
+    }
+
+    out = pop_front_unsafe();
+    return true;
+  }
+
+  [[nodiscard]] auto size() const noexcept -> size_type
+  {
+    if (head_ == nullptr)
+    {
+      return 0;
+    }
+    return static_cast<size_type>(tail_ ? (tail_->next_ ? pool_size : back_) + front_ : front_);
+  }
+
   [[nodiscard]] auto empty() const noexcept -> bool
   {
-    return (head_ == tail_ && front_ == back_);
+    return (head_ == nullptr) || (head_ == tail_ && front_ == back_);
   }
 
   void clear() noexcept

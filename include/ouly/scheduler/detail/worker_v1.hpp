@@ -17,11 +17,18 @@ namespace ouly::detail::v1
 {
 static constexpr uint32_t max_worker_groups = 32;
 
+constexpr auto init_priority_order() noexcept -> std::array<uint8_t, max_worker_groups>
+{
+  std::array<uint8_t, max_worker_groups> order{};
+  order.fill(std::numeric_limits<uint8_t>::max());
+  return order;
+}
+
 struct group_range
 {
-  std::array<uint8_t, max_worker_groups> priority_order_{};
-  uint32_t                               count_ = 0;
-  uint32_t                               mask_  = 0;
+  std::array<uint8_t, max_worker_groups> priority_order_ = init_priority_order();
+  uint32_t                               count_          = 0;
+  uint32_t                               mask_           = 0;
 
   // Store the range of threads this worker can steal from
   // This represents threads that belong to at least one shared workgroup
@@ -31,11 +38,6 @@ struct group_range
   // Bitset of threads this worker can steal from (for precise control)
   // Bit i is set if this worker can steal from worker i
   uint64_t steal_mask_ = 0;
-
-  group_range() noexcept
-  {
-    priority_order_.fill(std::numeric_limits<uint8_t>::max());
-  }
 };
 
 // Cache-aligned worker structure optimized for memory access patterns

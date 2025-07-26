@@ -14,30 +14,9 @@ namespace ouly::inline v2
 {
 
 // Bring type aliases into scope
-using workgroup_type                   = ouly::detail::v2::workgroup;
-using work_item_type                   = ouly::detail::v2::work_item;
-using worker_type                      = ouly::detail::v2::worker;
-constexpr uint32_t max_workgroup_count = ouly::detail::v2::max_workgroup;
-
-namespace
-{
-// Random seed for work distribution
-constexpr uint32_t initial_random_seed = 0xAAAAAAAAU;
-constexpr uint32_t lcg_multiplier      = 1664525U;
-constexpr uint32_t lcg_increment       = 1013904223U;
-constexpr uint32_t initial_seed_mask   = 0xAAAAAAAAU;
-constexpr uint32_t max_retry_attempts  = 100;
-constexpr uint32_t max_backoff_shift   = 8U;
-
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-thread_local uint32_t g_random_seed = initial_random_seed;
-
-auto update_seed() -> uint32_t
-{
-  return (g_random_seed = (g_random_seed * lcg_multiplier + lcg_increment) & initial_seed_mask);
-}
-
-} // anonymous namespace
+using workgroup_type = ouly::detail::v2::workgroup;
+using work_item_type = ouly::detail::v2::work_item;
+using worker_type    = ouly::detail::v2::worker;
 
 // Thread-local storage for worker information
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
@@ -113,41 +92,7 @@ void scheduler::submit_internal(task_context const& current, workgroup_id dst,
     }
   }
 
-  // Try to submit to mailbox for cross-workgroup submission
-  uint32_t retry = 0;
-  for (;;)
-  {
-    bool posted = target_workgroup.submit_to_mailbox(work);
-
-    // Add workgroup to needy list if it has work available
-    ouly::detail::v2::workgroup* wg_ptr = &target_workgroup;
-    needy_workgroups_.emplace(wg_ptr);
-
-    // Notify waiting workers
-    wake_tokens_.fetch_add(1, std::memory_order_release);
-    work_available_cv_.notify_one();
-
-    if (posted)
-    {
-      return;
-    }
-
-    for (uint32_t i = 0; i < (1U << std::min(retry, max_backoff_shift)); ++i)
-    {
-      ouly::detail::pause_exec();
-    }
-
-    if (retry++ > max_retry_attempts)
-    {
-      break;
-    }
-  }
-
-  // Final fallback - force push to mailbox (blocking)
-  while (!target_workgroup.submit_to_mailbox(work))
-  {
-    busy_work(current_worker);
-  }
+  target_workgroup.submit_to_mailbox(work);
 }
 
 void scheduler::run_worker(worker_id wid)
@@ -242,11 +187,18 @@ auto scheduler::find_work_for_worker(worker_id wid) noexcept -> bool
       return true;
     }
 
-    // Try to get work from mailbox if no work in local queue
-    if (worker.assigned_group_->receive_from_mailbox(work))
+    if (worker.assigned_group_->has_work())
     {
-      execute_work(wid, work);
-      return true;
+      // Try to get work from mailbox if no work in local queue
+      if (worker.assigned_group_->receive_from_mailbox(work))
+      {
+        execute_work(wid, work);
+        return true;
+      }
+    }
+    else
+    {
+      worker.assigned_group_->clear_work_available();
     }
   }
 

@@ -4,13 +4,15 @@
 #include "ouly/allocators/default_allocator.hpp"
 #include "ouly/containers/basic_queue.hpp"
 #include "ouly/scheduler/detail/cache_optimized_data.hpp"
-#include "ouly/scheduler/detail/chase_lev_queue.hpp"
 #include "ouly/scheduler/detail/mpmc_ring.hpp"
+#include "ouly/scheduler/detail/spmc_ring.hpp"
 #include "ouly/scheduler/spin_lock.hpp"
 #include "ouly/scheduler/task_context_v2.hpp"
 #include <atomic>
 #include <cstdint>
+#include <mutex>
 #include <span>
+#include <utility>
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -42,7 +44,7 @@ using work_item = task_delegate;
 class workgroup
 {
 public:
-  using queue_type      = ::ouly::detail::chase_lev_queue<work_item>;
+  using queue_type      = ::ouly::detail::spmc_ring<work_item>;
   workgroup() noexcept  = default;
   ~workgroup() noexcept = default;
 
@@ -73,11 +75,14 @@ public:
    */
   auto push_work_to_worker(uint32_t worker_offset, work_item const& item) noexcept -> bool
   {
-    OULY_ASSERT(worker_offset < static_cast<uint32_t>(thread_count_));
+    OULY_ASSERT(std::cmp_less(worker_offset, thread_count_));
 
-    work_queues_[worker_offset].push_front(item);
-    advertise_work_available();
-    return true;
+    if (work_queues_[worker_offset].push_back(item))
+    {
+      advertise_work_available();
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -85,7 +90,7 @@ public:
    */
   auto pop_work_from_worker(work_item& out, uint32_t worker_offset) noexcept -> bool
   {
-    OULY_ASSERT(worker_offset < static_cast<uint32_t>(thread_count_));
+    OULY_ASSERT(std::cmp_less(worker_offset, thread_count_));
     return work_queues_[worker_offset].pop_front(out);
   }
 
@@ -98,19 +103,19 @@ public:
 
     // Try to steal from a random worker's queue to reduce contention
     thread_local uint32_t steal_index = 0;
-    uint32_t              attempts    = static_cast<uint32_t>(thread_count_);
+    auto                  attempts    = static_cast<uint32_t>(thread_count_);
 
     for (uint32_t i = 0; i < attempts; ++i)
     {
-      uint32_t worker_idx = (steal_index + i) % thread_count_;
+      uint32_t worker_idx = (steal_index + i) % attempts;
       if (worker_idx == avoid_worker_offset)
       {
         continue; // Skip the worker we want to avoid
       }
 
-      if (work_queues_[worker_idx].pop_back(out))
+      if (work_queues_[worker_idx].steal(out))
       {
-        steal_index = (worker_idx + 1) % thread_count_; // Update for next time
+        steal_index = (worker_idx + 1) % attempts; // Update for next time
         return true;
       }
     }
@@ -121,14 +126,11 @@ public:
   /**
    * @brief Submit work via mailbox (cross-workgroup submission)
    */
-  auto submit_to_mailbox(work_item const& item) noexcept -> bool
+  void submit_to_mailbox(work_item const& item) noexcept
   {
-    bool success = mailbox_.emplace(item);
-    if (success)
-    {
-      advertise_work_available();
-    }
-    return success;
+    std::lock_guard lock(mailbox_mutex_);
+    mailbox_.push_back(item);
+    advertise_work_available();
   }
 
   /**
@@ -136,7 +138,8 @@ public:
    */
   auto receive_from_mailbox(work_item& out) noexcept -> bool
   {
-    return mailbox_.pop(out);
+    std::lock_guard lock(mailbox_mutex_);
+    return mailbox_.pop_front(out);
   }
 
   /**
@@ -197,13 +200,13 @@ public:
    */
   [[nodiscard]] auto get_end_thread_idx() const noexcept -> uint32_t
   {
-    return worker_start_idx_ + thread_count_;
+    return worker_start_idx_ + static_cast<uint32_t>(thread_count_);
   }
 
   // Accessors
   [[nodiscard]] auto get_thread_count() const noexcept -> uint32_t
   {
-    return thread_count_;
+    return static_cast<uint32_t>(thread_count_);
   }
 
   [[nodiscard]] auto get_priority() const noexcept -> uint32_t
@@ -246,7 +249,8 @@ private:
   std::unique_ptr<queue_type[]> work_queues_;
 
   // Mailbox for cross-workgroup work submission
-  mpmc_ring<work_item, mpmc_capacity> mailbox_;
+  std::mutex                   mailbox_mutex_;
+  ouly::basic_queue<work_item> mailbox_;
 };
 
 } // namespace ouly::detail::v2

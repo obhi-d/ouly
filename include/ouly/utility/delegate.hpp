@@ -227,50 +227,6 @@ class basic_delegate<SmallSize, Ret(Args...)>
 public:
   using fnptr = delegate_fn;
 
-  ~basic_delegate() noexcept = default;
-  // Default constructor
-  basic_delegate() noexcept = default;
-
-  // Move constructor
-  basic_delegate(basic_delegate&& other) noexcept
-  {
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    std::memcpy(reinterpret_cast<void*>(buffer_), reinterpret_cast<void const*>(other.buffer_), buffer_size);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    *reinterpret_cast<delegate_fn*>(other.buffer_) = nullptr;
-  }
-
-  // Move assignment operator
-  auto operator=(basic_delegate&& other) noexcept -> basic_delegate&
-  {
-    if (this != &other)
-    {
-      // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-      std::memcpy(reinterpret_cast<void*>(buffer_), reinterpret_cast<void const*>(other.buffer_), buffer_size);
-      // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-      *reinterpret_cast<delegate_fn*>(other.buffer_) = nullptr;
-    }
-    return *this;
-  }
-
-  // Move constructor
-  basic_delegate(basic_delegate const& other) noexcept
-  {
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    std::memcpy(reinterpret_cast<void*>(buffer_), reinterpret_cast<void const*>(other.buffer_), buffer_size);
-  }
-
-  // Move assignment operator
-  auto operator=(basic_delegate const& other) noexcept -> basic_delegate&
-  {
-    if (this != &other)
-    {
-      // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-      std::memcpy(reinterpret_cast<void*>(buffer_), reinterpret_cast<void const*>(other.buffer_), buffer_size);
-    }
-    return *this;
-  }
-
   /** Bind method for a functor_ or lambda like object */
   template <typename F>
   static auto bind(F&& func) -> basic_delegate
