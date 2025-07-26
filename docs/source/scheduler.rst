@@ -51,7 +51,7 @@ Basic Usage
 	scheduler.submit(ouly::main_worker_id, ouly::default_workgroup_id, task);
 
 	// Submit lambda task
-	scheduler.submit(worker_id, group_id, [](ouly::worker_context const& ctx) {
+	scheduler.submit(worker_id, group_id, [](ouly::task_context const& ctx) {
 		// Task work here
 	});
 

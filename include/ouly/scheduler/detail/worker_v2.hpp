@@ -2,25 +2,18 @@
 
 #pragma once
 
-#include "ouly/allocators/default_allocator.hpp"
-#include "ouly/containers/basic_queue.hpp"
-#include "ouly/scheduler/detail/cache_optimized_data.hpp"
-#include "ouly/scheduler/detail/mpmc_ring.hpp"
-#include "ouly/scheduler/detail/workgroup_v2.hpp"
-#include "ouly/scheduler/spin_lock.hpp"
-#include "ouly/scheduler/task.hpp"
-#include "ouly/scheduler/worker_context_v2.hpp"
-#include <array>
+#include "ouly/scheduler/task_context_v2.hpp"
 #include <cstdint>
 
-namespace ouly::detail::inline v2
+namespace ouly::detail::v2
 {
 
-class workgroup;
+class workgroup; // Forward declaration
+
 class worker
 {
 public:
-  auto get_context() noexcept -> ouly::v2::worker_context const&
+  [[nodiscard]] auto get_context() const noexcept -> task_context const&
   {
     return current_context_;
   }
@@ -32,8 +25,8 @@ public:
   }
 
 private:
-  workgroup*               assigned_group_ = nullptr; // The workgroup this worker belongs to
-  ouly::v2::worker_context current_context_;
+  workgroup*   assigned_group_ = nullptr; // The workgroup this worker belongs to
+  task_context current_context_;
 };
 
-} // namespace ouly::detail::inline v2
+} // namespace ouly::detail::v2

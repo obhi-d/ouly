@@ -243,7 +243,7 @@ scheduler.begin_execution();
 
 // Submit a lambda task to the default workgroup
 scheduler.submit(ouly::main_worker_id, ouly::default_workgroup_id, 
-    [](ouly::worker_context const& ctx) {
+    [](ouly::task_context const& ctx) {
         // Task code executed by a worker in the default workgroup
         std::cout << "Task running on worker " << ctx.get_worker().get_index() << std::endl;
     });
@@ -251,7 +251,7 @@ scheduler.submit(ouly::main_worker_id, ouly::default_workgroup_id,
 // Submit a task to a specific worker
 ouly::worker_id target_worker(1);
 scheduler.submit(ouly::main_worker_id, target_worker, ouly::default_workgroup_id,
-    [](ouly::worker_context const& ctx) {
+    [](ouly::task_context const& ctx) {
         // Task code executed specifically by worker 1
     });
 
@@ -287,7 +287,7 @@ std::vector<float> data(10000, 1.0f);
 
 // Process data in parallel using range-based execution
 ouly::parallel_for(
-    [](auto begin, auto end, ouly::worker_context const& ctx) {
+    [](auto begin, auto end, ouly::task_context const& ctx) {
         // Process items in range [begin, end)
         for (auto it = begin; it != end; ++it)
             *it = *it * 2.0f;
@@ -298,7 +298,7 @@ ouly::parallel_for(
 
 // Process data in parallel using element-based execution
 ouly::parallel_for(
-    [](float& element, ouly::worker_context const& ctx) {
+    [](float& element, ouly::task_context const& ctx) {
         // Process individual element
         element = element * 2.0f;
     },
@@ -313,7 +313,7 @@ struct custom_traits : ouly::default_task_traits {
 };
 
 ouly::parallel_for(
-    [](float& element, ouly::worker_context const& ctx) {
+    [](float& element, ouly::task_context const& ctx) {
         element = std::sqrt(element);
     },
     data,

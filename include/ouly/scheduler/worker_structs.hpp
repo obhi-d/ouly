@@ -34,17 +34,6 @@ public:
     return index_ != std::numeric_limits<uint32_t>::max();
   }
 
-  struct this_worker
-  {
-    /**
-     * @brief Returns the worker id for the current thread
-     */
-    /**
-     * @brief Returns the worker id for the current thread
-     */
-    static auto get_id() noexcept -> worker_id const&;
-  };
-
   auto operator<=>(worker_id const&) const noexcept = default;
 
 private:

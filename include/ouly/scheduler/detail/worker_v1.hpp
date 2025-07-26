@@ -9,11 +9,11 @@
 #include "ouly/scheduler/detail/workgroup_v1.hpp"
 #include "ouly/scheduler/spin_lock.hpp"
 #include "ouly/scheduler/task.hpp"
-#include "ouly/scheduler/worker_context_v1.hpp"
+#include "ouly/scheduler/task_context_v1.hpp"
 #include <array>
 #include <cstdint>
 
-namespace ouly::v1::detail
+namespace ouly::detail::v1
 {
 static constexpr uint32_t max_worker_groups = 32;
 
@@ -43,7 +43,7 @@ struct worker
 {
   // Context per work group - accessed during work execution
   // Pointer is stable, actual contexts allocated separately for better locality
-  std::unique_ptr<worker_context[]> contexts_;
+  std::unique_ptr<task_context[]> contexts_;
 
   worker_id id_                  = worker_id{0};
   worker_id min_steal_friend_id_ = worker_id{0};
@@ -51,8 +51,10 @@ struct worker
 
   int64_t tally_ = 0;
 
+  ouly::v1::task_context* current_context_ = nullptr;
+
   // No local queues needed - work is organized per workgroup per worker
   // This eliminates the complexity of multiple queue types and work validation
 };
 
-} // namespace ouly::v1::detail
+} // namespace ouly::detail::v1

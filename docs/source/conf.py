@@ -45,7 +45,7 @@ breathe_projects_source = {
     ]),
     "scheduler": ("../../include/ouly/scheduler", [
         "awaiters.hpp", "event_types.hpp", "parallel_for.hpp", "promise_type.hpp", "scheduler.hpp", 
-        "spin_lock.hpp", "task.hpp", "worker.hpp", "worker_context.hpp"
+        "spin_lock.hpp", "task.hpp", "worker.hpp", "task_context.hpp"
     ]),
     "serializers": ("../../include/ouly/serializers", [
         "binary_input_serializer.hpp", "binary_output_serializer.hpp", "binary_serializer.hpp", 

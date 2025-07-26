@@ -389,12 +389,12 @@ void bench_scheduler()
               std::atomic<int> counter{0};
               constexpr int    num_tasks = 1000;
 
-              auto ctx = ouly::worker_context::get(ouly::workgroup_id(0));
+              auto ctx = ouly::task_context::get(ouly::workgroup_id(0));
 
               for (int i = 0; i < num_tasks; ++i)
               {
                 ouly::async(ctx, ouly::workgroup_id(0),
-                            [&counter](ouly::worker_context const&)
+                            [&counter](ouly::task_context const&)
                             {
                               counter.fetch_add(1, std::memory_order_relaxed);
                             });
@@ -416,7 +416,7 @@ void bench_scheduler()
               std::iota(data.begin(), data.end(), 0);
 
               ouly::parallel_for(
-               [](int& value, ouly::worker_context const&)
+               [](int& value, ouly::task_context const&)
                {
                  value *= 2;
                  ankerl::nanobench::doNotOptimizeAway(value);
@@ -438,13 +438,13 @@ void bench_scheduler()
               std::atomic<long long> result{0};
               constexpr int          num_tasks = 500;
 
-              auto ctx = ouly::worker_context::get(ouly::workgroup_id(0));
+              auto ctx = ouly::task_context::get(ouly::workgroup_id(0));
 
               // Submit compute-intensive tasks that vary in duration
               for (int i = 0; i < num_tasks; ++i)
               {
                 ouly::async(ctx, ouly::workgroup_id(0),
-                            [&result, i](ouly::worker_context const&)
+                            [&result, i](ouly::task_context const&)
                             {
                               long long sum = 0;
                               // Variable work amount to trigger work stealing
@@ -473,19 +473,19 @@ void bench_scheduler()
               std::atomic<int> counter{0};
               constexpr int    tasks_per_group = 250;
 
-              auto ctx = ouly::worker_context::get(ouly::workgroup_id(0));
+              auto ctx = ouly::task_context::get(ouly::workgroup_id(0));
 
               // Submit tasks to both workgroups
               for (int i = 0; i < tasks_per_group; ++i)
               {
                 ouly::async(ctx, ouly::workgroup_id(0),
-                            [&counter](ouly::worker_context const&)
+                            [&counter](ouly::task_context const&)
                             {
                               counter.fetch_add(1, std::memory_order_relaxed);
                             });
 
                 ouly::async(ctx, ouly::workgroup_id(1),
-                            [&counter](ouly::worker_context const&)
+                            [&counter](ouly::task_context const&)
                             {
                               counter.fetch_add(1, std::memory_order_relaxed);
                             });
@@ -637,12 +637,12 @@ void bench_tbb_vs_ouly_comparison()
               scheduler.begin_execution();
 
               std::atomic<int> counter{0};
-              auto             ctx = ouly::worker_context::get(ouly::workgroup_id(0));
+              auto             ctx = ouly::task_context::get(ouly::workgroup_id(0));
 
               for (int i = 0; i < num_tasks; ++i)
               {
                 ouly::async(ctx, ouly::workgroup_id(0),
-                            [&counter](ouly::worker_context const&)
+                            [&counter](ouly::task_context const&)
                             {
                               counter.fetch_add(1, std::memory_order_relaxed);
                             });
@@ -682,7 +682,7 @@ void bench_tbb_vs_ouly_comparison()
               std::iota(data.begin(), data.end(), 0);
 
               ouly::parallel_for(
-               [](int& value, ouly::worker_context const&)
+               [](int& value, ouly::task_context const&)
                {
                  value = value * 2 + 1;
                },
@@ -769,10 +769,10 @@ int main(int argc, char* argv[])
                        scheduler.begin_execution();
 
                        std::atomic<int> counter{0};
-                       auto             ctx = ouly::worker_context::get(ouly::workgroup_id(0));
+                       auto             ctx = ouly::task_context::get(ouly::workgroup_id(0));
 
                        ouly::async(ctx, ouly::workgroup_id(0),
-                                   [&counter](ouly::worker_context const&)
+                                   [&counter](ouly::task_context const&)
                                    {
                                      counter.fetch_add(1, std::memory_order_relaxed);
                                    });

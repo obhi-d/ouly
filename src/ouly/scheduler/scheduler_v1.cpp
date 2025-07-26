@@ -4,7 +4,7 @@
 #include "ouly/scheduler/scheduler_v1.hpp"
 #include "ouly/scheduler/detail/pause.hpp"
 #include "ouly/scheduler/task.hpp"
-#include "ouly/scheduler/worker_context.hpp"
+#include "ouly/scheduler/task_context.hpp"
 #include "ouly/utility/common.hpp"
 #include <atomic>
 #include <barrier>
@@ -15,7 +15,7 @@ namespace ouly::v1
 {
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-thread_local detail::worker const* g_worker = nullptr;
+thread_local detail::v1::worker const* g_worker = nullptr;
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 thread_local ouly::worker_id g_worker_id = {};
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
@@ -33,14 +33,9 @@ static auto update_seed() -> uint32_t
   return (g_random_seed = (g_random_seed * lcg_multiplier + lcg_increment) & initial_seed_mask);
 }
 
-auto worker_context::get(workgroup_id group) noexcept -> worker_context const&
+auto task_context::this_context::get() noexcept -> task_context const&
 {
-  return g_worker->contexts_[group.get_index()];
-}
-
-auto worker_id::this_worker::get_id() noexcept -> worker_id const&
-{
-  return g_worker_id;
+  return *g_worker->current_context_;
 }
 
 struct scheduler::tally_publisher
@@ -408,12 +403,12 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
     compute_group_range(worker_index);
 
     auto wgroup_count = static_cast<uint32_t>(workgroups_.size());
-    worker.contexts_  = std::make_unique<worker_context[]>(wgroup_count);
+    worker.contexts_  = std::make_unique<task_context[]>(wgroup_count);
     for (uint32_t g = 0; g < wgroup_count; ++g)
     {
       worker.contexts_[g] =
-       worker_context(*this, user_context, worker_id(worker_index), workgroup_id(g),
-                      memory_block_.group_ranges_[worker_index].mask_, worker_index - workgroups_[g].start_thread_idx_);
+       task_context(*this, user_context, worker_id(worker_index), workgroup_id(g),
+                    memory_block_.group_ranges_[worker_index].mask_, worker_index - workgroups_[g].start_thread_idx_);
     }
     memory_block_.wake_data_[worker_index].get().status_.store(true, std::memory_order_relaxed);
   }

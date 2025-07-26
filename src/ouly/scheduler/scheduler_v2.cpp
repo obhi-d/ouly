@@ -1,28 +1,60 @@
 // SPDX-License-Identifier: MIT
 
 #include "ouly/scheduler/scheduler_v2.hpp"
-#include "ouly/scheduler/task.hpp"
-#include "ouly/scheduler/worker_context.hpp"
-#include "ouly/utility/common.hpp"
+#include "ouly/scheduler/detail/pause.hpp"
+#include "ouly/scheduler/detail/worker_v2.hpp"
+#include "ouly/scheduler/detail/workgroup_v2.hpp"
+#include "ouly/scheduler/task_context_v2.hpp"
 #include <atomic>
 #include <barrier>
 #include <latch>
+#include <thread>
+#ifdef __linux__
+#include <numa.h>
+#include <sched.h>
+#endif
 
 namespace ouly::inline v2
 {
 
+// Using declarations to resolve namespace conflicts
+using workgroup_type                   = ouly::detail::v2::workgroup;
+using work_item_type                   = ouly::detail::v2::work_item;
+using worker_type                      = ouly::detail::v2::worker;
+constexpr uint32_t max_workgroup_count = ouly::detail::v2::max_workgroup;
+
+namespace
+{
+// Random seed for work distribution
+constexpr uint32_t initial_random_seed = 0xAAAAAAAAU;
+constexpr uint32_t lcg_multiplier      = 1664525U;
+constexpr uint32_t lcg_increment       = 1013904223U;
+constexpr uint32_t initial_seed_mask   = 0xAAAAAAAAU;
+constexpr uint32_t max_retry_attempts  = 100;
+constexpr uint32_t max_backoff_shift   = 8U;
+
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+thread_local uint32_t g_random_seed = initial_random_seed;
+
+auto update_seed() -> uint32_t
+{
+  return (g_random_seed = (g_random_seed * lcg_multiplier + lcg_increment) & initial_seed_mask);
+}
+
+} // anonymous namespace
+
 // Thread-local storage for worker information
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-thread_local ouly::detail::worker const* g_worker = nullptr;
+thread_local detail::v2::worker const* g_worker = nullptr;
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 thread_local ouly::worker_id g_worker_id = {};
 
-auto worker_context::get(workgroup_id group) noexcept -> worker_context const&
+auto task_context::this_context::get() noexcept -> task_context const&
 {
-  return g_worker->contexts_[group.get_index()];
+  return g_worker->get_context();
 }
 
-auto worker_id::this_worker::get_id() noexcept -> worker_id const&
+auto task_context::this_context::get_worker_id() noexcept -> worker_id
 {
   return g_worker_id;
 }
@@ -32,6 +64,7 @@ struct scheduler::worker_synchronizer
   std::latch          job_board_freeze_ack_;
   std::barrier<>      published_tally_;
   std::atomic_int64_t tally_{0};
+  void*               user_context_ = nullptr;
 
   worker_synchronizer(ptrdiff_t worker_count) noexcept
       : job_board_freeze_ack_(worker_count), published_tally_(worker_count)
@@ -46,146 +79,238 @@ scheduler::~scheduler() noexcept
   }
 }
 
-void scheduler::submit_internal(worker_id src, workgroup_id dst, ouly::detail::work_item const& work)
+void scheduler::submit_internal(task_context const& current, workgroup_id dst,
+                                ::ouly::detail::v2::work_item const& work)
 {
-  // New implementation using the workgroup mailbox system
-  auto& target_workgroup = new_workgroups_[dst.get_index()];
+  auto& target_workgroup = workgroups_[dst.get_index()];
 
-  // Try to submit directly to the mailbox
+  // First try to submit to the worker's own queue if it belongs to this workgroup
+  worker_id current_worker = current.get_worker();
+  uint32_t  worker_start   = get_worker_start_idx(dst);
+  uint32_t  worker_count   = get_worker_count(dst);
+  uint32_t  worker_end     = worker_start + worker_count;
+
+  if (current_worker.get_index() >= worker_start && current_worker.get_index() < worker_end)
+  {
+    uint32_t local_offset = current_worker.get_index() - worker_start;
+    if (target_workgroup.push_work_to_worker(local_offset, work))
+    {
+      // Work was successfully pushed, workgroup will advertise availability
+      return;
+    }
+  }
+
+  // Try to submit to mailbox for cross-workgroup submission
   if (target_workgroup.submit_to_mailbox(work))
   {
-    // Notify workers that work is available
-    notify_workers_work_available();
+    // Add workgroup to needy list if it has work available
+    ouly::detail::v2::workgroup* wg_ptr = &target_workgroup;
+    needy_workgroups_.emplace(wg_ptr);
+
+    // Notify waiting workers
+    wake_tokens_.fetch_add(1, std::memory_order_release);
+    work_available_cv_.notify_one();
   }
   else
   {
-    // Mailbox is full - could implement fallback strategy here
-    // For now, just drop the work (in production, might want to retry or use a different strategy)
+    // Mailbox is full - implement exponential backoff and retry
+    for (uint32_t retry = 0; retry < max_retry_attempts; ++retry)
+    {
+      // Try random worker queue in the workgroup
+      uint32_t random_offset = update_seed() % worker_count;
+      if (target_workgroup.push_work_to_worker(random_offset, work))
+      {
+        return;
+      }
+
+      // Exponential backoff
+      for (uint32_t i = 0; i < (1U << std::min(retry, max_backoff_shift)); ++i)
+      {
+        ouly::detail::pause_exec();
+      }
+    }
+
+    // Final fallback - force push to mailbox (blocking)
+    while (!target_workgroup.submit_to_mailbox(work))
+    {
+      busy_work(current_worker);
+    }
   }
-}
-
-void scheduler::notify_workers_work_available() noexcept
-{
-  // Set the global work flag and notify all waiting workers
-  has_global_work_.store(true, std::memory_order_release);
-
-  std::lock_guard<std::mutex> lock(global_work_mutex_);
-  global_work_cv_.notify_all();
 }
 
 void scheduler::run_worker(worker_id worker_id)
 {
   // Set thread-local storage
   g_worker_id = worker_id;
-  g_worker    = &memory_block_.workers_[worker_id.get_index()].get();
+  g_worker    = &workers_[worker_id.get_index()];
+
+  // Set CPU affinity for NUMA awareness
+  set_worker_affinity(worker_id);
 
   // Execute the entry function if provided
   if (entry_fn_)
   {
-    // Create a worker_desc for the entry function - simplified for demo
-    worker_desc desc{worker_id, nullptr};
-    entry_fn_(desc);
+    entry_fn_(worker_id);
   }
 
   // Main worker loop
   while (!stop_.load(std::memory_order_relaxed))
   {
-    bool found_work = find_work_for_worker(worker_id);
+    bool found_work = false;
+
+    // Try to find work
+    found_work = find_work_for_worker(worker_id);
 
     if (!found_work)
     {
-      // No work found, wait for notification
-      std::unique_lock<std::mutex> lock(global_work_mutex_);
-      global_work_cv_.wait(lock,
-                           [this]
-                           {
-                             return has_global_work_.load(std::memory_order_acquire) ||
-                                    stop_.load(std::memory_order_relaxed);
-                           });
+      // Enter sleep state
+      sleeping_.fetch_add(1, std::memory_order_relaxed);
 
-      // Reset the global work flag - it will be set again when new work arrives
-      has_global_work_.store(false, std::memory_order_relaxed);
+      std::unique_lock<std::mutex> lock(work_available_mutex_);
+      work_available_cv_.wait(lock,
+                              [this]
+                              {
+                                return wake_tokens_.load(std::memory_order_acquire) > 0 ||
+                                       stop_.load(std::memory_order_relaxed);
+                              });
+
+      // Exit sleep state
+      sleeping_.fetch_sub(1, std::memory_order_relaxed);
+
+      // Consume a wake token
+      wake_tokens_.fetch_sub(1, std::memory_order_relaxed);
     }
   }
-
-  finalize_worker(worker_id);
 }
 
 auto scheduler::find_work_for_worker(worker_id worker_id) noexcept -> bool
 {
-  // Check each workgroup for available work, starting with workgroups this worker belongs to
-  for (auto& workgroup : new_workgroups_)
+  // Priority 1: Check assigned workgroups' own queues
+  for (uint32_t i = 0; i < detail::max_workgroup; ++i)
   {
-    if (workgroup.has_work())
+    auto& workgroup = workgroups_[i];
+    if (workgroup.get_thread_count() == 0)
     {
-      if (try_get_work_from_workgroup(worker_id, workgroup_id{static_cast<uint32_t>(&workgroup - &new_workgroups_[0])}))
+      continue;
+    }
+
+    uint32_t worker_start = get_worker_start_idx(workgroup_id{i});
+    uint32_t worker_count = get_worker_count(workgroup_id{i});
+    uint32_t worker_end   = worker_start + worker_count;
+
+    // Check if this worker belongs to this workgroup
+    if (worker_id.get_index() >= worker_start && worker_id.get_index() < worker_end)
+    {
+      uint32_t local_offset = worker_id.get_index() - worker_start;
+
+      detail::work_item work;
+      if (workgroup.pop_work_from_worker(work, local_offset))
       {
+        execute_work(worker_id, work);
         return true;
       }
     }
   }
 
-  return false;
-}
-
-auto scheduler::try_get_work_from_workgroup(worker_id worker_id, workgroup_id group_id) noexcept -> bool
-{
-  auto& workgroup = new_workgroups_[group_id.get_index()];
-
-  // First, try to get work from the mailbox
-  ouly::detail::work_item work;
-  if (workgroup.receive_from_mailbox(work))
+  // Priority 2: Check needy workgroups for mailbox work
+  detail::v2::workgroup* needy_wg = nullptr;
+  if (needy_workgroups_.pop(needy_wg))
   {
-    execute_work(worker_id, work);
-    return true;
+    detail::work_item work;
+    if (needy_wg->receive_from_mailbox(work))
+    {
+      execute_work(worker_id, work);
+      return true;
+    }
+
+    // No work in mailbox, try stealing from this workgroup
+    if (needy_wg->steal_work(work))
+    {
+      execute_work(worker_id, work);
+      return true;
+    }
+
+    // Clear work available flag since we found no work
+    needy_wg->clear_work_available();
   }
 
-  // Then try to get work from the worker's own queue (if this worker belongs to this workgroup)
-  uint32_t worker_start = workgroup.get_start_thread_idx();
-  uint32_t worker_end   = workgroup.get_end_thread_idx();
-  uint32_t worker_index = worker_id.get_index();
-
-  if (worker_index >= worker_start && worker_index < worker_end)
+  // Priority 3: Work stealing from any workgroup
+  for (uint32_t i = 0; i < detail::max_workgroup; ++i)
   {
-    // This worker belongs to this workgroup, try to pop from own queue
-    uint32_t local_offset = worker_index - worker_start;
-    auto     work_opt     = workgroup.pop_work_from_worker(local_offset);
-    if (work_opt.has_value())
+    auto& workgroup = workgroups_[i];
+    if (workgroup.get_thread_count() == 0)
     {
-      execute_work(worker_id, work_opt.value());
+      continue;
+    }
+
+    detail::work_item work;
+    if (workgroup.steal_work(work))
+    {
+      execute_work(worker_id, work);
       return true;
     }
   }
 
-  // Finally, try to steal work from other workers in this workgroup
-  uint32_t avoid_offset =
-   (worker_index >= worker_start && worker_index < worker_end) ? worker_index - worker_start : UINT32_MAX;
-
-  auto stolen_work = workgroup.steal_work(avoid_offset);
-  if (stolen_work.has_value())
-  {
-    execute_work(worker_id, stolen_work.value());
-    return true;
-  }
-
-  // No work available in this workgroup
-  workgroup.clear_work_available();
   return false;
 }
 
-void scheduler::execute_work(worker_id worker_id, ouly::detail::work_item& work) noexcept
+void scheduler::execute_work(worker_id /*worker_id*/, detail::work_item const& work) noexcept
 {
-  // Execute the work item with the appropriate worker context
-  auto& worker = memory_block_.workers_[worker_id.get_index()].get();
-
-  // For simplicity, use the default workgroup context
-  // In a full implementation, we'd determine the correct workgroup from the work item
-  work(worker.contexts_[0]);
+  auto& worker = workers_[g_worker_id.get_index()];
+  // Create a copy since work_item expects mutable reference
+  auto work_copy = work;
+  work_copy(worker.get_context());
 }
 
-void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_context)
+void scheduler::set_worker_affinity(worker_id worker_id) noexcept
+{
+#ifdef __linux__
+  // Set CPU affinity for NUMA awareness
+  cpu_set_t cpuset;
+  CPU_ZERO(&cpuset);
+  CPU_SET(worker_id.get_index() % std::thread::hardware_concurrency(), &cpuset);
+  pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
+
+  // Set NUMA policy if available
+  if (numa_available() != -1)
+  {
+    int node = worker_id.get_index() / (std::thread::hardware_concurrency() / numa_num_configured_nodes());
+    numa_set_preferred(node);
+  }
+#else
+  // On non-Linux platforms, this is a no-op
+  (void)worker_id;
+#endif
+}
+
+void scheduler::begin_execution(scheduler_worker_entry&& entry, uint32_t worker_count, void* user_context)
 {
   entry_fn_ = std::move(entry);
+
+  // Determine worker count
+  if (worker_count == 0)
+  {
+    worker_count_ = std::thread::hardware_concurrency();
+  }
+  else
+  {
+    worker_count_ = worker_count;
+  }
+
+  // Initialize workers and workgroups
+  workers_    = std::make_unique<detail::v2::worker[]>(worker_count_);
+  workgroups_ = std::make_unique<detail::v2::workgroup[]>(detail::max_workgroup);
+
+  // Initialize worker contexts
+  for (uint32_t i = 0; i < worker_count_; ++i)
+  {
+    // Workers will be assigned to workgroups when workgroups are created
+  }
+
+  // Create synchronizer
+  synchronizer_                = std::make_shared<worker_synchronizer>(worker_count_);
+  synchronizer_->user_context_ = user_context;
+
   stop_.store(false, std::memory_order_relaxed);
 
   // Create worker threads
@@ -206,8 +331,8 @@ void scheduler::end_execution()
 
   // Wake up all workers
   {
-    std::lock_guard<std::mutex> lock(global_work_mutex_);
-    global_work_cv_.notify_all();
+    std::lock_guard<std::mutex> lock(work_available_mutex_);
+    work_available_cv_.notify_all();
   }
 
   // Wait for all threads to finish
@@ -220,63 +345,108 @@ void scheduler::end_execution()
   }
 
   threads_.clear();
+  synchronizer_.reset();
 }
 
-void scheduler::create_group(workgroup_id group, uint32_t thread_offset, uint32_t thread_count, uint32_t priority)
+void scheduler::create_group(workgroup_id group, uint32_t thread_count, uint32_t priority)
 {
-  if (group.get_index() >= new_workgroups_.size())
+  if (group.get_index() >= detail::max_workgroup)
   {
-    new_workgroups_.resize(group.get_index() + 1);
+    return; // Invalid group ID
   }
 
-  new_workgroups_[group.get_index()].create_group(thread_offset, thread_count, priority);
-  worker_count_ = std::max(worker_count_, thread_offset + thread_count);
+  auto& wg = workgroups_[group.get_index()];
+  wg.initialize(thread_count, priority, this);
 
-  // Allocate memory blocks if needed
-  if (!memory_block_.workers_)
-  {
-    memory_block_.workers_      = std::make_unique<aligned_worker[]>(worker_count_);
-    memory_block_.group_ranges_ = std::make_unique<ouly::detail::group_range[]>(worker_count_);
-    memory_block_.wake_data_    = std::make_unique<aligned_wake_data[]>(worker_count_);
-  }
+  // Update worker assignments
+  update_worker_assignments();
 }
 
-auto scheduler::create_group(uint32_t thread_offset, uint32_t thread_count, uint32_t priority) -> workgroup_id
+auto scheduler::create_group(uint32_t thread_count, uint32_t priority) -> workgroup_id
 {
-  workgroup_id new_group{static_cast<uint32_t>(new_workgroups_.size())};
-  create_group(new_group, thread_offset, thread_count, priority);
-  return new_group;
+  // Find next available group ID
+  for (uint32_t i = 0; i < detail::max_workgroup; ++i)
+  {
+    if (workgroups_[i].get_thread_count() == 0)
+    {
+      workgroup_id new_group{i};
+      create_group(new_group, thread_count, priority);
+      return new_group;
+    }
+  }
+
+  return workgroup_id{0}; // Fallback to group 0 if all are used
 }
 
 void scheduler::clear_group(workgroup_id group)
 {
-  if (group.get_index() < new_workgroups_.size())
+  if (group.get_index() < detail::max_workgroup)
   {
-    new_workgroups_[group.get_index()] = ouly::detail::new_workgroup{};
+    workgroups_[group.get_index()].clear();
+    update_worker_assignments();
   }
+}
+
+void scheduler::update_worker_assignments()
+{
+  uint32_t next_worker = 0;
+
+  for (uint32_t i = 0; i < detail::max_workgroup && next_worker < worker_count_; ++i)
+  {
+    auto&    wg              = workgroups_[i];
+    uint32_t wg_thread_count = wg.get_thread_count();
+
+    if (wg_thread_count > 0)
+    {
+      uint32_t assigned_workers = std::min(wg_thread_count, worker_count_ - next_worker);
+
+      // Assign workers to this workgroup
+      for (uint32_t j = 0; j < assigned_workers; ++j)
+      {
+        workers_[next_worker + j].set_workgroup_info(j, workgroup_id{i});
+      }
+
+      wg.set_worker_range(next_worker, assigned_workers);
+      next_worker += assigned_workers;
+    }
+  }
+}
+
+auto scheduler::get_worker_count(workgroup_id g) const noexcept -> uint32_t
+{
+  if (g.get_index() < detail::max_workgroup)
+  {
+    return workgroups_[g.get_index()].get_thread_count();
+  }
+  return 0;
+}
+
+auto scheduler::get_worker_start_idx(workgroup_id g) const noexcept -> uint32_t
+{
+  uint32_t start = 0;
+  for (uint32_t i = 0; i < g.get_index() && i < detail::max_workgroup; ++i)
+  {
+    start += workgroups_[i].get_thread_count();
+  }
+  return start;
+}
+
+auto scheduler::get_logical_divisor(workgroup_id g) const noexcept -> uint32_t
+{
+  auto worker_count = get_worker_count(g);
+  return worker_count > 0 ? worker_count : 1;
 }
 
 void scheduler::take_ownership() noexcept
 {
   // Implementation for taking ownership when multiple schedulers exist
-  // For simplicity, this is a no-op in this demo
+  // This is typically used when multiple scheduler instances exist
 }
 
-void scheduler::busy_work(worker_id worker_id) noexcept
+void scheduler::busy_work(worker_id thread) noexcept
 {
-  // Try to find work for the worker
-  find_work_for_worker(worker_id);
+  // Try to find work for the worker during busy wait
+  find_work_for_worker(thread);
 }
-
-// Legacy methods - simplified implementations for compatibility
-void scheduler::assign_priority_order() {}
-auto scheduler::compute_group_range(uint32_t worker_index) -> bool
-{
-  return true;
-}
-void scheduler::compute_steal_mask(uint32_t worker_index) const {}
-void scheduler::finish_pending_tasks() noexcept {}
-void scheduler::wake_up(worker_id /*thread*/) noexcept {}
-void scheduler::finalize_worker(worker_id /*thread*/) noexcept {}
 
 } // namespace ouly::inline v2

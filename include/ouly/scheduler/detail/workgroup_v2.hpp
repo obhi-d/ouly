@@ -6,13 +6,18 @@
 #include "ouly/scheduler/detail/chase_lev_queue.hpp"
 #include "ouly/scheduler/detail/mpmc_ring.hpp"
 #include "ouly/scheduler/spin_lock.hpp"
-#include "ouly/scheduler/task.hpp"
-#include "ouly/scheduler/worker_context_v2.hpp"
+#include "ouly/scheduler/task_context_v2.hpp"
 #include <atomic>
 #include <cstdint>
 #include <span>
 
-namespace ouly::detail::inline v2
+// Forward declarations
+namespace ouly::inline v2
+{
+class scheduler;
+}
+
+namespace ouly::detail::v2
 {
 static constexpr uint32_t max_workgroup = 32; // Maximum number of workgroups supported
 static constexpr uint32_t mpmc_capacity = 256;
@@ -31,7 +36,7 @@ using work_item = task_delegate;
 class workgroup
 {
 public:
-  using queue_type      = chase_lev_queue<work_item>;
+  using queue_type      = ::ouly::detail::chase_lev_queue<work_item>;
   workgroup() noexcept  = default;
   ~workgroup() noexcept = default;
 
@@ -150,6 +155,51 @@ public:
     has_work_.store(false, std::memory_order_relaxed);
   }
 
+  /**
+   * @brief Initialize the workgroup with worker threads and scheduler reference
+   */
+  void initialize(uint32_t thread_count, uint32_t priority, void* owner) noexcept
+  {
+    owner_ = static_cast<ouly::v2::scheduler*>(owner);
+    create_group(thread_count, priority);
+  }
+
+  /**
+   * @brief Clear the workgroup
+   */
+  void clear() noexcept
+  {
+    thread_count_ = 0;
+    priority_     = 0;
+    work_queues_.reset();
+    has_work_.store(false, std::memory_order_relaxed);
+  }
+
+  /**
+   * @brief Set the worker range for this workgroup
+   */
+  void set_worker_range(uint32_t start_idx, uint32_t count) noexcept
+  {
+    worker_start_idx_    = start_idx;
+    worker_count_actual_ = count;
+  }
+
+  /**
+   * @brief Get the start worker index
+   */
+  [[nodiscard]] auto get_start_thread_idx() const noexcept -> uint32_t
+  {
+    return worker_start_idx_;
+  }
+
+  /**
+   * @brief Get the end worker index
+   */
+  [[nodiscard]] auto get_end_thread_idx() const noexcept -> uint32_t
+  {
+    return worker_start_idx_ + worker_count_actual_;
+  }
+
   // Accessors
   [[nodiscard]] auto get_thread_count() const noexcept -> uint32_t
   {
@@ -161,7 +211,7 @@ public:
   }
 
 private:
-  scheduler* owner_ = nullptr; // Pointer to the owning scheduler
+  ouly::v2::scheduler* owner_ = nullptr; // Pointer to the owning scheduler
   // Work queues - one Chase-Lev queue per worker in this workgroup
   std::unique_ptr<queue_type[]> work_queues_;
 
@@ -174,6 +224,10 @@ private:
   // Configuration
   uint32_t thread_count_ = 0;
   uint32_t priority_     = 0;
+
+  // Worker assignment information
+  uint32_t worker_start_idx_    = 0;
+  uint32_t worker_count_actual_ = 0;
 };
 
-} // namespace ouly::detail::inline v2
+} // namespace ouly::detail::v2

@@ -7,10 +7,10 @@
 #include "ouly/scheduler/detail/mpmc_ring.hpp"
 #include "ouly/scheduler/spin_lock.hpp"
 #include "ouly/scheduler/task.hpp"
-#include "ouly/scheduler/worker_context_v1.hpp"
+#include "ouly/scheduler/task_context_v1.hpp"
 #include <cstdint>
 
-namespace ouly::v1::detail
+namespace ouly::detail::v1
 {
 static constexpr uint32_t max_local_work_item       = 32; // 1/2 cache lines
 static constexpr size_t   max_work_items_per_worker = 64; // Maximum items per worker to prevent excessive memory usage
@@ -112,4 +112,4 @@ struct workgroup
   }
 };
 
-} // namespace ouly::v1::detail
+} // namespace ouly::detail::v1

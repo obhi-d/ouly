@@ -14,13 +14,13 @@ TEST_CASE("scheduler: Single workgroup")
 
   scheduler.begin_execution();
   {
-    ouly::worker_context ctx = ouly::worker_context::get(ouly::workgroup_id(0));
+    ouly::task_context ctx = ouly::task_context::get(ouly::workgroup_id(0));
     REQUIRE(ctx.get_worker().get_index() == 0);
   }
 
   bool result = false;
-  ouly::async(ouly::worker_context::get(ouly::workgroup_id(0)), ouly::workgroup_id(0),
-              [&result](ouly::worker_context const& ctx)
+  ouly::async(ouly::task_context::get(ouly::workgroup_id(0)), ouly::workgroup_id(0),
+              [&result](ouly::task_context const& ctx)
               {
                 if (ctx.get_worker().get_index() == 0)
                 {
@@ -43,12 +43,12 @@ TEST_CASE("scheduler: Construction")
     std::array<uint32_t, 18>              executed = {0};
     std::array<std::vector<uint32_t>, 18> accumulate;
 
-    void execute(ouly::worker_context const& id)
+    void execute(ouly::task_context const& id)
     {
       executed[id.get_worker().get_index()]++;
     }
 
-    void execute2(ouly::worker_context const& id, uint32_t n)
+    void execute2(ouly::task_context const& id, uint32_t n)
     {
       [[maybe_unused]] auto& scheduler = id.get_scheduler();
       accumulate[id.get_worker().get_index()].push_back(n);
@@ -83,7 +83,7 @@ TEST_CASE("scheduler: Construction")
   scheduler.begin_execution();
   executor instance;
   for (uint32_t i = 0; i < 1024; ++i)
-    ouly::async<&executor::execute>(ouly::worker_context::get(ouly::default_workgroup_id), ouly::workgroup_id(i % 2),
+    ouly::async<&executor::execute>(ouly::task_context::get(ouly::default_workgroup_id), ouly::workgroup_id(i % 2),
                                     instance);
   scheduler.end_execution();
 
@@ -93,8 +93,8 @@ TEST_CASE("scheduler: Construction")
   scheduler.begin_execution();
   executor instance2;
   for (uint32_t i = 0; i < 1024; ++i)
-    ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), ouly::workgroup_id(i % 2),
-                [&instance2, i](ouly::worker_context const& ctx)
+    ouly::async(ouly::task_context::get(ouly::default_workgroup_id), ouly::workgroup_id(i % 2),
+                [&instance2, i](ouly::task_context const& ctx)
                 {
                   instance2.execute2(ctx, i);
                 });
@@ -116,7 +116,7 @@ TEST_CASE("scheduler: Range ParallelFor")
   std::atomic_int value;
   for (uint32_t i = 0; i < 1024; ++i)
     ouly::parallel_for(
-     [&value](int a, int b, [[maybe_unused]] ouly::worker_context const& wc)
+     [&value](int a, int b, [[maybe_unused]] ouly::task_context const& wc)
      {
        value.fetch_add(b - a);
      },
@@ -143,11 +143,11 @@ TEST_CASE("scheduler: Simplest ParallelFor")
 
   std::atomic_int64_t parallel_sum = 0;
   ouly::parallel_for(
-   [&parallel_sum](int a, [[maybe_unused]] ouly::worker_context const& c)
+   [&parallel_sum](int a, [[maybe_unused]] ouly::task_context const& c)
    {
      [[maybe_unused]] auto id = ouly::worker_id::this_worker::get_id();
      OULY_ASSERT(id.get_index() < 16);
-     [[maybe_unused]] auto ctx = ouly::worker_context::get(ouly::default_workgroup_id);
+     [[maybe_unused]] auto ctx = ouly::task_context::get(ouly::default_workgroup_id);
      OULY_ASSERT(ctx.get_worker().get_index() < 16);
      OULY_ASSERT(ctx.get_group_offset() < 16);
      parallel_sum += a;
@@ -158,7 +158,7 @@ TEST_CASE("scheduler: Simplest ParallelFor")
 
   parallel_sum = 0;
   ouly::parallel_for(
-   [&parallel_sum](auto start, auto end, [[maybe_unused]] ouly::worker_context const& c)
+   [&parallel_sum](auto start, auto end, [[maybe_unused]] ouly::task_context const& c)
    {
      for (auto it = start; it != end; ++it)
        parallel_sum += *it;
@@ -200,7 +200,7 @@ TEST_CASE("scheduler: Test co_task")
   auto task        = continue_string();
   auto string_task = create_string(task);
 
-  ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), ouly::default_workgroup_id, task);
+  ouly::async(ouly::task_context::get(ouly::default_workgroup_id), ouly::default_workgroup_id, task);
   scheduler.submit(ouly::main_worker_id, ouly::default_workgroup_id, string_task);
 
   std::string        continue_string = "basic";
@@ -345,8 +345,8 @@ TEST_CASE("scheduler: Memory Layout Optimization Tests")
 
     for (int i = 0; i < 1000; ++i)
     {
-      ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), ouly::workgroup_id(i % 2),
-                  [&counter, &invalid_workers](ouly::worker_context const& ctx)
+      ouly::async(ouly::task_context::get(ouly::default_workgroup_id), ouly::workgroup_id(i % 2),
+                  [&counter, &invalid_workers](ouly::task_context const& ctx)
                   {
                     counter.fetch_add(1, std::memory_order_relaxed);
                     // Verify context access works
@@ -380,8 +380,8 @@ TEST_CASE("scheduler: Work Stealing Optimization Tests")
     for (int i = 0; i < total_tasks; ++i)
     {
       auto group = ouly::workgroup_id(i % 2);
-      ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), group,
-                  [&worker_task_counts](ouly::worker_context const& ctx)
+      ouly::async(ouly::task_context::get(ouly::default_workgroup_id), group,
+                  [&worker_task_counts](ouly::task_context const& ctx)
                   {
                     auto worker_idx = ctx.get_worker().get_index();
                     worker_task_counts[worker_idx].fetch_add(1, std::memory_order_relaxed);
@@ -424,8 +424,8 @@ TEST_CASE("scheduler: Work Stealing Optimization Tests")
     // Submit many small tasks to test load balancing
     for (int i = 0; i < total_tasks; ++i)
     {
-      ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), ouly::default_workgroup_id,
-                  [&execution_counts](ouly::worker_context const& ctx)
+      ouly::async(ouly::task_context::get(ouly::default_workgroup_id), ouly::default_workgroup_id,
+                  [&execution_counts](ouly::task_context const& ctx)
                   {
                     auto worker_idx = ctx.get_worker().get_index();
                     execution_counts[worker_idx].fetch_add(1, std::memory_order_relaxed);
@@ -483,15 +483,15 @@ TEST_CASE("scheduler: Priority and Exclusive Work Tests")
     for (int i = 0; i < 100; ++i)
     {
       // Low priority tasks
-      ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), ouly::workgroup_id(0),
-                  [&data, i](ouly::worker_context const&)
+      ouly::async(ouly::task_context::get(ouly::default_workgroup_id), ouly::workgroup_id(0),
+                  [&data, i](ouly::task_context const&)
                   {
                     data.low_priority_order[i] = data.execution_order.fetch_add(1, std::memory_order_acq_rel);
                   });
 
       // High priority tasks
-      ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), ouly::workgroup_id(1),
-                  [&data, i](ouly::worker_context const&)
+      ouly::async(ouly::task_context::get(ouly::default_workgroup_id), ouly::workgroup_id(1),
+                  [&data, i](ouly::task_context const&)
                   {
                     data.high_priority_order[i] = data.execution_order.fetch_add(1, std::memory_order_acq_rel);
                   });
@@ -517,8 +517,8 @@ TEST_CASE("scheduler: Error Handling and Edge Cases")
     std::atomic<int> task_count{0};
 
     // Submit to normal group
-    ouly::async(ouly::worker_context::get(ouly::workgroup_id(1)), ouly::workgroup_id(1),
-                [&task_count](ouly::worker_context const&)
+    ouly::async(ouly::task_context::get(ouly::workgroup_id(1)), ouly::workgroup_id(1),
+                [&task_count](ouly::task_context const&)
                 {
                   task_count.fetch_add(1, std::memory_order_relaxed);
                 });
@@ -540,8 +540,8 @@ TEST_CASE("scheduler: Error Handling and Edge Cases")
     // Submit many tasks rapidly to test contention handling
     for (int i = 0; i < high_task_count; ++i)
     {
-      ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), ouly::default_workgroup_id,
-                  [&contention_counter](ouly::worker_context const&)
+      ouly::async(ouly::task_context::get(ouly::default_workgroup_id), ouly::default_workgroup_id,
+                  [&contention_counter](ouly::task_context const&)
                   {
                     contention_counter.fetch_add(1, std::memory_order_relaxed);
                   });
@@ -564,8 +564,8 @@ TEST_CASE("scheduler: Error Handling and Edge Cases")
     // Submit tasks that themselves submit more tasks
     for (int i = 0; i < 10; ++i)
     {
-      ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), ouly::default_workgroup_id,
-                  [&nested_count, &total_count](ouly::worker_context const& ctx)
+      ouly::async(ouly::task_context::get(ouly::default_workgroup_id), ouly::default_workgroup_id,
+                  [&nested_count, &total_count](ouly::task_context const& ctx)
                   {
                     total_count.fetch_add(1, std::memory_order_relaxed);
 
@@ -573,7 +573,7 @@ TEST_CASE("scheduler: Error Handling and Edge Cases")
                     for (int j = 0; j < 5; ++j)
                     {
                       ouly::async(ctx, ouly::default_workgroup_id,
-                                  [&nested_count](ouly::worker_context const&)
+                                  [&nested_count](ouly::task_context const&)
                                   {
                                     nested_count.fetch_add(1, std::memory_order_relaxed);
                                   });
@@ -603,8 +603,8 @@ TEST_CASE("scheduler: Performance and Scalability Tests")
 
     for (int i = 0; i < large_task_count; ++i)
     {
-      ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), ouly::default_workgroup_id,
-                  [&processed_count](ouly::worker_context const&)
+      ouly::async(ouly::task_context::get(ouly::default_workgroup_id), ouly::default_workgroup_id,
+                  [&processed_count](ouly::task_context const&)
                   {
                     processed_count.fetch_add(1, std::memory_order_relaxed);
                   });
@@ -637,8 +637,8 @@ TEST_CASE("scheduler: Performance and Scalability Tests")
 
       for (int i = 0; i < 1000; ++i)
       {
-        ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), ouly::workgroup_id(i % 2),
-                    [&cycle_counter](ouly::worker_context const&)
+        ouly::async(ouly::task_context::get(ouly::default_workgroup_id), ouly::workgroup_id(i % 2),
+                    [&cycle_counter](ouly::task_context const&)
                     {
                       cycle_counter.fetch_add(1, std::memory_order_relaxed);
                     });
@@ -667,8 +667,8 @@ TEST_CASE("scheduler: Memory Layout and Cache Optimization Verification")
 
     for (uint32_t worker_id = 0; worker_id < 16; ++worker_id)
     {
-      ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), ouly::default_workgroup_id,
-                  [&counters, worker_id](ouly::worker_context const&)
+      ouly::async(ouly::task_context::get(ouly::default_workgroup_id), ouly::default_workgroup_id,
+                  [&counters, worker_id](ouly::task_context const&)
                   {
                     // Intensive counter updates that would cause false sharing if not properly aligned
                     for (int i = 0; i < iterations_per_worker; ++i)
@@ -723,8 +723,8 @@ TEST_CASE("scheduler: Memory Layout and Cache Optimization Verification")
     for (int i = 0; i < rapid_tasks; ++i)
     {
       auto group = ouly::workgroup_id(i % 2);
-      ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), group,
-                  [&rapid_counter, i](ouly::worker_context const&)
+      ouly::async(ouly::task_context::get(ouly::default_workgroup_id), group,
+                  [&rapid_counter, i](ouly::task_context const&)
                   {
                     rapid_counter.fetch_add(1, std::memory_order_relaxed);
 
@@ -760,9 +760,9 @@ TEST_CASE("scheduler: Advanced Work Stealing and Distribution")
     constexpr int overload_tasks = 5000;
     for (int i = 0; i < overload_tasks; ++i)
     {
-      ouly::async(ouly::worker_context::get(ouly::default_workgroup_id),
+      ouly::async(ouly::task_context::get(ouly::default_workgroup_id),
                   ouly::workgroup_id(0), // All to small group
-                  [&worker_loads](ouly::worker_context const& ctx)
+                  [&worker_loads](ouly::task_context const& ctx)
                   {
                     auto worker_idx = ctx.get_worker().get_index();
                     worker_loads[worker_idx].fetch_add(1, std::memory_order_relaxed);
@@ -821,8 +821,8 @@ TEST_CASE("scheduler: Advanced Work Stealing and Distribution")
     constexpr int ordered_tasks = 800;
     for (int i = 0; i < ordered_tasks; ++i)
     {
-      ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), ouly::default_workgroup_id,
-                  [&data, i](ouly::worker_context const& ctx)
+      ouly::async(ouly::task_context::get(ouly::default_workgroup_id), ouly::default_workgroup_id,
+                  [&data, i](ouly::task_context const& ctx)
                   {
                     auto worker_idx = ctx.get_worker().get_index();
                     {
@@ -872,8 +872,8 @@ TEST_CASE("scheduler: Stress Tests and Robustness")
 
       for (int i = 0; i < 100; ++i)
       {
-        ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), ouly::default_workgroup_id,
-                    [&cycle_tasks](ouly::worker_context const&)
+        ouly::async(ouly::task_context::get(ouly::default_workgroup_id), ouly::default_workgroup_id,
+                    [&cycle_tasks](ouly::task_context const&)
                     {
                       cycle_tasks.fetch_add(1, std::memory_order_relaxed);
                     });
@@ -901,8 +901,8 @@ TEST_CASE("scheduler: Stress Tests and Robustness")
     for (int i = 0; i < 300; ++i)
     {
       // CPU-intensive tasks
-      ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), ouly::workgroup_id(0),
-                  [&cpu_tasks](ouly::worker_context const&)
+      ouly::async(ouly::task_context::get(ouly::default_workgroup_id), ouly::workgroup_id(0),
+                  [&cpu_tasks](ouly::task_context const&)
                   {
                     cpu_tasks.fetch_add(1, std::memory_order_relaxed);
                     // Simulate CPU work
@@ -914,8 +914,8 @@ TEST_CASE("scheduler: Stress Tests and Robustness")
                   });
 
       // I/O simulation tasks
-      ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), ouly::workgroup_id(1),
-                  [&io_tasks](ouly::worker_context const&)
+      ouly::async(ouly::task_context::get(ouly::default_workgroup_id), ouly::workgroup_id(1),
+                  [&io_tasks](ouly::task_context const&)
                   {
                     io_tasks.fetch_add(1, std::memory_order_relaxed);
                     // Simulate I/O wait
@@ -925,8 +925,8 @@ TEST_CASE("scheduler: Stress Tests and Robustness")
       // Mixed tasks
       if (i % 2 == 0)
       {
-        ouly::async(ouly::worker_context::get(ouly::default_workgroup_id), ouly::workgroup_id(2),
-                    [&mixed_tasks](ouly::worker_context const&)
+        ouly::async(ouly::task_context::get(ouly::default_workgroup_id), ouly::workgroup_id(2),
+                    [&mixed_tasks](ouly::task_context const&)
                     {
                       mixed_tasks.fetch_add(1, std::memory_order_relaxed);
                     });
@@ -972,8 +972,8 @@ TEST_CASE("scheduler: Workgroup Stealing Constraints - Basic Validation")
   // Submit tasks to workgroup 0
   for (int i = 0; i < tasks_per_group; ++i)
   {
-    ouly::async(ouly::worker_context::get(ouly::workgroup_id(0)), ouly::workgroup_id(0),
-                [&tracker](ouly::worker_context const& ctx)
+    ouly::async(ouly::task_context::get(ouly::workgroup_id(0)), ouly::workgroup_id(0),
+                [&tracker](ouly::task_context const& ctx)
                 {
                   auto worker_idx = ctx.get_worker().get_index();
                   tracker.group0_executions[worker_idx].fetch_add(1, std::memory_order_relaxed);
@@ -990,8 +990,8 @@ TEST_CASE("scheduler: Workgroup Stealing Constraints - Basic Validation")
   // Submit tasks to workgroup 1
   for (int i = 0; i < tasks_per_group; ++i)
   {
-    ouly::async(ouly::worker_context::get(ouly::workgroup_id(0)), ouly::workgroup_id(1),
-                [&tracker](ouly::worker_context const& ctx)
+    ouly::async(ouly::task_context::get(ouly::workgroup_id(0)), ouly::workgroup_id(1),
+                [&tracker](ouly::task_context const& ctx)
                 {
                   auto worker_idx = ctx.get_worker().get_index();
                   tracker.group1_executions[worker_idx].fetch_add(1, std::memory_order_relaxed);
@@ -1010,8 +1010,8 @@ TEST_CASE("scheduler: Workgroup Stealing Constraints - Basic Validation")
   // Submit tasks to workgroup 2
   for (int i = 0; i < tasks_per_group; ++i)
   {
-    ouly::async(ouly::worker_context::get(ouly::workgroup_id(0)), ouly::workgroup_id(2),
-                [&tracker](ouly::worker_context const& ctx)
+    ouly::async(ouly::task_context::get(ouly::workgroup_id(0)), ouly::workgroup_id(2),
+                [&tracker](ouly::task_context const& ctx)
                 {
                   auto worker_idx = ctx.get_worker().get_index();
                   tracker.group2_executions[worker_idx].fetch_add(1, std::memory_order_relaxed);
@@ -1121,8 +1121,8 @@ TEST_CASE("scheduler: Workgroup Stealing Constraints - Overlapping Groups")
   {
     for (int i = 0; i < tasks_per_group; ++i)
     {
-      ouly::async(ouly::worker_context::get(ouly::workgroup_id(0)), ouly::workgroup_id(group),
-                  [&tracker, group](ouly::worker_context const& ctx)
+      ouly::async(ouly::task_context::get(ouly::workgroup_id(0)), ouly::workgroup_id(group),
+                  [&tracker, group](ouly::task_context const& ctx)
                   {
                     auto worker_idx = ctx.get_worker().get_index();
 
@@ -1235,8 +1235,8 @@ TEST_CASE("scheduler: Workgroup Stealing Constraints - High Load Validation")
   {
     auto group_id = ouly::workgroup_id(i % 3);
 
-    ouly::async(ouly::worker_context::get(ouly::workgroup_id(0)), group_id,
-                [&tracker](ouly::worker_context const& ctx)
+    ouly::async(ouly::task_context::get(ouly::workgroup_id(0)), group_id,
+                [&tracker](ouly::task_context const& ctx)
                 {
                   auto worker_idx = ctx.get_worker().get_index();
                   auto group_id   = ctx.get_workgroup();
@@ -1331,8 +1331,8 @@ TEST_CASE("scheduler: Workgroup Stealing Constraints - Context Validation")
   {
     for (int i = 0; i < validation_tasks; ++i)
     {
-      ouly::async(ouly::worker_context::get(ouly::workgroup_id(group)), ouly::workgroup_id(group),
-                  [&tracker, group](ouly::worker_context const& ctx)
+      ouly::async(ouly::task_context::get(ouly::workgroup_id(group)), ouly::workgroup_id(group),
+                  [&tracker, group](ouly::task_context const& ctx)
                   {
                     tracker.total_validations.fetch_add(1, std::memory_order_relaxed);
 
@@ -1406,8 +1406,8 @@ TEST_CASE("scheduler: Workgroup Stealing Constraints - Priority Groups")
   {
     for (int i = 0; i < tasks_per_priority; ++i)
     {
-      ouly::async(ouly::worker_context::get(ouly::workgroup_id(0)), ouly::workgroup_id(priority_group),
-                  [&tracker, priority_group](ouly::worker_context const& ctx)
+      ouly::async(ouly::task_context::get(ouly::workgroup_id(0)), ouly::workgroup_id(priority_group),
+                  [&tracker, priority_group](ouly::task_context const& ctx)
                   {
                     auto worker_idx = ctx.get_worker().get_index();
                     auto group_id   = ctx.get_workgroup().get_index();
@@ -1514,8 +1514,8 @@ TEST_CASE("scheduler: Workgroup Stealing Constraints - Extreme Load Stress Test"
   {
     auto group_id = ouly::workgroup_id(i % total_groups);
 
-    ouly::async(ouly::worker_context::get(ouly::workgroup_id(0)), group_id,
-                [&tracker](ouly::worker_context const& ctx)
+    ouly::async(ouly::task_context::get(ouly::workgroup_id(0)), group_id,
+                [&tracker](ouly::task_context const& ctx)
                 {
                   auto worker_idx = ctx.get_worker().get_index();
                   auto group_idx  = ctx.get_workgroup().get_index();

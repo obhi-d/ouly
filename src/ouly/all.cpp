@@ -26,7 +26,7 @@
 #include "ouly/scheduler/scheduler.hpp"
 #include "ouly/scheduler/spin_lock.hpp"
 #include "ouly/scheduler/task.hpp"
-#include "ouly/scheduler/worker_context.hpp"
+#include "ouly/scheduler/task_context.hpp"
 #include "ouly/serializers/lite_yml.hpp"
 #include "ouly/serializers/serializers.hpp"
 #include "ouly/utility/common.hpp"

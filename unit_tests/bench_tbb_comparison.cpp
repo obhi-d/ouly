@@ -155,12 +155,12 @@ void bench_task_submission()
               scheduler.begin_execution();
 
               std::atomic<int> counter{0};
-              auto             ctx = ouly::worker_context::get(ouly::workgroup_id(0));
+              auto             ctx = ouly::task_context::get(ouly::workgroup_id(0));
 
               for (int i = 0; i < num_tasks; ++i)
               {
                 ouly::async(ctx, ouly::workgroup_id(0),
-                            [&counter](ouly::worker_context const&)
+                            [&counter](ouly::task_context const&)
                             {
                               counter.fetch_add(1, std::memory_order_relaxed);
                             });
@@ -212,7 +212,7 @@ void bench_parallel_for()
               std::iota(data.begin(), data.end(), 0);
 
               ouly::parallel_for(
-               [](int& value, ouly::worker_context const&)
+               [](int& value, ouly::task_context const&)
                {
                  compute_intensive_task(value, 50);
                },
@@ -269,13 +269,13 @@ void bench_work_stealing()
               scheduler.begin_execution();
 
               std::atomic<long long> result{0};
-              auto                   ctx = ouly::worker_context::get(ouly::workgroup_id(0));
+              auto                   ctx = ouly::task_context::get(ouly::workgroup_id(0));
 
               // Submit compute-intensive tasks that vary in duration
               for (int i = 0; i < num_tasks; ++i)
               {
                 ouly::async(ctx, ouly::workgroup_id(0),
-                            [&result, i](ouly::worker_context const&)
+                            [&result, i](ouly::task_context const&)
                             {
                               long long sum = 0;
                               // Variable work amount to trigger work stealing
@@ -367,19 +367,19 @@ void bench_multi_workgroup()
               scheduler.begin_execution();
 
               std::atomic<int> counter{0};
-              auto             ctx = ouly::worker_context::get(ouly::workgroup_id(0));
+              auto             ctx = ouly::task_context::get(ouly::workgroup_id(0));
 
               // Submit tasks to both workgroups
               for (int i = 0; i < tasks_per_group; ++i)
               {
                 ouly::async(ctx, ouly::workgroup_id(0),
-                            [&counter](ouly::worker_context const&)
+                            [&counter](ouly::task_context const&)
                             {
                               counter.fetch_add(1, std::memory_order_relaxed);
                             });
 
                 ouly::async(ctx, ouly::workgroup_id(1),
-                            [&counter](ouly::worker_context const&)
+                            [&counter](ouly::task_context const&)
                             {
                               counter.fetch_add(1, std::memory_order_relaxed);
                             });
@@ -431,12 +431,12 @@ void bench_memory_allocation()
               scheduler.begin_execution();
 
               std::atomic<int> completed{0};
-              auto             ctx = ouly::worker_context::get(ouly::workgroup_id(0));
+              auto             ctx = ouly::task_context::get(ouly::workgroup_id(0));
 
               for (int i = 0; i < num_allocations; ++i)
               {
                 ouly::async(ctx, ouly::workgroup_id(0),
-                            [&completed, i](ouly::worker_context const&)
+                            [&completed, i](ouly::task_context const&)
                             {
                               std::vector<int> vec(100 + (i % 200));
                               std::iota(vec.begin(), vec.end(), i);
@@ -503,7 +503,7 @@ void bench_glm_vector_math()
               }
 
               ouly::parallel_for(
-               [](MathWorkItem& item, ouly::worker_context const&)
+               [](MathWorkItem& item, ouly::task_context const&)
                {
                  compute_math_intensive_task(item);
                },
@@ -587,7 +587,7 @@ void bench_glm_matrix_math()
               std::iota(indices.begin(), indices.end(), 0);
 
               ouly::parallel_for(
-               [&matrices, &positions, &rotations, &scales](size_t& index, ouly::worker_context const& ctx)
+               [&matrices, &positions, &rotations, &scales](size_t& index, ouly::task_context const& ctx)
                {
                  glm::mat4 transform = glm::mat4(1.0f);
                  transform           = glm::translate(transform, positions[index]);
@@ -685,7 +685,7 @@ void bench_glm_physics_simulation()
               for (int step = 0; step < 10; ++step)
               {
                 ouly::parallel_for(
-                 [dt, &particles](MathWorkItem& particle, ouly::worker_context const& ctx)
+                 [dt, &particles](MathWorkItem& particle, ouly::task_context const& ctx)
                  {
                    compute_math_intensive_task(particle, dt);
 
@@ -766,13 +766,13 @@ int main(int argc, char* argv[])
       scheduler.create_group(ouly::workgroup_id(0), 0, 4);
       scheduler.begin_execution();
       std::atomic<int> counter{0};
-      auto             ctx = ouly::worker_context::get(ouly::workgroup_id(0));
+      auto             ctx = ouly::task_context::get(ouly::workgroup_id(0));
 
       json_bench.run("ouly_task_submission",
                      [&]
                      {
                        ouly::async(ctx, ouly::workgroup_id(0),
-                                   [&counter](ouly::worker_context const&)
+                                   [&counter](ouly::task_context const&)
                                    {
                                      counter.fetch_add(1);
                                    });
@@ -811,7 +811,7 @@ int main(int argc, char* argv[])
                      [&]
                      {
                        ouly::parallel_for(
-                        [](int& value, ouly::worker_context const&)
+                        [](int& value, ouly::task_context const&)
                         {
                           value *= 2;
                         },
@@ -858,7 +858,7 @@ int main(int argc, char* argv[])
                      [&]
                      {
                        ouly::parallel_for(
-                        [](MathWorkItem& item, ouly::worker_context const&)
+                        [](MathWorkItem& item, ouly::task_context const&)
                         {
                           compute_math_intensive_task(item);
                         },

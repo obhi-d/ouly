@@ -30,8 +30,8 @@ namespace ouly
  *
  * - parallel_for: Main interface for parallel execution
  *   Supports two types of lambda functions:
- *   1. Range-based: void(Iterator begin, Iterator end, worker_context const& context)
- *   2. Element-based: void(T& element, worker_context const& context)
+ *   1. Range-based: void(Iterator begin, Iterator end, task_context const& context)
+ *   2. Element-based: void(T& element, task_context const& context)
  *
  * Usage Examples:
  * @code
@@ -56,7 +56,7 @@ namespace ouly
  *       parallel_execution_threshold and can be effectively parallelized
  *
  * @see default_task_traits For customizing execution behavior
- * @see worker_context For execution context details
+ * @see task_context For execution context details
  * @see scheduler For task scheduling implementation
  */
 

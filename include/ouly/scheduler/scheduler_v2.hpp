@@ -15,6 +15,13 @@
 
 namespace ouly::inline v2
 {
+
+// Type aliases for v2 implementation
+using workgroup_v2                  = ouly::detail::v2::workgroup;
+using worker_v2                     = ouly::detail::v2::worker;
+using work_item_v2                  = ouly::detail::v2::work_item;
+constexpr uint32_t max_workgroup_v2 = ouly::detail::v2::max_workgroup;
+
 /**
  * @brief A task scheduler with TBB-style workgroup architecture using Chase-Lev work-stealing queues
  *
@@ -33,7 +40,7 @@ namespace ouly::inline v2
  *
  * All existing APIs are preserved for backward compatibility:
  * - submit() methods work exactly the same
- * - worker_context API remains unchanged
+ * - task_context API remains unchanged
  * - Workgroup creation and management APIs are identical
  *
  * @note The scheduler must be started with begin_execution() before submitting tasks
@@ -59,9 +66,9 @@ public:
    * @param task_obj The task object containing the coroutine to be resumed
    */
   template <CoroutineTask C>
-  void submit(worker_context const& current, workgroup_id group, C const& task_obj) noexcept
+  void submit(task_context const& current, workgroup_id group, C const& task_obj) noexcept
   {
-    auto work_fn = [address = task_obj.address()](worker_context const&)
+    auto work_fn = [address = task_obj.address()](task_context const&)
     {
       std::coroutine_handle<>::from_address(address).resume();
     };
@@ -76,10 +83,10 @@ public:
    * @param data Callable object to be executed
    */
   template <typename Lambda>
-    requires(ouly::detail::Callable<Lambda, ouly::worker_context const&>)
-  void submit(worker_context const& current, workgroup_id group, Lambda&& data) noexcept
+    requires(::ouly::detail::Callable<Lambda, ouly::task_context const&>)
+  void submit(task_context const& current, workgroup_id group, Lambda&& data) noexcept
   {
-    submit_internal(current, group, detail::work_item::pbind(std::forward<Lambda>(data), group));
+    submit_internal(current, group, detail::v2::work_item::pbind(std::forward<Lambda>(data), group));
   }
 
   /**
@@ -91,9 +98,9 @@ public:
    * @param ctx Reference to the context object
    */
   template <auto M, typename Class>
-  void submit(worker_context const& current, workgroup_id group, Class& ctx) noexcept
+  void submit(task_context const& current, workgroup_id group, Class& ctx) noexcept
   {
-    submit_internal(current, group, detail::work_item::pbind<M>(ctx, group));
+    submit_internal(current, group, detail::v2::work_item::pbind<M>(ctx, group));
   }
 
   /**
@@ -103,9 +110,9 @@ public:
    * @param group Workgroup ID for the submitted work
    */
   template <auto M>
-  void submit(worker_context const& current, workgroup_id group) noexcept
+  void submit(task_context const& current, workgroup_id group) noexcept
   {
-    submit_internal(current, group, detail::work_item::pbind<M>(group));
+    submit_internal(current, group, detail::v2::work_item::pbind<M>(group));
   }
 
   /**
@@ -117,17 +124,18 @@ public:
    * @param args Arguments to be forwarded to the callable
    */
   template <typename... Args>
-  void submit(worker_context const& current, workgroup_id group, void (*callable)(worker_context const&, Args...),
+  void submit(task_context const& current, workgroup_id group, void (*callable)(task_context const&, Args...),
               Args&&... args) noexcept
   {
-    submit_internal(
-     current, group,
-     detail::work_item::pbind(callable, std::make_tuple<std::decay_t<Args>...>(std::forward<Args>(args)...), group));
+    submit_internal(current, group,
+                    detail::v2::work_item::pbind(
+                     callable, std::make_tuple<std::decay_t<Args>...>(std::forward<Args>(args)...), group));
   }
 
   /**
    * @brief Begin scheduler execution, group creation is frozen after this call.
    * @param entry An entry function can be provided that will be executed on all worker threads upon entry.
+   * @param worker_count Number of worker threads to create (0 = hardware_concurrency)
    * @param user_context User context pointer passed to worker threads
    */
   OULY_API void begin_execution(scheduler_worker_entry&& entry = {}, uint32_t worker_count = {},
@@ -149,12 +157,13 @@ public:
   /**
    * @brief Ensure a work-group by id and set a name
    */
-  OULY_API void create_group(workgroup_id group, uint32_t thread_count, uint32_t priority = 0);
+  OULY_API void create_group(workgroup_id group, uint32_t start_thread_idx, uint32_t thread_count,
+                             uint32_t priority = 0);
 
   /**
    * @brief Get the next available group
    */
-  OULY_API auto create_group(uint32_t thread_count, uint32_t priority = 0) -> workgroup_id;
+  OULY_API auto create_group(uint32_t start_thread_idx, uint32_t thread_count, uint32_t priority = 0) -> workgroup_id;
 
   /**
    * @brief Clear a group, and re-create it
@@ -189,7 +198,32 @@ private:
   /**
    * @brief Submit a work for execution - new implementation using mailbox system
    */
-  OULY_API void submit_internal(worker_id src, workgroup_id dst, ouly::detail::work_item const& work);
+  OULY_API void submit_internal(task_context const& current, workgroup_id dst, detail::v2::work_item const& work);
+
+  /**
+   * @brief Run worker thread main loop
+   */
+  void run_worker(worker_id worker_id);
+
+  /**
+   * @brief Find work for a specific worker
+   */
+  auto find_work_for_worker(worker_id worker_id) noexcept -> bool;
+
+  /**
+   * @brief Execute a work item
+   */
+  void execute_work(worker_id worker_id, detail::v2::work_item const& work) noexcept;
+
+  /**
+   * @brief Set worker thread affinity for NUMA awareness
+   */
+  void set_worker_affinity(worker_id worker_id) noexcept;
+
+  /**
+   * @brief Update worker assignments when workgroups change
+   */
+  void update_worker_assignments();
 
   struct worker_synchronizer;
 
@@ -229,7 +263,7 @@ private:
  * @note This is a convenience wrapper around scheduler::submit()
  */
 template <typename... Args>
-void async(worker_context const& current, workgroup_id submit_group, Args&&... args)
+void async(task_context const& current, workgroup_id submit_group, Args&&... args)
 {
   current.get_scheduler().submit(current.get_worker(), submit_group, std::forward<Args>(args)...);
 }
@@ -248,7 +282,7 @@ void async(worker_context const& current, workgroup_id submit_group, Args&&... a
  *       associated with the current worker context
  */
 template <auto M, typename... Args>
-void async(worker_context const& current, workgroup_id submit_group, Args&&... args)
+void async(task_context const& current, workgroup_id submit_group, Args&&... args)
 {
   current.get_scheduler().submit<M>(current.get_worker(), submit_group, std::forward<Args>(args)...);
 }

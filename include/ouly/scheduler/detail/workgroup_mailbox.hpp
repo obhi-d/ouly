@@ -9,14 +9,14 @@
 
 namespace ouly
 {
-class worker_context;
+class task_context;
 }
 
 namespace ouly::detail
 {
 
 // Simplified work item for now - will be replaced with proper task_delegate
-using work_item = std::function<void(ouly::worker_context const&)>;
+using work_item = std::function<void(ouly::task_context const&)>;
 
 /**
  * @brief Simple MPMC ring buffer for mailbox implementation

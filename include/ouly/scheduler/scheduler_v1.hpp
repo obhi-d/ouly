@@ -31,7 +31,7 @@ static constexpr uint32_t default_logical_task_divisior = 64;
  * scheduler.begin_execution();
  *
  * // Submit lambda task
- * ouly::async(context, group_id, [](ouly::worker_context const& ctx) {
+ * ouly::async(context, group_id, [](ouly::task_context const& ctx) {
  *   // Task work here
  * });
  *
@@ -40,7 +40,7 @@ static constexpr uint32_t default_logical_task_divisior = 64;
  * scheduler.submit(ouly::main_worker_id, ouly::default_workgroup_id, task);
  *
  * // Parallel for loop
- * ouly::parallel_for([](int a, ouly::worker_context const& ctx) {
+ * ouly::parallel_for([](int a, ouly::task_context const& ctx) {
  *   // Process element a
  * }, std::span(data), ouly::default_workgroup_id);
  *
@@ -95,14 +95,14 @@ public:
    *
    * @see worker_id
    * @see workgroup_id
-   * @see worker_context
+   * @see task_context
    */
   template <CoroutineTask C>
-  void submit(worker_context const& src, workgroup_id group, C const& task_obj) noexcept
+  void submit(task_context const& src, workgroup_id group, C const& task_obj) noexcept
   {
     submit_internal(src.get_worker(), group,
                     detail::work_item::pbind(
-                     [address = task_obj.address()](worker_context const&)
+                     [address = task_obj.address()](task_context const&)
                      {
                        std::coroutine_handle<>::from_address(address).resume();
                      },
@@ -117,13 +117,13 @@ public:
    * @param group ID of the workgroup this item belongs to
    * @param data Callable object to be executed
    *
-   * @requires Lambda must be callable with ouly::worker_context const& parameter
+   * @requires Lambda must be callable with ouly::task_context const& parameter
    *
    * @note This function is noexcept and will forward the lambda to the internal submit implementation
    */
   template <typename Lambda>
-    requires(ouly::detail::Callable<Lambda, ouly::worker_context const&>)
-  void submit(worker_context const& src, workgroup_id group, Lambda&& data) noexcept
+    requires(ouly::detail::Callable<Lambda, ouly::task_context const&>)
+  void submit(task_context const& src, workgroup_id group, Lambda&& data) noexcept
   {
     submit_internal(src.get_worker(), group, detail::work_item::pbind(std::forward<Lambda>(data), group));
   }
@@ -141,7 +141,7 @@ public:
    * @note The function is noexcept and will not throw exceptions
    */
   template <auto M, typename Class>
-  void submit(worker_context const& src, workgroup_id group, Class& ctx) noexcept
+  void submit(task_context const& src, workgroup_id group, Class& ctx) noexcept
   {
     submit_internal(src.get_worker(), group, detail::work_item::pbind<M>(ctx, group));
   }
@@ -157,7 +157,7 @@ public:
    *       using the member function pointer and workgroup.
    */
   template <auto M>
-  void submit(worker_context const& src, workgroup_id group) noexcept
+  void submit(task_context const& src, workgroup_id group) noexcept
   {
     submit_internal(src.get_worker(), group, detail::work_item::pbind<M>(group));
   }
@@ -178,7 +178,7 @@ public:
    * the workers in the target workgroup.
    */
   template <typename... Args>
-  void submit(worker_context const& src, workgroup_id group, task_delegate::fnptr callable, Args&&... args) noexcept
+  void submit(task_context const& src, workgroup_id group, task_delegate::fnptr callable, Args&&... args) noexcept
   {
     submit_internal(
      src.get_worker(), group,
@@ -189,7 +189,7 @@ public:
    * @brief Begin scheduler execution, group creation is frozen after this call.
    * @param entry An entry function can be provided that will be executed on all worker threads upon entry.
    */
-  void begin_execution(scheduler_worker_entry&& entry = {}, uint32_t worker_count = {}, void* user_context = nullptr);
+  void begin_execution(scheduler_worker_entry&& entry = {}, void* user_context = nullptr);
   /**
    * @brief Wait for threads to finish executing and end scheduler execution. Scheduler execution can be restarted
    * using begin_execution. Unlocks scheduler and makes it mutable.
@@ -207,12 +207,12 @@ public:
   /**
    * @brief Ensure a work-group by id and set a name
    */
-  void create_group(workgroup_id group, uint32_t thread_count, uint32_t priority = 0);
+  void create_group(workgroup_id group, uint32_t start_thread_idx, uint32_t thread_count, uint32_t priority = 0);
   /**
    * @brief Get the next available group. Group priority controls if a thread is shared between multiple groups, which
    * group is executed first by the thread
    */
-  auto create_group(uint32_t thread_count, uint32_t priority = 0) -> workgroup_id;
+  auto create_group(uint32_t start_thread_idx, uint32_t thread_count, uint32_t priority = 0) -> workgroup_id;
   /**
    * @brief Clear a group, and re-create it
    */
@@ -241,7 +241,7 @@ public:
     return workgroups_[g.get_index()].thread_count_ * work_scale;
   }
 
-  [[nodiscard]] auto get_context(worker_context const& wctx, workgroup_id group) const -> worker_context const&
+  [[nodiscard]] auto get_context(task_context const& wctx, workgroup_id group) const -> task_context const&
   {
     return memory_block_.workers_[wctx.get_worker().get_index()].get().contexts_[group.get_index()];
   }
@@ -325,7 +325,7 @@ private:
  * @note This is a convenience wrapper around scheduler::submit()
  */
 template <typename... Args>
-void async(worker_context const& current, workgroup_id submit_group, Args&&... args)
+void async(task_context const& current, workgroup_id submit_group, Args&&... args)
 {
   current.get_scheduler().submit(current.get_worker(), submit_group, std::forward<Args>(args)...);
 }
@@ -344,7 +344,7 @@ void async(worker_context const& current, workgroup_id submit_group, Args&&... a
  *       associated with the current worker context
  */
 template <auto M, typename... Args>
-void async(worker_context const& current, workgroup_id submit_group, Args&&... args)
+void async(task_context const& current, workgroup_id submit_group, Args&&... args)
 {
   current.get_scheduler().submit<M>(current.get_worker(), submit_group, std::forward<Args>(args)...);
 }
