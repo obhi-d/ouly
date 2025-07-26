@@ -43,7 +43,7 @@ struct worker
 {
   // Context per work group - accessed during work execution
   // Pointer is stable, actual contexts allocated separately for better locality
-  std::unique_ptr<task_context[]> contexts_;
+  std::unique_ptr<ouly::v1::task_context[]> contexts_;
 
   worker_id id_                  = worker_id{0};
   worker_id min_steal_friend_id_ = worker_id{0};

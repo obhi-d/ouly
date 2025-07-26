@@ -84,7 +84,7 @@ scheduler::~scheduler() noexcept
 }
 
 // NOLINTNEXTLINE
-inline void scheduler::do_work(worker_id thread, detail::work_item& work) noexcept
+inline void scheduler::do_work(worker_id thread, detail::v1::work_item& work) noexcept
 {
   auto& worker = memory_block_.workers_[thread.get_index()].get();
   worker.tally_--;
@@ -113,7 +113,7 @@ void scheduler::busy_work(worker_id thread) noexcept
     // Shorter pause for first attempts, longer for subsequent ones
     if (attempt < attempts - 1)
     {
-      pause_exec();
+      ouly::detail::pause_exec();
     }
   }
 
@@ -186,7 +186,7 @@ inline void scheduler::finalize_worker(worker_id thread) noexcept
 
 inline auto scheduler::work(worker_id thread) noexcept -> bool
 {
-  detail::work_item available_work;
+  detail::v1::work_item available_work;
   if (!get_work(thread, available_work))
   {
     return false;
@@ -247,7 +247,7 @@ thread_local uint32_t adaptive_work_stealer::success_streak  = 0;
 } // namespace detail
 
 // NOLINTNEXTLINE
-auto scheduler::get_work(worker_id thread, detail::work_item& work) noexcept -> bool
+auto scheduler::get_work(worker_id thread, detail::v1::work_item& work) noexcept -> bool
 {
   auto& range = memory_block_.group_ranges_[thread.get_index()];
 
@@ -326,7 +326,7 @@ auto scheduler::get_work(worker_id thread, detail::work_item& work) noexcept -> 
     uint32_t delay = detail::adaptive_work_stealer::get_adaptive_delay();
     for (uint32_t i = 0; i < delay; ++i)
     {
-      pause_exec();
+      detail::pause_exec();
     }
   }
 
@@ -345,7 +345,6 @@ void scheduler::wake_up(worker_id thread) noexcept
 
 void scheduler::assign_priority_order()
 {
-
   auto wgroup_count = static_cast<uint32_t>(workgroups_.size());
 
   for (uint32_t group = 0; group < wgroup_count; ++group)
@@ -486,7 +485,7 @@ void scheduler::end_execution()
   threads_.clear();
 }
 
-void scheduler::submit_internal([[maybe_unused]] worker_id src, workgroup_id dst, detail::work_item const& work)
+void scheduler::submit_internal([[maybe_unused]] worker_id src, workgroup_id dst, detail::v1::work_item const& work)
 {
   memory_block_.workers_[src.get_index()].get().tally_++;
 

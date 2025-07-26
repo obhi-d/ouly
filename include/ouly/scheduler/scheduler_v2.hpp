@@ -227,7 +227,7 @@ private:
 
   struct worker_synchronizer;
 
-  using workgroup_list = ouly::detail::mpmc_ring<detail::workgroup*, detail::max_workgroup>;
+  using workgroup_list = ouly::detail::mpmc_ring<detail::v2::workgroup*, detail::max_workgroup>;
   workgroup_list needy_workgroups_;
 
   std::condition_variable work_available_cv_;

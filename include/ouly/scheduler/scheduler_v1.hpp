@@ -101,7 +101,7 @@ public:
   void submit(task_context const& src, workgroup_id group, C const& task_obj) noexcept
   {
     submit_internal(src.get_worker(), group,
-                    detail::work_item::pbind(
+                    detail::v1::work_item::pbind(
                      [address = task_obj.address()](task_context const&)
                      {
                        std::coroutine_handle<>::from_address(address).resume();
@@ -125,7 +125,7 @@ public:
     requires(ouly::detail::Callable<Lambda, ouly::task_context const&>)
   void submit(task_context const& src, workgroup_id group, Lambda&& data) noexcept
   {
-    submit_internal(src.get_worker(), group, detail::work_item::pbind(std::forward<Lambda>(data), group));
+    submit_internal(src.get_worker(), group, detail::v1::work_item::pbind(std::forward<Lambda>(data), group));
   }
 
   /**
@@ -143,7 +143,7 @@ public:
   template <auto M, typename Class>
   void submit(task_context const& src, workgroup_id group, Class& ctx) noexcept
   {
-    submit_internal(src.get_worker(), group, detail::work_item::pbind<M>(ctx, group));
+    submit_internal(src.get_worker(), group, detail::v1::work_item::pbind<M>(ctx, group));
   }
 
   /**
@@ -159,7 +159,7 @@ public:
   template <auto M>
   void submit(task_context const& src, workgroup_id group) noexcept
   {
-    submit_internal(src.get_worker(), group, detail::work_item::pbind<M>(group));
+    submit_internal(src.get_worker(), group, detail::v1::work_item::pbind<M>(group));
   }
 
   /**
@@ -180,9 +180,9 @@ public:
   template <typename... Args>
   void submit(task_context const& src, workgroup_id group, task_delegate::fnptr callable, Args&&... args) noexcept
   {
-    submit_internal(
-     src.get_worker(), group,
-     detail::work_item::pbind(callable, std::make_tuple<std::decay_t<Args>...>(std::forward<Args>(args)...), group));
+    submit_internal(src.get_worker(), group,
+                    detail::v1::work_item::pbind(
+                     callable, std::make_tuple<std::decay_t<Args>...>(std::forward<Args>(args)...), group));
   }
 
   /**
@@ -257,19 +257,19 @@ private:
   /**
    * @brief Submit a work for execution
    */
-  void submit_internal(worker_id src, workgroup_id dst, detail::work_item const& work);
+  void submit_internal(worker_id src, workgroup_id dst, detail::v1::work_item const& work);
 
   void assign_priority_order();
   auto compute_group_range(uint32_t worker_index) -> bool;
   void compute_steal_mask(uint32_t worker_index) const;
 
   void        finish_pending_tasks() noexcept;
-  inline void do_work(worker_id /*thread*/, detail::work_item& /*work*/) noexcept;
+  inline void do_work(worker_id /*thread*/, detail::v1::work_item& /*work*/) noexcept;
   void        wake_up(worker_id /*thread*/) noexcept;
   void        run(worker_id /*thread*/);
   void        finalize_worker(worker_id /*thread*/) noexcept;
-  auto        get_work(worker_id /*thread*/, detail::work_item& /*work*/) noexcept -> bool;
-  auto        try_steal_work(worker_id /*thread*/, detail::work_item& /*work*/) const noexcept -> bool;
+  auto        get_work(worker_id /*thread*/, detail::v1::work_item& /*work*/) noexcept -> bool;
+  auto        try_steal_work(worker_id /*thread*/, detail::v1::work_item& /*work*/) const noexcept -> bool;
 
   auto work(worker_id /*thread*/) noexcept -> bool;
 
@@ -288,7 +288,7 @@ private:
     std::binary_semaphore event_{0};
   };
 
-  using aligned_worker    = ouly::detail::cache_optimized_data<detail::worker>;
+  using aligned_worker    = ouly::detail::cache_optimized_data<detail::v1::worker>;
   using aligned_wake_data = ouly::detail::cache_optimized_data<wake_data>;
 
   // Memory layout optimization: Allocate all scheduler data in a single block
@@ -296,13 +296,13 @@ private:
   struct scheduler_memory_block
   {
     // Hot data: accessed frequently during task execution
-    std::unique_ptr<aligned_worker[]>      workers_;
-    std::unique_ptr<detail::group_range[]> group_ranges_;
-    std::unique_ptr<aligned_wake_data[]>   wake_data_;
+    std::unique_ptr<aligned_worker[]>          workers_;
+    std::unique_ptr<detail::v1::group_range[]> group_ranges_;
+    std::unique_ptr<aligned_wake_data[]>       wake_data_;
   } memory_block_;
 
   // Work groups - frequently accessed during work stealing
-  std::vector<detail::workgroup>       workgroups_;
+  std::vector<detail::v1::workgroup>   workgroups_;
   std::shared_ptr<worker_synchronizer> synchronizer_ = nullptr;
 
   std::vector<std::thread> threads_;
