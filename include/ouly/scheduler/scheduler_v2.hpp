@@ -18,12 +18,6 @@
 namespace ouly::inline v2
 {
 
-// Type aliases for v2 implementation
-using workgroup_v2                  = ouly::detail::v2::workgroup;
-using worker_v2                     = ouly::detail::v2::worker;
-using work_item_v2                  = ouly::detail::v2::work_item;
-constexpr uint32_t max_workgroup_v2 = ouly::detail::v2::max_workgroup;
-
 /**
  * @brief A task scheduler with TBB-style workgroup architecture using Chase-Lev work-stealing queues
  *
@@ -51,6 +45,11 @@ constexpr uint32_t max_workgroup_v2 = ouly::detail::v2::max_workgroup;
  */
 class scheduler
 {
+  // Type aliases for v2 implementation
+  using workgroup_v2 = ouly::detail::v2::workgroup;
+  using worker_v2    = ouly::detail::v2::worker;
+  using work_item_v2 = ouly::detail::v2::work_item;
+
 public:
   static constexpr uint32_t work_scale = 4;
 
@@ -137,11 +136,9 @@ public:
   /**
    * @brief Begin scheduler execution, group creation is frozen after this call.
    * @param entry An entry function can be provided that will be executed on all worker threads upon entry.
-   * @param worker_count Number of worker threads to create (0 = hardware_concurrency)
    * @param user_context User context pointer passed to worker threads
    */
-  OULY_API void begin_execution(scheduler_worker_entry&& entry = {}, uint32_t worker_count = {},
-                                void* user_context = nullptr);
+  OULY_API void begin_execution(scheduler_worker_entry&& entry = {}, void* user_context = nullptr);
 
   /**
    * @brief Wait for threads to finish executing and end scheduler execution.
@@ -217,13 +214,10 @@ private:
    */
   void execute_work(worker_id worker_id, detail::v2::work_item const& work) noexcept;
 
-  /**
-   * @brief Update worker assignments when workgroups change
-   */
-  void update_worker_assignments();
-
   struct worker_synchronizer;
   struct tally_publisher;
+
+  static constexpr uint32_t max_workgroup_v2 = ouly::detail::v2::max_workgroup;
 
   using workgroup_list = ouly::detail::mpmc_ring<workgroup_v2*, max_workgroup_v2>;
   workgroup_list needy_workgroups_;
@@ -236,15 +230,17 @@ private:
   std::atomic_int32_t                  sleeping_{0};
   std::shared_ptr<worker_synchronizer> synchronizer_ = nullptr;
 
-  std::unique_ptr<detail::v2::worker[]>    workers_;
-  std::unique_ptr<detail::v2::workgroup[]> workgroups_;
+  std::unique_ptr<detail::v2::worker[]> workers_;
+
+  std::array<detail::v2::workgroup, max_workgroup_v2> workgroups_;
 
   std::vector<std::thread> threads_;
 
   // Scheduler state and configuration (cold data)
   scheduler_worker_entry entry_fn_;
 
-  uint32_t worker_count_ = 0;
+  uint32_t worker_count_    = 0;
+  uint32_t workgroup_count_ = 0;
 };
 
 /**

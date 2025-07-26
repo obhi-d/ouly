@@ -156,9 +156,6 @@ void scheduler::run_worker(worker_id worker_id)
   g_worker_id = worker_id;
   g_worker    = &workers_[worker_id.get_index()];
 
-  // Set CPU affinity for NUMA awareness
-  set_worker_affinity(worker_id);
-
   // Execute the entry function if provided
   if (entry_fn_)
   {
@@ -205,7 +202,7 @@ void scheduler::run_worker(worker_id worker_id)
 auto scheduler::find_work_for_worker(worker_id worker_id) noexcept -> bool
 {
   // Priority 1: Check assigned workgroups' own queues
-  for (uint32_t i = 0; i < detail::v2::max_workgroup; ++i)
+  for (uint32_t i = 0; i < workgroup_count_; ++i)
   {
     auto& workgroup = workgroups_[i];
     if (workgroup.get_thread_count() == 0)
@@ -285,24 +282,16 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
 {
   entry_fn_ = std::move(entry);
 
-  // Determine worker count
-  if (worker_count == 0)
-  {
-    worker_count_ = std::thread::hardware_concurrency();
-  }
-  else
-  {
-    worker_count_ = worker_count;
-  }
-
   // Initialize workers and workgroups
-  workers_    = std::make_unique<detail::v2::worker[]>(worker_count_);
-  workgroups_ = std::make_unique<detail::v2::workgroup[]>(detail::v2::max_workgroup);
+  workers_ = std::make_unique<detail::v2::worker[]>(worker_count_);
 
   // Initialize worker contexts
-  for (uint32_t i = 0; i < worker_count_; ++i)
+  for (uint32_t i = 0; i < detail::v2::max_workgroup; ++i)
   {
-    // Workers will be assigned to workgroups when workgroups are created
+    if (workgroups_[i].get_thread_count() > 0)
+    {
+      workgroup_count_ = std::max(workgroup_count_, i + 1);
+    }
   }
 
   // Create synchronizer
@@ -354,13 +343,8 @@ void scheduler::create_group(workgroup_id group, uint32_t start_thread_idx, uint
   }
 
   auto& wg = workgroups_[group.get_index()];
-  wg.initialize(thread_count, priority, this);
-
-  // TODO: Handle start_thread_idx properly in the workgroup management
-  (void)start_thread_idx; // Mark as used for now
-
-  // Update worker assignments
-  update_worker_assignments();
+  wg.initialize(start_thread_idx, thread_count, priority, this);
+  worker_count_ = std::max(worker_count_, wg.get_end_thread_idx());
 }
 
 auto scheduler::create_group(uint32_t start_thread_idx, uint32_t thread_count, uint32_t priority) -> workgroup_id
@@ -384,32 +368,6 @@ void scheduler::clear_group(workgroup_id group)
   if (group.get_index() < detail::v2::max_workgroup)
   {
     workgroups_[group.get_index()].clear();
-    update_worker_assignments();
-  }
-}
-
-void scheduler::update_worker_assignments()
-{
-  uint32_t next_worker = 0;
-
-  for (uint32_t i = 0; i < detail::v2::max_workgroup && next_worker < worker_count_; ++i)
-  {
-    auto&    wg              = workgroups_[i];
-    uint32_t wg_thread_count = wg.get_thread_count();
-
-    if (wg_thread_count > 0)
-    {
-      uint32_t assigned_workers = std::min(wg_thread_count, worker_count_ - next_worker);
-
-      // Assign workers to this workgroup
-      for (uint32_t j = 0; j < assigned_workers; ++j)
-      {
-        workers_[next_worker + j].set_workgroup_info(j, workgroup_id{i});
-      }
-
-      wg.set_worker_range(next_worker, assigned_workers);
-      next_worker += assigned_workers;
-    }
   }
 }
 

@@ -48,10 +48,11 @@ public:
   /**
    * @brief Initialize the workgroup with worker threads
    */
-  void create_group(uint32_t thread_count, uint32_t priority) noexcept
+  void create_group(uint32_t start, uint32_t thread_count, uint32_t priority) noexcept
   {
-    thread_count_ = thread_count;
-    priority_     = priority;
+    worker_start_idx_ = start;
+    thread_count_     = thread_count;
+    priority_         = priority;
 
     // Allocate Chase-Lev queues for each worker in this workgroup
     work_queues_ = std::make_unique<queue_type[]>(thread_count);
@@ -158,10 +159,10 @@ public:
   /**
    * @brief Initialize the workgroup with worker threads and scheduler reference
    */
-  void initialize(uint32_t thread_count, uint32_t priority, void* owner) noexcept
+  void initialize(uint32_t start, uint32_t thread_count, uint32_t priority, void* owner) noexcept
   {
     owner_ = static_cast<ouly::v2::scheduler*>(owner);
-    create_group(thread_count, priority);
+    create_group(start, thread_count, priority);
   }
 
   /**
@@ -173,15 +174,6 @@ public:
     priority_     = 0;
     work_queues_.reset();
     has_work_.store(false, std::memory_order_relaxed);
-  }
-
-  /**
-   * @brief Set the worker range for this workgroup
-   */
-  void set_worker_range(uint32_t start_idx, uint32_t count) noexcept
-  {
-    worker_start_idx_    = start_idx;
-    worker_count_actual_ = count;
   }
 
   /**
@@ -197,7 +189,7 @@ public:
    */
   [[nodiscard]] auto get_end_thread_idx() const noexcept -> uint32_t
   {
-    return worker_start_idx_ + worker_count_actual_;
+    return worker_start_idx_ + thread_count_;
   }
 
   // Accessors
@@ -205,6 +197,7 @@ public:
   {
     return thread_count_;
   }
+
   [[nodiscard]] auto get_priority() const noexcept -> uint32_t
   {
     return priority_;
@@ -222,12 +215,9 @@ private:
   std::atomic<bool> has_work_{false};
 
   // Configuration
-  uint32_t thread_count_ = 0;
-  uint32_t priority_     = 0;
-
-  // Worker assignment information
-  uint32_t worker_start_idx_    = 0;
-  uint32_t worker_count_actual_ = 0;
+  uint32_t worker_start_idx_ = 0;
+  uint32_t thread_count_     = 0;
+  uint32_t priority_         = 0;
 };
 
 } // namespace ouly::detail::v2
