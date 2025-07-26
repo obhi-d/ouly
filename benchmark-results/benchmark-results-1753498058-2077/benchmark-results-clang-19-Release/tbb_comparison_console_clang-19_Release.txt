@@ -1,0 +1,64 @@
+Starting ouly vs oneTBB performance comparison...
+TBB Version: 2022.2
+Benchmarking task submission performance...
+
+|             ns/task |              task/s |    err% |     total | Task Submission Comparison
+|--------------------:|--------------------:|--------:|----------:|:---------------------------
+|          140,274.26 |            7,128.89 |    0.8% |      0.07 | `TBB task_arena submit`
+|          369,425.92 |            2,706.90 |   26.1% |      0.19 | :wavy_dash: `ouly::scheduler async` (Unstable with ~45.6 iters. Increase `minEpochIterations` to e.g. 456)
+Benchmarking parallel_for performance...
+
+|        ns/operation |         operation/s |    err% |     total | Parallel For Comparison
+|--------------------:|--------------------:|--------:|----------:|:------------------------
+|        2,324,169.90 |              430.26 |    0.1% |      0.47 | `TBB parallel_for`
+|        2,514,527.45 |              397.69 |    0.2% |      0.51 | `ouly parallel_for`
+Benchmarking work stealing efficiency...
+
+|             ns/task |              task/s |    err% |     total | Work Stealing Comparison
+|--------------------:|--------------------:|--------:|----------:|:-------------------------
+|           19,067.50 |           52,445.26 |    1.9% |      0.00 | `TBB work_stealing`
+|          501,007.60 |            1,995.98 |    1.2% |      0.05 | `ouly work_stealing`
+Benchmarking multi-workgroup vs TBB task arena...
+
+|             ns/task |              task/s |    err% |     total | Multi-Group Scheduling
+|--------------------:|--------------------:|--------:|----------:|:-----------------------
+|          147,020.40 |            6,801.78 |    3.8% |      0.02 | `TBB multi_arena`
+|          269,722.10 |            3,707.52 |    4.0% |      0.03 | `ouly multi_workgroup`
+Benchmarking memory allocation patterns...
+
+|       ns/allocation |        allocation/s |    err% |     total | Memory Allocation Patterns
+|--------------------:|--------------------:|--------:|----------:|:---------------------------
+|           63,106.50 |           15,846.23 |    0.7% |      0.03 | `TBB with_std_allocator`
+|          272,272.90 |            3,672.79 |    1.1% |      0.14 | `ouly with std_allocator`
+Benchmarking GLM vector mathematics...
+
+|        ns/operation |         operation/s |    err% |     total | GLM Vector Math Operations
+|--------------------:|--------------------:|--------:|----------:|:---------------------------
+|        1,477,220.50 |              676.95 |    0.2% |      0.30 | `TBB_glm_vector_math`
+|        1,602,764.85 |              623.92 |    0.1% |      0.32 | `ouly_glm_vector_math`
+Benchmarking GLM matrix transformations...
+
+|        ns/operation |         operation/s |    err% |     total | GLM Matrix Transform Operations
+|--------------------:|--------------------:|--------:|----------:|:--------------------------------
+|          348,044.53 |            2,873.20 |    0.3% |      0.05 | `TBB_glm_matrix_transforms`
+|          511,961.47 |            1,953.27 |    2.3% |      0.08 | `ouly_glm_matrix_transforms`
+Benchmarking GLM physics simulation...
+
+|         ns/particle |          particle/s |    err% |     total | GLM Physics Simulation
+|--------------------:|--------------------:|--------:|----------:|:-----------------------
+|        1,835,555.90 |              544.79 |    0.2% |      0.19 | `TBB_glm_physics`
+|        2,265,227.50 |              441.46 |    0.6% |      0.23 | `ouly_glm_physics`
+
+TBB vs ouly comparison benchmarks completed successfully!
+
+Generating detailed JSON output...
+
+|        ns/operation |         operation/s |    err% |     total | TBB vs Ouly Performance Comparison
+|--------------------:|--------------------:|--------:|----------:|:-----------------------------------
+|              159.52 |        6,268,923.11 |    4.3% |      0.00 | `TBB_task_submission`
+|              107.60 |        9,293,934.91 |   18.3% |      0.00 | :wavy_dash: `ouly_task_submission` (Unstable with ~3,226.9 iters. Increase `minEpochIterations` to e.g. 32269)
+|            4,244.12 |          235,620.10 |    3.1% |      0.00 | `TBB_parallel_for_small`
+|            3,284.14 |          304,493.72 |    9.0% |      0.00 | :wavy_dash: `ouly_parallel_for_small` (Unstable with ~88.9 iters. Increase `minEpochIterations` to e.g. 889)
+|           26,731.48 |           37,409.08 |    1.1% |      0.01 | `TBB_glm_vector_math_small`
+|           25,159.14 |           39,746.99 |    5.7% |      0.01 | :wavy_dash: `ouly_glm_vector_math_small` (Unstable with ~44.4 iters. Increase `minEpochIterations` to e.g. 444)
+Detailed JSON results saved to tbb_comparison_results_clang-19_Release.json
