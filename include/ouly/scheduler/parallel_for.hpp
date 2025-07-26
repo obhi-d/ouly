@@ -73,16 +73,16 @@ struct parallel_for_data
 };
 
 template <typename L, TaskContext WC>
-void execute_sequential(L& lambda, auto range, WC const& this_context);
+void execute_sequential(L& lambda, auto&& range, WC const& this_context);
 
 template <TaskContext WC, typename L>
-void execute_remaining_work(L& lambda, auto range, uint32_t current_pos, uint32_t count, WC const& this_context);
+void execute_remaining_work(L& lambda, auto&& range, uint32_t current_pos, uint32_t count, WC const& this_context);
 
 template <TaskContext WC>
 inline void cooperative_wait(std::latch& counter, WC const& this_context);
 
 template <typename L, TaskContext WC>
-void launch_parallel_tasks(L& lambda, auto range, uint32_t work_count, uint32_t /*fixed_batch_size*/, uint32_t count,
+void launch_parallel_tasks(L& lambda, auto&& range, uint32_t work_count, uint32_t /*fixed_batch_size*/, uint32_t count,
                            WC const& this_context)
 {
   auto& scheduler = this_context.get_scheduler();
@@ -97,7 +97,7 @@ void launch_parallel_tasks(L& lambda, auto range, uint32_t work_count, uint32_t 
 
   if (parallel_tasks == 0)
   {
-    execute_sequential(lambda, range, this_context);
+    execute_sequential(lambda, std::forward<decltype(range)>(range), this_context);
     return;
   }
 
@@ -107,14 +107,14 @@ void launch_parallel_tasks(L& lambda, auto range, uint32_t work_count, uint32_t 
   uint32_t current_pos = submit_parallel_tasks(pfor_instance, effective_work_count, count, this_context);
 
   // Current thread processes the remaining work
-  execute_remaining_work(lambda, range, current_pos, count, this_context);
+  execute_remaining_work(lambda, std::forward<decltype(range)>(range), current_pos, count, this_context);
 
   // Cooperative wait: instead of blocking, yield to process other work
   cooperative_wait(pfor_instance.counter_, this_context);
 }
 
 template <typename L, TaskContext WC>
-void execute_sequential(L& lambda, auto range, WC const& this_context)
+void execute_sequential(L& lambda, auto&& range, WC const& this_context)
 {
   using iterator_t                 = decltype(std::begin(range));
   constexpr bool is_range_executor = ouly::detail::RangeExecutor<L, iterator_t, WC>;
@@ -190,7 +190,7 @@ auto create_task_lambda(parallel_for_data<Iterator, L>& pfor_instance, uint32_t 
 }
 
 template <TaskContext WC, typename L>
-void execute_remaining_work(L& lambda, auto range, uint32_t current_pos, uint32_t count, WC const& this_context)
+void execute_remaining_work(L& lambda, auto&& range, uint32_t current_pos, uint32_t count, WC const& this_context)
 {
   using iterator_t                 = decltype(std::begin(range));
   constexpr bool is_range_executor = ouly::detail::RangeExecutor<L, iterator_t, WC>;
@@ -231,7 +231,7 @@ inline void cooperative_wait(std::latch& counter, WC const& this_context)
 }
 
 template <typename L, typename FwIt, TaskContext WC, typename TaskTr = default_task_traits>
-void parallel_for(L lambda, FwIt range, WC const& this_context, TaskTr /*unused*/ = {})
+void parallel_for(L lambda, FwIt&& range, WC const& this_context, TaskTr /*unused*/ = {})
 {
   using iterator_t                 = decltype(std::begin(range));
   constexpr bool is_range_executor = ouly::detail::RangeExecutor<L, iterator_t, WC>;
@@ -293,7 +293,7 @@ void parallel_for(L lambda, FwIt range, WC const& this_context, TaskTr /*unused*
   }
   else
   {
-    launch_parallel_tasks(lambda, range, work_count, fixed_batch_size, count, this_context);
+    launch_parallel_tasks(lambda, std::forward<FwIt>(range), work_count, fixed_batch_size, count, this_context);
   }
 }
 

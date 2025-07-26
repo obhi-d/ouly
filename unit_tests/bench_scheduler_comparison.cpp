@@ -30,24 +30,6 @@
 #include <tbb/task_arena.h>
 #include <tbb/tbb.h>
 
-// Helper to create main contexts
-namespace ouly::v1
-{
-inline auto make_main_context(scheduler& sched, workgroup_id group = workgroup_id(0)) -> task_context
-{
-  return task_context(sched, nullptr, worker_id(0), group, 0xFFFFFFFF, 0);
-}
-} // namespace ouly::v1
-
-namespace ouly::v2
-{
-inline auto make_main_context(scheduler& sched, [[maybe_unused]] workgroup_id group = workgroup_id(0)) -> task_context
-{
-  auto ctx = task_context(sched, nullptr, 0, worker_id(0));
-  return ctx;
-}
-} // namespace ouly::v2
-
 // Benchmark data structures
 struct BenchmarkData
 {

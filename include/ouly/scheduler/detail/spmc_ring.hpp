@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <cstring>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <type_traits>
 
@@ -20,6 +21,98 @@ namespace ouly::detail
 {
 
 static constexpr size_t spmc_default_capacity = 256;
+// NOLINTNEXTLINE
+#ifndef LOCK_FREE_QUEUE
+
+template <typename T, std::size_t Capacity = spmc_default_capacity>
+class spmc_ring
+{
+  static_assert((Capacity > 0) && (Capacity & (Capacity - 1)) == 0, "Capacity must be a power‑of‑two > 0");
+  static_assert(std::is_trivially_copyable_v<T> && std::is_trivially_destructible_v<T>,
+                "T must be trivially copyable & trivially destructible");
+
+public:
+  void validate_thread()
+  {
+    static thread_local auto thread_id = std::this_thread::get_id();
+    assert(thread_id == std::this_thread::get_id());
+  }
+
+  /*===============================  PRODUCER  ===============================*/
+  auto push_back(const T& item) noexcept -> bool
+  {
+    validate_thread();
+    auto lock = std::scoped_lock(lock_);
+    auto b    = bottom_;
+    auto t    = top_;
+    if (static_cast<std::size_t>(b - t) >= Capacity)
+    {
+      return false; // full
+    }
+
+    // memcpy is fine
+    auto& data = slot(b);
+    std::memcpy(&data, &item, sizeof(T));
+    bottom_ += 1;
+    return true;
+  }
+
+  auto pop_back(T& out) noexcept -> bool // owner only
+  {
+    validate_thread();
+    auto lock = std::scoped_lock(lock_);
+    bottom_ -= 1;
+    auto b = bottom_;
+    auto t = top_;
+
+    if (t <= b)
+    { // non‑empty
+      // NOLINTNEXTLINE
+      auto& data = slot(b);
+      std::memcpy(&out, &data, sizeof(T));
+      return true;
+    }
+    // queue empty – restore bottom
+    bottom_ = t;
+    return false;
+  }
+
+  /*==============================  CONSUMER  ==============================*/
+  /**
+   * Steal one item; returns actual count (0 ⇒ empty or CAS lost).
+   * Caller must have space in `dst` for one item.
+   */
+  auto steal(T& dst) noexcept -> bool
+  {
+    auto lock = std::scoped_lock(lock_);
+    auto t    = top_;
+    auto b    = bottom_;
+
+    if (b <= t)
+    {
+      return false; // empty
+    }
+
+    auto new_t = t + 1;
+    top_       = new_t;
+    auto& data = slot(t);
+    std::memcpy(&dst, &data, sizeof(T));
+    return true;
+  }
+
+private:
+  auto slot(std::int64_t idx) noexcept -> T&
+  {
+    return buffer_[static_cast<uint32_t>(idx) & (Capacity - 1)];
+  }
+  std::mutex lock_;
+  int64_t    top_    = 0;
+  int64_t    bottom_ = 0; // producer only writes
+  alignas(cache_line_size) T buffer_[Capacity];
+};
+
+#else
+
 template <typename T, std::size_t Capacity = spmc_default_capacity>
 class spmc_ring
 {
@@ -47,7 +140,8 @@ public:
     }
 
     // memcpy is fine
-    std::memcpy(&slot(b), &item, sizeof(T));
+    auto& data = slot(b);
+    std::memcpy(&data, &item, sizeof(T));
     std::atomic_thread_fence(std::memory_order_release);
     bottom_.store(b + 1, std::memory_order_relaxed);
     return true;
@@ -61,7 +155,8 @@ public:
     if (t <= b)
     { // non‑empty
       // NOLINTNEXTLINE
-      std::memcpy(&out, &slot(b), sizeof(T));
+      auto& data = slot(b);
+      std::memcpy(&out, &data, sizeof(T));
       if (t == b)
       { // last item, race with steal
         if (!top_.compare_exchange_strong(t, t + 1, std::memory_order_seq_cst, std::memory_order_relaxed))
@@ -94,14 +189,10 @@ public:
       return false; // empty
     }
 
-    auto new_t = t + 1;
-    if (!top_.compare_exchange_strong(t, new_t, std::memory_order_seq_cst, std::memory_order_relaxed))
-    {
-      return false; // lost race
-    }
+    auto& data = slot(t);
+    std::memcpy(&dst, &data, sizeof(T));
 
-    std::memcpy(&dst, &slot(t), sizeof(T));
-    return true;
+    return top_.compare_exchange_strong(t, t + 1, std::memory_order_seq_cst, std::memory_order_relaxed);
   }
 
 private:
@@ -117,6 +208,7 @@ private:
   alignas(cache_line_size) std::atomic<std::int64_t> bottom_; // producer only writes
   alignas(cache_line_size) T buffer_[Capacity];
 };
+#endif
 } // namespace ouly::detail
 
 #ifdef _MSC_VER

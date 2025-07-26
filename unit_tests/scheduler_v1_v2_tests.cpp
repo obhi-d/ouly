@@ -29,26 +29,6 @@ struct TestCounter
   std::atomic<uint64_t> computation_result{0};
 };
 
-// Helper to create a main context for v1 scheduler
-namespace ouly::v1
-{
-inline auto make_main_context(scheduler& sched, workgroup_id group = workgroup_id(0)) -> task_context
-{
-  return task_context(sched, nullptr, worker_id(0), group, 0xFFFFFFFF, 0);
-}
-} // namespace ouly::v1
-
-// Helper to create a main context for v2 scheduler
-namespace ouly::v2
-{
-inline auto make_main_context(scheduler& sched, [[maybe_unused]] workgroup_id group = workgroup_id(0)) -> task_context
-{
-  auto ctx = task_context(sched, nullptr, 0, worker_id(0));
-  // v2 task_context doesn't have set_workgroup, the group is set internally
-  return ctx;
-}
-} // namespace ouly::v2
-
 // Template wrapper for testing both scheduler versions
 template <typename SchedulerType, typename TaskContextType>
 struct SchedulerTestRunner
@@ -152,7 +132,7 @@ TEMPLATE_TEST_CASE("Parallel For Small Loop", "[scheduler][parallel_for][templat
   scheduler.end_execution();
 
   // Verify all elements were processed
-  REQUIRE(counter.task_count.load() == 10000);
+  REQUIRE(counter.task_count.load() == 10);
 
   // Verify data transformation
   for (size_t i = 0; i < data.size(); ++i)

@@ -122,25 +122,18 @@ public:
   /**
    * @brief Try to steal work from any worker's queue in this workgroup
    */
-  [[nodiscard]] auto steal_work(work_item& out, uint32_t avoid_worker_offset = UINT32_MAX) noexcept -> bool
+  [[nodiscard]] auto steal_work(work_item& out, uint32_t steal_offset) noexcept -> bool
   {
     OULY_ASSERT(thread_count_ > 0);
 
-    // Try to steal from a random worker's queue to reduce contention
-    thread_local uint32_t steal_index = 0;
-    auto                  attempts    = static_cast<uint32_t>(thread_count_);
+    auto attempts = static_cast<uint32_t>(thread_count_);
 
     for (uint32_t i = 0; i < attempts; ++i)
     {
-      uint32_t worker_idx = (steal_index + i) % attempts;
-      if (worker_idx == avoid_worker_offset)
-      {
-        continue; // Skip the worker we want to avoid
-      }
+      uint32_t worker_idx = (steal_offset + i) % attempts;
 
       if (work_queues_[worker_idx].steal(out))
       {
-        steal_index = (worker_idx + 1) % attempts; // Update for next time
         return true;
       }
     }

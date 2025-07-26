@@ -23,6 +23,20 @@ using worker_type    = ouly::detail::v2::worker;
 thread_local detail::v2::worker const* g_worker = nullptr;
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 thread_local ouly::worker_id g_worker_id = {};
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+thread_local uint32_t g_random_seed = 0;
+
+// LCG constants for fast PRNG
+static constexpr uint32_t lcg_multiplier    = 1664525U;
+static constexpr uint32_t lcg_increment     = 1013904223U;
+static constexpr uint32_t initial_seed_mask = 0xAAAAAAAAU;
+
+static auto update_seed() -> uint32_t;
+
+static auto update_seed() -> uint32_t
+{
+  return (g_random_seed = (g_random_seed * lcg_multiplier + lcg_increment) & initial_seed_mask);
+}
 
 auto task_context::this_context::get() noexcept -> task_context const&
 {
@@ -213,6 +227,7 @@ auto scheduler::find_work_for_worker(worker_id wid) noexcept -> bool
   // Priority 2: Check needy workgroups for mailbox work (limit attempts to avoid starvation)
   static constexpr uint32_t max_needy_attempts = 3;
   uint32_t                  needy_attempts     = 0;
+  thread_local uint32_t     random_victim      = update_seed();
 
   detail::v2::workgroup* needy_wg = nullptr;
   while (needy_attempts < max_needy_attempts && needy_workgroups_.pop(needy_wg))
@@ -232,7 +247,7 @@ auto scheduler::find_work_for_worker(worker_id wid) noexcept -> bool
     }
 
     // No work in mailbox, try stealing from this workgroup
-    if (needy_wg->steal_work(work))
+    if (needy_wg->steal_work(work, random_victim))
     {
       execute_work(wid, work);
       return true;
@@ -240,11 +255,12 @@ auto scheduler::find_work_for_worker(worker_id wid) noexcept -> bool
 
     // Clear work available flag since we found no work
     needy_wg->clear_work_available();
+    random_victim = update_seed();
   }
 
   // Priority 3: Work stealing from any workgroup with priority-based selection
   // Start with higher priority workgroups and overloaded workgroups
-  thread_local uint32_t steal_start_idx = 0;
+  uint32_t steal_start_idx = update_seed();
 
   for (uint32_t attempt = 0; attempt < workgroup_count_; ++attempt)
   {
@@ -257,9 +273,8 @@ auto scheduler::find_work_for_worker(worker_id wid) noexcept -> bool
     }
 
     detail::v2::work_item work;
-    if (workgroup.steal_work(work))
+    if (workgroup.steal_work(work, steal_start_idx))
     {
-      steal_start_idx = (i + 1) % workgroup_count_; // Update for next time
       execute_work(wid, work);
       return true;
     }
