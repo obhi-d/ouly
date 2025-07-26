@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: MIT
 #pragma once
+#include "ouly/scheduler/detail/mpmc_ring.hpp"
 #include "ouly/scheduler/detail/worker_v2.hpp"
 #include "ouly/scheduler/detail/workgroup_v2.hpp"
 #include "ouly/utility/config.hpp"
 #include "ouly/utility/type_traits.hpp"
 #include <array>
+#include <atomic>
 #include <condition_variable>
+#include <cstdint>
 #include <mutex>
 #include <new>
 #include <thread>
@@ -127,7 +130,8 @@ public:
    * @param entry An entry function can be provided that will be executed on all worker threads upon entry.
    * @param user_context User context pointer passed to worker threads
    */
-  OULY_API void begin_execution(scheduler_worker_entry&& entry = {}, void* user_context = nullptr);
+  OULY_API void begin_execution(scheduler_worker_entry&& entry = {}, uint32_t worker_count = {},
+                                void* user_context = nullptr);
 
   /**
    * @brief Wait for threads to finish executing and end scheduler execution.
@@ -145,12 +149,12 @@ public:
   /**
    * @brief Ensure a work-group by id and set a name
    */
-  OULY_API void create_group(workgroup_id group, uint32_t thread_offset, uint32_t thread_count, uint32_t priority = 0);
+  OULY_API void create_group(workgroup_id group, uint32_t thread_count, uint32_t priority = 0);
 
   /**
    * @brief Get the next available group
    */
-  OULY_API auto create_group(uint32_t thread_offset, uint32_t thread_count, uint32_t priority = 0) -> workgroup_id;
+  OULY_API auto create_group(uint32_t thread_count, uint32_t priority = 0) -> workgroup_id;
 
   /**
    * @brief Clear a group, and re-create it
@@ -160,31 +164,15 @@ public:
   /**
    * @brief Get worker count in this group
    */
-  [[nodiscard]] auto get_worker_count(workgroup_id g) const noexcept -> uint32_t
-  {
-    return new_workgroups_[g.get_index()].get_thread_count();
-  }
-
+  [[nodiscard]] auto get_worker_count(workgroup_id g) const noexcept -> uint32_t;
   /**
    * @brief Get worker start index
    */
-  [[nodiscard]] auto get_worker_start_idx(workgroup_id g) const noexcept -> uint32_t
-  {
-    return new_workgroups_[g.get_index()].get_start_thread_idx();
-  }
-
+  [[nodiscard]] auto get_worker_start_idx(workgroup_id g) const noexcept -> uint32_t;
   /**
    * @brief Get logical divisor for workgroup
    */
-  [[nodiscard]] auto get_logical_divisor(workgroup_id g) const noexcept -> uint32_t
-  {
-    return new_workgroups_[g.get_index()].get_thread_count() * work_scale;
-  }
-
-  [[nodiscard]] auto get_context(worker_id worker, workgroup_id group) const -> worker_context const&
-  {
-    return memory_block_.workers_[worker.get_index()].get().contexts_[group.get_index()];
-  }
+  [[nodiscard]] auto get_logical_divisor(workgroup_id g) const noexcept -> uint32_t;
 
   /**
    * @brief If multiple schedulers are active, this function should be called from main thread before using the
@@ -203,59 +191,28 @@ private:
    */
   OULY_API void submit_internal(worker_id src, workgroup_id dst, ouly::detail::work_item const& work);
 
-  // New TBB-style scheduler methods
-  void run_worker(worker_id worker_id);
-  void notify_workers_work_available() noexcept;
-  auto find_work_for_worker(worker_id worker_id) noexcept -> bool;
-  auto try_get_work_from_workgroup(worker_id worker_id, workgroup_id group_id) noexcept -> bool;
-  void execute_work(worker_id worker_id, ouly::detail::work_item& work) noexcept;
-
-  // Legacy methods for compatibility - will be updated to use new architecture
-  void assign_priority_order();
-  auto compute_group_range(uint32_t worker_index) -> bool;
-  void compute_steal_mask(uint32_t worker_index) const;
-  void finish_pending_tasks() noexcept;
-  void wake_up(worker_id /*thread*/) noexcept;
-  void finalize_worker(worker_id /*thread*/) noexcept;
-
   struct worker_synchronizer;
 
-  uint32_t         worker_count_ = 0;
-  std::atomic_bool stop_         = false;
+  using workgroup_list = ouly::detail::mpmc_ring<detail::workgroup*, detail::max_workgroup>;
+  workgroup_list needy_workgroups_;
 
-  static constexpr std::size_t cache_line_size = detail::cache_line_size;
+  std::condition_variable work_available_cv_;
+  std::mutex              work_available_mutex_;
 
-  // Cache-aligned wake data to prevent false sharing
-  struct wake_data
-  {
-    std::atomic_bool         status_{false};
-    ouly::detail::wake_event event_;
-  };
-
-  using aligned_worker    = detail::cache_optimized_data<ouly::detail::worker>;
-  using aligned_wake_data = detail::cache_optimized_data<wake_data>;
-
-  // Memory layout optimization: Allocate all scheduler data in a single block
-  struct scheduler_memory_block
-  {
-    std::unique_ptr<aligned_worker[]>            workers_;
-    std::unique_ptr<ouly::detail::group_range[]> group_ranges_;
-    std::unique_ptr<aligned_wake_data[]>         wake_data_;
-  } memory_block_;
-
-  // New workgroups with Chase-Lev architecture
-  std::vector<ouly::detail::new_workgroup> new_workgroups_;
-
-  // Global condition variable for work availability notification (TBB-style)
-  mutable std::mutex              global_work_mutex_;
-  mutable std::condition_variable global_work_cv_;
-  std::atomic<bool>               has_global_work_{false};
-
+  std::atomic_bool                     stop_{false};
+  std::atomic_int32_t                  wake_tokens_{0}; // Used to wake up workers when work is available
+  std::atomic_int32_t                  sleeping_{0};
   std::shared_ptr<worker_synchronizer> synchronizer_ = nullptr;
-  std::vector<std::thread>             threads_;
+
+  std::unique_ptr<detail::v2::worker[]>    workers_;
+  std::unique_ptr<detail::v2::workgroup[]> workgroups_;
+
+  std::vector<std::thread> threads_;
 
   // Scheduler state and configuration (cold data)
   scheduler_worker_entry entry_fn_;
+
+  uint32_t worker_count_ = 0;
 };
 
 /**

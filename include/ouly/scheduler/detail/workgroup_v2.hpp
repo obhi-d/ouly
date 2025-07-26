@@ -10,13 +10,11 @@
 #include "ouly/scheduler/worker_context_v2.hpp"
 #include <atomic>
 #include <cstdint>
-#include <functional>
-#include <optional>
-#include <vector>
+#include <span>
 
 namespace ouly::detail::inline v2
 {
-
+static constexpr uint32_t max_workgroup = 32; // Maximum number of workgroups supported
 static constexpr uint32_t mpmc_capacity = 256;
 // Simplified work item for the new architecture
 using work_item = task_delegate;
@@ -33,6 +31,7 @@ using work_item = task_delegate;
 class workgroup
 {
 public:
+  using queue_type      = chase_lev_queue<work_item>;
   workgroup() noexcept  = default;
   ~workgroup() noexcept = default;
 
@@ -50,7 +49,7 @@ public:
     priority_     = priority;
 
     // Allocate Chase-Lev queues for each worker in this workgroup
-    work_queues_.resize(thread_count);
+    work_queues_ = std::make_unique<queue_type[]>(thread_count);
 
     // Reset work availability
     has_work_.store(false, std::memory_order_relaxed);
@@ -82,10 +81,7 @@ public:
    */
   [[nodiscard]] auto steal_work(work_item& out, uint32_t avoid_worker_offset = UINT32_MAX) noexcept -> bool
   {
-    if (work_queues_.empty())
-    {
-      return false;
-    }
+    OULY_ASSERT(thread_count_ > 0);
 
     // Try to steal from a random worker's queue to reduce contention
     thread_local uint32_t steal_index = 0;
@@ -154,29 +150,6 @@ public:
     has_work_.store(false, std::memory_order_relaxed);
   }
 
-  /**
-   * @brief Check if any worker queue or mailbox actually has work
-   */
-  [[nodiscard]] auto check_actual_work_available() const noexcept -> bool
-  {
-    // Check mailbox first (faster)
-    if (mailbox_.has_work())
-    {
-      return true;
-    }
-
-    // Check worker queues
-    for (const auto& queue : work_queues_)
-    {
-      if (!queue.empty())
-      {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
   // Accessors
   [[nodiscard]] auto get_thread_count() const noexcept -> uint32_t
   {
@@ -188,8 +161,9 @@ public:
   }
 
 private:
+  scheduler* owner_ = nullptr; // Pointer to the owning scheduler
   // Work queues - one Chase-Lev queue per worker in this workgroup
-  std::unique_ptr<chase_lev_queue<work_item>[]> work_queues_;
+  std::unique_ptr<queue_type[]> work_queues_;
 
   // Mailbox for cross-workgroup work submission
   mpmc_ring<work_item, mpmc_capacity> mailbox_;

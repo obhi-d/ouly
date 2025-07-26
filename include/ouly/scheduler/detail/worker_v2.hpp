@@ -20,14 +20,20 @@ class workgroup;
 class worker
 {
 public:
-  auto get_context() noexcept -> worker_context&
+  auto get_context() noexcept -> ouly::v2::worker_context const&
   {
     return current_context_;
   }
 
+  void set_workgroup_info(uint32_t offset, workgroup_id group) noexcept
+  {
+    current_context_.group_id_ = group;
+    current_context_.offset_   = offset;
+  }
+
 private:
-  workgroup*     assigned_group_ = nullptr; // The workgroup this worker belongs to
-  worker_context current_context_;
+  workgroup*               assigned_group_ = nullptr; // The workgroup this worker belongs to
+  ouly::v2::worker_context current_context_;
 };
 
 } // namespace ouly::detail::inline v2

@@ -2,17 +2,11 @@
 #pragma once
 
 #include "ouly/scheduler/detail/co_task.hpp"
-#include "ouly/utility/delegate.hpp"
 #include <concepts>
 
 namespace ouly
 {
 class scheduler;
-class worker_context;
-constexpr uint32_t max_task_data_size = 20;
-constexpr uint32_t max_task_base_size = 24;
-
-using task_delegate = ouly::basic_delegate<max_task_base_size, void(worker_context const&)>;
 
 template <typename T>
 concept CoroutineTask = requires(T a) {

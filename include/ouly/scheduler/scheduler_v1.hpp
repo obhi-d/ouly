@@ -189,7 +189,7 @@ public:
    * @brief Begin scheduler execution, group creation is frozen after this call.
    * @param entry An entry function can be provided that will be executed on all worker threads upon entry.
    */
-  void begin_execution(scheduler_worker_entry&& entry = {}, void* user_context = nullptr);
+  void begin_execution(scheduler_worker_entry&& entry = {}, uint32_t worker_count = {}, void* user_context = nullptr);
   /**
    * @brief Wait for threads to finish executing and end scheduler execution. Scheduler execution can be restarted
    * using begin_execution. Unlocks scheduler and makes it mutable.
@@ -207,12 +207,12 @@ public:
   /**
    * @brief Ensure a work-group by id and set a name
    */
-  void create_group(workgroup_id group, uint32_t thread_offset, uint32_t thread_count, uint32_t priority = 0);
+  void create_group(workgroup_id group, uint32_t thread_count, uint32_t priority = 0);
   /**
    * @brief Get the next available group. Group priority controls if a thread is shared between multiple groups, which
    * group is executed first by the thread
    */
-  auto create_group(uint32_t thread_offset, uint32_t thread_count, uint32_t priority = 0) -> workgroup_id;
+  auto create_group(uint32_t thread_count, uint32_t priority = 0) -> workgroup_id;
   /**
    * @brief Clear a group, and re-create it
    */
