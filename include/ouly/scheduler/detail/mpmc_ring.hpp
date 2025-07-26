@@ -175,7 +175,7 @@ private:
   struct node_t
   {
     alignas(cache_line_size) std::atomic<std::size_t> sequence_{0};
-    T storage_; // Use placement new to construct T in this storage
+    T storage_{}; // Use placement new to construct T in this storage
   };
 
   using node_list_t = std::array<node_t, capacity_pow2>;

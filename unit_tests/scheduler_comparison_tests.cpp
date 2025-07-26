@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+#define GLM_ENABLE_EXPERIMENTAL
 #include "catch2/catch_all.hpp"
 #include "ouly/scheduler/parallel_for.hpp"
 #include "ouly/scheduler/scheduler_v1.hpp"

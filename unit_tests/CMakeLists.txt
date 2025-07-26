@@ -140,13 +140,13 @@ add_unit_test(NAME yaml_serializer FILES "yaml_input_serializer.cpp" "yaml_outpu
 add_unit_test(NAME yaml_object FILES "yaml_object.cpp" SANITIZE)
 add_unit_test(NAME pool_allocator FILES "pool_allocator.cpp" SANITIZE)
 add_unit_test(NAME linear_allocator FILES "linear_allocator.cpp" SANITIZE)
-add_unit_test(NAME scheduler FILES "scheduler_tests.cpp" SANITIZE)
 add_unit_test(NAME microexpr FILES "microexpr_tests.cpp" SANITIZE)
 add_unit_test(NAME thread_safe_allocators FILES "thread_safe_allocators.cpp" SANITIZE)
 add_unit_test(NAME coalescing_allocator FILES "coalescing_allocator.cpp" SANITIZE)
+add_unit_test(NAME scheduler_v1_v2_tests FILES "scheduler_v1_v2_tests.cpp" LINK_LIBS glm::glm SANITIZE)
 add_executable(ouly-bench "bench_arena_allocator.cpp" "bench_main.cpp")
 add_executable(ouly-performance-bench "bench_performance.cpp")
-add_executable(ouly-tbb-comparison-bench "bench_tbb_comparison.cpp")
+add_executable(ouly-scheduler-comparison-bench "bench_scheduler_comparison.cpp")
 
 target_link_libraries(ouly-bench ouly::ouly nanobench::nanobench)
 target_compile_features(ouly-bench PRIVATE cxx_std_20)
@@ -155,12 +155,11 @@ target_link_libraries(ouly-performance-bench ouly::ouly nanobench::nanobench TBB
 target_compile_features(ouly-performance-bench PRIVATE cxx_std_20)
 target_compile_definitions(ouly-performance-bench PRIVATE -DOULY_REC_STATS -DOULY_THROW_ON_ERROR)
 
-target_link_libraries(ouly-tbb-comparison-bench ouly::ouly nanobench::nanobench TBB::tbb glm::glm)
-target_compile_features(ouly-tbb-comparison-bench PRIVATE cxx_std_20)
-target_compile_definitions(ouly-tbb-comparison-bench PRIVATE -DOULY_REC_STATS -DOULY_THROW_ON_ERROR)
+target_link_libraries(ouly-scheduler-comparison-bench ouly::ouly nanobench::nanobench TBB::tbb glm::glm)
+target_compile_features(ouly-scheduler-comparison-bench PRIVATE cxx_std_20)
+target_compile_definitions(ouly-scheduler-comparison-bench PRIVATE -DOULY_REC_STATS -DOULY_THROW_ON_ERROR)
 
 # Performance test target for release builds
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
     add_test(NAME performance_benchmarks COMMAND ouly-performance-bench)
-    add_test(NAME tbb_comparison_benchmarks COMMAND ouly-tbb-comparison-bench)
 endif()

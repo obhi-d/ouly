@@ -143,6 +143,13 @@ void scheduler::run_worker(worker_id wid)
 
     if (!found_work)
     {
+      // exit context
+      auto& worker = workers_[wid.get_index()];
+      if (worker.assigned_group_ != nullptr)
+      {
+        worker.assigned_group_->exit();
+        worker.assigned_group_ = nullptr;
+      }
       // Enter sleep state
       sleeping_.fetch_add(1, std::memory_order_relaxed);
 
@@ -467,7 +474,39 @@ void scheduler::take_ownership() noexcept
 void scheduler::busy_work(worker_id thread) noexcept
 {
   // Try to find work for the worker during busy wait
-  find_work_for_worker(thread);
+  // Optimized work stealing with adaptive attempts
+  constexpr uint32_t min_attempts      = 1;
+  constexpr uint32_t max_attempts      = 3;
+  constexpr uint32_t failure_threshold = 5;
+
+  // Use thread_local failure tracking for better performance
+  thread_local uint32_t local_recent_failures = 0;
+  uint32_t              attempts = (local_recent_failures > failure_threshold) ? min_attempts : max_attempts;
+
+  for (uint32_t attempt = 0; attempt < attempts; ++attempt)
+  {
+    if (find_work_for_worker(thread)) [[likely]]
+    {
+      local_recent_failures = std::max(0U, local_recent_failures - 1);
+      return; // Found and executed work
+    }
+
+    // Shorter pause for first attempts, longer for subsequent ones
+    if (attempt < attempts - 1)
+    {
+      ouly::detail::pause_exec();
+    }
+  }
 }
 
 } // namespace ouly::inline v2
+
+void ouly::v2::task_context::busy_wait(std::binary_semaphore& event) const
+{
+  while (!event.try_acquire())
+  {
+    // Use a busy wait loop to avoid blocking the thread
+    owner_->busy_work(index_);
+  }
+  // Wait until the semaphore is signaled
+}

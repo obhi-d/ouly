@@ -9,7 +9,6 @@
 
 namespace ouly
 {
-class scheduler;
 /**
  * @brief A worker represents a specific thread. A worker can belong to any of maximum of 32 worker_groups allowed by
  * the scheduler.
@@ -80,10 +79,9 @@ using scheduler_worker_entry = std::function<void(worker_id const&)>;
 template <typename T>
 concept TaskContext = requires(const T& ctx) {
   { ctx.get_worker() } -> std::convertible_to<worker_id>;
-  { ctx.get_scheduler() } -> std::convertible_to<scheduler&>;
   { ctx.get_group_offset() } -> std::convertible_to<uint32_t>;
   { ctx.template get_user_context<void>() } -> std::convertible_to<void*>;
-  { T::get(ctx.get_workgroup()) } -> std::convertible_to<const T&>;
+  { T::this_context::get() } -> std::convertible_to<const T&>;
   { ctx.busy_wait(std::declval<std::binary_semaphore&>()) } -> std::same_as<void>;
 };
 } // namespace ouly

@@ -10,6 +10,7 @@
 #include <barrier>
 #include <cstdint>
 #include <latch>
+#include <semaphore>
 
 namespace ouly::v1
 {
@@ -67,10 +68,10 @@ void scheduler::tally_publisher::operator()() const noexcept
     // Prefetch next worker data to improve cache performance
     if (thread + prefetch_distance < owner_->worker_count_)
     {
-      prefetch_for_read(&owner_->memory_block_.workers_[thread + prefetch_distance]);
+      prefetch_for_read(&owner_->workers_[thread + prefetch_distance]);
     }
 
-    total_remaining_tasks += owner_->memory_block_.workers_[thread].get().tally_;
+    total_remaining_tasks += owner_->workers_[thread].get().tally_;
   }
   owner_->synchronizer_->tally_.store(total_remaining_tasks, std::memory_order_release);
 }
@@ -86,7 +87,7 @@ scheduler::~scheduler() noexcept
 // NOLINTNEXTLINE
 inline void scheduler::do_work(workgroup_id id, worker_id thread, detail::v1::work_item& work) noexcept
 {
-  auto& worker = memory_block_.workers_[thread.get_index()].get();
+  auto& worker = workers_[thread.get_index()].get();
   worker.tally_--;
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
   work(worker.contexts_[id.get_index()]);
@@ -124,7 +125,7 @@ void scheduler::busy_work(worker_id thread) noexcept
 
 void scheduler::run_worker(worker_id thread)
 {
-  g_worker    = &memory_block_.workers_[thread.get_index()].get();
+  g_worker    = &workers_[thread.get_index()].get();
   g_worker_id = thread;
 
   // LCG constants for fast PRNG
@@ -146,8 +147,8 @@ void scheduler::run_worker(worker_id thread)
       break;
     }
 
-    memory_block_.wake_data_[thread.get_index()].get().status_.store(false, std::memory_order_relaxed);
-    memory_block_.wake_data_[thread.get_index()].get().event_.release();
+    wake_data_[thread.get_index()].get().status_.store(false, std::memory_order_relaxed);
+    wake_data_[thread.get_index()].get().event_.release();
   }
 
   if (synchronizer_ != nullptr)
@@ -164,7 +165,7 @@ inline void scheduler::finalize_worker(worker_id thread)
   if (synchronizer_ != nullptr)
   {
 
-    auto old_tally = memory_block_.workers_[thread.get_index()].get().tally_;
+    auto old_tally = workers_[thread.get_index()].get().tally_;
     synchronizer_->tally_.fetch_add(old_tally, std::memory_order_acq_rel);
 
     synchronizer_->published_tally_.arrive_and_wait();
@@ -193,7 +194,7 @@ inline auto scheduler::work(worker_id thread) noexcept -> bool
   {
     return false;
   }
-  OULY_ASSERT(&memory_block_.workers_[thread.get_index()].get().contexts_[id.get_index()].get_scheduler() == this);
+  OULY_ASSERT(&workers_[thread.get_index()].get().contexts_[id.get_index()].get_scheduler() == this);
   OULY_ASSERT(available_work);
   do_work(id, thread, available_work);
   return true;
@@ -248,7 +249,7 @@ thread_local uint32_t adaptive_work_stealer::success_streak  = 0;
 // NOLINTNEXTLINE
 auto scheduler::get_work(worker_id thread, ouly::detail::v1::work_item& work) noexcept -> workgroup_id
 {
-  auto& range = memory_block_.group_ranges_[thread.get_index()];
+  auto& range = group_ranges_[thread.get_index()];
 
   // Check workgroups in priority order - each worker's queue within each workgroup
   for (uint32_t i = 0; i < range.count_; ++i)
@@ -335,7 +336,7 @@ auto scheduler::get_work(worker_id thread, ouly::detail::v1::work_item& work) no
 // NOLINTNEXTLINE
 void scheduler::wake_up(worker_id thread) noexcept
 {
-  auto& wake = memory_block_.wake_data_[thread.get_index()].get();
+  auto& wake = wake_data_[thread.get_index()].get();
   if (!wake.status_.exchange(true, std::memory_order_acq_rel))
   {
     wake.event_.release();
@@ -352,7 +353,7 @@ void scheduler::assign_priority_order()
 
     for (uint32_t i = g.start_thread_idx_, end = g.thread_count_ + i; i < end; ++i)
     {
-      auto& range = memory_block_.group_ranges_[i];
+      auto& range = group_ranges_[i];
       range.mask_ |= 1U << group;
       range.priority_order_[range.count_++] = static_cast<uint8_t>(group);
     }
@@ -361,9 +362,9 @@ void scheduler::assign_priority_order()
 
 auto scheduler::compute_group_range(uint32_t worker_index) -> bool
 {
-  auto& worker = memory_block_.workers_[worker_index].get();
+  auto& worker = workers_[worker_index].get();
   worker.id_   = worker_id(worker_index);
-  auto& range  = memory_block_.group_ranges_[worker_index];
+  auto& range  = group_ranges_[worker_index];
 
   std::sort(range.priority_order_.data(), range.priority_order_.data() + range.count_,
             [&](uint8_t first, uint8_t second)
@@ -379,9 +380,9 @@ auto scheduler::compute_group_range(uint32_t worker_index) -> bool
 
 void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_context)
 {
-  memory_block_.workers_      = std::make_unique<aligned_worker[]>(worker_count_);
-  memory_block_.group_ranges_ = std::make_unique<ouly::detail::v1::group_range[]>(worker_count_);
-  memory_block_.wake_data_    = std::make_unique<aligned_wake_data[]>(worker_count_);
+  workers_      = std::make_unique<aligned_worker[]>(worker_count_);
+  group_ranges_ = std::make_unique<ouly::detail::v1::group_range[]>(worker_count_);
+  wake_data_    = std::make_unique<aligned_wake_data[]>(worker_count_);
 
   threads_.reserve(worker_count_ - 1);
 
@@ -389,7 +390,7 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
 
   for (uint32_t worker_index = 0; worker_index < worker_count_; ++worker_index)
   {
-    auto& worker = memory_block_.workers_[worker_index].get();
+    auto& worker = workers_[worker_index].get();
     worker.id_   = worker_id(worker_index);
 
     compute_group_range(worker_index);
@@ -399,10 +400,10 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
     for (uint32_t g = 0; g < wgroup_count; ++g)
     {
       worker.contexts_[g] =
-       task_context(*this, user_context, worker_id(worker_index), workgroup_id(g),
-                    memory_block_.group_ranges_[worker_index].mask_, worker_index - workgroups_[g].start_thread_idx_);
+       task_context(*this, user_context, worker_id(worker_index), workgroup_id(g), group_ranges_[worker_index].mask_,
+                    worker_index - workgroups_[g].start_thread_idx_);
     }
-    memory_block_.wake_data_[worker_index].get().status_.store(true, std::memory_order_relaxed);
+    wake_data_[worker_index].get().status_.store(true, std::memory_order_relaxed);
   }
 
   stop_              = false;
@@ -422,7 +423,7 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
     threads_.emplace_back(&scheduler::run_worker, this, worker_id(thread));
   }
 
-  g_worker    = &memory_block_.workers_[0].get();
+  g_worker    = &workers_[0].get();
   g_worker_id = worker_id(0);
   entry_fn_(worker_id(0));
 
@@ -433,7 +434,7 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
 // NOLINTNEXTLINE
 void scheduler::take_ownership() noexcept
 {
-  g_worker    = &memory_block_.workers_[0].get();
+  g_worker    = &workers_[0].get();
   g_worker_id = worker_id(0);
 }
 
@@ -481,7 +482,7 @@ void scheduler::end_execution()
 void scheduler::submit_internal([[maybe_unused]] worker_id src, workgroup_id dst,
                                 ouly::detail::v1::work_item const& work)
 {
-  memory_block_.workers_[src.get_index()].get().tally_++;
+  workers_[src.get_index()].get().tally_++;
 
   auto& wg = workgroups_[dst.get_index()];
 
@@ -495,7 +496,7 @@ void scheduler::submit_internal([[maybe_unused]] worker_id src, workgroup_id dst
     uint32_t worker_offset = (start_offset + attempt) % wg.thread_count_;
     uint32_t worker_index  = wg.start_thread_idx_ + worker_offset;
 
-    auto& worker_wake_data = memory_block_.wake_data_[worker_index].get();
+    auto& worker_wake_data = wake_data_[worker_index].get();
 
     // If worker is sleeping, try to assign work directly to its workgroup queue
     if (!worker_wake_data.status_.load(std::memory_order_acquire))
@@ -587,5 +588,14 @@ void scheduler::clear_group(workgroup_id group)
   wg.start_thread_idx_ = 0;
   wg.thread_count_     = 0;
 }
-
 } // namespace ouly::v1
+
+void ouly::v1::task_context::busy_wait(std::binary_semaphore& event) const
+{
+  while (!event.try_acquire())
+  {
+    // Use a busy wait loop to avoid blocking the thread
+    owner_->busy_work(index_);
+  }
+  // Wait until the semaphore is signaled
+}

@@ -61,7 +61,7 @@ public:
   }
 
   template <typename T>
-  auto get_user_context() const noexcept -> T*
+  [[nodiscard]] auto get_user_context() const noexcept -> T*
   {
     return static_cast<T*>(user_context_);
   }
@@ -72,7 +72,7 @@ public:
     static auto get() noexcept -> task_context const&;
   };
 
-  void busy_wait(std::binary_semaphore& event);
+  void busy_wait(std::binary_semaphore& event) const;
 
   auto operator<=>(task_context const&) const noexcept = default;
 
@@ -86,5 +86,7 @@ private:
   scheduler*   owner_        = nullptr;
   void*        user_context_ = nullptr;
 };
+
+static_assert(TaskContext<task_context>, "task_context must satisfy TaskContext concept");
 
 } // namespace ouly::inline v2

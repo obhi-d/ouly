@@ -50,8 +50,33 @@ public:
 
   workgroup(const workgroup&)                    = delete;
   auto operator=(const workgroup&) -> workgroup& = delete;
-  workgroup(workgroup&&)                         = delete;
-  auto operator=(workgroup&&) -> workgroup&      = delete;
+  workgroup(workgroup&& other) noexcept
+      : assigned_workers_(other.assigned_workers_.load(std::memory_order_relaxed)),
+        has_work_(other.has_work_.load(std::memory_order_relaxed)), thread_count_(other.thread_count_),
+        worker_start_idx_(other.worker_start_idx_), worker_end_idx_(other.worker_end_idx_), priority_(other.priority_),
+        owner_(other.owner_), work_queues_(std::move(other.work_queues_)), mailbox_(std::move(other.mailbox_))
+  {
+    other.thread_count_ = 0;
+    other.priority_     = 0;
+    other.owner_        = nullptr;
+  }
+
+  auto operator=(workgroup&& other) noexcept -> workgroup&
+  {
+    if (this != &other)
+    {
+      assigned_workers_.store(other.assigned_workers_.load(std::memory_order_relaxed), std::memory_order_relaxed);
+      has_work_.store(other.has_work_.load(std::memory_order_relaxed), std::memory_order_relaxed);
+      thread_count_     = other.thread_count_;
+      worker_start_idx_ = other.worker_start_idx_;
+      worker_end_idx_   = other.worker_end_idx_;
+      priority_         = other.priority_;
+      owner_            = other.owner_;
+      work_queues_      = std::move(other.work_queues_);
+      mailbox_          = std::move(other.mailbox_);
+    }
+    return *this;
+  }
 
   /**
    * @brief Initialize the workgroup with worker threads

@@ -6,7 +6,6 @@
 
 namespace ouly
 {
-class scheduler;
 
 template <typename T>
 concept CoroutineTask = requires(T a) {

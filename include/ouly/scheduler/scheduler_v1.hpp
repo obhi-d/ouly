@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 #include "ouly/scheduler/detail/worker_v1.hpp"
+#include "ouly/scheduler/task_context_v1.hpp"
 #include "ouly/scheduler/worker_structs.hpp"
 #include "ouly/utility/common.hpp"
 #include "ouly/utility/config.hpp"
@@ -76,9 +77,36 @@ public:
 
   scheduler() noexcept                           = default;
   scheduler(const scheduler&)                    = delete;
-  scheduler(scheduler&&)                         = delete;
   auto operator=(const scheduler&) -> scheduler& = delete;
-  auto operator=(scheduler&&) -> scheduler&      = delete;
+
+  scheduler(scheduler&& other) noexcept
+      : worker_count_(other.worker_count_), stop_(other.stop_.load()), workers_(std::move(other.workers_)),
+        group_ranges_(std::move(other.group_ranges_)), wake_data_(std::move(other.wake_data_)),
+        workgroups_(std::move(other.workgroups_)), synchronizer_(std::move(other.synchronizer_)),
+        threads_(std::move(other.threads_)), entry_fn_(std::move(other.entry_fn_))
+  {
+    other.worker_count_ = 0;
+    other.synchronizer_ = nullptr;
+  }
+
+  auto operator=(scheduler&& other) noexcept -> scheduler&
+  {
+    if (this != &other)
+    {
+      workgroups_         = std::move(other.workgroups_);
+      workers_            = std::move(other.workers_);
+      worker_count_       = other.worker_count_;
+      synchronizer_       = std::move(other.synchronizer_);
+      stop_               = other.stop_.load();
+      entry_fn_           = std::move(other.entry_fn_);
+      group_ranges_       = std::move(other.group_ranges_);
+      wake_data_          = std::move(other.wake_data_);
+      other.worker_count_ = 0;
+      other.synchronizer_ = nullptr;
+    }
+    return *this;
+  }
+
   ~scheduler() noexcept;
 
   /**
@@ -99,11 +127,11 @@ public:
    * @see task_context
    */
   template <CoroutineTask C>
-  void submit(task_context const& src, workgroup_id group, C const& task_obj) noexcept
+  void submit(ouly::v1::task_context const& src, workgroup_id group, C const& task_obj) noexcept
   {
     submit_internal(src.get_worker(), group,
                     detail::v1::work_item::bind(
-                     [address = task_obj.address()](task_context const&)
+                     [address = task_obj.address()](ouly::v1::task_context const&)
                      {
                        std::coroutine_handle<>::from_address(address).resume();
                      }));
@@ -122,8 +150,8 @@ public:
    * @note This function is noexcept and will forward the lambda to the internal submit implementation
    */
   template <typename Lambda>
-    requires(ouly::detail::Callable<Lambda, ouly::task_context const&>)
-  void submit(task_context const& src, workgroup_id group, Lambda&& data) noexcept
+    requires(ouly::detail::Callable<Lambda, ouly::v1::task_context const&>)
+  void submit(ouly::v1::task_context const& src, workgroup_id group, Lambda&& data) noexcept
   {
     submit_internal(src.get_worker(), group, detail::v1::work_item::bind(std::forward<Lambda>(data)));
   }
@@ -141,7 +169,7 @@ public:
    * @note The function is noexcept and will not throw exceptions
    */
   template <auto M, typename Class>
-  void submit(task_context const& src, workgroup_id group, Class& ctx) noexcept
+  void submit(ouly::v1::task_context const& src, workgroup_id group, Class& ctx) noexcept
   {
     submit_internal(src.get_worker(), group, detail::v1::work_item::bind<M>(ctx));
   }
@@ -157,7 +185,7 @@ public:
    *       using the member function pointer and workgroup.
    */
   template <auto M>
-  void submit(task_context const& src, workgroup_id group) noexcept
+  void submit(ouly::v1::task_context const& src, workgroup_id group) noexcept
   {
     submit_internal(src.get_worker(), group, detail::v1::work_item::bind<M>());
   }
@@ -178,7 +206,8 @@ public:
    * the workers in the target workgroup.
    */
   template <typename... Args>
-  void submit(task_context const& src, workgroup_id group, task_delegate::fnptr callable, Args&&... args) noexcept
+  void submit(ouly::v1::task_context const& src, workgroup_id group, task_delegate::fnptr callable,
+              Args&&... args) noexcept
   {
     submit_internal(
      src.get_worker(), group,
@@ -195,36 +224,37 @@ public:
 
   // Coroutine task submission without explicit group
   template <CoroutineTask C>
-  void submit(task_context const& current, C const& task_obj) noexcept
+  void submit(ouly::v1::task_context const& current, C const& task_obj) noexcept
   {
     submit(current, current.get_workgroup(), task_obj);
   }
 
   // Callable/lambda submission without explicit group
   template <typename Lambda>
-    requires(::ouly::detail::Callable<Lambda, task_context const&>)
-  void submit(task_context const& current, Lambda&& data) noexcept
+    requires(::ouly::detail::Callable<Lambda, ouly::v1::task_context const&>)
+  void submit(ouly::v1::task_context const& current, Lambda&& data) noexcept
   {
     submit(current, current.get_workgroup(), std::forward<Lambda>(data));
   }
 
   // Member function submission without explicit group
   template <auto M, typename Class>
-  void submit(task_context const& current, Class& ctx) noexcept
+  void submit(ouly::v1::task_context const& current, Class& ctx) noexcept
   {
     submit<M>(current, current.get_workgroup(), ctx);
   }
 
   // Member function without object (static) submission without explicit group
   template <auto M>
-  void submit(task_context const& current) noexcept
+  void submit(ouly::v1::task_context const& current) noexcept
   {
     submit<M>(current, current.get_workgroup());
   }
 
   // Free function pointer submission without explicit group
   template <typename... Args>
-  void submit(task_context const& current, void (*callable)(task_context const&, Args...), Args&&... args) noexcept
+  void submit(ouly::v1::task_context const& current, void (*callable)(ouly::v1::task_context const&, Args...),
+              Args&&... args) noexcept
   {
     submit(current, current.get_workgroup(), callable, std::forward<Args>(args)...);
   }
@@ -287,7 +317,7 @@ public:
 
   [[nodiscard]] auto get_context(task_context const& wctx, workgroup_id group) const -> task_context const&
   {
-    return memory_block_.workers_[wctx.get_worker().get_index()].get().contexts_[group.get_index()];
+    return workers_[wctx.get_worker().get_index()].get().contexts_[group.get_index()];
   }
 
   /**
@@ -296,6 +326,10 @@ public:
    */
   void take_ownership() noexcept;
   void busy_work(worker_id /*thread*/) noexcept;
+  void busy_work(v1::task_context const& ctx) noexcept
+  {
+    busy_work(ctx.get_worker());
+  }
 
 private:
   /**
@@ -336,13 +370,10 @@ private:
 
   // Memory layout optimization: Allocate all scheduler data in a single block
   // for better cache locality and reduced allocator overhead
-  struct scheduler_memory_block
-  {
-    // Hot data: accessed frequently during task execution
-    std::unique_ptr<aligned_worker[]>          workers_;
-    std::unique_ptr<detail::v1::group_range[]> group_ranges_;
-    std::unique_ptr<aligned_wake_data[]>       wake_data_;
-  } memory_block_;
+  // Hot data: accessed frequently during task execution
+  std::unique_ptr<aligned_worker[]>          workers_;
+  std::unique_ptr<detail::v1::group_range[]> group_ranges_;
+  std::unique_ptr<aligned_wake_data[]>       wake_data_;
 
   // Work groups - frequently accessed during work stealing
   std::vector<detail::v1::workgroup>   workgroups_;
@@ -353,43 +384,5 @@ private:
   // Scheduler state and configuration (cold data)
   scheduler_worker_entry entry_fn_;
 };
-
-/**
- * @brief Asynchronously submits a task to the scheduler
- *
- * This function forwards the given arguments to the scheduler's submit function,
- * allowing tasks to be queued for asynchronous execution in the specified workgroup.
- *
- * @tparam Args Variadic template parameter pack for forwarded arguments
- * @param current The current worker context from which the task is being submitted
- * @param submit_group The workgroup identifier where the task should be scheduled
- * @param args Arguments to be forwarded to the task
- *
- * @note This is a convenience wrapper around scheduler::submit()
- */
-template <typename... Args>
-void async(task_context const& current, workgroup_id submit_group, Args&&... args)
-{
-  current.get_scheduler().submit(current, submit_group, std::forward<Args>(args)...);
-}
-
-/**
- * @brief Submits a task asynchronously to the scheduler
- *
- * @tparam M Work item type to be submitted
- * @tparam Args Variable template parameter pack for work item arguments
- *
- * @param current Current worker context that will submit the work
- * @param submit_group Target workgroup ID where the work will be submitted
- * @param args Arguments to be forwarded to the work item constructor
- *
- * @note This is a helper function that forwards the submission request to the scheduler
- *       associated with the current worker context
- */
-template <auto M, typename... Args>
-void async(task_context const& current, workgroup_id submit_group, Args&&... args)
-{
-  current.get_scheduler().template submit<M>(current, submit_group, std::forward<Args>(args)...);
-}
 
 } // namespace ouly::v1

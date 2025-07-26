@@ -54,12 +54,36 @@ class scheduler
 public:
   static constexpr uint32_t work_scale = 4;
 
-  OULY_API scheduler() noexcept                  = default;
-  OULY_API scheduler(const scheduler&)           = delete;
-  scheduler(scheduler&&)                         = delete;
-  auto operator=(const scheduler&) -> scheduler& = delete;
-  auto operator=(scheduler&&) -> scheduler&      = delete;
+  OULY_API scheduler() noexcept                      = default;
+  OULY_API scheduler(const scheduler&)               = delete;
+  auto     operator=(const scheduler&) -> scheduler& = delete;
   ~scheduler() noexcept;
+
+  scheduler(scheduler&& other) noexcept
+      : stop_(other.stop_.load()), synchronizer_(std::move(other.synchronizer_)), workers_(std::move(other.workers_)),
+        workgroups_(std::move(other.workgroups_)), threads_(std::move(other.threads_)),
+        entry_fn_(std::move(other.entry_fn_)), worker_count_(other.worker_count_),
+        workgroup_count_(other.workgroup_count_)
+  {
+    other.worker_count_ = 0;
+    other.synchronizer_ = nullptr;
+  }
+
+  auto operator=(scheduler&& other) noexcept -> scheduler&
+  {
+    if (this != &other)
+    {
+      stop_            = other.stop_.load();
+      synchronizer_    = std::move(other.synchronizer_);
+      workers_         = std::move(other.workers_);
+      workgroups_      = std::move(other.workgroups_);
+      threads_         = std::move(other.threads_);
+      entry_fn_        = std::move(other.entry_fn_);
+      worker_count_    = other.worker_count_;
+      workgroup_count_ = other.workgroup_count_;
+    }
+    return *this;
+  }
 
   /**
    * @brief Submits a coroutine-based task to be executed by the scheduler
@@ -72,9 +96,9 @@ public:
    * correct workgroup when the task runs.
    */
   template <CoroutineTask C>
-  void submit(task_context const& current, workgroup_id group, C const& task_obj) noexcept
+  void submit(ouly::v2::task_context const& current, workgroup_id group, C const& task_obj) noexcept
   {
-    auto work_fn = [address = task_obj.address()](task_context const&)
+    auto work_fn = [address = task_obj.address()](ouly::v2::task_context const&)
     {
       std::coroutine_handle<>::from_address(address).resume();
     };
@@ -89,8 +113,8 @@ public:
    * @param data Callable object to be executed
    */
   template <typename Lambda>
-    requires(::ouly::detail::Callable<Lambda, task_context const&>)
-  void submit(task_context const& current, workgroup_id group, Lambda&& data) noexcept
+    requires(::ouly::detail::Callable<Lambda, ouly::v2::task_context const&>)
+  void submit(ouly::v2::task_context const& current, workgroup_id group, Lambda&& data) noexcept
   {
     submit_internal(current, group, detail::v2::work_item::bind(std::forward<Lambda>(data)));
   }
@@ -104,7 +128,7 @@ public:
    * @param ctx Reference to the context object
    */
   template <auto M, typename Class>
-  void submit(task_context const& current, workgroup_id group, Class& ctx) noexcept
+  void submit(ouly::v2::task_context const& current, workgroup_id group, Class& ctx) noexcept
   {
     submit_internal(current, group, detail::v2::work_item::bind<M>(ctx));
   }
@@ -116,7 +140,7 @@ public:
    * @param group Workgroup ID for the submitted work
    */
   template <auto M>
-  void submit(task_context const& current, workgroup_id group) noexcept
+  void submit(ouly::v2::task_context const& current, workgroup_id group) noexcept
   {
     submit_internal(current, group, detail::v2::work_item::bind<M>());
   }
@@ -130,7 +154,7 @@ public:
    * @param args Arguments to be forwarded to the callable
    */
   template <typename... Args>
-  void submit(task_context const& current, workgroup_id group, void (*callable)(task_context const&, Args...),
+  void submit(ouly::v2::task_context const& current, workgroup_id group, void (*callable)(task_context const&, Args...),
               Args&&... args) noexcept
   {
     submit_internal(
@@ -148,36 +172,37 @@ public:
 
   // Coroutine task submission without explicit group
   template <CoroutineTask C>
-  void submit(task_context const& current, C const& task_obj) noexcept
+  void submit(ouly::v2::task_context const& current, C const& task_obj) noexcept
   {
     submit(current, current.get_workgroup(), task_obj);
   }
 
   // Callable/lambda submission without explicit group
   template <typename Lambda>
-    requires(::ouly::detail::Callable<Lambda, task_context const&>)
-  void submit(task_context const& current, Lambda&& data) noexcept
+    requires(::ouly::detail::Callable<Lambda, ouly::v2::task_context const&>)
+  void submit(ouly::v2::task_context const& current, Lambda&& data) noexcept
   {
     submit(current, current.get_workgroup(), std::forward<Lambda>(data));
   }
 
   // Member function submission without explicit group
   template <auto M, typename Class>
-  void submit(task_context const& current, Class& ctx) noexcept
+  void submit(ouly::v2::task_context const& current, Class& ctx) noexcept
   {
     submit<M>(current, current.get_workgroup(), ctx);
   }
 
   // Member function without object (static) submission without explicit group
   template <auto M>
-  void submit(task_context const& current) noexcept
+  void submit(ouly::v2::task_context const& current) noexcept
   {
     submit<M>(current, current.get_workgroup());
   }
 
   // Free function pointer submission without explicit group
   template <typename... Args>
-  void submit(task_context const& current, void (*callable)(task_context const&, Args...), Args&&... args) noexcept
+  void submit(ouly::v2::task_context const& current, void (*callable)(ouly::v2::task_context const&, Args...),
+              Args&&... args) noexcept
   {
     submit(current, current.get_workgroup(), callable, std::forward<Args>(args)...);
   }
@@ -242,11 +267,17 @@ public:
    */
   OULY_API void busy_work(worker_id /*thread*/) noexcept;
 
+  void busy_work(v2::task_context const& ctx) noexcept
+  {
+    busy_work(ctx.get_worker());
+  }
+
 private:
   /**
    * @brief Submit a work for execution - new implementation using mailbox system
    */
-  OULY_API void submit_internal(task_context const& current, workgroup_id dst, detail::v2::work_item const& work);
+  OULY_API void submit_internal(ouly::v2::task_context const& current, workgroup_id dst,
+                                detail::v2::work_item const& work);
 
   /**
    * @brief Run worker thread main loop
