@@ -3,7 +3,7 @@
 #include "ouly/scheduler/scheduler_v1.hpp"
 #include "ouly/scheduler/detail/pause.hpp"
 #include "ouly/scheduler/task.hpp"
-#include "ouly/scheduler/task_context.hpp"
+#include "ouly/scheduler/task_context_v1.hpp"
 #include "ouly/scheduler/worker_structs.hpp"
 #include "ouly/utility/common.hpp"
 #include <atomic>
@@ -84,11 +84,12 @@ scheduler::~scheduler() noexcept
 }
 
 // NOLINTNEXTLINE
-inline void scheduler::do_work(worker_id thread, detail::v1::work_item& work) noexcept
+inline void scheduler::do_work(workgroup_id id, worker_id thread, detail::v1::work_item& work) noexcept
 {
   auto& worker = memory_block_.workers_[thread.get_index()].get();
   worker.tally_--;
-  work(worker.contexts_[work.get_compressed_data<ouly::workgroup_id>().get_index()]);
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
+  work(worker.contexts_[id.get_index()]);
 }
 
 void scheduler::busy_work(worker_id thread) noexcept
@@ -121,7 +122,7 @@ void scheduler::busy_work(worker_id thread) noexcept
   local_recent_failures++;
 }
 
-void scheduler::run(worker_id thread)
+void scheduler::run_worker(worker_id thread)
 {
   g_worker    = &memory_block_.workers_[thread.get_index()].get();
   g_worker_id = thread;
@@ -158,7 +159,7 @@ void scheduler::run(worker_id thread)
   finalize_worker(thread);
 }
 
-inline void scheduler::finalize_worker(worker_id thread) noexcept
+inline void scheduler::finalize_worker(worker_id thread)
 {
   if (synchronizer_ != nullptr)
   {
@@ -187,16 +188,14 @@ inline void scheduler::finalize_worker(worker_id thread) noexcept
 inline auto scheduler::work(worker_id thread) noexcept -> bool
 {
   detail::v1::work_item available_work;
-  if (!get_work(thread, available_work))
+  auto                  id = get_work(thread, available_work);
+  if (!id)
   {
     return false;
   }
-  OULY_ASSERT(&memory_block_.workers_[thread.get_index()]
-                .get()
-                .contexts_[available_work.get_compressed_data<workgroup_id>().get_index()]
-                .get_scheduler() == this);
+  OULY_ASSERT(&memory_block_.workers_[thread.get_index()].get().contexts_[id.get_index()].get_scheduler() == this);
   OULY_ASSERT(available_work);
-  do_work(thread, available_work);
+  do_work(id, thread, available_work);
   return true;
 }
 
@@ -247,7 +246,7 @@ thread_local uint32_t adaptive_work_stealer::success_streak  = 0;
 } // namespace detail
 
 // NOLINTNEXTLINE
-auto scheduler::get_work(worker_id thread, ouly::detail::v1::work_item& work) noexcept -> bool
+auto scheduler::get_work(worker_id thread, ouly::detail::v1::work_item& work) noexcept -> workgroup_id
 {
   auto& range = memory_block_.group_ranges_[thread.get_index()];
 
@@ -264,7 +263,7 @@ auto scheduler::get_work(worker_id thread, ouly::detail::v1::work_item& work) no
     if (workgroup.pop_item_from_worker(worker_offset, work)) [[likely]]
     {
       detail::adaptive_work_stealer::record_success();
-      return true;
+      return workgroup_id{group_idx};
     }
 
     // Then try to steal from other workers' queues within this workgroup
@@ -290,7 +289,7 @@ auto scheduler::get_work(worker_id thread, ouly::detail::v1::work_item& work) no
         if (workgroup.pop_item_from_worker(target_worker_offset, work)) [[likely]]
         {
           detail::adaptive_work_stealer::record_success();
-          return true;
+          return workgroup_id{group_idx};
         }
       }
     }
@@ -309,7 +308,7 @@ auto scheduler::get_work(worker_id thread, ouly::detail::v1::work_item& work) no
       if (workgroup.pop_item_from_worker(target_worker_offset, work)) [[unlikely]]
       {
         detail::adaptive_work_stealer::record_success();
-        return true;
+        return workgroup_id{target_worker_offset};
       }
     }
   }
@@ -330,7 +329,7 @@ auto scheduler::get_work(worker_id thread, ouly::detail::v1::work_item& work) no
     }
   }
 
-  return false; // No work found
+  return workgroup_id{}; // No work found
 }
 
 // NOLINTNEXTLINE
@@ -378,12 +377,6 @@ auto scheduler::compute_group_range(uint32_t worker_index) -> bool
   return true;
 }
 
-void scheduler::compute_steal_mask([[maybe_unused]] uint32_t worker_index) const
-{
-  // No longer needed with the new per-workgroup-per-worker queue design
-  // Work stealing is naturally bounded by workgroup membership
-}
-
 void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_context)
 {
   memory_block_.workers_      = std::make_unique<aligned_worker[]>(worker_count_);
@@ -424,15 +417,15 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
     start_counter.count_down();
   };
 
-  entry_fn_(worker_id(0));
-
   for (uint32_t thread = 1; thread < worker_count_; ++thread)
   {
-    threads_.emplace_back(&scheduler::run, this, worker_id(thread));
+    threads_.emplace_back(&scheduler::run_worker, this, worker_id(thread));
   }
 
   g_worker    = &memory_block_.workers_[0].get();
   g_worker_id = worker_id(0);
+  entry_fn_(worker_id(0));
+
   start_counter.wait();
   entry_fn_ = {};
 }
@@ -445,7 +438,7 @@ void scheduler::take_ownership() noexcept
 }
 
 // NOLINTNEXTLINE
-void scheduler::finish_pending_tasks() noexcept
+void scheduler::finish_pending_tasks()
 {
   synchronizer_ = std::make_shared<worker_synchronizer>(worker_count_, this);
 

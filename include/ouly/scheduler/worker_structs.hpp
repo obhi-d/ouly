@@ -70,7 +70,7 @@ public:
   auto operator<=>(workgroup_id const&) const noexcept = default;
 
 private:
-  uint32_t index_ = 0;
+  uint32_t index_ = std::numeric_limits<uint32_t>::max();
 };
 
 static constexpr workgroup_id default_workgroup_id = workgroup_id(0);
@@ -78,7 +78,7 @@ static constexpr workgroup_id default_workgroup_id = workgroup_id(0);
 using scheduler_worker_entry = std::function<void(worker_id const&)>;
 
 template <typename T>
-concept WorkContext = requires(const T& ctx) {
+concept TaskContext = requires(const T& ctx) {
   { ctx.get_worker() } -> std::convertible_to<worker_id>;
   { ctx.get_scheduler() } -> std::convertible_to<scheduler&>;
   { ctx.get_group_offset() } -> std::convertible_to<uint32_t>;

@@ -13,7 +13,7 @@
 namespace ouly::inline v2
 {
 
-// Using declarations to resolve namespace conflicts
+// Bring type aliases into scope
 using workgroup_type                   = ouly::detail::v2::workgroup;
 using work_item_type                   = ouly::detail::v2::work_item;
 using worker_type                      = ouly::detail::v2::worker;
@@ -77,10 +77,14 @@ struct scheduler::worker_synchronizer
 void scheduler::tally_publisher::operator()() const noexcept
 {
   // Cache-friendly sequential access with prefetching
-  int64_t            total_remaining_tasks = 0;
-  constexpr uint32_t prefetch_distance     = 2;
+  int64_t total_remaining_tasks = 0;
 
   // Count tasks
+  for (uint32_t thread = 0; thread < owner_->worker_count_; ++thread)
+  {
+    total_remaining_tasks += owner_->workers_[thread].tally_;
+  }
+  owner_->synchronizer_->tally_.store(total_remaining_tasks, std::memory_order_release);
 }
 
 scheduler::~scheduler() noexcept
@@ -98,14 +102,11 @@ void scheduler::submit_internal(task_context const& current, workgroup_id dst,
 
   // First try to submit to the worker's own queue if it belongs to this workgroup
   worker_id current_worker = current.get_worker();
-  uint32_t  worker_start   = get_worker_start_idx(dst);
-  uint32_t  worker_count   = get_worker_count(dst);
-  uint32_t  worker_end     = worker_start + worker_count;
+  workers_[current_worker.get_index()].tally_++;
 
-  if (current_worker.get_index() >= worker_start && current_worker.get_index() < worker_end)
+  if (current.get_workgroup() == dst)
   {
-    uint32_t local_offset = current_worker.get_index() - worker_start;
-    if (target_workgroup.push_work_to_worker(local_offset, work))
+    if (target_workgroup.push_work_to_worker(current.get_group_offset(), work))
     {
       // Work was successfully pushed, workgroup will advertise availability
       return;
@@ -113,8 +114,11 @@ void scheduler::submit_internal(task_context const& current, workgroup_id dst,
   }
 
   // Try to submit to mailbox for cross-workgroup submission
-  if (target_workgroup.submit_to_mailbox(work))
+  uint32_t retry = 0;
+  for (;;)
   {
+    bool posted = target_workgroup.submit_to_mailbox(work);
+
     // Add workgroup to needy list if it has work available
     ouly::detail::v2::workgroup* wg_ptr = &target_workgroup;
     needy_workgroups_.emplace(wg_ptr);
@@ -122,44 +126,40 @@ void scheduler::submit_internal(task_context const& current, workgroup_id dst,
     // Notify waiting workers
     wake_tokens_.fetch_add(1, std::memory_order_release);
     work_available_cv_.notify_one();
+
+    if (posted)
+    {
+      return;
+    }
+
+    for (uint32_t i = 0; i < (1U << std::min(retry, max_backoff_shift)); ++i)
+    {
+      ouly::detail::pause_exec();
+    }
+
+    if (retry++ > max_retry_attempts)
+    {
+      break;
+    }
   }
-  else
+
+  // Final fallback - force push to mailbox (blocking)
+  while (!target_workgroup.submit_to_mailbox(work))
   {
-    // Mailbox is full - implement exponential backoff and retry
-    for (uint32_t retry = 0; retry < max_retry_attempts; ++retry)
-    {
-      // Try random worker queue in the workgroup
-      uint32_t random_offset = update_seed() % worker_count;
-      if (target_workgroup.push_work_to_worker(random_offset, work))
-      {
-        return;
-      }
-
-      // Exponential backoff
-      for (uint32_t i = 0; i < (1U << std::min(retry, max_backoff_shift)); ++i)
-      {
-        ouly::detail::pause_exec();
-      }
-    }
-
-    // Final fallback - force push to mailbox (blocking)
-    while (!target_workgroup.submit_to_mailbox(work))
-    {
-      busy_work(current_worker);
-    }
+    busy_work(current_worker);
   }
 }
 
-void scheduler::run_worker(worker_id worker_id)
+void scheduler::run_worker(worker_id wid)
 {
-  // Set thread-local storage
-  g_worker_id = worker_id;
-  g_worker    = &workers_[worker_id.get_index()];
+  // Set thread-local storage for this worker
+  g_worker_id = wid;
+  g_worker    = &workers_[wid.get_index()];
 
   // Execute the entry function if provided
   if (entry_fn_)
   {
-    entry_fn_(worker_id);
+    entry_fn_(wid);
   }
 
   // Main worker loop
@@ -168,7 +168,7 @@ void scheduler::run_worker(worker_id worker_id)
     bool found_work = false;
 
     // Try to find work
-    found_work = find_work_for_worker(worker_id);
+    found_work = find_work_for_worker(wid);
 
     if (!found_work)
     {
@@ -197,52 +197,79 @@ void scheduler::run_worker(worker_id worker_id)
       sleeping_.fetch_sub(1, std::memory_order_relaxed);
     }
   }
+
+  if (synchronizer_ != nullptr)
+  {
+    synchronizer_->job_board_freeze_ack_.count_down();
+    synchronizer_->job_board_freeze_ack_.wait();
+  }
 }
 
-auto scheduler::find_work_for_worker(worker_id worker_id) noexcept -> bool
+auto scheduler::enter_context(worker_id wid, detail::v2::workgroup* needy_wg) noexcept -> bool
 {
-  // Priority 1: Check assigned workgroups' own queues
-  for (uint32_t i = 0; i < workgroup_count_; ++i)
+  auto& worker = workers_[wid.get_index()];
+
+  if (worker.assigned_group_ != needy_wg)
   {
-    auto& workgroup = workgroups_[i];
-    if (workgroup.get_thread_count() == 0)
+    int enter_ctx = needy_wg->enter();
+    if (enter_ctx < 0)
     {
-      continue;
+      return false;
     }
 
-    uint32_t worker_start = get_worker_start_idx(workgroup_id{i});
-    uint32_t worker_count = get_worker_count(workgroup_id{i});
-    uint32_t worker_end   = worker_start + worker_count;
-
-    // Check if this worker belongs to this workgroup
-    if (worker_id.get_index() >= worker_start && worker_id.get_index() < worker_end)
+    if (worker.assigned_group_ != nullptr)
     {
-      uint32_t local_offset = worker_id.get_index() - worker_start;
+      worker.assigned_group_->exit();
+    }
 
-      detail::v2::work_item work;
-      if (workgroup.pop_work_from_worker(work, local_offset))
-      {
-        execute_work(worker_id, work);
-        return true;
-      }
+    worker.assigned_group_  = needy_wg;
+    worker.assigned_offset_ = static_cast<uint32_t>(enter_ctx);
+  }
+  return true;
+}
+
+auto scheduler::find_work_for_worker(worker_id wid) noexcept -> bool
+{
+  // Try to drain work from the worker's own workgroup first
+  auto& worker = workers_[wid.get_index()];
+
+  if (worker.assigned_group_ != nullptr)
+  {
+    detail::v2::work_item work;
+    if (worker.assigned_group_->pop_work_from_worker(work, worker.assigned_offset_))
+    {
+      execute_work(wid, work);
+      return true;
+    }
+
+    // Try to get work from mailbox if no work in local queue
+    if (worker.assigned_group_->receive_from_mailbox(work))
+    {
+      execute_work(wid, work);
+      return true;
     }
   }
 
   // Priority 2: Check needy workgroups for mailbox work
   detail::v2::workgroup* needy_wg = nullptr;
-  if (needy_workgroups_.pop(needy_wg))
+  while (needy_workgroups_.pop(needy_wg))
   {
+    if (!enter_context(wid, needy_wg))
+    {
+      continue; // Failed to enter context, try next needy workgroup
+    }
+
     detail::v2::work_item work;
     if (needy_wg->receive_from_mailbox(work))
     {
-      execute_work(worker_id, work);
+      execute_work(wid, work);
       return true;
     }
 
     // No work in mailbox, try stealing from this workgroup
     if (needy_wg->steal_work(work))
     {
-      execute_work(worker_id, work);
+      execute_work(wid, work);
       return true;
     }
 
@@ -251,18 +278,19 @@ auto scheduler::find_work_for_worker(worker_id worker_id) noexcept -> bool
   }
 
   // Priority 3: Work stealing from any workgroup
-  for (uint32_t i = 0; i < detail::v2::max_workgroup; ++i)
+  for (uint32_t i = 0; i < workgroup_count_; ++i)
   {
     auto& workgroup = workgroups_[i];
-    if (workgroup.get_thread_count() == 0)
+    if (!workgroup.has_work() || !enter_context(wid, &workgroup))
     {
+      // Skip if no work or already in context
       continue;
     }
 
     detail::v2::work_item work;
     if (workgroup.steal_work(work))
     {
-      execute_work(worker_id, work);
+      execute_work(wid, work);
       return true;
     }
   }
@@ -270,9 +298,10 @@ auto scheduler::find_work_for_worker(worker_id worker_id) noexcept -> bool
   return false;
 }
 
-void scheduler::execute_work(worker_id /*worker_id*/, detail::v2::work_item const& work) noexcept
+void scheduler::execute_work(worker_id wid, detail::v2::work_item const& work) noexcept
 {
-  auto& worker = workers_[g_worker_id.get_index()];
+  auto& worker = workers_[wid.get_index()];
+  worker.tally_--;
   // Create a copy since work_item expects mutable reference
   auto work_copy = work;
   work_copy(worker.get_context());
@@ -280,8 +309,6 @@ void scheduler::execute_work(worker_id /*worker_id*/, detail::v2::work_item cons
 
 void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_context)
 {
-  entry_fn_ = std::move(entry);
-
   // Initialize workers and workgroups
   workers_ = std::make_unique<detail::v2::worker[]>(worker_count_);
 
@@ -294,33 +321,37 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
     }
   }
 
-  // Create synchronizer
-  synchronizer_                = std::make_shared<worker_synchronizer>(worker_count_);
-  synchronizer_->user_context_ = user_context;
-
   stop_.store(false, std::memory_order_relaxed);
+
+  auto start_counter = std::latch(worker_count_);
+
+  entry_fn_ = [cust_entry = std::move(entry), &start_counter](ouly::worker_id worker)
+  {
+    if (cust_entry)
+    {
+      cust_entry(worker);
+    }
+    start_counter.count_down();
+  };
 
   // Create worker threads
   threads_.reserve(worker_count_);
-  for (uint32_t i = 0; i < worker_count_; ++i)
+
+  for (uint32_t thread = 1; thread < worker_count_; ++thread)
   {
-    threads_.emplace_back(
-     [this, worker_id = worker_id{i}]()
-     {
-       run_worker(worker_id);
-     });
+    workers_[thread].current_context_.user_context_ = user_context;
+    threads_.emplace_back(&scheduler::run_worker, this, worker_id(thread));
   }
+
+  workers_[0].current_context_.user_context_ = user_context;
+  g_worker                                   = &workers_[0];
+  g_worker_id                                = worker_id(0);
+  entry_fn_(worker_id(0));
 }
 
 void scheduler::end_execution()
 {
-  stop_.store(true, std::memory_order_release);
-
-  // Wake up all workers
-  {
-    std::lock_guard<std::mutex> lock(work_available_mutex_);
-    work_available_cv_.notify_all();
-  }
+  finish_pending_tasks();
 
   // Wait for all threads to finish
   for (auto& thread : threads_)
@@ -333,6 +364,58 @@ void scheduler::end_execution()
 
   threads_.clear();
   synchronizer_.reset();
+}
+
+void scheduler::finish_pending_tasks()
+{
+  synchronizer_ = std::make_shared<worker_synchronizer>(worker_count_, this);
+
+  // First: Signal stop to prevent new task submissions
+  stop_.store(true, std::memory_order_seq_cst);
+
+  // Wake up all workers
+  {
+    std::lock_guard<std::mutex> lock(work_available_mutex_);
+    work_available_cv_.notify_all();
+  }
+
+  // Third: Wait for all workers to acknowledge the stop signal
+  synchronizer_->job_board_freeze_ack_.count_down();
+  while (!synchronizer_->job_board_freeze_ack_.try_wait())
+  {
+    work_available_cv_.notify_all();
+    // Wait for all workers to acknowledge freeze
+    ouly::detail::pause_exec();
+  }
+
+  finalize_worker(worker_id(0));
+}
+
+void scheduler::finalize_worker(worker_id wid)
+{
+  // Implementation for finalizing a worker
+  if (synchronizer_ != nullptr)
+  {
+
+    auto old_tally = workers_[wid.get_index()].tally_;
+    synchronizer_->tally_.fetch_add(old_tally, std::memory_order_acq_rel);
+
+    synchronizer_->published_tally_.arrive_and_wait();
+
+    while (synchronizer_->tally_.load(std::memory_order_acquire) > 0)
+    {
+      while (find_work_for_worker(wid))
+      {
+      }
+
+      synchronizer_->published_tally_.arrive_and_wait();
+    }
+
+    // Wait to take stock of the remaning work
+  }
+
+  g_worker    = nullptr;
+  g_worker_id = {};
 }
 
 void scheduler::create_group(workgroup_id group, uint32_t start_thread_idx, uint32_t thread_count, uint32_t priority)

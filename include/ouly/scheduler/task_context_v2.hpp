@@ -14,7 +14,6 @@ namespace ouly::inline v2
 class task_context;
 class scheduler;
 
-constexpr uint32_t max_task_data_size = 20;
 constexpr uint32_t max_task_base_size = 24;
 
 using task_delegate = ouly::basic_delegate<max_task_base_size, void(task_context const&)>;

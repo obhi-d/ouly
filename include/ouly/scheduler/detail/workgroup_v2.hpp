@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 #pragma once
+#include "cache_optimized_data.hpp"
 #include "ouly/allocators/default_allocator.hpp"
 #include "ouly/containers/basic_queue.hpp"
 #include "ouly/scheduler/detail/cache_optimized_data.hpp"
@@ -10,6 +11,11 @@
 #include <atomic>
 #include <cstdint>
 #include <span>
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4324) // structure was padded due to alignment specifier
+#endif
 
 // Forward declarations
 namespace ouly::inline v2
@@ -51,7 +57,8 @@ public:
   void create_group(uint32_t start, uint32_t thread_count, uint32_t priority) noexcept
   {
     worker_start_idx_ = start;
-    thread_count_     = thread_count;
+    worker_end_idx_   = start + thread_count;
+    thread_count_     = static_cast<int32_t>(thread_count);
     priority_         = priority;
 
     // Allocate Chase-Lev queues for each worker in this workgroup
@@ -66,7 +73,7 @@ public:
    */
   auto push_work_to_worker(uint32_t worker_offset, work_item const& item) noexcept -> bool
   {
-    OULY_ASSERT(worker_offset < thread_count_);
+    OULY_ASSERT(worker_offset < static_cast<uint32_t>(thread_count_));
 
     work_queues_[worker_offset].push_front(item);
     advertise_work_available();
@@ -78,7 +85,7 @@ public:
    */
   auto pop_work_from_worker(work_item& out, uint32_t worker_offset) noexcept -> bool
   {
-    OULY_ASSERT(worker_offset < thread_count_);
+    OULY_ASSERT(worker_offset < static_cast<uint32_t>(thread_count_));
     return work_queues_[worker_offset].pop_front(out);
   }
 
@@ -91,7 +98,7 @@ public:
 
     // Try to steal from a random worker's queue to reduce contention
     thread_local uint32_t steal_index = 0;
-    uint32_t              attempts    = thread_count_;
+    uint32_t              attempts    = static_cast<uint32_t>(thread_count_);
 
     for (uint32_t i = 0; i < attempts; ++i)
     {
@@ -173,6 +180,7 @@ public:
     thread_count_ = 0;
     priority_     = 0;
     work_queues_.reset();
+    assigned_workers_.store(0, std::memory_order_relaxed);
     has_work_.store(false, std::memory_order_relaxed);
   }
 
@@ -203,21 +211,46 @@ public:
     return priority_;
   }
 
+  auto enter() -> int
+  {
+    int32_t prev = assigned_workers_.fetch_add(1, std::memory_order_relaxed);
+    if (prev >= thread_count_)
+    {
+      assigned_workers_.fetch_sub(1, std::memory_order_relaxed);
+      return -1;
+    }
+    // success
+    std::atomic_thread_fence(std::memory_order_acquire);
+    return prev;
+  }
+
+  void exit() noexcept
+  {
+    std::atomic_thread_fence(std::memory_order_release);
+    assigned_workers_.fetch_sub(1, std::memory_order_relaxed);
+  }
+
 private:
+  friend class ouly::v2::scheduler;
+
+  // Work availability flag - advertises to scheduler
+  alignas(cache_line_size) std::atomic_int32_t assigned_workers_{0};
+  alignas(cache_line_size) std::atomic_bool has_work_{false}; // Flag to indicate work availability  // Configuration
+  alignas(cache_line_size) int32_t thread_count_ = 0;
+  uint32_t worker_start_idx_                     = 0;
+  uint32_t worker_end_idx_                       = 0; // End index for this workgroup
+  uint32_t priority_                             = 0;
+
   ouly::v2::scheduler* owner_ = nullptr; // Pointer to the owning scheduler
   // Work queues - one Chase-Lev queue per worker in this workgroup
   std::unique_ptr<queue_type[]> work_queues_;
 
   // Mailbox for cross-workgroup work submission
   mpmc_ring<work_item, mpmc_capacity> mailbox_;
-
-  // Work availability flag - advertises to scheduler
-  std::atomic<bool> has_work_{false};
-
-  // Configuration
-  uint32_t worker_start_idx_ = 0;
-  uint32_t thread_count_     = 0;
-  uint32_t priority_         = 0;
 };
 
 } // namespace ouly::detail::v2
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif

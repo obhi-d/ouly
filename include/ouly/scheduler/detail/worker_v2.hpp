@@ -25,7 +25,11 @@ public:
   }
 
 private:
-  workgroup*   assigned_group_ = nullptr; // The workgroup this worker belongs to
+  friend class ouly::v2::scheduler;
+
+  int64_t      tally_           = 0;
+  workgroup*   assigned_group_  = nullptr; // The workgroup this worker belongs to
+  uint32_t     assigned_offset_ = 0;       // Offset within the workgroup
   task_context current_context_;
 };
 

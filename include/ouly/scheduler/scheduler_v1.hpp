@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 #include "ouly/scheduler/detail/worker_v1.hpp"
+#include "ouly/scheduler/worker_structs.hpp"
 #include "ouly/utility/common.hpp"
 #include "ouly/utility/config.hpp"
 #include "ouly/utility/type_traits.hpp"
@@ -101,12 +102,11 @@ public:
   void submit(task_context const& src, workgroup_id group, C const& task_obj) noexcept
   {
     submit_internal(src.get_worker(), group,
-                    detail::v1::work_item::pbind(
+                    detail::v1::work_item::bind(
                      [address = task_obj.address()](task_context const&)
                      {
                        std::coroutine_handle<>::from_address(address).resume();
-                     },
-                     group));
+                     }));
   }
 
   /**
@@ -125,7 +125,7 @@ public:
     requires(ouly::detail::Callable<Lambda, ouly::task_context const&>)
   void submit(task_context const& src, workgroup_id group, Lambda&& data) noexcept
   {
-    submit_internal(src.get_worker(), group, detail::v1::work_item::pbind(std::forward<Lambda>(data), group));
+    submit_internal(src.get_worker(), group, detail::v1::work_item::bind(std::forward<Lambda>(data)));
   }
 
   /**
@@ -143,7 +143,7 @@ public:
   template <auto M, typename Class>
   void submit(task_context const& src, workgroup_id group, Class& ctx) noexcept
   {
-    submit_internal(src.get_worker(), group, detail::v1::work_item::pbind<M>(ctx, group));
+    submit_internal(src.get_worker(), group, detail::v1::work_item::bind<M>(ctx));
   }
 
   /**
@@ -159,7 +159,7 @@ public:
   template <auto M>
   void submit(task_context const& src, workgroup_id group) noexcept
   {
-    submit_internal(src.get_worker(), group, detail::v1::work_item::pbind<M>(group));
+    submit_internal(src.get_worker(), group, detail::v1::work_item::bind<M>());
   }
 
   /**
@@ -180,9 +180,53 @@ public:
   template <typename... Args>
   void submit(task_context const& src, workgroup_id group, task_delegate::fnptr callable, Args&&... args) noexcept
   {
-    submit_internal(src.get_worker(), group,
-                    detail::v1::work_item::pbind(
-                     callable, std::make_tuple<std::decay_t<Args>...>(std::forward<Args>(args)...), group));
+    submit_internal(
+     src.get_worker(), group,
+     detail::v1::work_item::bind(callable, std::make_tuple<std::decay_t<Args>...>(std::forward<Args>(args)...), group));
+  }
+
+  /**
+   * @brief Overloads that deduce the workgroup from the current task context.
+   *
+   * These overloads allow callers to omit the workgroup ID when the task should run
+   * in the same workgroup as the submitting context. They forward the work to the
+   * existing submit() overloads that take an explicit workgroup.
+   */
+
+  // Coroutine task submission without explicit group
+  template <CoroutineTask C>
+  void submit(task_context const& current, C const& task_obj) noexcept
+  {
+    submit(current, current.get_workgroup(), task_obj);
+  }
+
+  // Callable/lambda submission without explicit group
+  template <typename Lambda>
+    requires(::ouly::detail::Callable<Lambda, task_context const&>)
+  void submit(task_context const& current, Lambda&& data) noexcept
+  {
+    submit(current, current.get_workgroup(), std::forward<Lambda>(data));
+  }
+
+  // Member function submission without explicit group
+  template <auto M, typename Class>
+  void submit(task_context const& current, Class& ctx) noexcept
+  {
+    submit<M>(current, current.get_workgroup(), ctx);
+  }
+
+  // Member function without object (static) submission without explicit group
+  template <auto M>
+  void submit(task_context const& current) noexcept
+  {
+    submit<M>(current, current.get_workgroup());
+  }
+
+  // Free function pointer submission without explicit group
+  template <typename... Args>
+  void submit(task_context const& current, void (*callable)(task_context const&, Args...), Args&&... args) noexcept
+  {
+    submit(current, current.get_workgroup(), callable, std::forward<Args>(args)...);
   }
 
   /**
@@ -261,15 +305,14 @@ private:
 
   void assign_priority_order();
   auto compute_group_range(uint32_t worker_index) -> bool;
-  void compute_steal_mask(uint32_t worker_index) const;
 
-  void        finish_pending_tasks() noexcept;
-  inline void do_work(worker_id /*thread*/, detail::v1::work_item& /*work*/) noexcept;
+  void        finish_pending_tasks();
+  inline void do_work(workgroup_id id, worker_id /*thread*/, detail::v1::work_item& /*work*/) noexcept;
   void        wake_up(worker_id /*thread*/) noexcept;
-  void        run(worker_id /*thread*/);
-  void        finalize_worker(worker_id /*thread*/) noexcept;
-  auto        get_work(worker_id /*thread*/, detail::v1::work_item& /*work*/) noexcept -> bool;
-  auto        try_steal_work(worker_id /*thread*/, detail::v1::work_item& /*work*/) const noexcept -> bool;
+  void        run_worker(worker_id /*thread*/);
+  void        finalize_worker(worker_id /*thread*/);
+  auto        get_work(worker_id thread, detail::v1::work_item& work) noexcept -> workgroup_id;
+  auto        try_steal_work(worker_id thread, detail::v1::work_item& work) const noexcept -> bool;
 
   auto work(worker_id /*thread*/) noexcept -> bool;
 
@@ -327,7 +370,7 @@ private:
 template <typename... Args>
 void async(task_context const& current, workgroup_id submit_group, Args&&... args)
 {
-  current.get_scheduler().submit(current.get_worker(), submit_group, std::forward<Args>(args)...);
+  current.get_scheduler().submit(current, submit_group, std::forward<Args>(args)...);
 }
 
 /**
@@ -346,7 +389,7 @@ void async(task_context const& current, workgroup_id submit_group, Args&&... arg
 template <auto M, typename... Args>
 void async(task_context const& current, workgroup_id submit_group, Args&&... args)
 {
-  current.get_scheduler().submit<M>(current.get_worker(), submit_group, std::forward<Args>(args)...);
+  current.get_scheduler().template submit<M>(current, submit_group, std::forward<Args>(args)...);
 }
 
 } // namespace ouly::v1

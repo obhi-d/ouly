@@ -13,9 +13,9 @@
 namespace ouly::detail::v1
 {
 static constexpr uint32_t max_local_work_item       = 32; // 1/2 cache lines
-static constexpr size_t   max_work_items_per_worker = 64; // Maximum items per worker to prevent excessive memory usage
+static constexpr uint32_t max_work_items_per_worker = 64; // Maximum items per worker to prevent excessive memory usage
 static constexpr uint32_t max_steal_workers         = 64; // Maximum workers that can be tracked in steal mask
-using work_item                                     = task_delegate;
+using work_item                                     = ouly::v1::task_delegate;
 
 struct work_queue_traits
 {

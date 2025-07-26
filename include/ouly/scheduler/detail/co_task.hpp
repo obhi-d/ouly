@@ -95,7 +95,7 @@ public:
    * @brief Returns result after waiting for the task to finish, with a non-blocking event, that tries to do work when
    * this coro is not available
    */
-  template <WorkContext WC>
+  template <TaskContext WC>
   auto busy_wait_result(WC const& ctx) noexcept -> R
   {
     std::binary_semaphore event{0};

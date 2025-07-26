@@ -72,7 +72,7 @@ struct parallel_for_data
   std::reference_wrapper<L> lambda_instance_;
 };
 
-template <typename L, WorkContext WC>
+template <typename L, TaskContext WC>
 void launch_parallel_tasks(L& lambda, auto range, uint32_t work_count, uint32_t /*fixed_batch_size*/, uint32_t count,
                            WC const& this_context)
 {
@@ -104,7 +104,7 @@ void launch_parallel_tasks(L& lambda, auto range, uint32_t work_count, uint32_t 
   cooperative_wait(pfor_instance.counter_, this_context);
 }
 
-template <typename L, WorkContext WC>
+template <typename L, TaskContext WC>
 void execute_sequential(L& lambda, auto range, WC const& this_context)
 {
   using iterator_t                 = decltype(std::begin(range));
@@ -130,7 +130,7 @@ void execute_sequential(L& lambda, auto range, WC const& this_context)
   }
 }
 
-template <typename L, typename Iterator, WorkContext WC>
+template <typename L, typename Iterator, TaskContext WC>
 auto submit_parallel_tasks(parallel_for_data<Iterator, L>& pfor_instance, uint32_t effective_work_count, uint32_t count,
                            WC const& this_context) -> uint32_t
 {
@@ -152,7 +152,7 @@ auto submit_parallel_tasks(parallel_for_data<Iterator, L>& pfor_instance, uint32
   return current_pos;
 }
 
-template <WorkContext WC, typename L, typename Iterator>
+template <TaskContext WC, typename L, typename Iterator>
 auto create_task_lambda(parallel_for_data<Iterator, L>& pfor_instance, uint32_t start, uint32_t end)
 {
   return [instance = &pfor_instance, start, end](WC const& wc)
@@ -180,7 +180,7 @@ auto create_task_lambda(parallel_for_data<Iterator, L>& pfor_instance, uint32_t 
   };
 }
 
-template <WorkContext WC, typename L>
+template <TaskContext WC, typename L>
 void execute_remaining_work(L& lambda, auto range, uint32_t current_pos, uint32_t count, WC const& this_context)
 {
   using iterator_t                 = decltype(std::begin(range));
@@ -210,7 +210,7 @@ void execute_remaining_work(L& lambda, auto range, uint32_t current_pos, uint32_
   }
 }
 
-template <WorkContext WC>
+template <TaskContext WC>
 inline void cooperative_wait(std::latch& counter, WC const& this_context)
 {
   auto& scheduler = this_context.get_scheduler();
@@ -221,7 +221,7 @@ inline void cooperative_wait(std::latch& counter, WC const& this_context)
   }
 }
 
-template <typename L, typename FwIt, WorkContext WC, typename TaskTr = default_task_traits>
+template <typename L, typename FwIt, TaskContext WC, typename TaskTr = default_task_traits>
 void parallel_for(L lambda, FwIt range, WC const& this_context, TaskTr /*unused*/ = {})
 {
   using iterator_t                 = decltype(std::begin(range));
