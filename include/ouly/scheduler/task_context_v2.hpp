@@ -39,6 +39,14 @@ public:
     return offset_;
   }
 
+  /**
+   * @brief Returns the current workgroup id
+   */
+  [[nodiscard]] auto get_workgroup() const noexcept -> workgroup_id
+  {
+    return group_id_;
+  }
+
   [[nodiscard]] auto get_scheduler() const -> scheduler&
   {
     OULY_ASSERT(owner_);

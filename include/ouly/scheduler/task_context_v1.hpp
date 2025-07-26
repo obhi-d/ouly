@@ -61,7 +61,6 @@ public:
     static auto get_worker_id() noexcept -> worker_id;
     static auto get() noexcept -> task_context const&;
   };
-
   void busy_wait(std::binary_semaphore& event);
 
   auto operator<=>(task_context const&) const noexcept = default;

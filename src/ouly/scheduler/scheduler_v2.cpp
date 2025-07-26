@@ -9,10 +9,6 @@
 #include <barrier>
 #include <latch>
 #include <thread>
-#ifdef __linux__
-#include <numa.h>
-#include <sched.h>
-#endif
 
 namespace ouly::inline v2
 {
@@ -59,17 +55,33 @@ auto task_context::this_context::get_worker_id() noexcept -> worker_id
   return g_worker_id;
 }
 
+struct scheduler::tally_publisher
+{
+  scheduler* owner_ = nullptr;
+
+  void operator()() const noexcept;
+};
+
 struct scheduler::worker_synchronizer
 {
-  std::latch          job_board_freeze_ack_;
-  std::barrier<>      published_tally_;
-  std::atomic_int64_t tally_{0};
-  void*               user_context_ = nullptr;
+  std::latch                    job_board_freeze_ack_;
+  std::barrier<tally_publisher> published_tally_;
+  std::atomic_int64_t           tally_{0};
+  void*                         user_context_ = nullptr;
 
-  worker_synchronizer(ptrdiff_t worker_count) noexcept
-      : job_board_freeze_ack_(worker_count), published_tally_(worker_count)
+  worker_synchronizer(ptrdiff_t worker_count, scheduler* owner) noexcept
+      : job_board_freeze_ack_(worker_count), published_tally_(worker_count, tally_publisher{owner})
   {}
 };
+
+void scheduler::tally_publisher::operator()() const noexcept
+{
+  // Cache-friendly sequential access with prefetching
+  int64_t            total_remaining_tasks = 0;
+  constexpr uint32_t prefetch_distance     = 2;
+
+  // Count tasks
+}
 
 scheduler::~scheduler() noexcept
 {
@@ -170,15 +182,22 @@ void scheduler::run_worker(worker_id worker_id)
       work_available_cv_.wait(lock,
                               [this]
                               {
-                                return wake_tokens_.load(std::memory_order_acquire) > 0 ||
-                                       stop_.load(std::memory_order_relaxed);
+                                if (stop_.load(std::memory_order_relaxed))
+                                {
+                                  return true; // Exit condition
+                                }
+
+                                if (wake_tokens_.fetch_sub(1, std::memory_order_acquire) < 0)
+                                {
+                                  wake_tokens_.fetch_add(1, std::memory_order_relaxed);
+                                  return false; // No work available
+                                }
+
+                                return true;
                               });
 
       // Exit sleep state
       sleeping_.fetch_sub(1, std::memory_order_relaxed);
-
-      // Consume a wake token
-      wake_tokens_.fetch_sub(1, std::memory_order_relaxed);
     }
   }
 }
@@ -186,7 +205,7 @@ void scheduler::run_worker(worker_id worker_id)
 auto scheduler::find_work_for_worker(worker_id worker_id) noexcept -> bool
 {
   // Priority 1: Check assigned workgroups' own queues
-  for (uint32_t i = 0; i < detail::max_workgroup; ++i)
+  for (uint32_t i = 0; i < detail::v2::max_workgroup; ++i)
   {
     auto& workgroup = workgroups_[i];
     if (workgroup.get_thread_count() == 0)
@@ -203,7 +222,7 @@ auto scheduler::find_work_for_worker(worker_id worker_id) noexcept -> bool
     {
       uint32_t local_offset = worker_id.get_index() - worker_start;
 
-      detail::work_item work;
+      detail::v2::work_item work;
       if (workgroup.pop_work_from_worker(work, local_offset))
       {
         execute_work(worker_id, work);
@@ -216,7 +235,7 @@ auto scheduler::find_work_for_worker(worker_id worker_id) noexcept -> bool
   detail::v2::workgroup* needy_wg = nullptr;
   if (needy_workgroups_.pop(needy_wg))
   {
-    detail::work_item work;
+    detail::v2::work_item work;
     if (needy_wg->receive_from_mailbox(work))
     {
       execute_work(worker_id, work);
@@ -235,7 +254,7 @@ auto scheduler::find_work_for_worker(worker_id worker_id) noexcept -> bool
   }
 
   // Priority 3: Work stealing from any workgroup
-  for (uint32_t i = 0; i < detail::max_workgroup; ++i)
+  for (uint32_t i = 0; i < detail::v2::max_workgroup; ++i)
   {
     auto& workgroup = workgroups_[i];
     if (workgroup.get_thread_count() == 0)
@@ -243,7 +262,7 @@ auto scheduler::find_work_for_worker(worker_id worker_id) noexcept -> bool
       continue;
     }
 
-    detail::work_item work;
+    detail::v2::work_item work;
     if (workgroup.steal_work(work))
     {
       execute_work(worker_id, work);
@@ -254,7 +273,7 @@ auto scheduler::find_work_for_worker(worker_id worker_id) noexcept -> bool
   return false;
 }
 
-void scheduler::execute_work(worker_id /*worker_id*/, detail::work_item const& work) noexcept
+void scheduler::execute_work(worker_id /*worker_id*/, detail::v2::work_item const& work) noexcept
 {
   auto& worker = workers_[g_worker_id.get_index()];
   // Create a copy since work_item expects mutable reference
@@ -262,28 +281,7 @@ void scheduler::execute_work(worker_id /*worker_id*/, detail::work_item const& w
   work_copy(worker.get_context());
 }
 
-void scheduler::set_worker_affinity(worker_id worker_id) noexcept
-{
-#ifdef __linux__
-  // Set CPU affinity for NUMA awareness
-  cpu_set_t cpuset;
-  CPU_ZERO(&cpuset);
-  CPU_SET(worker_id.get_index() % std::thread::hardware_concurrency(), &cpuset);
-  pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
-
-  // Set NUMA policy if available
-  if (numa_available() != -1)
-  {
-    int node = worker_id.get_index() / (std::thread::hardware_concurrency() / numa_num_configured_nodes());
-    numa_set_preferred(node);
-  }
-#else
-  // On non-Linux platforms, this is a no-op
-  (void)worker_id;
-#endif
-}
-
-void scheduler::begin_execution(scheduler_worker_entry&& entry, uint32_t worker_count, void* user_context)
+void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_context)
 {
   entry_fn_ = std::move(entry);
 
@@ -299,7 +297,7 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, uint32_t worker_
 
   // Initialize workers and workgroups
   workers_    = std::make_unique<detail::v2::worker[]>(worker_count_);
-  workgroups_ = std::make_unique<detail::v2::workgroup[]>(detail::max_workgroup);
+  workgroups_ = std::make_unique<detail::v2::workgroup[]>(detail::v2::max_workgroup);
 
   // Initialize worker contexts
   for (uint32_t i = 0; i < worker_count_; ++i)
@@ -348,9 +346,9 @@ void scheduler::end_execution()
   synchronizer_.reset();
 }
 
-void scheduler::create_group(workgroup_id group, uint32_t thread_count, uint32_t priority)
+void scheduler::create_group(workgroup_id group, uint32_t start_thread_idx, uint32_t thread_count, uint32_t priority)
 {
-  if (group.get_index() >= detail::max_workgroup)
+  if (group.get_index() >= detail::v2::max_workgroup)
   {
     return; // Invalid group ID
   }
@@ -358,19 +356,22 @@ void scheduler::create_group(workgroup_id group, uint32_t thread_count, uint32_t
   auto& wg = workgroups_[group.get_index()];
   wg.initialize(thread_count, priority, this);
 
+  // TODO: Handle start_thread_idx properly in the workgroup management
+  (void)start_thread_idx; // Mark as used for now
+
   // Update worker assignments
   update_worker_assignments();
 }
 
-auto scheduler::create_group(uint32_t thread_count, uint32_t priority) -> workgroup_id
+auto scheduler::create_group(uint32_t start_thread_idx, uint32_t thread_count, uint32_t priority) -> workgroup_id
 {
   // Find next available group ID
-  for (uint32_t i = 0; i < detail::max_workgroup; ++i)
+  for (uint32_t i = 0; i < detail::v2::max_workgroup; ++i)
   {
     if (workgroups_[i].get_thread_count() == 0)
     {
       workgroup_id new_group{i};
-      create_group(new_group, thread_count, priority);
+      create_group(new_group, start_thread_idx, thread_count, priority);
       return new_group;
     }
   }
@@ -380,7 +381,7 @@ auto scheduler::create_group(uint32_t thread_count, uint32_t priority) -> workgr
 
 void scheduler::clear_group(workgroup_id group)
 {
-  if (group.get_index() < detail::max_workgroup)
+  if (group.get_index() < detail::v2::max_workgroup)
   {
     workgroups_[group.get_index()].clear();
     update_worker_assignments();
@@ -391,7 +392,7 @@ void scheduler::update_worker_assignments()
 {
   uint32_t next_worker = 0;
 
-  for (uint32_t i = 0; i < detail::max_workgroup && next_worker < worker_count_; ++i)
+  for (uint32_t i = 0; i < detail::v2::max_workgroup && next_worker < worker_count_; ++i)
   {
     auto&    wg              = workgroups_[i];
     uint32_t wg_thread_count = wg.get_thread_count();
@@ -414,21 +415,12 @@ void scheduler::update_worker_assignments()
 
 auto scheduler::get_worker_count(workgroup_id g) const noexcept -> uint32_t
 {
-  if (g.get_index() < detail::max_workgroup)
-  {
-    return workgroups_[g.get_index()].get_thread_count();
-  }
-  return 0;
+  return workgroups_[g.get_index()].get_thread_count();
 }
 
 auto scheduler::get_worker_start_idx(workgroup_id g) const noexcept -> uint32_t
 {
-  uint32_t start = 0;
-  for (uint32_t i = 0; i < g.get_index() && i < detail::max_workgroup; ++i)
-  {
-    start += workgroups_[i].get_thread_count();
-  }
-  return start;
+  return workgroups_[g.get_index()].get_start_thread_idx();
 }
 
 auto scheduler::get_logical_divisor(workgroup_id g) const noexcept -> uint32_t

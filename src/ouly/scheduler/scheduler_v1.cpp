@@ -1,10 +1,10 @@
-
 // SPDX-License-Identifier: MIT
 
 #include "ouly/scheduler/scheduler_v1.hpp"
 #include "ouly/scheduler/detail/pause.hpp"
 #include "ouly/scheduler/task.hpp"
 #include "ouly/scheduler/task_context.hpp"
+#include "ouly/scheduler/worker_structs.hpp"
 #include "ouly/utility/common.hpp"
 #include <atomic>
 #include <barrier>
@@ -131,7 +131,7 @@ void scheduler::run(worker_id thread)
   // Random seed for randomized stealing - use thread index and a simple counter for variety
   g_random_seed = thread.get_index() ^ initial_seed_mask;
 
-  entry_fn_(worker_desc(thread, memory_block_.group_ranges_[thread.get_index()].mask_));
+  entry_fn_(worker_id(thread.get_index()));
 
   while (true)
   {
@@ -146,7 +146,7 @@ void scheduler::run(worker_id thread)
     }
 
     memory_block_.wake_data_[thread.get_index()].get().status_.store(false, std::memory_order_relaxed);
-    memory_block_.wake_data_[thread.get_index()].get().event_.wait();
+    memory_block_.wake_data_[thread.get_index()].get().event_.release();
   }
 
   if (synchronizer_ != nullptr)
@@ -247,7 +247,7 @@ thread_local uint32_t adaptive_work_stealer::success_streak  = 0;
 } // namespace detail
 
 // NOLINTNEXTLINE
-auto scheduler::get_work(worker_id thread, detail::v1::work_item& work) noexcept -> bool
+auto scheduler::get_work(worker_id thread, ouly::detail::v1::work_item& work) noexcept -> bool
 {
   auto& range = memory_block_.group_ranges_[thread.get_index()];
 
@@ -269,7 +269,7 @@ auto scheduler::get_work(worker_id thread, detail::v1::work_item& work) noexcept
 
     // Then try to steal from other workers' queues within this workgroup
     // Start with adjacent workers for better cache locality
-    uint32_t start_steal_offset = detail::update_seed() % workgroup.thread_count_;
+    uint32_t start_steal_offset = update_seed() % workgroup.thread_count_;
 
     // First try nearby workers (cache-friendly)
     for (uint32_t distance = 1; distance <= workgroup.thread_count_ / 2; ++distance)
@@ -326,7 +326,7 @@ auto scheduler::get_work(worker_id thread, detail::v1::work_item& work) noexcept
     uint32_t delay = detail::adaptive_work_stealer::get_adaptive_delay();
     for (uint32_t i = 0; i < delay; ++i)
     {
-      detail::pause_exec();
+      ouly::detail::pause_exec();
     }
   }
 
@@ -339,7 +339,7 @@ void scheduler::wake_up(worker_id thread) noexcept
   auto& wake = memory_block_.wake_data_[thread.get_index()].get();
   if (!wake.status_.exchange(true, std::memory_order_acq_rel))
   {
-    wake.event_.notify();
+    wake.event_.release();
   }
 }
 
@@ -387,7 +387,7 @@ void scheduler::compute_steal_mask([[maybe_unused]] uint32_t worker_index) const
 void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_context)
 {
   memory_block_.workers_      = std::make_unique<aligned_worker[]>(worker_count_);
-  memory_block_.group_ranges_ = std::make_unique<detail::group_range[]>(worker_count_);
+  memory_block_.group_ranges_ = std::make_unique<ouly::detail::v1::group_range[]>(worker_count_);
   memory_block_.wake_data_    = std::make_unique<aligned_wake_data[]>(worker_count_);
 
   threads_.reserve(worker_count_ - 1);
@@ -415,7 +415,7 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
   stop_              = false;
   auto start_counter = std::latch(worker_count_);
 
-  entry_fn_ = [cust_entry = std::move(entry), &start_counter](worker_desc worker)
+  entry_fn_ = [cust_entry = std::move(entry), &start_counter](ouly::worker_id worker)
   {
     if (cust_entry)
     {
@@ -424,7 +424,7 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
     start_counter.count_down();
   };
 
-  entry_fn_(worker_desc(worker_id(0), memory_block_.group_ranges_[0].mask_));
+  entry_fn_(worker_id(0));
 
   for (uint32_t thread = 1; thread < worker_count_; ++thread)
   {
@@ -469,7 +469,7 @@ void scheduler::finish_pending_tasks() noexcept
     }
 
     // Wait for all workers to acknowledge freeze
-    pause_exec();
+    ouly::detail::pause_exec();
   }
 
   finalize_worker(worker_id(0));
@@ -485,7 +485,8 @@ void scheduler::end_execution()
   threads_.clear();
 }
 
-void scheduler::submit_internal([[maybe_unused]] worker_id src, workgroup_id dst, detail::v1::work_item const& work)
+void scheduler::submit_internal([[maybe_unused]] worker_id src, workgroup_id dst,
+                                ouly::detail::v1::work_item const& work)
 {
   memory_block_.workers_[src.get_index()].get().tally_++;
 
@@ -493,7 +494,7 @@ void scheduler::submit_internal([[maybe_unused]] worker_id src, workgroup_id dst
 
   // Load balancing: Try to distribute work among threads in the workgroup
   // Use round-robin assignment to balance load
-  uint32_t start_offset = detail::update_seed();
+  uint32_t start_offset = update_seed();
 
   // First, try to find an idle thread in the workgroup and push directly to its queue
   for (uint32_t attempt = 0; attempt < wg.thread_count_; ++attempt)
@@ -548,7 +549,7 @@ void scheduler::submit_internal([[maybe_unused]] worker_id src, workgroup_id dst
     uint32_t backoff_cycles = std::min(1U << std::min(retry_count, max_backoff_shift), max_backoff_cycles);
     for (uint32_t i = 0; i < backoff_cycles; ++i)
     {
-      pause_exec();
+      ouly::detail::pause_exec();
     }
     retry_count++;
   }

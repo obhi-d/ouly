@@ -3,11 +3,13 @@
 #include "ouly/scheduler/detail/mpmc_ring.hpp"
 #include "ouly/scheduler/detail/worker_v2.hpp"
 #include "ouly/scheduler/detail/workgroup_v2.hpp"
+#include "ouly/scheduler/task.hpp"
 #include "ouly/utility/config.hpp"
 #include "ouly/utility/type_traits.hpp"
 #include <array>
 #include <atomic>
 #include <condition_variable>
+#include <coroutine>
 #include <cstdint>
 #include <mutex>
 #include <new>
@@ -216,18 +218,14 @@ private:
   void execute_work(worker_id worker_id, detail::v2::work_item const& work) noexcept;
 
   /**
-   * @brief Set worker thread affinity for NUMA awareness
-   */
-  void set_worker_affinity(worker_id worker_id) noexcept;
-
-  /**
    * @brief Update worker assignments when workgroups change
    */
   void update_worker_assignments();
 
   struct worker_synchronizer;
+  struct tally_publisher;
 
-  using workgroup_list = ouly::detail::mpmc_ring<detail::v2::workgroup*, detail::max_workgroup>;
+  using workgroup_list = ouly::detail::mpmc_ring<workgroup_v2*, max_workgroup_v2>;
   workgroup_list needy_workgroups_;
 
   std::condition_variable work_available_cv_;

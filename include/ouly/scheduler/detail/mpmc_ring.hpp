@@ -96,7 +96,7 @@ public:
       }
     }
 
-    new (&node_ptr->storage_) T(std::move(value));
+    node_ptr->storage_ = std::move(value);
     node_ptr->sequence_.store(pos + 1, std::memory_order_release);
     return true;
   }
@@ -128,7 +128,7 @@ public:
       }
     }
 
-    new (&node_ptr->storage_) T(std::forward<Args>(args)...);
+    node_ptr->storage_ = T(std::forward<Args>(args)...);
     node_ptr->sequence_.store(pos + 1, std::memory_order_release);
     return true;
   }
@@ -175,7 +175,7 @@ private:
   struct node_t
   {
     alignas(cache_line_size) std::atomic<std::size_t> sequence_{0};
-    alignas(alignof(T)) std::byte storage_[sizeof(T)] = {};
+    T storage_; // Use placement new to construct T in this storage
   };
 
   using node_list_t = std::array<node_t, capacity_pow2>;
