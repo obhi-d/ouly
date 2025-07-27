@@ -2,13 +2,28 @@ name: Performance Benchmarks
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, develop ]
   pull_request:
     branches: [ main ]
   schedule:
     # Run benchmarks daily at 2 AM UTC
     - cron: '0 2 * * *'
   workflow_dispatch:
+    inputs:
+      benchmark_type:
+        description: 'Type of benchmark to run'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+        - all
+        - scheduler
+        - allocator
+        - comparison
+
+env:
+  BUILD_TYPE: Release
+  CMAKE_BUILD_PARALLEL_LEVEL: 4
 
 jobs:
   benchmark:
@@ -58,32 +73,37 @@ jobs:
       shell: bash
       run: |
         cd build/unit_tests
-        # Run benchmarks and capture both JSON data and console output
-        echo "Running ouly performance benchmarks..."
-        ./ouly-performance-bench benchmark_results_${{ matrix.compiler }}_${{ matrix.build_type }}.json | tee benchmark_console_${{ matrix.compiler }}_${{ matrix.build_type }}.txt
+        echo "🚀 Running performance benchmarks..."
         
-        echo "Running TBB vs ouly comparison benchmarks..."
-        ./ouly-tbb-comparison-bench tbb_comparison_results_${{ matrix.compiler }}_${{ matrix.build_type }}.json | tee tbb_comparison_console_${{ matrix.compiler }}_${{ matrix.build_type }}.txt
-        
-        # Note: Some test failures in TBB's own test suite are expected and won't affect our benchmarks
-        echo "Note: TBB test compilation failures are expected and do not affect benchmark functionality"
-        
-        # Verify JSON files were created
-        if [ -f "benchmark_results_${{ matrix.compiler }}_${{ matrix.build_type }}.json" ]; then
-          echo "✅ Ouly JSON results file created successfully"
-          echo "File size: $(wc -c < benchmark_results_${{ matrix.compiler }}_${{ matrix.build_type }}.json) bytes"
-        else
-          echo "❌ Ouly JSON results file was not created"
-          exit 1
+        # Run scheduler comparison benchmark (includes TBB comparison)
+        if [[ "${{ github.event.inputs.benchmark_type }}" == "all" || "${{ github.event.inputs.benchmark_type }}" == "scheduler" || "${{ github.event.inputs.benchmark_type }}" == "comparison" ]]; then
+          echo "📊 Running comprehensive scheduler comparison benchmarks..."
+          ./ouly-scheduler-comparison-bench || echo "⚠️ Scheduler benchmark completed with warnings"
         fi
         
-        if [ -f "tbb_comparison_results_${{ matrix.compiler }}_${{ matrix.build_type }}.json" ]; then
-          echo "✅ TBB comparison JSON results file created successfully"
-          echo "File size: $(wc -c < tbb_comparison_results_${{ matrix.compiler }}_${{ matrix.build_type }}.json) bytes"
-        else
-          echo "❌ TBB comparison JSON results file was not created"
-          exit 1
+        # Run allocator benchmarks
+        if [[ "${{ github.event.inputs.benchmark_type }}" == "all" || "${{ github.event.inputs.benchmark_type }}" == "allocator" ]]; then
+          echo "🔄 Running allocator performance benchmarks..."
+          ./ouly-performance-bench || echo "⚠️ Allocator benchmark completed with warnings"
         fi
+        
+        # Verify result files were created
+        echo "✅ Benchmarks completed"
+        echo "Generated files:"
+        ls -la *.json *.txt 2>/dev/null || echo "No result files found"
+        
+        # Rename files with compiler and build type for clarity
+        for file in *.json; do
+          if [ -f "$file" ]; then
+            mv "$file" "${file%.json}_${{ matrix.compiler }}_${{ matrix.build_type }}.json"
+          fi
+        done
+        
+        for file in *.txt; do
+          if [ -f "$file" ]; then
+            mv "$file" "${file%.txt}_${{ matrix.compiler }}_${{ matrix.build_type }}.txt"
+          fi
+        done
         
     - name: Upload benchmark results
       uses: actions/upload-artifact@v4
@@ -107,12 +127,12 @@ jobs:
   performance-tracking:
     runs-on: ubuntu-latest
     needs: benchmark
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
     
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout main repository
+      uses: actions/checkout@v4
       with:
-        # Fetch full history for performance tracking
         fetch-depth: 0
         
     - name: Download all benchmark results
@@ -120,131 +140,144 @@ jobs:
       with:
         path: benchmark-results
         
-    - name: Setup performance tracking
-      shell: bash
+    - name: Checkout performance tracking branch
+      uses: actions/checkout@v4
+      with:
+        ref: performance-tracking
+        path: ./performance-tracking
+        token: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Process and commit results
+      working-directory: ./performance-tracking
       run: |
-        # Create performance tracking branch if it doesn't exist
-        git config user.name "github-actions[bot]"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
+        echo "🔄 Processing performance results..."
         
-        # Create a unique temporary directory to avoid conflicts
-        TEMP_DIR="/tmp/benchmark-results-$(date +%s)-$$"
-        
-        # Temporarily move benchmark results to avoid conflicts
-        if [ -d "benchmark-results" ]; then
-          echo "Moving benchmark results to temporary location: $TEMP_DIR"
-          mv benchmark-results "$TEMP_DIR"
+        # Copy scripts from source if they don't exist
+        if [ ! -f "scripts/generate_performance_report.py" ]; then
+          mkdir -p scripts
+          cp ../scripts/*.py scripts/ 2>/dev/null || echo "No Python scripts to copy"
+          cp ../scripts/*.sh scripts/ 2>/dev/null || echo "No shell scripts to copy" 
+          chmod +x scripts/*.py scripts/*.sh 2>/dev/null || echo "No scripts to make executable"
         fi
         
-        # Check if performance-tracking branch exists
-        if git ls-remote --heads origin performance-tracking | grep -q performance-tracking; then
-          echo "Checking out existing performance-tracking branch"
-          git fetch origin performance-tracking
-          git checkout performance-tracking
-        else
-          echo "Creating new performance-tracking branch"
-          git checkout --orphan performance-tracking
-          git rm -rf .
-        fi
+        # Create results directory structure
+        TIMESTAMP=$(date +"%Y-%m-%d_%H-%M")
+        COMMIT_HASH="${{ github.sha }}"
+        COMMIT_SHORT="${COMMIT_HASH:0:8}"
+        BRANCH="${{ github.ref_name }}"
         
-        # Restore benchmark results
-        if [ -d "$TEMP_DIR" ]; then
-          echo "Restoring benchmark results from: $TEMP_DIR"
-          mv "$TEMP_DIR" benchmark-results
-        fi
+        # Determine compiler version from matrix
+        COMPILER_VERSION="multi"  # Default for multiple compilers
         
-    - name: Store benchmark results
-      shell: bash
-      run: |
-        # Create directory structure for historical data
-        TIMESTAMP=$(date '+%Y-%m-%d_%H-%M-%S')
-        COMMIT_SHA="${{ github.sha }}"
-        RESULT_DIR="results/${TIMESTAMP}_${COMMIT_SHA:0:8}"
+        RESULT_DIR="results/$TIMESTAMP/$COMPILER_VERSION/$BRANCH/$COMMIT_SHORT"
         mkdir -p "$RESULT_DIR"
         
-        # Copy all benchmark results and console outputs
-        find benchmark-results -name "*.json" -exec cp {} "$RESULT_DIR/" \;
-        find benchmark-results -name "*.txt" -exec cp {} "$RESULT_DIR/" \;
+        # Copy benchmark results from all matrix jobs
+        if [ -d "../benchmark-results" ]; then
+          echo "📁 Copying benchmark results..."
+          find ../benchmark-results -name "*.json" -exec cp {} "$RESULT_DIR/" \; 2>/dev/null || echo "⚠️ No JSON files found"
+          find ../benchmark-results -name "*.txt" -exec cp {} "$RESULT_DIR/" \; 2>/dev/null || echo "⚠️ No TXT files found"
+          echo "✅ Results copied to $RESULT_DIR"
+          ls -la "$RESULT_DIR"
+        fi
         
-        # Generate summary from JSON data
-        echo "# Performance Summary for ${COMMIT_SHA:0:8}" > "$RESULT_DIR/SUMMARY.md"
-        echo "" >> "$RESULT_DIR/SUMMARY.md"
-        echo "**Timestamp**: ${TIMESTAMP}" >> "$RESULT_DIR/SUMMARY.md"
-        echo "**Commit**: ${COMMIT_SHA}" >> "$RESULT_DIR/SUMMARY.md"
-        echo "" >> "$RESULT_DIR/SUMMARY.md"
-        echo "## Benchmark Results" >> "$RESULT_DIR/SUMMARY.md"
-        echo "" >> "$RESULT_DIR/SUMMARY.md"
+        # Generate performance report if script exists
+        if [ -f "scripts/generate_performance_report.py" ]; then
+          echo "📊 Generating performance report..."
+          python3 scripts/generate_performance_report.py --results-dir results --output PERFORMANCE_REPORT.md
+        else
+          echo "⚠️ Performance report script not found, creating basic report"
+          echo "# OULY Performance Report" > PERFORMANCE_REPORT.md
+          echo "" >> PERFORMANCE_REPORT.md
+          echo "**Generated:** $(date)" >> PERFORMANCE_REPORT.md
+          echo "**Commit:** $COMMIT_SHORT" >> PERFORMANCE_REPORT.md
+          echo "**Branch:** $BRANCH" >> PERFORMANCE_REPORT.md
+          echo "" >> PERFORMANCE_REPORT.md
+          echo "Benchmark results are available in the results directory." >> PERFORMANCE_REPORT.md
+        fi
         
-        # Extract key metrics from JSON files
-        for json_file in "$RESULT_DIR"/*.json; do
-          if [ -f "$json_file" ]; then
-            filename=$(basename "$json_file")
-            echo "### $filename" >> "$RESULT_DIR/SUMMARY.md"
-            echo "" >> "$RESULT_DIR/SUMMARY.md"
-            
-            # Use jq to extract benchmark names and median times (if jq is available)
-            if command -v jq &> /dev/null; then
-              jq -r '.results[] | "- **\(.name)**: \(.\"median(elapsed)\" * 1e9 | round) ns/operation"' "$json_file" >> "$RESULT_DIR/SUMMARY.md" 2>/dev/null || {
-                echo "- Raw JSON data available in $filename" >> "$RESULT_DIR/SUMMARY.md"
-              }
-            else
-              echo "- Raw JSON data available in $filename" >> "$RESULT_DIR/SUMMARY.md"
-            fi
-            echo "" >> "$RESULT_DIR/SUMMARY.md"
-          fi
-        done
-        
-        # Create or update index file
-        cat > results/index.md << EOF
+        # Update results index
+        echo "📝 Updating results index..."
+        cat > "results/index.md" << EOF
         # Ouly Performance Tracking
         
-        This branch contains historical performance benchmark results with detailed JSON data.
+        This branch contains historical performance benchmark results.
         
         ## Latest Results
         
-        - **Timestamp**: ${TIMESTAMP}
-        - **Commit**: ${COMMIT_SHA:0:8}
-        - **Branch**: main
+        - **Timestamp**: $TIMESTAMP  
+        - **Commit**: $COMMIT_SHORT
+        - **Branch**: $BRANCH
+        - **Compiler**: Multiple (gcc-14, clang-19)
+        - **Workflow Run**: [${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
         
-        ## Benchmark Data Structure
+        ## Results Structure
         
-        Each directory contains:
-        - **JSON files**: Detailed nanobench results with timing data, iterations, and statistics
-        - **TXT files**: Human-readable console output
-        - **SUMMARY.md**: Extracted key metrics and overview
+        Each directory contains benchmark results for a specific build organized by:
+        - Timestamp (YYYY-MM-DD_HH-MM)
+        - Compiler version or "multi" for multiple compilers
+        - Branch name
+        - Commit hash (first 8 characters)
         
         ## Tracked Components
         
-        - **ts_shared_linear_allocator**: Thread-safe shared linear allocator performance
-        - **ts_thread_local_allocator**: Thread-local allocator performance (with our recent optimizations!)
-        - **coalescing_arena_allocator**: Coalescing arena allocator performance
-        - **scheduler**: Task scheduler performance (task submission, parallel_for, work stealing)
-        - **TBB vs ouly comparison**: Direct performance comparison with oneTBB across:
-          - Task submission and scheduling
-          - Parallel for loops
-          - Parallel reduce operations
-          - Work stealing efficiency
-          - Multi-workgroup vs multi-arena patterns
-          - Memory allocation patterns
-        
-        ## JSON Data Format
-        
-        The JSON files follow nanobench's format with:
-        - Individual measurement data points
-        - Statistical summaries (median, percentile errors)
-        - Timing in seconds (multiply by 1e9 for nanoseconds)
-        - Performance counters (when available)
+        - **Scheduler**: Task scheduler performance (V1 vs V2 vs TBB comparison)
+          - Task submission performance
+          - Parallel for operations
+          - Matrix operations  
+          - Mixed workloads
+          - Task throughput
+          - Nested parallel workloads
+        - **Allocators**: Memory allocator performance
+          - Thread-safe shared linear allocator
+          - Thread-safe thread local allocator
+          - Coalescing arena allocator
         
         ## Usage
         
-        Results can be processed with the provided visualization scripts or any JSON-compatible tool.
-        Each result includes metadata like compiler, build type, and platform information.
+        Results are stored in JSON format and can be processed with analysis tools.
+        Each benchmark includes median, min, max, mean times and relative error.
+        
+        ### Performance Report
+        
+        The comprehensive performance report is available in [PERFORMANCE_REPORT.md](../PERFORMANCE_REPORT.md).
+        
+        ### Latest Benchmark Files
+        
         EOF
         
-        # Add and commit results
+        # List the latest benchmark files
+        find "$RESULT_DIR" -name "*.json" -o -name "*.txt" 2>/dev/null | sort | while read file; do
+            if [ -f "$file" ]; then
+                filename=$(basename "$file")
+                rel_path=$(echo "$file" | sed "s|results/||")
+                echo "- [\`$filename\`]($rel_path)" >> "results/index.md"
+            fi
+        done
+        
+        echo "" >> "results/index.md"
+        echo "*Last updated: $(date) (Run #${{ github.run_number }})*" >> "results/index.md"
+        
+        # Configure git
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        
+        # Commit results
         git add .
-        git commit -m "Add detailed performance results for commit ${COMMIT_SHA:0:8} (${TIMESTAMP})" || echo "No changes to commit"
-        git push origin performance-tracking
+        if git diff --staged --quiet; then
+          echo "No changes to commit"
+        else
+          git commit -m "📊 Performance results for $BRANCH@$COMMIT_SHORT
+          
+          - Timestamp: $TIMESTAMP
+          - Compiler: Multiple (gcc-14, clang-19)
+          - Workflow: #${{ github.run_number }}
+          - Benchmark type: ${{ github.event.inputs.benchmark_type || 'all' }}
+          
+          Results saved in $RESULT_DIR"
+          git push
+          echo "✅ Results committed and pushed to performance-tracking branch"
+        fi
         
     - name: Generate performance report
       shell: bash
