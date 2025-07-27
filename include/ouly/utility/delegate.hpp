@@ -81,7 +81,7 @@ class basic_delegate<SmallSize, Ret(Args...)>
 
   // Small object optimization buffer
   // NOLINTNEXTLINE
-  alignas(std::max_align_t) std::byte buffer_[buffer_size];
+  alignas(std::max_align_t) std::byte buffer_[buffer_size] = {};
 
   template <typename P>
   struct compressed_pair

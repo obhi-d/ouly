@@ -13,6 +13,7 @@
 #include <ranges>
 #include <thread>
 #include <vector>
+#include <iostream>
 
 // NOLINTBEGIN
 // Include GLM for mathematical operations
@@ -25,6 +26,8 @@
 struct TestCounter
 {
   std::atomic<uint32_t> task_count{0};
+  std::atomic<uint32_t> sub_task_count_0{0};
+  std::atomic<uint32_t> sub_task_count_1{0};
   std::atomic<uint32_t> total_operations{0};
   std::atomic<uint64_t> computation_result{0};
 };
@@ -71,8 +74,7 @@ TEMPLATE_TEST_CASE("Basic Task Submission", "[scheduler][template]",
     scheduler.submit(main_ctx, ouly::workgroup_id(0),
                      [&counter](TaskContextType const&)
                      {
-                       if(counter.task_count.fetch_add(1, std::memory_order_relaxed) > 1000)
-                         assert(false && "home");
+                       counter.task_count.fetch_add(1, std::memory_order_relaxed);
                      });
   }
 
@@ -198,6 +200,7 @@ TEMPLATE_TEST_CASE("GLM Mathematical Operations", "[scheduler][glm][math][templa
 
   scheduler.begin_execution();
   auto const& main_ctx = TestRunner::get_main_context();
+    
 
   // Create test vectors for mathematical operations
   static constexpr size_t vector_count = 50000;
@@ -232,6 +235,7 @@ TEMPLATE_TEST_CASE("GLM Mathematical Operations", "[scheduler][glm][math][templa
        vec += glm::vec3(0.1f);
 
        counter.total_operations.fetch_add(3, std::memory_order_relaxed);
+       counter.sub_task_count_0.fetch_add(1, std::memory_order_relaxed);
      }
      counter.task_count.fetch_add(1, std::memory_order_relaxed);
    },
@@ -241,7 +245,7 @@ TEMPLATE_TEST_CASE("GLM Mathematical Operations", "[scheduler][glm][math][templa
   for (size_t i = 0; i < data_holder.matrices.size(); ++i)
   {
     scheduler.submit(main_ctx, ouly::workgroup_id(0),
-                     [&data_holder, &counter, i](TaskContextType const&)
+                     [&data_holder, &counter, i](TaskContextType const& )
                      {
                        // Complex matrix operations
                        auto& matrix = data_holder.matrices[i];
@@ -251,12 +255,19 @@ TEMPLATE_TEST_CASE("GLM Mathematical Operations", "[scheduler][glm][math][templa
                        // Extract some result for verification
                        glm::vec4 transformed  = matrix * glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
                        data_holder.results[i] = glm::length(glm::vec3(transformed));
+                       if (data_holder.results[i] < 0.1f)
+                         data_holder.results[i] = 1.0f; // Prevent zero results
 
                        counter.total_operations.fetch_add(3, std::memory_order_relaxed);
+                       counter.sub_task_count_1.fetch_add(1, std::memory_order_relaxed);
+
                      });
   }
 
   scheduler.end_execution();
+
+  REQUIRE(counter.sub_task_count_0.load() == data_holder.vectors.size());
+  REQUIRE(counter.sub_task_count_1.load() == data_holder.matrices.size());
 
   // Verify operations were performed
   REQUIRE(counter.total_operations.load() >= vector_count * 3 + data_holder.matrices.size() * 3);

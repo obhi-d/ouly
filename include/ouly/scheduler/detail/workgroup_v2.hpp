@@ -94,10 +94,11 @@ public:
     // Allocate Chase-Lev queues for each worker in this workgroup
     work_queues_     = std::make_unique<queue_type[]>(thread_count);
     available_slots_ = std::make_unique<uint32_t[]>(thread_count);
+    auto slot_span   = std::span(available_slots_.get(), thread_count);
 
-    std::iota(available_slots_.get(), available_slots_.get() + thread_count, 0);
+    std::iota(std::rbegin(slot_span), std::rend(slot_span), 0);
     // Initialize all slots as available (set bits 0 to thread_count-1)
-    slot_index_top_.store(0, std::memory_order_relaxed);
+    slot_index_top_.store(static_cast<int64_t>(thread_count), std::memory_order_relaxed);
 
     // Reset work availability
     has_work_.store(false, std::memory_order_relaxed);
@@ -246,14 +247,16 @@ public:
    */
   auto enter() -> int
   {
-    auto top = slot_index_top_.fetch_add(1, std::memory_order_acquire);
-    if (top >= thread_count_)
+    auto     old_top = slot_index_top_.load(std::memory_order_relaxed);
+    while (old_top > 0)
     {
-      // No available slots
-      slot_index_top_.fetch_sub(1, std::memory_order_relaxed);
-      return -1; // Indicate no available slot
+      if (slot_index_top_.compare_exchange_weak(old_top, old_top - 1, std::memory_order_acquire,
+                                                std::memory_order_relaxed))
+      {
+        return static_cast<int>(available_slots_[old_top - 1]);
+      }
     }
-    return static_cast<int>(available_slots_[static_cast<size_t>(top)]);
+    return -1;
   }
 
   /**
@@ -262,12 +265,15 @@ public:
    */
   void exit(int slot_index) noexcept
   {
-    OULY_ASSERT(slot_index >= 0 && slot_index < thread_count_);
-    auto top = slot_index_top_.fetch_sub(1, std::memory_order_release);
-    if (top > 0)
+    auto old_top = slot_index_top_.load(std::memory_order_relaxed);
+    while (old_top < thread_count_)
     {
-      // Store the returned slot index back to the available slots
-      available_slots_[static_cast<size_t>(top - 1)] = static_cast<uint32_t>(slot_index);
+      if (slot_index_top_.compare_exchange_weak(old_top, old_top + 1, std::memory_order_release,
+                                                std::memory_order_relaxed))
+      {
+        available_slots_[old_top] = static_cast<uint32_t>(slot_index);
+        return;
+      }
     }
   }
 

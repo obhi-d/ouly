@@ -151,7 +151,7 @@ void scheduler::run_worker(worker_id wid)
       auto& worker = workers_[wid.get_index()];
       if (worker.assigned_group_ != nullptr)
       {
-        worker.assigned_group_->exit(static_cast<int>(worker.assigned_offset_));
+        worker.assigned_group_->exit(static_cast<int>(worker.get_group_offset()));
         worker.assigned_group_ = nullptr;
       }
       // Enter sleep state
@@ -192,12 +192,11 @@ auto scheduler::enter_context(worker_id wid, detail::v2::workgroup* needy_wg) no
 
     if (worker.assigned_group_ != nullptr)
     {
-      worker.assigned_group_->exit(static_cast<int>(worker.assigned_offset_));
+      worker.assigned_group_->exit(static_cast<int>(worker.get_group_offset()));
     }
 
     worker.assigned_group_  = needy_wg;
-    worker.assigned_offset_ = static_cast<uint32_t>(enter_ctx);
-    worker.set_workgroup_info(worker.assigned_offset_,
+    worker.set_workgroup_info(static_cast<uint32_t>(enter_ctx),
                               workgroup_id(static_cast<uint32_t>(std::distance(workgroups_.data(), needy_wg))));
   }
   return true;
@@ -213,7 +212,7 @@ auto scheduler::find_work_for_worker(worker_id wid) noexcept -> bool
   if (worker.assigned_group_ != nullptr)
   {
     detail::v2::work_item work;
-    if (worker.assigned_group_->pop_work_from_worker(work, worker.assigned_offset_))
+    if (worker.assigned_group_->pop_work_from_worker(work, worker.get_group_offset()))
     {
       execute_work(wid, work);
       return true;
@@ -338,7 +337,7 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
   }
 
   workers_[0].current_context_.init(*this, user_context, 0, worker_id(0));
-  workers_[0].set_workgroup_info(0, workgroup_id(0));
+  enter_context(worker_id(0), &workgroups_[0]);
 
   g_worker    = &workers_[0];
   g_worker_id = worker_id(0);
@@ -410,6 +409,10 @@ void scheduler::finalize_worker(worker_id wid)
     // Wait to take stock of the remaning work
   }
 
+  if (wid == worker_id(0))
+  {
+    assert(synchronizer_->tally_.load(std::memory_order_acquire) == 0);
+  }
   g_worker    = nullptr;
   g_worker_id = {};
 }
@@ -488,17 +491,6 @@ void scheduler::busy_work(worker_id thread) noexcept
   {
     if (find_work_for_worker(thread)) [[likely]]
     {
-      if (thread.get_index() == 0)
-      {
-        auto& worker = workers_[0];
-        // reset the context
-        if (worker.assigned_group_ != nullptr)
-        {
-          worker.assigned_group_->exit(static_cast<int>(worker.assigned_offset_));
-          worker.assigned_group_ = nullptr;
-        }
-        worker.set_workgroup_info(0, workgroup_id(0));
-      }
       local_recent_failures = std::max(0U, local_recent_failures - 1);
       return; // Found and executed work
     }

@@ -22,8 +22,7 @@ static constexpr size_t spmc_default_capacity = 256;
 // NOLINTNEXTLINE
 
 template <typename T, std::size_t Capacity = spmc_default_capacity>
-  requires(std::is_trivially_copyable_v<T> && std::is_trivially_default_constructible_v<T> &&
-           std::is_trivially_destructible_v<T>)
+  requires(std::is_trivially_copyable_v<T> && std::is_trivially_destructible_v<T>)
 class spmc_ring
 {
   static_assert((Capacity > 0) && (Capacity & (Capacity - 1)) == 0, "Capacity must be a power-of-two > 0");

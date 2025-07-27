@@ -123,6 +123,7 @@ public:
     other.head_  = nullptr;
     other.tail_  = nullptr;
     other.free_  = nullptr;
+    other.size_  = 0;
     other.front_ = 0;
     other.back_  = 0;
 
@@ -134,7 +135,9 @@ public:
     clear();
     free_chain(free_);
     free_ = nullptr;
-    head_ = tail_ = nullptr;
+    head_ = nullptr;
+    tail_ = nullptr;
+    size_ = 0;
   }
 
   void push_back(value_type const& item)
@@ -227,8 +230,12 @@ public:
       tail_->next_ = free_;
       free_        = head_;
     }
-    head_ = tail_ = nullptr;
-    front_ = back_ = 0;
+    head_ = nullptr;
+    tail_ = nullptr;
+
+    front_ = 0;
+    back_  = 0;
+    size_  = 0;
   }
 
   template <typename L>
