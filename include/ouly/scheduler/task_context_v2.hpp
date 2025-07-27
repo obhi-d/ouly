@@ -40,6 +40,8 @@ public:
 
   /**
    * @brief get the current worker's index relative to the group's thread start offset
+   * @note This value might change between cooperative waits, like exectution of parallel_for or busy_wait, so the value
+   * should always be fetched from the context object.
    */
   [[nodiscard]] auto get_group_offset() const noexcept -> uint32_t
   {

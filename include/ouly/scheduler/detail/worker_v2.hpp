@@ -24,7 +24,7 @@ public:
     current_context_.offset_   = offset;
   }
 
-  uint32_t get_group_offset() const noexcept
+  [[nodiscard]] auto get_group_offset() const noexcept -> uint32_t
   {
     return current_context_.get_group_offset();
   }
@@ -42,8 +42,7 @@ public:
 private:
   friend class ouly::v2::scheduler;
 
-  int64_t      tally_           = 0;
-  workgroup*   assigned_group_  = nullptr; // The workgroup this worker belongs to
+  int64_t      tally_ = 0;
   task_context current_context_;
 };
 

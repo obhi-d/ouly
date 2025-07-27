@@ -288,7 +288,7 @@ private:
    */
   auto find_work_for_worker(worker_id wid) noexcept -> bool;
 
-  auto enter_context(worker_id wid, detail::v2::workgroup* needy_wg) noexcept -> bool;
+  auto enter_context(worker_id wid, workgroup_id needy_wg) noexcept -> bool;
 
   /**
    * @brief Execute a work item
@@ -309,7 +309,7 @@ private:
 
   static constexpr uint32_t max_workgroup_v2 = ouly::detail::v2::max_workgroup;
 
-  using workgroup_list = ouly::detail::mpmc_ring<ouly::detail::v2::workgroup*, ouly::detail::v2::mpmc_capacity>;
+  using workgroup_list = ouly::detail::mpmc_ring<workgroup_id, ouly::detail::v2::mpmc_capacity>;
   workgroup_list needy_workgroups_;
 
   std::atomic_bool                     stop_{false};

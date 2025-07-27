@@ -247,13 +247,13 @@ public:
    */
   auto enter() -> int
   {
-    auto     old_top = slot_index_top_.load(std::memory_order_relaxed);
+    auto old_top = slot_index_top_.load(std::memory_order_relaxed);
     while (old_top > 0)
     {
       if (slot_index_top_.compare_exchange_weak(old_top, old_top - 1, std::memory_order_acquire,
                                                 std::memory_order_relaxed))
       {
-        return static_cast<int>(available_slots_[old_top - 1]);
+        return static_cast<int>(available_slots_[static_cast<size_t>(old_top - 1)]);
       }
     }
     return -1;
@@ -271,7 +271,7 @@ public:
       if (slot_index_top_.compare_exchange_weak(old_top, old_top + 1, std::memory_order_release,
                                                 std::memory_order_relaxed))
       {
-        available_slots_[old_top] = static_cast<uint32_t>(slot_index);
+        available_slots_[static_cast<size_t>(old_top)] = static_cast<uint32_t>(slot_index);
         return;
       }
     }

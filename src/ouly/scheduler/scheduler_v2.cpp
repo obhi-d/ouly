@@ -5,8 +5,10 @@
 #include "ouly/scheduler/detail/worker_v2.hpp"
 #include "ouly/scheduler/detail/workgroup_v2.hpp"
 #include "ouly/scheduler/task_context_v2.hpp"
+#include "ouly/scheduler/worker_structs.hpp"
 #include <atomic>
 #include <barrier>
+#include <cstdint>
 #include <latch>
 #include <thread>
 
@@ -110,7 +112,7 @@ void scheduler::submit_internal(task_context const& current, workgroup_id dst,
   target_workgroup.submit_to_mailbox(work);
 
   // Add to needy workgroups list for better work distribution
-  needy_workgroups_.push(&target_workgroup);
+  needy_workgroups_.emplace(dst);
   wake_up_workers(1); // Wake up workers to handle the new work
 }
 
@@ -149,10 +151,11 @@ void scheduler::run_worker(worker_id wid)
     {
       // exit context
       auto& worker = workers_[wid.get_index()];
-      if (worker.assigned_group_ != nullptr)
+      if (worker.get_workgroup())
       {
-        worker.assigned_group_->exit(static_cast<int>(worker.get_group_offset()));
-        worker.assigned_group_ = nullptr;
+        auto& workgroup = workgroups_[worker.get_workgroup().get_index()];
+        workgroup.exit(static_cast<int>(worker.get_group_offset()));
+        worker.set_workgroup_info(0, workgroup_id{});
       }
       // Enter sleep state
       sleeping_.fetch_add(1, std::memory_order_relaxed);
@@ -178,26 +181,26 @@ void scheduler::run_worker(worker_id wid)
   finalize_worker(wid);
 }
 
-auto scheduler::enter_context(worker_id wid, detail::v2::workgroup* needy_wg) noexcept -> bool
+auto scheduler::enter_context(worker_id wid, workgroup_id needy_wg) noexcept -> bool
 {
   auto& worker = workers_[wid.get_index()];
 
-  if (worker.assigned_group_ != needy_wg)
+  if (worker.get_workgroup() != needy_wg)
   {
-    int enter_ctx = needy_wg->enter();
+    auto& needy_workgroup = workgroups_[needy_wg.get_index()];
+    int   enter_ctx       = needy_workgroup.enter();
     if (enter_ctx < 0)
     {
       return false;
     }
 
-    if (worker.assigned_group_ != nullptr)
+    if (worker.get_workgroup())
     {
-      worker.assigned_group_->exit(static_cast<int>(worker.get_group_offset()));
+      auto& current_group = workgroups_[worker.get_workgroup().get_index()];
+      current_group.exit(static_cast<int>(worker.get_group_offset()));
     }
 
-    worker.assigned_group_  = needy_wg;
-    worker.set_workgroup_info(static_cast<uint32_t>(enter_ctx),
-                              workgroup_id(static_cast<uint32_t>(std::distance(workgroups_.data(), needy_wg))));
+    worker.set_workgroup_info(static_cast<uint32_t>(enter_ctx), needy_wg);
   }
   return true;
 }
@@ -205,43 +208,46 @@ auto scheduler::enter_context(worker_id wid, detail::v2::workgroup* needy_wg) no
 auto scheduler::find_work_for_worker(worker_id wid) noexcept -> bool
 {
   // Try to drain work from the worker's own workgroup first
-  auto& worker = workers_[wid.get_index()];
+  auto&                     worker             = workers_[wid.get_index()];
   static constexpr uint32_t max_steal_attempts = 3;
   thread_local uint32_t     random_victim      = update_seed();
 
-  if (worker.assigned_group_ != nullptr)
+  if (worker.get_workgroup())
   {
+    auto&                 workgroup = workgroups_[worker.get_workgroup().get_index()];
     detail::v2::work_item work;
-    if (worker.assigned_group_->pop_work_from_worker(work, worker.get_group_offset()))
+    if (workgroup.pop_work_from_worker(work, worker.get_group_offset()))
     {
       execute_work(wid, work);
       return true;
     }
 
     // No work in mailbox, try stealing from this workgroup
-    if (worker.assigned_group_->steal_work(work, random_victim))
+    if (workgroup.steal_work(work, random_victim))
     {
       execute_work(wid, work);
       return true;
     }
 
-    if (worker.assigned_group_->has_work() && worker.assigned_group_->receive_from_mailbox(work))
+    if (workgroup.has_work() && workgroup.receive_from_mailbox(work))
     {
       execute_work(wid, work);
       return true;
     }
 
-    worker.assigned_group_->clear_work_available();
+    workgroup.clear_work_available();
     random_victim = update_seed();
   }
 
   // Priority 2: Check needy workgroups for mailbox work (limit attempts to avoid starvation)
-  uint32_t                  needy_attempts     = 0;
+  uint32_t needy_attempts = 0;
 
-  detail::v2::workgroup* needy_wg = nullptr;
+  workgroup_id needy_wg;
   while (needy_attempts < max_steal_attempts && needy_workgroups_.pop(needy_wg))
   {
     ++needy_attempts;
+
+    auto& needy_workgroup = workgroups_[needy_wg.get_index()];
 
     if (!enter_context(wid, needy_wg))
     {
@@ -249,21 +255,21 @@ auto scheduler::find_work_for_worker(worker_id wid) noexcept -> bool
     }
 
     detail::v2::work_item work;
-    if (needy_wg->receive_from_mailbox(work))
+    if (needy_workgroup.receive_from_mailbox(work))
     {
       execute_work(wid, work);
       return true;
     }
 
     // No work in mailbox, try stealing from this workgroup
-    if (needy_wg->steal_work(work, random_victim))
+    if (needy_workgroup.steal_work(work, random_victim))
     {
       execute_work(wid, work);
       return true;
     }
 
     // Clear work available flag since we found no work
-    needy_wg->clear_work_available();
+    needy_workgroup.clear_work_available();
     random_victim = update_seed();
   }
 
@@ -276,7 +282,7 @@ auto scheduler::find_work_for_worker(worker_id wid) noexcept -> bool
     uint32_t i         = (steal_start_idx + attempt) % workgroup_count_;
     auto&    workgroup = workgroups_[i];
 
-    if (!workgroup.has_work() || !enter_context(wid, &workgroup))
+    if (!workgroup.has_work() || !enter_context(wid, workgroup_id(i)))
     {
       continue;
     }
@@ -337,7 +343,7 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
   }
 
   workers_[0].current_context_.init(*this, user_context, 0, worker_id(0));
-  enter_context(worker_id(0), &workgroups_[0]);
+  enter_context(worker_id(0), workgroup_id(0));
 
   g_worker    = &workers_[0];
   g_worker_id = worker_id(0);
@@ -477,6 +483,10 @@ void scheduler::take_ownership() noexcept
 
 void scheduler::busy_work(worker_id thread) noexcept
 {
+  auto& worker = workers_[thread.get_index()];
+  // We need to preserve the worker's context and group information and restore it after busy work
+  auto preserve_group = worker.get_workgroup();
+
   // Try to find work for the worker during busy wait
   // Optimized work stealing with adaptive attempts
   constexpr uint32_t min_attempts      = 1;
@@ -486,6 +496,8 @@ void scheduler::busy_work(worker_id thread) noexcept
   // Use thread_local failure tracking for better performance
   thread_local uint32_t local_recent_failures = 0;
   uint32_t              attempts = (local_recent_failures > failure_threshold) ? min_attempts : max_attempts;
+
+  // If thi
 
   for (uint32_t attempt = 0; attempt < attempts; ++attempt)
   {
@@ -498,6 +510,22 @@ void scheduler::busy_work(worker_id thread) noexcept
     // Shorter pause for first attempts, longer for subsequent ones
     if (attempt < attempts - 1)
     {
+      ouly::detail::pause_exec();
+    }
+  }
+
+  if (worker.get_workgroup() != preserve_group)
+  {
+    constexpr uint32_t max_context_enter_attempts = 1000;
+    uint32_t           enter_attempts             = 0;
+    while (worker.get_workgroup() != preserve_group && enter_attempts < max_context_enter_attempts)
+    {
+      if (enter_context(thread, preserve_group))
+      {
+        break; // Successfully entered the preserved group context
+      };
+
+      ++enter_attempts;
       ouly::detail::pause_exec();
     }
   }
