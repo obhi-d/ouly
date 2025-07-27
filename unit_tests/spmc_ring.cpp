@@ -352,6 +352,98 @@ TEST_CASE("spmc_ring producer pop_back vs consumer steal", "[spmc_ring][multithr
 
 TEST_CASE("spmc_ring stress test with queue size validation", "[spmc_ring][multithreaded][stress]")
 {
+  SECTION("simplified race condition test")
+  {
+    // This test is designed to expose the specific race condition bug
+    constexpr int num_iterations = 1000;
+
+    for (int test_run = 0; test_run < 100; ++test_run)
+    {
+      spmc_ring<int, 8> ring; // Small ring to force more contention
+
+      std::atomic<int>  pushed{0};
+      std::atomic<int>  popped{0};
+      std::atomic<int>  stolen{0};
+      std::atomic<bool> done{false};
+
+      // Producer thread
+      std::thread producer(
+       [&]()
+       {
+         for (int i = 0; i < num_iterations; ++i)
+         {
+           while (!ring.push_back(i))
+           {
+             std::this_thread::yield();
+           }
+           pushed.fetch_add(1);
+         }
+         done = true;
+       });
+
+      // Pop_back thread
+      std::thread pop_thread(
+       [&]()
+       {
+         int value;
+         while (!done.load() || popped.load() + stolen.load() < pushed.load())
+         {
+           if (ring.pop_back(value))
+           {
+             popped.fetch_add(1);
+           }
+           else
+           {
+             std::this_thread::yield();
+           }
+         }
+       });
+
+      // Steal thread
+      std::thread steal_thread(
+       [&]()
+       {
+         int value;
+         while (!done.load() || popped.load() + stolen.load() < pushed.load())
+         {
+           if (ring.steal(value))
+           {
+             stolen.fetch_add(1);
+           }
+           else
+           {
+             std::this_thread::yield();
+           }
+         }
+       });
+
+      producer.join();
+      pop_thread.join();
+      steal_thread.join();
+
+      // Count remaining items
+      int remaining = 0;
+      int dummy;
+      while (ring.steal(dummy) || ring.pop_back(dummy))
+      {
+        remaining++;
+      }
+
+      int total_consumed = popped.load() + stolen.load() + remaining;
+
+      if (pushed.load() != total_consumed)
+      {
+        INFO("Test run: " << test_run);
+        INFO("Pushed: " << pushed.load());
+        INFO("Popped: " << popped.load());
+        INFO("Stolen: " << stolen.load());
+        INFO("Remaining: " << remaining);
+        INFO("Total consumed: " << total_consumed);
+        FAIL("Conservation violation detected!");
+      }
+    }
+  }
+
   SECTION("continuous push/pop/steal with size tracking")
   {
     constexpr int test_duration_ms = 1000;

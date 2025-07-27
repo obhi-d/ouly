@@ -80,8 +80,8 @@ class basic_delegate<SmallSize, Ret(Args...)>
   static constexpr size_t buffer_size = sizeof(void*) + SmallSize;
 
   // Small object optimization buffer
-
-  alignas(std::max_align_t) std::byte buffer_[buffer_size] = {};
+  // NOLINTNEXTLINE
+  alignas(std::max_align_t) std::byte buffer_[buffer_size];
 
   template <typename P>
   struct compressed_pair

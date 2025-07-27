@@ -241,8 +241,7 @@ void parallel_for(L lambda, FwIt&& range, WC const& this_context, TaskTr /*unuse
 
   size_type count = it_helper::size(range);
 
-  constexpr uint32_t min_batches_per_worker = 1;
-  const size_type    work_count             = [&]()
+  const size_type work_count = [&]()
   {
     if (!is_range_executor)
     {
@@ -254,6 +253,7 @@ void parallel_for(L lambda, FwIt&& range, WC const& this_context, TaskTr /*unuse
     }
     else
     {
+      constexpr uint32_t min_batches_per_worker = 1;
       return ouly::detail::get_work_count(std::max(min_batches_per_worker, traits::batches_per_worker),
                                           this_context.get_scheduler().get_worker_count(this_context.get_workgroup()),
                                           count);

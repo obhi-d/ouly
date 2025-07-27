@@ -4,12 +4,10 @@
 #include "ouly/scheduler/detail/cache_optimized_data.hpp"
 #include "ouly/utility/user_config.hpp"
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <cstdint>
 #include <cstring>
-#include <memory>
-#include <mutex>
-#include <optional>
 #include <type_traits>
 
 #ifdef _MSC_VER
@@ -24,11 +22,11 @@ static constexpr size_t spmc_default_capacity = 256;
 // NOLINTNEXTLINE
 
 template <typename T, std::size_t Capacity = spmc_default_capacity>
+  requires(std::is_trivially_copyable_v<T> && std::is_trivially_default_constructible_v<T> &&
+           std::is_trivially_destructible_v<T>)
 class spmc_ring
 {
-  static_assert((Capacity > 0) && (Capacity & (Capacity - 1)) == 0, "Capacity must be a power‑of‑two > 0");
-  static_assert(std::is_trivially_copyable_v<T> && std::is_trivially_destructible_v<T>,
-                "T must be trivially copyable & trivially destructible");
+  static_assert((Capacity > 0) && (Capacity & (Capacity - 1)) == 0, "Capacity must be a power-of-two > 0");
 
 public:
   spmc_ring() noexcept  = default;
@@ -43,57 +41,68 @@ public:
   /** Push item only from a single thread */
   auto push_back(const T& item) noexcept -> bool
   {
-    auto b = bottom_.load(std::memory_order_relaxed);
-    auto t = top_.load(std::memory_order_acquire);
-    if (static_cast<std::size_t>(b - t) >= Capacity)
+    const size_t b = bottom_.load(std::memory_order_relaxed);
+    const size_t t = top_.load(std::memory_order_acquire);
+
+    // Check if the deque is full.
+    if (b - t >= Capacity)
     {
-      return false; // full
+      return false;
     }
 
-    // memcpy is fine
-    auto& data = slot(b);
-    std::memcpy(&data, &item, sizeof(T));
-    std::atomic_thread_fence(std::memory_order_release);
-    bottom_.store(b + 1, std::memory_order_relaxed);
+    buffer_[b % Capacity] = item;
+
+    // A release store ensures that the write to the buffer is visible
+    // to other threads before the update to 'bottom'.
+    bottom_.store(b + 1, std::memory_order_release);
+
     return true;
   }
 
   /** Pop item only from a single thread, same thread as `push_back` */
   auto pop_back(T& out) noexcept -> bool // owner only
   {
+    size_t b = bottom_.load(std::memory_order_relaxed);
+    size_t t = top_.load(std::memory_order_relaxed);
 
-    auto b = bottom_.load(std::memory_order_relaxed) - 1;
+    // Quick check if the deque is empty.
+    if (t >= b)
+    {
+      return false;
+    }
+
+    // Reserve an item from the bottom.
+    b -= 1;
     bottom_.store(b, std::memory_order_relaxed);
 
+    // This fence is crucial. It prevents the CPU from reordering the store to 'bottom'
+    // with the subsequent load of 'top'. This ensures we race fairly with stealers.
     std::atomic_thread_fence(std::memory_order_seq_cst);
 
-    auto t = top_.load(std::memory_order_relaxed);
+    t = top_.load(std::memory_order_relaxed);
 
-    auto size = b - t;
-    if (size < 0)
+    if (t > b)
     {
-      // queue empty – restore bottom
-      bottom_.store(b + 1, std::memory_order_relaxed);
+      // The deque became empty due to a concurrent steal. Restore 'bottom'
+      // to its state before our failed pop attempt.
+      bottom_.store(t, std::memory_order_relaxed);
       return false;
     }
 
-    auto& data = slot(b);
-    std::memcpy(&out, &data, sizeof(T));
+    // Successfully claimed the item.
+    out = buffer_[b % Capacity];
 
-    if (size > 0)
+    if (t == b)
     {
-      return true;
+      // This was the last item. We must race with stealers to update 'top'.
+      // If we win, the pop is successful. If we lose, a stealer took the item.
+      bool success = top_.compare_exchange_strong(t, t + 1, std::memory_order_seq_cst, std::memory_order_relaxed);
+      // Regardless of the outcome, 'bottom' must be updated to mark the deque as empty.
+      bottom_.store(t + 1, std::memory_order_relaxed);
+      return success;
     }
 
-    if (!top_.compare_exchange_strong(t, t + 1, std::memory_order_seq_cst, std::memory_order_relaxed))
-    {
-      // lost race – revert and fail
-      bottom_.store(b + 1, std::memory_order_relaxed);
-      return false;
-    }
-
-    // queue empty – restore bottom
-    bottom_.store(b + 1, std::memory_order_relaxed);
+    // More than one item was in the deque, so the pop is successful without a race.
     return true;
   }
 
@@ -103,38 +112,34 @@ public:
    */
   auto steal(T& dst) noexcept -> bool
   {
-    auto t = top_.load(std::memory_order_acquire);
+    size_t t = top_.load(std::memory_order_acquire);
+
+    // The fence prevents reordering of the 'top' load with the 'bottom' load,
+    // ensuring we get a consistent (though not necessarily current) view of the deque's state.
     std::atomic_thread_fence(std::memory_order_seq_cst);
-    auto b = bottom_.load(std::memory_order_acquire);
 
-    if (b <= t)
-    {
-      return false; // empty
-    }
+    size_t b = bottom_.load(std::memory_order_acquire);
 
-    if (!top_.compare_exchange_strong(t, t + 1, std::memory_order_seq_cst, std::memory_order_relaxed))
+    // Check if the deque is empty.
+    if (t >= b)
     {
       return false;
     }
 
-    auto& data = slot(t);
-    std::memcpy(&dst, &data, sizeof(T));
+    // There appears to be an item. Read it before attempting to claim it.
+    dst = buffer_[t % Capacity];
 
-    return true;
+    // Try to claim the item by incrementing 'top'.
+    // 'acq_rel' ensures synchronization with the producer (via release in push)
+    // and other stealers (via acquire on their 'top' loads).
+    return top_.compare_exchange_strong(t, t + 1, std::memory_order_acq_rel, std::memory_order_relaxed);
   }
 
 private:
-  /*-------------------------------- slot helper ------------------------------*/
-
-  auto slot(std::int64_t idx) noexcept -> T&
-  {
-    return buffer_[static_cast<uint32_t>(idx) & (Capacity - 1)];
-  }
-
   /*-------------------------------- data members -----------------------------*/
-  alignas(cache_line_size) std::atomic<std::int64_t> top_;    // thieves CAS on this
-  alignas(cache_line_size) std::atomic<std::int64_t> bottom_; // producer only writes
-  alignas(cache_line_size) T buffer_[Capacity];
+  alignas(cache_line_size) std::atomic<size_t> top_{0};    // thieves CAS on this
+  alignas(cache_line_size) std::atomic<size_t> bottom_{0}; // producer only writes
+  alignas(cache_line_size) std::array<T, Capacity> buffer_ = {};
 };
 
 } // namespace ouly::detail
