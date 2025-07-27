@@ -4,6 +4,7 @@
 #include "ouly/scheduler/detail/cache_optimized_data.hpp"
 #include "ouly/utility/utils.hpp"
 #include <array>
+#include <memory>
 
 #ifdef _MSC_VER
 #pragma warning(push)

@@ -205,11 +205,20 @@ auto scheduler::find_work_for_worker(worker_id wid) noexcept -> bool
 {
   // Try to drain work from the worker's own workgroup first
   auto& worker = workers_[wid.get_index()];
+  static constexpr uint32_t max_steal_attempts = 3;
+  thread_local uint32_t     random_victim      = update_seed();
 
   if (worker.assigned_group_ != nullptr)
   {
     detail::v2::work_item work;
     if (worker.assigned_group_->pop_work_from_worker(work, worker.assigned_offset_))
+    {
+      execute_work(wid, work);
+      return true;
+    }
+
+    // No work in mailbox, try stealing from this workgroup
+    if (worker.assigned_group_->steal_work(work, random_victim))
     {
       execute_work(wid, work);
       return true;
@@ -222,15 +231,14 @@ auto scheduler::find_work_for_worker(worker_id wid) noexcept -> bool
     }
 
     worker.assigned_group_->clear_work_available();
+    random_victim = update_seed();
   }
 
   // Priority 2: Check needy workgroups for mailbox work (limit attempts to avoid starvation)
-  static constexpr uint32_t max_needy_attempts = 3;
   uint32_t                  needy_attempts     = 0;
-  thread_local uint32_t     random_victim      = update_seed();
 
   detail::v2::workgroup* needy_wg = nullptr;
-  while (needy_attempts < max_needy_attempts && needy_workgroups_.pop(needy_wg))
+  while (needy_attempts < max_steal_attempts && needy_workgroups_.pop(needy_wg))
   {
     ++needy_attempts;
 
@@ -363,13 +371,13 @@ void scheduler::finish_pending_tasks()
   stop_.store(true, std::memory_order_seq_cst);
 
   // Wake up all workers
-  wake_tokens_.release(worker_count_);
+  wake_up_workers(worker_count_);
 
   // Third: Wait for all workers to acknowledge the stop signal
   synchronizer_->job_board_freeze_ack_.count_down();
   while (!synchronizer_->job_board_freeze_ack_.try_wait())
   {
-    wake_tokens_.release(worker_count_);
+    wake_up_workers(worker_count_);
     // Wait for all workers to acknowledge freeze
     ouly::detail::pause_exec();
   }

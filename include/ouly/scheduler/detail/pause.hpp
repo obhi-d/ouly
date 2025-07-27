@@ -2,7 +2,7 @@
 #pragma once
 
 #ifdef _MSC_VER
-#if (defined(__aarch64__) || defined(__arm__) // Arm & AArch64)
+#if (defined(__aarch64__) || defined(__arm__)) // Arm & AArch64)
 #include <Windows.h>
 #else
 #include <intrin.h> // For _mm_pause() intrinsic

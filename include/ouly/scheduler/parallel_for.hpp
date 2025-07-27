@@ -252,9 +252,12 @@ void parallel_for(L lambda, FwIt&& range, WC const& this_context, TaskTr /*unuse
     {
       return (count + traits::fixed_batch_size - 1) / traits::fixed_batch_size;
     }
-    return ouly::detail::get_work_count(std::max(min_batches_per_worker, traits::batches_per_worker),
-                                        this_context.get_scheduler().get_worker_count(this_context.get_workgroup()),
-                                        count);
+    else
+    {
+      return ouly::detail::get_work_count(std::max(min_batches_per_worker, traits::batches_per_worker),
+                                          this_context.get_scheduler().get_worker_count(this_context.get_workgroup()),
+                                          count);
+    }
   }();
 
   const size_type fixed_batch_size = [&]()

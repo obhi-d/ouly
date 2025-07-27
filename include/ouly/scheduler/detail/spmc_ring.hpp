@@ -22,6 +22,7 @@ namespace ouly::detail
 
 static constexpr size_t spmc_default_capacity = 256;
 // NOLINTNEXTLINE
+#define LOCK_FREE_QUEUE
 #ifndef LOCK_FREE_QUEUE
 
 template <typename T, std::size_t Capacity = spmc_default_capacity>

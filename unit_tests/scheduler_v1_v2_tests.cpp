@@ -71,7 +71,8 @@ TEMPLATE_TEST_CASE("Basic Task Submission", "[scheduler][template]",
     scheduler.submit(main_ctx, ouly::workgroup_id(0),
                      [&counter](TaskContextType const&)
                      {
-                       counter.task_count.fetch_add(1, std::memory_order_relaxed);
+                       if(counter.task_count.fetch_add(1, std::memory_order_relaxed) > 1000)
+                         assert(false && "home");
                      });
   }
 
