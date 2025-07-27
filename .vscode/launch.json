@@ -8,7 +8,7 @@
       "name": "(gdb) Attach",
       "type": "cppdbg",
       "request": "attach",
-      "program": "${workspaceFolder}/build/unit_tests/test_scheduler_v1_v2_tests",
+      "program": "${workspaceFolder}/build/unit_tests/test_spmc_ring",
       "MIMode": "gdb",
       "setupCommands": [
         {

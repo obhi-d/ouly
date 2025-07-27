@@ -11,9 +11,9 @@
 #include <atomic>
 #include <cstdint>
 #include <mutex>
+#include <numeric>
 #include <span>
 #include <utility>
-#include <numeric>
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -92,7 +92,7 @@ public:
     priority_         = priority;
 
     // Allocate Chase-Lev queues for each worker in this workgroup
-    work_queues_ = std::make_unique<queue_type[]>(thread_count);
+    work_queues_     = std::make_unique<queue_type[]>(thread_count);
     available_slots_ = std::make_unique<uint32_t[]>(thread_count);
 
     std::iota(available_slots_.get(), available_slots_.get() + thread_count, 0);
@@ -253,7 +253,7 @@ public:
       slot_index_top_.fetch_sub(1, std::memory_order_relaxed);
       return -1; // Indicate no available slot
     }
-    return available_slots_[top];
+    return static_cast<int>(available_slots_[static_cast<size_t>(top)]);
   }
 
   /**
@@ -267,7 +267,7 @@ public:
     if (top > 0)
     {
       // Store the returned slot index back to the available slots
-      available_slots_[top - 1] = slot_index;
+      available_slots_[static_cast<size_t>(top - 1)] = static_cast<uint32_t>(slot_index);
     }
   }
 
