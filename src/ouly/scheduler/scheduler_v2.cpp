@@ -151,7 +151,7 @@ void scheduler::run_worker(worker_id wid)
       auto& worker = workers_[wid.get_index()];
       if (worker.assigned_group_ != nullptr)
       {
-        worker.assigned_group_->exit();
+        worker.assigned_group_->exit(static_cast<int>(worker.assigned_offset_));
         worker.assigned_group_ = nullptr;
       }
       // Enter sleep state
@@ -192,11 +192,13 @@ auto scheduler::enter_context(worker_id wid, detail::v2::workgroup* needy_wg) no
 
     if (worker.assigned_group_ != nullptr)
     {
-      worker.assigned_group_->exit();
+      worker.assigned_group_->exit(static_cast<int>(worker.assigned_offset_));
     }
 
     worker.assigned_group_  = needy_wg;
     worker.assigned_offset_ = static_cast<uint32_t>(enter_ctx);
+    worker.set_workgroup_info(worker.assigned_offset_,
+                              workgroup_id(static_cast<uint32_t>(std::distance(workgroups_.data(), needy_wg))));
   }
   return true;
 }
@@ -492,7 +494,7 @@ void scheduler::busy_work(worker_id thread) noexcept
         // reset the context
         if (worker.assigned_group_ != nullptr)
         {
-          worker.assigned_group_->exit();
+          worker.assigned_group_->exit(static_cast<int>(worker.assigned_offset_));
           worker.assigned_group_ = nullptr;
         }
         worker.set_workgroup_info(0, workgroup_id(0));

@@ -72,8 +72,8 @@ public:
   basic_queue(allocator_type const& alloc) noexcept : allocator_type(alloc) {}
 
   basic_queue(basic_queue const& other, allocator_type const& alloc)
-      : allocator_type(alloc), head_(other.head_), tail_(other.tail_), free_(other.free_), front_(other.front_),
-        back_(other.back_)
+      : allocator_type(alloc), head_(other.head_), tail_(other.tail_), free_(other.free_), size_(other.size_),
+        front_(other.front_), back_(other.back_)
   {
     copy(other);
   }
@@ -85,18 +85,18 @@ public:
   }
 
   basic_queue(basic_queue&& other) noexcept
-      : head_(other.head_), tail_(other.tail_), free_(other.free_), front_(other.front_), back_(other.back_)
+      : head_(other.head_), tail_(other.tail_), free_(other.free_), size_(other.size_), front_(other.front_),
+        back_(other.back_)
   {
     other.head_  = nullptr;
     other.tail_  = nullptr;
     other.free_  = nullptr;
+    other.size_  = 0;
     other.front_ = 0;
     other.back_  = 0;
   }
 
-  auto operator=(basic_queue const& other) -> basic_queue&
-    requires(std::is_copy_constructible_v<Ty>)
-  {
+  auto operator=(basic_queue const& other) -> basic_queue& requires(std::is_copy_constructible_v<Ty>) {
     if (this == &other)
     {
       return *this;
@@ -117,6 +117,7 @@ public:
     head_        = other.head_;
     tail_        = other.tail_;
     free_        = other.free_;
+    size_        = other.size_;
     front_       = other.front_;
     back_        = other.back_;
     other.head_  = nullptr;
@@ -152,6 +153,7 @@ public:
     }
     auto ptr = tail_->data_[back_++].template as<Ty>();
     std::construct_at(ptr, std::forward<Args>(args)...);
+    size_++;
     return *ptr;
   }
 
@@ -182,6 +184,7 @@ public:
       front_ = 0;
     }
 
+    size_--;
     return ret;
   }
 
@@ -198,16 +201,12 @@ public:
 
   [[nodiscard]] auto size() const noexcept -> size_type
   {
-    if (head_ == nullptr)
-    {
-      return 0;
-    }
-    return static_cast<size_type>(tail_ ? (tail_->next_ ? pool_size : back_) + front_ : front_);
+    return size_;
   }
 
   [[nodiscard]] auto empty() const noexcept -> bool
   {
-    return (head_ == nullptr) || (head_ == tail_ && front_ == back_);
+    return size_ == 0;
   }
 
   void clear() noexcept
@@ -325,6 +324,7 @@ private:
   deque_block* head_  = nullptr;
   deque_block* tail_  = nullptr;
   deque_block* free_  = nullptr;
+  size_type    size_  = 0;
   size_type    front_ = 0;
   size_type    back_  = 0;
 };

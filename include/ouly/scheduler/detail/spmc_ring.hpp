@@ -150,34 +150,43 @@ public:
 
   auto pop_back(T& out) noexcept -> bool // owner only
   {
-    auto b = bottom_.fetch_sub(1, std::memory_order_seq_cst) - 1;
+    
+    auto b = bottom_.load(std::memory_order_relaxed) - 1;
+    bottom_.store(b, std::memory_order_relaxed);
+
+    std::atomic_thread_fence(std::memory_order_seq_cst);
+
     auto t = top_.load(std::memory_order_relaxed);
 
-    if (t <= b)
-    { // non‑empty
-      // NOLINTNEXTLINE
-      auto& data = slot(b);
-      std::memcpy(&out, &data, sizeof(T));
-      if (t == b)
-      { // last item, race with steal
-        if (!top_.compare_exchange_strong(t, t + 1, std::memory_order_seq_cst, std::memory_order_relaxed))
-        {
-          // lost race – revert and fail
-          bottom_.store(t + 1, std::memory_order_relaxed);
-          return false;
-        }
-      }
-      return true;
+    auto size = b - t;
+    if (size < 0)
+    {
+      // queue empty – restore bottom
+      bottom_.store(b + 1, std::memory_order_relaxed);
+      return false;
     }
+
+    auto& data = slot(b);
+    std::memcpy(&out, &data, sizeof(T));
+
+    if (size > 0)
+      return true;
+    
+    if (!top_.compare_exchange_strong(t, t + 1, std::memory_order_seq_cst, std::memory_order_relaxed))
+    {
+      // lost race – revert and fail
+      bottom_.store(b + 1, std::memory_order_relaxed);
+      return false;
+    }
+    
     // queue empty – restore bottom
-    bottom_.store(t, std::memory_order_relaxed);
-    return false;
+    bottom_.store(b + 1, std::memory_order_relaxed);
+    return true;
   }
 
   /*==============================  CONSUMER  ==============================*/
   /**
-   * Steal one item; returns actual count (0 ⇒ empty or CAS lost).
-   * Caller must have space in `dst` for one item.
+   * Steal one item; returns true if found.
    */
   auto steal(T& dst) noexcept -> bool
   {
@@ -190,10 +199,16 @@ public:
       return false; // empty
     }
 
+    if (!top_.compare_exchange_strong(t, t + 1, std::memory_order_seq_cst, std::memory_order_relaxed))
+    {
+      return false;
+    }
+
+    
     auto& data = slot(t);
     std::memcpy(&dst, &data, sizeof(T));
 
-    return top_.compare_exchange_strong(t, t + 1, std::memory_order_seq_cst, std::memory_order_relaxed);
+    return true;
   }
 
 private:

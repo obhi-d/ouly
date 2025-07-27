@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
 #pragma once
+
 #include "cache_optimized_data.hpp"
 #include "ouly/allocators/default_allocator.hpp"
 #include "ouly/containers/basic_queue.hpp"
@@ -13,6 +13,7 @@
 #include <mutex>
 #include <span>
 #include <utility>
+#include <numeric>
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -51,10 +52,11 @@ public:
   workgroup(const workgroup&)                    = delete;
   auto operator=(const workgroup&) -> workgroup& = delete;
   workgroup(workgroup&& other) noexcept
-      : assigned_workers_(other.assigned_workers_.load(std::memory_order_relaxed)),
-        has_work_(other.has_work_.load(std::memory_order_relaxed)), thread_count_(other.thread_count_),
-        worker_start_idx_(other.worker_start_idx_), worker_end_idx_(other.worker_end_idx_), priority_(other.priority_),
-        owner_(other.owner_), work_queues_(std::move(other.work_queues_)), mailbox_(std::move(other.mailbox_))
+      : slot_index_top_(other.slot_index_top_.load(std::memory_order_relaxed)),
+        has_work_(other.has_work_.load(std::memory_order_relaxed)), available_slots_(std::move(other.available_slots_)),
+        thread_count_(other.thread_count_), worker_start_idx_(other.worker_start_idx_),
+        worker_end_idx_(other.worker_end_idx_), priority_(other.priority_), owner_(other.owner_),
+        work_queues_(std::move(other.work_queues_)), mailbox_(std::move(other.mailbox_))
   {
     other.thread_count_ = 0;
     other.priority_     = 0;
@@ -65,8 +67,9 @@ public:
   {
     if (this != &other)
     {
-      assigned_workers_.store(other.assigned_workers_.load(std::memory_order_relaxed), std::memory_order_relaxed);
+      slot_index_top_.store(other.slot_index_top_.load(std::memory_order_relaxed), std::memory_order_relaxed);
       has_work_.store(other.has_work_.load(std::memory_order_relaxed), std::memory_order_relaxed);
+      available_slots_  = std::move(other.available_slots_);
       thread_count_     = other.thread_count_;
       worker_start_idx_ = other.worker_start_idx_;
       worker_end_idx_   = other.worker_end_idx_;
@@ -85,11 +88,16 @@ public:
   {
     worker_start_idx_ = start;
     worker_end_idx_   = start + thread_count;
-    thread_count_     = static_cast<int32_t>(thread_count);
+    thread_count_     = static_cast<int64_t>(thread_count);
     priority_         = priority;
 
     // Allocate Chase-Lev queues for each worker in this workgroup
     work_queues_ = std::make_unique<queue_type[]>(thread_count);
+    available_slots_ = std::make_unique<uint32_t[]>(thread_count);
+
+    std::iota(available_slots_.get(), available_slots_.get() + thread_count, 0);
+    // Initialize all slots as available (set bits 0 to thread_count-1)
+    slot_index_top_.store(0, std::memory_order_relaxed);
 
     // Reset work availability
     has_work_.store(false, std::memory_order_relaxed);
@@ -126,11 +134,11 @@ public:
   {
     OULY_ASSERT(thread_count_ > 0);
 
-    auto attempts = static_cast<uint32_t>(thread_count_);
+    auto attempts = static_cast<uint64_t>(thread_count_);
 
-    for (uint32_t i = 0; i < attempts; ++i)
+    for (uint64_t i = 0; i < attempts; ++i)
     {
-      uint32_t worker_idx = (steal_offset + i) % attempts;
+      uint64_t worker_idx = (steal_offset + i) % attempts;
 
       if (work_queues_[worker_idx].steal(out))
       {
@@ -201,7 +209,7 @@ public:
     thread_count_ = 0;
     priority_     = 0;
     work_queues_.reset();
-    assigned_workers_.store(0, std::memory_order_relaxed);
+    slot_index_top_.store(0, std::memory_order_relaxed);
     has_work_.store(false, std::memory_order_relaxed);
   }
 
@@ -232,35 +240,48 @@ public:
     return priority_;
   }
 
+  /**
+   * @brief Enter the workgroup and claim an available worker slot
+   * @return Worker slot index (0 to thread_count_-1) on success, -1 if no slots available
+   */
   auto enter() -> int
   {
-    int32_t prev = assigned_workers_.fetch_add(1, std::memory_order_relaxed);
-    if (prev >= thread_count_)
+    auto top = slot_index_top_.fetch_add(1, std::memory_order_acquire);
+    if (top >= thread_count_)
     {
-      assigned_workers_.fetch_sub(1, std::memory_order_relaxed);
-      return -1;
+      // No available slots
+      slot_index_top_.fetch_sub(1, std::memory_order_relaxed);
+      return -1; // Indicate no available slot
     }
-    // success
-    std::atomic_thread_fence(std::memory_order_acquire);
-    return prev;
+    return available_slots_[top];
   }
 
-  void exit() noexcept
+  /**
+   * @brief Exit the workgroup and release the worker slot
+   * @param slot_index The slot index that was returned by enter()
+   */
+  void exit(int slot_index) noexcept
   {
-    std::atomic_thread_fence(std::memory_order_release);
-    assigned_workers_.fetch_sub(1, std::memory_order_relaxed);
+    OULY_ASSERT(slot_index >= 0 && slot_index < thread_count_);
+    auto top = slot_index_top_.fetch_sub(1, std::memory_order_release);
+    if (top > 0)
+    {
+      // Store the returned slot index back to the available slots
+      available_slots_[top - 1] = slot_index;
+    }
   }
 
 private:
   friend class ouly::v2::scheduler;
 
-  // Work availability flag - advertises to scheduler
-  alignas(cache_line_size) std::atomic_int32_t assigned_workers_{0};
+  // Available worker slots as a bitset - each bit represents whether a slot is available
+  alignas(cache_line_size) std::atomic_int64_t slot_index_top_{0};
   alignas(cache_line_size) std::atomic_bool has_work_{false}; // Flag to indicate work availability  // Configuration
-  alignas(cache_line_size) int32_t thread_count_ = 0;
-  uint32_t worker_start_idx_                     = 0;
-  uint32_t worker_end_idx_                       = 0; // End index for this workgroup
-  uint32_t priority_                             = 0;
+  alignas(cache_line_size) std::unique_ptr<uint32_t[]> available_slots_;
+  int64_t  thread_count_     = 0;
+  uint32_t worker_start_idx_ = 0;
+  uint32_t worker_end_idx_   = 0; // End index for this workgroup
+  uint32_t priority_         = 0;
 
   ouly::v2::scheduler* owner_ = nullptr; // Pointer to the owning scheduler
   // Work queues - one Chase-Lev queue per worker in this workgroup
