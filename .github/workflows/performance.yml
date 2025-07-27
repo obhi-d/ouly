@@ -283,7 +283,7 @@ jobs:
       shell: bash
       run: |
         # Switch back to performance-tracking branch to generate report
-        git checkout performance-tracking
+        git checkout origin/performance-tracking
         
         # Create comprehensive performance summary
         echo "# 🚀 Performance Benchmark Summary" > performance_summary.md
