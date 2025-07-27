@@ -367,36 +367,29 @@ TEST_CASE("spmc_ring stress test with queue size validation", "[spmc_ring][multi
       std::atomic<bool> done{false};
 
       // Producer thread
-      std::thread producer(
+      std::thread producer_popper(
        [&]()
        {
          for (int i = 0; i < num_iterations; ++i)
          {
+
            while (!ring.push_back(i))
            {
              std::this_thread::yield();
            }
            pushed.fetch_add(1);
+
+           if (i % 4)
+           {
+             int value;
+             if (ring.pop_back(value))
+             {
+               (void)value;
+               popped.fetch_add(1);
+             }
+           }
          }
          done = true;
-       });
-
-      // Pop_back thread
-      std::thread pop_thread(
-       [&]()
-       {
-         int value;
-         while (!done.load() || popped.load() + stolen.load() < pushed.load())
-         {
-           if (ring.pop_back(value))
-           {
-             popped.fetch_add(1);
-           }
-           else
-           {
-             std::this_thread::yield();
-           }
-         }
        });
 
       // Steal thread
@@ -417,8 +410,7 @@ TEST_CASE("spmc_ring stress test with queue size validation", "[spmc_ring][multi
          }
        });
 
-      producer.join();
-      pop_thread.join();
+      producer_popper.join();
       steal_thread.join();
 
       // Count remaining items
@@ -468,27 +460,18 @@ TEST_CASE("spmc_ring stress test with queue size validation", "[spmc_ring][multi
            total_pushed.fetch_add(1);
            counter++;
          }
-         if (counter % 100 == 0)
-         {
-           std::this_thread::yield();
-         }
-       }
-     });
 
-    // Producer pop_back thread (simulates owner taking work back)
-    std::thread pop_back_thread(
-     [&]()
-     {
-       int value = 0;
-       while (!stop_flag.load())
-       {
-         if (ring.pop_back(value))
+         if (counter % 4)
          {
-           total_popped.fetch_add(1);
-         }
-         else
-         {
-           std::this_thread::yield();
+           int value = 0;
+           if (ring.pop_back(value))
+           {
+             total_popped.fetch_add(1);
+           }
+           else
+           {
+             std::this_thread::yield();
+           }
          }
        }
      });
@@ -521,7 +504,6 @@ TEST_CASE("spmc_ring stress test with queue size validation", "[spmc_ring][multi
 
     // Wait for all threads to finish
     producer.join();
-    pop_back_thread.join();
     for (auto& t : stealers)
     {
       t.join();

@@ -28,6 +28,8 @@ class spmc_ring
 {
   static_assert((Capacity > 0) && (Capacity & (Capacity - 1)) == 0, "Capacity must be a power-of-two > 0");
 
+  static constexpr size_t module_mask = Capacity - 1; // For modulo operation with power-of-two capacity
+
 public:
   spmc_ring() noexcept  = default;
   ~spmc_ring() noexcept = default;
@@ -50,7 +52,7 @@ public:
       return false;
     }
 
-    buffer_[b % Capacity] = item;
+    buffer_[b & module_mask] = item;
 
     // A release store ensures that the write to the buffer is visible
     // to other threads before the update to 'bottom'.
@@ -80,30 +82,26 @@ public:
     std::atomic_thread_fence(std::memory_order_seq_cst);
 
     t = top_.load(std::memory_order_relaxed);
-
-    if (t > b)
+    if (t <= b)
     {
-      // The deque became empty due to a concurrent steal. Restore 'bottom'
-      // to its state before our failed pop attempt.
-      bottom_.store(t, std::memory_order_relaxed);
-      return false;
+      out = buffer_[b & module_mask];
+      if (t == b)
+      {
+        // last element: compete with thieves
+        std::size_t expected = t;
+        if (!top_.compare_exchange_strong(expected, t + 1, std::memory_order_seq_cst, std::memory_order_seq_cst))
+        {
+          // lost the race, restore
+          bottom_.store(t + 1, std::memory_order_relaxed);
+          return false;
+        }
+        bottom_.store(t + 1, std::memory_order_relaxed);
+      }
+      return true;
     }
-
-    // Successfully claimed the item.
-    out = buffer_[b % Capacity];
-
-    if (t == b)
-    {
-      // This was the last item. We must race with stealers to update 'top'.
-      // If we win, the pop is successful. If we lose, a stealer took the item.
-      bool success = top_.compare_exchange_strong(t, t + 1, std::memory_order_seq_cst, std::memory_order_relaxed);
-      // Regardless of the outcome, 'bottom' must be updated to mark the deque as empty.
-      bottom_.store(t + 1, std::memory_order_relaxed);
-      return success;
-    }
-
-    // More than one item was in the deque, so the pop is successful without a race.
-    return true;
+    // deque became empty
+    bottom_.store(t, std::memory_order_relaxed);
+    return false;
   }
 
   /*==============================  CONSUMER  ==============================*/
@@ -119,20 +117,16 @@ public:
     std::atomic_thread_fence(std::memory_order_seq_cst);
 
     size_t b = bottom_.load(std::memory_order_acquire);
-
-    // Check if the deque is empty.
-    if (t >= b)
+    if (t < b)
     {
-      return false;
+      dst                  = buffer_[t & module_mask];
+      std::size_t expected = t;
+      if (top_.compare_exchange_strong(expected, t + 1, std::memory_order_seq_cst, std::memory_order_seq_cst))
+      {
+        return true;
+      }
     }
-
-    // There appears to be an item. Read it before attempting to claim it.
-    dst = buffer_[t % Capacity];
-
-    // Try to claim the item by incrementing 'top'.
-    // 'acq_rel' ensures synchronization with the producer (via release in push)
-    // and other stealers (via acquire on their 'top' loads).
-    return top_.compare_exchange_strong(t, t + 1, std::memory_order_acq_rel, std::memory_order_relaxed);
+    return false;
   }
 
 private:
