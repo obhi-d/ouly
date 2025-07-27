@@ -413,7 +413,7 @@ TEMPLATE_TEST_CASE("Multiple Workgroups Different Sizes", "[scheduler][workgroup
   using SchedulerType   = typename TestRunner::scheduler_type;
   using TaskContextType = typename TestRunner::task_context_type;
 
-  TestCounter counter;
+  [[maybe_unused]] TestCounter counter;
 
   SchedulerType scheduler;
   // Create workgroups with different worker counts

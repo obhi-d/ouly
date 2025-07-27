@@ -133,13 +133,15 @@ public:
   using scheduler_type    = SchedulerType;
   using task_context_type = TaskContextType;
 
-  // Task submission performance
+  // Task submission performance using parallel_for
   static void run_task_submission(ankerl::nanobench::Bench& bench, const std::string& name_suffix)
   {
-    constexpr uint32_t TASK_COUNT = 10000U;
+    constexpr uint32_t    TASK_COUNT = 10000U;
+    std::vector<uint32_t> task_data(TASK_COUNT);
+    std::iota(task_data.begin(), task_data.end(), 0);
 
     bench.run(std::string("TaskSubmission_") + name_suffix,
-              [=]()
+              [&task_data]()
               {
                 scheduler_type scheduler;
                 scheduler.create_group(ouly::workgroup_id(0), 0, std::thread::hardware_concurrency());
@@ -149,14 +151,12 @@ public:
 
                 const auto& main_ctx = get_main_context();
 
-                for (uint32_t i = 0; i < TASK_COUNT; ++i)
-                {
-                  scheduler.submit(main_ctx, ouly::workgroup_id(0),
-                                   [&counter](const task_context_type&)
-                                   {
-                                     counter.fetch_add(1, std::memory_order_relaxed);
-                                   });
-                }
+                ouly::parallel_for(
+                 [&counter](uint32_t&, const task_context_type&)
+                 {
+                   counter.fetch_add(1, std::memory_order_relaxed);
+                 },
+                 task_data, main_ctx);
 
                 scheduler.end_execution();
                 ankerl::nanobench::doNotOptimizeAway(counter.load());
@@ -190,7 +190,7 @@ public:
               });
   }
 
-  // Matrix operations with task submission
+  // Matrix operations using parallel_for
   static void run_matrix_operations(ankerl::nanobench::Bench& bench, const std::string& name_suffix)
   {
     constexpr size_t DATA_SIZE = 25000;
@@ -205,14 +205,12 @@ public:
                 scheduler.begin_execution();
                 const auto& main_ctx = get_main_context();
 
-                for (size_t i = 0; i < data.matrices.size(); ++i)
-                {
-                  scheduler.submit(main_ctx, ouly::workgroup_id(0),
-                                   [&data, i](const task_context_type&)
-                                   {
-                                     ComputationKernels::matrix_operations(data.matrices[i]);
-                                   });
-                }
+                ouly::parallel_for(
+                 [](glm::mat4& matrix, const task_context_type&)
+                 {
+                   ComputationKernels::matrix_operations(matrix);
+                 },
+                 data.matrices, main_ctx);
 
                 scheduler.end_execution();
                 ankerl::nanobench::doNotOptimizeAway(data.matrices.data());
@@ -253,14 +251,16 @@ public:
               });
   }
 
-  // High-throughput task processing
+  // High-throughput task processing using parallel_for
   static void run_task_throughput(ankerl::nanobench::Bench& bench, const std::string& name_suffix)
   {
-    constexpr uint32_t TASK_COUNT     = 25000U;
-    constexpr uint32_t WORK_INTENSITY = 500U;
+    constexpr uint32_t    TASK_COUNT     = 25000U;
+    constexpr uint32_t    WORK_INTENSITY = 500U;
+    std::vector<uint32_t> task_indices(TASK_COUNT);
+    std::iota(task_indices.begin(), task_indices.end(), 0);
 
     bench.run(std::string("TaskThroughput_") + name_suffix,
-              [=]()
+              [&task_indices, WORK_INTENSITY]()
               {
                 scheduler_type scheduler;
                 scheduler.create_group(ouly::workgroup_id(0), 0, std::thread::hardware_concurrency());
@@ -270,28 +270,25 @@ public:
 
                 const auto& main_ctx = get_main_context();
 
-                for (uint32_t i = 0; i < TASK_COUNT; ++i)
-                {
-                  scheduler.submit(main_ctx, ouly::workgroup_id(0),
-                                   [&result, i, WORK_INTENSITY](const task_context_type&)
-                                   {
-                                     glm::vec3 vec(static_cast<float>(i));
-                                     for (uint32_t j = 0; j < WORK_INTENSITY; ++j)
-                                     {
-                                       ComputationKernels::vector_operations(vec);
-                                     }
-                                     result.fetch_add(
-                                      static_cast<uint64_t>(glm::length(vec) * benchmark_config::LENGTH_MULTIPLIER),
-                                      std::memory_order_relaxed);
-                                   });
-                }
+                ouly::parallel_for(
+                 [&result, WORK_INTENSITY](uint32_t& i, const task_context_type&)
+                 {
+                   glm::vec3 vec(static_cast<float>(i));
+                   for (uint32_t j = 0; j < WORK_INTENSITY; ++j)
+                   {
+                     ComputationKernels::vector_operations(vec);
+                   }
+                   result.fetch_add(static_cast<uint64_t>(glm::length(vec) * benchmark_config::LENGTH_MULTIPLIER),
+                                    std::memory_order_relaxed);
+                 },
+                 task_indices, main_ctx);
 
                 scheduler.end_execution();
                 ankerl::nanobench::doNotOptimizeAway(result.load());
               });
   }
 
-  // Nested parallel workload
+  // Nested parallel workload using parallel_for
   static void run_nested_parallel(ankerl::nanobench::Bench& bench, const std::string& name_suffix)
   {
     constexpr size_t DATA_SIZE = 10000;
@@ -307,24 +304,25 @@ public:
                 scheduler.begin_execution();
                 const auto& main_ctx = get_main_context();
 
-                // Outer parallel loop
+                // Outer parallel loop with nested parallel work
                 ouly::parallel_for(
-                 [&data, &main_ctx](auto begin, auto end, const task_context_type& ctx)
+                 [&data](glm::vec3& vec, const task_context_type& ctx)
                  {
-                   for (auto it = begin; it != end; ++it)
-                   {
-                     const size_t idx = static_cast<size_t>(std::distance(begin, it));
+                   const size_t idx = static_cast<size_t>(&vec - data.vectors.data());
 
-                     // Submit nested work to different workgroup
-                     ctx.get_scheduler().submit(ctx, ouly::workgroup_id(1),
-                                                [&data, idx](const task_context_type&)
-                                                {
-                                                  if (idx < data.matrices.size())
-                                                  {
-                                                    ComputationKernels::matrix_operations(data.matrices[idx]);
-                                                  }
-                                                });
+                   // Submit nested work to different workgroup using parallel_for on matrices
+                   if (idx < data.matrices.size())
+                   {
+                     std::vector<glm::mat4*> matrix_refs = {&data.matrices[idx]};
+                     ouly::parallel_for(
+                      [](glm::mat4*& matrix_ptr, const task_context_type&)
+                      {
+                        ComputationKernels::matrix_operations(*matrix_ptr);
+                      },
+                      matrix_refs, ctx);
                    }
+
+                   ComputationKernels::vector_operations(vec);
                  },
                  data.vectors, main_ctx);
 
@@ -430,36 +428,6 @@ public:
                                   });
 
                 ankerl::nanobench::doNotOptimizeAway(data.integer_data.data());
-              });
-  }
-
-  static void run_parallel_reduce(ankerl::nanobench::Bench& bench)
-  {
-    constexpr size_t DATA_SIZE = 1000000;
-    BenchmarkData    data(DATA_SIZE);
-
-    bench.run("ParallelReduce_TBB",
-              [&data]()
-              {
-                tbb::global_control global_limit(tbb::global_control::max_allowed_parallelism,
-                                                 std::thread::hardware_concurrency());
-
-                const double result = tbb::parallel_reduce(
-                 tbb::blocked_range<size_t>(0, data.double_data.size()), 0.0,
-                 [&data](const tbb::blocked_range<size_t>& range, double init)
-                 {
-                   for (size_t i = range.begin(); i != range.end(); ++i)
-                   {
-                     init += std::sqrt(data.double_data[i] * data.double_data[i] + 1.0);
-                   }
-                   return init;
-                 },
-                 [](double a, double b)
-                 {
-                   return a + b;
-                 });
-
-                ankerl::nanobench::doNotOptimizeAway(result);
               });
   }
 
@@ -612,10 +580,7 @@ void run_comprehensive_scheduler_benchmarks()
   ComprehensiveSchedulerBenchmark<ouly::v1::scheduler, ouly::v1::task_context>::run_nested_parallel(bench, "V1");
   ComprehensiveSchedulerBenchmark<ouly::v2::scheduler, ouly::v2::task_context>::run_nested_parallel(bench, "V2");
 
-  std::cout << "📉 Running TBB-specific Parallel Reduce..." << std::endl;
-  TBBBenchmarks::run_parallel_reduce(bench);
-
-  std::cout << "💾 Saving benchmark results..." << std::endl;
+  std::cout << " Saving benchmark results..." << std::endl;
   BenchmarkReporter::save_results(bench, "scheduler_comparison");
 
   std::cout << std::endl;
