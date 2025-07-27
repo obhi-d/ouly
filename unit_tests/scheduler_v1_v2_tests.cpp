@@ -413,7 +413,7 @@ TEMPLATE_TEST_CASE("Multiple Workgroups Different Sizes", "[scheduler][workgroup
   using SchedulerType   = typename TestRunner::scheduler_type;
   using TaskContextType = typename TestRunner::task_context_type;
 
-  TestCounter counter;
+  [[maybe_unused]] TestCounter counter;
 
   SchedulerType scheduler;
   // Create workgroups with different worker counts
@@ -1092,7 +1092,7 @@ TEMPLATE_TEST_CASE("Memory Pressure and Large Task Queues", "[scheduler][memory]
   for (uint32_t i = 0; i < large_task_count; ++i)
   {
     scheduler.submit(main_ctx, ouly::workgroup_id(0),
-                     [&, i](TaskContextType const&)
+                     [&total_memory_processed, &completed_tasks, i](TaskContextType const&)
                      {
                        // Allocate and process some memory
                        std::vector<uint32_t> local_data(data_size_per_task);
