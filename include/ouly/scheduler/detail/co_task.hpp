@@ -4,8 +4,7 @@
 
 #include "ouly/scheduler/detail/get_awaiter.hpp"
 #include "ouly/scheduler/detail/promise_type.hpp"
-#include "ouly/scheduler/task_context_v1.hpp"
-#include "ouly/scheduler/task_context_v2.hpp"
+#include "ouly/scheduler/worker_structs.hpp"
 #include <semaphore>
 
 namespace ouly::detail

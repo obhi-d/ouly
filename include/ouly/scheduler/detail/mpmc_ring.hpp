@@ -172,6 +172,21 @@ public:
     return true;
   }
 
+  void clear() noexcept
+  {
+    for (std::size_t i = 0; i < capacity_pow2; ++i)
+    {
+      buffer_[i].sequence_.store(i, std::memory_order_relaxed);
+    }
+    head_.store(0, std::memory_order_relaxed);
+    tail_.store(0, std::memory_order_relaxed);
+  }
+
+  [[nodiscard]] auto size() const noexcept -> std::size_t
+  {
+    return head_.load(std::memory_order_relaxed) - tail_.load(std::memory_order_relaxed);
+  }
+
 private:
   struct node_t
   {

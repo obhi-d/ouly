@@ -5,10 +5,6 @@
 #include "nanobench.h"
 #include "ouly/scheduler/parallel_for.hpp"
 #include "ouly/scheduler/scheduler.hpp"
-#include "ouly/scheduler/scheduler_v1.hpp"
-#include "ouly/scheduler/scheduler_v2.hpp"
-#include "ouly/scheduler/task_context_v1.hpp"
-#include "ouly/scheduler/task_context_v2.hpp"
 
 #include <algorithm>
 #include <atomic>
@@ -152,7 +148,7 @@ public:
                 const auto& main_ctx = get_main_context();
 
                 ouly::parallel_for(
-                 [&counter](uint32_t&, const task_context_type&)
+                 [&counter](uint32_t, const task_context_type&)
                  {
                    counter.fetch_add(1, std::memory_order_relaxed);
                  },
@@ -535,7 +531,7 @@ public:
 };
 
 // Main benchmark execution
-void run_comprehensive_scheduler_benchmarks()
+void run_comprehensive_scheduler_benchmarks(int run_only = -1)
 {
   std::cout << "🚀 OULY Comprehensive Scheduler Comparison Benchmarks" << std::endl;
   std::cout << "=======================================================" << std::endl;
@@ -551,34 +547,52 @@ void run_comprehensive_scheduler_benchmarks()
    .minEpochIterations(5)
    .relative(true);
 
-  std::cout << "📊 Running Task Submission Benchmarks..." << std::endl;
-  ComprehensiveSchedulerBenchmark<ouly::v1::scheduler, ouly::v1::task_context>::run_task_submission(bench, "V1");
-  ComprehensiveSchedulerBenchmark<ouly::v2::scheduler, ouly::v2::task_context>::run_task_submission(bench, "V2");
-  TBBBenchmarks::run_task_submission(bench);
+  if (run_only < 0 || run_only == 0)
+  {
+    std::cout << "📊 Running Task Submission Benchmarks..." << std::endl;
+    ComprehensiveSchedulerBenchmark<ouly::v1::scheduler, ouly::v1::task_context>::run_task_submission(bench, "V1");
+    ComprehensiveSchedulerBenchmark<ouly::v2::scheduler, ouly::v2::task_context>::run_task_submission(bench, "V2");
+    TBBBenchmarks::run_task_submission(bench);
+  }
 
-  std::cout << "🔄 Running Parallel For Vector Operations..." << std::endl;
-  ComprehensiveSchedulerBenchmark<ouly::v1::scheduler, ouly::v1::task_context>::run_parallel_for_vectors(bench, "V1");
-  ComprehensiveSchedulerBenchmark<ouly::v2::scheduler, ouly::v2::task_context>::run_parallel_for_vectors(bench, "V2");
-  TBBBenchmarks::run_parallel_for_vectors(bench);
+  if (run_only < 0 || run_only == 1)
+  {
+    std::cout << "🔄 Running Parallel For Vector Operations..." << std::endl;
+    ComprehensiveSchedulerBenchmark<ouly::v1::scheduler, ouly::v1::task_context>::run_parallel_for_vectors(bench, "V1");
+    ComprehensiveSchedulerBenchmark<ouly::v2::scheduler, ouly::v2::task_context>::run_parallel_for_vectors(bench, "V2");
+    TBBBenchmarks::run_parallel_for_vectors(bench);
+  }
 
-  std::cout << "🧮 Running Matrix Operations..." << std::endl;
-  ComprehensiveSchedulerBenchmark<ouly::v1::scheduler, ouly::v1::task_context>::run_matrix_operations(bench, "V1");
-  ComprehensiveSchedulerBenchmark<ouly::v2::scheduler, ouly::v2::task_context>::run_matrix_operations(bench, "V2");
-  TBBBenchmarks::run_matrix_operations(bench);
+  if (run_only < 0 || run_only == 2)
+  {
+    std::cout << "🧮 Running Matrix Operations..." << std::endl;
+    ComprehensiveSchedulerBenchmark<ouly::v1::scheduler, ouly::v1::task_context>::run_matrix_operations(bench, "V1");
+    ComprehensiveSchedulerBenchmark<ouly::v2::scheduler, ouly::v2::task_context>::run_matrix_operations(bench, "V2");
+    TBBBenchmarks::run_matrix_operations(bench);
+  }
 
-  std::cout << "🔀 Running Mixed Workload Benchmarks..." << std::endl;
-  ComprehensiveSchedulerBenchmark<ouly::v1::scheduler, ouly::v1::task_context>::run_mixed_workload(bench, "V1");
-  ComprehensiveSchedulerBenchmark<ouly::v2::scheduler, ouly::v2::task_context>::run_mixed_workload(bench, "V2");
-  TBBBenchmarks::run_mixed_workload(bench);
+  if (run_only < 0 || run_only == 3)
+  {
+    std::cout << "🔀 Running Mixed Workload Benchmarks..." << std::endl;
+    ComprehensiveSchedulerBenchmark<ouly::v1::scheduler, ouly::v1::task_context>::run_mixed_workload(bench, "V1");
+    ComprehensiveSchedulerBenchmark<ouly::v2::scheduler, ouly::v2::task_context>::run_mixed_workload(bench, "V2");
+    TBBBenchmarks::run_mixed_workload(bench);
+  }
 
-  std::cout << "⚡ Running Task Throughput Benchmarks..." << std::endl;
-  ComprehensiveSchedulerBenchmark<ouly::v1::scheduler, ouly::v1::task_context>::run_task_throughput(bench, "V1");
-  ComprehensiveSchedulerBenchmark<ouly::v2::scheduler, ouly::v2::task_context>::run_task_throughput(bench, "V2");
-  TBBBenchmarks::run_task_throughput(bench);
+  if (run_only < 0 || run_only == 4)
+  {
+    std::cout << "⚡ Running Task Throughput Benchmarks..." << std::endl;
+    ComprehensiveSchedulerBenchmark<ouly::v1::scheduler, ouly::v1::task_context>::run_task_throughput(bench, "V1");
+    ComprehensiveSchedulerBenchmark<ouly::v2::scheduler, ouly::v2::task_context>::run_task_throughput(bench, "V2");
+    TBBBenchmarks::run_task_throughput(bench);
+  }
 
-  std::cout << "🔗 Running Nested Parallel Workloads..." << std::endl;
-  ComprehensiveSchedulerBenchmark<ouly::v1::scheduler, ouly::v1::task_context>::run_nested_parallel(bench, "V1");
-  ComprehensiveSchedulerBenchmark<ouly::v2::scheduler, ouly::v2::task_context>::run_nested_parallel(bench, "V2");
+  if (run_only < 0 || run_only == 5)
+  {
+    std::cout << "🔗 Running Nested Parallel Workloads..." << std::endl;
+    ComprehensiveSchedulerBenchmark<ouly::v1::scheduler, ouly::v1::task_context>::run_nested_parallel(bench, "V1");
+    ComprehensiveSchedulerBenchmark<ouly::v2::scheduler, ouly::v2::task_context>::run_nested_parallel(bench, "V2");
+  }
 
   std::cout << " Saving benchmark results..." << std::endl;
   BenchmarkReporter::save_results(bench, "scheduler_comparison");
@@ -602,17 +616,32 @@ int main(int argc, char** argv)
         std::cout << "Usage: " << argv[0] << " [options]" << std::endl;
         std::cout << "Options:" << std::endl;
         std::cout << "  --help, -h    Show this help message" << std::endl;
-        std::cout << "  --quick       Run quick benchmark subset" << std::endl;
+        std::cout << "  --quick  [test_index]  Run quick benchmark subset" << std::endl;
         return 0;
       }
       if (arg == "--quick")
       {
         std::cout << "Running quick benchmark subset..." << std::endl;
+        int test_index = -1;
+        if (argc > 2)
+        {
+          try
+          {
+            test_index = std::stoi(argv[2]);
+          }
+          catch (const std::exception&)
+          {
+            std::cerr << "Invalid test index provided. Running comprehensive benchmarks." << std::endl;
+          }
+        }
+
         // Could implement a reduced benchmark set here for CI
+        run_comprehensive_scheduler_benchmarks(test_index);
+        return 0;
       }
     }
 
-    run_comprehensive_scheduler_benchmarks();
+    run_comprehensive_scheduler_benchmarks(-1);
     return 0;
   }
   catch (const std::exception& e)

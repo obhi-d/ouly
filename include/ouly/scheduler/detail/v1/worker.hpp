@@ -6,10 +6,10 @@
 #include "ouly/containers/basic_queue.hpp"
 #include "ouly/scheduler/detail/cache_optimized_data.hpp"
 #include "ouly/scheduler/detail/mpmc_ring.hpp"
-#include "ouly/scheduler/detail/workgroup_v1.hpp"
+#include "ouly/scheduler/detail/v1/workgroup.hpp"
 #include "ouly/scheduler/spin_lock.hpp"
 #include "ouly/scheduler/task.hpp"
-#include "ouly/scheduler/task_context_v1.hpp"
+#include "ouly/scheduler/v1/task_context.hpp"
 #include <array>
 #include <cstdint>
 

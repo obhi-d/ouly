@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 #pragma once
-#include "ouly/scheduler/detail/worker_v1.hpp"
-#include "ouly/scheduler/task_context_v1.hpp"
+#include "ouly/scheduler/detail/v1/worker.hpp"
+#include "ouly/scheduler/v1/task_context.hpp"
 #include "ouly/scheduler/worker_structs.hpp"
 #include "ouly/utility/common.hpp"
 #include "ouly/utility/config.hpp"

@@ -3,10 +3,6 @@
 #include "catch2/catch_all.hpp"
 #include "ouly/scheduler/parallel_for.hpp"
 #include "ouly/scheduler/scheduler.hpp"
-#include "ouly/scheduler/scheduler_v1.hpp"
-#include "ouly/scheduler/scheduler_v2.hpp"
-#include "ouly/scheduler/task_context_v1.hpp"
-#include "ouly/scheduler/task_context_v2.hpp"
 #include <atomic>
 #include <chrono>
 #include <iostream>

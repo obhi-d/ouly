@@ -86,10 +86,19 @@ function(add_unit_test)
         add_test(${target_name} ${target_name})
     endif()
 
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    if(
+        CMAKE_CXX_COMPILER_ID STREQUAL "GNU"
+        OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang"
+    )
         message("Building with coverage info : ${target_name}")
-        target_compile_options(${target_name} PRIVATE --coverage -fprofile-update=atomic)
-        target_link_options(${target_name} PRIVATE --coverage -fprofile-update=atomic)
+        target_compile_options(
+            ${target_name}
+            PRIVATE --coverage -fprofile-update=atomic
+        )
+        target_link_options(
+            ${target_name}
+            PRIVATE --coverage -fprofile-update=atomic
+        )
         if(unit_test_SANITIZE)
             message("Santizers active on : ${target_name}")
             target_compile_options(${target_name} PUBLIC -fsanitize=address)
@@ -103,19 +112,14 @@ function(add_unit_test)
     else()
         target_compile_options(
             ${target_name}
-            PRIVATE
-                -Wall
-                -Wextra
-                -pedantic
-                -Werror
+            PRIVATE -Wall -Wextra -pedantic -Werror
         )
         if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
             target_compile_options(
                 ${target_name}
-                PRIVATE
-                    -Wno-unknown-warning-option
+                PRIVATE -Wno-unknown-warning-option
             )
-        endif() 
+        endif()
     endif()
 endfunction(add_unit_test)
 
@@ -144,7 +148,7 @@ add_unit_test(NAME microexpr FILES "microexpr_tests.cpp" SANITIZE)
 add_unit_test(NAME thread_safe_allocators FILES "thread_safe_allocators.cpp" SANITIZE)
 add_unit_test(NAME coalescing_allocator FILES "coalescing_allocator.cpp" SANITIZE)
 add_unit_test(NAME spmc_ring FILES "spmc_ring.cpp" SANITIZE)
-add_unit_test(NAME scheduler_v1_v2_tests FILES "scheduler_v1_v2_tests.cpp" LINK_LIBS glm::glm SANITIZE)
+add_unit_test(NAME scheduler_tests FILES "scheduler_tests.cpp" LINK_LIBS glm::glm SANITIZE)
 add_executable(ouly-bench "bench_arena_allocator.cpp" "bench_main.cpp")
 add_executable(ouly-performance-bench "bench_performance.cpp")
 add_executable(ouly-scheduler-comparison-bench "bench_scheduler_comparison.cpp")
@@ -152,13 +156,31 @@ add_executable(ouly-scheduler-comparison-bench "bench_scheduler_comparison.cpp")
 target_link_libraries(ouly-bench ouly::ouly nanobench::nanobench)
 target_compile_features(ouly-bench PRIVATE cxx_std_20)
 
-target_link_libraries(ouly-performance-bench ouly::ouly nanobench::nanobench TBB::tbb glm::glm)
+target_link_libraries(
+    ouly-performance-bench
+    ouly::ouly
+    nanobench::nanobench
+    TBB::tbb
+    glm::glm
+)
 target_compile_features(ouly-performance-bench PRIVATE cxx_std_20)
-target_compile_definitions(ouly-performance-bench PRIVATE -DOULY_REC_STATS -DOULY_THROW_ON_ERROR)
+target_compile_definitions(
+    ouly-performance-bench
+    PRIVATE -DOULY_REC_STATS -DOULY_THROW_ON_ERROR
+)
 
-target_link_libraries(ouly-scheduler-comparison-bench ouly::ouly nanobench::nanobench TBB::tbb glm::glm)
+target_link_libraries(
+    ouly-scheduler-comparison-bench
+    ouly::ouly
+    nanobench::nanobench
+    TBB::tbb
+    glm::glm
+)
 target_compile_features(ouly-scheduler-comparison-bench PRIVATE cxx_std_20)
-target_compile_definitions(ouly-scheduler-comparison-bench PRIVATE -DOULY_REC_STATS -DOULY_THROW_ON_ERROR)
+target_compile_definitions(
+    ouly-scheduler-comparison-bench
+    PRIVATE -DOULY_REC_STATS -DOULY_THROW_ON_ERROR
+)
 
 # Performance test target for release builds
 if(CMAKE_BUILD_TYPE STREQUAL "Release")

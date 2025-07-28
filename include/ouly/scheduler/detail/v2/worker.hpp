@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "ouly/scheduler/task_context_v2.hpp"
+#include "ouly/scheduler/v2/task_context.hpp"
 #include <cstdint>
 
 namespace ouly::detail::v2

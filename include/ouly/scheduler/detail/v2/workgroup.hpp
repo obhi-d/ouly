@@ -1,13 +1,12 @@
 #pragma once
 
-#include "cache_optimized_data.hpp"
 #include "ouly/allocators/default_allocator.hpp"
 #include "ouly/containers/basic_queue.hpp"
 #include "ouly/scheduler/detail/cache_optimized_data.hpp"
 #include "ouly/scheduler/detail/mpmc_ring.hpp"
 #include "ouly/scheduler/detail/spmc_ring.hpp"
 #include "ouly/scheduler/spin_lock.hpp"
-#include "ouly/scheduler/task_context_v2.hpp"
+#include "ouly/scheduler/v2/task_context.hpp"
 #include <atomic>
 #include <cstdint>
 #include <mutex>

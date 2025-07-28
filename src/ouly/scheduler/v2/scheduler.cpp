@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 
-#include "ouly/scheduler/scheduler_v2.hpp"
+#include "ouly/scheduler/v2/scheduler.hpp"
 #include "ouly/scheduler/detail/pause.hpp"
-#include "ouly/scheduler/detail/worker_v2.hpp"
-#include "ouly/scheduler/detail/workgroup_v2.hpp"
-#include "ouly/scheduler/task_context_v2.hpp"
+#include "ouly/scheduler/detail/v2/worker.hpp"
+#include "ouly/scheduler/detail/v2/workgroup.hpp"
+#include "ouly/scheduler/v2/task_context.hpp"
 #include "ouly/scheduler/worker_structs.hpp"
 #include <atomic>
 #include <barrier>

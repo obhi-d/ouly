@@ -37,21 +37,16 @@ add_library(
     "src/ouly/allocators/ts_thread_local_allocator.cpp"
     "src/ouly/dsl/lite_yml.cpp"
     "src/ouly/dsl/microexpr.cpp"
-    "src/ouly/scheduler/scheduler_v1.cpp"
-    "src/ouly/scheduler/scheduler_v2.cpp"
+    "src/ouly/scheduler/v1/scheduler.cpp"
+    "src/ouly/scheduler/v2/scheduler.cpp"
     "src/ouly/utility/string_utils.cpp"
 )
 
 set_property(TARGET ${OULY_TARGET_NAME} PROPERTY CXX_STANDARD 20)
 
 # Add all warning flags
-if (MSVC)
-    target_compile_options(
-        ${OULY_TARGET_NAME}
-        PRIVATE
-            /W4
-            /WX
-    )
+if(MSVC)
+    target_compile_options(${OULY_TARGET_NAME} PRIVATE /W4 /WX)
 else()
     target_compile_options(
         ${OULY_TARGET_NAME}
@@ -81,29 +76,29 @@ else()
             -Wuninitialized
             -Wnull-dereference
     )
-    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         target_compile_options(
             ${OULY_TARGET_NAME}
-            PRIVATE
-                -Wno-unknown-warning-option
+            PRIVATE -Wno-unknown-warning-option
         )
     endif()
 endif()
 
-message(STATUS "Using ${CMAKE_CXX_COMPILER} version ${CMAKE_CXX_COMPILER_VERSION}")
+message(
+    STATUS
+    "Using ${CMAKE_CXX_COMPILER} version ${CMAKE_CXX_COMPILER_VERSION}"
+)
 # Check if Windows, skip clang-tidy in which case
 if(NOT MSVC)
-    
-  find_program(CLANG_TIDY_EXE NAMES "clang-tidy")
-  # setup clang-tidy command from executable + options
-  if(CLANG_TIDY_EXE)
-      set(CLANG_TIDY_COMMAND "${CLANG_TIDY_EXE}")
-      set_target_properties(
-          ${OULY_TARGET_NAME}
-          PROPERTIES CXX_CLANG_TIDY "${CLANG_TIDY_COMMAND}"
-      )
-  endif()
-
+    find_program(CLANG_TIDY_EXE NAMES "clang-tidy")
+    # setup clang-tidy command from executable + options
+    if(CLANG_TIDY_EXE)
+        set(CLANG_TIDY_COMMAND "${CLANG_TIDY_EXE}")
+        set_target_properties(
+            ${OULY_TARGET_NAME}
+            PROPERTIES CXX_CLANG_TIDY "${CLANG_TIDY_COMMAND}"
+        )
+    endif()
 endif()
 
 add_library(${PROJECT_NAME}::${OULY_TARGET_NAME} ALIAS ${OULY_TARGET_NAME})
@@ -177,11 +172,13 @@ install(
 
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
-
-if (OULY_EXPORT_CC_TO_SRC_DIR)
-add_custom_target(copy_compile_commands ALL
-  COMMAND ${CMAKE_COMMAND} -E create_symlink
-    ${PROJECT_BINARY_DIR}/compile_commands.json
-    ${CMAKE_SOURCE_DIR}/compile_commands.json
-)
+if(OULY_EXPORT_CC_TO_SRC_DIR)
+    add_custom_target(
+        copy_compile_commands
+        ALL
+        COMMAND
+            ${CMAKE_COMMAND} -E create_symlink
+            ${PROJECT_BINARY_DIR}/compile_commands.json
+            ${CMAKE_SOURCE_DIR}/compile_commands.json
+    )
 endif()

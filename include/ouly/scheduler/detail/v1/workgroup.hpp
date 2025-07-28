@@ -6,7 +6,7 @@
 #include "ouly/scheduler/detail/mpmc_ring.hpp"
 #include "ouly/scheduler/spin_lock.hpp"
 #include "ouly/scheduler/task.hpp"
-#include "ouly/scheduler/task_context_v1.hpp"
+#include "ouly/scheduler/v1/task_context.hpp"
 #include <cstdint>
 
 namespace ouly::detail::v1

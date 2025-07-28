@@ -128,6 +128,18 @@ public:
     return false;
   }
 
+  void clear()
+  {
+    // Reset the ring buffer by clearing the top and bottom indices.
+    top_.store(0, std::memory_order_relaxed);
+    bottom_.store(0, std::memory_order_relaxed);
+  }
+
+  [[nodiscard]] auto size() const noexcept -> size_t
+  {
+    return bottom_.load(std::memory_order_relaxed) - top_.load(std::memory_order_relaxed);
+  }
+
 private:
   /*-------------------------------- data members -----------------------------*/
   alignas(cache_line_size) std::atomic<size_t> top_{0};    // thieves CAS on this
