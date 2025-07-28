@@ -110,15 +110,17 @@ function(add_unit_test)
     if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
         target_compile_options(${target_name} PRIVATE /W4 /WX)
     else()
-        target_compile_options(
-            ${target_name}
-            PRIVATE -Wall -Wextra -pedantic -Werror
-        )
-        if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        if (NOT CMAKE_GENERATOR MATCHES "Xcode")
             target_compile_options(
                 ${target_name}
-                PRIVATE -Wno-unknown-warning-option
+                PRIVATE -Wall -Wextra -pedantic -Werror
             )
+            if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+                target_compile_options(
+                    ${target_name}
+                    PRIVATE -Wno-unknown-warning-option
+                )
+            endif()
         endif()
     endif()
 endfunction(add_unit_test)
