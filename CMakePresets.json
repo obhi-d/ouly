@@ -142,6 +142,31 @@
       }
     },
     {
+      "name": "windows-profiling",
+      "displayName": "Windows x64 Profiling",
+      "description": "Target Windows with the Visual Studio development environment.",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
+        "ASAN_ENABLED": "ON",
+        "OULY_BUILD_TESTS": "ON"
+      },
+      "vendor": {
+        "microsoft.com/VisualStudioSettings/CMake/1.0": {
+          "hostOS": [
+            "Windows"
+          ]
+        }
+      }
+    },
+    {
       "name": "windows-gen",
       "displayName": "Windows x64 Generate",
       "description": "Target Windows with the Visual Studio development environment.",
@@ -230,6 +255,10 @@
     {
       "name": "windows-test",
       "configurePreset": "windows-test"
+    },
+    {
+      "name": "windows-profiling",
+      "configurePreset": "windows-profiling"
     },
     {
       "name": "windows-gen",
