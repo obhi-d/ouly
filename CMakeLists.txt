@@ -48,39 +48,41 @@ set_property(TARGET ${OULY_TARGET_NAME} PROPERTY CXX_STANDARD 20)
 if(MSVC)
     target_compile_options(${OULY_TARGET_NAME} PRIVATE /W4 /WX)
 else()
-    target_compile_options(
-        ${OULY_TARGET_NAME}
-        PRIVATE
-            -Wall
-            -Wextra
-            -pedantic
-            -Werror
-            -Wshadow
-            -Wconversion
-            -Wsign-conversion
-            -Wfloat-conversion
-            -Wnon-virtual-dtor
-            -Wold-style-cast
-            -Woverloaded-virtual
-            -Wcast-align
-            -Wcast-qual
-            -Winit-self
-            -Wmissing-declarations
-            -Wmissing-include-dirs
-            -Wpointer-arith
-            -Wredundant-decls
-            -Wsign-promo
-            -Wswitch
-            -Wswitch-default
-            -Wswitch-enum
-            -Wuninitialized
-            -Wnull-dereference
-    )
-    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    if (NOT CMAKE_GENERATOR MATCHES "Xcode")
         target_compile_options(
             ${OULY_TARGET_NAME}
-            PRIVATE -Wno-unknown-warning-option
+            PRIVATE
+                -Wall
+                -Wextra
+                -pedantic
+                -Werror
+                -Wshadow
+                -Wconversion
+                -Wsign-conversion
+                -Wfloat-conversion
+                -Wnon-virtual-dtor
+                -Wold-style-cast
+                -Woverloaded-virtual
+                -Wcast-align
+                -Wcast-qual
+                -Winit-self
+                -Wmissing-declarations
+                -Wmissing-include-dirs
+                -Wpointer-arith
+                -Wredundant-decls
+                -Wsign-promo
+                -Wswitch
+                -Wswitch-default
+                -Wswitch-enum
+                -Wuninitialized
+                -Wnull-dereference
         )
+        if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+            target_compile_options(
+                ${OULY_TARGET_NAME}
+                PRIVATE -Wno-unknown-warning-option
+            )
+        endif()
     endif()
 endif()
 
