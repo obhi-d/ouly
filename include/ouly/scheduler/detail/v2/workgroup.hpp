@@ -275,8 +275,8 @@ public:
     uint64_t mask = small_mask_.load(std::memory_order_relaxed);
     while (mask != 0U)
     {
-      uint64_t bit      = mask & -mask; // isolate lowest‑set bit
-      uint64_t new_mask = mask & ~bit;  // clear it
+      uint64_t bit      = mask & (~mask + 1); // isolate lowest‑set bit
+      uint64_t new_mask = mask & ~bit;        // clear it
       if (small_mask_.compare_exchange_weak(mask, new_mask, std::memory_order_acquire, std::memory_order_relaxed))
       {
         return std::countr_zero(bit);
