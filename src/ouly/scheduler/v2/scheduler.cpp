@@ -379,7 +379,7 @@ void scheduler::finish_pending_tasks()
   stop_.store(true, std::memory_order_seq_cst);
 
   // Wake up all workers
-  wake_up_workers(worker_count_);
+  wake_tokens_.release(worker_count_);
 
   // Third: Wait for all workers to acknowledge the stop signal
   synchronizer_->job_board_freeze_ack_.count_down();

@@ -96,7 +96,7 @@ class basic_delegate<SmallSize, Ret(Args...)>
   {
     // Retrieve the stored function and cast it back to its original type
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    auto& func = *reinterpret_cast<F*>(d.buffer_ + sizeof(delegate_fn));
+    auto& func = *reinterpret_cast<F*>(d.buffer_.data() + sizeof(delegate_fn));
     return func(std::forward<Args>(args)...);
   }
 
@@ -116,7 +116,7 @@ class basic_delegate<SmallSize, Ret(Args...)>
     // using F = typename M::function_type;
 
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    auto data = *reinterpret_cast<C**>(d.buffer_ + sizeof(delegate_fn));
+    auto data = *reinterpret_cast<C**>(d.buffer_.data() + sizeof(delegate_fn));
     return M::invoke(*data, std::forward<Args>(args)...);
   }
 
@@ -125,7 +125,7 @@ class basic_delegate<SmallSize, Ret(Args...)>
   static auto invoke_lambda(basic_delegate& d, Args... args) -> Ret
   {
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    auto& func = *reinterpret_cast<F*>(d.buffer_ + sizeof(delegate_fn));
+    auto& func = *reinterpret_cast<F*>(d.buffer_.data() + sizeof(delegate_fn));
     return func(std::forward<Args>(args)...);
   }
 
@@ -167,7 +167,7 @@ class basic_delegate<SmallSize, Ret(Args...)>
   void construct(delegate_fn fn)
   {
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    *reinterpret_cast<delegate_fn*>(buffer_) = fn;
+    *reinterpret_cast<delegate_fn*>(buffer_.data()) = fn;
   }
 
   template <typename F>
@@ -180,8 +180,8 @@ class basic_delegate<SmallSize, Ret(Args...)>
                         DecayedF>();
 
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    *reinterpret_cast<delegate_fn*>(buffer_) = fn;
-    new (buffer_ + sizeof(delegate_fn)) DecayedF(std::forward<F>(arg));
+    *reinterpret_cast<delegate_fn*>(buffer_.data()) = fn;
+    new (buffer_.data() + sizeof(delegate_fn)) DecayedF(std::forward<F>(arg));
   }
 
   template <typename P>
@@ -195,7 +195,7 @@ class basic_delegate<SmallSize, Ret(Args...)>
                         DecayedP>();
 
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    auto pair = reinterpret_cast<compressed_pair<P>*>(buffer_);
+    auto pair = reinterpret_cast<compressed_pair<P>*>(buffer_.data());
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     *reinterpret_cast<delegate_fn*>(pair->functor_) = fn;
     new (pair->data_) DecayedP(std::forward<P>(p));
@@ -216,7 +216,7 @@ class basic_delegate<SmallSize, Ret(Args...)>
                         DecayedP>();
 
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    auto pair = reinterpret_cast<compressed_pair<P>*>(buffer_);
+    auto pair = reinterpret_cast<compressed_pair<P>*>(buffer_.data());
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     *reinterpret_cast<delegate_fn*>(pair->functor_) = fn;
     new (pair->functor_ + sizeof(delegate_fn)) DecayedF(std::forward<F>(arg));
@@ -378,14 +378,14 @@ public:
   auto args() const noexcept -> std::tuple<PArgs...> const&
   {
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    return *reinterpret_cast<std::tuple<PArgs...> const*>(buffer_ + sizeof(delegate_fn));
+    return *reinterpret_cast<std::tuple<PArgs...> const*>(buffer_.data() + sizeof(delegate_fn));
   }
 
   template <typename... PArgs>
   auto args() noexcept -> std::tuple<PArgs...>&
   {
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    return *reinterpret_cast<std::tuple<PArgs...>*>(buffer_ + sizeof(delegate_fn));
+    return *reinterpret_cast<std::tuple<PArgs...>*>(buffer_.data() + sizeof(delegate_fn));
   }
 
   /** Get compressed pair's data */
@@ -394,7 +394,7 @@ public:
   {
     using CompressedPair = compressed_pair<P>;
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    auto pair = reinterpret_cast<CompressedPair const*>(buffer_);
+    auto pair = reinterpret_cast<CompressedPair const*>(buffer_.data());
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     return *reinterpret_cast<P const*>(pair->data_);
   }
@@ -402,13 +402,13 @@ public:
   explicit operator bool() const noexcept
   {
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    return (*reinterpret_cast<delegate_fn const*>(buffer_)) != nullptr;
+    return (*reinterpret_cast<delegate_fn const*>(buffer_.data())) != nullptr;
   }
 
   auto operator=(std::nullptr_t) noexcept -> basic_delegate&
   {
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    (*reinterpret_cast<delegate_fn*>(buffer_)) = nullptr;
+    (*reinterpret_cast<delegate_fn*>(buffer_.data())) = nullptr;
     return *this;
   }
 
@@ -416,9 +416,9 @@ public:
   auto operator()(Args... args) -> Ret
   {
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    OULY_ASSERT(*reinterpret_cast<delegate_fn*>(buffer_));
+    OULY_ASSERT(*reinterpret_cast<delegate_fn*>(buffer_.data()));
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    return ((*reinterpret_cast<delegate_fn*>(buffer_)))(*this, std::forward<Args>(args)...);
+    return ((*reinterpret_cast<delegate_fn*>(buffer_.data())))(*this, std::forward<Args>(args)...);
   }
 };
 
