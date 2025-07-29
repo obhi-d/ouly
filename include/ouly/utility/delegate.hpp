@@ -75,13 +75,12 @@ class basic_delegate;
 template <size_t SmallSize, typename Ret, typename... Args>
 class basic_delegate<SmallSize, Ret(Args...)>
 {
-
   using delegate_fn                   = Ret (*)(basic_delegate&, Args...);
   static constexpr size_t buffer_size = sizeof(void*) + SmallSize;
 
   // Small object optimization buffer
   // NOLINTNEXTLINE
-  alignas(std::max_align_t) std::byte buffer_[buffer_size] = {};
+  alignas(std::max_align_t) std::array<std::byte, buffer_size> buffer_;
 
   template <typename P>
   struct compressed_pair
@@ -225,7 +224,19 @@ class basic_delegate<SmallSize, Ret(Args...)>
   }
 
 public:
+  struct noinit_t
+  {};
+
+  static constexpr noinit_t noinit{};
+
   using fnptr = delegate_fn;
+
+  basic_delegate() noexcept : buffer_{} {}
+
+  constexpr basic_delegate(noinit_t /*noinit*/) noexcept
+  {
+    // No initialization, used for move construction
+  }
 
   /** Bind method for a functor_ or lambda like object */
   template <typename F>

@@ -195,8 +195,9 @@ inline void scheduler::finalize_worker(worker_id thread)
 
 inline auto scheduler::work(worker_id thread) noexcept -> bool
 {
-  detail::v1::work_item available_work;
-  auto                  id = get_work(thread, available_work);
+  detail::v1::work_item available_work{detail::v1::work_item::noinit};
+
+  auto id = get_work(thread, available_work);
   if (!id)
   {
     return false;

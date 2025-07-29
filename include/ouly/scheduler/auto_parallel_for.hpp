@@ -152,6 +152,12 @@ struct auto_range
   uint32_t   size_{};
   uint16_t   spawn_worker_index_{}; // assuming we have maximum 256 workers
   uint8_t    max_depth_{};
+  uint8_t    divisor_{0}; // log2(divisor)
+
+  [[nodiscard]] auto divisor() const noexcept -> uint32_t
+  {
+    return 1U << divisor_;
+  }
 
   [[nodiscard]] auto span() const noexcept -> range_type
   {
