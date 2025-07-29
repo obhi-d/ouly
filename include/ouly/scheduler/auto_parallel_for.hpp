@@ -54,7 +54,7 @@ class range_pool
 {
 private:
   uint8_t                          head_{0};
-  uint8_t                          tail_{0};
+  uint8_t                          tail_{1};
   uint8_t                          size_{1};
   std::array<uint8_t, MaxCapacity> depths_;
   std::array<Range, MaxCapacity>   ranges_;
@@ -89,11 +89,13 @@ public:
   }
   [[nodiscard]] auto back() -> Range&
   {
-    return ranges_[tail_];
+    const uint8_t back_idx = (tail_ - 1) & (MaxCapacity - 1);
+    return ranges_[back_idx];
   }
   [[nodiscard]] auto back_depth() const noexcept -> uint8_t
   {
-    return depths_[tail_];
+    const uint8_t back_idx = (tail_ - 1) & (MaxCapacity - 1);
+    return depths_[back_idx];
   }
   void pop_front()
   {
@@ -126,23 +128,33 @@ public:
 
   [[nodiscard]] auto is_divisible(uint8_t max_depth) const noexcept -> bool
   {
-    return !empty() && back().is_divisible() && depths_[tail_] < max_depth;
+    if (empty())
+    {
+      return false;
+    }
+    const uint8_t back_idx = (tail_ - 1) & (MaxCapacity - 1);
+    return ranges_[back_idx].is_divisible() && depths_[back_idx] < max_depth;
   }
 
   void split_to_fill(uint8_t max_depth)
   {
+
     while (!full() && is_divisible(max_depth))
     {
-      const uint8_t back_idx      = tail_;
+      const uint8_t back_idx      = (tail_ - 1) & (MaxCapacity - 1); // Current back index
       Range&        back_range    = ranges_[back_idx];
       const uint8_t current_depth = depths_[back_idx];
 
       if (back_range.is_divisible() && current_depth < max_depth)
       {
         // split range::subrange
-        push_back(back_range.split(), current_depth + 1);
+        Range split_range = back_range.split();
+        push_back(split_range, current_depth + 1);
         depths_[back_idx] = current_depth + 1; // Update left range depth too
-        continue;
+      }
+      else
+      {
+        break; // Can't split anymore
       }
     }
   }
@@ -215,14 +227,14 @@ struct auto_range
   void execute(WC const& this_context)
   {
     uint8_t    max_depth       = max_depth_;
-    auto       execution_index = static_cast<uint16_t>(this_context.get_worker());
+    auto       execution_index = static_cast<uint16_t>(this_context.get_worker().get_index());
     const bool is_stolen       = execution_index != spawn_worker_index_;
     if (is_stolen && max_depth < Traits::max_depth)
     {
       max_depth += Traits::depth_increment;
     }
 
-    if (is_divisible() || max_depth == 0)
+    if (!is_divisible() || max_depth == 0)
     {
       execute_sequential_auto(this_context);
       return;
@@ -250,24 +262,27 @@ struct auto_range
 
         state_->spawns_.fetch_add(1, std::memory_order_relaxed);
         scheduler.submit(this_context,
-                         [new_range = auto_range{state_, range.begin(), static_cast<uint32_t>(range.size()),
+                         [new_range = auto_range{state_, work_range.begin(), static_cast<uint32_t>(work_range.size()),
                                                  execution_index, work_depth}](WC const& wc) mutable
                          {
                            new_range.execute(wc);
+                           new_range.state_->spawns_.fetch_sub(1, std::memory_order_relaxed);
                          });
 
+        // Continue to process remaining ranges in the pool
         continue;
       }
 
-      // Execute the back range
+      // Execute the back range sequentially
       auto& back_range = pool.back();
       auto new_range = auto_range{state_, back_range.begin(), static_cast<uint32_t>(back_range.size()), execution_index,
                                   pool.back_depth()};
       pool.pop_back();
-      new_range.execute_sequential_auto(this_context);
-    }
 
-    state_->spawns_.fetch_sub(1, std::memory_order_relaxed);
+      new_range.execute_sequential_auto(this_context);
+
+      // Continue processing any remaining ranges
+    }
   }
 };
 
@@ -277,7 +292,7 @@ struct auto_parallel_for_state
   auto_parallel_for_state(L& lambda, FwIt f) noexcept : first_(f), lambda_instance_(lambda) {}
 
   using value_type  = typename std::iterator_traits<FwIt>::value_type;
-  using range_type  = std::ranges::subrange<FwIt, FwIt>;
+  using range_type  = ouly::subrange<FwIt>;
   using iterator    = FwIt;
   using lambda_type = L;
 
@@ -293,6 +308,107 @@ inline void cooperative_wait_auto(std::latch& counter, WC const& this_context)
   while (!counter.try_wait())
   {
     // Try to do other work while waiting - this helps with work stealing detection
+    scheduler.busy_work(this_context);
+  }
+}
+
+/**
+ * @brief Execute lambda sequentially over a range
+ */
+template <typename L, typename FwIt, TaskContext WC>
+void execute_sequential_auto(L& lambda, FwIt&& range, WC const& this_context)
+{
+  using iterator_t                 = decltype(std::begin(range));
+  constexpr bool is_range_executor = ouly::detail::RangeExecutor<L, iterator_t, WC>;
+
+  if constexpr (is_range_executor)
+  {
+    lambda(std::begin(std::forward<FwIt>(range)), std::end(std::forward<FwIt>(range)), this_context);
+  }
+  else
+  {
+    for (auto it = std::begin(std::forward<FwIt>(range)), end = std::end(std::forward<FwIt>(range)); it != end; ++it)
+    {
+      if constexpr (std::is_integral_v<std::decay_t<decltype(it)>>)
+      {
+        lambda(it, this_context);
+      }
+      else
+      {
+        lambda(*it, this_context);
+      }
+    }
+  }
+}
+
+/**
+ * @brief Launch auto parallel tasks with adaptive partitioning
+ */
+template <typename L, typename FwIt, TaskContext WC, typename Traits = auto_partitioner_traits>
+void launch_auto_parallel_tasks(L lambda, FwIt&& range, uint32_t initial_divisor, uint32_t count,
+                                WC const& this_context)
+{
+  using iterator_t = decltype(std::begin(range));
+  using state_type = auto_parallel_for_state<iterator_t, L>;
+
+  auto& scheduler = this_context.get_scheduler();
+
+  // Create shared state for tracking spawned tasks
+  state_type state(lambda, std::begin(std::forward<FwIt>(range)));
+
+  // Calculate initial chunk size
+  const uint32_t chunk_size = count / initial_divisor;
+  const uint32_t remainder  = count % initial_divisor;
+
+  // Create latch for synchronization - we'll spawn (initial_divisor - 1) tasks
+  // and execute one chunk in the current thread
+  std::latch completion_latch(initial_divisor - 1);
+
+  // Launch parallel tasks
+  uint32_t current_pos = 0;
+  for (uint32_t i = 0; i < initial_divisor - 1; ++i)
+  {
+    // Give some tasks one extra element to handle remainder
+    const uint32_t current_chunk_size = chunk_size + (i < remainder ? 1 : 0);
+    const auto     worker_index       = static_cast<uint16_t>(this_context.get_worker().get_index());
+
+    auto task_range = auto_range<state_type, Traits>{
+     &state, std::begin(std::forward<FwIt>(range)) + current_pos, current_chunk_size, worker_index,
+     0 // initial depth
+    };
+
+    state.spawns_.fetch_add(1, std::memory_order_relaxed);
+    scheduler.submit(this_context,
+                     [task_range, &completion_latch, &state](WC const& wc) mutable
+                     {
+                       task_range.execute(wc);
+                       state.spawns_.fetch_sub(1, std::memory_order_relaxed);
+                       completion_latch.count_down();
+                     });
+
+    current_pos += current_chunk_size;
+  }
+
+  // Execute remaining work in current thread
+  if (current_pos < count)
+  {
+    const uint32_t remaining_size = count - current_pos;
+    const auto     worker_index   = static_cast<uint16_t>(this_context.get_worker().get_index());
+
+    auto current_range = auto_range<state_type, Traits>{
+     &state, std::begin(std::forward<FwIt>(range)) + current_pos, remaining_size, worker_index,
+     0 // initial depth
+    };
+
+    current_range.execute(this_context);
+  }
+
+  // Wait for all parallel tasks to complete
+  cooperative_wait_auto(completion_latch, this_context);
+
+  // Wait for any additional spawned tasks to complete
+  while (state.spawns_.load(std::memory_order_relaxed) > 0)
+  {
     scheduler.busy_work(this_context);
   }
 }

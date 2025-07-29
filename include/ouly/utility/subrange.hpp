@@ -47,7 +47,7 @@ public:
   {
     auto mid   = begin_ + (size() >> 1);
     auto right = subrange(mid, end_);
-    begin_     = mid;
+    end_       = mid; // Fix: truncate original range to left half
     return right;
   }
 
