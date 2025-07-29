@@ -68,7 +68,7 @@ concept HasParallelExecutionThreshold = requires {
 template <typename T>
 struct fixed_batch_size_t
 {
-  static constexpr uint32_t value = default_task_traits::fixed_batch_size;
+  static constexpr uint32_t value = default_partitioner_traits::fixed_batch_size;
 };
 
 template <HasFixedBatchSize T>
@@ -80,7 +80,7 @@ struct fixed_batch_size_t<T>
 template <typename T>
 struct batches_per_worker_t
 {
-  static constexpr uint32_t value = default_task_traits::batches_per_worker;
+  static constexpr uint32_t value = default_partitioner_traits::batches_per_worker;
 };
 
 template <HasBatchesPerWorker T>
@@ -92,7 +92,7 @@ struct batches_per_worker_t<T>
 template <typename T>
 struct parallel_execution_threshold_t
 {
-  static constexpr uint32_t value = default_task_traits::parallel_execution_threshold;
+  static constexpr uint32_t value = default_partitioner_traits::parallel_execution_threshold;
 };
 
 template <HasParallelExecutionThreshold T>

@@ -23,30 +23,6 @@ namespace ouly
 {
 
 /**
- * @brief Auto partitioner traits following TBB's design
- */
-struct auto_partitioner_traits
-{
-  /** Grain size for auto partitioning */
-  static constexpr uint32_t grain_size = 1U;
-
-  /** Maximum depth for partitioning */
-  static constexpr uint32_t max_depth = 8;
-
-  /** Depth increment due to steal */
-  static constexpr uint32_t depth_increment = 1;
-
-  /** Minimum split size */
-  static constexpr uint32_t min_split_size = 32;
-
-  /** Sequential threshold for splitting */
-  static constexpr uint32_t sequential_threshold = 128;
-
-  /** Range pool capacity  */
-  static constexpr uint32_t range_pool_capacity = 8;
-};
-
-/**
  * @brief Range pool for storing work ranges with depths (similar to TBB's range_vector)
  */
 template <typename Range, uint32_t MaxCapacity = auto_partitioner_traits::range_pool_capacity>
@@ -240,8 +216,8 @@ struct auto_range
       return;
     }
 
-    auto                   range = range_type{start_, start_ + size_};
-    range_pool<range_type> pool(range);
+    auto                                                range = range_type{start_, start_ + size_};
+    range_pool<range_type, Traits::range_pool_capacity> pool(range);
 
     auto& scheduler = this_context.get_scheduler();
 
@@ -296,7 +272,7 @@ struct auto_parallel_for_state
   using iterator    = FwIt;
   using lambda_type = L;
 
-  alignas(ouly::detail::cache_line_size) std::atomic<uint32_t> spawns_{0};
+  alignas(ouly::detail::cache_line_size) std::atomic<int64_t> spawns_{0};
   iterator                  first_;
   std::reference_wrapper<L> lambda_instance_;
 };
@@ -379,10 +355,10 @@ void launch_auto_parallel_tasks(L lambda, FwIt&& range, uint32_t initial_divisor
 
     state.spawns_.fetch_add(1, std::memory_order_relaxed);
     scheduler.submit(this_context,
-                     [task_range, &completion_latch, &state](WC const& wc) mutable
+                     [task_range, &completion_latch](WC const& wc) mutable
                      {
                        task_range.execute(wc);
-                       state.spawns_.fetch_sub(1, std::memory_order_relaxed);
+                       task_range.state_->spawns_.fetch_sub(1, std::memory_order_relaxed);
                        completion_latch.count_down();
                      });
 
@@ -444,13 +420,6 @@ void auto_parallel_for(L lambda, FwIt&& range, WC const& this_context, Traits /*
   }
 
   launch_auto_parallel_tasks(lambda, std::forward<FwIt>(range), initial_divisor, count, this_context);
-}
-
-// Convenience alias to match TBB interface style
-template <typename L, typename FwIt, TaskContext WC>
-void parallel_for(L lambda, FwIt&& range, WC const& this_context, auto_partitioner_traits traits = {})
-{
-  auto_parallel_for(lambda, std::forward<FwIt>(range), this_context, traits);
 }
 
 } // namespace ouly

@@ -307,7 +307,7 @@ ouly::parallel_for(
 );
 
 // Custom execution control with task traits
-struct custom_traits : ouly::default_task_traits {
+struct custom_traits : ouly::default_partitioner_traits {
     static constexpr uint32_t batches_per_worker = 8;           // More granular batching
     static constexpr uint32_t parallel_execution_threshold = 8; // Parallelize smaller workloads
 };
