@@ -3,7 +3,7 @@
 #define GLM_ENABLE_EXPERIMENTAL
 
 #include "nanobench.h"
-#include "ouly/scheduler/parallel_for.hpp"
+#include "ouly/scheduler/auto_parallel_for.hpp"
 #include "ouly/scheduler/scheduler.hpp"
 
 #include <algorithm>

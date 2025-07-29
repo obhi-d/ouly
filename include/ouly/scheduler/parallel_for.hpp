@@ -4,7 +4,7 @@
 
 #include "ouly/scheduler/detail/parallel_executer.hpp"
 #include "ouly/scheduler/worker_structs.hpp"
-#include "ouly/utility/integer_range.hpp"
+#include "ouly/utility/subrange.hpp"
 #include "ouly/utility/type_traits.hpp"
 #include <functional>
 #include <latch>

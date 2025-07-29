@@ -6,12 +6,12 @@ This section describes the utility classes provided by OULY (Abstract Core Libra
 Integer Range
 ------------
 
-``integer_range<I>`` provides a simple range abstraction for integers:
+``subrange<I>`` provides a simple range abstraction for integers:
 
 .. code-block:: cpp
 
 	template <typename I>
-	class integer_range;
+	class subrange;
 
 Key features:
 

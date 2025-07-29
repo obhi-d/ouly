@@ -1,0 +1,344 @@
+// SPDX-License-Identifier: MIT
+
+#pragma once
+
+#include "ouly/scheduler/detail/cache_optimized_data.hpp"
+#include "ouly/scheduler/detail/parallel_executer.hpp"
+#include "ouly/scheduler/worker_structs.hpp"
+#include "ouly/utility/subrange.hpp"
+
+#include <algorithm>
+#include <array>
+#include <atomic>
+#include <functional>
+#include <latch>
+#include <type_traits>
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4324) // structure was padded due to alignment specifier
+#endif
+
+namespace ouly
+{
+
+/**
+ * @brief Auto partitioner traits following TBB's design
+ */
+struct auto_partitioner_traits
+{
+  /** Grain size for auto partitioning */
+  static constexpr uint32_t grain_size = 1U;
+
+  /** Maximum depth for partitioning */
+  static constexpr uint32_t max_depth = 8;
+
+  /** Depth increment due to steal */
+  static constexpr uint32_t depth_increment = 1;
+
+  /** Minimum split size */
+  static constexpr uint32_t min_split_size = 32;
+
+  /** Sequential threshold for splitting */
+  static constexpr uint32_t sequential_threshold = 128;
+
+  /** Range pool capacity  */
+  static constexpr uint32_t range_pool_capacity = 8;
+};
+
+/**
+ * @brief Range pool for storing work ranges with depths (similar to TBB's range_vector)
+ */
+template <typename Range, uint32_t MaxCapacity = auto_partitioner_traits::range_pool_capacity>
+class range_pool
+{
+private:
+  uint8_t                          head_{0};
+  uint8_t                          tail_{0};
+  uint8_t                          size_{1};
+  std::array<uint8_t, MaxCapacity> depths_;
+  std::array<Range, MaxCapacity>   ranges_;
+
+public:
+  explicit range_pool(const Range& initial_range) noexcept
+  {
+    ranges_[0] = initial_range;
+    depths_[0] = 0;
+  }
+
+  [[nodiscard]] auto size() const noexcept -> uint8_t
+  {
+    return size_;
+  }
+  [[nodiscard]] auto empty() const noexcept -> bool
+  {
+    return size_ == 0;
+  }
+  [[nodiscard]] auto full() const noexcept -> bool
+  {
+    return size_ == MaxCapacity;
+  }
+
+  [[nodiscard]] auto front() -> Range&
+  {
+    return ranges_[head_];
+  }
+  [[nodiscard]] auto front_depth() const noexcept -> uint8_t
+  {
+    return depths_[head_];
+  }
+  [[nodiscard]] auto back() -> Range&
+  {
+    return ranges_[tail_];
+  }
+  [[nodiscard]] auto back_depth() const noexcept -> uint8_t
+  {
+    return depths_[tail_];
+  }
+  void pop_front()
+  {
+    if (size_ > 0)
+    {
+      head_ = (head_ + 1) & (MaxCapacity - 1);
+      --size_;
+    }
+  }
+
+  void push_back(const Range& range, uint8_t depth)
+  {
+    if (size_ < MaxCapacity)
+    {
+      ranges_[tail_] = range;
+      depths_[tail_] = depth;
+      tail_          = (tail_ + 1) & (MaxCapacity - 1);
+      ++size_;
+    }
+  }
+
+  void pop_back()
+  {
+    if (size_ > 0)
+    {
+      tail_ = (tail_ - 1) & (MaxCapacity - 1);
+      --size_;
+    }
+  }
+
+  [[nodiscard]] auto is_divisible(uint8_t max_depth) const noexcept -> bool
+  {
+    return !empty() && back().is_divisible() && depths_[tail_] < max_depth;
+  }
+
+  void split_to_fill(uint8_t max_depth)
+  {
+    while (!full() && is_divisible(max_depth))
+    {
+      const uint8_t back_idx      = tail_;
+      Range&        back_range    = ranges_[back_idx];
+      const uint8_t current_depth = depths_[back_idx];
+
+      if (back_range.is_divisible() && current_depth < max_depth)
+      {
+        // split range::subrange
+        push_back(back_range.split(), current_depth + 1);
+        depths_[back_idx] = current_depth + 1; // Update left range depth too
+        continue;
+      }
+    }
+  }
+};
+
+/**
+ * @brief Auto partition range
+ */
+template <typename StateData, typename Traits = auto_partitioner_traits>
+struct auto_range
+{
+  using value_type  = typename StateData::value_type;
+  using iterator    = typename StateData::iterator;
+  using range_type  = typename StateData::range_type;
+  using lambda_type = typename StateData::lambda_type;
+
+  StateData* state_{};
+  iterator   start_{};
+  uint32_t   size_{};
+  uint16_t   spawn_worker_index_{}; // assuming we have maximum 256 workers
+  uint8_t    max_depth_{};
+
+  [[nodiscard]] auto span() const noexcept -> range_type
+  {
+    return {start_, start_ + size_};
+  }
+
+  [[nodiscard]] auto size() const noexcept -> uint32_t
+  {
+    return size_;
+  }
+
+  [[nodiscard]] auto empty() const noexcept -> bool
+  {
+    return size_ == 0;
+  }
+
+  [[nodiscard]] auto is_divisible() const noexcept -> bool
+  {
+    return size() > Traits::grain_size;
+  }
+
+  template <TaskContext WC>
+  void execute_sequential_auto(WC const& this_context)
+  {
+    constexpr bool is_range_executor = ouly::detail::RangeExecutor<lambda_type, iterator, WC>;
+    auto&          lambda            = state_->lambda_instance_.get();
+
+    if constexpr (is_range_executor)
+    {
+      lambda(start_, start_ + size_, this_context);
+    }
+    else
+    {
+      for (auto it = start_, end = start_ + size_; it != end; ++it)
+      {
+        if constexpr (std::is_integral_v<std::decay_t<decltype(it)>>)
+        {
+          lambda(it, this_context);
+        }
+        else
+        {
+          lambda(*it, this_context);
+        }
+      }
+    }
+  }
+
+  template <TaskContext WC>
+  void execute(WC const& this_context)
+  {
+    uint8_t    max_depth       = max_depth_;
+    auto       execution_index = static_cast<uint16_t>(this_context.get_worker());
+    const bool is_stolen       = execution_index != spawn_worker_index_;
+    if (is_stolen && max_depth < Traits::max_depth)
+    {
+      max_depth += Traits::depth_increment;
+    }
+
+    if (is_divisible() || max_depth == 0)
+    {
+      execute_sequential_auto(this_context);
+      return;
+    }
+
+    auto                   range = range_type{start_, start_ + size_};
+    range_pool<range_type> pool(range);
+
+    auto& scheduler = this_context.get_scheduler();
+
+    while (!pool.empty())
+    {
+      // Fill the range pool by splitting ranges
+      pool.split_to_fill(max_depth);
+
+      // Check for work stealing demand
+      const bool has_demand = is_stolen || (Traits::grain_size > 1);
+
+      if (has_demand && pool.size() > 1)
+      {
+        // Offer work to the scheduler - create a new task for the front range
+        auto    work_range = pool.front();
+        uint8_t work_depth = pool.front_depth();
+        pool.pop_front();
+
+        state_->spawns_.fetch_add(1, std::memory_order_relaxed);
+        scheduler.submit(this_context,
+                         [new_range = auto_range{state_, range.begin(), static_cast<uint32_t>(range.size()),
+                                                 execution_index, work_depth}](WC const& wc) mutable
+                         {
+                           new_range.execute(wc);
+                         });
+
+        continue;
+      }
+
+      // Execute the back range
+      auto& back_range = pool.back();
+      auto new_range = auto_range{state_, back_range.begin(), static_cast<uint32_t>(back_range.size()), execution_index,
+                                  pool.back_depth()};
+      pool.pop_back();
+      new_range.execute_sequential_auto(this_context);
+    }
+
+    state_->spawns_.fetch_sub(1, std::memory_order_relaxed);
+  }
+};
+
+template <typename FwIt, typename L, typename Traits = auto_partitioner_traits>
+struct auto_parallel_for_state
+{
+  auto_parallel_for_state(L& lambda, FwIt f) noexcept : first_(f), lambda_instance_(lambda) {}
+
+  using value_type  = typename std::iterator_traits<FwIt>::value_type;
+  using range_type  = std::ranges::subrange<FwIt, FwIt>;
+  using iterator    = FwIt;
+  using lambda_type = L;
+
+  alignas(ouly::detail::cache_line_size) std::atomic<uint32_t> spawns_{0};
+  iterator                  first_;
+  std::reference_wrapper<L> lambda_instance_;
+};
+
+template <TaskContext WC>
+inline void cooperative_wait_auto(std::latch& counter, WC const& this_context)
+{
+  auto& scheduler = this_context.get_scheduler();
+  while (!counter.try_wait())
+  {
+    // Try to do other work while waiting - this helps with work stealing detection
+    scheduler.busy_work(this_context);
+  }
+}
+
+/**
+ * @brief Auto parallel_for implementation with adaptive partitioning
+ *
+ * This implementation uses TBB-style auto partitioning that adapts to load imbalances
+ * and work stealing patterns for optimal performance across different workloads.
+ */
+template <typename L, typename FwIt, TaskContext WC, typename Traits = auto_partitioner_traits>
+void auto_parallel_for(L lambda, FwIt&& range, WC const& this_context, Traits /*traits*/ = {})
+{
+  using it_helper = ouly::detail::it_size_type<FwIt>;
+  using size_type = uint32_t;
+
+  size_type count = it_helper::size(range);
+
+  if (count <= Traits::sequential_threshold)
+  {
+    execute_sequential_auto(lambda, std::forward<FwIt>(range), this_context);
+    return;
+  }
+
+  // Auto partitioner: calculate initial divisor based on concurrency and work characteristics
+  const uint32_t available_workers = this_context.get_scheduler().get_worker_count(this_context.get_workgroup());
+  const uint32_t initial_divisor   = std::min(available_workers * Traits::grain_size, count / Traits::grain_size);
+
+  if (initial_divisor <= 1)
+  {
+    execute_sequential_auto(lambda, std::forward<FwIt>(range), this_context);
+    return;
+  }
+
+  launch_auto_parallel_tasks(lambda, std::forward<FwIt>(range), initial_divisor, count, this_context);
+}
+
+// Convenience alias to match TBB interface style
+template <typename L, typename FwIt, TaskContext WC>
+void parallel_for(L lambda, FwIt&& range, WC const& this_context, auto_partitioner_traits traits = {})
+{
+  auto_parallel_for(lambda, std::forward<FwIt>(range), this_context, traits);
+}
+
+} // namespace ouly
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
