@@ -146,7 +146,7 @@ public:
               {
                 std::atomic<uint32_t> counter{0};
 
-                ouly::parallel_for(
+                ouly::auto_parallel_for(
                  [&counter](uint32_t, const task_context_type&)
                  {
                    counter.fetch_add(1, std::memory_order_relaxed);
@@ -171,7 +171,7 @@ public:
     bench.run(std::string("ParallelFor_VectorOps_") + name_suffix,
               [&data, &main_ctx]()
               {
-                ouly::parallel_for(
+                ouly::auto_parallel_for(
                  [](glm::vec3& vec, const task_context_type&)
                  {
                    ComputationKernels::vector_operations(vec);
@@ -197,7 +197,7 @@ public:
               {
                 for (uint32_t i = 0; i < benchmark_config::MAX_SAMPLES; ++i)
                 {
-                  ouly::parallel_for(
+                  ouly::auto_parallel_for(
                    [](glm::mat4& matrix, const task_context_type&)
                    {
                      ComputationKernels::matrix_operations(matrix);
@@ -222,7 +222,7 @@ public:
     bench.run(std::string("MixedWorkload_") + name_suffix,
               [&data, &main_ctx]()
               {
-                ouly::parallel_for(
+                ouly::auto_parallel_for(
                  [&data](auto begin, auto end, const task_context_type&)
                  {
                    for (auto it = begin; it != end; ++it)
@@ -258,7 +258,7 @@ public:
               {
                 std::atomic<uint64_t> result{0};
 
-                ouly::parallel_for(
+                ouly::auto_parallel_for(
                  [&result, WORK_INTENSITY](uint32_t& i, const task_context_type&)
                  {
                    glm::vec3 vec(static_cast<float>(i));
@@ -290,7 +290,7 @@ public:
               [&data, &main_ctx]()
               {
                 // Outer parallel loop with nested parallel work
-                ouly::parallel_for(
+                ouly::auto_parallel_for(
                  [&data](glm::vec3& vec, const task_context_type& ctx)
                  {
                    const auto idx = static_cast<size_t>(&vec - data.vectors.data());
@@ -299,7 +299,7 @@ public:
                    if (idx < data.matrices.size())
                    {
                      std::vector<glm::mat4*> matrix_refs = {&data.matrices[idx]};
-                     ouly::parallel_for(
+                     ouly::auto_parallel_for(
                       [](glm::mat4*& matrix_ptr, const task_context_type&)
                       {
                         ComputationKernels::matrix_operations(*matrix_ptr);

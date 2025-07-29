@@ -8,6 +8,7 @@
 #include "ouly/scheduler/spin_lock.hpp"
 #include "ouly/scheduler/v2/task_context.hpp"
 #include <atomic>
+#include <bit>
 #include <cstdint>
 #include <mutex>
 #include <numeric>
@@ -44,18 +45,22 @@ using work_item = task_delegate;
 class workgroup
 {
 public:
-  using queue_type      = ::ouly::detail::spmc_ring<work_item>;
+  static constexpr int32_t  max_fast_context_switch = 64;
+  static constexpr uint32_t word_size               = 64;
+
+  using queue_type = ::ouly::detail::spmc_ring<work_item>;
+
   workgroup() noexcept  = default;
   ~workgroup() noexcept = default;
 
   workgroup(const workgroup&)                    = delete;
   auto operator=(const workgroup&) -> workgroup& = delete;
   workgroup(workgroup&& other) noexcept
-      : slot_index_top_(other.slot_index_top_.load(std::memory_order_relaxed)),
-        has_work_(other.has_work_.load(std::memory_order_relaxed)), available_slots_(std::move(other.available_slots_)),
-        thread_count_(other.thread_count_), worker_start_idx_(other.worker_start_idx_),
-        worker_end_idx_(other.worker_end_idx_), priority_(other.priority_), owner_(other.owner_),
-        work_queues_(std::move(other.work_queues_)), mailbox_(std::move(other.mailbox_))
+      : has_work_(other.has_work_.load(std::memory_order_relaxed)),
+        small_mask_(other.small_mask_.load(std::memory_order_relaxed)), thread_count_(other.thread_count_),
+        worker_start_idx_(other.worker_start_idx_), worker_end_idx_(other.worker_end_idx_), priority_(other.priority_),
+        owner_(other.owner_), work_queues_(std::move(other.work_queues_)), mailbox_(std::move(other.mailbox_)),
+        bitfield_(std::move(other.bitfield_)), bitfield_words_(other.bitfield_words_)
   {
     other.thread_count_ = 0;
     other.priority_     = 0;
@@ -66,9 +71,8 @@ public:
   {
     if (this != &other)
     {
-      slot_index_top_.store(other.slot_index_top_.load(std::memory_order_relaxed), std::memory_order_relaxed);
       has_work_.store(other.has_work_.load(std::memory_order_relaxed), std::memory_order_relaxed);
-      available_slots_  = std::move(other.available_slots_);
+      small_mask_.store(other.small_mask_.load(std::memory_order_relaxed), std::memory_order_relaxed);
       thread_count_     = other.thread_count_;
       worker_start_idx_ = other.worker_start_idx_;
       worker_end_idx_   = other.worker_end_idx_;
@@ -76,6 +80,8 @@ public:
       owner_            = other.owner_;
       work_queues_      = std::move(other.work_queues_);
       mailbox_          = std::move(other.mailbox_);
+      bitfield_         = std::move(other.bitfield_);
+      bitfield_words_   = other.bitfield_words_;
     }
     return *this;
   }
@@ -90,14 +96,30 @@ public:
     thread_count_     = static_cast<int64_t>(thread_count);
     priority_         = priority;
 
-    // Allocate Chase-Lev queues for each worker in this workgroup
-    work_queues_     = std::make_unique<queue_type[]>(thread_count);
-    available_slots_ = std::make_unique<uint32_t[]>(thread_count);
-    auto slot_span   = std::span(available_slots_.get(), thread_count);
+    // Allocate Chase‑Lev queues for each worker
+    work_queues_ = std::make_unique<queue_type[]>(thread_count);
 
-    std::iota(std::rbegin(slot_span), std::rend(slot_span), 0);
-    // Initialize all slots as available (set bits 0 to thread_count-1)
-    slot_index_top_.store(static_cast<int64_t>(thread_count), std::memory_order_relaxed);
+    // Bitmap initialisation
+
+    small_mask_.store((thread_count == max_fast_context_switch) ? ~uint64_t{0} : ((uint64_t{1} << thread_count) - 1),
+                      std::memory_order_relaxed);
+    if (thread_count_ > max_fast_context_switch)
+    {
+      uint32_t slow_switch_count = thread_count - max_fast_context_switch;
+      bitfield_words_            = (slow_switch_count + word_size - 1) / word_size;
+      bitfield_                  = std::make_unique<uint64_t[]>(bitfield_words_);
+      for (uint32_t w = 0; w < bitfield_words_; ++w)
+      {
+        bitfield_[w] = ~uint64_t{0};
+      }
+
+      // clear unused high bits in the last word
+      uint32_t unused = (bitfield_words_ * word_size) - thread_count;
+      if (unused != 0U)
+      {
+        bitfield_[bitfield_words_ - 1] >>= unused;
+      }
+    }
 
     // Reset work availability
     has_work_.store(false, std::memory_order_relaxed);
@@ -206,10 +228,14 @@ public:
    */
   void clear() noexcept
   {
+    std::scoped_lock lock(slot_mutex_);
+    small_mask_.store(0, std::memory_order_relaxed);
+    bitfield_.reset();
+    bitfield_words_ = 0;
+
     thread_count_ = 0;
     priority_     = 0;
     work_queues_.reset();
-    slot_index_top_.store(0, std::memory_order_relaxed);
     has_work_.store(false, std::memory_order_relaxed);
   }
 
@@ -246,13 +272,30 @@ public:
    */
   auto enter() -> int
   {
-    auto old_top = slot_index_top_.load(std::memory_order_relaxed);
-    while (old_top > 0)
+    uint64_t mask = small_mask_.load(std::memory_order_relaxed);
+    while (mask != 0U)
     {
-      if (slot_index_top_.compare_exchange_weak(old_top, old_top - 1, std::memory_order_acquire,
-                                                std::memory_order_relaxed))
+      uint64_t bit      = mask & -mask; // isolate lowest‑set bit
+      uint64_t new_mask = mask & ~bit;  // clear it
+      if (small_mask_.compare_exchange_weak(mask, new_mask, std::memory_order_acquire, std::memory_order_relaxed))
       {
-        return static_cast<int>(available_slots_[static_cast<size_t>(old_top - 1)]);
+        return std::countr_zero(bit);
+      }
+    }
+    if (thread_count_ <= max_fast_context_switch)
+    {
+      return -1; // no free slots
+    }
+
+    std::scoped_lock lock(slot_mutex_);
+    for (uint32_t w = 0; w < bitfield_words_; ++w)
+    {
+      uint64_t offset_mask = bitfield_[w];
+      if (offset_mask != 0U)
+      {
+        auto bit = std::countr_zero(offset_mask);
+        bitfield_[w] &= ~(uint64_t{1} << static_cast<uint32_t>(bit));
+        return static_cast<int>(w * word_size) + bit + max_fast_context_switch;
       }
     }
     return -1;
@@ -264,25 +307,31 @@ public:
    */
   void exit(int slot_index) noexcept
   {
-    auto old_top = slot_index_top_.load(std::memory_order_relaxed);
-    while (old_top < thread_count_)
+    if (slot_index < 0 || slot_index >= thread_count_)
     {
-      if (slot_index_top_.compare_exchange_weak(old_top, old_top + 1, std::memory_order_release,
-                                                std::memory_order_relaxed))
-      {
-        available_slots_[static_cast<size_t>(old_top)] = static_cast<uint32_t>(slot_index);
-        return;
-      }
+      return;
     }
+
+    if (slot_index < max_fast_context_switch)
+    {
+      small_mask_.fetch_or(uint64_t{1} << static_cast<uint32_t>(slot_index), std::memory_order_release);
+      return;
+    }
+
+    std::scoped_lock lock(slot_mutex_);
+    auto             index = static_cast<uint32_t>(slot_index) - max_fast_context_switch;
+    uint32_t         w     = index / word_size;
+    uint32_t         bit   = index % word_size;
+    bitfield_[w] |= (uint64_t{1} << bit);
   }
 
 private:
   friend class ouly::v2::scheduler;
 
-  // Available worker slots as a bitset - each bit represents whether a slot is available
-  alignas(cache_line_size) std::atomic_int64_t slot_index_top_{0};
-  alignas(cache_line_size) std::atomic_bool has_work_{false}; // Flag to indicate work availability  // Configuration
-  alignas(cache_line_size) std::unique_ptr<uint32_t[]> available_slots_;
+  // --- Slot management (mutex‑protected bitfield) -------------------------
+  alignas(cache_line_size) std::atomic_bool has_work_{false};   // Work availability flag
+  alignas(cache_line_size) std::atomic_uint64_t small_mask_{0}; // for ≤64 threads
+
   int64_t  thread_count_     = 0;
   uint32_t worker_start_idx_ = 0;
   uint32_t worker_end_idx_   = 0; // End index for this workgroup
@@ -295,6 +344,10 @@ private:
   // Mailbox for cross-workgroup work submission
   std::mutex                   mailbox_mutex_;
   ouly::basic_queue<work_item> mailbox_;
+
+  alignas(cache_line_size) std::mutex slot_mutex_;
+  alignas(cache_line_size) std::unique_ptr<uint64_t[]> bitfield_; // for >64 threads
+  uint32_t bitfield_words_{0};
 };
 
 } // namespace ouly::detail::v2

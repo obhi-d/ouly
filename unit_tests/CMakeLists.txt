@@ -151,6 +151,8 @@ add_unit_test(NAME thread_safe_allocators FILES "thread_safe_allocators.cpp" SAN
 add_unit_test(NAME coalescing_allocator FILES "coalescing_allocator.cpp" SANITIZE)
 add_unit_test(NAME spmc_ring FILES "spmc_ring.cpp" SANITIZE)
 add_unit_test(NAME scheduler_tests FILES "scheduler_tests.cpp" LINK_LIBS glm::glm SANITIZE)
+add_unit_test(NAME auto_parallel_for FILES "test_auto_parallel_for.cpp" LINK_LIBS glm::glm SANITIZE)
+add_unit_test(NAME debug_auto_parallel_for FILES "debug_auto_parallel_for.cpp" LINK_LIBS glm::glm SANITIZE)
 add_executable(ouly-bench "bench_arena_allocator.cpp" "bench_main.cpp")
 add_executable(ouly-performance-bench "bench_performance.cpp")
 add_executable(ouly-scheduler-comparison-bench "bench_scheduler_comparison.cpp")

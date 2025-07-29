@@ -215,7 +215,8 @@ auto scheduler::find_work_for_worker(worker_id wid) noexcept -> bool
   if (worker.get_workgroup())
   {
     auto&                 workgroup = workgroups_[worker.get_workgroup().get_index()];
-    detail::v2::work_item work;
+    detail::v2::work_item work{detail::v2::work_item::noinit};
+
     if (workgroup.pop_work_from_worker(work, worker.get_group_offset()))
     {
       execute_work(wid, work);
@@ -254,7 +255,7 @@ auto scheduler::find_work_for_worker(worker_id wid) noexcept -> bool
       continue; // Failed to enter context, try next needy workgroup
     }
 
-    detail::v2::work_item work;
+    detail::v2::work_item work{detail::v2::work_item::noinit};
     if (needy_workgroup.receive_from_mailbox(work))
     {
       execute_work(wid, work);
@@ -287,7 +288,7 @@ auto scheduler::find_work_for_worker(worker_id wid) noexcept -> bool
       continue;
     }
 
-    detail::v2::work_item work;
+    detail::v2::work_item work{detail::v2::work_item::noinit};
     if (workgroup.steal_work(work, steal_start_idx))
     {
       execute_work(wid, work);
@@ -378,7 +379,7 @@ void scheduler::finish_pending_tasks()
   stop_.store(true, std::memory_order_seq_cst);
 
   // Wake up all workers
-  wake_up_workers(worker_count_);
+  wake_tokens_.release(worker_count_);
 
   // Third: Wait for all workers to acknowledge the stop signal
   synchronizer_->job_board_freeze_ack_.count_down();

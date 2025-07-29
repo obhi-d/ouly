@@ -54,7 +54,7 @@ breathe_projects_source = {
     ]),
     "utils": ("../../include/ouly/utils", [
         "common.hpp", "config.hpp", "delegate.hpp", "error_codes.hpp", "external/komihash.h", 
-        "external/wyhash.h", "external/wyhash32.h", "external/wyhash32.hpp", "integer_range.hpp", 
+        "external/wyhash.h", "external/wyhash32.h", "external/wyhash32.hpp", "subrange.hpp", 
         "intrusive_ptr.hpp", "komihash.hpp", "nullable_optional.hpp", "program_args.hpp", 
         "projected_view.hpp", "reflection.hpp", "reflection_utils.hpp", "string_literal.hpp", 
         "string_utils.hpp", "tagged_int.hpp", "tagged_ptr.hpp", "tuple.hpp", "type_name.hpp", 
