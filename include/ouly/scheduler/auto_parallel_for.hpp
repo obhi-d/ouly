@@ -274,6 +274,9 @@ struct auto_range
   template <TaskContext WC>
   void execute(WC const& this_context)
   {
+    // uint32_t group_mask = 1U << this_context.get_group_offset();
+    // auto     old_mask   = state_->group_offset_mask_.fetch_or(group_mask, std::memory_order_relaxed);
+    // OULY_ASSERT((group_mask & old_mask) == 0);
     uint8_t    max_depth       = max_depth_;
     uint8_t    divisor_log2    = divisor_log2_;
     auto       execution_index = static_cast<uint16_t>(this_context.get_worker().get_index());
@@ -300,6 +303,7 @@ struct auto_range
     if (!is_divisible() || max_depth == 0)
     {
       execute_sequential_auto(this_context);
+      // OULY_ASSERT((group_mask & state_->group_offset_mask_.fetch_and(~group_mask, std::memory_order_relaxed)) != 0);
       return;
     }
 
@@ -326,12 +330,14 @@ struct auto_range
         uint8_t child_divisor = divisor_log2 > 0 ? static_cast<uint8_t>(divisor_log2 - 1) : 0;
 
         state_->spawns_.fetch_add(1, std::memory_order_relaxed);
+        // state_->total_spawns_.fetch_add(1, std::memory_order_relaxed);
         scheduler.submit(this_context,
                          [new_range = auto_range{state_, work_range.begin(), static_cast<uint32_t>(work_range.size()),
                                                  execution_index, work_depth, child_divisor}](WC const& wc) mutable
                          {
                            new_range.execute(wc);
-                           new_range.state_->spawns_.fetch_sub(1, std::memory_order_acq_rel);
+                           new_range.state_->spawns_.fetch_sub(1, std::memory_order_release);
+                           // new_range.state_->total_executed_.fetch_add(1, std::memory_order_release);
                          });
 
         // Continue to process remaining ranges in the pool
@@ -348,6 +354,7 @@ struct auto_range
 
       // Continue processing any remaining ranges
     }
+    // OULY_ASSERT((group_mask & state_->group_offset_mask_.fetch_and(~group_mask, std::memory_order_relaxed)) != 0);
   }
 };
 
@@ -362,6 +369,9 @@ struct auto_parallel_for_state
   using lambda_type = L;
 
   alignas(ouly::detail::cache_line_size) std::atomic<int64_t> spawns_{0};
+  // std::atomic<int64_t>      total_spawns_{0};   // Total number of spawned tasks
+  // std::atomic<int64_t>      total_executed_{0}; // Total number of executed tasks
+  // std::atomic<uint64_t>     group_offset_mask_{0};
   iterator                  first_;
   std::reference_wrapper<L> lambda_instance_;
 };
@@ -447,11 +457,13 @@ void launch_auto_parallel_tasks(L lambda, FwIt&& range, uint32_t initial_divisor
                                                      initial_divisor_log2};
 
     state.spawns_.fetch_add(1, std::memory_order_relaxed);
+    // state.total_spawns_.fetch_add(1, std::memory_order_relaxed);
     scheduler.submit(this_context,
                      [task_range, &completion_latch](WC const& wc) mutable
                      {
                        task_range.execute(wc);
-                       task_range.state_->spawns_.fetch_sub(1, std::memory_order_acq_rel);
+                       task_range.state_->spawns_.fetch_sub(1, std::memory_order_release);
+                       // task_range.state_->total_executed_.fetch_add(1, std::memory_order_release);
                        completion_latch.count_down();
                      });
 
