@@ -138,7 +138,7 @@ jobs:
     - name: Download all extended benchmark results
       uses: actions/download-artifact@v4
       with:
-        path: extended-benchmark-artifacts
+        path: results
         pattern: extended-benchmark-results-*
         merge-multiple: true
 
@@ -168,18 +168,6 @@ jobs:
         git checkout main -- scripts/ || echo "No scripts directory in main branch"
         chmod +x scripts/*.py 2>/dev/null || echo "No Python scripts to make executable"
         
-        # Copy extended benchmark results
-        if [ -d "../extended-benchmark-artifacts" ]; then
-          COLLECTED_FILES=$(find ../extended-benchmark-artifacts -name "*.json" -o -name "*.txt" | wc -l)
-          echo "Found $COLLECTED_FILES extended benchmark files"
-          
-          if [ $COLLECTED_FILES -gt 0 ]; then
-            cp ../extended-benchmark-artifacts/*.json results/ 2>/dev/null || echo "No JSON files to copy"
-            cp ../extended-benchmark-artifacts/*.txt results/ 2>/dev/null || echo "No TXT files to copy"
-            echo "✅ Copied extended benchmark files to results directory"
-          fi
-        fi
-
     - name: Cleanup old results
       run: |
         if [ -f "scripts/cleanup_old_results.py" ]; then
