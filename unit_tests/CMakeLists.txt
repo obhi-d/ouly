@@ -220,7 +220,7 @@ if(WIN32)
         COMMENT "Copying TBB libraries to bench_scheduler_comparison directory"
     )
 elseif(APPLE)
-    # macOS: Find and copy TBB dylibs from the build directory
+    # macOS: Use CMake script to find and copy TBB dylibs
     add_custom_command(
         TARGET bench_performance
         POST_BUILD
@@ -228,9 +228,9 @@ elseif(APPLE)
             ${CMAKE_COMMAND} -E echo
             "Copying TBB dylibs for bench_performance..."
         COMMAND
-            find ${CMAKE_BINARY_DIR} -name "libtbb*.dylib" -exec
-            ${CMAKE_COMMAND} -E copy_if_different {}
-            "$<TARGET_FILE_DIR:bench_performance>/" "\;"
+            ${CMAKE_COMMAND} -DTBB_BUILD_DIR=${CMAKE_BINARY_DIR}
+            -DTARGET_DIR=$<TARGET_FILE_DIR:bench_performance> -P
+            ${CMAKE_CURRENT_SOURCE_DIR}/copy_tbb_libs.cmake
         COMMENT "Copying TBB dylibs to bench_performance directory"
     )
 
@@ -241,13 +241,13 @@ elseif(APPLE)
             ${CMAKE_COMMAND} -E echo
             "Copying TBB dylibs for bench_scheduler_comparison..."
         COMMAND
-            find ${CMAKE_BINARY_DIR} -name "libtbb*.dylib" -exec
-            ${CMAKE_COMMAND} -E copy_if_different {}
-            "$<TARGET_FILE_DIR:bench_scheduler_comparison>/" "\;"
+            ${CMAKE_COMMAND} -DTBB_BUILD_DIR=${CMAKE_BINARY_DIR}
+            -DTARGET_DIR=$<TARGET_FILE_DIR:bench_scheduler_comparison> -P
+            ${CMAKE_CURRENT_SOURCE_DIR}/copy_tbb_libs.cmake
         COMMENT "Copying TBB dylibs to bench_scheduler_comparison directory"
     )
 else()
-    # Linux: Find and copy TBB shared libraries
+    # Linux: Use CMake script to find and copy TBB shared libraries
     add_custom_command(
         TARGET bench_performance
         POST_BUILD
@@ -255,8 +255,9 @@ else()
             ${CMAKE_COMMAND} -E echo
             "Copying TBB shared libraries for bench_performance..."
         COMMAND
-            find ${CMAKE_BINARY_DIR} -name "libtbb*.so*" -exec ${CMAKE_COMMAND}
-            -E copy_if_different {} "$<TARGET_FILE_DIR:bench_performance>/" "\;"
+            ${CMAKE_COMMAND} -DTBB_BUILD_DIR=${CMAKE_BINARY_DIR}
+            -DTARGET_DIR=$<TARGET_FILE_DIR:bench_performance> -P
+            ${CMAKE_CURRENT_SOURCE_DIR}/copy_tbb_libs.cmake
         COMMENT "Copying TBB shared libraries to bench_performance directory"
     )
 
@@ -267,9 +268,9 @@ else()
             ${CMAKE_COMMAND} -E echo
             "Copying TBB shared libraries for bench_scheduler_comparison..."
         COMMAND
-            find ${CMAKE_BINARY_DIR} -name "libtbb*.so*" -exec ${CMAKE_COMMAND}
-            -E copy_if_different {}
-            "$<TARGET_FILE_DIR:bench_scheduler_comparison>/" "\;"
+            ${CMAKE_COMMAND} -DTBB_BUILD_DIR=${CMAKE_BINARY_DIR}
+            -DTARGET_DIR=$<TARGET_FILE_DIR:bench_scheduler_comparison> -P
+            ${CMAKE_CURRENT_SOURCE_DIR}/copy_tbb_libs.cmake
         COMMENT
             "Copying TBB shared libraries to bench_scheduler_comparison directory"
     )
