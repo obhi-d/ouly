@@ -12,7 +12,6 @@
 #include <atomic>
 #include <bit> // for std::bit_width
 #include <functional>
-#include <latch>
 #include <sys/types.h>
 #include <type_traits>
 
@@ -212,7 +211,7 @@ struct auto_range
   using lambda_type = typename StateData::lambda_type;
 
   StateData* state_{};
-  iterator   start_{};
+  uint32_t   start_{};
   uint32_t   size_{};
   uint16_t   spawn_worker_index_{}; // assuming we have maximum 256 workers
   uint8_t    max_depth_{};
@@ -225,7 +224,8 @@ struct auto_range
 
   [[nodiscard]] auto span() const noexcept -> range_type
   {
-    return {start_, start_ + size_};
+    auto start = state_->first_ + start_;
+    return {start, start + size_};
   }
 
   [[nodiscard]] auto size() const noexcept -> uint32_t
@@ -253,11 +253,13 @@ struct auto_range
 
     if constexpr (is_range_executor)
     {
-      lambda(start_, start_ + size_, this_context);
+      auto start = state_->first_ + start_;
+      lambda(start, start + size_, this_context);
     }
     else
     {
-      for (auto it = start_, end = start_ + size_; it != end; ++it)
+      const auto start = state_->first_ + start_;
+      for (auto it = start, end = start + size_; it != end; ++it)
       {
         if constexpr (std::is_integral_v<std::decay_t<decltype(it)>>)
         {
@@ -364,7 +366,7 @@ struct auto_parallel_for_state
   auto_parallel_for_state(L& lambda, FwIt f) noexcept : first_(f), lambda_instance_(lambda) {}
 
   using value_type  = typename std::iterator_traits<FwIt>::value_type;
-  using range_type  = ouly::subrange<FwIt>;
+  using range_type  = ouly::subrange<uint32_t>;
   using iterator    = FwIt;
   using lambda_type = L;
 
@@ -375,17 +377,6 @@ struct auto_parallel_for_state
   iterator                  first_;
   std::reference_wrapper<L> lambda_instance_;
 };
-
-template <TaskContext WC>
-inline void cooperative_wait_auto(std::latch& counter, WC const& this_context)
-{
-  auto& scheduler = this_context.get_scheduler();
-  while (!counter.try_wait())
-  {
-    // Try to do other work while waiting - this helps with work stealing detection
-    scheduler.busy_work(this_context);
-  }
-}
 
 /**
  * @brief Execute lambda sequentially over a range
@@ -423,23 +414,20 @@ template <typename L, typename FwIt, TaskContext WC, typename Traits = auto_part
 void launch_auto_parallel_tasks(L lambda, FwIt&& range, uint32_t initial_divisor, uint32_t count,
                                 WC const& this_context)
 {
-  using iterator_t = decltype(std::begin(range));
-  using state_type = auto_parallel_for_state<iterator_t, L>;
+  using iterator_t   = decltype(std::begin(range));
+  using state_t      = auto_parallel_for_state<iterator_t, L>;
+  using auto_range_t = auto_range<state_t, Traits>;
 
   auto& scheduler = this_context.get_scheduler();
 
   // Create shared state for tracking spawned tasks
-  state_type state(lambda, std::begin(std::forward<FwIt>(range)));
+  state_t state(lambda, std::begin(std::forward<FwIt>(range)));
 
   // Calculate initial chunk size
   const uint32_t chunk_size = count / initial_divisor;
   const uint32_t remainder  = count % initial_divisor;
 
   const auto initial_divisor_log2 = static_cast<uint8_t>(std::bit_width(initial_divisor) - 1);
-
-  // Create latch for synchronization - we'll spawn (initial_divisor - 1) tasks
-  // and execute one chunk in the current thread
-  std::latch completion_latch(initial_divisor - 1);
 
   // Launch parallel tasks
   uint32_t current_pos = 0;
@@ -449,22 +437,16 @@ void launch_auto_parallel_tasks(L lambda, FwIt&& range, uint32_t initial_divisor
     const uint32_t current_chunk_size = chunk_size + (i < remainder ? 1 : 0);
     const auto     worker_index       = static_cast<uint16_t>(this_context.get_worker().get_index());
 
-    auto task_range = auto_range<state_type, Traits>{&state,
-                                                     std::begin(std::forward<FwIt>(range)) + current_pos,
-                                                     current_chunk_size,
-                                                     worker_index,
-                                                     0,
-                                                     initial_divisor_log2};
+    auto task_range = auto_range_t{&state, current_pos, current_chunk_size, worker_index, 0, initial_divisor_log2};
 
     state.spawns_.fetch_add(1, std::memory_order_relaxed);
     // state.total_spawns_.fetch_add(1, std::memory_order_relaxed);
     scheduler.submit(this_context,
-                     [task_range, &completion_latch](WC const& wc) mutable
+                     [task_range](WC const& wc) mutable
                      {
                        task_range.execute(wc);
                        task_range.state_->spawns_.fetch_sub(1, std::memory_order_release);
                        // task_range.state_->total_executed_.fetch_add(1, std::memory_order_release);
-                       completion_latch.count_down();
                      });
 
     current_pos += current_chunk_size;
@@ -476,18 +458,10 @@ void launch_auto_parallel_tasks(L lambda, FwIt&& range, uint32_t initial_divisor
     const uint32_t remaining_size = count - current_pos;
     const auto     worker_index   = static_cast<uint16_t>(this_context.get_worker().get_index());
 
-    auto current_range = auto_range<state_type, Traits>{&state,
-                                                        std::begin(std::forward<FwIt>(range)) + current_pos,
-                                                        remaining_size,
-                                                        worker_index,
-                                                        0,
-                                                        initial_divisor_log2};
+    auto current_range = auto_range_t{&state, current_pos, remaining_size, worker_index, 0, initial_divisor_log2};
 
     current_range.execute(this_context);
   }
-
-  // Wait for all parallel tasks to complete
-  cooperative_wait_auto(completion_latch, this_context);
 
   // Wait for any additional spawned tasks to complete
   while (state.spawns_.load(std::memory_order_acquire) > 0)
