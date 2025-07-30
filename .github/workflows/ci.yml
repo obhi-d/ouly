@@ -127,14 +127,13 @@ jobs:
 
     - name: Build
       if: steps.clang_check.outputs.skip_build != 'true'
+      working-directory: ${{ github.workspace }}/build
       run: cmake --build ${{ github.workspace }}/build --config ${{ env.BUILD_TYPE }} --parallel
-      shell: bash
 
     - name: Test
       if: steps.clang_check.outputs.skip_build != 'true'
-      working-directory: build
+      working-directory: ${{ github.workspace }}/build
       run: ctest -C ${{ env.BUILD_TYPE }} --output-on-failure --parallel
-      shell: bash
 
   coverage:
     name: Code Coverage
@@ -167,12 +166,12 @@ jobs:
       run: cmake --build ${{ github.workspace }}/build --config Debug --parallel
 
     - name: Run tests
-      working-directory: build
+      working-directory: ${{ github.workspace }}/build
       shell: bash
       run: ctest -C Debug --output-on-failure --parallel
 
     - name: Generate coverage report
-      working-directory: build
+      working-directory: ${{ github.workspace }}/build
       shell: bash
       run: |
         lcov --gcov-tool gcov-14 --capture --directory . --base-directory ${{ github.workspace }} --output-file coverage.info --no-external --ignore-errors mismatch
