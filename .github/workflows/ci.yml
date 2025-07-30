@@ -77,6 +77,13 @@ jobs:
         echo "Current Clang version: $clang_version"
         echo "clang_version=$clang_version" >> $GITHUB_OUTPUT
         
+        # Verify compilers exist
+        echo "Checking compiler availability:"
+        which clang || echo "clang not found"
+        which clang++ || echo "clang++ not found"
+        clang --version || echo "clang version check failed"
+        clang++ --version || echo "clang++ version check failed"
+        
         if [[ "${{ matrix.config.min_clang_version }}" != "" ]] && [[ $clang_version -lt ${{ matrix.config.min_clang_version }} ]]; then
           echo "Clang version $clang_version is less than required ${{ matrix.config.min_clang_version }}"
           echo "Skipping this build as it's not compatible with older Clang versions"
@@ -97,7 +104,19 @@ jobs:
     - name: Configure CMake
       if: steps.clang_check.outputs.skip_build != 'true'
       run: |
-        cmake -B ${{ github.workspace }}/build -G "${{ matrix.config.generator }}" -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DCMAKE_C_COMPILER=${{ matrix.config.cc }} -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }} -DOULY_BUILD_TESTS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+        echo "Debug: Matrix config CC=${{ matrix.config.cc }}, CXX=${{ matrix.config.cxx }}"
+        echo "Debug: Environment CC=$CC, CXX=$CXX"
+        echo "Debug: OS=${{ runner.os }}"
+        
+        # For macOS, use absolute paths to ensure we get the right compiler
+        if [[ "${{ runner.os }}" == "macOS" ]]; then
+          CC_PATH=$(which ${{ matrix.config.cc }})
+          CXX_PATH=$(which ${{ matrix.config.cxx }})
+          echo "Debug: macOS CC_PATH=$CC_PATH, CXX_PATH=$CXX_PATH"
+          cmake -B ${{ github.workspace }}/build -G "${{ matrix.config.generator }}" -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DCMAKE_C_COMPILER="$CC_PATH" -DCMAKE_CXX_COMPILER="$CXX_PATH" -DOULY_BUILD_TESTS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+        else
+          cmake -B ${{ github.workspace }}/build -G "${{ matrix.config.generator }}" -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DCMAKE_C_COMPILER=${{ matrix.config.cc }} -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }} -DOULY_BUILD_TESTS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+        fi
       env:
         CC: ${{ matrix.config.cc }}
         CXX: ${{ matrix.config.cxx }}
