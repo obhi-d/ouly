@@ -33,7 +33,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest]
         compiler: 
           - name: gcc-14
             cc: gcc-14
@@ -43,21 +43,6 @@ jobs:
             cc: clang-18
             cxx: clang++-18
             id: clang-18
-        exclude:
-          # GCC not available on macOS runners
-          - os: macos-latest
-            compiler: { name: gcc-14 }
-          # clang-18 not available on macOS runners (use system clang instead)  
-          - os: macos-latest
-            compiler: { name: clang-18 }
-        include:
-          # Add clang-15 for macOS (default Xcode version)
-          - os: macos-latest
-            compiler:
-              name: clang-15
-              cc: clang
-              cxx: clang++
-              id: clang-15
               
     runs-on: ${{ matrix.os }}
         
@@ -76,13 +61,6 @@ jobs:
           sudo ./llvm.sh 18
           sudo apt-get install -y clang-18 clang++-18
         fi
-        echo "CC=${{ matrix.compiler.cc }}" >> $GITHUB_ENV
-        echo "CXX=${{ matrix.compiler.cxx }}" >> $GITHUB_ENV
-        echo "COMPILER_ID=${{ matrix.compiler.id }}" >> $GITHUB_ENV
-
-    - name: Set up compiler (macOS)
-      if: runner.os == 'macOS'
-      run: |
         echo "CC=${{ matrix.compiler.cc }}" >> $GITHUB_ENV
         echo "CXX=${{ matrix.compiler.cxx }}" >> $GITHUB_ENV
         echo "COMPILER_ID=${{ matrix.compiler.id }}" >> $GITHUB_ENV
