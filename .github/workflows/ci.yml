@@ -118,7 +118,7 @@ jobs:
           CXX_PATH=$(which ${{ matrix.config.cxx }})
           echo "Debug: macOS CC_PATH=$CC_PATH, CXX_PATH=$CXX_PATH"
           cmake -B build -G "${{ matrix.config.generator }}" -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DCMAKE_C_COMPILER="$CC_PATH" -DCMAKE_CXX_COMPILER="$CXX_PATH" -DOULY_BUILD_TESTS=ON 
-        else if [[ ${{ runner.os }} == "Linux" ]]; then
+        elif [[ "${{ runner.os }}" == "Linux" ]]; then
            cmake -B build -G "${{ matrix.config.generator }}" -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DCMAKE_C_COMPILER=${{ matrix.config.cc }} -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }} -DOULY_BUILD_TESTS=ON -DOULY_TEST_COVERAGE=ON
         else
           cmake -B build -G "${{ matrix.config.generator }}" -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DCMAKE_C_COMPILER=${{ matrix.config.cc }} -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }} -DOULY_BUILD_TESTS=ON 
@@ -130,8 +130,8 @@ jobs:
 
     - name: Build
       if: steps.clang_check.outputs.skip_build != 'true'
-      working-directory: ${{ github.workspace }}
-      run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel
+      working-directory: build
+      run: cmake --build . --config ${{ env.BUILD_TYPE }} --parallel
 
     - name: Test
       if: steps.clang_check.outputs.skip_build != 'true'
