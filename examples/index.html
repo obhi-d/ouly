@@ -1,0 +1,279 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Examples &mdash; OULY 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/graphviz.css?v=4ae1632d" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=4721fb27" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=8d563738"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Unit Test Examples" href="unit_test_examples.html" />
+    <link rel="prev" title="API Reference" href="../api_reference/index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            OULY
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/index.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/index.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api_reference/index.html">API Reference</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="unit_test_examples.html">Unit Test Examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#finding-examples">Finding Examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#building-and-running-examples">Building and Running Examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#learning-from-unit-tests">Learning from Unit Tests</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#contributing-examples">Contributing Examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#future-examples">Future Examples</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../performance/index.html">Performance Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing to OULY</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">OULY</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Examples</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/examples/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="examples">
+<h1>Examples<a class="headerlink" href="#examples" title="Link to this heading"></a></h1>
+<p>Working examples demonstrating OULY usage patterns.</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="unit_test_examples.html">Unit Test Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="unit_test_examples.html#allocator-examples">Allocator Examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="unit_test_examples.html#container-examples">Container Examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="unit_test_examples.html#ecs-examples">ECS Examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="unit_test_examples.html#scheduler-examples">Scheduler Examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="unit_test_examples.html#serialization-examples">Serialization Examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="unit_test_examples.html#running-specific-examples">Running Specific Examples</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
+<p>OULY examples are currently found in the comprehensive unit test suite. These tests serve as practical examples showing how to use OULY components correctly in various scenarios.</p>
+<dl class="simple">
+<dt><strong>Unit Test Examples</strong></dt><dd><p>The <code class="docutils literal notranslate"><span class="pre">unit_tests/</span></code> directory contains extensive examples for all OULY components, demonstrating proper usage patterns and best practices.</p>
+</dd>
+<dt><strong>Test Categories</strong></dt><dd><ul class="simple">
+<li><p><strong>Allocator Tests</strong> - Memory management examples and usage patterns</p></li>
+<li><p><strong>Container Tests</strong> - High-performance container usage and configuration</p></li>
+<li><p><strong>ECS Tests</strong> - Entity-component system implementation examples</p></li>
+<li><p><strong>Scheduler Tests</strong> - Task scheduling and parallel processing examples</p></li>
+<li><p><strong>Serialization Tests</strong> - Binary and YAML serialization usage</p></li>
+</ul>
+</dd>
+</dl>
+</section>
+<section id="finding-examples">
+<h2>Finding Examples<a class="headerlink" href="#finding-examples" title="Link to this heading"></a></h2>
+<p>The unit tests are organized by component and provide comprehensive coverage:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>unit_tests/
+├── allocators/
+│   ├── test_linear_allocator.cpp
+│   ├── test_pool_allocator.cpp
+│   ├── test_arena_allocator.cpp
+│   └── ...
+├── containers/
+│   ├── test_small_vector.cpp
+│   ├── test_dynamic_array.cpp
+│   ├── test_soavector.cpp
+│   └── ...
+├── ecs/
+│   ├── test_registry.cpp
+│   ├── test_components.cpp
+│   └── ...
+├── scheduler/
+│   ├── test_scheduler.cpp
+│   └── ...
+└── serializers/
+    ├── test_binary_serializer.cpp
+    ├── test_yaml_serializer.cpp
+    └── ...
+</pre></div>
+</div>
+</section>
+<section id="building-and-running-examples">
+<h2>Building and Running Examples<a class="headerlink" href="#building-and-running-examples" title="Link to this heading"></a></h2>
+<p>To build and run the unit test examples:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Clone the repository</span>
+git<span class="w"> </span>clone<span class="w"> </span>https://github.com/obhi-d/ouly.git
+<span class="nb">cd</span><span class="w"> </span>ouly
+
+<span class="c1"># Configure with tests enabled</span>
+cmake<span class="w"> </span>--preset<span class="o">=</span>macos-default<span class="w">  </span><span class="c1"># or linux-default</span>
+
+<span class="c1"># Build</span>
+cmake<span class="w"> </span>--build<span class="w"> </span>build/macos-default
+
+<span class="c1"># Run all tests</span>
+<span class="nb">cd</span><span class="w"> </span>build/macos-default<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>ctest
+
+<span class="c1"># Run specific test categories</span>
+ctest<span class="w"> </span>-R<span class="w"> </span>allocator<span class="w">  </span><span class="c1"># Run allocator tests only</span>
+ctest<span class="w"> </span>-R<span class="w"> </span>container<span class="w">  </span><span class="c1"># Run container tests only</span>
+ctest<span class="w"> </span>-R<span class="w"> </span>ecs<span class="w">        </span><span class="c1"># Run ECS tests only</span>
+</pre></div>
+</div>
+</section>
+<section id="learning-from-unit-tests">
+<h2>Learning from Unit Tests<a class="headerlink" href="#learning-from-unit-tests" title="Link to this heading"></a></h2>
+<p>The unit tests demonstrate:</p>
+<ul class="simple">
+<li><p><strong>Correct API usage</strong> - Proper initialization, configuration, and cleanup</p></li>
+<li><p><strong>Error handling</strong> - How to handle edge cases and error conditions</p></li>
+<li><p><strong>Performance patterns</strong> - Optimal usage for different scenarios</p></li>
+<li><p><strong>Integration examples</strong> - How components work together</p></li>
+</ul>
+<p><strong>Example Test Structure:</strong></p>
+<p>Each test file follows a consistent pattern:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;catch2/catch_test_macros.hpp&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/component/header.hpp&gt;</span>
+
+<span class="n">TEST_CASE</span><span class="p">(</span><span class="s">&quot;component basic usage&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;[component]&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// Setup</span>
+<span class="w">    </span><span class="c1">// Usage demonstration</span>
+<span class="w">    </span><span class="c1">// Verification</span>
+<span class="p">}</span>
+
+<span class="n">TEST_CASE</span><span class="p">(</span><span class="s">&quot;component advanced features&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;[component]&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// Advanced usage patterns</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Key Test Files to Review:</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">test_linear_allocator.cpp</span></code> - Memory allocation patterns</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">test_small_vector.cpp</span></code> - Container usage and performance</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">test_registry.cpp</span></code> - ECS entity management</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">test_scheduler.cpp</span></code> - Task submission and execution</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">test_binary_serializer.cpp</span></code> - Serialization patterns</p></li>
+</ul>
+</section>
+<section id="contributing-examples">
+<h2>Contributing Examples<a class="headerlink" href="#contributing-examples" title="Link to this heading"></a></h2>
+<p>To contribute additional examples:</p>
+<ol class="arabic simple">
+<li><p><strong>Add to Unit Tests</strong> - Extend existing test files with new usage patterns</p></li>
+<li><p><strong>Document Use Cases</strong> - Add comments explaining the example’s purpose</p></li>
+<li><p><strong>Follow Test Structure</strong> - Use the established testing patterns</p></li>
+<li><p><strong>Include Edge Cases</strong> - Demonstrate error handling and boundary conditions</p></li>
+</ol>
+<p>Example Template:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">TEST_CASE</span><span class="p">(</span><span class="s">&quot;descriptive test name&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;[category]&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">SECTION</span><span class="p">(</span><span class="s">&quot;basic usage&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// Demonstrate basic functionality</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="n">SECTION</span><span class="p">(</span><span class="s">&quot;advanced usage&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// Show advanced patterns</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="n">SECTION</span><span class="p">(</span><span class="s">&quot;error handling&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// Demonstrate proper error handling</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="future-examples">
+<h2>Future Examples<a class="headerlink" href="#future-examples" title="Link to this heading"></a></h2>
+<p>Standalone examples are planned for future releases:</p>
+<ul class="simple">
+<li><p><strong>Game Engine Example</strong> - Complete ECS-based game</p></li>
+<li><p><strong>Scientific Computing</strong> - Parallel numerical algorithms</p></li>
+<li><p><strong>Web Server</strong> - High-performance HTTP server</p></li>
+<li><p><strong>Data Processing</strong> - ETL pipeline with custom allocators</p></li>
+</ul>
+<p>For now, the comprehensive unit test suite provides extensive examples of proper OULY usage patterns.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../api_reference/index.html" class="btn btn-neutral float-left" title="API Reference" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="unit_test_examples.html" class="btn btn-neutral float-right" title="Unit Test Examples" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, OULY Contributors.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

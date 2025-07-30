@@ -1,0 +1,457 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Memory Management Tutorial &mdash; OULY 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/graphviz.css?v=4ae1632d" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=4721fb27" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=8d563738"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Containers Tutorial" href="containers_tutorial.html" />
+    <link rel="prev" title="Tutorials" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            OULY
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting Started</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Tutorials</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Memory Management Tutorial</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#overview-of-allocators">Overview of Allocators</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#linear-allocator">Linear Allocator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#linear-arena-allocator">Linear Arena Allocator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pool-allocator">Pool Allocator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#configuration-system">Configuration System</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#thread-safe-allocators">Thread-Safe Allocators</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#address-space-allocators">Address Space Allocators</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#best-practices">Best Practices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#next-steps">Next Steps</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="containers_tutorial.html">Containers Tutorial</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ecs_tutorial.html">Entity Component System Tutorial</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scheduler_tutorial.html">Task Scheduler Tutorial</a></li>
+<li class="toctree-l2"><a class="reference internal" href="serialization_tutorial.html">Serialization Tutorial</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#prerequisites">Prerequisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#getting-help">Getting Help</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/index.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api_reference/index.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples/index.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../performance/index.html">Performance Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing to OULY</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">OULY</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Tutorials</a></li>
+      <li class="breadcrumb-item active">Memory Management Tutorial</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/tutorials/memory_management.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="memory-management-tutorial">
+<h1>Memory Management Tutorial<a class="headerlink" href="#memory-management-tutorial" title="Link to this heading"></a></h1>
+<p>OULY provides a comprehensive set of memory allocators designed for different use cases and performance requirements. This tutorial will guide you through the available allocators and when to use each one.</p>
+<section id="overview-of-allocators">
+<h2>Overview of Allocators<a class="headerlink" href="#overview-of-allocators" title="Link to this heading"></a></h2>
+<p>OULY includes several allocator types:</p>
+<ul class="simple">
+<li><p><strong>Linear Allocators</strong> - Fast sequential allocation, LIFO deallocation only</p></li>
+<li><p><strong>Arena Allocators</strong> - Block-based allocation with configurable strategies</p></li>
+<li><p><strong>Pool Allocators</strong> - Fixed-size block allocation for specific object types</p></li>
+<li><p><strong>Thread-safe Variants</strong> - Lock-free allocators for multi-threaded use</p></li>
+</ul>
+</section>
+<section id="linear-allocator">
+<h2>Linear Allocator<a class="headerlink" href="#linear-allocator" title="Link to this heading"></a></h2>
+<p>The linear allocator is the fastest allocator for sequential allocation patterns:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/allocators/linear_allocator.hpp&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;iostream&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// Create a 1KB linear allocator</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">linear_allocator</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">allocator</span><span class="p">(</span><span class="mi">1024</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// Allocate some memory</span>
+<span class="w">    </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">ptr1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">allocator</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="mi">256</span><span class="p">);</span>
+<span class="w">    </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">ptr2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">allocator</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="mi">128</span><span class="p">);</span>
+
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;Available space: &quot;</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">allocator</span><span class="p">.</span><span class="n">available</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot; bytes</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">;</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;Used space: &quot;</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">allocator</span><span class="p">.</span><span class="n">used</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot; bytes</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// Linear allocators support LIFO deallocation only</span>
+<span class="w">    </span><span class="n">allocator</span><span class="p">.</span><span class="n">deallocate</span><span class="p">(</span><span class="n">ptr2</span><span class="p">,</span><span class="w"> </span><span class="mi">128</span><span class="p">);</span><span class="w">  </span><span class="c1">// Must deallocate in reverse order</span>
+<span class="w">    </span><span class="n">allocator</span><span class="p">.</span><span class="n">deallocate</span><span class="p">(</span><span class="n">ptr1</span><span class="p">,</span><span class="w"> </span><span class="mi">256</span><span class="p">);</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Use Cases:</strong>
+* Temporary allocations with predictable lifetimes
+* Frame-based allocations in games
+* Parser/compiler temporary storage</p>
+</section>
+<section id="linear-arena-allocator">
+<h2>Linear Arena Allocator<a class="headerlink" href="#linear-arena-allocator" title="Link to this heading"></a></h2>
+<p>The arena allocator provides automatic memory management with block allocation:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/allocators/linear_arena_allocator.hpp&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;vector&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// Create arena with 4KB initial size</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">linear_arena_allocator</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">arena</span><span class="p">(</span><span class="mi">4096</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// Use with STL containers</span>
+<span class="w">    </span><span class="k">using</span><span class="w"> </span><span class="n">ArenaVector</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">std_allocator_wrapper</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span><span class="w"> </span><span class="k">decltype</span><span class="p">(</span><span class="n">arena</span><span class="p">)</span><span class="o">&gt;&gt;</span><span class="p">;</span>
+<span class="w">    </span><span class="n">ArenaVector</span><span class="w"> </span><span class="n">numbers</span><span class="p">(</span><span class="n">ouly</span><span class="o">::</span><span class="n">std_allocator_wrapper</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span><span class="w"> </span><span class="k">decltype</span><span class="p">(</span><span class="n">arena</span><span class="p">)</span><span class="o">&gt;</span><span class="p">(</span><span class="n">arena</span><span class="p">));</span>
+
+<span class="w">    </span><span class="c1">// Add many elements - arena will automatically grow</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">1000</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">numbers</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">i</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;Vector size: &quot;</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">numbers</span><span class="p">.</span><span class="n">size</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">;</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;Arena blocks: &quot;</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">arena</span><span class="p">.</span><span class="n">block_count</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// Memory is automatically freed when arena is destroyed</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="pool-allocator">
+<h2>Pool Allocator<a class="headerlink" href="#pool-allocator" title="Link to this heading"></a></h2>
+<p>Pool allocators are optimal for fixed-size allocations:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/allocators/pool_allocator.hpp&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;iostream&gt;</span>
+
+<span class="k">struct</span><span class="w"> </span><span class="nc">GameObject</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">,</span><span class="w"> </span><span class="n">z</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">health</span><span class="p">;</span>
+<span class="w">    </span><span class="c1">// 16 bytes total</span>
+<span class="p">};</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// Create pool for 100 GameObjects (16 bytes each)</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">pool_allocator</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">pool</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="n">GameObject</span><span class="p">),</span><span class="w"> </span><span class="mi">100</span><span class="p">);</span>
+
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">GameObject</span><span class="o">*&gt;</span><span class="w"> </span><span class="n">objects</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// Allocate game objects</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">50</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">auto</span><span class="o">*</span><span class="w"> </span><span class="n">obj</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">static_cast</span><span class="o">&lt;</span><span class="n">GameObject</span><span class="o">*&gt;</span><span class="p">(</span><span class="n">pool</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="n">GameObject</span><span class="p">)));</span>
+<span class="w">        </span><span class="k">new</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span><span class="w"> </span><span class="n">GameObject</span><span class="p">{</span><span class="kt">float</span><span class="p">(</span><span class="n">i</span><span class="p">),</span><span class="w"> </span><span class="kt">float</span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">2</span><span class="p">),</span><span class="w"> </span><span class="mf">0.0f</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p">};</span>
+<span class="w">        </span><span class="n">objects</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">obj</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;Allocated &quot;</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">objects</span><span class="p">.</span><span class="n">size</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot; objects</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">;</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;Pool utilization: &quot;</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">pool</span><span class="p">.</span><span class="n">used_blocks</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;/&quot;</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">pool</span><span class="p">.</span><span class="n">total_blocks</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// Clean up</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="o">*</span><span class="w"> </span><span class="n">obj</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">objects</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">obj</span><span class="o">-&gt;~</span><span class="n">GameObject</span><span class="p">();</span>
+<span class="w">        </span><span class="n">pool</span><span class="p">.</span><span class="n">deallocate</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">GameObject</span><span class="p">));</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Use Cases:</strong>
+* Object pools for games (entities, particles, etc.)
+* Network packet buffers
+* Database record caching</p>
+</section>
+<section id="configuration-system">
+<h2>Configuration System<a class="headerlink" href="#configuration-system" title="Link to this heading"></a></h2>
+<p>OULY allocators use a template-based configuration system:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/allocators/config.hpp&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/allocators/linear_allocator.hpp&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// Configure allocator with custom alignment and memory tracking</span>
+<span class="w">    </span><span class="k">using</span><span class="w"> </span><span class="n">Config</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">config</span><span class="o">&lt;</span>
+<span class="w">        </span><span class="n">ouly</span><span class="o">::</span><span class="n">cfg</span><span class="o">::</span><span class="n">min_alignment</span><span class="o">&lt;</span><span class="mi">32</span><span class="o">&gt;</span><span class="p">,</span><span class="w">    </span><span class="c1">// 32-byte minimum alignment</span>
+<span class="w">        </span><span class="n">ouly</span><span class="o">::</span><span class="n">cfg</span><span class="o">::</span><span class="n">track_memory</span><span class="p">,</span><span class="w">         </span><span class="c1">// Enable memory tracking</span>
+<span class="w">        </span><span class="n">ouly</span><span class="o">::</span><span class="n">cfg</span><span class="o">::</span><span class="n">compute_stats</span><span class="w">         </span><span class="c1">// Compute allocation statistics</span>
+<span class="w">    </span><span class="o">&gt;</span><span class="p">;</span>
+
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">linear_allocator</span><span class="o">&lt;</span><span class="n">Config</span><span class="o">&gt;</span><span class="w"> </span><span class="n">allocator</span><span class="p">(</span><span class="mi">1024</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// All allocations will respect 32-byte minimum alignment</span>
+<span class="w">    </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">aligned_ptr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">allocator</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="mi">100</span><span class="p">);</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Available allocator configuration options:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::min_alignment&lt;N&gt;</span></code> - Set minimum memory alignment requirements</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::track_memory</span></code> - Enable memory usage tracking</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::compute_stats</span></code> - Collect basic allocation statistics</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::compute_atomic_stats</span></code> - Collect thread-safe allocation statistics</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::underlying_allocator&lt;T&gt;</span></code> - Specify custom underlying allocator</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::allocator_type&lt;T&gt;</span></code> - Set allocator type for arena-based allocators</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::atom_size&lt;N&gt;</span></code> - Set allocation atom size (power of 2)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::atom_size_npt&lt;N&gt;</span></code> - Set allocation atom size (not power of 2)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::atom_count&lt;N&gt;</span></code> - Set number of atoms per allocation unit</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::granularity&lt;N&gt;</span></code> - Set allocation granularity</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::max_bucket&lt;N&gt;</span></code> - Set maximum bucket size for bucket allocators</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::search_window&lt;N&gt;</span></code> - Set search window size for allocation strategies</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::strategy&lt;T&gt;</span></code> - Specify allocation strategy for complex allocators</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::fallback_start&lt;T&gt;</span></code> - Set fallback strategy when primary fails</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::fixed_max_per_slot&lt;N&gt;</span></code> - Maximum allocations per slot</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::extension&lt;T&gt;</span></code> - Add extension functionality</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::manager&lt;T&gt;</span></code> - Set memory manager implementation</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::debug_tracer&lt;T&gt;</span></code> - Enable debug tracing with custom tracer</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::base_stats&lt;T&gt;</span></code> - Set base statistics collection type</p></li>
+</ul>
+<p><strong>Advanced Configuration Examples:</strong></p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// High-performance arena with custom strategy</span>
+<span class="k">using</span><span class="w"> </span><span class="n">PerformanceConfig</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">config</span><span class="o">&lt;</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">cfg</span><span class="o">::</span><span class="n">strategy</span><span class="o">&lt;</span><span class="n">ouly</span><span class="o">::</span><span class="n">strat</span><span class="o">::</span><span class="n">best_fit_v2</span><span class="o">&gt;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">cfg</span><span class="o">::</span><span class="n">min_alignment</span><span class="o">&lt;</span><span class="mi">64</span><span class="o">&gt;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">cfg</span><span class="o">::</span><span class="n">granularity</span><span class="o">&lt;</span><span class="mi">4096</span><span class="o">&gt;</span>
+<span class="o">&gt;</span><span class="p">;</span>
+
+<span class="n">ouly</span><span class="o">::</span><span class="n">arena_allocator</span><span class="o">&lt;</span><span class="n">PerformanceConfig</span><span class="o">&gt;</span><span class="w"> </span><span class="n">arena</span><span class="p">(</span><span class="mi">16</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="p">);</span>
+
+<span class="c1">// Debug-enabled allocator with tracing</span>
+<span class="k">using</span><span class="w"> </span><span class="n">DebugConfig</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">config</span><span class="o">&lt;</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">cfg</span><span class="o">::</span><span class="n">track_memory</span><span class="p">,</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">cfg</span><span class="o">::</span><span class="n">compute_atomic_stats</span><span class="p">,</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">cfg</span><span class="o">::</span><span class="n">debug_tracer</span><span class="o">&lt;</span><span class="n">MyCustomTracer</span><span class="o">&gt;</span>
+<span class="o">&gt;</span><span class="p">;</span>
+
+<span class="n">ouly</span><span class="o">::</span><span class="n">coalescing_arena_allocator</span><span class="o">&lt;</span><span class="n">DebugConfig</span><span class="o">&gt;</span><span class="w"> </span><span class="n">debug_arena</span><span class="p">(</span><span class="mi">8</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="p">);</span>
+
+<span class="c1">// Pool allocator with custom atom configuration</span>
+<span class="k">using</span><span class="w"> </span><span class="n">PoolConfig</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">config</span><span class="o">&lt;</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">cfg</span><span class="o">::</span><span class="n">atom_size</span><span class="o">&lt;</span><span class="mi">256</span><span class="o">&gt;</span><span class="p">,</span><span class="w">      </span><span class="c1">// 256-byte atoms</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">cfg</span><span class="o">::</span><span class="n">atom_count</span><span class="o">&lt;</span><span class="mi">64</span><span class="o">&gt;</span><span class="p">,</span><span class="w">      </span><span class="c1">// 64 atoms per allocation</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">cfg</span><span class="o">::</span><span class="n">max_bucket</span><span class="o">&lt;</span><span class="mi">16</span><span class="o">&gt;</span><span class="w">       </span><span class="c1">// Maximum 16 buckets</span>
+<span class="o">&gt;</span><span class="p">;</span>
+
+<span class="n">ouly</span><span class="o">::</span><span class="n">pool_allocator</span><span class="o">&lt;</span><span class="n">PoolConfig</span><span class="o">&gt;</span><span class="w"> </span><span class="n">pool</span><span class="p">;</span>
+</pre></div>
+</div>
+</section>
+<section id="thread-safe-allocators">
+<h2>Thread-Safe Allocators<a class="headerlink" href="#thread-safe-allocators" title="Link to this heading"></a></h2>
+<p>For multi-threaded applications, use thread-safe allocator variants:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/allocators/ts_shared_linear_allocator.hpp&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;thread&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;vector&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// Thread-safe shared linear allocator</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ts_shared_linear_allocator</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">shared_allocator</span><span class="p">(</span><span class="mi">1024</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="p">);</span>
+
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="kr">thread</span><span class="o">&gt;</span><span class="w"> </span><span class="n">threads</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// Launch multiple threads that allocate memory</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">threads</span><span class="p">.</span><span class="n">emplace_back</span><span class="p">([</span><span class="o">&amp;</span><span class="n">shared_allocator</span><span class="p">,</span><span class="w"> </span><span class="n">i</span><span class="p">]()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">100</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">j</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">ptr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">shared_allocator</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="mi">256</span><span class="p">);</span>
+<span class="w">                </span><span class="c1">// Use memory...</span>
+<span class="w">                </span><span class="n">std</span><span class="o">::</span><span class="n">this_thread</span><span class="o">::</span><span class="n">sleep_for</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">chrono</span><span class="o">::</span><span class="n">microseconds</span><span class="p">(</span><span class="mi">10</span><span class="p">));</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">});</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="c1">// Wait for all threads</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">threads</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">t</span><span class="p">.</span><span class="n">join</span><span class="p">();</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="address-space-allocators">
+<h2>Address Space Allocators<a class="headerlink" href="#address-space-allocators" title="Link to this heading"></a></h2>
+<p>OULY provides specialized allocators that work with address spaces rather than direct memory allocation. These are particularly useful for GPU memory management and virtual memory systems:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/allocators/arena_allocator.hpp&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/allocators/coalescing_arena_allocator.hpp&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// Arena allocator for managing address ranges</span>
+<span class="w">    </span><span class="c1">// Can be used with GPU memory pools or virtual address spaces</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">arena_allocator</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">arena</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// Coalescing arena allocator reduces fragmentation</span>
+<span class="w">    </span><span class="c1">// by merging adjacent free blocks</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">coalescing_arena_allocator</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">coalescing_arena</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// These allocators manage address ranges, not actual memory</span>
+<span class="w">    </span><span class="c1">// Useful for:</span>
+<span class="w">    </span><span class="c1">// - GPU memory allocation coordination</span>
+<span class="w">    </span><span class="c1">// - Virtual memory management</span>
+<span class="w">    </span><span class="c1">// - Address space partitioning</span>
+
+<span class="w">    </span><span class="c1">// Example: GPU memory allocation wrapper</span>
+<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">GPUMemoryAllocator</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">ouly</span><span class="o">::</span><span class="n">arena_allocator</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">address_allocator</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">gpu_memory_pool</span><span class="p">;</span>
+
+<span class="w">        </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">allocate_gpu_memory</span><span class="p">(</span><span class="kt">size_t</span><span class="w"> </span><span class="n">size</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="c1">// Get address offset from arena allocator</span>
+<span class="w">            </span><span class="k">auto</span><span class="w"> </span><span class="n">offset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">address_allocator</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="n">size</span><span class="p">);</span>
+<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">offset</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="k">nullptr</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="k">nullptr</span><span class="p">;</span>
+
+<span class="w">            </span><span class="c1">// Convert offset to actual GPU memory address</span>
+<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">char</span><span class="o">*&gt;</span><span class="p">(</span><span class="n">gpu_memory_pool</span><span class="p">)</span><span class="w"> </span><span class="o">+</span>
+<span class="w">                   </span><span class="k">reinterpret_cast</span><span class="o">&lt;</span><span class="kt">uintptr_t</span><span class="o">&gt;</span><span class="p">(</span><span class="n">offset</span><span class="p">);</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">};</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Use Cases for Address Space Allocators:</strong></p>
+<ul class="simple">
+<li><p><strong>GPU Memory Management</strong> - Coordinate address ranges in GPU memory pools</p></li>
+<li><p><strong>Virtual Memory Systems</strong> - Manage virtual address space allocation</p></li>
+<li><p><strong>Memory Mapped Files</strong> - Allocate ranges within large mapped regions</p></li>
+<li><p><strong>Custom Memory Backends</strong> - Abstract address management from physical allocation</p></li>
+</ul>
+</section>
+<section id="best-practices">
+<h2>Best Practices<a class="headerlink" href="#best-practices" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p><strong>Choose the Right Allocator</strong></p>
+<ul class="simple">
+<li><p>Linear: Temporary/frame-based allocations</p></li>
+<li><p>Arena: Growing collections with unknown final size</p></li>
+<li><p>Pool: Fixed-size objects with frequent allocation/deallocation</p></li>
+</ul>
+</li>
+<li><p><strong>Alignment Considerations</strong></p>
+<ul class="simple">
+<li><p>Use appropriate alignment for your data types</p></li>
+<li><p>SIMD operations often require 16 or 32-byte alignment</p></li>
+<li><p>Cache line alignment (64 bytes) for performance-critical data</p></li>
+</ul>
+</li>
+<li><p><strong>Memory Layout</strong></p>
+<ul class="simple">
+<li><p>Group related allocations together for cache efficiency</p></li>
+<li><p>Consider Structure of Arrays (SoA) layouts for better vectorization</p></li>
+</ul>
+</li>
+<li><p><strong>Debugging</strong></p>
+<ul class="simple">
+<li><p>Enable debug mode during development</p></li>
+<li><p>Use statistics to monitor allocation patterns</p></li>
+<li><p>Profile memory usage in release builds</p></li>
+</ul>
+</li>
+<li><p><strong>Thread Safety</strong></p>
+<ul class="simple">
+<li><p>Use thread-safe allocators sparingly (performance overhead)</p></li>
+<li><p>Consider thread-local allocators for better performance</p></li>
+<li><p>Synchronize access to shared allocators when necessary</p></li>
+</ul>
+</li>
+</ol>
+</section>
+<section id="next-steps">
+<h2>Next Steps<a class="headerlink" href="#next-steps" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>Learn about <a class="reference internal" href="containers_tutorial.html"><span class="doc">Containers Tutorial</span></a> that work with custom allocators</p></li>
+<li><p>Explore <a class="reference internal" href="ecs_tutorial.html"><span class="doc">Entity Component System Tutorial</span></a> for data-oriented memory layouts</p></li>
+<li><p>Check <a class="reference internal" href="../performance/index.html"><span class="doc">Performance Guide</span></a> for memory optimization techniques</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="Tutorials" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="containers_tutorial.html" class="btn btn-neutral float-right" title="Containers Tutorial" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, OULY Contributors.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

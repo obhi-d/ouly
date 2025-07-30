@@ -1,0 +1,239 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tutorials &mdash; OULY 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/graphviz.css?v=4ae1632d" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=4721fb27" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=8d563738"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Memory Management Tutorial" href="memory_management.html" />
+    <link rel="prev" title="Getting Started" href="../getting_started.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            OULY
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting Started</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Tutorials</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="memory_management.html">Memory Management Tutorial</a></li>
+<li class="toctree-l2"><a class="reference internal" href="containers_tutorial.html">Containers Tutorial</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ecs_tutorial.html">Entity Component System Tutorial</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scheduler_tutorial.html">Task Scheduler Tutorial</a></li>
+<li class="toctree-l2"><a class="reference internal" href="serialization_tutorial.html">Serialization Tutorial</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#prerequisites">Prerequisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#getting-help">Getting Help</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/index.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api_reference/index.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples/index.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../performance/index.html">Performance Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing to OULY</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">OULY</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Tutorials</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/tutorials/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="tutorials">
+<h1>Tutorials<a class="headerlink" href="#tutorials" title="Link to this heading"></a></h1>
+<p>Step-by-step tutorials to learn OULY’s core features through practical examples.</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="memory_management.html">Memory Management Tutorial</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="memory_management.html#overview-of-allocators">Overview of Allocators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="memory_management.html#linear-allocator">Linear Allocator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="memory_management.html#linear-arena-allocator">Linear Arena Allocator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="memory_management.html#pool-allocator">Pool Allocator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="memory_management.html#configuration-system">Configuration System</a></li>
+<li class="toctree-l2"><a class="reference internal" href="memory_management.html#thread-safe-allocators">Thread-Safe Allocators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="memory_management.html#address-space-allocators">Address Space Allocators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="memory_management.html#best-practices">Best Practices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="memory_management.html#next-steps">Next Steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="containers_tutorial.html">Containers Tutorial</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="containers_tutorial.html#container-overview">Container Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="containers_tutorial.html#small-vector">Small Vector</a></li>
+<li class="toctree-l2"><a class="reference internal" href="containers_tutorial.html#dynamic-array">Dynamic Array</a></li>
+<li class="toctree-l2"><a class="reference internal" href="containers_tutorial.html#sparse-vector">Sparse Vector</a></li>
+<li class="toctree-l2"><a class="reference internal" href="containers_tutorial.html#intrusive-list">Intrusive List</a></li>
+<li class="toctree-l2"><a class="reference internal" href="containers_tutorial.html#structure-of-arrays-soa">Structure of Arrays (SoA)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="containers_tutorial.html#container-algorithms">Container Algorithms</a></li>
+<li class="toctree-l2"><a class="reference internal" href="containers_tutorial.html#custom-allocators">Custom Allocators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="containers_tutorial.html#container-configuration">Container Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="containers_tutorial.html#performance-considerations">Performance Considerations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="containers_tutorial.html#best-practices">Best Practices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="containers_tutorial.html#next-steps">Next Steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="ecs_tutorial.html">Entity Component System Tutorial</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="ecs_tutorial.html#ecs-fundamentals">ECS Fundamentals</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ecs_tutorial.html#basic-entity-management">Basic Entity Management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ecs_tutorial.html#component-storage">Component Storage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ecs_tutorial.html#component-storage-configuration">Component Storage Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ecs_tutorial.html#ecs-configuration-options">ECS Configuration Options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ecs_tutorial.html#systems-and-iteration">Systems and Iteration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ecs_tutorial.html#collections-for-entity-groups">Collections for Entity Groups</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ecs_tutorial.html#thread-safe-ecs-with-revisions">Thread-Safe ECS with Revisions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ecs_tutorial.html#advanced-ecs-patterns">Advanced ECS Patterns</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ecs_tutorial.html#performance-optimization">Performance Optimization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ecs_tutorial.html#best-practices">Best Practices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ecs_tutorial.html#next-steps">Next Steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="scheduler_tutorial.html">Task Scheduler Tutorial</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="scheduler_tutorial.html#scheduler-overview">Scheduler Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scheduler_tutorial.html#basic-task-submission">Basic Task Submission</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scheduler_tutorial.html#task-context-and-submission">Task Context and Submission</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scheduler_tutorial.html#workgroups-and-organization">Workgroups and Organization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scheduler_tutorial.html#coroutine-integration">Coroutine Integration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scheduler_tutorial.html#parallel-algorithms">Parallel Algorithms</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scheduler_tutorial.html#producer-consumer-patterns">Producer-Consumer Patterns</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scheduler_tutorial.html#performance-considerations">Performance Considerations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scheduler_tutorial.html#best-practices">Best Practices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scheduler_tutorial.html#next-steps">Next Steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="serialization_tutorial.html">Serialization Tutorial</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="serialization_tutorial.html#serialization-overview">Serialization Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="serialization_tutorial.html#binary-serialization">Binary Serialization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="serialization_tutorial.html#file-i-o-with-binary-serialization">File I/O with Binary Serialization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="serialization_tutorial.html#custom-type-serialization">Custom Type Serialization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="serialization_tutorial.html#yaml-serialization">YAML Serialization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="serialization_tutorial.html#yaml-file-operations">YAML File Operations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="serialization_tutorial.html#network-serialization">Network Serialization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="serialization_tutorial.html#endianness-handling">Endianness Handling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="serialization_tutorial.html#performance-considerations">Performance Considerations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="serialization_tutorial.html#best-practices">Best Practices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="serialization_tutorial.html#next-steps">Next Steps</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
+<p>These tutorials are designed to progressively introduce you to OULY’s capabilities:</p>
+<ol class="arabic simple">
+<li><p><strong>Memory Management</strong> - Learn about custom allocators and memory strategies</p></li>
+<li><p><strong>Containers</strong> - Explore high-performance container classes</p></li>
+<li><p><strong>Entity Component System</strong> - Build data-oriented applications with ECS</p></li>
+<li><p><strong>Task Scheduler</strong> - Master parallel execution and work-stealing</p></li>
+<li><p><strong>Serialization</strong> - Handle data persistence and network protocols</p></li>
+</ol>
+<p>Each tutorial includes:</p>
+<ul class="simple">
+<li><p>Clear explanations of concepts</p></li>
+<li><p>Complete, runnable code examples</p></li>
+<li><p>Common patterns and best practices</p></li>
+<li><p>Performance considerations</p></li>
+<li><p>Troubleshooting tips</p></li>
+</ul>
+</section>
+<section id="prerequisites">
+<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading"></a></h2>
+<p>Before starting these tutorials, ensure you have:</p>
+<ul class="simple">
+<li><p>Basic C++ knowledge (C++17/20 features helpful)</p></li>
+<li><p>OULY properly installed and configured</p></li>
+<li><p>A development environment with a C++20 compiler</p></li>
+</ul>
+</section>
+<section id="getting-help">
+<h2>Getting Help<a class="headerlink" href="#getting-help" title="Link to this heading"></a></h2>
+<p>If you encounter issues while following these tutorials:</p>
+<ul class="simple">
+<li><p>Check the <a class="reference internal" href="../api_reference/index.html"><span class="doc">API Reference</span></a> for detailed API documentation</p></li>
+<li><p>Review <a class="reference internal" href="../examples/index.html"><span class="doc">Examples</span></a> for additional code samples</p></li>
+<li><p>Visit the <a class="reference external" href="https://github.com/obhi-d/ouly">GitHub repository</a> for issues and discussions</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../getting_started.html" class="btn btn-neutral float-left" title="Getting Started" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="memory_management.html" class="btn btn-neutral float-right" title="Memory Management Tutorial" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, OULY Contributors.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

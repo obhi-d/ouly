@@ -1,0 +1,317 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Getting Started &mdash; OULY 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/graphviz.css?v=4ae1632d" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=4721fb27" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=8d563738"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Tutorials" href="tutorials/index.html" />
+    <link rel="prev" title="OULY Documentation" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            OULY
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Getting Started</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#system-requirements">System Requirements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#installation">Installation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#using-cmake-fetchcontent-recommended">Using CMake FetchContent (Recommended)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#git-submodule">Git Submodule</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#manual-installation">Manual Installation</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#building-from-source">Building from Source</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#available-cmake-presets">Available CMake Presets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cmake-options">CMake Options</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#basic-concepts">Basic Concepts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#first-program">First Program</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#next-steps">Next Steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/index.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide/index.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api_reference/index.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples/index.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="performance/index.html">Performance Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing to OULY</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">OULY</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Getting Started</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/getting_started.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="getting-started">
+<h1>Getting Started<a class="headerlink" href="#getting-started" title="Link to this heading"></a></h1>
+<p>This guide will help you get started with OULY, covering installation, basic concepts, and your first programs.</p>
+<section id="system-requirements">
+<h2>System Requirements<a class="headerlink" href="#system-requirements" title="Link to this heading"></a></h2>
+<dl class="simple">
+<dt><strong>Compiler Support</strong></dt><dd><ul class="simple">
+<li><p>GCC 13.0 or later</p></li>
+<li><p>Clang 17.0 or later</p></li>
+<li><p>MSVC 2022 (Visual Studio 17.0) or later</p></li>
+<li><p>Apple Clang 15.0 or later</p></li>
+</ul>
+</dd>
+<dt><strong>Build System</strong></dt><dd><ul class="simple">
+<li><p>CMake 3.20 or later</p></li>
+<li><p>Ninja (recommended) or Make</p></li>
+</ul>
+</dd>
+<dt><strong>Operating Systems</strong></dt><dd><ul class="simple">
+<li><p>Linux (Ubuntu 20.04+, RHEL 8+)</p></li>
+<li><p>macOS 11.0+</p></li>
+<li><p>Windows 10/11</p></li>
+</ul>
+</dd>
+</dl>
+</section>
+<section id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h2>
+<p>OULY is a header-only library that can be integrated into your project in several ways:</p>
+<section id="using-cmake-fetchcontent-recommended">
+<h3>Using CMake FetchContent (Recommended)<a class="headerlink" href="#using-cmake-fetchcontent-recommended" title="Link to this heading"></a></h3>
+<div class="highlight-cmake notranslate"><div class="highlight"><pre><span></span><span class="nb">cmake_minimum_required</span><span class="p">(</span><span class="s">VERSION</span><span class="w"> </span><span class="s">3.20</span><span class="p">)</span>
+<span class="nb">project</span><span class="p">(</span><span class="s">MyProject</span><span class="p">)</span>
+
+<span class="nb">include</span><span class="p">(</span><span class="s">FetchContent</span><span class="p">)</span>
+<span class="nb">FetchContent_Declare</span><span class="p">(</span>
+<span class="w">  </span><span class="s">ouly</span>
+<span class="w">  </span><span class="s">GIT_REPOSITORY</span><span class="w"> </span><span class="s">https://github.com/obhi-d/ouly.git</span>
+<span class="w">  </span><span class="s">GIT_TAG</span><span class="w">        </span><span class="s">main</span><span class="w">  </span><span class="c"># or specific version tag</span>
+<span class="p">)</span>
+<span class="nb">FetchContent_MakeAvailable</span><span class="p">(</span><span class="s">ouly</span><span class="p">)</span>
+
+<span class="nb">add_executable</span><span class="p">(</span><span class="s">my_app</span><span class="w"> </span><span class="s">main.cpp</span><span class="p">)</span>
+<span class="nb">target_link_libraries</span><span class="p">(</span><span class="s">my_app</span><span class="w"> </span><span class="s">PRIVATE</span><span class="w"> </span><span class="s">ouly::ouly</span><span class="p">)</span>
+<span class="nb">target_compile_features</span><span class="p">(</span><span class="s">my_app</span><span class="w"> </span><span class="s">PRIVATE</span><span class="w"> </span><span class="s">cxx_std_20</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="git-submodule">
+<h3>Git Submodule<a class="headerlink" href="#git-submodule" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Add as submodule</span>
+git<span class="w"> </span>submodule<span class="w"> </span>add<span class="w"> </span>https://github.com/obhi-d/ouly.git<span class="w"> </span>third_party/ouly
+git<span class="w"> </span>submodule<span class="w"> </span>update<span class="w"> </span>--init<span class="w"> </span>--recursive
+</pre></div>
+</div>
+<p>Then in your CMakeLists.txt:</p>
+<div class="highlight-cmake notranslate"><div class="highlight"><pre><span></span><span class="nb">add_subdirectory</span><span class="p">(</span><span class="s">third_party/ouly</span><span class="p">)</span>
+<span class="nb">target_link_libraries</span><span class="p">(</span><span class="s">your_target</span><span class="w"> </span><span class="s">PRIVATE</span><span class="w"> </span><span class="s">ouly::ouly</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="manual-installation">
+<h3>Manual Installation<a class="headerlink" href="#manual-installation" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p>Download or clone the repository</p></li>
+<li><p>Copy the <code class="docutils literal notranslate"><span class="pre">include/</span></code> directory to your project</p></li>
+<li><p>Add the include path to your compiler</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/obhi-d/ouly.git
+cp<span class="w"> </span>-r<span class="w"> </span>ouly/include/ouly<span class="w"> </span>/your/project/include/
+</pre></div>
+</div>
+</section>
+</section>
+<section id="building-from-source">
+<h2>Building from Source<a class="headerlink" href="#building-from-source" title="Link to this heading"></a></h2>
+<p>If you want to build tests, examples, or documentation:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/obhi-d/ouly.git
+<span class="nb">cd</span><span class="w"> </span>ouly
+
+<span class="c1"># Configure with default preset</span>
+cmake<span class="w"> </span>--preset<span class="o">=</span>macos-default<span class="w">  </span><span class="c1"># or linux-default</span>
+
+<span class="c1"># Build</span>
+cmake<span class="w"> </span>--build<span class="w"> </span>build/macos-default
+
+<span class="c1"># Run tests</span>
+<span class="nb">cd</span><span class="w"> </span>build/macos-default<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>ctest
+</pre></div>
+</div>
+<section id="available-cmake-presets">
+<h3>Available CMake Presets<a class="headerlink" href="#available-cmake-presets" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">macos-default</span></code> - Debug build with tests (macOS)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">macos-release</span></code> - Release build (macOS)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">linux-default</span></code> - Debug build with tests (Linux)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">linux-release</span></code> - Release build (Linux)</p></li>
+</ul>
+</section>
+<section id="cmake-options">
+<h3>CMake Options<a class="headerlink" href="#cmake-options" title="Link to this heading"></a></h3>
+<div class="highlight-cmake notranslate"><div class="highlight"><pre><span></span><span class="nb">option</span><span class="p">(</span><span class="s">OULY_BUILD_TESTS</span><span class="w"> </span><span class="s2">&quot;Build unit tests&quot;</span><span class="w"> </span><span class="s">OFF</span><span class="p">)</span>
+<span class="nb">option</span><span class="p">(</span><span class="s">OULY_BUILD_DOCS</span><span class="w"> </span><span class="s2">&quot;Build documentation&quot;</span><span class="w"> </span><span class="s">OFF</span><span class="p">)</span>
+<span class="nb">option</span><span class="p">(</span><span class="s">OULY_ENABLE_ASAN</span><span class="w"> </span><span class="s2">&quot;Enable AddressSanitizer&quot;</span><span class="w"> </span><span class="s">OFF</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="basic-concepts">
+<h2>Basic Concepts<a class="headerlink" href="#basic-concepts" title="Link to this heading"></a></h2>
+<p>OULY is organized into several core modules:</p>
+<dl class="simple">
+<dt><strong>Allocators</strong> (<code class="docutils literal notranslate"><span class="pre">ouly/allocators/</span></code>)</dt><dd><p>Memory management components for efficient allocation strategies.</p>
+</dd>
+<dt><strong>Containers</strong> (<code class="docutils literal notranslate"><span class="pre">ouly/containers/</span></code>)</dt><dd><p>High-performance containers with STL-compatible interfaces.</p>
+</dd>
+<dt><strong>ECS</strong> (<code class="docutils literal notranslate"><span class="pre">ouly/ecs/</span></code>)</dt><dd><p>Entity Component System for data-oriented design.</p>
+</dd>
+<dt><strong>Scheduler</strong> (<code class="docutils literal notranslate"><span class="pre">ouly/scheduler/</span></code>)</dt><dd><p>Task scheduling and parallel execution framework.</p>
+</dd>
+<dt><strong>Serializers</strong> (<code class="docutils literal notranslate"><span class="pre">ouly/serializers/</span></code>)</dt><dd><p>Binary and text-based serialization utilities.</p>
+</dd>
+<dt><strong>Utilities</strong> (<code class="docutils literal notranslate"><span class="pre">ouly/utility/</span></code>)</dt><dd><p>Helper classes and meta-programming utilities.</p>
+</dd>
+</dl>
+</section>
+<section id="first-program">
+<h2>First Program<a class="headerlink" href="#first-program" title="Link to this heading"></a></h2>
+<p>Here’s a simple program demonstrating basic OULY usage:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/allocators/linear_arena_allocator.hpp&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/containers/small_vector.hpp&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/ecs/registry.hpp&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/scheduler/scheduler_v2.hpp&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;iostream&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// Memory allocator example</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">linear_arena_allocator</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">allocator</span><span class="p">(</span><span class="mi">1024</span><span class="p">);</span>
+<span class="w">    </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">memory</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">allocator</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="mi">256</span><span class="p">);</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;Allocated 256 bytes</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// Container example</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">small_vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span><span class="w"> </span><span class="mi">8</span><span class="o">&gt;</span><span class="w"> </span><span class="n">numbers</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span><span class="p">};</span>
+<span class="w">    </span><span class="n">numbers</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="mi">6</span><span class="p">);</span>
+
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;Vector contents: &quot;</span><span class="p">;</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="n">num</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">numbers</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">num</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot; &quot;</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// ECS example</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">registry</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">registry</span><span class="p">;</span>
+<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">entity</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">registry</span><span class="p">.</span><span class="n">emplace</span><span class="p">();</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;Created entity: &quot;</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">entity</span><span class="p">.</span><span class="n">value</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// Scheduler example</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">scheduler</span><span class="w"> </span><span class="n">scheduler</span><span class="p">(</span><span class="mi">2</span><span class="p">);</span>
+<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">workgroup</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">create_workgroup</span><span class="p">();</span>
+<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">begin_execution</span><span class="p">();</span>
+
+<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">future</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">submit</span><span class="p">(</span><span class="n">workgroup</span><span class="p">,</span><span class="w"> </span><span class="p">[]()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="mi">42</span><span class="p">;</span>
+<span class="w">    </span><span class="p">});</span>
+
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;Task result: &quot;</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">future</span><span class="p">.</span><span class="n">get</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">;</span>
+
+<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">end_execution</span><span class="p">();</span>
+<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">shutdown</span><span class="p">();</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="next-steps">
+<h2>Next Steps<a class="headerlink" href="#next-steps" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>Read the <a class="reference internal" href="tutorials/index.html"><span class="doc">Tutorials</span></a> for guided examples</p></li>
+<li><p>Explore the <a class="reference internal" href="user_guide/index.html"><span class="doc">User Guide</span></a> for detailed component documentation</p></li>
+<li><p>Check out <a class="reference internal" href="examples/index.html"><span class="doc">Examples</span></a> for real-world usage patterns</p></li>
+<li><p>Review <a class="reference internal" href="performance/index.html"><span class="doc">Performance Guide</span></a> for optimization guidance</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="OULY Documentation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="tutorials/index.html" class="btn btn-neutral float-right" title="Tutorials" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, OULY Contributors.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

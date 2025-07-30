@@ -1,0 +1,406 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contributing to OULY &mdash; OULY 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/graphviz.css?v=4ae1632d" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=4721fb27" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=8d563738"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Changelog" href="changelog.html" />
+    <link rel="prev" title="Performance Guide" href="performance/index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            OULY
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/index.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide/index.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api_reference/index.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples/index.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="performance/index.html">Performance Guide</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Contributing to OULY</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#development-environment">Development Environment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#code-style-and-standards">Code Style and Standards</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#contribution-types">Contribution Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#pull-request-process">Pull Request Process</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#code-review-guidelines">Code Review Guidelines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#testing-requirements">Testing Requirements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#documentation-standards">Documentation Standards</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#release-process">Release Process</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#community-guidelines">Community Guidelines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#getting-help">Getting Help</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#recognition">Recognition</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">OULY</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Contributing to OULY</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/contributing.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="contributing-to-ouly">
+<h1>Contributing to OULY<a class="headerlink" href="#contributing-to-ouly" title="Link to this heading"></a></h1>
+<p>Guidelines for contributing to the OULY project.</p>
+<section id="development-environment">
+<h2>Development Environment<a class="headerlink" href="#development-environment" title="Link to this heading"></a></h2>
+<p>Setting up your development environment:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Clone the repository</span>
+git<span class="w"> </span>clone<span class="w"> </span>https://github.com/obhi-d/ouly.git
+<span class="nb">cd</span><span class="w"> </span>ouly
+
+<span class="c1"># Install dependencies (Ubuntu/Debian)</span>
+sudo<span class="w"> </span>apt-get<span class="w"> </span>update
+sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>build-essential<span class="w"> </span>cmake<span class="w"> </span>ninja-build<span class="w"> </span>doxygen
+
+<span class="c1"># Install dependencies (macOS)</span>
+brew<span class="w"> </span>install<span class="w"> </span>cmake<span class="w"> </span>ninja<span class="w"> </span>doxygen
+
+<span class="c1"># Configure development build</span>
+cmake<span class="w"> </span>--preset<span class="o">=</span>linux-default<span class="w">  </span><span class="c1"># or macos-default</span>
+
+<span class="c1"># Build and test</span>
+cmake<span class="w"> </span>--build<span class="w"> </span>build/linux-default
+<span class="nb">cd</span><span class="w"> </span>build/linux-default<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>ctest
+</pre></div>
+</div>
+</section>
+<section id="code-style-and-standards">
+<h2>Code Style and Standards<a class="headerlink" href="#code-style-and-standards" title="Link to this heading"></a></h2>
+<p>OULY follows specific coding standards:</p>
+<dl>
+<dt><strong>Naming Conventions</strong></dt><dd><ul class="simple">
+<li><p>Types: <code class="docutils literal notranslate"><span class="pre">snake_case</span></code> (e.g., <code class="docutils literal notranslate"><span class="pre">linear_allocator</span></code>)</p></li>
+<li><p>Functions: <code class="docutils literal notranslate"><span class="pre">snake_case</span></code> (e.g., <code class="docutils literal notranslate"><span class="pre">allocate</span></code>, <code class="docutils literal notranslate"><span class="pre">get_size</span></code>)</p></li>
+<li><p>Variables: <code class="docutils literal notranslate"><span class="pre">snake_case</span></code> (e.g., <code class="docutils literal notranslate"><span class="pre">memory_pool</span></code>, <code class="docutils literal notranslate"><span class="pre">block_size</span></code>)</p></li>
+<li><p>Constants: <code class="docutils literal notranslate"><span class="pre">UPPER_CASE</span></code> (e.g., <code class="docutils literal notranslate"><span class="pre">DEFAULT_ALIGNMENT</span></code>)</p></li>
+<li><p>Template parameters: <code class="docutils literal notranslate"><span class="pre">CamelCase</span></code> (e.g., <code class="docutils literal notranslate"><span class="pre">AllocatorType</span></code>)</p></li>
+</ul>
+</dd>
+<dt><strong>File Organization</strong></dt><dd><ul class="simple">
+<li><p>Headers: <code class="docutils literal notranslate"><span class="pre">include/ouly/module/file.hpp</span></code></p></li>
+<li><p>Implementation: <code class="docutils literal notranslate"><span class="pre">src/module/file.cpp</span></code> (if needed)</p></li>
+<li><p>Tests: <code class="docutils literal notranslate"><span class="pre">unit_tests/module/test_file.cpp</span></code></p></li>
+</ul>
+</dd>
+<dt><strong>Code Formatting</strong></dt><dd><p>Use the provided <code class="docutils literal notranslate"><span class="pre">.clang-format</span></code> configuration:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Format all code</span>
+find<span class="w"> </span>include<span class="w"> </span>src<span class="w"> </span>unit_tests<span class="w"> </span>-name<span class="w"> </span><span class="s2">&quot;*.hpp&quot;</span><span class="w"> </span>-o<span class="w"> </span>-name<span class="w"> </span><span class="s2">&quot;*.cpp&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>xargs<span class="w"> </span>clang-format<span class="w"> </span>-i
+</pre></div>
+</div>
+</dd>
+<dt><strong>Documentation Standards</strong></dt><dd><p>All public APIs must be documented with Doxygen comments:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cm">/**</span>
+<span class="cm"> * @brief Allocates memory with specified alignment.</span>
+<span class="cm"> *</span>
+<span class="cm"> * @param size Number of bytes to allocate</span>
+<span class="cm"> * @param alignment Memory alignment requirement (must be power of 2)</span>
+<span class="cm"> * @return Pointer to allocated memory, or nullptr on failure</span>
+<span class="cm"> *</span>
+<span class="cm"> * @pre size &gt; 0</span>
+<span class="cm"> * @pre alignment is a power of 2</span>
+<span class="cm"> * @post Returned pointer is aligned to the specified boundary</span>
+<span class="cm"> */</span>
+<span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="nf">allocate</span><span class="p">(</span><span class="kt">size_t</span><span class="w"> </span><span class="n">size</span><span class="p">,</span><span class="w"> </span><span class="n">alignment</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">alignment</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">alignment</span><span class="o">&lt;&gt;</span><span class="p">{});</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+</section>
+<section id="contribution-types">
+<h2>Contribution Types<a class="headerlink" href="#contribution-types" title="Link to this heading"></a></h2>
+<p>We welcome several types of contributions:</p>
+<dl class="simple">
+<dt><strong>Bug Fixes</strong></dt><dd><ul class="simple">
+<li><p>Identify and fix bugs in existing code</p></li>
+<li><p>Add regression tests for fixed issues</p></li>
+<li><p>Update documentation if behavior changes</p></li>
+</ul>
+</dd>
+<dt><strong>New Features</strong></dt><dd><ul class="simple">
+<li><p>Implement new allocators, containers, or utilities</p></li>
+<li><p>Add platform-specific optimizations</p></li>
+<li><p>Enhance existing APIs with new functionality</p></li>
+</ul>
+</dd>
+<dt><strong>Performance Improvements</strong></dt><dd><ul class="simple">
+<li><p>Optimize existing algorithms and data structures</p></li>
+<li><p>Add SIMD optimizations for supported platforms</p></li>
+<li><p>Improve memory layout and cache efficiency</p></li>
+</ul>
+</dd>
+<dt><strong>Documentation</strong></dt><dd><ul class="simple">
+<li><p>Improve API documentation and examples</p></li>
+<li><p>Add tutorials for new features</p></li>
+<li><p>Fix typos and clarify explanations</p></li>
+</ul>
+</dd>
+<dt><strong>Testing</strong></dt><dd><ul class="simple">
+<li><p>Add unit tests for untested code paths</p></li>
+<li><p>Create integration tests for complex scenarios</p></li>
+</ul>
+</dd>
+</dl>
+</section>
+<section id="pull-request-process">
+<h2>Pull Request Process<a class="headerlink" href="#pull-request-process" title="Link to this heading"></a></h2>
+<ol class="arabic">
+<li><p><strong>Create an Issue</strong></p>
+<p>Before starting work, create an issue describing the problem or enhancement.</p>
+</li>
+<li><p><strong>Fork and Branch</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Fork the repository on GitHub, then:</span>
+git<span class="w"> </span>clone<span class="w"> </span>https://github.com/YOUR_USERNAME/ouly.git
+<span class="nb">cd</span><span class="w"> </span>ouly
+git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>feature/your-feature-name
+</pre></div>
+</div>
+</li>
+<li><p><strong>Implement Changes</strong></p>
+<ul class="simple">
+<li><p>Follow the coding standards</p></li>
+<li><p>Add appropriate tests</p></li>
+<li><p>Update documentation</p></li>
+<li><p>Ensure all tests pass</p></li>
+</ul>
+</li>
+<li><p><strong>Test Your Changes</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Run all tests</span>
+cmake<span class="w"> </span>--build<span class="w"> </span>build<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>build<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>ctest
+
+<span class="c1"># Run specific test categories</span>
+ctest<span class="w"> </span>-R<span class="w"> </span>allocator<span class="w">  </span><span class="c1"># Run allocator tests only</span>
+</pre></div>
+</div>
+</li>
+<li><p><strong>Update Documentation</strong></p>
+<p>If you add new features or change APIs:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Build documentation</span>
+<span class="nb">cd</span><span class="w"> </span>docs
+make<span class="w"> </span>html
+
+<span class="c1"># Check for warnings</span>
+make<span class="w"> </span>html<span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-i<span class="w"> </span>warning
+</pre></div>
+</div>
+</li>
+<li><p><strong>Commit Changes</strong></p>
+<p>Use clear, descriptive commit messages:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>add<span class="w"> </span>.
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat(allocators): add coalescing arena allocator</span>
+
+<span class="s2">- Implements block coalescing for reduced fragmentation</span>
+<span class="s2">- Adds configurable coalescing strategies</span>
+<span class="s2">- Includes comprehensive unit tests</span>
+
+<span class="s2">Fixes #123&quot;</span>
+</pre></div>
+</div>
+</li>
+<li><p><strong>Submit Pull Request</strong></p>
+<ul class="simple">
+<li><p>Push your branch and create a pull request</p></li>
+<li><p>Fill out the pull request template completely</p></li>
+<li><p>Link to related issues</p></li>
+<li><p>Include before/after performance data if applicable</p></li>
+</ul>
+</li>
+</ol>
+</section>
+<section id="code-review-guidelines">
+<h2>Code Review Guidelines<a class="headerlink" href="#code-review-guidelines" title="Link to this heading"></a></h2>
+<dl class="simple">
+<dt><strong>For Contributors</strong></dt><dd><ul class="simple">
+<li><p>Be responsive to feedback</p></li>
+<li><p>Keep pull requests focused and reasonably sized</p></li>
+<li><p>Update your branch if conflicts arise</p></li>
+<li><p>Add tests for edge cases identified during review</p></li>
+</ul>
+</dd>
+<dt><strong>For Reviewers</strong></dt><dd><ul class="simple">
+<li><p>Be constructive and specific in feedback</p></li>
+<li><p>Test the changes locally when possible</p></li>
+<li><p>Check for performance implications</p></li>
+<li><p>Verify documentation is complete and accurate</p></li>
+</ul>
+</dd>
+</dl>
+</section>
+<section id="testing-requirements">
+<h2>Testing Requirements<a class="headerlink" href="#testing-requirements" title="Link to this heading"></a></h2>
+<p>All contributions must include appropriate tests:</p>
+<p><strong>Unit Tests</strong></p>
+<blockquote>
+<div><div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;catch2/catch_test_macros.hpp&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/allocators/linear_allocator.hpp&gt;</span>
+
+<span class="n">TEST_CASE</span><span class="p">(</span><span class="s">&quot;linear_allocator basic allocation&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;[allocators]&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">linear_allocator</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">allocator</span><span class="p">(</span><span class="mi">1024</span><span class="p">);</span>
+
+<span class="w">    </span><span class="n">SECTION</span><span class="p">(</span><span class="s">&quot;successful allocation&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">ptr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">allocator</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="mi">256</span><span class="p">);</span>
+<span class="w">        </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">ptr</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="k">nullptr</span><span class="p">);</span>
+<span class="w">        </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">allocator</span><span class="p">.</span><span class="n">used</span><span class="p">()</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">256</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="n">SECTION</span><span class="p">(</span><span class="s">&quot;alignment requirements&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">ptr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">allocator</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">alignment</span><span class="o">&lt;</span><span class="mi">16</span><span class="o">&gt;</span><span class="p">{});</span>
+<span class="w">        </span><span class="n">REQUIRE</span><span class="p">(</span><span class="k">reinterpret_cast</span><span class="o">&lt;</span><span class="kt">uintptr_t</span><span class="o">&gt;</span><span class="p">(</span><span class="n">ptr</span><span class="p">)</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="mi">16</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div></blockquote>
+</section>
+<section id="documentation-standards">
+<h2>Documentation Standards<a class="headerlink" href="#documentation-standards" title="Link to this heading"></a></h2>
+<dl class="simple">
+<dt><strong>API Documentation</strong></dt><dd><p>Use Doxygen with complete parameter and return documentation.</p>
+</dd>
+<dt><strong>Code Examples</strong></dt><dd><p>Include practical, compilable examples in documentation.</p>
+</dd>
+<dt><strong>Architecture Documentation</strong></dt><dd><p>Explain design decisions and trade-offs for complex components.</p>
+</dd>
+<dt><strong>Performance Notes</strong></dt><dd><p>Document performance characteristics and optimization tips.</p>
+</dd>
+</dl>
+</section>
+<section id="release-process">
+<h2>Release Process<a class="headerlink" href="#release-process" title="Link to this heading"></a></h2>
+<p>OULY follows semantic versioning (MAJOR.MINOR.PATCH):</p>
+<ul class="simple">
+<li><p><strong>MAJOR</strong>: Incompatible API changes</p></li>
+<li><p><strong>MINOR</strong>: New functionality, backward compatible</p></li>
+<li><p><strong>PATCH</strong>: Bug fixes, backward compatible</p></li>
+</ul>
+<p><strong>Release Checklist</strong>
+1. Update version numbers
+2. Update CHANGELOG.md
+3. Run full test suite on all supported platforms
+4. Update documentation
+5. Create release tag
+6. Publish release notes</p>
+</section>
+<section id="community-guidelines">
+<h2>Community Guidelines<a class="headerlink" href="#community-guidelines" title="Link to this heading"></a></h2>
+<dl class="simple">
+<dt><strong>Be Respectful</strong></dt><dd><p>Treat all contributors with respect and professionalism.</p>
+</dd>
+<dt><strong>Be Collaborative</strong></dt><dd><p>Work together to find the best solutions.</p>
+</dd>
+<dt><strong>Be Patient</strong></dt><dd><p>Code review and discussion take time.</p>
+</dd>
+<dt><strong>Ask Questions</strong></dt><dd><p>If you’re unsure about anything, ask for clarification.</p>
+</dd>
+<dt><strong>Learn and Teach</strong></dt><dd><p>Share knowledge and learn from others.</p>
+</dd>
+</dl>
+</section>
+<section id="getting-help">
+<h2>Getting Help<a class="headerlink" href="#getting-help" title="Link to this heading"></a></h2>
+<p>If you need help contributing:</p>
+<ul class="simple">
+<li><p>Check existing issues and discussions</p></li>
+<li><p>Ask questions in GitHub Discussions</p></li>
+<li><p>Join the community chat (if available)</p></li>
+<li><p>Reach out to maintainers for guidance</p></li>
+</ul>
+</section>
+<section id="recognition">
+<h2>Recognition<a class="headerlink" href="#recognition" title="Link to this heading"></a></h2>
+<p>Contributors are recognized in:</p>
+<ul class="simple">
+<li><p>CONTRIBUTORS.md file</p></li>
+<li><p>Release notes for significant contributions</p></li>
+<li><p>Annual contributor highlights</p></li>
+</ul>
+<p>Thank you for contributing to OULY! Your efforts help make it a better library for everyone.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="performance/index.html" class="btn btn-neutral float-left" title="Performance Guide" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="changelog.html" class="btn btn-neutral float-right" title="Changelog" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, OULY Contributors.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

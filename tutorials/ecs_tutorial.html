@@ -1,0 +1,670 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Entity Component System Tutorial &mdash; OULY 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/graphviz.css?v=4ae1632d" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=4721fb27" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=8d563738"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Task Scheduler Tutorial" href="scheduler_tutorial.html" />
+    <link rel="prev" title="Containers Tutorial" href="containers_tutorial.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            OULY
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting Started</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Tutorials</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="memory_management.html">Memory Management Tutorial</a></li>
+<li class="toctree-l2"><a class="reference internal" href="containers_tutorial.html">Containers Tutorial</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Entity Component System Tutorial</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#ecs-fundamentals">ECS Fundamentals</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#basic-entity-management">Basic Entity Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#component-storage">Component Storage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#component-storage-configuration">Component Storage Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#ecs-configuration-options">ECS Configuration Options</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#systems-and-iteration">Systems and Iteration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#collections-for-entity-groups">Collections for Entity Groups</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#thread-safe-ecs-with-revisions">Thread-Safe ECS with Revisions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#advanced-ecs-patterns">Advanced ECS Patterns</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#performance-optimization">Performance Optimization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#best-practices">Best Practices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#next-steps">Next Steps</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="scheduler_tutorial.html">Task Scheduler Tutorial</a></li>
+<li class="toctree-l2"><a class="reference internal" href="serialization_tutorial.html">Serialization Tutorial</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#prerequisites">Prerequisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#getting-help">Getting Help</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/index.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api_reference/index.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples/index.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../performance/index.html">Performance Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing to OULY</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">OULY</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Tutorials</a></li>
+      <li class="breadcrumb-item active">Entity Component System Tutorial</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/tutorials/ecs_tutorial.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="entity-component-system-tutorial">
+<h1>Entity Component System Tutorial<a class="headerlink" href="#entity-component-system-tutorial" title="Link to this heading"></a></h1>
+<p>OULY’s ECS (Entity Component System) is designed for high-performance, data-oriented applications. This tutorial will guide you through building efficient ECS-based systems for games, simulations, and other performance-critical applications.</p>
+<section id="ecs-fundamentals">
+<h2>ECS Fundamentals<a class="headerlink" href="#ecs-fundamentals" title="Link to this heading"></a></h2>
+<p>The Entity Component System pattern separates data (Components) from behavior (Systems) using unique identifiers (Entities):</p>
+<ul class="simple">
+<li><p><strong>Entities</strong> - Unique IDs that represent game objects or simulation elements</p></li>
+<li><p><strong>Components</strong> - Data structures that hold state (Position, Velocity, Health, etc.)</p></li>
+<li><p><strong>Systems</strong> - Functions that operate on entities with specific component combinations</p></li>
+</ul>
+</section>
+<section id="basic-entity-management">
+<h2>Basic Entity Management<a class="headerlink" href="#basic-entity-management" title="Link to this heading"></a></h2>
+<p>Start with creating and managing entities:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/ecs/registry.hpp&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;iostream&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// Create an entity registry</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">registry</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">registry</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// Create entities</span>
+<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">player</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">registry</span><span class="p">.</span><span class="n">emplace</span><span class="p">();</span>
+<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">enemy1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">registry</span><span class="p">.</span><span class="n">emplace</span><span class="p">();</span>
+<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">enemy2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">registry</span><span class="p">.</span><span class="n">emplace</span><span class="p">();</span>
+
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;Player entity: &quot;</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">player</span><span class="p">.</span><span class="n">value</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">;</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;Enemy1 entity: &quot;</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">enemy1</span><span class="p">.</span><span class="n">value</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// Check if entities are valid</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;Player valid: &quot;</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">registry</span><span class="p">.</span><span class="n">is_valid</span><span class="p">(</span><span class="n">player</span><span class="p">)</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// Destroy an entity</span>
+<span class="w">    </span><span class="n">registry</span><span class="p">.</span><span class="n">destroy</span><span class="p">(</span><span class="n">enemy1</span><span class="p">);</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;Enemy1 valid after destroy: &quot;</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">registry</span><span class="p">.</span><span class="n">is_valid</span><span class="p">(</span><span class="n">enemy1</span><span class="p">)</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// Entity IDs are recycled</span>
+<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">new_entity</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">registry</span><span class="p">.</span><span class="n">emplace</span><span class="p">();</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;New entity (recycled ID): &quot;</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">new_entity</span><span class="p">.</span><span class="n">value</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">;</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="component-storage">
+<h2>Component Storage<a class="headerlink" href="#component-storage" title="Link to this heading"></a></h2>
+<p>Components are stored separately from entities for optimal memory layout:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/ecs/registry.hpp&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/ecs/components.hpp&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;iostream&gt;</span>
+
+<span class="c1">// Define component types</span>
+<span class="k">struct</span><span class="w"> </span><span class="nc">Position</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">,</span><span class="w"> </span><span class="n">z</span><span class="p">;</span>
+<span class="w">    </span><span class="n">Position</span><span class="p">(</span><span class="kt">float</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">z</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">x</span><span class="p">(</span><span class="n">x</span><span class="p">),</span><span class="w"> </span><span class="n">y</span><span class="p">(</span><span class="n">y</span><span class="p">),</span><span class="w"> </span><span class="n">z</span><span class="p">(</span><span class="n">z</span><span class="p">)</span><span class="w"> </span><span class="p">{}</span>
+<span class="p">};</span>
+
+<span class="k">struct</span><span class="w"> </span><span class="nc">Velocity</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">dx</span><span class="p">,</span><span class="w"> </span><span class="n">dy</span><span class="p">,</span><span class="w"> </span><span class="n">dz</span><span class="p">;</span>
+<span class="w">    </span><span class="n">Velocity</span><span class="p">(</span><span class="kt">float</span><span class="w"> </span><span class="n">dx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">dy</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">dz</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">dx</span><span class="p">(</span><span class="n">dx</span><span class="p">),</span><span class="w"> </span><span class="n">dy</span><span class="p">(</span><span class="n">dy</span><span class="p">),</span><span class="w"> </span><span class="n">dz</span><span class="p">(</span><span class="n">dz</span><span class="p">)</span><span class="w"> </span><span class="p">{}</span>
+<span class="p">};</span>
+
+<span class="k">struct</span><span class="w"> </span><span class="nc">Health</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">current</span><span class="p">,</span><span class="w"> </span><span class="n">maximum</span><span class="p">;</span>
+<span class="w">    </span><span class="n">Health</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">max</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">100</span><span class="p">)</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">current</span><span class="p">(</span><span class="n">max</span><span class="p">),</span><span class="w"> </span><span class="n">maximum</span><span class="p">(</span><span class="n">max</span><span class="p">)</span><span class="w"> </span><span class="p">{}</span>
+<span class="p">};</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">registry</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">registry</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// Create component storage</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="n">Position</span><span class="o">&gt;</span><span class="w"> </span><span class="n">positions</span><span class="p">;</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="n">Velocity</span><span class="o">&gt;</span><span class="w"> </span><span class="n">velocities</span><span class="p">;</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="n">Health</span><span class="o">&gt;</span><span class="w"> </span><span class="n">health_components</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// Create entities</span>
+<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">player</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">registry</span><span class="p">.</span><span class="n">emplace</span><span class="p">();</span>
+<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">npc</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">registry</span><span class="p">.</span><span class="n">emplace</span><span class="p">();</span>
+
+<span class="w">    </span><span class="c1">// Add components to entities</span>
+<span class="w">    </span><span class="n">positions</span><span class="p">.</span><span class="n">emplace_at</span><span class="p">(</span><span class="n">player</span><span class="p">,</span><span class="w"> </span><span class="mf">10.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">20.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0f</span><span class="p">);</span>
+<span class="w">    </span><span class="n">velocities</span><span class="p">.</span><span class="n">emplace_at</span><span class="p">(</span><span class="n">player</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0f</span><span class="p">);</span>
+<span class="w">    </span><span class="n">health_components</span><span class="p">.</span><span class="n">emplace_at</span><span class="p">(</span><span class="n">player</span><span class="p">,</span><span class="w"> </span><span class="mi">150</span><span class="p">);</span><span class="w">  </span><span class="c1">// 150 max health</span>
+
+<span class="w">    </span><span class="n">positions</span><span class="p">.</span><span class="n">emplace_at</span><span class="p">(</span><span class="n">npc</span><span class="p">,</span><span class="w"> </span><span class="mf">5.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">15.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0f</span><span class="p">);</span>
+<span class="w">    </span><span class="n">health_components</span><span class="p">.</span><span class="n">emplace_at</span><span class="p">(</span><span class="n">npc</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p">);</span><span class="w">     </span><span class="c1">// 100 max health (no velocity)</span>
+
+<span class="w">    </span><span class="c1">// Access components</span>
+<span class="w">    </span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">player_pos</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">positions</span><span class="p">[</span><span class="n">player</span><span class="p">];</span>
+<span class="w">    </span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">player_vel</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">velocities</span><span class="p">[</span><span class="n">player</span><span class="p">];</span>
+
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;Player position: (&quot;</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">player_pos</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;, &quot;</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">player_pos</span><span class="p">.</span><span class="n">y</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;)</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">;</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;Player velocity: (&quot;</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">player_vel</span><span class="p">.</span><span class="n">dx</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;, &quot;</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">player_vel</span><span class="p">.</span><span class="n">dy</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;)</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// Check if entity has component</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">positions</span><span class="p">.</span><span class="n">contains</span><span class="p">(</span><span class="n">npc</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;NPC has position component</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">velocities</span><span class="p">.</span><span class="n">contains</span><span class="p">(</span><span class="n">npc</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;NPC does not have velocity component</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="component-storage-configuration">
+<h2>Component Storage Configuration<a class="headerlink" href="#component-storage-configuration" title="Link to this heading"></a></h2>
+<p>OULY provides different storage strategies for optimal performance:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/ecs/components.hpp&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/ecs/config.hpp&gt;</span>
+
+<span class="c1">// Sparse storage - memory efficient for sparse data</span>
+<span class="k">using</span><span class="w"> </span><span class="n">SparseConfig</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">cfg</span><span class="o">::</span><span class="n">use_sparse</span><span class="o">&lt;&gt;</span><span class="p">;</span>
+<span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="n">Position</span><span class="p">,</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">entity</span><span class="o">&lt;&gt;</span><span class="p">,</span><span class="w"> </span><span class="n">SparseConfig</span><span class="o">&gt;</span><span class="w"> </span><span class="n">sparse_positions</span><span class="p">;</span>
+
+<span class="c1">// Dense storage - faster iteration (default)</span>
+<span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="n">Velocity</span><span class="o">&gt;</span><span class="w"> </span><span class="n">dense_velocities</span><span class="p">;</span>
+
+<span class="c1">// Direct mapping - fastest access, more memory usage</span>
+<span class="k">using</span><span class="w"> </span><span class="n">DirectConfig</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">cfg</span><span class="o">::</span><span class="n">use_direct_mapping</span><span class="o">&lt;&gt;</span><span class="p">;</span>
+<span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="n">Health</span><span class="p">,</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">entity</span><span class="o">&lt;&gt;</span><span class="p">,</span><span class="w"> </span><span class="n">DirectConfig</span><span class="o">&gt;</span><span class="w"> </span><span class="n">direct_health</span><span class="p">;</span>
+</pre></div>
+</div>
+<p><strong>Storage Strategy Guidelines:</strong></p>
+<ul class="simple">
+<li><p><strong>Sparse</strong> - Use for components that exist on few entities (&lt; 10% of total)</p></li>
+<li><p><strong>Dense</strong> - Default choice, good balance of memory and performance</p></li>
+<li><p><strong>Direct</strong> - Use for components that exist on most entities (&gt; 80% of total)</p></li>
+</ul>
+</section>
+<section id="ecs-configuration-options">
+<h2>ECS Configuration Options<a class="headerlink" href="#ecs-configuration-options" title="Link to this heading"></a></h2>
+<p>ECS components can be configured using options from the <code class="docutils literal notranslate"><span class="pre">ouly::cfg</span></code> namespace:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/ecs/components.hpp&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/utility/config.hpp&gt;</span>
+
+<span class="c1">// Custom storage configuration</span>
+<span class="k">using</span><span class="w"> </span><span class="n">CustomConfig</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">config</span><span class="o">&lt;</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">cfg</span><span class="o">::</span><span class="n">use_sparse</span><span class="p">,</span><span class="w">              </span><span class="c1">// Use sparse storage</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">cfg</span><span class="o">::</span><span class="n">pool_size</span><span class="o">&lt;</span><span class="mi">8192</span><span class="o">&gt;</span><span class="p">,</span><span class="w">         </span><span class="c1">// Set pool size for allocations</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">cfg</span><span class="o">::</span><span class="n">custom_vector</span><span class="o">&lt;</span><span class="n">MyVector</span><span class="o">&gt;</span><span class="w">  </span><span class="c1">// Use custom vector implementation</span>
+<span class="o">&gt;</span><span class="p">;</span>
+
+<span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="n">Position</span><span class="p">,</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">entity</span><span class="o">&lt;&gt;</span><span class="p">,</span><span class="w"> </span><span class="n">CustomConfig</span><span class="o">&gt;</span><span class="w"> </span><span class="n">components</span><span class="p">;</span>
+</pre></div>
+</div>
+<p><strong>Available ECS Configuration Options:</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::use_sparse</span></code> - Enable sparse storage strategy for memory efficiency</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::use_direct_mapping</span></code> - Enable direct mapping for fastest access</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::pool_size&lt;N&gt;</span></code> - Set pool size for internal memory management</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::index_pool_size&lt;N&gt;</span></code> - Pool size for entity index management</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::self_index_pool_size&lt;N&gt;</span></code> - Pool size for self-referencing indexes</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::keys_index_pool_size&lt;N&gt;</span></code> - Pool size for key index management</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::custom_vector&lt;T&gt;</span></code> - Use custom vector implementation as storage backend</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::basic_size_type&lt;T&gt;</span></code> - Set size type for component storage (default: uint32_t)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::use_sparse_index</span></code> - Use sparse indexing for entity lookups</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::self_use_sparse_index</span></code> - Enable sparse indexing for self-references</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::keys_use_sparse_index</span></code> - Enable sparse indexing for key management</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::zero_out_memory</span></code> - Zero-initialize allocated memory</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::disable_pool_tracking</span></code> - Disable pool usage tracking for performance</p></li>
+</ul>
+<p><strong>Configuration Examples:</strong></p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// High-performance configuration for frequently accessed components</span>
+<span class="k">using</span><span class="w"> </span><span class="n">PerformanceConfig</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">config</span><span class="o">&lt;</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">cfg</span><span class="o">::</span><span class="n">use_direct_mapping</span><span class="p">,</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">cfg</span><span class="o">::</span><span class="n">pool_size</span><span class="o">&lt;</span><span class="mi">16384</span><span class="o">&gt;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">cfg</span><span class="o">::</span><span class="n">disable_pool_tracking</span>
+<span class="o">&gt;</span><span class="p">;</span>
+
+<span class="c1">// Memory-efficient configuration for rarely used components</span>
+<span class="k">using</span><span class="w"> </span><span class="n">MemoryConfig</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">config</span><span class="o">&lt;</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">cfg</span><span class="o">::</span><span class="n">use_sparse</span><span class="p">,</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">cfg</span><span class="o">::</span><span class="n">pool_size</span><span class="o">&lt;</span><span class="mi">1024</span><span class="o">&gt;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">cfg</span><span class="o">::</span><span class="n">use_sparse_index</span>
+<span class="o">&gt;</span><span class="p">;</span>
+
+<span class="c1">// Debug configuration with safety features</span>
+<span class="k">using</span><span class="w"> </span><span class="n">DebugConfig</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">config</span><span class="o">&lt;</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">cfg</span><span class="o">::</span><span class="n">zero_out_memory</span><span class="p">,</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">cfg</span><span class="o">::</span><span class="n">pool_size</span><span class="o">&lt;</span><span class="mi">4096</span><span class="o">&gt;</span>
+<span class="o">&gt;</span><span class="p">;</span>
+
+<span class="c1">// Components configured for different access patterns</span>
+<span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="n">Transform</span><span class="p">,</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">entity</span><span class="o">&lt;&gt;</span><span class="p">,</span><span class="w"> </span><span class="n">PerformanceConfig</span><span class="o">&gt;</span><span class="w"> </span><span class="n">transforms</span><span class="p">;</span>
+<span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="n">AudioSource</span><span class="p">,</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">entity</span><span class="o">&lt;&gt;</span><span class="p">,</span><span class="w"> </span><span class="n">MemoryConfig</span><span class="o">&gt;</span><span class="w"> </span><span class="n">audio_sources</span><span class="p">;</span>
+<span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="n">DebugInfo</span><span class="p">,</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">entity</span><span class="o">&lt;&gt;</span><span class="p">,</span><span class="w"> </span><span class="n">DebugConfig</span><span class="o">&gt;</span><span class="w"> </span><span class="n">debug_info</span><span class="p">;</span>
+</pre></div>
+</div>
+</section>
+<section id="systems-and-iteration">
+<h2>Systems and Iteration<a class="headerlink" href="#systems-and-iteration" title="Link to this heading"></a></h2>
+<p>Systems process entities with specific component combinations:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/ecs/registry.hpp&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/ecs/components.hpp&gt;</span>
+
+<span class="c1">// Movement system - updates positions based on velocity</span>
+<span class="kt">void</span><span class="w"> </span><span class="nf">movement_system</span><span class="p">(</span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="n">Position</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">positions</span><span class="p">,</span>
+<span class="w">                    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="n">Velocity</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">velocities</span><span class="p">,</span>
+<span class="w">                    </span><span class="kt">float</span><span class="w"> </span><span class="n">delta_time</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// Iterate over all entities that have both Position and Velocity</span>
+<span class="w">    </span><span class="n">positions</span><span class="p">.</span><span class="n">for_each</span><span class="p">(</span><span class="n">velocities</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="n">delta_time</span><span class="p">](</span><span class="k">auto</span><span class="w"> </span><span class="n">entity</span><span class="p">,</span><span class="w"> </span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">pos</span><span class="p">,</span><span class="w"> </span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">vel</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">pos</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">vel</span><span class="p">.</span><span class="n">dx</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">delta_time</span><span class="p">;</span>
+<span class="w">        </span><span class="n">pos</span><span class="p">.</span><span class="n">y</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">vel</span><span class="p">.</span><span class="n">dy</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">delta_time</span><span class="p">;</span>
+<span class="w">        </span><span class="n">pos</span><span class="p">.</span><span class="n">z</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">vel</span><span class="p">.</span><span class="n">dz</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">delta_time</span><span class="p">;</span>
+<span class="w">    </span><span class="p">});</span>
+<span class="p">}</span>
+
+<span class="c1">// Health regeneration system</span>
+<span class="kt">void</span><span class="w"> </span><span class="nf">health_regen_system</span><span class="p">(</span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="n">Health</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">health_components</span><span class="p">,</span>
+<span class="w">                        </span><span class="kt">float</span><span class="w"> </span><span class="n">delta_time</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">health_components</span><span class="p">.</span><span class="n">for_each</span><span class="p">([</span><span class="n">delta_time</span><span class="p">](</span><span class="k">auto</span><span class="w"> </span><span class="n">entity</span><span class="p">,</span><span class="w"> </span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">health</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">health</span><span class="p">.</span><span class="n">current</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">health</span><span class="p">.</span><span class="n">maximum</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">health</span><span class="p">.</span><span class="n">current</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">min</span><span class="p">(</span><span class="n">health</span><span class="p">.</span><span class="n">maximum</span><span class="p">,</span>
+<span class="w">                                    </span><span class="n">health</span><span class="p">.</span><span class="n">current</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">(</span><span class="mi">10</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">delta_time</span><span class="p">));</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">});</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">registry</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">registry</span><span class="p">;</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="n">Position</span><span class="o">&gt;</span><span class="w"> </span><span class="n">positions</span><span class="p">;</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="n">Velocity</span><span class="o">&gt;</span><span class="w"> </span><span class="n">velocities</span><span class="p">;</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="n">Health</span><span class="o">&gt;</span><span class="w"> </span><span class="n">health_components</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// Create some entities with components</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">100</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">auto</span><span class="w"> </span><span class="n">entity</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">registry</span><span class="p">.</span><span class="n">emplace</span><span class="p">();</span>
+<span class="w">        </span><span class="n">positions</span><span class="p">.</span><span class="n">emplace_at</span><span class="p">(</span><span class="n">entity</span><span class="p">,</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">10.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0f</span><span class="p">);</span>
+<span class="w">        </span><span class="n">velocities</span><span class="p">.</span><span class="n">emplace_at</span><span class="p">(</span><span class="n">entity</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0f</span><span class="p">);</span>
+<span class="w">        </span><span class="n">health_components</span><span class="p">.</span><span class="n">emplace_at</span><span class="p">(</span><span class="n">entity</span><span class="p">,</span><span class="w"> </span><span class="mi">80</span><span class="p">);</span><span class="w">  </span><span class="c1">// Damaged entities</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="c1">// Game loop</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">delta_time</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">1.0f</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mf">60.0f</span><span class="p">;</span><span class="w">  </span><span class="c1">// 60 FPS</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">frame</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">frame</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">frame</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">movement_system</span><span class="p">(</span><span class="n">positions</span><span class="p">,</span><span class="w"> </span><span class="n">velocities</span><span class="p">,</span><span class="w"> </span><span class="n">delta_time</span><span class="p">);</span>
+<span class="w">        </span><span class="n">health_regen_system</span><span class="p">(</span><span class="n">health_components</span><span class="p">,</span><span class="w"> </span><span class="n">delta_time</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="collections-for-entity-groups">
+<h2>Collections for Entity Groups<a class="headerlink" href="#collections-for-entity-groups" title="Link to this heading"></a></h2>
+<p>Collections allow efficient processing of specific entity groups:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/ecs/collection.hpp&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">registry</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">registry</span><span class="p">;</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="n">Position</span><span class="o">&gt;</span><span class="w"> </span><span class="n">positions</span><span class="p">;</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="n">Velocity</span><span class="o">&gt;</span><span class="w"> </span><span class="n">velocities</span><span class="p">;</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="n">Health</span><span class="o">&gt;</span><span class="w"> </span><span class="n">health_components</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// Collections for different entity types</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">collection</span><span class="o">&lt;</span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">entity</span><span class="o">&lt;&gt;&gt;</span><span class="w"> </span><span class="n">players</span><span class="p">;</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">collection</span><span class="o">&lt;</span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">entity</span><span class="o">&lt;&gt;&gt;</span><span class="w"> </span><span class="n">enemies</span><span class="p">;</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">collection</span><span class="o">&lt;</span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">entity</span><span class="o">&lt;&gt;&gt;</span><span class="w"> </span><span class="n">projectiles</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// Create different entity types</span>
+<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">player</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">registry</span><span class="p">.</span><span class="n">emplace</span><span class="p">();</span>
+<span class="w">    </span><span class="n">positions</span><span class="p">.</span><span class="n">emplace_at</span><span class="p">(</span><span class="n">player</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0f</span><span class="p">);</span>
+<span class="w">    </span><span class="n">health_components</span><span class="p">.</span><span class="n">emplace_at</span><span class="p">(</span><span class="n">player</span><span class="p">,</span><span class="w"> </span><span class="mi">150</span><span class="p">);</span>
+<span class="w">    </span><span class="n">players</span><span class="p">.</span><span class="n">emplace</span><span class="p">(</span><span class="n">player</span><span class="p">);</span>
+
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">auto</span><span class="w"> </span><span class="n">enemy</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">registry</span><span class="p">.</span><span class="n">emplace</span><span class="p">();</span>
+<span class="w">        </span><span class="n">positions</span><span class="p">.</span><span class="n">emplace_at</span><span class="p">(</span><span class="n">enemy</span><span class="p">,</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">5.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">10.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0f</span><span class="p">);</span>
+<span class="w">        </span><span class="n">velocities</span><span class="p">.</span><span class="n">emplace_at</span><span class="p">(</span><span class="n">enemy</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">-1.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0f</span><span class="p">);</span>
+<span class="w">        </span><span class="n">health_components</span><span class="p">.</span><span class="n">emplace_at</span><span class="p">(</span><span class="n">enemy</span><span class="p">,</span><span class="w"> </span><span class="mi">50</span><span class="p">);</span>
+<span class="w">        </span><span class="n">enemies</span><span class="p">.</span><span class="n">emplace</span><span class="p">(</span><span class="n">enemy</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="c1">// Process only enemies</span>
+<span class="w">    </span><span class="n">enemies</span><span class="p">.</span><span class="n">for_each</span><span class="p">(</span><span class="n">positions</span><span class="p">,</span><span class="w"> </span><span class="n">velocities</span><span class="p">,</span><span class="w"> </span><span class="p">[](</span><span class="k">auto</span><span class="w"> </span><span class="n">entity</span><span class="p">,</span><span class="w"> </span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">pos</span><span class="p">,</span><span class="w"> </span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">vel</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// AI behavior for enemies</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">pos</span><span class="p">.</span><span class="n">y</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">vel</span><span class="p">.</span><span class="n">dy</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">1.0f</span><span class="p">;</span><span class="w">  </span><span class="c1">// Bounce off bottom</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">});</span>
+
+<span class="w">    </span><span class="c1">// Process only players</span>
+<span class="w">    </span><span class="n">players</span><span class="p">.</span><span class="n">for_each</span><span class="p">(</span><span class="n">health_components</span><span class="p">,</span><span class="w"> </span><span class="p">[](</span><span class="k">auto</span><span class="w"> </span><span class="n">entity</span><span class="p">,</span><span class="w"> </span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">health</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;Player health: &quot;</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">health</span><span class="p">.</span><span class="n">current</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;/&quot;</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">health</span><span class="p">.</span><span class="n">maximum</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">;</span>
+<span class="w">    </span><span class="p">});</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="thread-safe-ecs-with-revisions">
+<h2>Thread-Safe ECS with Revisions<a class="headerlink" href="#thread-safe-ecs-with-revisions" title="Link to this heading"></a></h2>
+<p>For multi-threaded applications, use the revision-based registry:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/ecs/rxregistry.hpp&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;thread&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;vector&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// Revision-based registry for thread safety</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">rxregistry</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">registry</span><span class="p">;</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="n">Position</span><span class="o">&gt;</span><span class="w"> </span><span class="n">positions</span><span class="p">;</span>
+
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="kr">thread</span><span class="o">&gt;</span><span class="w"> </span><span class="n">threads</span><span class="p">;</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">rxentity</span><span class="o">&lt;&gt;&gt;</span><span class="w"> </span><span class="n">entities</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// Create entities in main thread</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">100</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">auto</span><span class="w"> </span><span class="n">entity</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">registry</span><span class="p">.</span><span class="n">emplace</span><span class="p">();</span>
+<span class="w">        </span><span class="n">positions</span><span class="p">.</span><span class="n">emplace_at</span><span class="p">(</span><span class="n">entity</span><span class="p">,</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">1.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0f</span><span class="p">);</span>
+<span class="w">        </span><span class="n">entities</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">entity</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="c1">// Launch worker threads</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">t</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">threads</span><span class="p">.</span><span class="n">emplace_back</span><span class="p">([</span><span class="o">&amp;</span><span class="n">registry</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">positions</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">entities</span><span class="p">,</span><span class="w"> </span><span class="n">t</span><span class="p">]()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">size_t</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">t</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">entities</span><span class="p">.</span><span class="n">size</span><span class="p">();</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="mi">4</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="k">auto</span><span class="w"> </span><span class="n">entity</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">entities</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+
+<span class="w">                </span><span class="c1">// Check if entity is still valid (might have been destroyed)</span>
+<span class="w">                </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">registry</span><span class="p">.</span><span class="n">is_valid</span><span class="p">(</span><span class="n">entity</span><span class="p">)</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">positions</span><span class="p">.</span><span class="n">contains</span><span class="p">(</span><span class="n">entity</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                    </span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">pos</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">positions</span><span class="p">[</span><span class="n">entity</span><span class="p">];</span>
+<span class="w">                    </span><span class="n">pos</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="mf">0.1f</span><span class="p">;</span><span class="w">  </span><span class="c1">// Move entity</span>
+<span class="w">                </span><span class="p">}</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">});</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="c1">// Wait for all threads</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="kr">thread</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">threads</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kr">thread</span><span class="p">.</span><span class="n">join</span><span class="p">();</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="advanced-ecs-patterns">
+<h2>Advanced ECS Patterns<a class="headerlink" href="#advanced-ecs-patterns" title="Link to this heading"></a></h2>
+<p><strong>Component Dependencies and Relationships</strong></p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="k">struct</span><span class="w"> </span><span class="nc">Transform</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">,</span><span class="w"> </span><span class="n">z</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">rotation</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">scale</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="k">struct</span><span class="w"> </span><span class="nc">Parent</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">entity</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">parent_entity</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="k">struct</span><span class="w"> </span><span class="nc">Children</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">entity</span><span class="o">&lt;&gt;&gt;</span><span class="w"> </span><span class="n">child_entities</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="c1">// System to update child transforms based on parent</span>
+<span class="kt">void</span><span class="w"> </span><span class="nf">transform_hierarchy_system</span><span class="p">(</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="n">Transform</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">transforms</span><span class="p">,</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="n">Parent</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">parents</span><span class="p">,</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="n">Children</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">children</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">    </span><span class="n">parents</span><span class="p">.</span><span class="n">for_each</span><span class="p">(</span><span class="n">transforms</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="o">&amp;</span><span class="p">](</span><span class="k">auto</span><span class="w"> </span><span class="n">child_entity</span><span class="p">,</span><span class="w"> </span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">parent_ref</span><span class="p">,</span><span class="w"> </span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">child_transform</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">transforms</span><span class="p">.</span><span class="n">contains</span><span class="p">(</span><span class="n">parent_ref</span><span class="p">.</span><span class="n">parent_entity</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">parent_transform</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">transforms</span><span class="p">[</span><span class="n">parent_ref</span><span class="p">.</span><span class="n">parent_entity</span><span class="p">];</span>
+<span class="w">            </span><span class="c1">// Apply parent transformation to child</span>
+<span class="w">            </span><span class="n">child_transform</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">parent_transform</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+<span class="w">            </span><span class="n">child_transform</span><span class="p">.</span><span class="n">y</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">parent_transform</span><span class="p">.</span><span class="n">y</span><span class="p">;</span>
+<span class="w">            </span><span class="n">child_transform</span><span class="p">.</span><span class="n">rotation</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">parent_transform</span><span class="p">.</span><span class="n">rotation</span><span class="p">;</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">});</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Tag Components</strong></p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// Tag components (zero-size)</span>
+<span class="k">struct</span><span class="w"> </span><span class="nc">Player</span><span class="w"> </span><span class="p">{};</span>
+<span class="k">struct</span><span class="w"> </span><span class="nc">Enemy</span><span class="w"> </span><span class="p">{};</span>
+<span class="k">struct</span><span class="w"> </span><span class="nc">Dead</span><span class="w"> </span><span class="p">{};</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">registry</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">registry</span><span class="p">;</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="n">Player</span><span class="o">&gt;</span><span class="w"> </span><span class="n">player_tags</span><span class="p">;</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="n">Enemy</span><span class="o">&gt;</span><span class="w"> </span><span class="n">enemy_tags</span><span class="p">;</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="n">Dead</span><span class="o">&gt;</span><span class="w"> </span><span class="n">dead_tags</span><span class="p">;</span>
+
+<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">entity</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">registry</span><span class="p">.</span><span class="n">emplace</span><span class="p">();</span>
+<span class="w">    </span><span class="n">player_tags</span><span class="p">.</span><span class="n">emplace_at</span><span class="p">(</span><span class="n">entity</span><span class="p">);</span><span class="w">  </span><span class="c1">// Mark as player</span>
+
+<span class="w">    </span><span class="c1">// Check for tag</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">player_tags</span><span class="p">.</span><span class="n">contains</span><span class="p">(</span><span class="n">entity</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;Entity is a player</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Event System Integration</strong></p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;functional&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;vector&gt;</span>
+
+<span class="k">struct</span><span class="w"> </span><span class="nc">DamageEvent</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">entity</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">target</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">damage</span><span class="p">;</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">entity</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">source</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">EventSystem</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">DamageEvent</span><span class="o">&gt;</span><span class="w"> </span><span class="n">damage_events</span><span class="p">;</span>
+
+<span class="k">public</span><span class="o">:</span>
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="n">queue_damage</span><span class="p">(</span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">entity</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">target</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">damage</span><span class="p">,</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">entity</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">source</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">damage_events</span><span class="p">.</span><span class="n">push_back</span><span class="p">({</span><span class="n">target</span><span class="p">,</span><span class="w"> </span><span class="n">damage</span><span class="p">,</span><span class="w"> </span><span class="n">source</span><span class="p">});</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="n">process_damage_events</span><span class="p">(</span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="n">Health</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">health_components</span><span class="p">,</span>
+<span class="w">                              </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="n">Dead</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">dead_tags</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">event</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">damage_events</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">health_components</span><span class="p">.</span><span class="n">contains</span><span class="p">(</span><span class="n">event</span><span class="p">.</span><span class="n">target</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">health</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">health_components</span><span class="p">[</span><span class="n">event</span><span class="p">.</span><span class="n">target</span><span class="p">];</span>
+<span class="w">                </span><span class="n">health</span><span class="p">.</span><span class="n">current</span><span class="w"> </span><span class="o">-=</span><span class="w"> </span><span class="n">event</span><span class="p">.</span><span class="n">damage</span><span class="p">;</span>
+
+<span class="w">                </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">health</span><span class="p">.</span><span class="n">current</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                    </span><span class="n">dead_tags</span><span class="p">.</span><span class="n">emplace_at</span><span class="p">(</span><span class="n">event</span><span class="p">.</span><span class="n">target</span><span class="p">);</span>
+<span class="w">                </span><span class="p">}</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">        </span><span class="n">damage_events</span><span class="p">.</span><span class="n">clear</span><span class="p">();</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+</section>
+<section id="performance-optimization">
+<h2>Performance Optimization<a class="headerlink" href="#performance-optimization" title="Link to this heading"></a></h2>
+<p><strong>Memory Layout Optimization</strong></p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// Pack components for better cache utilization</span>
+<span class="k">struct</span><span class="w"> </span><span class="nc">PackedTransform</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">position</span><span class="p">[</span><span class="mi">3</span><span class="p">];</span><span class="w">    </span><span class="c1">// x, y, z</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">rotation</span><span class="p">[</span><span class="mi">4</span><span class="p">];</span><span class="w">    </span><span class="c1">// quaternion</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">scale</span><span class="p">[</span><span class="mi">3</span><span class="p">];</span><span class="w">       </span><span class="c1">// sx, sy, sz</span>
+<span class="p">};</span>
+
+<span class="c1">// Use Structure of Arrays for SIMD operations</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/containers/soavector.hpp&gt;</span>
+
+<span class="k">struct</span><span class="w"> </span><span class="nc">ParticleData</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">pos_x</span><span class="p">,</span><span class="w"> </span><span class="n">pos_y</span><span class="p">,</span><span class="w"> </span><span class="n">pos_z</span><span class="p">;</span><span class="w">      </span><span class="c1">// position</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">vel_x</span><span class="p">,</span><span class="w"> </span><span class="n">vel_y</span><span class="p">,</span><span class="w"> </span><span class="n">vel_z</span><span class="p">;</span><span class="w">      </span><span class="c1">// velocity</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">life_time</span><span class="p">;</span><span class="w">                </span><span class="c1">// lifetime</span>
+<span class="p">};</span>
+
+<span class="n">ouly</span><span class="o">::</span><span class="n">soavector</span><span class="o">&lt;</span><span class="n">ParticleData</span><span class="o">&gt;</span><span class="w"> </span><span class="n">particles</span><span class="p">;</span>
+
+<span class="c1">// Access individual component arrays</span>
+<span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">x_positions</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">particles</span><span class="p">.</span><span class="n">get</span><span class="o">&lt;</span><span class="mi">0</span><span class="o">&gt;</span><span class="p">();</span><span class="w">  </span><span class="c1">// pos_x array</span>
+<span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">lifetimes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">particles</span><span class="p">.</span><span class="n">get</span><span class="o">&lt;</span><span class="mi">6</span><span class="o">&gt;</span><span class="p">();</span><span class="w">    </span><span class="c1">// life_time array</span>
+</pre></div>
+</div>
+<p><strong>Batch Processing</strong></p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// Process components in batches for better cache utilization</span>
+<span class="kt">void</span><span class="w"> </span><span class="nf">batch_movement_system</span><span class="p">(</span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="n">Position</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">positions</span><span class="p">,</span>
+<span class="w">                          </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="n">Velocity</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">velocities</span><span class="p">,</span>
+<span class="w">                          </span><span class="kt">float</span><span class="w"> </span><span class="n">delta_time</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">constexpr</span><span class="w"> </span><span class="kt">size_t</span><span class="w"> </span><span class="n">BATCH_SIZE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">64</span><span class="p">;</span>
+
+<span class="w">    </span><span class="n">positions</span><span class="p">.</span><span class="n">for_each_batch</span><span class="p">(</span><span class="n">velocities</span><span class="p">,</span><span class="w"> </span><span class="n">BATCH_SIZE</span><span class="p">,</span>
+<span class="w">        </span><span class="p">[</span><span class="n">delta_time</span><span class="p">](</span><span class="k">auto</span><span class="w"> </span><span class="n">begin</span><span class="p">,</span><span class="w"> </span><span class="k">auto</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">pos_range</span><span class="p">,</span><span class="w"> </span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">vel_range</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="c1">// Process batch of entities</span>
+<span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="n">it</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">begin</span><span class="p">;</span><span class="w"> </span><span class="n">it</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">end</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">it</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">pos</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">pos_range</span><span class="p">[</span><span class="n">it</span><span class="p">];</span>
+<span class="w">                </span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">vel</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">vel_range</span><span class="p">[</span><span class="n">it</span><span class="p">];</span>
+<span class="w">                </span><span class="n">pos</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">vel</span><span class="p">.</span><span class="n">dx</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">delta_time</span><span class="p">;</span>
+<span class="w">                </span><span class="n">pos</span><span class="p">.</span><span class="n">y</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">vel</span><span class="p">.</span><span class="n">dy</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">delta_time</span><span class="p">;</span>
+<span class="w">                </span><span class="n">pos</span><span class="p">.</span><span class="n">z</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">vel</span><span class="p">.</span><span class="n">dz</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">delta_time</span><span class="p">;</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">});</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="best-practices">
+<h2>Best Practices<a class="headerlink" href="#best-practices" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p><strong>Component Design</strong></p>
+<ul class="simple">
+<li><p>Keep components simple and focused (Single Responsibility)</p></li>
+<li><p>Use POD types when possible for better performance</p></li>
+<li><p>Group related data into single components</p></li>
+</ul>
+</li>
+<li><p><strong>System Organization</strong></p>
+<ul class="simple">
+<li><p>Systems should be stateless functions</p></li>
+<li><p>Process components in logical order (input → logic → rendering)</p></li>
+<li><p>Use collections to group entities by type/behavior</p></li>
+</ul>
+</li>
+<li><p><strong>Memory Management</strong></p>
+<ul class="simple">
+<li><p>Choose appropriate storage strategy for each component type</p></li>
+<li><p>Use custom allocators for better memory control</p></li>
+<li><p>Consider memory alignment for SIMD operations</p></li>
+</ul>
+</li>
+<li><p><strong>Threading</strong></p>
+<ul class="simple">
+<li><p>Use rxregistry for multi-threaded access</p></li>
+<li><p>Partition work by entity ranges or component types</p></li>
+<li><p>Avoid shared mutable state between threads</p></li>
+</ul>
+</li>
+</ol>
+</section>
+<section id="next-steps">
+<h2>Next Steps<a class="headerlink" href="#next-steps" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>Learn about <a class="reference internal" href="scheduler_tutorial.html"><span class="doc">Task Scheduler Tutorial</span></a> for parallel ECS processing</p></li>
+<li><p>Explore <a class="reference internal" href="memory_management.html"><span class="doc">Memory Management Tutorial</span></a> for optimal ECS memory layout</p></li>
+<li><p>Check <a class="reference internal" href="../performance/index.html"><span class="doc">Performance Guide</span></a> for ECS optimization techniques</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="containers_tutorial.html" class="btn btn-neutral float-left" title="Containers Tutorial" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="scheduler_tutorial.html" class="btn btn-neutral float-right" title="Task Scheduler Tutorial" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, OULY Contributors.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
