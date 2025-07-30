@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Cleanup script to keep only the last 20 performance results.
-Removes older results based on build number to maintain performance-tracking branch size.
+Removes older results based on build number to maintain perfo branch size.
 """
 
 import argparse

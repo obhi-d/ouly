@@ -2,14 +2,14 @@
 
 ## Overview
 
-The OULY project now has a comprehensive performance tracking system that integrates between the **main branch** (source code + workflow) and the **performance-tracking branch** (results + reports).
+The OULY project now has a comprehensive performance tracking system that integrates between the **main branch** (source code + workflow) and the **perfo branch** (results + reports).
 
 ## How It Works
 
 ### 1. Workflow Location
 - **Workflow file**: `.github/workflows/performance.yml` is in the **main branch**
 - **Execution**: GitHub Actions runs the workflow when code is pushed to main/develop
-- **Results storage**: Performance data is committed to the **performance-tracking branch**
+- **Results storage**: Performance data is committed to the **perfo branch**
 
 ### 2. Workflow Triggers
 
@@ -50,7 +50,7 @@ Benchmarks run on both:
 
 1. **Collection**: Benchmark JSON/TXT files are generated
 2. **Organization**: Results are organized by timestamp/compiler/branch/commit
-3. **Storage**: Files are committed to performance-tracking branch
+3. **Storage**: Files are committed to perfo branch
 4. **Reporting**: Comprehensive markdown reports are generated
 
 ## Directory Structure
@@ -70,7 +70,7 @@ main/
 
 ### Performance-Tracking Branch
 ```
-performance-tracking/
+perfo/
 ├── results/
 │   ├── index.md                      # Latest results summary
 │   └── YYYY-MM-DD_HH-MM/             # Results by timestamp
@@ -92,12 +92,12 @@ performance-tracking/
 - Executes benchmark suite
 - Uploads results as artifacts
 
-### 2. `performance-tracking`
+### 2. `perfo`
 - Downloads benchmark artifacts
-- Switches to performance-tracking branch
+- Switches to perfo branch
 - Processes and organizes results
 - Generates comprehensive reports
-- Commits everything to performance-tracking branch
+- Commits everything to perfo branch
 
 ### 3. `build-verification` 
 - Verifies builds work across platforms
@@ -139,8 +139,8 @@ performance-tracking/
 5. Click "Run workflow"
 
 ### View Latest Results
-- **Quick Overview**: Check [performance-tracking/results/index.md](https://github.com/your-repo/tree/performance-tracking/results/index.md)
-- **Detailed Report**: View [performance-tracking/PERFORMANCE_REPORT.md](https://github.com/your-repo/blob/performance-tracking/PERFORMANCE_REPORT.md)
+- **Quick Overview**: Check [perfo/results/index.md](https://github.com/your-repo/tree/perfo/results/index.md)
+- **Detailed Report**: View [perfo/PERFORMANCE_REPORT.md](https://github.com/your-repo/blob/perfo/PERFORMANCE_REPORT.md)
 - **Raw Data**: Browse the results directory structure
 
 ### Performance Impact Analysis
@@ -183,13 +183,13 @@ performance-tracking/
 - Verify workflow has write access
 
 ### Missing Performance Scripts
-- Scripts are copied from main branch to performance-tracking
+- Scripts are copied from main branch to perfo
 - If missing, they're automatically copied during workflow execution
 - Can be manually synchronized if needed
 
 ### Results Not Appearing
 - Check workflow execution logs
 - Verify benchmark completion
-- Ensure performance-tracking branch exists
+- Ensure perfo branch exists
 
 This integration provides a robust, automated performance tracking system that scales with your development workflow while maintaining clean separation between source code and performance data.

@@ -4,7 +4,7 @@ This document describes the automated performance tracking system for the OULY p
 
 ## Overview
 
-The performance tracking system automatically runs benchmarks on every push to `main` and `develop` branches, stores results in a dedicated `performance-tracking` branch, and generates visualizations and reports.
+The performance tracking system automatically runs benchmarks on every push to `main` and `develop` branches, stores results in a dedicated `perfo` branch, and generates visualizations and reports.
 
 ## System Components
 
@@ -18,7 +18,7 @@ The performance tracking system automatically runs benchmarks on every push to `
 
 - **Benchmark execution**: Runs benchmarks after tests on pushes to main/develop
 - **Artifact upload**: Stores benchmark results as workflow artifacts
-- **Performance tracking job**: Processes results and commits to performance-tracking branch
+- **Performance tracking job**: Processes results and commits to perfo branch
 
 ### 3. Dedicated Performance Workflow (`.github/workflows/performance.yml`)
 
@@ -34,7 +34,7 @@ The performance tracking system automatically runs benchmarks on every push to `
 - Supports multiple compilers and test categories
 
 #### `cleanup_old_results.py`
-- Maintains performance-tracking branch size
+- Maintains perfo branch size
 - Keeps only the last 20 builds by default
 - Preserves files with unexpected naming formats
 
@@ -45,7 +45,7 @@ The performance tracking system automatically runs benchmarks on every push to `
 ## Performance-Tracking Branch Structure
 
 ```
-performance-tracking/
+perfo/
 ├── results/
 │   ├── <compiler>-<commit>-<build>-<test_id>.json
 │   ├── <compiler>-<commit>-<build>-<test_id>.txt
@@ -113,8 +113,8 @@ The system runs automatically on:
 - **Manual trigger**: On-demand with selectable benchmark types
 
 ### Accessing Results
-- **Performance tracking branch**: `git checkout performance-tracking`
-- **Latest report**: View `PERFORMANCE.md` in the performance-tracking branch
+- **Performance tracking branch**: `git checkout perfo`
+- **Latest report**: View `PERFORMANCE.md` in the perfo branch
 - **Raw data**: Browse `results/` directory for JSON/TXT files
 - **Workflow artifacts**: Download from GitHub Actions workflow runs
 

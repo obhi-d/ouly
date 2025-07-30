@@ -227,7 +227,7 @@ def generate_performance_md(df: pd.DataFrame, plot_files: List[str], output_path
         md_content.append("")
     
     md_content.append("---")
-    md_content.append("*This report is automatically generated from benchmark results stored in the performance-tracking branch.*")
+    md_content.append("*This report is automatically generated from benchmark results stored in the perfo branch.*")
     
     # Write the file
     with open(output_path, 'w') as f:

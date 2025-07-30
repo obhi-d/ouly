@@ -97,7 +97,7 @@ jobs:
           build/unit_tests/*.txt
         retention-days: 90
 
-  update-performance-tracking:
+  update-perfo:
     name: Update Performance Tracking
     runs-on: ubuntu-latest
     needs: dedicated-benchmarks
@@ -128,8 +128,8 @@ jobs:
 
     - name: Checkout performance tracking branch
       run: |
-        git fetch origin performance-tracking || echo "No existing performance-tracking branch"
-        git checkout performance-tracking || git checkout --orphan performance-tracking
+        git fetch origin perfo || echo "No existing perfo branch"
+        git checkout perfo || git checkout --orphan perfo
 
     - name: Process extended benchmark results
       run: |
@@ -190,8 +190,8 @@ jobs:
           Total result files: $RESULT_COUNT
           Generated: $(date)"
           
-          git push origin performance-tracking
-          echo "✅ Extended results committed to performance-tracking branch"
+          git push origin perfo
+          echo "✅ Extended results committed to perfo branch"
         else
           echo "No new extended results to commit"
         fi

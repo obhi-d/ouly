@@ -225,7 +225,7 @@ jobs:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./docs/_build/html
 
-  performance-tracking:
+  perfo:
     name: Performance Tracking
     runs-on: ubuntu-latest
     needs: build-and-test
@@ -256,8 +256,8 @@ jobs:
 
     - name: Checkout performance tracking branch
       run: |
-        git fetch origin performance-tracking || git checkout --orphan performance-tracking
-        git checkout performance-tracking || echo "Creating new performance-tracking branch"
+        git fetch origin perfo || git checkout --orphan perfo
+        git checkout perfo || echo "Creating new perfo branch"
 
     - name: Setup performance tracking branch structure
       run: |
@@ -265,7 +265,7 @@ jobs:
         mkdir -p results
         mkdir -p scripts
         
-        # Copy scripts to performance-tracking branch
+        # Copy scripts to perfo branch
         if [ -d "../scripts" ]; then
           cp -r ../scripts/* scripts/ 2>/dev/null || echo "No scripts to copy"
         fi
@@ -333,7 +333,7 @@ jobs:
           echo "Benchmark results are available in the results directory." >> PERFORMANCE.md
         fi
 
-    - name: Commit results to performance-tracking branch
+    - name: Commit results to perfo branch
       run: |
         # Configure git
         git config user.name "github-actions[bot]"
@@ -356,6 +356,6 @@ jobs:
           Total result files: $RESULT_COUNT
           Generated: $(date)"
           
-          git push origin performance-tracking
-          echo "✅ Results committed and pushed to performance-tracking branch"
+          git push origin perfo
+          echo "✅ Results committed and pushed to perfo branch"
         fi
