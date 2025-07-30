@@ -165,18 +165,27 @@ jobs:
       working-directory: docs
       shell: bash
       run: |
+        python -m venv venv
+        source venv/bin/activate
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+
+    - name: Generate Doxygen XML
+      if: runner.os == 'Linux' && matrix.config.cxx == 'g++-14'
+      shell: bash
+      run: doxygen Doxyfile
 
     - name: Build documentation
       if: runner.os == 'Linux' && matrix.config.cxx == 'g++-14'
       working-directory: docs
       shell: bash
-      run: make html
+      run: |
+        source venv/bin/activate
+        sphinx-build -b html source build/html -E -a
 
     - name: Deploy to GitHub Pages
       if: github.ref == 'refs/heads/main' && runner.os == 'Linux' && matrix.config.cxx == 'g++-14'
       uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./docs/_build/html
+        publish_dir: ./docs/build/html

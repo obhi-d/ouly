@@ -6,82 +6,86 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'ouly'
-copyright = '2025, obhi-d'
-author = 'obhi-d'
-release = '0.0.1'
+project = 'OULY'
+copyright = '2025, OULY Contributors'
+author = 'OULY Contributors'
+release = '1.0.0'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
-   "breathe"
+    'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
+    'sphinx.ext.napoleon',
+    'sphinx.ext.viewcode',
+    'sphinx.ext.intersphinx',
+    'sphinx.ext.todo',
+    'breathe',
+    'sphinx.ext.graphviz',
+    'sphinx.ext.imgmath',
 ]
-
-breathe_projects = {
-    "OULY": "../xml"
-}
-breathe_default_project = "OULY"
-breathe_projects_source = {
-    "allocators": ("../../include/ouly/allocators", [
-        "allocator.hpp", "arena_allocator.hpp", "arena_options.hpp", "best_fit_options.hpp", 
-        "coalescing_allocator.hpp", "coalescing_arena_allocator.hpp", "default_allocator.hpp", 
-        "linear_allocator.hpp", "linear_arena_allocator.hpp", 
-        "linear_stack_allocator.hpp", "memory_stats.hpp", "memory_tracker.hpp", "pool_allocator.hpp", 
-        "std_allocator_wrapper.hpp", "std_short_alloc.hpp", "strat_best_fit_tree.hpp", 
-        "strat_best_fit_v0.hpp", "strat_best_fit_v1.hpp", "strat_best_fit_v2.hpp", 
-        "strat_greedy_v0.hpp", "strat_greedy_v1.hpp"
-    ]),
-    "containers": ("../../include/ouly/containers", [
-        "array_types.hpp", "basic_queue.hpp", "blackboard.hpp", "index_map.hpp", "indirection.hpp", 
-        "intrusive_list.hpp", "rbtree.hpp", "small_vector.hpp", "soavector.hpp", 
-        "sparse_table.hpp", "sparse_vector.hpp", "table.hpp", "vlist.hpp"
-    ]),
-    "dsl": ("../../include/ouly/dsl", [
-        "microexpr.hpp", "yaml.hpp"
-    ]),
-    "ecs": ("../../include/ouly/ecs", [
-        "collection.hpp", "components.hpp", "entity.hpp", "registry.hpp"
-    ]),
-    "scheduler": ("../../include/ouly/scheduler", [
-        "awaiters.hpp", "event_types.hpp", "parallel_for.hpp", "promise_type.hpp", "scheduler.hpp", 
-        "spin_lock.hpp", "task.hpp", "worker.hpp", "task_context.hpp"
-    ]),
-    "serializers": ("../../include/ouly/serializers", [
-        "binary_input_serializer.hpp", "binary_output_serializer.hpp", "binary_serializer.hpp", 
-        "input_serializer.hpp", "output_serializer.hpp", "yaml_input_serializer.hpp", 
-        "yaml_output_serializer.hpp"
-    ]),
-    "utils": ("../../include/ouly/utils", [
-        "common.hpp", "config.hpp", "delegate.hpp", "error_codes.hpp", "external/komihash.h", 
-        "external/wyhash.h", "external/wyhash32.h", "external/wyhash32.hpp", "subrange.hpp", 
-        "intrusive_ptr.hpp", "komihash.hpp", "nullable_optional.hpp", "program_args.hpp", 
-        "projected_view.hpp", "reflection.hpp", "reflection_utils.hpp", "string_literal.hpp", 
-        "string_utils.hpp", "tagged_int.hpp", "tagged_ptr.hpp", "tuple.hpp", "type_name.hpp", 
-        "type_traits.hpp", "utils.hpp", "vector_abstraction.hpp", "word_list.hpp", "wyhash.hpp", 
-        "zip_view.hpp"
-    ])
-}
-
 
 templates_path = ['_templates']
 exclude_patterns = []
 
-language = 'C++'
+# -- Breathe configuration --------------------------------------------------
+breathe_projects = {"OULY": "../xml/"}
+breathe_default_project = "OULY"
+breathe_default_members = ('members', 'undoc-members')
 
-# -- Options for HTML output -------------------------------------------------
+# -- Options for HTML output ------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = "sphinx_rtd_theme"
-
-# Theme options (optional, customize as needed)
-html_theme_options = {
-    "collapse_navigation": False,
-    "navigation_depth": 4,
-    "style_external_links": True,
-    "titles_only": False
-}
+html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
-html_css_files = [
-    "custom.css",
-]
+
+# Theme options
+html_theme_options = {
+    'canonical_url': '',
+    'analytics_id': '',
+    'display_version': True,
+    'prev_next_buttons_location': 'bottom',
+    'style_external_links': False,
+    'vcs_pageview_mode': '',
+    # Toc options
+    'collapse_navigation': True,
+    'sticky_navigation': True,
+    'navigation_depth': 4,
+    'includehidden': True,
+    'titles_only': False
+}
+
+# Add any paths that contain custom static files (such as style sheets) here,
+# relative to this directory. They are copied after the builtin static files,
+# so a file named "default.css" will overwrite the builtin "default.css".
+html_static_path = ['_static']
+
+# -- Napoleon settings -------------------------------------------------------
+napoleon_google_docstring = True
+napoleon_numpy_docstring = True
+napoleon_include_init_with_doc = False
+napoleon_include_private_with_doc = False
+napoleon_include_special_with_doc = True
+napoleon_use_admonition_for_examples = False
+napoleon_use_admonition_for_notes = False
+napoleon_use_admonition_for_references = False
+napoleon_use_ivar = False
+napoleon_use_param = True
+napoleon_use_rtype = True
+napoleon_preprocess_types = False
+napoleon_type_aliases = None
+napoleon_attr_annotations = True
+
+# -- Intersphinx configuration -----------------------------------------------
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3', None),
+    'sphinx': ('https://www.sphinx-doc.org/en/master', None),
+}
+
+# -- Options for todo extension ----------------------------------------------
+todo_include_todos = True
+
+# -- Custom CSS --------------------------------------------------------------
+def setup(app):
+    app.add_css_file('custom.css')
