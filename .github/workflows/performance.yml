@@ -12,6 +12,15 @@ on:
         - all
         - scheduler
         - allocator
+  schedule:
+    # Run performance benchmarks daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'include/ouly/scheduler/**'
+      - 'include/ouly/allocators/**'
+      - 'unit_tests/bench_*.cpp'
 
 env:
   BUILD_TYPE: Release
@@ -19,53 +28,88 @@ env:
 
 jobs:
   dedicated-benchmarks:
-    name: Dedicated Performance Testing
-    runs-on: ubuntu-latest
+    name: Performance Testing (${{ matrix.os }}-${{ matrix.compiler }})
     strategy:
       fail-fast: false
       matrix:
-        compiler: [gcc-14, clang-18]
+        os: [ubuntu-latest, macos-latest]
+        compiler: 
+          - name: gcc-14
+            cc: gcc-14
+            cxx: g++-14
+            id: gcc-14
+          - name: clang-18
+            cc: clang-18
+            cxx: clang++-18
+            id: clang-18
+        exclude:
+          # GCC not available on macOS runners
+          - os: macos-latest
+            compiler: { name: gcc-14 }
+        include:
+          # Add clang-15 for macOS (default Xcode version)
+          - os: macos-latest
+            compiler:
+              name: clang-15
+              cc: clang
+              cxx: clang++
+              id: clang-15
+              
+    runs-on: ${{ matrix.os }}
         
     steps:
     - uses: actions/checkout@v4
     
-    - name: Set up compiler
+    - name: Set up compiler (Ubuntu)
+      if: runner.os == 'Linux'
       run: |
         sudo apt-get update
-        if [[ "${{ matrix.compiler }}" == "gcc-14" ]]; then
+        if [[ "${{ matrix.compiler.name }}" == "gcc-14" ]]; then
           sudo apt-get install -y gcc-14 g++-14
-          echo "CC=gcc-14" >> $GITHUB_ENV
-          echo "CXX=g++-14" >> $GITHUB_ENV
-        elif [[ "${{ matrix.compiler }}" == "clang-18" ]]; then
+        elif [[ "${{ matrix.compiler.name }}" == "clang-18" ]]; then
           wget https://apt.llvm.org/llvm.sh
           chmod +x llvm.sh
           sudo ./llvm.sh 18
           sudo apt-get install -y clang-18 clang++-18
-          echo "CC=clang-18" >> $GITHUB_ENV
-          echo "CXX=clang++-18" >> $GITHUB_ENV
         fi
+        echo "CC=${{ matrix.compiler.cc }}" >> $GITHUB_ENV
+        echo "CXX=${{ matrix.compiler.cxx }}" >> $GITHUB_ENV
+        echo "COMPILER_ID=${{ matrix.compiler.id }}" >> $GITHUB_ENV
+
+    - name: Set up compiler (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        echo "CC=${{ matrix.compiler.cc }}" >> $GITHUB_ENV
+        echo "CXX=${{ matrix.compiler.cxx }}" >> $GITHUB_ENV
+        echo "COMPILER_ID=${{ matrix.compiler.id }}" >> $GITHUB_ENV
     
-    - name: Configure CMake
+    - name: Configure CMake (Release build without ASAN)
       run: |
         cmake -B build \
           -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
           -DCMAKE_C_COMPILER=$CC \
           -DCMAKE_CXX_COMPILER=$CXX \
-          -DOULY_BUILD_TESTS=ON
+          -DOULY_BUILD_TESTS=ON \
+          -DOULY_ASAN_ENABLED=OFF
     
     - name: Build
-      run: cmake --build build --config ${{ env.BUILD_TYPE }} -j$(nproc)
+      run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel
     
     - name: Run Extended Performance Benchmarks
       working-directory: build/unit_tests
       env:
         GITHUB_SHA: ${{ github.sha }}
         GITHUB_RUN_NUMBER: ${{ github.run_number }}
+        COMPILER_ID: ${{ env.COMPILER_ID }}
       run: |
         echo "🚀 Running extended performance benchmarks..."
+        echo "Environment: COMPILER_ID=$COMPILER_ID, BUILD_NUMBER=$GITHUB_RUN_NUMBER"
+        
+        # Default benchmark type for scheduled/push events
+        BENCHMARK_TYPE="${{ github.event.inputs.benchmark_type || 'all' }}"
         
         # Run comprehensive scheduler comparison benchmarks
-        if [[ "${{ github.event.inputs.benchmark_type }}" == "all" || "${{ github.event.inputs.benchmark_type }}" == "scheduler" ]]; then
+        if [[ "$BENCHMARK_TYPE" == "all" || "$BENCHMARK_TYPE" == "scheduler" ]]; then
           echo "📊 Running comprehensive scheduler benchmarks..."
           if [ -f "./bench_scheduler_comparison" ]; then
             ./bench_scheduler_comparison
@@ -74,13 +118,13 @@ jobs:
           fi
         fi
         
-        # Run allocator benchmarks if available
-        if [[ "${{ github.event.inputs.benchmark_type }}" == "all" || "${{ github.event.inputs.benchmark_type }}" == "allocator" ]]; then
-          echo "🔄 Running allocator benchmarks..."
-          if [ -f "./bench_allocators" ]; then
-            ./bench_allocators
+        # Run general performance benchmarks
+        if [[ "$BENCHMARK_TYPE" == "all" || "$BENCHMARK_TYPE" == "allocator" ]]; then
+          echo "🔄 Running general performance benchmarks..."
+          if [ -f "./bench_performance" ]; then
+            ./bench_performance
           else
-            echo "⚠️ Allocator benchmark executable not found"
+            echo "⚠️ General performance benchmark executable not found"
           fi
         fi
         
@@ -91,7 +135,7 @@ jobs:
     - name: Upload extended benchmark results
       uses: actions/upload-artifact@v4
       with:
-        name: extended-benchmark-results-${{ matrix.compiler }}-${{ github.run_number }}
+        name: extended-benchmark-results-${{ matrix.os }}-${{ matrix.compiler.id }}-${{ github.run_number }}
         path: |
           build/unit_tests/*.json
           build/unit_tests/*.txt
@@ -101,7 +145,7 @@ jobs:
     name: Update Performance Tracking
     runs-on: ubuntu-latest
     needs: dedicated-benchmarks
-    if: github.ref == 'refs/heads/main'
+    if: always() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
     
     steps:
     - name: Checkout main repository

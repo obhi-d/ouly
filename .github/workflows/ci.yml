@@ -111,41 +111,6 @@ jobs:
       working-directory: ${{ github.workspace }}/build
       run: ctest -C ${{ env.BUILD_TYPE }} --output-on-failure --parallel
 
-    - name: Run Performance Benchmarks
-      if: steps.clang_check.outputs.skip_build != 'true' && github.event_name == 'push' && contains(fromJSON('["main", "develop"]'), github.ref_name) && runner.os != 'Windows'
-      working-directory: ${{ github.workspace }}/build/unit_tests
-      shell: bash
-      env:
-        GITHUB_SHA: ${{ github.sha }}
-        GITHUB_RUN_NUMBER: ${{ github.run_number }}
-      run: |
-        if [ -f "./bench_scheduler_comparison" ] || [ -f "./bench_scheduler_comparison.exe" ]; then
-          echo "🚀 Running performance benchmarks..."
-          if [ -f "./bench_scheduler_comparison" ]; then
-            ./bench_scheduler_comparison --quick
-          else
-            ./bench_scheduler_comparison.exe --quick
-          fi
-          echo "✅ Benchmarks completed"
-          
-          # List generated files
-          echo "Generated benchmark files:"
-          ls -la *.json *.txt 2>/dev/null || echo "No benchmark files found"
-        else
-          echo "⚠️ Benchmark executable not found, skipping benchmarks"
-        fi
-
-    - name: Upload benchmark results
-      if: steps.clang_check.outputs.skip_build != 'true' && github.event_name == 'push' && contains(fromJSON('["main", "develop"]'), github.ref_name) && runner.os != 'Windows'
-      uses: actions/upload-artifact@v4
-      with:
-        name: benchmark-results-${{ matrix.config.name }}-${{ github.run_number }}
-        path: |
-          ${{ github.workspace }}/build/unit_tests/*.json
-          ${{ github.workspace }}/build/unit_tests/*.txt
-        retention-days: 30
-        if-no-files-found: warn
-
   coverage:
     name: Code Coverage
     runs-on: ubuntu-latest
