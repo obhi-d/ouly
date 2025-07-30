@@ -110,7 +110,7 @@ function(add_unit_test)
     if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
         target_compile_options(${target_name} PRIVATE /W4 /WX)
     else()
-        if (NOT CMAKE_GENERATOR MATCHES "Xcode")
+        if(NOT CMAKE_GENERATOR MATCHES "Xcode")
             target_compile_options(
                 ${target_name}
                 PRIVATE -Wall -Wextra -pedantic -Werror
@@ -153,40 +153,129 @@ add_unit_test(NAME spmc_ring FILES "spmc_ring.cpp" SANITIZE)
 add_unit_test(NAME scheduler_tests FILES "scheduler_tests.cpp" LINK_LIBS glm::glm SANITIZE)
 add_unit_test(NAME auto_parallel_for FILES "test_auto_parallel_for.cpp" LINK_LIBS glm::glm SANITIZE)
 add_unit_test(NAME debug_auto_parallel_for FILES "debug_auto_parallel_for.cpp" LINK_LIBS glm::glm SANITIZE)
-add_executable(ouly-bench "bench_arena_allocator.cpp" "bench_main.cpp")
-add_executable(ouly-performance-bench "bench_performance.cpp")
-add_executable(ouly-scheduler-comparison-bench "bench_scheduler_comparison.cpp")
+add_executable(
+    bench_arena_allocator
+    "bench_arena_allocator.cpp"
+    "bench_main.cpp"
+)
+add_executable(bench_performance "bench_performance.cpp")
+add_executable(bench_scheduler_comparison "bench_scheduler_comparison.cpp")
 
-target_link_libraries(ouly-bench ouly::ouly nanobench::nanobench)
-target_compile_features(ouly-bench PRIVATE cxx_std_20)
+target_link_libraries(bench_arena_allocator ouly::ouly nanobench::nanobench)
+target_compile_features(bench_arena_allocator PRIVATE cxx_std_20)
 
 target_link_libraries(
-    ouly-performance-bench
+    bench_performance
     ouly::ouly
     nanobench::nanobench
     TBB::tbb
     glm::glm
 )
-target_compile_features(ouly-performance-bench PRIVATE cxx_std_20)
+target_compile_features(bench_performance PRIVATE cxx_std_20)
 target_compile_definitions(
-    ouly-performance-bench
+    bench_performance
     PRIVATE -DOULY_REC_STATS -DOULY_THROW_ON_ERROR
 )
 
 target_link_libraries(
-    ouly-scheduler-comparison-bench
+    bench_scheduler_comparison
     ouly::ouly
     nanobench::nanobench
     TBB::tbb
     glm::glm
 )
-target_compile_features(ouly-scheduler-comparison-bench PRIVATE cxx_std_20)
+target_compile_features(bench_scheduler_comparison PRIVATE cxx_std_20)
 target_compile_definitions(
-    ouly-scheduler-comparison-bench
+    bench_scheduler_comparison
     PRIVATE -DOULY_REC_STATS -DOULY_THROW_ON_ERROR
 )
+
+# Add post-build commands to copy TBB libraries to unit_tests directory
+# This ensures the benchmarks can find TBB libraries at runtime
+
+if(WIN32)
+    # Windows: Find and copy TBB DLLs
+    add_custom_command(
+        TARGET bench_performance
+        POST_BUILD
+        COMMAND
+            ${CMAKE_COMMAND} -E echo "Copying TBB DLLs for bench_performance..."
+        COMMAND
+            ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbb>"
+            "$<TARGET_FILE_DIR:bench_performance>/"
+        COMMAND_EXPAND_LISTS
+        COMMENT "Copying TBB libraries to bench_performance directory"
+    )
+
+    add_custom_command(
+        TARGET bench_scheduler_comparison
+        POST_BUILD
+        COMMAND
+            ${CMAKE_COMMAND} -E echo
+            "Copying TBB DLLs for bench_scheduler_comparison..."
+        COMMAND
+            ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbb>"
+            "$<TARGET_FILE_DIR:bench_scheduler_comparison>/"
+        COMMAND_EXPAND_LISTS
+        COMMENT "Copying TBB libraries to bench_scheduler_comparison directory"
+    )
+elseif(APPLE)
+    # macOS: Find and copy TBB dylibs from the build directory
+    add_custom_command(
+        TARGET bench_performance
+        POST_BUILD
+        COMMAND
+            ${CMAKE_COMMAND} -E echo
+            "Copying TBB dylibs for bench_performance..."
+        COMMAND
+            find ${CMAKE_BINARY_DIR} -name "libtbb*.dylib" -exec
+            ${CMAKE_COMMAND} -E copy_if_different {}
+            "$<TARGET_FILE_DIR:bench_performance>/" "\;"
+        COMMENT "Copying TBB dylibs to bench_performance directory"
+    )
+
+    add_custom_command(
+        TARGET bench_scheduler_comparison
+        POST_BUILD
+        COMMAND
+            ${CMAKE_COMMAND} -E echo
+            "Copying TBB dylibs for bench_scheduler_comparison..."
+        COMMAND
+            find ${CMAKE_BINARY_DIR} -name "libtbb*.dylib" -exec
+            ${CMAKE_COMMAND} -E copy_if_different {}
+            "$<TARGET_FILE_DIR:bench_scheduler_comparison>/" "\;"
+        COMMENT "Copying TBB dylibs to bench_scheduler_comparison directory"
+    )
+else()
+    # Linux: Find and copy TBB shared libraries
+    add_custom_command(
+        TARGET bench_performance
+        POST_BUILD
+        COMMAND
+            ${CMAKE_COMMAND} -E echo
+            "Copying TBB shared libraries for bench_performance..."
+        COMMAND
+            find ${CMAKE_BINARY_DIR} -name "libtbb*.so*" -exec ${CMAKE_COMMAND}
+            -E copy_if_different {} "$<TARGET_FILE_DIR:bench_performance>/" "\;"
+        COMMENT "Copying TBB shared libraries to bench_performance directory"
+    )
+
+    add_custom_command(
+        TARGET bench_scheduler_comparison
+        POST_BUILD
+        COMMAND
+            ${CMAKE_COMMAND} -E echo
+            "Copying TBB shared libraries for bench_scheduler_comparison..."
+        COMMAND
+            find ${CMAKE_BINARY_DIR} -name "libtbb*.so*" -exec ${CMAKE_COMMAND}
+            -E copy_if_different {}
+            "$<TARGET_FILE_DIR:bench_scheduler_comparison>/" "\;"
+        COMMENT
+            "Copying TBB shared libraries to bench_scheduler_comparison directory"
+    )
+endif()
 
 # Performance test target for release builds
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
-    add_test(NAME performance_benchmarks COMMAND ouly-performance-bench)
+    add_test(NAME performance_benchmarks COMMAND bench_performance)
 endif()

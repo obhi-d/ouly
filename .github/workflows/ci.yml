@@ -112,8 +112,9 @@ jobs:
       run: ctest -C ${{ env.BUILD_TYPE }} --output-on-failure --parallel
 
     - name: Run Performance Benchmarks
-      if: steps.clang_check.outputs.skip_build != 'true' && github.event_name == 'push' && contains(fromJSON('["main", "develop"]'), github.ref_name)
+      if: steps.clang_check.outputs.skip_build != 'true' && github.event_name == 'push' && contains(fromJSON('["main", "develop"]'), github.ref_name) && runner.os != 'Windows'
       working-directory: ${{ github.workspace }}/build/unit_tests
+      shell: bash
       env:
         GITHUB_SHA: ${{ github.sha }}
         GITHUB_RUN_NUMBER: ${{ github.run_number }}
@@ -135,7 +136,7 @@ jobs:
         fi
 
     - name: Upload benchmark results
-      if: steps.clang_check.outputs.skip_build != 'true' && github.event_name == 'push' && contains(fromJSON('["main", "develop"]'), github.ref_name)
+      if: steps.clang_check.outputs.skip_build != 'true' && github.event_name == 'push' && contains(fromJSON('["main", "develop"]'), github.ref_name) && runner.os != 'Windows'
       uses: actions/upload-artifact@v4
       with:
         name: benchmark-results-${{ matrix.config.name }}-${{ github.run_number }}

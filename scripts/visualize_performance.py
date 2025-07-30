@@ -60,10 +60,16 @@ def load_benchmark_data(results_dir: Path) -> pd.DataFrame:
             
             # Process each benchmark result
             for result in benchmark_data.get('results', []):
+                # Convert build_number to int, default to 0 if not numeric
+                try:
+                    build_number = int(file_info['build_number'])
+                except ValueError:
+                    build_number = 0
+                    
                 row = {
                     'compiler': file_info['compiler'],
                     'commit_hash': file_info['commit_hash'],
-                    'build_number': int(file_info['build_number']),
+                    'build_number': build_number,
                     'test_id': file_info['test_id'],
                     'run_date': file_time,
                     'benchmark_name': result.get('name', 'unknown'),
