@@ -1,13 +1,6 @@
 name: Performance Benchmarks
 
 on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main ]
-  schedule:
-    # Run benchmarks daily at 2 AM UTC
-    - cron: '0 2 * * *'
   workflow_dispatch:
     inputs:
       benchmark_type:
@@ -19,593 +12,186 @@ on:
         - all
         - scheduler
         - allocator
-        - comparison
 
 env:
   BUILD_TYPE: Release
   CMAKE_BUILD_PARALLEL_LEVEL: 4
 
 jobs:
-  benchmark:
+  dedicated-benchmarks:
+    name: Dedicated Performance Testing
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false  # Don't cancel other matrix jobs if one fails
+      fail-fast: false
       matrix:
-        build_type: [Release]
-        compiler: [gcc-14, clang-19]
+        compiler: [gcc-14, clang-18]
         
     steps:
     - uses: actions/checkout@v4
     
     - name: Set up compiler
-      shell: bash
       run: |
         sudo apt-get update
         if [[ "${{ matrix.compiler }}" == "gcc-14" ]]; then
-          # Install GCC 14 (latest stable available in Ubuntu)
           sudo apt-get install -y gcc-14 g++-14
           echo "CC=gcc-14" >> $GITHUB_ENV
           echo "CXX=g++-14" >> $GITHUB_ENV
-        elif [[ "${{ matrix.compiler }}" == "clang-19" ]]; then
-          # Install Clang 19 using LLVM script
+        elif [[ "${{ matrix.compiler }}" == "clang-18" ]]; then
           wget https://apt.llvm.org/llvm.sh
           chmod +x llvm.sh
-          sudo ./llvm.sh 19
-          sudo apt-get install -y clang-19 clang++-19
-          echo "CC=clang-19" >> $GITHUB_ENV
-          echo "CXX=clang++-19" >> $GITHUB_ENV
+          sudo ./llvm.sh 18
+          sudo apt-get install -y clang-18 clang++-18
+          echo "CC=clang-18" >> $GITHUB_ENV
+          echo "CXX=clang++-18" >> $GITHUB_ENV
         fi
     
     - name: Configure CMake
-      shell: bash
       run: |
         cmake -B build \
-          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
           -DCMAKE_C_COMPILER=$CC \
           -DCMAKE_CXX_COMPILER=$CXX \
           -DOULY_BUILD_TESTS=ON
     
     - name: Build
-      shell: bash
-      run: cmake --build build --config ${{ matrix.build_type }} -j$(nproc)
+      run: cmake --build build --config ${{ env.BUILD_TYPE }} -j$(nproc)
     
-    - name: Run Performance Benchmarks
-      shell: bash
+    - name: Run Extended Performance Benchmarks
+      working-directory: build/unit_tests
+      env:
+        GITHUB_SHA: ${{ github.sha }}
+        GITHUB_RUN_NUMBER: ${{ github.run_number }}
       run: |
-        cd build/unit_tests
-        echo "🚀 Running performance benchmarks..."
+        echo "🚀 Running extended performance benchmarks..."
         
-        # Run scheduler comparison benchmark (includes TBB comparison)
-        if [[ "${{ github.event.inputs.benchmark_type }}" == "all" || "${{ github.event.inputs.benchmark_type }}" == "scheduler" || "${{ github.event.inputs.benchmark_type }}" == "comparison" ]]; then
-          echo "📊 Running comprehensive scheduler comparison benchmarks..."
-          ./ouly-scheduler-comparison-bench || echo "⚠️ Scheduler benchmark completed with warnings"
+        # Run comprehensive scheduler comparison benchmarks
+        if [[ "${{ github.event.inputs.benchmark_type }}" == "all" || "${{ github.event.inputs.benchmark_type }}" == "scheduler" ]]; then
+          echo "📊 Running comprehensive scheduler benchmarks..."
+          if [ -f "./bench_scheduler_comparison" ]; then
+            ./bench_scheduler_comparison
+          else
+            echo "⚠️ Scheduler benchmark executable not found"
+          fi
         fi
         
-        # Run allocator benchmarks
+        # Run allocator benchmarks if available
         if [[ "${{ github.event.inputs.benchmark_type }}" == "all" || "${{ github.event.inputs.benchmark_type }}" == "allocator" ]]; then
-          echo "🔄 Running allocator performance benchmarks..."
-          ./ouly-performance-bench || echo "⚠️ Allocator benchmark completed with warnings"
+          echo "🔄 Running allocator benchmarks..."
+          if [ -f "./bench_allocators" ]; then
+            ./bench_allocators
+          else
+            echo "⚠️ Allocator benchmark executable not found"
+          fi
         fi
         
-        # Verify result files were created
-        echo "✅ Benchmarks completed"
+        echo "✅ Extended benchmarks completed"
         echo "Generated files:"
         ls -la *.json *.txt 2>/dev/null || echo "No result files found"
         
-        # Rename files with compiler and build type for clarity
-        for file in *.json; do
-          if [ -f "$file" ]; then
-            mv "$file" "${file%.json}_${{ matrix.compiler }}_${{ matrix.build_type }}.json"
-          fi
-        done
-        
-        for file in *.txt; do
-          if [ -f "$file" ]; then
-            mv "$file" "${file%.txt}_${{ matrix.compiler }}_${{ matrix.build_type }}.txt"
-          fi
-        done
-        
-    - name: Upload benchmark results
+    - name: Upload extended benchmark results
       uses: actions/upload-artifact@v4
       with:
-        name: benchmark-results-${{ matrix.compiler }}-${{ matrix.build_type }}
+        name: extended-benchmark-results-${{ matrix.compiler }}-${{ github.run_number }}
         path: |
-          build/unit_tests/benchmark_results_*.json
-          build/unit_tests/benchmark_console_*.txt
-          build/unit_tests/tbb_comparison_results_*.json
-          build/unit_tests/tbb_comparison_console_*.txt
-        retention-days: 30
-        
-    - name: Performance regression check
-      if: github.event_name == 'pull_request'
-      shell: bash
-      run: |
-        echo "Performance benchmark completed for PR"
-        echo "Results can be compared manually from artifacts"
-        # Future: Add automatic regression detection here
+          build/unit_tests/*.json
+          build/unit_tests/*.txt
+        retention-days: 90
 
-  performance-tracking:
+  update-performance-tracking:
+    name: Update Performance Tracking
     runs-on: ubuntu-latest
-    needs: benchmark
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    needs: dedicated-benchmarks
+    if: github.ref == 'refs/heads/main'
     
     steps:
     - name: Checkout main repository
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
-        
-    - name: Download all benchmark results
+
+    - name: Download all extended benchmark results
       uses: actions/download-artifact@v4
       with:
-        path: benchmark-results
-        
-    - name: Checkout performance tracking branch
-      uses: actions/checkout@v4
-      with:
-        ref: performance-tracking
-        path: ./performance-tracking
-        token: ${{ secrets.GITHUB_TOKEN }}
-        
-    - name: Process and commit results
-      working-directory: ./performance-tracking
-      run: |
-        echo "🔄 Processing performance results..."
-        
-        # Copy scripts from source if they don't exist
-        if [ ! -f "scripts/generate_performance_report.py" ]; then
-          mkdir -p scripts
-          cp ../scripts/*.py scripts/ 2>/dev/null || echo "No Python scripts to copy"
-          cp ../scripts/*.sh scripts/ 2>/dev/null || echo "No shell scripts to copy" 
-          chmod +x scripts/*.py scripts/*.sh 2>/dev/null || echo "No scripts to make executable"
-        fi
-        
-        # Create results directory structure
-        TIMESTAMP=$(date +"%Y-%m-%d_%H-%M")
-        COMMIT_HASH="${{ github.sha }}"
-        COMMIT_SHORT="${COMMIT_HASH:0:8}"
-        BRANCH="${{ github.ref_name }}"
-        
-        # Determine compiler version from matrix
-        COMPILER_VERSION="multi"  # Default for multiple compilers
-        
-        RESULT_DIR="results/$TIMESTAMP/$COMPILER_VERSION/$BRANCH/$COMMIT_SHORT"
-        mkdir -p "$RESULT_DIR"
-        
-        # Copy benchmark results from all matrix jobs
-        if [ -d "../benchmark-results" ]; then
-          echo "📁 Copying benchmark results..."
-          find ../benchmark-results -name "*.json" -exec cp {} "$RESULT_DIR/" \; 2>/dev/null || echo "⚠️ No JSON files found"
-          find ../benchmark-results -name "*.txt" -exec cp {} "$RESULT_DIR/" \; 2>/dev/null || echo "⚠️ No TXT files found"
-          echo "✅ Results copied to $RESULT_DIR"
-          ls -la "$RESULT_DIR"
-        fi
-        
-        # Generate performance report if script exists
-        if [ -f "scripts/generate_performance_report.py" ]; then
-          echo "📊 Generating performance report..."
-          python3 scripts/generate_performance_report.py --results-dir results --output PERFORMANCE_REPORT.md
-        else
-          echo "⚠️ Performance report script not found, creating basic report"
-          echo "# OULY Performance Report" > PERFORMANCE_REPORT.md
-          echo "" >> PERFORMANCE_REPORT.md
-          echo "**Generated:** $(date)" >> PERFORMANCE_REPORT.md
-          echo "**Commit:** $COMMIT_SHORT" >> PERFORMANCE_REPORT.md
-          echo "**Branch:** $BRANCH" >> PERFORMANCE_REPORT.md
-          echo "" >> PERFORMANCE_REPORT.md
-          echo "Benchmark results are available in the results directory." >> PERFORMANCE_REPORT.md
-        fi
-        
-        # Update results index
-        echo "📝 Updating results index..."
-        cat > "results/index.md" << EOF
-        # Ouly Performance Tracking
-        
-        This branch contains historical performance benchmark results.
-        
-        ## Latest Results
-        
-        - **Timestamp**: $TIMESTAMP  
-        - **Commit**: $COMMIT_SHORT
-        - **Branch**: $BRANCH
-        - **Compiler**: Multiple (gcc-14, clang-19)
-        - **Workflow Run**: [${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-        
-        ## Results Structure
-        
-        Each directory contains benchmark results for a specific build organized by:
-        - Timestamp (YYYY-MM-DD_HH-MM)
-        - Compiler version or "multi" for multiple compilers
-        - Branch name
-        - Commit hash (first 8 characters)
-        
-        ## Tracked Components
-        
-        - **Scheduler**: Task scheduler performance (V1 vs V2 vs TBB comparison)
-          - Task submission performance
-          - Parallel for operations
-          - Matrix operations  
-          - Mixed workloads
-          - Task throughput
-          - Nested parallel workloads
-        - **Allocators**: Memory allocator performance
-          - Thread-safe shared linear allocator
-          - Thread-safe thread local allocator
-          - Coalescing arena allocator
-        
-        ## Usage
-        
-        Results are stored in JSON format and can be processed with analysis tools.
-        Each benchmark includes median, min, max, mean times and relative error.
-        
-        ### Performance Report
-        
-        The comprehensive performance report is available in [PERFORMANCE_REPORT.md](../PERFORMANCE_REPORT.md).
-        
-        ### Latest Benchmark Files
-        
-        EOF
-        
-        # List the latest benchmark files
-        find "$RESULT_DIR" -name "*.json" -o -name "*.txt" 2>/dev/null | sort | while read file; do
-            if [ -f "$file" ]; then
-                filename=$(basename "$file")
-                rel_path=$(echo "$file" | sed "s|results/||")
-                echo "- [\`$filename\`]($rel_path)" >> "results/index.md"
-            fi
-        done
-        
-        echo "" >> "results/index.md"
-        echo "*Last updated: $(date) (Run #${{ github.run_number }})*" >> "results/index.md"
-        
-        # Configure git
-        git config user.name "github-actions[bot]"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
-        
-        # Commit results
-        git add .
-        if git diff --staged --quiet; then
-          echo "No changes to commit"
-        else
-          git commit -m "📊 Performance results for $BRANCH@$COMMIT_SHORT
-          
-          - Timestamp: $TIMESTAMP
-          - Compiler: Multiple (gcc-14, clang-19)
-          - Workflow: #${{ github.run_number }}
-          - Benchmark type: ${{ github.event.inputs.benchmark_type || 'all' }}
-          
-          Results saved in $RESULT_DIR"
-          git push
-          echo "✅ Results committed and pushed to performance-tracking branch"
-        fi
-        
-    - name: Generate performance report
-      shell: bash
-      run: |
-        # Switch back to performance-tracking branch to generate report
-        git checkout origin/performance-tracking
-        
-        # Create comprehensive performance summary
-        echo "# 🚀 Performance Benchmark Summary" > performance_summary.md
-        echo "" >> performance_summary.md
-        echo "**Date**: $(date)" >> performance_summary.md
-        echo "**Commit**: ${{ github.sha }}" >> performance_summary.md
-        echo "" >> performance_summary.md
-        echo "## Detailed Results" >> performance_summary.md
-        echo "" >> performance_summary.md
-        
-        # Process JSON files to extract key metrics
-        latest_results_dir=$(ls -t results/ | head -1)
-        if [ -n "$latest_results_dir" ] && [ -d "results/$latest_results_dir" ]; then
-          echo "### Latest Benchmark Results ($(echo $latest_results_dir | cut -d'_' -f1-2 | tr '_' ' '))" >> performance_summary.md
-          echo "" >> performance_summary.md
-          
-          for json_file in "results/$latest_results_dir"/*.json; do
-            if [ -f "$json_file" ]; then
-              filename=$(basename "$json_file")
-              compiler=$(echo "$filename" | grep -o -E "(gcc|clang)" || echo "unknown")
-              benchmark_type=$(echo "$filename" | grep -q "tbb_comparison" && echo "TBB Comparison" || echo "Ouly Performance")
-              
-              echo "#### $compiler Results - $benchmark_type" >> performance_summary.md
-              echo "" >> performance_summary.md
-              
-              # Extract benchmark results using jq if available
-              if command -v jq &> /dev/null; then
-                echo "| Benchmark | Median Time (ns) | Operations/sec |" >> performance_summary.md
-                echo "|-----------|------------------|----------------|" >> performance_summary.md
-                
-                jq -r '.results[] | "| \(.name) | \((.\"median(elapsed)\" * 1e9) | round) | \((1 / .\"median(elapsed)\") | round) |"' "$json_file" 2>/dev/null >> performance_summary.md || {
-                  echo "| Raw data available | See JSON file | - |" >> performance_summary.md
-                }
-              else
-                echo "- Detailed results available in JSON format" >> performance_summary.md
-              fi
-              echo "" >> performance_summary.md
-            fi
-          done
-          
-          # Add thread-local allocator improvement note
-          echo "## 🎯 Recent Improvements" >> performance_summary.md
-          echo "" >> performance_summary.md
-          echo "- **ts_thread_local_allocator**: Fixed critical thread safety bugs and optimized performance" >> performance_summary.md
-          echo "  - Eliminated race conditions during thread destruction" >> performance_summary.md
-          echo "  - Improved memory efficiency for large allocations" >> performance_summary.md
-          echo "  - Added lock-free thread-local storage management" >> performance_summary.md
-          echo "" >> performance_summary.md
-        fi
-        
-        echo "## 📈 Historical Data" >> performance_summary.md
-        echo "" >> performance_summary.md
-        echo "Full historical performance data and visualizations are available in the \`performance-tracking\` branch." >> performance_summary.md
-        echo "" >> performance_summary.md
-        echo "**Available Data:**" >> performance_summary.md
-        echo "- JSON format results with detailed nanobench metrics" >> performance_summary.md  
-        echo "- Console output with human-readable benchmark tables" >> performance_summary.md
-        echo "- Performance visualizations (when generated)" >> performance_summary.md
-        
-    - name: Comment on PR with performance info
-      if: github.event_name == 'pull_request'
-      uses: actions/github-script@v7
-      with:
-        script: |
-          const fs = require('fs');
-          if (fs.existsSync('performance_summary.md')) {
-            const summary = fs.readFileSync('performance_summary.md', 'utf8');
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `## 🚀 Performance Benchmark Results\n\n${summary}\n\nDetailed results are available in the workflow artifacts.`
-            });
-          }
+        path: extended-benchmark-artifacts
+        pattern: extended-benchmark-results-*
+        merge-multiple: true
 
-  # Generate performance visualizations and reports
-  performance-visualization:
-    runs-on: ubuntu-latest
-    needs: performance-tracking
-    if: github.ref == 'refs/heads/main'
-    
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        ref: main
-        fetch-depth: 0
-        
-    - name: Copy visualization scripts to performance-tracking branch
-      shell: bash
-      run: |
-        # Configure git
-        git config user.name "github-actions[bot]"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
-        
-        # Create temporary directory for scripts and verify they exist
-        mkdir -p /tmp/scripts-backup
-        if [ -d "scripts/" ]; then
-          cp -r scripts/ /tmp/scripts-backup/
-          echo "✅ Scripts copied to temporary location"
-          ls -la /tmp/scripts-backup/scripts/
-        else
-          echo "❌ Scripts directory not found on main branch"
-          exit 1
-        fi
-        
-        # Switch to performance-tracking branch
-        git fetch origin performance-tracking
-        git checkout performance-tracking
-        
-        # Copy scripts to performance-tracking branch and verify
-        mkdir -p scripts/
-        cp -r /tmp/scripts-backup/scripts/* scripts/
-        echo "✅ Scripts copied to performance-tracking branch"
-        ls -la scripts/
-        
-    - name: Set up Python
+    - name: Setup Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.9'
-        
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y jq
-        
+
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install matplotlib seaborn pandas numpy
-        
-    - name: Generate performance visualizations
-      shell: bash
-      continue-on-error: true  # Don't fail the workflow if visualization fails
+        pip install matplotlib pandas numpy
+
+    - name: Checkout performance tracking branch
       run: |
-        # Verify scripts are available before running
-        if [ ! -f "scripts/visualize_performance.py" ]; then
-          echo "❌ visualize_performance.py not found in scripts directory"
-          echo "Available files in scripts/:"
-          ls -la scripts/ || echo "Scripts directory does not exist"
-          echo "::warning::Visualization script not found, skipping visualization generation"
-          exit 0  # Exit gracefully instead of failing
-        fi
-        
-        echo "✅ Found visualization script, running..."
-        python3 scripts/visualize_performance.py results/ -o visualizations -v
-        
-    - name: Generate PERFORMANCE.md for performance-tracking branch
-      shell: bash
-      continue-on-error: true
+        git fetch origin performance-tracking || echo "No existing performance-tracking branch"
+        git checkout performance-tracking || git checkout --orphan performance-tracking
+
+    - name: Process extended benchmark results
       run: |
-        # Create PERFORMANCE.md with timeline graphs
-        if [ -f "scripts/visualize_performance.py" ] && [ -d "visualizations" ]; then
-          echo "📝 Generating PERFORMANCE.md with embedded timeline graphs..."
+        echo "🔄 Processing extended benchmark results..."
+        
+        # Ensure directory structure exists
+        mkdir -p results scripts
+        
+        # Copy scripts from main branch
+        git checkout main -- scripts/ || echo "No scripts directory in main branch"
+        chmod +x scripts/*.py 2>/dev/null || echo "No Python scripts to make executable"
+        
+        # Copy extended benchmark results
+        if [ -d "../extended-benchmark-artifacts" ]; then
+          COLLECTED_FILES=$(find ../extended-benchmark-artifacts -name "*.json" -o -name "*.txt" | wc -l)
+          echo "Found $COLLECTED_FILES extended benchmark files"
           
-          # Create a dedicated PERFORMANCE.md for the tracking branch
-          mkdir -p performance-docs
-          
-          # Copy visualization images to performance-docs
-          if [ -d "visualizations" ]; then
-            cp visualizations/*.png performance-docs/ 2>/dev/null || true
+          if [ $COLLECTED_FILES -gt 0 ]; then
+            cp ../extended-benchmark-artifacts/*.json results/ 2>/dev/null || echo "No JSON files to copy"
+            cp ../extended-benchmark-artifacts/*.txt results/ 2>/dev/null || echo "No TXT files to copy"
+            echo "✅ Copied extended benchmark files to results directory"
           fi
-          
-          # Generate the PERFORMANCE.md with relative image paths
-          python3 scripts/visualize_performance.py results/ -o performance-docs -v
-          
-          echo "✅ PERFORMANCE.md generated in performance-docs/"
-          ls -la performance-docs/
-        else
-          echo "⚠️ Skipping PERFORMANCE.md generation - dependencies not available"
         fi
-        
-    - name: Upload visualization artifacts
-      uses: actions/upload-artifact@v4
-      if: hashFiles('visualizations/**') != ''  # Only upload if visualizations exist
-      with:
-        name: performance-visualizations
-        path: visualizations/
-        retention-days: 90
-        
-    - name: Commit visualizations and scripts to performance-tracking branch
-      shell: bash
+
+    - name: Cleanup old results
+      run: |
+        if [ -f "scripts/cleanup_old_results.py" ]; then
+          echo "🧹 Cleaning up old results (keeping last 20 builds)..."
+          python3 scripts/cleanup_old_results.py results --keep 20
+        fi
+
+    - name: Generate comprehensive performance report
+      run: |
+        if [ -f "scripts/visualize_performance.py" ]; then
+          echo "📊 Generating comprehensive performance visualizations..."
+          python3 scripts/visualize_performance.py results -o . -v
+        else
+          echo "⚠️ Visualization script not found"
+          echo "# OULY Performance Report (Extended)" > PERFORMANCE.md
+          echo "**Generated:** $(date)" >> PERFORMANCE.md
+          echo "**Type:** Extended/Dedicated Benchmarks" >> PERFORMANCE.md
+        fi
+
+    - name: Commit extended results
       run: |
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
         
-        # Add scripts (always available) and visualizations (if they exist)
-        git add scripts/
-        if [ -d "visualizations" ] && [ "$(ls -A visualizations 2>/dev/null)" ]; then
-          git add visualizations/
-          echo "✅ Adding visualizations to commit"
+        git add .
+        
+        if ! git diff --staged --quiet; then
+          RESULT_COUNT=$(find results -name "*.json" -o -name "*.txt" | wc -l)
+          
+          git commit -m "📊 Extended performance results (scheduled run)
+          
+          Commit: ${{ github.sha }}
+          Type: Extended/Dedicated benchmarks
+          Total result files: $RESULT_COUNT
+          Generated: $(date)"
+          
+          git push origin performance-tracking
+          echo "✅ Extended results committed to performance-tracking branch"
         else
-          echo "⚠️ No visualizations to commit"
+          echo "No new extended results to commit"
         fi
-        
-        # Add PERFORMANCE.md and related docs if they exist
-        if [ -d "performance-docs" ] && [ "$(ls -A performance-docs 2>/dev/null)" ]; then
-          # Only add performance-docs directory (contains PERFORMANCE.md with correct image paths)
-          git add performance-docs/
-          echo "✅ Adding PERFORMANCE.md and documentation to commit"
-        else
-          echo "⚠️ No performance documentation to commit"
-        fi
-        
-        git commit -m "Update performance visualizations, PERFORMANCE.md and scripts for commit ${{ github.sha }}" || echo "No changes to commit"
-        git push origin performance-tracking
-
-  build-verification:
-    runs-on: ${{ matrix.os }}
-    continue-on-error: ${{ matrix.os == 'macos-latest' }}  # Allow macOS job to fail without affecting workflow
-    strategy:
-      fail-fast: false  # Don't cancel other jobs if one fails
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        build_type: [Release]
-        
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Configure CMake (Unix)
-      if: runner.os != 'Windows'
-      continue-on-error: true  # Allow this step to fail on macOS
-      shell: bash
-      run: |
-        cmake -B build \
-          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-          -DOULY_BUILD_TESTS=ON
-    
-    - name: Configure CMake (Windows)
-      if: runner.os == 'Windows'
-      shell: bash
-      run: |
-        cmake -B build -DOULY_BUILD_TESTS=ON
-    
-    - name: Build (Unix)
-      if: runner.os != 'Windows'
-      continue-on-error: true  # Allow this step to fail on macOS
-      shell: bash
-      run: |
-        cmake --build build --config ${{ matrix.build_type }} -j$(nproc 2>/dev/null || sysctl -n hw.ncpu)
-    
-    - name: Build (Windows)
-      if: runner.os == 'Windows'
-      run: |
-        cmake --build build --config ${{ matrix.build_type }}
-      shell: bash
-    
-    - name: Quick benchmark verification (Unix)
-      if: runner.os != 'Windows'
-      continue-on-error: true  # Allow this step to fail on macOS
-      shell: bash
-      run: |
-        if [ -f "build/unit_tests/ouly-performance-bench" ]; then
-          cd build/unit_tests
-          ./ouly-performance-bench --help || echo "Benchmark executable built successfully"
-        else
-          echo "::warning::Benchmark executable not found, likely due to build failure (expected on macOS with incompatible compiler)"
-        fi
-        
-    - name: Quick benchmark verification (Windows)
-      if: runner.os == 'Windows'
-      run: |
-        cd build/unit_tests
-        if [ -f "${{ matrix.build_type }}/ouly-performance-bench.exe" ]; then
-          ./${{ matrix.build_type }}/ouly-performance-bench.exe --help || echo "Benchmark executable built successfully"
-        else
-          echo "::warning::Benchmark executable not found"
-        fi
-      shell: bash
-      
-    - name: Build Status Summary
-      if: runner.os == 'macOS'
-      shell: bash
-      run: |
-        echo "::notice::macOS build verification completed. Any failures are expected due to compiler version requirements and do not indicate issues."
-        
-    - name: Build Status Summary
-      if: runner.os == 'Windows'
-      shell: bash
-      run: |
-        echo "::notice::Windows build verification completed."
-        
-    - name: Build Status Summary
-      if: runner.os == 'Linux'
-      shell: bash
-      run: |
-        echo "::notice::Linux build verification completed."
-
-  # Summary job to provide overall workflow status
-  workflow-summary:
-    needs: [benchmark, build-verification, performance-visualization]
-    runs-on: ubuntu-latest
-    if: always()
-    
-    steps:
-    - name: Workflow Summary
-      shell: bash
-      run: |
-        echo "## 📊 Performance Benchmark Workflow Summary"
-        echo ""
-        
-        # Check benchmark job status
-        if [[ "${{ needs.benchmark.result }}" == "success" ]]; then
-          echo "✅ **Performance Benchmarks**: PASSED"
-          echo "   - All performance benchmarks completed successfully"
-        else
-          echo "❌ **Performance Benchmarks**: FAILED"
-          echo "   - Performance benchmark execution encountered issues"
-        fi
-        
-        echo ""
-        
-        # Check build verification status
-        if [[ "${{ needs.build-verification.result }}" == "success" ]]; then
-          echo "✅ **Build Verification**: PASSED"
-          echo "   - All platforms built successfully"
-        elif [[ "${{ needs.build-verification.result }}" == "failure" ]]; then
-          echo "⚠️ **Build Verification**: PARTIAL"
-          echo "   - Some platforms failed (expected for macOS with incompatible compiler)"
-        else
-          echo "❓ **Build Verification**: ${{ needs.build-verification.result }}"
-        fi
-        
-        echo ""
-        echo "**Note**: macOS build failures are expected and do not indicate issues with the codebase."
-        echo "The primary performance benchmarks run on Linux with controlled compiler versions."

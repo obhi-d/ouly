@@ -10,6 +10,7 @@
 #include <atomic>
 #include <chrono>
 #include <cmath>
+#include <cstdlib>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -506,14 +507,22 @@ private:
   }
 
 public:
-  static void save_results(ankerl::nanobench::Bench& bench, const std::string& test_type)
+  static void save_results(ankerl::nanobench::Bench& bench, const std::string& test_id,
+                           const std::string& commit_hash = "", const std::string& build_number = "")
   {
-    const std::string compiler  = get_compiler_info();
-    const std::string timestamp = get_timestamp();
+    const std::string compiler = get_compiler_info();
 
-    // Save JSON for performance tracking
-    const std::string json_filename = test_type + "_" + compiler + "_" + timestamp + ".json";
-    std::ofstream     json_file(json_filename);
+    // Generate short commit hash (8 chars) and build number for filename
+    std::string short_commit = commit_hash.empty() ? "local" : commit_hash.substr(0, 8);
+    std::string build_num    = build_number.empty() ? "0" : build_number;
+
+    // New filename format: <compiler-id>-<small-commit-hash>-<build-number>-<test_id>.json
+    const std::string json_filename = compiler + "-" + short_commit + "-" + build_num + "-" + test_id + ".json";
+
+    // Output test_id to console for CI tracking
+    std::cout << "TEST_ID: " << test_id << std::endl;
+
+    std::ofstream json_file(json_filename);
     if (json_file.is_open())
     {
       bench.render(ankerl::nanobench::templates::json(), json_file);
@@ -521,8 +530,8 @@ public:
       std::cout << "✅ JSON results saved to: " << json_filename << std::endl;
     }
 
-    // Save human-readable results
-    const std::string txt_filename = test_type + "_" + compiler + "_" + timestamp + ".txt";
+    // Save human-readable results with same naming pattern
+    const std::string txt_filename = compiler + "-" + short_commit + "-" + build_num + "-" + test_id + ".txt";
     std::ofstream     txt_file(txt_filename);
     if (txt_file.is_open())
     {
@@ -532,6 +541,12 @@ public:
       txt_file.close();
       std::cout << "📄 Text results saved to: " << txt_filename << std::endl;
     }
+  }
+
+  // Legacy function for backward compatibility
+  static void save_results(ankerl::nanobench::Bench& bench, const std::string& test_type)
+  {
+    save_results(bench, test_type, "", "");
   }
 
   static void print_system_info()
@@ -608,8 +623,16 @@ void run_comprehensive_scheduler_benchmarks(int run_only = -1)
     ComprehensiveSchedulerBenchmark<ouly::v2::scheduler, ouly::v2::task_context>::run_nested_parallel(bench, "V2");
   }
 
-  std::cout << " Saving benchmark results..." << std::endl;
-  BenchmarkReporter::save_results(bench, "scheduler_comparison");
+  std::cout << " Saving benchmark results...\n";
+
+  // Get environment variables for CI integration
+  const char* commit_hash_env  = std::getenv("GITHUB_SHA");
+  const char* build_number_env = std::getenv("GITHUB_RUN_NUMBER");
+
+  std::string commit_hash  = (commit_hash_env != nullptr) ? commit_hash_env : "";
+  std::string build_number = (build_number_env != nullptr) ? build_number_env : "";
+
+  BenchmarkReporter::save_results(bench, "scheduler_comparison", commit_hash, build_number);
 
   std::cout << std::endl;
   std::cout << "✅ Comprehensive benchmark suite completed successfully!" << std::endl;
