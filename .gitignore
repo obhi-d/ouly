@@ -1,0 +1,47 @@
+# Prerequisites
+*.d
+
+# User specific
+CMakeLists.txt.user
+compile_commands.json
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# PDB
+*.pdb
+
+# Executables
+*.exe
+*.out
+*.app
+/.vs
+/out
+/build
+/install
+/.cache
+/docs/build
+/docs/xml
+.DS_Store
+/build*
