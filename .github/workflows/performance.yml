@@ -47,6 +47,9 @@ jobs:
           # GCC not available on macOS runners
           - os: macos-latest
             compiler: { name: gcc-14 }
+          # clang-18 not available on macOS runners (use system clang instead)  
+          - os: macos-latest
+            compiler: { name: clang-18 }
         include:
           # Add clang-15 for macOS (default Xcode version)
           - os: macos-latest
