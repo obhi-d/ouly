@@ -33,15 +33,37 @@ compile_commands.json
 *.pdb
 
 # Executables
-*.exe
-*.out
-*.app
-/.vs
-/out
-/build
-/install
-/.cache
-/docs/build
-/docs/xml
-.DS_Store
-/build*
+# Ignore everything
+*
+
+# But not these file types
+!*.json
+!*.svg
+!*.txt
+!*.md
+!*.py
+!*.sh
+
+
+
+# Allow the results directory
+!results/
+!results/*.json
+!results/*.svg
+!results/*.txt
+!results/*.md
+!results/*.py
+!results/*.sh
+!results/*.yaml
+
+# Ignore all other directories
+/*/
+!/*.json
+!/*.svg
+!/*.txt
+!/*.md
+!/*.py
+!/*.sh
+!/*.yaml
+
+compile_commands.json
