@@ -90,28 +90,27 @@ jobs:
       if: steps.clang_check.outputs.skip_build != 'true'
       shell: bash
       run: |
-        cmake -B ${{ github.workspace }}/build \
+        cmake -B build \
               -G "${{ matrix.config.generator }}" \
               -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
               -DCMAKE_C_COMPILER=${{ matrix.config.cc }} \
               -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }} \
               -DOULY_BUILD_TESTS=ON \
               -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+      working-directory: ${{ github.workspace }}
       env:
         CC: ${{ matrix.config.cc }}
         CXX: ${{ matrix.config.cxx }}
 
     - name: Build
       if: steps.clang_check.outputs.skip_build != 'true'
-      shell: bash
-      run: cmake --build ${{ github.workspace }}/build --config ${{ env.BUILD_TYPE }} --parallel
+      working-directory: build
+      run: cmake --build . --config ${{ env.BUILD_TYPE }} --parallel
 
     - name: Test
       if: steps.clang_check.outputs.skip_build != 'true'
-      shell: bash
-      run: |
-        cd ${{ github.workspace }}/build
-        ctest -C ${{ env.BUILD_TYPE }} --output-on-failure --parallel
+      working-directory: build
+      run: ctest -C ${{ env.BUILD_TYPE }} --output-on-failure --parallel
 
     - name: Report Status
       if: failure() && steps.clang_check.outputs.skip_build != 'true'
