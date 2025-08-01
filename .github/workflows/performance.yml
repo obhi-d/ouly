@@ -135,13 +135,6 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Download all extended benchmark results
-      uses: actions/download-artifact@v4
-      with:
-        path: results
-        pattern: extended-benchmark-results-*
-        merge-multiple: true
-
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
@@ -164,6 +157,13 @@ jobs:
           # First‑time run: create a clean orphan branch so history is separate
           git checkout --orphan perfo
         fi
+
+    - name: Download all extended benchmark results
+      uses: actions/download-artifact@v4
+      with:
+        path: results
+        pattern: extended-benchmark-results-*
+        merge-multiple: true
 
     - name: Process extended benchmark results
       run: |
