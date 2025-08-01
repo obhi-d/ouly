@@ -224,9 +224,8 @@ auto scheduler::enter_context(worker_id wid, workgroup_id needy_wg) noexcept -> 
 auto scheduler::find_work_for_worker(worker_id wid) noexcept -> bool
 {
   // Try to drain work from the worker's own workgroup first
-  auto&                     worker             = workers_[wid.get_index()];
-  static constexpr uint32_t max_steal_attempts = 3;
-  thread_local uint32_t     random_victim      = update_seed();
+  auto&                 worker        = workers_[wid.get_index()];
+  thread_local uint32_t random_victim = update_seed();
 
   if (worker.get_workgroup())
   {
