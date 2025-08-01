@@ -155,7 +155,15 @@ jobs:
     - name: Checkout performance tracking branch
       run: |
         git fetch origin perfo || echo "No existing perfo branch"
-        git checkout perfo || git checkout --orphan perfo
+
+        # If the branch already exists on the remote, make the local branch
+        # point **exactly** at it so we start from an up‑to‑date tip.
+        if git show-ref --quiet refs/remotes/origin/perfo; then
+          git checkout -B perfo origin/perfo
+        else
+          # First‑time run: create a clean orphan branch so history is separate
+          git checkout --orphan perfo
+        fi
 
     - name: Process extended benchmark results
       run: |
@@ -192,20 +200,28 @@ jobs:
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
         
-        git add .
-        
+        # Only stage the files/folders you want on perfo:
+        git add PERFORMANCE.md || true
+        git add results/**/*.json results/**/*.txt 2>/dev/null || true
+        git add *.svg 2>/dev/null || true
+        git add scripts 2>/dev/null || true
+
         if ! git diff --staged --quiet; then
           RESULT_COUNT=$(find results -name "*.json" -o -name "*.txt" | wc -l)
-          
           git commit -m "📊 Extended performance results (scheduled run)
-          
+
           Commit: ${{ github.sha }}
           Type: Extended/Dedicated benchmarks
           Total result files: $RESULT_COUNT
           Generated: $(date)"
-          
-          git push origin perfo
-          echo "✅ Extended results committed to perfo branch"
+          # Rebase onto the latest remote tip – this resolves the usual
+          # non‑fast‑forward error when another run updated the branch earlier.
+          git pull --rebase --autostash origin perfo || true
+
+          # Push our changes; --force-with-lease ensures we don't overwrite any
+          # new commits that may have appeared after the rebase attempt.
+          git push --force-with-lease origin perfo
         else
           echo "No new extended results to commit"
         fi
+        
