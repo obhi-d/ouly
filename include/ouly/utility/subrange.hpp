@@ -51,11 +51,6 @@ public:
     return right;
   }
 
-  [[nodiscard]] constexpr auto is_divisible() const noexcept -> bool
-  {
-    return size() > 1; // Arbitrary condition for divisibility
-  }
-
   [[nodiscard]] constexpr auto front() const noexcept -> I
   {
     return begin_;

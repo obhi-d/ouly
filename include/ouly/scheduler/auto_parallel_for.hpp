@@ -125,14 +125,14 @@ public:
     }
   }
 
-  [[nodiscard]] auto is_divisible(uint8_t max_depth) const noexcept -> bool
+  [[nodiscard]] auto is_divisible(uint8_t max_depth, uint64_t granularity) const noexcept -> bool
   {
     if (empty())
     {
       return false;
     }
     const uint8_t back_idx = (tail_ - 1) & (MaxCapacity - 1);
-    return ranges_[back_idx].is_divisible() && depths_[back_idx] < max_depth;
+    return ranges_[back_idx].size() > granularity && depths_[back_idx] < max_depth;
   }
 
   /**
@@ -143,11 +143,11 @@ public:
    *   idle threads can steal it quickly.
    *
    */
-  void split_to_fill(uint8_t max_depth)
+  void split_to_fill(uint8_t max_depth, uint64_t granularity)
   {
     bool split_from_back = true; // alternate sides to stay depth‑first on the hot branch
 
-    while (!full() && is_divisible(max_depth))
+    while (!full() && is_divisible(max_depth, granularity))
     {
       // Choose which end to split this iteration
       const uint8_t idx           = split_from_back ? (tail_ - 1) & (MaxCapacity - 1) : head_;
@@ -156,7 +156,7 @@ public:
 
       // If this range cannot be split, try the other end once; if that also
       // fails we are done.
-      if (!(target_range.is_divisible() && current_depth < max_depth))
+      if (target_range.size() > granularity && current_depth < max_depth)
       {
         split_from_back       = !split_from_back;
         const uint8_t alt_idx = split_from_back ? (tail_ - 1) & (MaxCapacity - 1) : head_;
@@ -167,7 +167,7 @@ public:
 
         Range&  alt_range = ranges_[alt_idx];
         uint8_t alt_depth = depths_[alt_idx];
-        if (!(alt_range.is_divisible() && alt_depth < max_depth))
+        if (alt_range.size() < granularity && alt_depth < max_depth)
         {
           break; // neither end is further divisible
         }
@@ -314,10 +314,11 @@ struct auto_range
 
     auto& scheduler = this_context.get_scheduler();
 
+    auto granularity = static_cast<uint64_t>(Traits::grain_size) << divisor_log2_;
     while (!pool.empty())
     {
       // Fill the range pool by splitting ranges
-      pool.split_to_fill(max_depth);
+      pool.split_to_fill(max_depth, granularity);
 
       // Check for work stealing demand
       const bool has_demand = is_stolen || (Traits::grain_size > 1);
