@@ -17,7 +17,7 @@ namespace ouly::detail
 {
 
 #ifdef _WIN32
-auto protection_to_win32(cfg::protection prot) noexcept -> DWORD
+inline static auto protection_to_win32(cfg::protection prot) noexcept -> DWORD
 {
   switch (prot)
   {
@@ -40,7 +40,7 @@ auto protection_to_win32(cfg::protection prot) noexcept -> DWORD
   }
 }
 
-auto map_flags_to_win32(map_flags flags) noexcept -> DWORD
+inline static auto map_flags_to_win32(map_flags flags) noexcept -> DWORD
 {
   DWORD result = 0;
 
@@ -55,7 +55,7 @@ auto map_flags_to_win32(map_flags flags) noexcept -> DWORD
 
 constexpr mode_t default_file_mode = 0644;
 
-auto protection_to_posix(cfg::protection prot) noexcept -> int
+inline static auto protection_to_posix(cfg::protection prot) noexcept -> int
 {
   int result = PROT_NONE;
 
@@ -75,7 +75,7 @@ auto protection_to_posix(cfg::protection prot) noexcept -> int
   return result;
 }
 
-auto map_flags_to_posix(map_flags flags) noexcept -> int
+inline static auto map_flags_to_posix(map_flags flags) noexcept -> int
 {
   int result = 0;
 
@@ -99,7 +99,7 @@ auto map_flags_to_posix(map_flags flags) noexcept -> int
   return result;
 }
 
-auto advice_to_posix(cfg::advice advice_type) noexcept -> int
+inline static auto advice_to_posix(cfg::advice advice_type) noexcept -> int
 {
   switch (advice_type)
   {
