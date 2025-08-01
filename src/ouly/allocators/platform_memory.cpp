@@ -186,8 +186,8 @@ auto virtual_protect(void* ptr, std::size_t size, cfg::protection new_prot) noex
 #endif
 }
 
-auto map_file(std::filesystem::path const& filename, std::size_t size, cfg::protection prot, map_flags flags,
-              bool create_if_missing) noexcept -> mapped_file_info
+auto map_file(std::filesystem::path const& filename, std::size_t size, cfg::protection prot,
+              [[maybe_unused]] map_flags flags, bool create_if_missing) noexcept -> mapped_file_info
 {
   if (filename.empty())
   {
@@ -226,8 +226,8 @@ auto map_file(std::filesystem::path const& filename, std::size_t size, cfg::prot
   }
 
   DWORD  protect        = protection_to_win32(prot);
-  HANDLE mapping_handle = CreateFileMappingA(file_handle, nullptr, protect, static_cast<DWORD>(size >> 32),
-                                             static_cast<DWORD>(size & 0xFFFFFFFF), nullptr);
+  HANDLE mapping_handle = CreateFileMapping(file_handle, nullptr, protect, static_cast<DWORD>(size >> 32),
+                                            static_cast<DWORD>(size & 0xFFFFFFFF), nullptr);
   CloseHandle(file_handle);
 
   if (mapping_handle == nullptr)
