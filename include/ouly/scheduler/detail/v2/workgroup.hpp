@@ -45,6 +45,8 @@ using work_item = task_delegate;
 class workgroup
 {
 public:
+  using mailbox = std::unique_ptr<ouly::detail::mpmc_ring<work_item, mpmc_capacity>>;
+
   static constexpr int32_t  max_fast_context_switch = 64;
   static constexpr uint32_t word_size               = 64;
 
@@ -59,8 +61,8 @@ public:
       : has_work_(other.has_work_.load(std::memory_order_relaxed)),
         small_mask_(other.small_mask_.load(std::memory_order_relaxed)), thread_count_(other.thread_count_),
         worker_start_idx_(other.worker_start_idx_), worker_end_idx_(other.worker_end_idx_), priority_(other.priority_),
-        owner_(other.owner_), work_queues_(std::move(other.work_queues_)), bitfield_(std::move(other.bitfield_)),
-        bitfield_words_(other.bitfield_words_)
+        owner_(other.owner_), work_queues_(std::move(other.work_queues_)), mailbox_(std::move(other.mailbox_)),
+        bitfield_(std::move(other.bitfield_)), bitfield_words_(other.bitfield_words_)
   {
     other.thread_count_ = 0;
     other.priority_     = 0;
@@ -79,6 +81,7 @@ public:
       priority_         = other.priority_;
       owner_            = other.owner_;
       work_queues_      = std::move(other.work_queues_);
+      mailbox_          = std::move(other.mailbox_);
       bitfield_         = std::move(other.bitfield_);
       bitfield_words_   = other.bitfield_words_;
     }
@@ -97,6 +100,7 @@ public:
 
     // Allocate Chase‑Lev queues for each worker
     work_queues_ = std::make_unique<queue_type[]>(thread_count);
+    mailbox_     = std::make_unique<ouly::detail::mpmc_ring<work_item, mpmc_capacity>>();
 
     // Bitmap initialisation
 
@@ -181,7 +185,7 @@ public:
    */
   [[nodiscard]] auto submit_to_mailbox(work_item const& item) noexcept -> bool
   {
-    if (mailbox_.emplace(item))
+    if (mailbox_->emplace(item))
     {
       advertise_work_available();
       return true;
@@ -194,7 +198,7 @@ public:
    */
   [[nodiscard]] auto receive_from_mailbox(work_item& out) noexcept -> bool
   {
-    if (mailbox_.pop(out))
+    if (mailbox_->pop(out))
     {
       has_work_.fetch_sub(1, std::memory_order_relaxed);
       return true;
@@ -347,7 +351,7 @@ private:
   std::unique_ptr<queue_type[]> work_queues_;
 
   // Mailbox for cross-workgroup work submission
-  ouly::detail::mpmc_ring<work_item, mpmc_capacity> mailbox_;
+  mailbox mailbox_;
 
   alignas(cache_line_size) std::mutex slot_mutex_;
   alignas(cache_line_size) std::unique_ptr<uint64_t[]> bitfield_; // for >64 threads
