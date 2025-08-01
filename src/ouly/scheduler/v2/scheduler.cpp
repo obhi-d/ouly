@@ -109,7 +109,11 @@ void scheduler::submit_internal(task_context const& current, workgroup_id dst,
     }
   }
 
-  target_workgroup.submit_to_mailbox(work);
+  while (!target_workgroup.submit_to_mailbox(work))
+  {
+    // Possibly coop wait
+    busy_work(current_worker);
+  }
 
   // Add to needy workgroups list for better work distribution
   needy_workgroups_.emplace(dst);
@@ -205,6 +209,7 @@ auto scheduler::enter_context(worker_id wid, workgroup_id needy_wg) noexcept -> 
   return true;
 }
 
+// NOLINTNEXTLINE
 auto scheduler::find_work_for_worker(worker_id wid) noexcept -> bool
 {
   // Try to drain work from the worker's own workgroup first
@@ -214,30 +219,33 @@ auto scheduler::find_work_for_worker(worker_id wid) noexcept -> bool
 
   if (worker.get_workgroup())
   {
-    auto&                 workgroup = workgroups_[worker.get_workgroup().get_index()];
-    detail::v2::work_item work{detail::v2::work_item::noinit};
+    auto& workgroup = workgroups_[worker.get_workgroup().get_index()];
 
-    if (workgroup.pop_work_from_worker(work, worker.get_group_offset()))
+    if (workgroup.has_work())
     {
-      execute_work(wid, work);
-      return true;
-    }
+      detail::v2::work_item work{detail::v2::work_item::noinit};
 
-    // No work in mailbox, try stealing from this workgroup
-    if (workgroup.steal_work(work, random_victim))
-    {
-      execute_work(wid, work);
-      return true;
-    }
+      if (workgroup.pop_work_from_worker(work, worker.get_group_offset()))
+      {
+        execute_work(wid, work);
+        return true;
+      }
 
-    if (workgroup.has_work() && workgroup.receive_from_mailbox(work))
-    {
-      execute_work(wid, work);
-      return true;
-    }
+      // No work in mailbox, try stealing from this workgroup
+      if (workgroup.steal_work(work, random_victim))
+      {
+        execute_work(wid, work);
+        return true;
+      }
 
-    workgroup.clear_work_available();
-    random_victim = update_seed();
+      if (workgroup.receive_from_mailbox(work))
+      {
+        execute_work(wid, work);
+        return true;
+      }
+
+      random_victim = update_seed();
+    }
   }
 
   // Priority 2: Check needy workgroups for mailbox work (limit attempts to avoid starvation)
@@ -249,6 +257,11 @@ auto scheduler::find_work_for_worker(worker_id wid) noexcept -> bool
     ++needy_attempts;
 
     auto& needy_workgroup = workgroups_[needy_wg.get_index()];
+
+    if (!needy_workgroup.has_work())
+    {
+      continue;
+    }
 
     if (!enter_context(wid, needy_wg))
     {
@@ -269,8 +282,6 @@ auto scheduler::find_work_for_worker(worker_id wid) noexcept -> bool
       return true;
     }
 
-    // Clear work available flag since we found no work
-    needy_workgroup.clear_work_available();
     random_victim = update_seed();
   }
 
@@ -283,13 +294,24 @@ auto scheduler::find_work_for_worker(worker_id wid) noexcept -> bool
     uint32_t i         = (steal_start_idx + attempt) % workgroup_count_;
     auto&    workgroup = workgroups_[i];
 
-    if (!workgroup.has_work() || !enter_context(wid, workgroup_id(i)))
+    if (!workgroup.has_work())
+    {
+      continue;
+    }
+
+    if (!enter_context(wid, workgroup_id(i)))
     {
       continue;
     }
 
     detail::v2::work_item work{detail::v2::work_item::noinit};
     if (workgroup.steal_work(work, steal_start_idx))
+    {
+      execute_work(wid, work);
+      return true;
+    }
+
+    if (workgroup.receive_from_mailbox(work))
     {
       execute_work(wid, work);
       return true;

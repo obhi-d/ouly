@@ -29,7 +29,7 @@ class scheduler;
 namespace ouly::detail::v2
 {
 static constexpr uint32_t max_workgroup = 32; // Maximum number of workgroups supported
-static constexpr uint32_t mpmc_capacity = 256;
+static constexpr uint32_t mpmc_capacity = 1024;
 // Simplified work item for the new architecture
 using work_item = task_delegate;
 
@@ -59,8 +59,8 @@ public:
       : has_work_(other.has_work_.load(std::memory_order_relaxed)),
         small_mask_(other.small_mask_.load(std::memory_order_relaxed)), thread_count_(other.thread_count_),
         worker_start_idx_(other.worker_start_idx_), worker_end_idx_(other.worker_end_idx_), priority_(other.priority_),
-        owner_(other.owner_), work_queues_(std::move(other.work_queues_)), mailbox_(std::move(other.mailbox_)),
-        bitfield_(std::move(other.bitfield_)), bitfield_words_(other.bitfield_words_)
+        owner_(other.owner_), work_queues_(std::move(other.work_queues_)), bitfield_(std::move(other.bitfield_)),
+        bitfield_words_(other.bitfield_words_)
   {
     other.thread_count_ = 0;
     other.priority_     = 0;
@@ -79,7 +79,6 @@ public:
       priority_         = other.priority_;
       owner_            = other.owner_;
       work_queues_      = std::move(other.work_queues_);
-      mailbox_          = std::move(other.mailbox_);
       bitfield_         = std::move(other.bitfield_);
       bitfield_words_   = other.bitfield_words_;
     }
@@ -122,7 +121,7 @@ public:
     }
 
     // Reset work availability
-    has_work_.store(false, std::memory_order_relaxed);
+    has_work_.store(0, std::memory_order_relaxed);
   }
 
   /**
@@ -146,7 +145,12 @@ public:
   auto pop_work_from_worker(work_item& out, uint32_t worker_offset) noexcept -> bool
   {
     OULY_ASSERT(std::cmp_less(worker_offset, thread_count_));
-    return work_queues_[worker_offset].pop_back(out);
+    if (work_queues_[worker_offset].pop_back(out))
+    {
+      has_work_.fetch_sub(1, std::memory_order_relaxed);
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -164,6 +168,7 @@ public:
 
       if (work_queues_[worker_idx].steal(out))
       {
+        has_work_.fetch_sub(1, std::memory_order_relaxed);
         return true;
       }
     }
@@ -174,20 +179,28 @@ public:
   /**
    * @brief Submit work via mailbox (cross-workgroup submission)
    */
-  void submit_to_mailbox(work_item const& item) noexcept
+  [[nodiscard]] auto submit_to_mailbox(work_item const& item) noexcept -> bool
   {
-    std::lock_guard lock(mailbox_mutex_);
-    mailbox_.push_back(item);
-    advertise_work_available();
+    if (mailbox_.emplace(item))
+    {
+      advertise_work_available();
+      return true;
+    }
+    return false;
   }
 
   /**
    * @brief Try to receive work from mailbox
    */
-  auto receive_from_mailbox(work_item& out) noexcept -> bool
+  [[nodiscard]] auto receive_from_mailbox(work_item& out) noexcept -> bool
   {
-    std::lock_guard lock(mailbox_mutex_);
-    return mailbox_.pop_front(out);
+    if (mailbox_.pop(out))
+    {
+      has_work_.fetch_sub(1, std::memory_order_relaxed);
+      return true;
+    }
+
+    return false;
   }
 
   /**
@@ -195,7 +208,7 @@ public:
    */
   [[nodiscard]] auto has_work() const noexcept -> bool
   {
-    return has_work_.load(std::memory_order_relaxed);
+    return has_work_.load(std::memory_order_relaxed) > 0;
   }
 
   /**
@@ -203,15 +216,7 @@ public:
    */
   void advertise_work_available() noexcept
   {
-    has_work_.store(true, std::memory_order_release);
-  }
-
-  /**
-   * @brief Clear work available flag
-   */
-  void clear_work_available() noexcept
-  {
-    has_work_.store(false, std::memory_order_relaxed);
+    has_work_.fetch_add(1, std::memory_order_relaxed);
   }
 
   /**
@@ -236,7 +241,7 @@ public:
     thread_count_ = 0;
     priority_     = 0;
     work_queues_.reset();
-    has_work_.store(false, std::memory_order_relaxed);
+    has_work_.store(0, std::memory_order_relaxed);
   }
 
   /**
@@ -277,7 +282,7 @@ public:
     {
       uint64_t bit      = mask & (~mask + 1); // isolate lowest‑set bit
       uint64_t new_mask = mask & ~bit;        // clear it
-      if (small_mask_.compare_exchange_weak(mask, new_mask, std::memory_order_acquire, std::memory_order_relaxed))
+      if (small_mask_.compare_exchange_weak(mask, new_mask, std::memory_order_acq_rel, std::memory_order_relaxed))
       {
         return std::countr_zero(bit);
       }
@@ -329,7 +334,7 @@ private:
   friend class ouly::v2::scheduler;
 
   // --- Slot management (mutex‑protected bitfield) -------------------------
-  alignas(cache_line_size) std::atomic_bool has_work_{false};   // Work availability flag
+  alignas(cache_line_size) std::atomic_uint64_t has_work_{0};   // Work availability flag
   alignas(cache_line_size) std::atomic_uint64_t small_mask_{0}; // for ≤64 threads
 
   int64_t  thread_count_     = 0;
@@ -342,8 +347,7 @@ private:
   std::unique_ptr<queue_type[]> work_queues_;
 
   // Mailbox for cross-workgroup work submission
-  std::mutex                   mailbox_mutex_;
-  ouly::basic_queue<work_item> mailbox_;
+  ouly::detail::mpmc_ring<work_item, mpmc_capacity> mailbox_;
 
   alignas(cache_line_size) std::mutex slot_mutex_;
   alignas(cache_line_size) std::unique_ptr<uint64_t[]> bitfield_; // for >64 threads

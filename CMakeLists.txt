@@ -33,6 +33,7 @@ add_library(
     ${OULY_TARGET_NAME}
     "src/ouly/allocators/coalescing_allocator.cpp"
     "src/ouly/allocators/coalescing_arena_allocator.cpp"
+    "src/ouly/allocators/platform_memory.cpp"
     "src/ouly/allocators/ts_shared_linear_allocator.cpp"
     "src/ouly/allocators/ts_thread_local_allocator.cpp"
     "src/ouly/dsl/lite_yml.cpp"
@@ -48,7 +49,7 @@ set_property(TARGET ${OULY_TARGET_NAME} PROPERTY CXX_STANDARD 20)
 if(MSVC)
     target_compile_options(${OULY_TARGET_NAME} PRIVATE /W4 /WX)
 else()
-    if (NOT CMAKE_GENERATOR MATCHES "Xcode")
+    if(NOT CMAKE_GENERATOR MATCHES "Xcode")
         target_compile_options(
             ${OULY_TARGET_NAME}
             PRIVATE

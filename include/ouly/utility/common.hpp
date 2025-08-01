@@ -39,16 +39,25 @@
 #define OULY_PRINT_DEBUG ouly::print_debug_info
 #endif
 
+#ifndef OULY_PRINT_ERROR
+#define OULY_PRINT_ERROR ouly::print_error
+#endif
+
 #define OULY_EXTERN extern "C"
 
 namespace ouly
 {
 constexpr std::uint32_t safety_offset = alignof(void*);
 
-inline void print_debug_info(std::string const& /*s*/)
+inline void print_debug_info(std::string_view /*s*/)
 {
   /*ignored*/
 }
+inline void print_error(std::string_view /*msg*/)
+{
+  /*ignored */
+}
+
 template <bool B, typename T>
 constexpr void typed_static_assert()
 {

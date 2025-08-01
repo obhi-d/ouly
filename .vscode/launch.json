@@ -8,8 +8,9 @@
       "name": "(gdb) Attach",
       "type": "cppdbg",
       "request": "attach",
-      "program": "${workspaceFolder}/build/unit_tests/test_spmc_ring",
-      "MIMode": "gdb",
+      "program": "/Users/obhi-d/code/ouly/build/macos-default/unit_tests/test_scheduler_tests",
+      "MIMode": "lldb",
+      "miDebuggerPath": "/Users/obhi-d/bin/lldb-mi",
       "setupCommands": [
         {
           "description": "Enable pretty-printing for gdb",

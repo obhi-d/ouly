@@ -41,6 +41,9 @@ template <typename T>
 concept HasUnderlyingAllocator = requires { typename T::underlying_allocator_t; };
 
 template <typename T>
+concept HasProtection = requires { typename T::protection_t; };
+
+template <typename T>
 struct debug_tracer
 {
   using type = ouly::detail::dummy_debug_tracer;
@@ -69,5 +72,40 @@ struct min_alignment<T>
 
 template <typename T>
 constexpr auto min_alignment_v = min_alignment<T>::value;
+
+template <typename T>
+struct has_protection
+{
+  static constexpr bool value = false;
+};
+
+template <HasProtection T>
+struct has_protection<T>
+{
+  static constexpr bool value = true;
+};
+
+template <typename T>
+constexpr bool has_protection_v = has_protection<T>::value;
+
+template <typename T>
+struct protection
+{
+  // Default protection - will be overridden by specialization
+  using type = void;
+};
+
+template <HasProtection T>
+struct protection<T>
+{
+  using type                  = typename T::protection_t;
+  static constexpr auto value = T::protection_v;
+};
+
+template <typename T>
+using protection_t = typename protection<T>::type;
+
+template <typename T>
+constexpr auto protection_v = protection<T>::value;
 
 } // namespace ouly::detail

@@ -106,6 +106,34 @@ struct strategy
   using strategy_t = T;
 };
 
+/**
+ * @brief Advise the kernel about memory usage patterns
+ * @param ptr Pointer to memory region
+ * @param size Size of the region
+ * @param advice Memory usage advice
+ * @return true on success, false on failure
+ */
+enum class advice : std::uint8_t
+{
+  normal,     // No special treatment
+  random,     // Random access pattern
+  sequential, // Sequential access pattern
+  will_need,  // Will need this memory soon
+  dont_need   // Don't need this memory soon
+};
+
+enum class protection : std::uint8_t
+{
+  none  = 0,
+  read  = 1,
+  write = 2,
+  // execute            = 4,
+  read_write = read | write,
+  // read_execute       = read | execute,
+  // write_execute      = write | execute,
+  // read_write_execute = read | write | execute
+};
+
 enum class memory_stat_type : uint8_t
 {
   e_none,
