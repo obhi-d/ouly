@@ -69,6 +69,18 @@ struct scheduler::worker_synchronizer
   {}
 };
 
+struct workgroup_desc
+{
+  uint32_t start_        = 0;
+  uint32_t thread_count_ = 0;
+  uint32_t priority_     = 0; // Priority of the workgroup
+};
+
+struct scheduler::worker_initializer
+{
+  std::array<workgroup_desc, detail::v2::max_workgroup> workgroup_descriptions_;
+};
+
 void scheduler::tally_publisher::operator()() const noexcept
 {
   // Cache-friendly sequential access with prefetching
@@ -116,7 +128,6 @@ void scheduler::submit_internal(task_context const& current, workgroup_id dst,
   }
 
   // Add to needy workgroups list for better work distribution
-  needy_workgroups_.emplace(dst);
   wake_up_workers(1); // Wake up workers to handle the new work
 }
 
@@ -248,43 +259,6 @@ auto scheduler::find_work_for_worker(worker_id wid) noexcept -> bool
     }
   }
 
-  // Priority 2: Check needy workgroups for mailbox work (limit attempts to avoid starvation)
-  uint32_t needy_attempts = 0;
-
-  workgroup_id needy_wg;
-  while (needy_attempts < max_steal_attempts && needy_workgroups_.pop(needy_wg))
-  {
-    ++needy_attempts;
-
-    auto& needy_workgroup = workgroups_[needy_wg.get_index()];
-
-    if (!needy_workgroup.has_work())
-    {
-      continue;
-    }
-
-    if (!enter_context(wid, needy_wg))
-    {
-      continue; // Failed to enter context, try next needy workgroup
-    }
-
-    detail::v2::work_item work{detail::v2::work_item::noinit};
-    if (needy_workgroup.receive_from_mailbox(work))
-    {
-      execute_work(wid, work);
-      return true;
-    }
-
-    // No work in mailbox, try stealing from this workgroup
-    if (needy_workgroup.steal_work(work, random_victim))
-    {
-      execute_work(wid, work);
-      return true;
-    }
-
-    random_victim = update_seed();
-  }
-
   // Priority 3: Work stealing from any workgroup with priority-based selection
   // Start with higher priority workgroups and overloaded workgroups
   uint32_t steal_start_idx = update_seed();
@@ -331,17 +305,31 @@ void scheduler::execute_work(worker_id wid, detail::v2::work_item& work) noexcep
 
 void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_context)
 {
-  // Initialize workers and workgroups
-  workers_ = std::make_unique<detail::v2::worker[]>(worker_count_);
 
+  auto& workgroup_descs = initializer_->workgroup_descriptions_;
   // Initialize worker contexts
   for (uint32_t i = 0; i < detail::v2::max_workgroup; ++i)
   {
-    if (workgroups_[i].get_thread_count() > 0)
+    if (workgroup_descs[i].thread_count_ > 0)
     {
       workgroup_count_ = std::max(workgroup_count_, i + 1);
+      worker_count_    = std::max(worker_count_, workgroup_descs[i].start_ + workgroup_descs[i].thread_count_);
     }
   }
+
+  workgroups_ = std::make_unique<detail::v2::workgroup[]>(workgroup_count_);
+
+  for (uint32_t i = 0; i < workgroup_count_; ++i)
+  {
+    if (workgroup_descs[i].thread_count_ > 0)
+    {
+      workgroups_[i].create_group(workgroup_descs[i].start_, workgroup_descs[i].thread_count_,
+                                  workgroup_descs[i].priority_);
+    }
+  }
+
+  // Initialize workers and workgroups
+  workers_ = std::make_unique<detail::v2::worker[]>(worker_count_);
 
   stop_.store(false, std::memory_order_relaxed);
 
@@ -374,6 +362,8 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
   entry_fn_(worker_id(0));
   start_counter.wait();
   entry_fn_ = {}; // Clear entry function after execution starts
+
+  initializer_ = nullptr;
 }
 
 void scheduler::end_execution()
@@ -448,22 +438,35 @@ void scheduler::finalize_worker(worker_id wid)
 
 void scheduler::create_group(workgroup_id group, uint32_t start_thread_idx, uint32_t thread_count, uint32_t priority)
 {
-  if (group.get_index() >= detail::v2::max_workgroup)
+  if (group.get_index() >= detail::v2::max_workgroup || thread_count == 0)
   {
-    return; // Invalid group ID
+    return;
   }
 
-  auto& wg = workgroups_[group.get_index()];
-  wg.initialize(start_thread_idx, thread_count, priority, this);
-  worker_count_ = std::max(worker_count_, wg.get_end_thread_idx());
+  if (!initializer_)
+  {
+    initializer_ = std::make_shared<worker_initializer>();
+  }
+
+  if (group.get_index() >= workgroup_count_)
+  {
+    workgroup_count_ = group.get_index() + 1;
+  }
+
+  auto& wg         = initializer_->workgroup_descriptions_[group.get_index()];
+  wg.start_        = start_thread_idx;
+  wg.thread_count_ = thread_count;
+  wg.priority_     = priority;
+  worker_count_    = std::max(worker_count_, wg.start_ + wg.thread_count_);
 }
 
 auto scheduler::create_group(uint32_t start_thread_idx, uint32_t thread_count, uint32_t priority) -> workgroup_id
 {
   // Find next available group ID
+  auto& workgroup_descs = initializer_->workgroup_descriptions_;
   for (uint32_t i = 0; i < detail::v2::max_workgroup; ++i)
   {
-    if (workgroups_[i].get_thread_count() == 0)
+    if (workgroup_descs[i].thread_count_ == 0)
     {
       workgroup_id new_group{i};
       create_group(new_group, start_thread_idx, thread_count, priority);

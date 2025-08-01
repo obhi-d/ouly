@@ -59,7 +59,8 @@ public:
   ~scheduler() noexcept;
 
   scheduler(scheduler&& other) noexcept
-      : stop_(other.stop_.load()), synchronizer_(std::move(other.synchronizer_)), workers_(std::move(other.workers_)),
+      : stop_(other.stop_.load()), synchronizer_(std::move(other.synchronizer_)),
+        initializer_(std::move(other.initializer_)), workers_(std::move(other.workers_)),
         workgroups_(std::move(other.workgroups_)), threads_(std::move(other.threads_)),
         entry_fn_(std::move(other.entry_fn_)), worker_count_(other.worker_count_),
         workgroup_count_(other.workgroup_count_)
@@ -74,6 +75,7 @@ public:
     {
       stop_            = other.stop_.load();
       synchronizer_    = std::move(other.synchronizer_);
+      initializer_     = std::move(other.initializer_);
       workers_         = std::move(other.workers_);
       workgroups_      = std::move(other.workgroups_);
       threads_         = std::move(other.threads_);
@@ -305,23 +307,21 @@ private:
   void finalize_worker(worker_id wid);
 
   struct worker_synchronizer;
+  struct worker_initializer;
   struct tally_publisher;
 
   static constexpr uint32_t max_workgroup_v2 = ouly::detail::v2::max_workgroup;
-
-  using workgroup_list = ouly::detail::mpmc_ring<workgroup_id, ouly::detail::v2::mpmc_capacity>;
-  workgroup_list needy_workgroups_;
 
   std::atomic_bool                     stop_{false};
   std::counting_semaphore<INT_MAX>     wake_tokens_{0}; // Used to wake up workers when work is available
   std::atomic_int32_t                  sleeping_{0};
   std::shared_ptr<worker_synchronizer> synchronizer_ = nullptr;
+  std::shared_ptr<worker_initializer>  initializer_  = nullptr;
 
   std::unique_ptr<worker_v2[]> workers_;
 
-  std::array<workgroup_v2, max_workgroup_v2> workgroups_;
-
-  std::vector<std::thread> threads_;
+  std::unique_ptr<workgroup_v2[]> workgroups_;
+  std::vector<std::thread>        threads_;
 
   // Scheduler state and configuration (cold data)
   scheduler_worker_entry entry_fn_;
