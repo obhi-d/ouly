@@ -16,8 +16,6 @@
 namespace ouly::detail
 {
 
-constexpr mode_t default_file_mode = 0644;
-
 #ifdef _WIN32
 auto protection_to_win32(cfg::protection prot) noexcept -> DWORD
 {
@@ -54,6 +52,9 @@ auto map_flags_to_win32(map_flags flags) noexcept -> DWORD
   return result;
 }
 #else
+
+constexpr mode_t default_file_mode = 0644;
+
 auto protection_to_posix(cfg::protection prot) noexcept -> int
 {
   int result = PROT_NONE;
@@ -243,10 +244,10 @@ auto map_file(std::filesystem::path const& filename, std::size_t size, cfg::prot
   {
     map_access |= FILE_MAP_WRITE;
   }
-  if ((static_cast<std::uint8_t>(prot) & static_cast<std::uint8_t>(cfg::protection::execute)) != 0)
-  {
-    map_access |= FILE_MAP_EXECUTE;
-  }
+  // if ((static_cast<std::uint8_t>(prot) & static_cast<std::uint8_t>(cfg::protection::execute)) != 0)
+  // {
+  //   map_access |= FILE_MAP_EXECUTE;
+  // }
 
   void* ptr = MapViewOfFile(mapping_handle, map_access, 0, 0, size);
   CloseHandle(mapping_handle);
