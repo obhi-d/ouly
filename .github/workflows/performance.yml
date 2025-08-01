@@ -86,6 +86,7 @@ jobs:
       run: |
         echo "🚀 Running extended performance benchmarks..."
         echo "Environment: COMPILER_ID=$COMPILER_ID, BUILD_NUMBER=$GITHUB_RUN_NUMBER"
+        echo "Commit SHA: $GITHUB_SHA"
         
         # Default benchmark type for scheduled/push events
         BENCHMARK_TYPE="${{ github.event.inputs.benchmark_type || 'all' }}"
@@ -100,11 +101,14 @@ jobs:
           fi
         fi
         
-        # Run general performance benchmarks
+        # Run general performance benchmarks with proper naming
         if [[ "$BENCHMARK_TYPE" == "all" || "$BENCHMARK_TYPE" == "allocator" ]]; then
           echo "🔄 Running general performance benchmarks..."
           if [ -f "./bench_performance" ]; then
-            ./bench_performance
+            # Generate output filename following the expected pattern
+            OUTPUT_FILE="${COMPILER_ID}-$(echo $GITHUB_SHA | cut -c1-8)-$GITHUB_RUN_NUMBER-allocator_performance.json"
+            echo "Saving allocator benchmark results to: $OUTPUT_FILE"
+            ./bench_performance "$OUTPUT_FILE"
           else
             echo "⚠️ General performance benchmark executable not found"
           fi
@@ -187,12 +191,24 @@ jobs:
       run: |
         if [ -f "scripts/visualize_performance.py" ]; then
           echo "📊 Generating comprehensive performance visualizations..."
+          echo "Available result files:"
+          find results -name "*.json" | head -10
           python3 scripts/visualize_performance.py results -o . -v
+          
+          echo "Generated visualization files:"
+          ls -la *.svg 2>/dev/null || echo "No SVG files generated"
+          
+          echo "Generated report:"
+          ls -la PERFORMANCE.md 2>/dev/null || echo "No PERFORMANCE.md generated"
         else
           echo "⚠️ Visualization script not found"
           echo "# OULY Performance Report (Extended)" > PERFORMANCE.md
           echo "**Generated:** $(date)" >> PERFORMANCE.md
           echo "**Type:** Extended/Dedicated Benchmarks" >> PERFORMANCE.md
+          echo "**Build Number:** ${{ github.run_number }}" >> PERFORMANCE.md
+          echo "**Commit:** ${{ github.sha }}" >> PERFORMANCE.md
+          echo "" >> PERFORMANCE.md
+          echo "⚠️ Performance visualization script was not available during this run." >> PERFORMANCE.md
         fi
 
     - name: Commit extended results

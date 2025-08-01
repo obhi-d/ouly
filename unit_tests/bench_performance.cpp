@@ -6,6 +6,7 @@
 #include "ouly/scheduler/parallel_for.hpp"
 #include "ouly/scheduler/scheduler.hpp"
 #include <atomic>
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <numeric>
@@ -388,6 +389,24 @@ int main(int argc, char* argv[])
     if (argc > 1)
     {
       output_file = argv[1];
+    }
+
+    // Check for CI environment variables to create consistent filenames
+    const char* commit_hash_env  = std::getenv("GITHUB_SHA");
+    const char* build_number_env = std::getenv("GITHUB_RUN_NUMBER");
+    const char* compiler_id_env  = std::getenv("COMPILER_ID");
+
+    constexpr int commit_hash_length = 8;
+    std::string   commit_hash =
+     (commit_hash_env != nullptr) ? std::string(commit_hash_env).substr(0, commit_hash_length) : "local";
+    std::string build_number = (build_number_env != nullptr) ? std::string(build_number_env) : "0";
+    std::string compiler_id  = (compiler_id_env != nullptr) ? std::string(compiler_id_env) : "unknown";
+
+    // If we're in CI and no custom output file was specified, use the standard naming convention
+    if ((commit_hash_env != nullptr || build_number_env != nullptr) && argc <= 1)
+    {
+      output_file = compiler_id + "-" + commit_hash + "-" + build_number + "-allocator_performance.json";
+      std::cout << "Using CI naming convention: " << output_file << '\n';
     }
 
     // Create a comprehensive benchmark that includes representative results for JSON output
