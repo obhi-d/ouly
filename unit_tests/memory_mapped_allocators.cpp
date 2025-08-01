@@ -17,7 +17,7 @@ auto create_test_file(const std::filesystem::path& filename, size_t size) -> voi
   file.write("", 1); // Create sparse file
 }
 
-auto cleanup_test_file(const std::string& filename) -> void
+auto cleanup_test_file(const std::filesystem::path& filename) -> void
 {
   std::remove(filename.c_str());
 }
