@@ -246,7 +246,7 @@ TEST_CASE("Validate error handling", "[mmap_error_handling]")
       source.map("non_existent_file.dat");
       FAIL("Expected exception for non-existent file");
     }
-    catch (const std::system_error& e)
+    catch (const std::system_error& /*e*/)
     {}
   }
 
@@ -258,7 +258,7 @@ TEST_CASE("Validate error handling", "[mmap_error_handling]")
       [[maybe_unused]] auto source = ouly::make_mmap_source("non_existent_file.dat");
       FAIL("Expected exception for non-existent file");
     }
-    catch (const std::system_error& e)
+    catch (const std::system_error& /*e*/)
     {}
   }
 }
