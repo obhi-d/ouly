@@ -19,7 +19,7 @@ auto create_test_file(const std::filesystem::path& filename, size_t size) -> voi
 
 auto cleanup_test_file(const std::filesystem::path& filename) -> void
 {
-  std::remove(filename.c_str());
+  std::filesystem::remove(filename);
 }
 } // namespace
 
