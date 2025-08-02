@@ -47,7 +47,7 @@ compile_commands.json
 
 
 # Allow the results directory
-!results/
+!results/*.*
 !results/*.json
 !results/*.svg
 !results/*.txt
@@ -57,7 +57,6 @@ compile_commands.json
 !results/*.yaml
 
 # Ignore all other directories
-/*/
 !/*.json
 !/*.svg
 !/*.txt
