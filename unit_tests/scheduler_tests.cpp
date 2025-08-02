@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
 #define GLM_ENABLE_EXPERIMENTAL
 #include "catch2/catch_all.hpp"
+#include "ouly/scheduler/auto_parallel_for.hpp"
 #include "ouly/scheduler/parallel_for.hpp"
 #include "ouly/scheduler/scheduler.hpp"
+#include "ouly/utility/subrange.hpp"
 #include <atomic>
 #include <chrono>
 #include <iostream>
@@ -1363,6 +1365,258 @@ TEMPLATE_TEST_CASE("Task Submission Patterns", "[scheduler][submission][patterns
 
   REQUIRE(immediate_tasks.load() == 50);
   REQUIRE(delayed_tasks.load() == 25);
+}
+
+// Test auto_parallel_for with ouly::subrange<uint32_t> - Basic functionality
+TEMPLATE_TEST_CASE("Auto Parallel For with Subrange Basic", "[scheduler][auto_parallel_for][subrange][template]",
+                   (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
+{
+  using TestRunner      = TestType;
+  using TaskContextType = typename TestRunner::task_context_type;
+
+  auto scheduler = TestRunner::setup_scheduler(4);
+
+  scheduler.begin_execution();
+  auto const& main_ctx = TestRunner::get_main_context();
+
+  std::atomic<uint32_t> processed_elements{0};
+  std::atomic<uint32_t> sum{0};
+
+  // Create a subrange from 0 to 99
+  ouly::subrange<uint32_t> test_range{0, 100};
+
+  // Test range-based lambda with subrange
+  ouly::auto_parallel_for(
+   [&](uint32_t begin, uint32_t end, TaskContextType const&)
+   {
+     for (uint32_t i = begin; i < end; ++i)
+     {
+       sum.fetch_add(i, std::memory_order_relaxed);
+       processed_elements.fetch_add(1, std::memory_order_relaxed);
+     }
+   },
+   test_range, main_ctx);
+
+  scheduler.end_execution();
+
+  REQUIRE(processed_elements.load() == 100);
+  // Sum of 0 to 99 = 99 * 100 / 2 = 4950
+  REQUIRE(sum.load() == 4950);
+}
+
+// Test auto_parallel_for with ouly::subrange<uint32_t> - Element-based processing
+TEMPLATE_TEST_CASE("Auto Parallel For with Subrange Element Based",
+                   "[scheduler][auto_parallel_for][subrange][template]",
+                   (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
+{
+  using TestRunner      = TestType;
+  using TaskContextType = typename TestRunner::task_context_type;
+
+  auto scheduler = TestRunner::setup_scheduler(4);
+
+  scheduler.begin_execution();
+  auto const& main_ctx = TestRunner::get_main_context();
+
+  std::atomic<uint32_t> processed_elements{0};
+  std::atomic<uint32_t> doubled_sum{0};
+
+  // Create a subrange from 1 to 50
+  ouly::subrange<uint32_t> test_range{1, 51};
+
+  // Test element-based lambda with subrange
+  ouly::auto_parallel_for(
+   [&](uint32_t value, TaskContextType const&)
+   {
+     doubled_sum.fetch_add(value * 2, std::memory_order_relaxed);
+     processed_elements.fetch_add(1, std::memory_order_relaxed);
+   },
+   test_range, main_ctx);
+
+  scheduler.end_execution();
+
+  REQUIRE(processed_elements.load() == 50);
+  // Sum of 1 to 50 doubled = 2 * (50 * 51 / 2) = 2550
+  REQUIRE(doubled_sum.load() == 2550);
+}
+
+// Test auto_parallel_for with ouly::subrange<uint32_t> - Large range stress test
+TEMPLATE_TEST_CASE("Auto Parallel For with Subrange Stress Test",
+                   "[scheduler][auto_parallel_for][subrange][stress][template]",
+                   (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
+{
+  using TestRunner      = TestType;
+  using TaskContextType = typename TestRunner::task_context_type;
+
+  auto scheduler = TestRunner::setup_scheduler(std::thread::hardware_concurrency());
+
+  scheduler.begin_execution();
+  auto const& main_ctx = TestRunner::get_main_context();
+
+  constexpr uint32_t    range_size = 100000;
+  std::atomic<uint32_t> processed_elements{0};
+  std::atomic<uint64_t> computation_result{0};
+
+  // Create a large subrange
+  ouly::subrange<uint32_t> large_range{0, range_size};
+
+  // Test with computationally intensive operations
+  ouly::auto_parallel_for(
+   [&](uint32_t begin, uint32_t end, TaskContextType const&)
+   {
+     uint64_t local_result = 0;
+     uint32_t local_count  = 0;
+
+     for (uint32_t i = begin; i < end; ++i)
+     {
+       // Some computation to make work meaningful
+       volatile uint32_t temp = i * 13 + 7;
+       temp                   = temp ^ (temp >> 8);
+       local_result += temp % 1000;
+       local_count++;
+     }
+
+     computation_result.fetch_add(local_result, std::memory_order_relaxed);
+     processed_elements.fetch_add(local_count, std::memory_order_relaxed);
+   },
+   large_range, main_ctx);
+
+  scheduler.end_execution();
+
+  REQUIRE(processed_elements.load() == range_size);
+  REQUIRE(computation_result.load() > 0);
+}
+
+// Test auto_parallel_for with ouly::subrange<uint32_t> - Empty range edge case
+TEMPLATE_TEST_CASE("Auto Parallel For with Subrange Empty Range",
+                   "[scheduler][auto_parallel_for][subrange][edge][template]",
+                   (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
+{
+  using TestRunner      = TestType;
+  using TaskContextType = typename TestRunner::task_context_type;
+
+  auto scheduler = TestRunner::setup_scheduler(2);
+
+  scheduler.begin_execution();
+  auto const& main_ctx = TestRunner::get_main_context();
+
+  std::atomic<uint32_t> processed_elements{0};
+
+  // Create an empty subrange
+  ouly::subrange<uint32_t> empty_range{10, 10};
+
+  // Test with empty range
+  ouly::auto_parallel_for(
+   [&](uint32_t begin, uint32_t end, TaskContextType const&)
+   {
+     for (uint32_t i = begin; i < end; ++i)
+     {
+       processed_elements.fetch_add(1, std::memory_order_relaxed);
+     }
+   },
+   empty_range, main_ctx);
+
+  scheduler.end_execution();
+
+  REQUIRE(processed_elements.load() == 0);
+}
+
+// Test auto_parallel_for with ouly::subrange<uint32_t> - Single element range
+TEMPLATE_TEST_CASE("Auto Parallel For with Subrange Single Element",
+                   "[scheduler][auto_parallel_for][subrange][edge][template]",
+                   (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
+{
+  using TestRunner      = TestType;
+  using TaskContextType = typename TestRunner::task_context_type;
+
+  auto scheduler = TestRunner::setup_scheduler(2);
+
+  scheduler.begin_execution();
+  auto const& main_ctx = TestRunner::get_main_context();
+
+  std::atomic<uint32_t> processed_elements{0};
+  std::atomic<uint32_t> result_value{0};
+
+  // Create a single element subrange
+  ouly::subrange<uint32_t> single_range{42, 43};
+
+  // Test with single element range
+  ouly::auto_parallel_for(
+   [&](uint32_t value, TaskContextType const&)
+   {
+     result_value.store(value, std::memory_order_relaxed);
+     processed_elements.fetch_add(1, std::memory_order_relaxed);
+   },
+   single_range, main_ctx);
+
+  scheduler.end_execution();
+
+  REQUIRE(processed_elements.load() == 1);
+  REQUIRE(result_value.load() == 42);
+}
+
+// Test auto_parallel_for with ouly::subrange<uint32_t> - Nested in async tasks
+TEMPLATE_TEST_CASE("Auto Parallel For with Subrange in Async Tasks",
+                   "[scheduler][auto_parallel_for][subrange][async][template]",
+                   (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
+{
+  using TestRunner      = TestType;
+  using TaskContextType = typename TestRunner::task_context_type;
+
+  auto scheduler = TestRunner::setup_scheduler(6);
+
+  scheduler.begin_execution();
+  auto const& main_ctx = TestRunner::get_main_context();
+
+  const uint32_t outer_task_count    = 5;
+  const uint32_t range_size_per_task = 1000;
+
+  std::atomic<uint32_t> completed_outer_tasks{0};
+  std::atomic<uint32_t> total_processed_elements{0};
+
+  for (uint32_t task_id = 0; task_id < outer_task_count; ++task_id)
+  {
+    scheduler.submit(main_ctx, ouly::workgroup_id(0),
+                     [&, task_id](TaskContextType const& ctx)
+                     {
+                       // Create a subrange for this task
+                       uint32_t                 start = task_id * range_size_per_task;
+                       uint32_t                 end   = start + range_size_per_task;
+                       ouly::subrange<uint32_t> task_range{start, end};
+
+                       std::atomic<uint32_t> task_processed{0};
+
+                       // Execute auto_parallel_for within the async task
+                       ouly::auto_parallel_for(
+                        [&task_processed](uint32_t begin, uint32_t end_val, TaskContextType const&)
+                        {
+                          for (uint32_t i = begin; i < end_val; ++i)
+                          {
+                            volatile uint32_t computation = i * 2 + 1;
+                            (void)computation; // Prevent optimization
+                            task_processed.fetch_add(1, std::memory_order_relaxed);
+                          }
+                        },
+                        task_range, ctx);
+
+                       // Verify all elements were processed in this task
+                       if (task_processed.load() == range_size_per_task)
+                       {
+                         total_processed_elements.fetch_add(range_size_per_task, std::memory_order_relaxed);
+                         completed_outer_tasks.fetch_add(1, std::memory_order_relaxed);
+                       }
+                     });
+  }
+
+  scheduler.end_execution();
+
+  REQUIRE(completed_outer_tasks.load() == outer_task_count);
+  REQUIRE(total_processed_elements.load() == outer_task_count * range_size_per_task);
 }
 
 // NOLINTEND
