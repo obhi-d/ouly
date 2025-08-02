@@ -43,9 +43,22 @@ def parse_filename(filename: str) -> Dict[str, str]:
             'extension': match.group(4)
         }
     
-    # Fallback pattern for other potential formats: compiler-commit-buildnumber-testid.ext
-    fallback_pattern = r'([^-]+)-([^-]+)-(\d+)-([^.]+)\.(json|txt)'
+    # Fallback pattern for the new naming convention: compiler-commit-buildnumber-testid.ext
+    # Handle compound compiler names like "gcc-14" or "clang-18"
+    fallback_pattern = r'([^-]+-[^-]+)-([^-]+)-(\d+)-([^.]+)\.(json|txt)'
     match = re.match(fallback_pattern, filename)
+    if match:
+        return {
+            'compiler': match.group(1),
+            'commit_hash': match.group(2),
+            'build_number': int(match.group(3)),
+            'test_id': match.group(4),
+            'extension': match.group(5)
+        }
+    
+    # Simple fallback pattern for single-part compiler names: compiler-commit-buildnumber-testid.ext
+    simple_fallback_pattern = r'([^-]+)-([^-]+)-(\d+)-([^.]+)\.(json|txt)'
+    match = re.match(simple_fallback_pattern, filename)
     if match:
         return {
             'compiler': match.group(1),
