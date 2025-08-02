@@ -148,68 +148,10 @@ public:
    * @note This function is noexcept and will forward the lambda to the internal submit implementation
    */
   template <typename Lambda>
-    requires(ouly::detail::Callable<Lambda, ouly::v1::task_context const&>)
+    requires(std::invocable<Lambda, ouly::v1::task_context const&>)
   void submit(ouly::v1::task_context const& src, workgroup_id group, Lambda&& data) noexcept
   {
     submit_internal(src.get_worker(), group, ouly::detail::v1::work_item::bind(std::forward<Lambda>(data)));
-  }
-
-  /**
-   * @brief Submits a member function to be executed as a work item in the scheduler
-   *
-   * @tparam M Member function pointer to be executed
-   * @tparam Class Type of the context object
-   * @param src ID of the worker submitting the work item
-   * @param group Workgroup ID for the work item
-   * @param ctx Reference to the context object
-   *
-   * @note This is a convenience overload that automatically binds the member function to the context
-   * @note The function is noexcept and will not throw exceptions
-   */
-  template <auto M, typename Class>
-  void submit(ouly::v1::task_context const& src, workgroup_id group, Class& ctx) noexcept
-  {
-    submit_internal(src.get_worker(), group, ouly::detail::v1::work_item::bind<M>(ctx));
-  }
-
-  /**
-   * @brief Submits a work item to the scheduler bound to a member function.
-   *
-   * @tparam M Member function pointer to be bound to the work item
-   * @param src Source worker ID submitting the work
-   * @param group Workgroup ID for the submitted work
-   *
-   * @note This is a convenience overload that automatically creates a work item
-   *       using the member function pointer and workgroup.
-   */
-  template <auto M>
-  void submit(ouly::v1::task_context const& src, workgroup_id group) noexcept
-  {
-    submit_internal(src.get_worker(), group, ouly::detail::v1::work_item::bind<M>());
-  }
-
-  /**
-   * @brief Submits a task to be executed by the scheduler.
-   *
-   * @tparam Args Variadic template parameter pack for callable arguments
-   * @param src Source worker ID submitting the task
-   * @param group Target workgroup ID where the task will be executed
-   * @param callable Function pointer to the task to be executed
-   * @param args Arguments to be forwarded to the callable
-   *
-   * @note This function is noexcept and will not throw exceptions
-   *
-   * This template function binds the given callable with its arguments and submits it
-   * as a work item to the specified workgroup. The task will be executed by one of
-   * the workers in the target workgroup.
-   */
-  template <typename... Args>
-  void submit(ouly::v1::task_context const& src, workgroup_id group, task_delegate::fnptr callable,
-              Args&&... args) noexcept
-  {
-    submit_internal(
-     src.get_worker(), group,
-     ouly::detail::v1::work_item::bind(callable, std::make_tuple<std::decay_t<Args>...>(std::forward<Args>(args)...)));
   }
 
   /**
@@ -229,32 +171,10 @@ public:
 
   // Callable/lambda submission without explicit group
   template <typename Lambda>
-    requires(::ouly::detail::Callable<Lambda, ouly::v1::task_context const&>)
+    requires(std::invocable<Lambda, ouly::v1::task_context const&>)
   void submit(ouly::v1::task_context const& current, Lambda&& data) noexcept
   {
     submit(current, current.get_workgroup(), std::forward<Lambda>(data));
-  }
-
-  // Member function submission without explicit group
-  template <auto M, typename Class>
-  void submit(ouly::v1::task_context const& current, Class& ctx) noexcept
-  {
-    submit<M>(current, current.get_workgroup(), ctx);
-  }
-
-  // Member function without object (static) submission without explicit group
-  template <auto M>
-  void submit(ouly::v1::task_context const& current) noexcept
-  {
-    submit<M>(current, current.get_workgroup());
-  }
-
-  // Free function pointer submission without explicit group
-  template <typename... Args>
-  void submit(ouly::v1::task_context const& current, void (*callable)(ouly::v1::task_context const&, Args...),
-              Args&&... args) noexcept
-  {
-    submit(current, current.get_workgroup(), callable, std::forward<Args>(args)...);
   }
 
   /**

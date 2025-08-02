@@ -10,11 +10,6 @@
 namespace ouly::detail
 {
 
-template <typename F, typename... Args>
-concept Callable = requires(F f, Args&&... args) {
-  { f(std::forward<Args>(args)...) };
-};
-
 // Concept to check if a type is a free function pointer
 template <typename F, typename... Args>
 concept Function = std::is_function_v<std::remove_pointer_t<F>>;

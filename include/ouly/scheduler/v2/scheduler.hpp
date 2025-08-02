@@ -111,53 +111,10 @@ public:
    * @param data Callable object to be executed
    */
   template <typename Lambda>
-    requires(::ouly::detail::Callable<Lambda, ouly::v2::task_context const&>)
+    requires(std::invocable<Lambda, ouly::v2::task_context const&>)
   void submit(ouly::v2::task_context const& current, workgroup_id group, Lambda&& data) noexcept
   {
     submit_internal(current, group, detail::v2::work_item::bind(std::forward<Lambda>(data)));
-  }
-
-  /**
-   * @brief Submits a member function to be executed as a work item in the scheduler
-   * @tparam M Member function pointer to be executed
-   * @tparam Class Type of the context object
-   * @param current Context of the submitting worker
-   * @param group Workgroup ID for the work item
-   * @param ctx Reference to the context object
-   */
-  template <auto M, typename Class>
-  void submit(ouly::v2::task_context const& current, workgroup_id group, Class& ctx) noexcept
-  {
-    submit_internal(current, group, detail::v2::work_item::bind<M>(ctx));
-  }
-
-  /**
-   * @brief Submits a work item to the scheduler bound to a member function.
-   * @tparam M Member function pointer to be bound to the work item
-   * @param current Source worker context submitting the work
-   * @param group Workgroup ID for the submitted work
-   */
-  template <auto M>
-  void submit(ouly::v2::task_context const& current, workgroup_id group) noexcept
-  {
-    submit_internal(current, group, detail::v2::work_item::bind<M>());
-  }
-
-  /**
-   * @brief Submits a task to be executed by the scheduler.
-   * @tparam Args Variadic template parameter pack for callable arguments
-   * @param current Source worker context submitting the task
-   * @param group Target workgroup ID where the task will be executed
-   * @param callable Function pointer to the task to be executed
-   * @param args Arguments to be forwarded to the callable
-   */
-  template <typename... Args>
-  void submit(ouly::v2::task_context const& current, workgroup_id group, void (*callable)(task_context const&, Args...),
-              Args&&... args) noexcept
-  {
-    submit_internal(
-     current, group,
-     detail::v2::work_item::bind(callable, std::make_tuple<std::decay_t<Args>...>(std::forward<Args>(args)...)));
   }
 
   /**
@@ -177,32 +134,10 @@ public:
 
   // Callable/lambda submission without explicit group
   template <typename Lambda>
-    requires(::ouly::detail::Callable<Lambda, ouly::v2::task_context const&>)
+    requires(std::invocable<Lambda, ouly::v2::task_context const&>)
   void submit(ouly::v2::task_context const& current, Lambda&& data) noexcept
   {
     submit(current, current.get_workgroup(), std::forward<Lambda>(data));
-  }
-
-  // Member function submission without explicit group
-  template <auto M, typename Class>
-  void submit(ouly::v2::task_context const& current, Class& ctx) noexcept
-  {
-    submit<M>(current, current.get_workgroup(), ctx);
-  }
-
-  // Member function without object (static) submission without explicit group
-  template <auto M>
-  void submit(ouly::v2::task_context const& current) noexcept
-  {
-    submit<M>(current, current.get_workgroup());
-  }
-
-  // Free function pointer submission without explicit group
-  template <typename... Args>
-  void submit(ouly::v2::task_context const& current, void (*callable)(ouly::v2::task_context const&, Args...),
-              Args&&... args) noexcept
-  {
-    submit(current, current.get_workgroup(), callable, std::forward<Args>(args)...);
   }
 
   /**

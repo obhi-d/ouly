@@ -5,10 +5,12 @@
 #include "ouly/utility/tuple.hpp"
 #include "ouly/utility/type_traits.hpp"
 
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <type_traits>
+#include <utility>
 
 /**
  * Defines a basic_delegate object with a memory store to store a function pointer and its capture inline allocated.
@@ -75,354 +77,83 @@ class basic_delegate;
 template <size_t SmallSize, typename Ret, typename... Args>
 class basic_delegate<SmallSize, Ret(Args...)>
 {
-  using delegate_fn                   = Ret (*)(basic_delegate&, Args...);
-  static constexpr size_t buffer_size = sizeof(void*) + SmallSize;
+  using fnptr = Ret (*)(basic_delegate& data, Args...);
 
-  // Small object optimization buffer
-  // NOLINTNEXTLINE
-  alignas(std::max_align_t) std::array<std::byte, buffer_size> buffer_;
-
-  template <typename P>
-  struct compressed_pair
+  struct invocable_base
   {
-    static constexpr size_t small_functor_size = buffer_size - sizeof(P);
-    alignas(std::max_align_t) std::byte functor_[small_functor_size];
-    alignas(alignof(P)) std::byte data_[sizeof(P)];
+    fnptr callable_ = nullptr;
   };
 
-  // Helper to call free functions
-  template <typename F>
-  static auto invoke_free_function_by_pointer(basic_delegate& d, Args... args) -> Ret
+  template <typename Lambda>
+  struct invocable_impl : invocable_base
   {
-    // Retrieve the stored function and cast it back to its original type
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    auto& func = *reinterpret_cast<F*>(d.buffer_.data() + sizeof(delegate_fn));
-    return func(std::forward<Args>(args)...);
-  }
+    static auto execute(basic_delegate& data, Args... args) -> Ret
+    {
+      // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+      auto* invocable = reinterpret_cast<invocable_impl<Lambda>*>(data.buffer_.data());
+      return invocable->lambda_(std::forward<Args>(args)...);
+    }
 
-  // Helper to call free functions
-  template <auto F>
-  static auto invoke_free_function_by_binding(basic_delegate& /*d*/, Args... args) -> Ret
-  {
-    // Retrieve the stored function and cast it back to its original type
-    return F(std::forward<Args>(args)...);
-  }
+    invocable_impl(Lambda&& lambda) noexcept : invocable_base{&invocable_impl::execute}, lambda_(std::move(lambda)) {}
+    invocable_impl(Lambda const& lambda) noexcept : invocable_base{&invocable_impl::execute}, lambda_(lambda) {}
 
-  // Helper to call member functions
-  template <typename M>
-  static auto invoke_member_function(basic_delegate& d, Args... args) -> Ret
-  {
-    using C = typename M::class_type;
-    // using F = typename M::function_type;
-
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    auto data = *reinterpret_cast<C**>(d.buffer_.data() + sizeof(delegate_fn));
-    return M::invoke(*data, std::forward<Args>(args)...);
-  }
-
-  // Helper to call lambdas or functors
-  template <typename F>
-  static auto invoke_lambda(basic_delegate& d, Args... args) -> Ret
-  {
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    auto& func = *reinterpret_cast<F*>(d.buffer_.data() + sizeof(delegate_fn));
-    return func(std::forward<Args>(args)...);
-  }
-
-  // Helper to call free functions
-  template <typename F, typename P>
-  static auto p_invoke_free_function_by_pointer(basic_delegate& d, Args... args) -> Ret
-  {
-    // Retrieve the stored function and cast it back to its original type
-    auto& func =
-     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-     *reinterpret_cast<F*>(reinterpret_cast<compressed_pair<P>*>(d.buffer_)->functor_ + sizeof(delegate_fn));
-
-    return func(std::forward<Args>(args)...);
-  }
-
-  // Helper to call member functions
-  template <typename M, typename P>
-  static auto p_invoke_member_function(basic_delegate& d, Args... args) -> Ret
-  {
-    using C = typename M::class_type;
-    // using F = typename M::function_type;
-
-    auto data =
-     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-     *reinterpret_cast<C**>(reinterpret_cast<compressed_pair<P>*>(d.buffer_)->functor_ + sizeof(delegate_fn));
-    return M::invoke(*data, std::forward<Args>(args)...);
-  }
-
-  // Helper to call lambdas or functors
-  template <typename F, typename P>
-  static auto p_invoke_lambda(basic_delegate& d, Args... args) -> Ret
-  {
-    auto& func =
-     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-     *reinterpret_cast<F*>(reinterpret_cast<compressed_pair<P>*>(d.buffer_)->functor_ + sizeof(delegate_fn));
-    return func(std::forward<Args>(args)...);
-  }
-
-  void construct(delegate_fn fn)
-  {
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    *reinterpret_cast<delegate_fn*>(buffer_.data()) = fn;
-  }
-
-  template <typename F>
-  void construct(delegate_fn fn, F&& arg)
-  {
-    using DecayedF = std::decay_t<F>;
-    typed_static_assert<sizeof(DecayedF) <= SmallSize && "Function/Lamda object too large for inline storage.",
-                        DecayedF>();
-    typed_static_assert<std::is_trivially_destructible_v<DecayedF> && "Capture type should be trivially destructible",
-                        DecayedF>();
-
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    *reinterpret_cast<delegate_fn*>(buffer_.data()) = fn;
-    new (buffer_.data() + sizeof(delegate_fn)) DecayedF(std::forward<F>(arg));
-  }
-
-  template <typename P>
-  void pconstruct(delegate_fn fn, P&& p)
-  {
-    using DecayedP       = std::decay_t<P>;
-    using CompressedPair = compressed_pair<DecayedP>;
-    typed_static_assert<sizeof(CompressedPair) <= buffer_size && "Function/Lamda object too large for inline storage.",
-                        DecayedP>();
-    typed_static_assert<std::is_trivially_destructible_v<DecayedP>, "Parameter type should be trivially destructible",
-                        DecayedP>();
-
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    auto pair = reinterpret_cast<compressed_pair<P>*>(buffer_.data());
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    *reinterpret_cast<delegate_fn*>(pair->functor_) = fn;
-    new (pair->data_) DecayedP(std::forward<P>(p));
-  }
-
-  template <typename F, typename P>
-  void pconstruct(delegate_fn fn, F&& arg, P&& p)
-  {
-    using DecayedF           = std::decay_t<F>;
-    using DecayedP           = std::decay_t<P>;
-    using CompressedPair     = compressed_pair<DecayedP>;
-    constexpr bool condition = (sizeof(CompressedPair) <= buffer_size &&
-                                CompressedPair::small_functor_size >= (sizeof(delegate_fn) + sizeof(DecayedF)));
-    typed_static_assert<condition && "Function/Lamda object too large for inline storage.", DecayedP>();
-    typed_static_assert<std::is_trivially_destructible_v<DecayedF> && "Capture type should be trivially destructible",
-                        DecayedF>();
-    typed_static_assert<std::is_trivially_destructible_v<DecayedP> && "Parameter type should be trivially destructible",
-                        DecayedP>();
-
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    auto pair = reinterpret_cast<compressed_pair<P>*>(buffer_.data());
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    *reinterpret_cast<delegate_fn*>(pair->functor_) = fn;
-    new (pair->functor_ + sizeof(delegate_fn)) DecayedF(std::forward<F>(arg));
-    new (pair->data_) DecayedP(std::forward<P>(p));
-  }
+    Lambda lambda_;
+  };
 
 public:
   struct noinit_t
   {};
-
   static constexpr noinit_t noinit{};
 
-  using fnptr = delegate_fn;
-
   basic_delegate() noexcept : buffer_{} {}
+  // NOLINTNEXTLINE
+  explicit basic_delegate(noinit_t /* unused */) noexcept {}
+  basic_delegate(basic_delegate const&)     = default;
+  basic_delegate(basic_delegate&&) noexcept = default;
+  ~basic_delegate() noexcept                = default;
 
-  constexpr basic_delegate(noinit_t /*noinit*/) noexcept
+  // NOLINTNEXTLINE
+  auto operator=(basic_delegate const&) -> basic_delegate& = default;
+  // NOLINTNEXTLINE
+  auto operator=(basic_delegate&&) noexcept -> basic_delegate& = default;
+
+  template <typename Lambda>
+    requires(std::is_invocable_r_v<Ret, Lambda, Args...>)
+  static auto bind(Lambda&& lambda) noexcept -> basic_delegate<SmallSize, Ret(Args...)>
   {
-    // No initialization, used for move construction
-  }
+    using LambdaType = std::decay_t<Lambda>;
+    static_assert(sizeof(invocable_impl<LambdaType>) <= SmallSize,
+                  "Lambda size exceeds small object optimization size");
+    static_assert(std::is_trivially_destructible_v<LambdaType> && std::is_trivially_copyable_v<LambdaType>,
+                  "Lambda must be trivially destructible and copyable for basic_delegate");
 
-  /** Bind method for a functor_ or lambda like object */
-  template <typename F>
-  static auto bind(F&& func) -> basic_delegate
-  {
-    using DecayedF = std::decay_t<F>;
-    basic_delegate r;
-    if constexpr (std::is_function_v<DecayedF>)
-    {
-      if constexpr (std::is_assignable_v<fnptr&, DecayedF>)
-      {
-        r.construct(func);
-      }
-      else
-      {
-        r.construct(&invoke_free_function_by_pointer<DecayedF>, std::forward<F>(func));
-      }
-    }
-    else
-    {
-      if constexpr (std::is_assignable_v<fnptr&, DecayedF>)
-      {
-        r.construct(func);
-      }
-      else
-      {
-        r.construct(&invoke_lambda<DecayedF>, std::forward<F>(func));
-      }
-    }
-    return r;
-  }
-
-  /** Bind method for a class member and its class instance */
-  template <auto M>
-  static auto bind(typename ouly::member_function<M>::class_type& instance) -> basic_delegate
-  {
-    // using C = typename ouly::member_function<M>::class_type;
-    // using F = typename ouly::member_function<M>::function_type;
-
-    basic_delegate r;
-    r.construct(&invoke_member_function<ouly::member_function<M>>, &instance);
-    return r;
-  }
-
-  /** Bind a free function */
-  template <auto F>
-  static auto bind() -> basic_delegate
-  {
-    basic_delegate r;
-    r.construct(&invoke_free_function_by_binding<F>);
-    return r;
-  }
-
-  template <typename L, typename F>
-  static auto bind(L&& func, F&& data) -> basic_delegate
-  {
-    basic_delegate r;
-    using DecayedL = std::decay_t<L>;
-    static_assert(std::is_assignable_v<fnptr&, DecayedL>, "Can only accept function pointer");
-    r.construct(std::forward<L>(func), std::forward<F>(data));
-    return r;
-  }
-
-  /**
-   * Bind method for a compressed pair of function + some data, that is not passed to the function, but can be later
-   * obtained from the packaged function object. The compressed pair must fit within the SmallBuffer along with its
-   * alignment requirements.
-   */
-  template <typename F, typename P>
-  static auto pbind(F&& func, P&& p) -> basic_delegate
-  {
-    using DecayedF = std::decay_t<F>;
-    using DecayedP = std::decay_t<P>;
-
-    basic_delegate r;
-    if constexpr (std::is_function_v<DecayedF>)
-    {
-      if constexpr (std::is_assignable_v<fnptr&, DecayedF>)
-      {
-        r.pconstruct(func, std::forward<P>(p));
-      }
-      else
-      {
-        r.pconstruct(&p_invoke_free_function_by_pointer<DecayedF, DecayedP>, std::forward<F>(func), std::forward<P>(p));
-      }
-    }
-    else
-    {
-      if constexpr (std::is_assignable_v<fnptr&, DecayedF>)
-      {
-        r.pconstruct(func, std::forward<P>(p));
-      }
-      else
-      {
-        r.pconstruct(&p_invoke_lambda<DecayedF, DecayedP>, std::forward<F>(func), std::forward<P>(p));
-      }
-    }
-    return r;
-  }
-
-  /** Bind method for a class member and its class instance along with an extra data, that is not passed to the
-   * function, but can be later obtained from the packaged function object. The compressed pair must fit within the
-   * SmallBuffer along with its alignment requirements.
-   */
-  template <auto M, typename P>
-  static auto pbind(typename ouly::member_function<M>::class_type& instance, P&& p) -> basic_delegate
-  {
-    // using C = typename ouly::member_function<M>::class_type;
-    // using F = typename ouly::member_function<M>::function_type;
-    basic_delegate r;
-    r.pconstruct(&p_invoke_member_function<ouly::member_function<M>, std::decay_t<P>>, &instance, std::forward<P>(p));
-    return r;
-  }
-
-  /** Bind a free function along with an extra data, that is not passed to the
-   * function, but can be later obtained from the packaged function object. The compressed pair must fit within the
-   * SmallBuffer along with its alignment requirements.
-   */
-  template <auto F, typename P>
-    requires(!ouly::member_function<F>::is_member_function_traits)
-  static auto pbind(P&& arg) -> basic_delegate
-  {
-    // using DecayedP = std::decay_t<P>;
-    basic_delegate r;
-
-    r.pconstruct(&invoke_free_function_by_binding<F>, std::forward<P>(arg));
-    return r;
-  }
-
-  template <typename F, typename P>
-  static auto pbind(fnptr fn_ptr, F&& data, P&& p) -> basic_delegate
-  {
-    basic_delegate r;
-    r.pconstruct(fn_ptr, std::forward<F>(data), std::forward<P>(p));
-    return r;
-  }
-
-  template <typename... PArgs>
-  auto args() const noexcept -> std::tuple<PArgs...> const&
-  {
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    return *reinterpret_cast<std::tuple<PArgs...> const*>(buffer_.data() + sizeof(delegate_fn));
-  }
-
-  template <typename... PArgs>
-  auto args() noexcept -> std::tuple<PArgs...>&
-  {
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    return *reinterpret_cast<std::tuple<PArgs...>*>(buffer_.data() + sizeof(delegate_fn));
-  }
-
-  /** Get compressed pair's data */
-  template <typename P>
-  [[nodiscard]] auto get_compressed_data() const -> P const&
-  {
-    using CompressedPair = compressed_pair<P>;
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    auto pair = reinterpret_cast<CompressedPair const*>(buffer_.data());
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    return *reinterpret_cast<P const*>(pair->data_);
-  }
-
-  explicit operator bool() const noexcept
-  {
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    return (*reinterpret_cast<delegate_fn const*>(buffer_.data())) != nullptr;
-  }
-
-  auto operator=(std::nullptr_t) noexcept -> basic_delegate&
-  {
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    (*reinterpret_cast<delegate_fn*>(buffer_.data())) = nullptr;
-    return *this;
+    basic_delegate ret;
+    new (ret.buffer_.data()) invocable_impl<LambdaType>(std::forward<Lambda>(lambda));
+    return ret;
   }
 
   // Invocation operator
   auto operator()(Args... args) -> Ret
   {
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    OULY_ASSERT(*reinterpret_cast<delegate_fn*>(buffer_.data()));
+    auto* invocable = reinterpret_cast<invocable_base*>(buffer_.data());
+    OULY_ASSERT(invocable);
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    return ((*reinterpret_cast<delegate_fn*>(buffer_.data())))(*this, std::forward<Args>(args)...);
+    return invocable->callable_(*this, std::forward<Args>(args)...);
   }
+
+  explicit operator bool() const noexcept
+  {
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    auto const* invocable = reinterpret_cast<invocable_base const*>(buffer_.data());
+    return invocable->callable_ != nullptr;
+  }
+
+private:
+  alignas(alignof(std::max_align_t)) std::array<uint8_t, SmallSize> buffer_;
 };
 
-constexpr uint32_t max_delegate_base_size = 24;
+constexpr uint32_t max_delegate_base_size = 64;
 template <typename V>
 using delegate = basic_delegate<max_delegate_base_size, V>;
 

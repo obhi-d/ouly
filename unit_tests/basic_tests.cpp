@@ -369,7 +369,7 @@ public:
 using test_delegate_t = ouly::delegate<int(int, int)>;
 TEST_CASE("Test free function delegate", "[delegate]")
 {
-  auto del = test_delegate_t::bind<free_function>();
+  auto del = test_delegate_t::bind(free_function);
   REQUIRE(static_cast<bool>(del) == true); // Ensure the delegate was initialized correctly
   REQUIRE(del(3, 4) == 7);                 // Check that it correctly calls the free function
 
@@ -404,14 +404,22 @@ TEST_CASE("Test member function delegate", "[delegate]")
 
   SECTION("Test non-const member function")
   {
-    auto del = test_delegate_t::bind<&MyClass::multiply>(obj);
+    auto del = test_delegate_t::bind(
+     [&obj](int a, int b)
+     {
+       return obj.multiply(a, b);
+     });
     REQUIRE(static_cast<bool>(del) == true);
     REQUIRE(del(3, 4) == 12); // Test non-const member function invocation
   }
 
   SECTION("Test const member function")
   {
-    auto del = test_delegate_t::bind<&MyClass::add>(obj);
+    auto del = test_delegate_t::bind(
+     [&obj](int a, int b) -> int
+     {
+       return obj.add(a, b);
+     });
     REQUIRE(static_cast<bool>(del) == true);
     REQUIRE(del(3, 4) == 7); // Test const member function invocation
   }
@@ -443,13 +451,13 @@ TEST_CASE("Test empty delegate behavior", "[delegate]")
 
 TEST_CASE("Test direct delegate behavior", "[delegate]")
 {
-  auto lambda = [](test_delegate_t& data, int a, int b) -> int
+  int  value  = 20;
+  auto lambda = [value](int a, int b) -> int
   {
-    auto [value] = data.args<int>();
     return a + b + value;
   };
 
-  ouly::delegate<int(int, int)> del = test_delegate_t::bind(lambda, 20);
+  auto del = test_delegate_t::bind(lambda);
 
   REQUIRE(static_cast<bool>(del) == true);
   REQUIRE(del(10, 5) == 35);
@@ -457,21 +465,15 @@ TEST_CASE("Test direct delegate behavior", "[delegate]")
 
 TEST_CASE("Test tuple expand delegate behavior", "[delegate]")
 {
-  auto lambda = [](test_delegate_t& data, int a, int b) -> int
+  int  value1 = 20;
+  int  value2 = 30;
+  auto lambda = [value1, value2](int a, int b) -> int
   {
-    auto [value1, value2] = data.args<int const, int const>();
     return a + b + value1 + value2;
   };
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wmissing-braces"
-#endif
-  ouly::delegate<int(int, int)> del = test_delegate_t::bind(lambda, ouly::tuple<int const, int const>{7, 13});
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
+  auto del = test_delegate_t::bind(lambda);
   REQUIRE(static_cast<bool>(del) == true);
-  REQUIRE(del(10, 5) == 35);
+  REQUIRE(del(10, 5) == 65);
 }
 
 std::string throw_error(ouly::visitor_error::code code)
