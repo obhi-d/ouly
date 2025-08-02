@@ -209,7 +209,7 @@ jobs:
         git config user.email "github-actions[bot]@users.noreply.github.com"
         
         # Remove the temporary new_results directory
-        rm -rf results
+        rm -rf last_results || echo "No last_results directory to remove"
         
         # Stage all the files we want to preserve on perfo branch
         git add PERFORMANCE.md || true
