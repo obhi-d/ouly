@@ -11,12 +11,13 @@
 #include <cstdint>
 #include <latch>
 #include <semaphore>
+#include <span>
 
 namespace ouly::v1
 {
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-thread_local detail::v1::worker const* g_worker = nullptr;
+thread_local ouly::detail::v1::worker const* g_worker = nullptr;
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 thread_local ouly::worker_id g_worker_id = {};
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
@@ -39,43 +40,6 @@ auto task_context::this_context::get() noexcept -> task_context const&
   return *g_worker->current_context_;
 }
 
-struct scheduler::tally_publisher
-{
-  scheduler* owner_ = nullptr;
-
-  void operator()() const noexcept;
-};
-
-struct scheduler::worker_synchronizer
-{
-  std::latch                    job_board_freeze_ack_;
-  std::barrier<tally_publisher> published_tally_;
-  std::atomic_int64_t           tally_{0};
-
-  worker_synchronizer(ptrdiff_t worker_count, scheduler* owner) noexcept
-      : job_board_freeze_ack_(worker_count), published_tally_(worker_count, tally_publisher{owner})
-  {}
-};
-
-void scheduler::tally_publisher::operator()() const noexcept
-{
-  // Cache-friendly sequential access with prefetching
-  int64_t            total_remaining_tasks = 0;
-  constexpr uint32_t prefetch_distance     = 2;
-
-  for (uint32_t thread = 0; thread < owner_->worker_count_; ++thread)
-  {
-    // Prefetch next worker data to improve cache performance
-    if (thread + prefetch_distance < owner_->worker_count_)
-    {
-      prefetch_for_read(&owner_->workers_[thread + prefetch_distance]);
-    }
-
-    total_remaining_tasks += owner_->workers_[thread].get().tally_;
-  }
-  owner_->synchronizer_->tally_.store(total_remaining_tasks, std::memory_order_release);
-}
-
 scheduler::~scheduler() noexcept
 {
   if (!stop_.load())
@@ -85,13 +49,13 @@ scheduler::~scheduler() noexcept
 }
 
 // NOLINTNEXTLINE
-inline void scheduler::do_work(workgroup_id id, worker_id thread, detail::v1::work_item& work) noexcept
+inline void scheduler::do_work(workgroup_id id, worker_id thread, ouly::detail::v1::work_item& work) noexcept
 {
-  auto& worker = workers_[thread.get_index()].get();
-  worker.tally_--;
+  auto& worker            = workers_[thread.get_index()].get();
   worker.current_context_ = &worker.contexts_[id.get_index()];
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
   work(*worker.current_context_);
+  workgroups_[id.get_index()].sink_one_work();
 }
 
 void scheduler::busy_work(worker_id thread) noexcept
@@ -142,51 +106,14 @@ void scheduler::run_worker(worker_id thread)
 
   entry_fn_(worker_id(thread.get_index()));
 
-  while (true)
+  while (!stop_.load(std::memory_order_acquire))
   {
     while (work(thread))
     {
-      ;
-    }
-
-    if (stop_.load(std::memory_order_acquire)) [[unlikely]]
-    {
-      break;
     }
 
     wake_data_[thread.get_index()].get().status_.store(false, std::memory_order_relaxed);
     wake_data_[thread.get_index()].get().event_.release();
-  }
-
-  if (synchronizer_ != nullptr)
-  {
-    synchronizer_->job_board_freeze_ack_.count_down();
-    synchronizer_->job_board_freeze_ack_.wait();
-  }
-
-  finalize_worker(thread);
-}
-
-inline void scheduler::finalize_worker(worker_id thread)
-{
-  if (synchronizer_ != nullptr)
-  {
-
-    auto old_tally = workers_[thread.get_index()].get().tally_;
-    synchronizer_->tally_.fetch_add(old_tally, std::memory_order_acq_rel);
-
-    synchronizer_->published_tally_.arrive_and_wait();
-
-    while (synchronizer_->tally_.load(std::memory_order_acquire) > 0)
-    {
-      while (work(thread))
-      {
-      }
-
-      synchronizer_->published_tally_.arrive_and_wait();
-    }
-
-    // Wait to take stock of the remaning work
   }
 
   g_worker    = nullptr;
@@ -195,7 +122,7 @@ inline void scheduler::finalize_worker(worker_id thread)
 
 inline auto scheduler::work(worker_id thread) noexcept -> bool
 {
-  detail::v1::work_item available_work{detail::v1::work_item::noinit};
+  ouly::detail::v1::work_item available_work{ouly::detail::v1::work_item::noinit};
 
   auto id = get_work(thread, available_work);
   if (!id)
@@ -452,32 +379,10 @@ void scheduler::take_ownership() noexcept
 // NOLINTNEXTLINE
 void scheduler::finish_pending_tasks()
 {
-  synchronizer_ = std::make_shared<worker_synchronizer>(worker_count_, this);
+  wait_for_tasks();
 
   // First: Signal stop to prevent new task submissions
   stop_.store(true, std::memory_order_seq_cst);
-
-  // Second: Wake all workers to process remaining tasks
-  for (uint32_t thread = 1; thread < worker_count_; ++thread)
-  {
-    wake_up(worker_id(thread));
-  }
-
-  // Third: Wait for all workers to acknowledge the stop signal
-  synchronizer_->job_board_freeze_ack_.count_down();
-  while (!synchronizer_->job_board_freeze_ack_.try_wait())
-  {
-    for (uint32_t thread = 1; thread < worker_count_; ++thread)
-    {
-      // Wake up each worker to finish their tasks
-      wake_up(worker_id(thread));
-    }
-
-    // Wait for all workers to acknowledge freeze
-    ouly::detail::pause_exec();
-  }
-
-  finalize_worker(worker_id(0));
 }
 
 void scheduler::end_execution()
@@ -493,8 +398,6 @@ void scheduler::end_execution()
 void scheduler::submit_internal([[maybe_unused]] worker_id src, workgroup_id dst,
                                 ouly::detail::v1::work_item const& work)
 {
-  workers_[src.get_index()].get().tally_++;
-
   auto& wg = workgroups_[dst.get_index()];
 
   // Load balancing: Try to distribute work among threads in the workgroup
@@ -599,6 +502,28 @@ void scheduler::clear_group(workgroup_id group)
   wg.start_thread_idx_ = 0;
   wg.thread_count_     = 0;
 }
+
+auto scheduler::has_work() const -> bool
+{
+  auto workers = std::span(workers_.get(), worker_count_);
+  for (const auto& group : workgroups_)
+  {
+    if (group.has_work_strong())
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+void scheduler::wait_for_tasks()
+{
+  while (has_work())
+  {
+    busy_work(worker_id(0));
+  }
+}
+
 } // namespace ouly::v1
 
 void ouly::v1::task_context::busy_wait(std::binary_semaphore& event) const

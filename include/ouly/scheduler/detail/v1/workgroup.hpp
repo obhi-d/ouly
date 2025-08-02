@@ -9,6 +9,11 @@
 #include "ouly/scheduler/v1/task_context.hpp"
 #include <cstdint>
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4324) // structure was padded due to alignment specifier
+#endif
+
 namespace ouly::detail::v1
 {
 static constexpr uint32_t max_local_work_item       = 32; // 1/2 cache lines
@@ -29,6 +34,9 @@ using mpmc_work_ring   = ouly::detail::mpmc_ring<work_item, max_work_items_per_w
 // Optimized workgroup structure with per-worker queues
 struct workgroup
 {
+
+  alignas(ouly::detail::cache_line_size) std::atomic<int64_t> tally_ = {0};
+
   // Per-worker queues within this workgroup - one queue per worker thread
   std::unique_ptr<mpmc_work_ring[]> per_worker_queues_;
 
@@ -91,24 +99,51 @@ struct workgroup
   auto operator=(const workgroup&) -> workgroup& = delete;
 
   // Push item to a specific worker's queue within this workgroup
-  [[nodiscard]] auto push_item_to_worker(uint32_t worker_offset, work_item const& item) const -> bool
+  [[nodiscard]] auto push_item_to_worker(uint32_t worker_offset, work_item const& item) -> bool
   {
     if (worker_offset >= thread_count_)
     {
       return false;
     }
-    return per_worker_queues_[worker_offset].emplace(item);
+
+    if (per_worker_queues_[worker_offset].emplace(item))
+    {
+      tally_.fetch_add(1, std::memory_order_relaxed);
+      return true;
+    }
+
+    return false;
   }
 
   // Pop item from a specific worker's queue within this workgroup
-  [[nodiscard]] auto pop_item_from_worker(uint32_t worker_offset, work_item& item) const -> bool
+  [[nodiscard]] auto pop_item_from_worker(uint32_t worker_offset, work_item& item) -> bool
   {
     if (worker_offset >= thread_count_)
     {
       return false;
     }
+
     return per_worker_queues_[worker_offset].pop(item);
+  }
+
+  void sink_one_work() noexcept
+  {
+    tally_.fetch_sub(1, std::memory_order_relaxed);
+  }
+
+  [[nodiscard]] auto has_work() const noexcept -> bool
+  {
+    return tally_.load(std::memory_order_relaxed) > 0;
+  }
+
+  [[nodiscard]] auto has_work_strong() const noexcept -> bool
+  {
+    return tally_.load(std::memory_order_acquire) > 0;
   }
 };
 
 } // namespace ouly::detail::v1
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif

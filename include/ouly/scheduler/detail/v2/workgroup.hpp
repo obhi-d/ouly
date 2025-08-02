@@ -149,12 +149,7 @@ public:
   auto pop_work_from_worker(work_item& out, uint32_t worker_offset) noexcept -> bool
   {
     OULY_ASSERT(std::cmp_less(worker_offset, thread_count_));
-    if (work_queues_[worker_offset].pop_back(out))
-    {
-      has_work_.fetch_sub(1, std::memory_order_relaxed);
-      return true;
-    }
-    return false;
+    return work_queues_[worker_offset].pop_back(out);
   }
 
   /**
@@ -172,7 +167,6 @@ public:
 
       if (work_queues_[worker_idx].steal(out))
       {
-        has_work_.fetch_sub(1, std::memory_order_relaxed);
         return true;
       }
     }
@@ -198,13 +192,7 @@ public:
    */
   [[nodiscard]] auto receive_from_mailbox(work_item& out) noexcept -> bool
   {
-    if (mailbox_->pop(out))
-    {
-      has_work_.fetch_sub(1, std::memory_order_relaxed);
-      return true;
-    }
-
-    return false;
+    return mailbox_->pop(out);
   }
 
   /**
@@ -213,6 +201,14 @@ public:
   [[nodiscard]] auto has_work() const noexcept -> bool
   {
     return has_work_.load(std::memory_order_relaxed) > 0;
+  }
+
+  /**
+   * @brief Check if this workgroup has work available
+   */
+  [[nodiscard]] auto has_work_strong() const noexcept -> bool
+  {
+    return has_work_.load(std::memory_order_acquire) > 0;
   }
 
   /**
@@ -246,6 +242,11 @@ public:
     priority_     = 0;
     work_queues_.reset();
     has_work_.store(0, std::memory_order_relaxed);
+  }
+
+  void sink_one_work()
+  {
+    has_work_.fetch_sub(1, std::memory_order_relaxed);
   }
 
   /**

@@ -50,25 +50,6 @@ auto task_context::this_context::get_worker_id() noexcept -> worker_id
   return g_worker_id;
 }
 
-struct scheduler::tally_publisher
-{
-  scheduler* owner_ = nullptr;
-
-  void operator()() const noexcept;
-};
-
-struct scheduler::worker_synchronizer
-{
-  std::latch                    job_board_freeze_ack_;
-  std::barrier<tally_publisher> published_tally_;
-  std::atomic_int64_t           tally_{0};
-  void*                         user_context_ = nullptr;
-
-  worker_synchronizer(ptrdiff_t worker_count, scheduler* owner) noexcept
-      : job_board_freeze_ack_(worker_count), published_tally_(worker_count, tally_publisher{owner})
-  {}
-};
-
 struct workgroup_desc
 {
   uint32_t start_        = 0;
@@ -80,19 +61,6 @@ struct scheduler::worker_initializer
 {
   std::array<workgroup_desc, detail::v2::max_workgroup> workgroup_descriptions_;
 };
-
-void scheduler::tally_publisher::operator()() const noexcept
-{
-  // Cache-friendly sequential access with prefetching
-  int64_t total_remaining_tasks = 0;
-
-  // Count tasks
-  for (uint32_t thread = 0; thread < owner_->worker_count_; ++thread)
-  {
-    total_remaining_tasks += owner_->workers_[thread].tally_;
-  }
-  owner_->synchronizer_->tally_.store(total_remaining_tasks, std::memory_order_release);
-}
 
 scheduler::~scheduler() noexcept
 {
@@ -109,7 +77,6 @@ void scheduler::submit_internal(task_context const& current, workgroup_id dst,
 
   // First try to submit to the worker's own queue if it belongs to this workgroup
   worker_id current_worker = current.get_worker();
-  workers_[current_worker.get_index()].tally_++;
 
   if (current.get_workgroup() == dst)
   {
@@ -187,13 +154,8 @@ void scheduler::run_worker(worker_id wid)
     }
   }
 
-  if (synchronizer_ != nullptr)
-  {
-    synchronizer_->job_board_freeze_ack_.count_down();
-    synchronizer_->job_board_freeze_ack_.wait();
-  }
-
-  finalize_worker(wid);
+  g_worker    = nullptr;
+  g_worker_id = {};
 }
 
 auto scheduler::enter_context(worker_id wid, workgroup_id needy_wg) noexcept -> bool
@@ -297,9 +259,11 @@ auto scheduler::find_work_for_worker(worker_id wid) noexcept -> bool
 void scheduler::execute_work(worker_id wid, detail::v2::work_item& work) noexcept
 {
   auto& worker = workers_[wid.get_index()];
-  worker.tally_--;
   // Create a copy since work_item expects mutable reference
-  work(worker.get_context());
+  auto& current_context = worker.get_context();
+  work(current_context);
+
+  workgroups_[current_context.get_workgroup().get_index()].sink_one_work();
 }
 
 void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_context)
@@ -379,60 +343,42 @@ void scheduler::end_execution()
   }
 
   threads_.clear();
-  synchronizer_.reset();
+}
+
+auto scheduler::has_work() const -> bool
+{
+  for (uint32_t i = 0; i < workgroup_count_; ++i)
+  {
+    if (workgroups_[i].has_work_strong())
+    {
+      return true; // At least one workgroup has work
+    }
+  }
+  return false; // No work found
+}
+
+void scheduler::wait_for_tasks()
+{
+  // Wake up all workers
+  wake_tokens_.release(worker_count_);
+
+  while (has_work())
+  {
+    wake_up_workers(worker_count_);
+    // Busy wait to ensure we don't miss any work
+    busy_work(worker_id(0));
+  }
 }
 
 void scheduler::finish_pending_tasks()
 {
-  synchronizer_ = std::make_shared<worker_synchronizer>(worker_count_, this);
+  wait_for_tasks();
 
   // First: Signal stop to prevent new task submissions
   stop_.store(true, std::memory_order_seq_cst);
 
   // Wake up all workers
   wake_tokens_.release(worker_count_);
-
-  // Third: Wait for all workers to acknowledge the stop signal
-  synchronizer_->job_board_freeze_ack_.count_down();
-  while (!synchronizer_->job_board_freeze_ack_.try_wait())
-  {
-    wake_up_workers(worker_count_);
-    // Wait for all workers to acknowledge freeze
-    ouly::detail::pause_exec();
-  }
-
-  finalize_worker(worker_id(0));
-}
-
-void scheduler::finalize_worker(worker_id wid)
-{
-  // Implementation for finalizing a worker
-  if (synchronizer_ != nullptr)
-  {
-
-    auto old_tally = workers_[wid.get_index()].tally_;
-    synchronizer_->tally_.fetch_add(old_tally, std::memory_order_acq_rel);
-
-    synchronizer_->published_tally_.arrive_and_wait();
-
-    while (synchronizer_->tally_.load(std::memory_order_acquire) > 0)
-    {
-      while (find_work_for_worker(wid))
-      {
-      }
-
-      synchronizer_->published_tally_.arrive_and_wait();
-    }
-
-    // Wait to take stock of the remaning work
-  }
-
-  if (wid == worker_id(0))
-  {
-    assert(synchronizer_->tally_.load(std::memory_order_acquire) == 0);
-  }
-  g_worker    = nullptr;
-  g_worker_id = {};
 }
 
 void scheduler::create_group(workgroup_id group, uint32_t start_thread_idx, uint32_t thread_count, uint32_t priority)
@@ -504,6 +450,7 @@ void scheduler::take_ownership() noexcept
 {
   // Implementation for taking ownership when multiple schedulers exist
   // This is typically used when multiple scheduler instances exist
+  enter_context(worker_id(0), workgroup_id(0));
 }
 
 void scheduler::busy_work(worker_id thread) noexcept

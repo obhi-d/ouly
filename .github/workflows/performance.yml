@@ -165,46 +165,10 @@ jobs:
     - name: Download all extended benchmark results
       uses: actions/download-artifact@v4
       with:
-        path: new_results
+        path: results
         pattern: extended-benchmark-results-*
         merge-multiple: true
-
-    - name: Process extended benchmark results
-      run: |
-        echo "🔄 Processing extended benchmark results..."
         
-        # Ensure directory structure exists
-        mkdir -p results scripts
-        
-        # Merge new results with existing ones (preserving history)
-        if [ -d "new_results" ] && [ "$(find new_results -name '*.json' -o -name '*.txt' | wc -l)" -gt 0 ]; then
-          echo "📦 Merging new results with existing historical data..."
-          echo "Existing results: $(find results -name '*.json' -o -name '*.txt' 2>/dev/null | wc -l) files"
-          echo "New results: $(find new_results -name '*.json' -o -name '*.txt' | wc -l) files"
-          
-          # Copy new results to results directory
-          cp -r new_results/* results/ 2>/dev/null || echo "No new result files to copy"
-          
-          echo "Total results after merge: $(find results -name '*.json' -o -name '*.txt' 2>/dev/null | wc -l) files"
-        else
-          echo "⚠️ No new results found to merge"
-        fi
-        
-        # Copy scripts from main branch
-        git checkout main -- scripts/ || echo "No scripts directory in main branch"
-        chmod +x scripts/*.py 2>/dev/null || echo "No Python scripts to make executable"
-        
-    - name: Cleanup old results
-      run: |
-        if [ -f "scripts/cleanup_old_results.py" ]; then
-          echo "🧹 Cleaning up old results (keeping last 20 builds)..."
-          echo "Results before cleanup: $(find results -name '*.json' -o -name '*.txt' 2>/dev/null | wc -l) files"
-          python3 scripts/cleanup_old_results.py results --keep 20
-          echo "Results after cleanup: $(find results -name '*.json' -o -name '*.txt' 2>/dev/null | wc -l) files"
-        else
-          echo "⚠️ Cleanup script not found, keeping all results"
-        fi
-
     - name: Generate comprehensive performance report
       run: |
         if [ -f "scripts/visualize_performance.py" ]; then
@@ -235,16 +199,13 @@ jobs:
         git config user.email "github-actions[bot]@users.noreply.github.com"
         
         # Remove the temporary new_results directory
-        rm -rf new_results
+        rm -rf results
         
         # Stage all the files we want to preserve on perfo branch
         git add PERFORMANCE.md || true
-        git add results/ || true
         git add *.svg 2>/dev/null || true
-        git add scripts/ || true
 
         if ! git diff --staged --quiet; then
-          RESULT_COUNT=$(find results -name "*.json" -o -name "*.txt" 2>/dev/null | wc -l)
           git commit -m "📊 Extended performance results (build ${{ github.run_number }})
 
           Commit: ${{ github.sha }}
@@ -260,4 +221,3 @@ jobs:
         else
           echo "No new extended results to commit"
         fi
-        

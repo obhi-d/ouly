@@ -59,14 +59,12 @@ public:
   ~scheduler() noexcept;
 
   scheduler(scheduler&& other) noexcept
-      : stop_(other.stop_.load()), synchronizer_(std::move(other.synchronizer_)),
-        initializer_(std::move(other.initializer_)), workers_(std::move(other.workers_)),
+      : stop_(other.stop_.load()), initializer_(std::move(other.initializer_)), workers_(std::move(other.workers_)),
         workgroups_(std::move(other.workgroups_)), threads_(std::move(other.threads_)),
         entry_fn_(std::move(other.entry_fn_)), worker_count_(other.worker_count_),
         workgroup_count_(other.workgroup_count_)
   {
     other.worker_count_ = 0;
-    other.synchronizer_ = nullptr;
   }
 
   auto operator=(scheduler&& other) noexcept -> scheduler&
@@ -74,7 +72,6 @@ public:
     if (this != &other)
     {
       stop_            = other.stop_.load();
-      synchronizer_    = std::move(other.synchronizer_);
       initializer_     = std::move(other.initializer_);
       workers_         = std::move(other.workers_);
       workgroups_      = std::move(other.workgroups_);
@@ -273,6 +270,8 @@ public:
     busy_work(ctx.get_worker());
   }
 
+  OULY_API void wait_for_tasks();
+
 private:
   /**
    * @brief Submit a work for execution - new implementation using mailbox system
@@ -304,19 +303,16 @@ private:
 
   /*  */
   void finish_pending_tasks();
-  void finalize_worker(worker_id wid);
+  auto has_work() const -> bool;
 
-  struct worker_synchronizer;
   struct worker_initializer;
-  struct tally_publisher;
 
   static constexpr uint32_t max_workgroup_v2 = ouly::detail::v2::max_workgroup;
 
-  std::atomic_bool                     stop_{false};
-  std::counting_semaphore<INT_MAX>     wake_tokens_{0}; // Used to wake up workers when work is available
-  std::atomic_int32_t                  sleeping_{0};
-  std::shared_ptr<worker_synchronizer> synchronizer_ = nullptr;
-  std::shared_ptr<worker_initializer>  initializer_  = nullptr;
+  std::atomic_bool                    stop_{false};
+  std::counting_semaphore<INT_MAX>    wake_tokens_{0}; // Used to wake up workers when work is available
+  std::atomic_int32_t                 sleeping_{0};
+  std::shared_ptr<worker_initializer> initializer_ = nullptr;
 
   std::unique_ptr<worker_v2[]> workers_;
 

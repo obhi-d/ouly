@@ -51,8 +51,6 @@ struct worker
   worker_id min_steal_friend_id_ = worker_id{0};
   worker_id max_steal_friend_id_ = worker_id{0};
 
-  int64_t tally_ = 0;
-
   ouly::v1::task_context* current_context_ = nullptr;
 
   // No local queues needed - work is organized per workgroup per worker

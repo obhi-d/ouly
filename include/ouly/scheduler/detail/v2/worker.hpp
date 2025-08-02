@@ -42,7 +42,6 @@ public:
 private:
   friend class ouly::v2::scheduler;
 
-  int64_t      tally_ = 0;
   task_context current_context_;
 };
 

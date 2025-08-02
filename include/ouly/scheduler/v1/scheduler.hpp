@@ -82,11 +82,10 @@ public:
   scheduler(scheduler&& other) noexcept
       : worker_count_(other.worker_count_), stop_(other.stop_.load()), workers_(std::move(other.workers_)),
         group_ranges_(std::move(other.group_ranges_)), wake_data_(std::move(other.wake_data_)),
-        workgroups_(std::move(other.workgroups_)), synchronizer_(std::move(other.synchronizer_)),
-        threads_(std::move(other.threads_)), entry_fn_(std::move(other.entry_fn_))
+        workgroups_(std::move(other.workgroups_)), threads_(std::move(other.threads_)),
+        entry_fn_(std::move(other.entry_fn_))
   {
     other.worker_count_ = 0;
-    other.synchronizer_ = nullptr;
   }
 
   auto operator=(scheduler&& other) noexcept -> scheduler&
@@ -96,13 +95,11 @@ public:
       workgroups_         = std::move(other.workgroups_);
       workers_            = std::move(other.workers_);
       worker_count_       = other.worker_count_;
-      synchronizer_       = std::move(other.synchronizer_);
       stop_               = other.stop_.load();
       entry_fn_           = std::move(other.entry_fn_);
       group_ranges_       = std::move(other.group_ranges_);
       wake_data_          = std::move(other.wake_data_);
       other.worker_count_ = 0;
-      other.synchronizer_ = nullptr;
     }
     return *this;
   }
@@ -130,7 +127,7 @@ public:
   void submit(ouly::v1::task_context const& src, workgroup_id group, C const& task_obj) noexcept
   {
     submit_internal(src.get_worker(), group,
-                    detail::v1::work_item::bind(
+                    ouly::detail::v1::work_item::bind(
                      [address = task_obj.address()](ouly::v1::task_context const&)
                      {
                        std::coroutine_handle<>::from_address(address).resume();
@@ -153,7 +150,7 @@ public:
     requires(ouly::detail::Callable<Lambda, ouly::v1::task_context const&>)
   void submit(ouly::v1::task_context const& src, workgroup_id group, Lambda&& data) noexcept
   {
-    submit_internal(src.get_worker(), group, detail::v1::work_item::bind(std::forward<Lambda>(data)));
+    submit_internal(src.get_worker(), group, ouly::detail::v1::work_item::bind(std::forward<Lambda>(data)));
   }
 
   /**
@@ -171,7 +168,7 @@ public:
   template <auto M, typename Class>
   void submit(ouly::v1::task_context const& src, workgroup_id group, Class& ctx) noexcept
   {
-    submit_internal(src.get_worker(), group, detail::v1::work_item::bind<M>(ctx));
+    submit_internal(src.get_worker(), group, ouly::detail::v1::work_item::bind<M>(ctx));
   }
 
   /**
@@ -187,7 +184,7 @@ public:
   template <auto M>
   void submit(ouly::v1::task_context const& src, workgroup_id group) noexcept
   {
-    submit_internal(src.get_worker(), group, detail::v1::work_item::bind<M>());
+    submit_internal(src.get_worker(), group, ouly::detail::v1::work_item::bind<M>());
   }
 
   /**
@@ -209,9 +206,9 @@ public:
   void submit(ouly::v1::task_context const& src, workgroup_id group, task_delegate::fnptr callable,
               Args&&... args) noexcept
   {
-    submit_internal(
-     src.get_worker(), group,
-     detail::v1::work_item::bind(callable, std::make_tuple<std::decay_t<Args>...>(std::forward<Args>(args)...), group));
+    submit_internal(src.get_worker(), group,
+                    ouly::detail::v1::work_item::bind(
+                     callable, std::make_tuple<std::decay_t<Args>...>(std::forward<Args>(args)...), group));
   }
 
   /**
@@ -331,27 +328,26 @@ public:
     busy_work(ctx.get_worker());
   }
 
+  OULY_API void wait_for_tasks();
+
 private:
   /**
    * @brief Submit a work for execution
    */
-  void submit_internal(worker_id src, workgroup_id dst, detail::v1::work_item const& work);
+  void submit_internal(worker_id src, workgroup_id dst, ouly::detail::v1::work_item const& work);
 
   void assign_priority_order();
   auto compute_group_range(uint32_t worker_index) -> bool;
 
   void        finish_pending_tasks();
-  inline void do_work(workgroup_id id, worker_id /*thread*/, detail::v1::work_item& /*work*/) noexcept;
+  inline void do_work(workgroup_id id, worker_id /*thread*/, ouly::detail::v1::work_item& /*work*/) noexcept;
   void        wake_up(worker_id /*thread*/) noexcept;
   void        run_worker(worker_id /*thread*/);
-  void        finalize_worker(worker_id /*thread*/);
-  auto        get_work(worker_id thread, detail::v1::work_item& work) noexcept -> workgroup_id;
-  auto        try_steal_work(worker_id thread, detail::v1::work_item& work) const noexcept -> bool;
+  auto        get_work(worker_id thread, ouly::detail::v1::work_item& work) noexcept -> workgroup_id;
 
   auto work(worker_id /*thread*/) noexcept -> bool;
 
-  struct worker_synchronizer;
-  struct tally_publisher;
+  auto has_work() const -> bool;
 
   uint32_t         worker_count_ = 0;
   std::atomic_bool stop_         = false;
@@ -365,19 +361,18 @@ private:
     std::binary_semaphore event_{0};
   };
 
-  using aligned_worker    = ouly::detail::cache_optimized_data<detail::v1::worker>;
+  using aligned_worker    = ouly::detail::cache_optimized_data<ouly::detail::v1::worker>;
   using aligned_wake_data = ouly::detail::cache_optimized_data<wake_data>;
 
   // Memory layout optimization: Allocate all scheduler data in a single block
   // for better cache locality and reduced allocator overhead
   // Hot data: accessed frequently during task execution
-  std::unique_ptr<aligned_worker[]>          workers_;
-  std::unique_ptr<detail::v1::group_range[]> group_ranges_;
-  std::unique_ptr<aligned_wake_data[]>       wake_data_;
+  std::unique_ptr<aligned_worker[]>                workers_;
+  std::unique_ptr<ouly::detail::v1::group_range[]> group_ranges_;
+  std::unique_ptr<aligned_wake_data[]>             wake_data_;
 
   // Work groups - frequently accessed during work stealing
-  std::vector<detail::v1::workgroup>   workgroups_;
-  std::shared_ptr<worker_synchronizer> synchronizer_ = nullptr;
+  std::vector<ouly::detail::v1::workgroup> workgroups_;
 
   std::vector<std::thread> threads_;
 
