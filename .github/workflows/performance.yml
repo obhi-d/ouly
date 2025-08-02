@@ -165,9 +165,19 @@ jobs:
     - name: Download all extended benchmark results
       uses: actions/download-artifact@v4
       with:
-        path: results
+        path: last_results
         pattern: extended-benchmark-results-*
         merge-multiple: true
+
+    - name: Copy results from last run to previous runs directory
+      run: |
+        mkdir -p results
+        if [ -d "last_results" ]; then
+          echo "📦 Copying results from last run..."
+          cp -r last_results/* results/ || echo "No results found in last run"
+        else
+          echo "⚠️ No last_results directory found"
+        fi
         
     - name: Generate comprehensive performance report
       run: |
@@ -204,6 +214,8 @@ jobs:
         # Stage all the files we want to preserve on perfo branch
         git add PERFORMANCE.md || true
         git add *.svg 2>/dev/null || true
+        git add results/*.json 2>/dev/null || true
+        git add results/*.txt 2>/dev/null || true
 
         if ! git diff --staged --quiet; then
           git commit -m "📊 Extended performance results (build ${{ github.run_number }})
