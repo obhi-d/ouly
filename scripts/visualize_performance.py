@@ -123,161 +123,105 @@ def load_benchmark_data(results_dir: Path) -> pd.DataFrame:
     df = df.sort_values(['build_number', 'run_date'])
     return df
 
+def extract_measurement_type(benchmark_name: str) -> str:
+    """Extract the base measurement type from benchmark name."""
+    # Handle scheduler comparison benchmarks
+    if '_V1' in benchmark_name or '_V2' in benchmark_name or '_TBB' in benchmark_name:
+        return benchmark_name.rsplit('_', 1)[0]  # Remove _V1, _V2, _TBB suffix
+    
+    # Handle allocator benchmarks - return as-is since they don't have variants
+    return benchmark_name
+
+def extract_measurement_type(benchmark_name: str) -> str:
+    """Extract the base measurement type from benchmark name."""
+    # Handle scheduler comparison benchmarks
+    if '_V1' in benchmark_name or '_V2' in benchmark_name or '_TBB' in benchmark_name:
+        return benchmark_name.rsplit('_', 1)[0]  # Remove _V1, _V2, _TBB suffix
+    
+    # Handle allocator benchmarks - return as-is since they don't have variants
+    return benchmark_name
+
 def create_performance_plots(df: pd.DataFrame, output_dir: Path) -> List[str]:
-    """Create performance visualization plots and return list of generated files."""
-    
-    if df.empty:
-        print("No data to plot")
-        return []
-    
-    output_dir.mkdir(parents=True, exist_ok=True)
+    """Create performance visualization plots split by measurement type."""
     generated_files = []
     
-    # Configure plot styling for high-quality SVG output
-    plt.style.use('default')
+    if df.empty:
+        return generated_files
     
-    # Color palette for different compilers/benchmarks
-    colors = plt.cm.Set1(np.linspace(0, 1, 10))
+    # Create output directory if it doesn't exist
+    output_dir.mkdir(parents=True, exist_ok=True)
     
-    # Get unique combinations for plotting
-    test_ids = df['test_id'].unique()
+    # Color palette for different lines
+    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', 
+              '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+    
+    # Extract measurement types from benchmark names
+    df = df.copy()
+    df['measurement_type'] = df['benchmark_name'].apply(extract_measurement_type)
+    
+    # Get unique values for grouping
+    measurement_types = df['measurement_type'].unique()
     compilers = df['compiler'].unique()
     
-    # Create aggregated plots across all test IDs
-    if len(df) > 1:  # Only create plots if we have multiple data points
+    # Create plots per measurement type
+    for measurement_type in measurement_types:
+        type_data = df[df['measurement_type'] == measurement_type]
         
-        # Plot 1: Overall Performance Trend (Elapsed Time)
-        plt.figure(figsize=(14, 10))
-        color_idx = 0
-        
-        for test_id in test_ids:
-            test_data = df[df['test_id'] == test_id]
-            
-            for compiler in compilers:
-                comp_data = test_data[test_data['compiler'] == compiler]
-                if comp_data.empty:
-                    continue
-                    
-                for bench_name in comp_data['benchmark_name'].unique():
-                    bench_data = comp_data[comp_data['benchmark_name'] == bench_name]
-                    if len(bench_data) > 1:  # Only plot if we have multiple points
-                        # Aggregate by build number to handle multiple runs per build
-                        agg_data = bench_data.groupby('build_number').agg({
-                            'elapsed_ns': 'median',
-                            'run_date': 'first'
-                        }).reset_index()
-                        
-                        label = f'{test_id} - {compiler} - {bench_name}'
-                        plt.plot(agg_data['build_number'], agg_data['elapsed_ns'], 
-                               marker='o', label=label, linewidth=2, markersize=6,
-                               color=colors[color_idx % len(colors)])
-                        color_idx += 1
-        
-        plt.xlabel('Build Number', fontsize=12)
-        plt.ylabel('Median Elapsed Time (nanoseconds)', fontsize=12)
-        plt.title('OULY Performance Trends - Execution Time Over Builds', fontsize=14, fontweight='bold')
-        plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=10)
-        plt.grid(True, alpha=0.3)
-        plt.yscale('log')  # Log scale for better visualization of different orders of magnitude
-        plt.tight_layout()
-        
-        filename = 'ouly_performance_trends_elapsed.svg'
-        filepath = output_dir / filename
-        plt.savefig(filepath, format='svg', bbox_inches='tight', dpi=300)
-        plt.close()
-        generated_files.append(filename)
-        
-        # Plot 2: Overall Throughput Trend
-        plt.figure(figsize=(14, 10))
-        color_idx = 0
-        
-        for test_id in test_ids:
-            test_data = df[df['test_id'] == test_id]
-            
-            for compiler in compilers:
-                comp_data = test_data[test_data['compiler'] == compiler]
-                if comp_data.empty:
-                    continue
-                    
-                for bench_name in comp_data['benchmark_name'].unique():
-                    bench_data = comp_data[comp_data['benchmark_name'] == bench_name]
-                    if len(bench_data) > 1:
-                        # Aggregate by build number
-                        agg_data = bench_data.groupby('build_number').agg({
-                            'operations_per_sec': 'median',
-                            'run_date': 'first'
-                        }).reset_index()
-                        
-                        label = f'{test_id} - {compiler} - {bench_name}'
-                        plt.plot(agg_data['build_number'], agg_data['operations_per_sec'], 
-                               marker='s', label=label, linewidth=2, markersize=6,
-                               color=colors[color_idx % len(colors)])
-                        color_idx += 1
-        
-        plt.xlabel('Build Number', fontsize=12)
-        plt.ylabel('Operations per Second', fontsize=12)
-        plt.title('OULY Performance Trends - Throughput Over Builds', fontsize=14, fontweight='bold')
-        plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=10)
-        plt.grid(True, alpha=0.3)
-        plt.yscale('log')  # Log scale for ops/sec
-        plt.tight_layout()
-        
-        filename = 'ouly_performance_trends_throughput.svg'
-        filepath = output_dir / filename
-        plt.savefig(filepath, format='svg', bbox_inches='tight', dpi=300)
-        plt.close()
-        generated_files.append(filename)
-    
-    # Create individual plots per test category for detailed analysis
-    for test_id in test_ids:
-        test_data = df[df['test_id'] == test_id]
-        
-        if test_data.empty or len(test_data.groupby(['compiler', 'benchmark_name'])) == 0:
+        if type_data.empty or len(type_data.groupby(['compiler', 'benchmark_name'])) == 0:
             continue
             
-        # Plot 1: Detailed view for this test ID - Elapsed Time
+        # Plot 1: Elapsed Time for this measurement type
         plt.figure(figsize=(12, 8))
         color_idx = 0
         
         for compiler in compilers:
-            comp_data = test_data[test_data['compiler'] == compiler]
+            comp_data = type_data[type_data['compiler'] == compiler]
             if comp_data.empty:
                 continue
                 
             for bench_name in comp_data['benchmark_name'].unique():
                 bench_data = comp_data[comp_data['benchmark_name'] == bench_name]
-                if len(bench_data) > 1:
-                    # Aggregate by build number
+                if len(bench_data) > 1:  # Only plot if we have multiple points
+                    # Aggregate by build number to handle multiple runs per build
                     agg_data = bench_data.groupby('build_number').agg({
                         'elapsed_ns': 'median',
                         'run_date': 'first'
                     }).reset_index()
                     
+                    # Create clean label (remove redundant measurement type prefix)
+                    label_suffix = bench_name.replace(measurement_type, '').strip('_')
+                    if label_suffix:
+                        label = f'{compiler} - {label_suffix}'
+                    else:
+                        label = f'{compiler}'
+                    
                     plt.plot(agg_data['build_number'], agg_data['elapsed_ns'], 
-                           marker='o', label=f'{compiler} - {bench_name}', linewidth=2, markersize=6,
+                           marker='o', label=label, linewidth=2, markersize=6,
                            color=colors[color_idx % len(colors)])
                     color_idx += 1
         
         plt.xlabel('Build Number', fontsize=12)
         plt.ylabel('Median Elapsed Time (nanoseconds)', fontsize=12)
-        plt.title(f'{test_id.replace("_", " ").title()} - Performance Trend', fontsize=14, fontweight='bold')
+        plt.title(f'{measurement_type.replace("_", " ").title()} - Performance Trend', fontsize=14, fontweight='bold')
         plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
         plt.grid(True, alpha=0.3)
         plt.yscale('log')
         plt.tight_layout()
         
-        filename = f'performance_trend_{test_id}.svg'
+        # Create safe filename
+        safe_name = measurement_type.replace('_', '').replace(' ', '').lower()
+        filename = f'performance_trend_{safe_name}.svg'
         filepath = output_dir / filename
         plt.savefig(filepath, format='svg', bbox_inches='tight', dpi=300)
         plt.close()
         generated_files.append(filename)
         
-        # Plot 2: Detailed throughput view for this test ID
+        # Plot 2: Throughput for this measurement type
         plt.figure(figsize=(12, 8))
         color_idx = 0
         
         for compiler in compilers:
-            comp_data = test_data[test_data['compiler'] == compiler]
+            comp_data = type_data[type_data['compiler'] == compiler]
             if comp_data.empty:
                 continue
                 
@@ -290,20 +234,27 @@ def create_performance_plots(df: pd.DataFrame, output_dir: Path) -> List[str]:
                         'run_date': 'first'
                     }).reset_index()
                     
+                    # Create clean label (remove redundant measurement type prefix)
+                    label_suffix = bench_name.replace(measurement_type, '').strip('_')
+                    if label_suffix:
+                        label = f'{compiler} - {label_suffix}'
+                    else:
+                        label = f'{compiler}'
+                    
                     plt.plot(agg_data['build_number'], agg_data['operations_per_sec'], 
-                           marker='s', label=f'{compiler} - {bench_name}', linewidth=2, markersize=6,
+                           marker='s', label=label, linewidth=2, markersize=6,
                            color=colors[color_idx % len(colors)])
                     color_idx += 1
         
         plt.xlabel('Build Number', fontsize=12)
         plt.ylabel('Operations per Second', fontsize=12)
-        plt.title(f'{test_id.replace("_", " ").title()} - Throughput Trend', fontsize=14, fontweight='bold')
+        plt.title(f'{measurement_type.replace("_", " ").title()} - Throughput Trend', fontsize=14, fontweight='bold')
         plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
         plt.grid(True, alpha=0.3)
         plt.yscale('log')
         plt.tight_layout()
         
-        filename = f'throughput_trend_{test_id}.svg'
+        filename = f'throughput_trend_{safe_name}.svg'
         filepath = output_dir / filename
         plt.savefig(filepath, format='svg', bbox_inches='tight', dpi=300)
         plt.close()
@@ -355,48 +306,40 @@ def generate_performance_md(df: pd.DataFrame, plot_files: List[str], output_path
         md_content.append("")
         md_content.append("The following charts show performance trends over build numbers, ")
         md_content.append("with build number on the X-axis and performance metrics on the Y-axis.")
+        md_content.append("Performance is grouped by measurement type.")
         md_content.append("")
         
-        # Add overall trends first
-        overall_plots = [f for f in plot_files if f.startswith('ouly_performance_trends')]
-        if overall_plots:
-            md_content.append("### Overall Performance Trends")
-            md_content.append("")
-            for plot_file in overall_plots:
-                if 'elapsed' in plot_file:
-                    md_content.append("#### Execution Time Trends")
-                    md_content.append("![OULY Performance Trends - Elapsed Time](ouly_performance_trends_elapsed.svg)")
-                elif 'throughput' in plot_file:
-                    md_content.append("#### Throughput Trends")
-                    md_content.append("![OULY Performance Trends - Throughput](ouly_performance_trends_throughput.svg)")
-                md_content.append("")
-        
-        # Add detailed plots per test category
-        detailed_plots = [f for f in plot_files if not f.startswith('ouly_performance_trends')]
-        test_categories = set()
-        for plot_file in detailed_plots:
+        # Get measurement types from plot files
+        measurement_types = set()
+        for plot_file in plot_files:
             if 'performance_trend_' in plot_file:
-                test_id = plot_file.replace('performance_trend_', '').replace('.svg', '')
-                test_categories.add(test_id)
+                measurement_type = plot_file.replace('performance_trend_', '').replace('.svg', '')
+                measurement_types.add(measurement_type)
             elif 'throughput_trend_' in plot_file:
-                test_id = plot_file.replace('throughput_trend_', '').replace('.svg', '')
-                test_categories.add(test_id)
+                measurement_type = plot_file.replace('throughput_trend_', '').replace('.svg', '')
+                measurement_types.add(measurement_type)
         
-        for test_id in sorted(test_categories):
-            md_content.append(f"### {test_id.replace('_', ' ').title()} Performance Details")
-            md_content.append("")
+        for measurement_type in sorted(measurement_types):
+            # Create a nice display name from the measurement type
+            display_name = measurement_type.replace('_', ' ').title()
             
-            perf_plot = f'performance_trend_{test_id}.svg'
-            throughput_plot = f'throughput_trend_{test_id}.svg'
+            # For safe filenames, we need to reverse the process
+            perf_plot = f'performance_trend_{measurement_type}.svg'
+            throughput_plot = f'throughput_trend_{measurement_type}.svg'
             
-            if perf_plot in plot_files:
-                md_content.append("#### Execution Time")
-                md_content.append(f"![{test_id} Performance Trend]({perf_plot})")
+            if perf_plot in plot_files or throughput_plot in plot_files:
+                md_content.append(f"### {display_name} Performance")
                 md_content.append("")
-            
-            if throughput_plot in plot_files:
-                md_content.append("#### Throughput")
-                md_content.append(f"![{test_id} Throughput Trend]({throughput_plot})")
+                
+                if perf_plot in plot_files:
+                    md_content.append("#### Execution Time")
+                    md_content.append(f"![{display_name} Performance Trend]({perf_plot})")
+                    md_content.append("")
+                
+                if throughput_plot in plot_files:
+                    md_content.append("#### Throughput")
+                    md_content.append(f"![{display_name} Throughput Trend]({throughput_plot})")
+                    md_content.append("")
                 md_content.append("")
         
         # Data summary

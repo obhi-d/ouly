@@ -1,11 +1,22 @@
 # OULY Performance Tracking
 
-**Generated:** 2025-08-02 16:01:35 UTC
+**Generated:** 2025-08-02 20:06:40 UTC
 
 ## 📊 Latest Performance Results
 
 **Build Number:** 74
 **Commit Hash:** 08c4c46c
+
+### Allocator Performance
+
+| Compiler | Benchmark | Median Time (ns) | Ops/sec | Error % |
+|----------|-----------|------------------|---------|---------|
+| clang-18 | ts_shared_linear_single_thread | 6.31 | 158478605 | 0.00 |
+| clang-18 | ts_thread_local_single_thread | 4.21 | 237529691 | 0.00 |
+| clang-18 | coalescing_arena_alloc_dealloc | 205.98 | 4854918 | 0.00 |
+| gcc-14 | ts_shared_linear_single_thread | 6.01 | 166389351 | 0.00 |
+| gcc-14 | ts_thread_local_single_thread | 4.21 | 237529691 | 0.00 |
+| gcc-14 | coalescing_arena_alloc_dealloc | 218.71 | 4572265 | 0.00 |
 
 ### Scheduler Comparison
 
@@ -46,52 +57,99 @@
 | gcc-4.2 | NestedParallel_V1 | 63517.80 | 15744 | 0.00 |
 | gcc-4.2 | NestedParallel_V2 | 69315.60 | 14427 | 0.00 |
 
-### Allocator Performance
-
-| Compiler | Benchmark | Median Time (ns) | Ops/sec | Error % |
-|----------|-----------|------------------|---------|---------|
-| gcc-14 | ts_shared_linear_single_thread | 6.01 | 166389351 | 0.00 |
-| gcc-14 | ts_thread_local_single_thread | 4.21 | 237529691 | 0.00 |
-| gcc-14 | coalescing_arena_alloc_dealloc | 218.71 | 4572265 | 0.00 |
-| clang-18 | ts_shared_linear_single_thread | 6.31 | 158478605 | 0.00 |
-| clang-18 | ts_thread_local_single_thread | 4.21 | 237529691 | 0.00 |
-| clang-18 | coalescing_arena_alloc_dealloc | 205.98 | 4854918 | 0.00 |
-
 ## 📈 Performance Trends
 
 The following charts show performance trends over build numbers, 
 with build number on the X-axis and performance metrics on the Y-axis.
+Performance is grouped by measurement type.
 
-### Overall Performance Trends
-
-#### Execution Time Trends
-![OULY Performance Trends - Elapsed Time](ouly_performance_trends_elapsed.svg)
-
-#### Throughput Trends
-![OULY Performance Trends - Throughput](ouly_performance_trends_throughput.svg)
-
-### Allocator Performance Performance Details
+### Coalescingarenaallocdealloc Performance
 
 #### Execution Time
-![allocator_performance Performance Trend](performance_trend_allocator_performance.svg)
+![Coalescingarenaallocdealloc Performance Trend](performance_trend_coalescingarenaallocdealloc.svg)
 
 #### Throughput
-![allocator_performance Throughput Trend](throughput_trend_allocator_performance.svg)
+![Coalescingarenaallocdealloc Throughput Trend](throughput_trend_coalescingarenaallocdealloc.svg)
 
-### Scheduler Comparison Performance Details
+
+### Matrixops Performance
 
 #### Execution Time
-![scheduler_comparison Performance Trend](performance_trend_scheduler_comparison.svg)
+![Matrixops Performance Trend](performance_trend_matrixops.svg)
 
 #### Throughput
-![scheduler_comparison Throughput Trend](throughput_trend_scheduler_comparison.svg)
+![Matrixops Throughput Trend](throughput_trend_matrixops.svg)
+
+
+### Mixedworkload Performance
+
+#### Execution Time
+![Mixedworkload Performance Trend](performance_trend_mixedworkload.svg)
+
+#### Throughput
+![Mixedworkload Throughput Trend](throughput_trend_mixedworkload.svg)
+
+
+### Nestedparallel Performance
+
+#### Execution Time
+![Nestedparallel Performance Trend](performance_trend_nestedparallel.svg)
+
+#### Throughput
+![Nestedparallel Throughput Trend](throughput_trend_nestedparallel.svg)
+
+
+### Parallelforvectorops Performance
+
+#### Execution Time
+![Parallelforvectorops Performance Trend](performance_trend_parallelforvectorops.svg)
+
+#### Throughput
+![Parallelforvectorops Throughput Trend](throughput_trend_parallelforvectorops.svg)
+
+
+### Tasksubmission Performance
+
+#### Execution Time
+![Tasksubmission Performance Trend](performance_trend_tasksubmission.svg)
+
+#### Throughput
+![Tasksubmission Throughput Trend](throughput_trend_tasksubmission.svg)
+
+
+### Taskthroughput Performance
+
+#### Execution Time
+![Taskthroughput Performance Trend](performance_trend_taskthroughput.svg)
+
+#### Throughput
+![Taskthroughput Throughput Trend](throughput_trend_taskthroughput.svg)
+
+
+### Tssharedlinearsinglethread Performance
+
+#### Execution Time
+![Tssharedlinearsinglethread Performance Trend](performance_trend_tssharedlinearsinglethread.svg)
+
+#### Throughput
+![Tssharedlinearsinglethread Throughput Trend](throughput_trend_tssharedlinearsinglethread.svg)
+
+
+### Tsthreadlocalsinglethread Performance
+
+#### Execution Time
+![Tsthreadlocalsinglethread Performance Trend](performance_trend_tsthreadlocalsinglethread.svg)
+
+#### Throughput
+![Tsthreadlocalsinglethread Throughput Trend](throughput_trend_tsthreadlocalsinglethread.svg)
+
 
 ## 📋 Data Summary
 
 - **Total benchmark runs:** 160
 - **Build range:** 71 - 74
 - **Date range:** 2025-08-02 to 2025-08-02
-- **Compilers tested:** gcc-14, clang-18, gcc-14.2, gcc-4.2
+- **Compilers tested:** clang-18, gcc-14, gcc-14.2, gcc-4.2
 - **Test categories:** allocator_performance, scheduler_comparison
 
 ---
