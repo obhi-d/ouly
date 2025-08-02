@@ -207,9 +207,9 @@ public:
   void submit(ouly::v1::task_context const& src, workgroup_id group, task_delegate::fnptr callable,
               Args&&... args) noexcept
   {
-    submit_internal(src.get_worker(), group,
-                    ouly::detail::v1::work_item::bind(
-                     callable, std::make_tuple<std::decay_t<Args>...>(std::forward<Args>(args)...), group));
+    submit_internal(
+     src.get_worker(), group,
+     ouly::detail::v1::work_item::bind(callable, std::make_tuple<std::decay_t<Args>...>(std::forward<Args>(args)...)));
   }
 
   /**
