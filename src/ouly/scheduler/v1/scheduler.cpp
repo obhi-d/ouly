@@ -119,6 +119,9 @@ void scheduler::run_worker(worker_id thread)
 
   g_worker    = nullptr;
   g_worker_id = {};
+
+  // Notify that this worker has finished execution
+  finished_.fetch_add(1, std::memory_order_release);
 }
 
 inline auto scheduler::work(worker_id thread) noexcept -> bool
@@ -384,6 +387,15 @@ void scheduler::finish_pending_tasks()
 
   // First: Signal stop to prevent new task submissions
   stop_.store(true, std::memory_order_seq_cst);
+
+  auto thread_count = static_cast<uint32_t>(worker_count_ - 1);
+  while (finished_.load(std::memory_order_acquire) < thread_count)
+  {
+    for (uint32_t i = 1; i < worker_count_; ++i)
+    {
+      wake_up(worker_id(i));
+    }
+  }
 }
 
 void scheduler::end_execution()
@@ -517,6 +529,11 @@ void scheduler::wait_for_tasks()
 {
   while (has_work())
   {
+    for (uint32_t i = 1; i < worker_count_; ++i)
+    {
+      wake_up(worker_id(i));
+    }
+
     busy_work(worker_id(0));
   }
 }

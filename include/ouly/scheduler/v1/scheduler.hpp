@@ -7,6 +7,7 @@
 #include "ouly/utility/config.hpp"
 #include "ouly/utility/type_traits.hpp"
 #include <array>
+#include <atomic>
 #include <functional>
 #include <new>
 #include <semaphore>
@@ -349,8 +350,9 @@ private:
 
   [[nodiscard]] auto has_work() const -> bool;
 
-  uint32_t         worker_count_ = 0;
-  std::atomic_bool stop_         = false;
+  uint32_t             worker_count_ = 0;
+  std::atomic_bool     stop_         = false;
+  std::atomic_uint32_t finished_     = 0; // Used to ack all finished workers
 
   static constexpr std::size_t cache_line_size = ouly::detail::cache_line_size;
 

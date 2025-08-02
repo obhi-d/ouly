@@ -8,6 +8,25 @@
       "name": "(gdb) Attach",
       "type": "cppdbg",
       "request": "attach",
+      "program": "/home/obhi/code/ouly/build/linux-default/unit_tests/test_scheduler_tests",
+      "MIMode": "gdb",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        },
+        {
+          "description": "Set Disassembly Flavor to Intel",
+          "text": "-gdb-set disassembly-flavor intel",
+          "ignoreFailures": true
+        }
+      ]
+    },
+    {
+      "name": "(lldb) Attach",
+      "type": "cppdbg",
+      "request": "attach",
       "program": "/Users/obhi-d/code/ouly/build/macos-default/unit_tests/test_scheduler_tests",
       "MIMode": "lldb",
       "miDebuggerPath": "/Users/obhi-d/bin/lldb-mi",

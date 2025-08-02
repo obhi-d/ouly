@@ -310,6 +310,7 @@ private:
   static constexpr uint32_t max_workgroup_v2 = ouly::detail::v2::max_workgroup;
 
   std::atomic_bool                    stop_{false};
+  std::atomic_uint32_t                finished_{0};    // Used to ack all finished workers
   std::counting_semaphore<INT_MAX>    wake_tokens_{0}; // Used to wake up workers when work is available
   std::atomic_int32_t                 sleeping_{0};
   std::shared_ptr<worker_initializer> initializer_ = nullptr;

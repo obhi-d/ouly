@@ -157,6 +157,8 @@ void scheduler::run_worker(worker_id wid)
 
   g_worker    = nullptr;
   g_worker_id = {};
+
+  finished_.fetch_add(1, std::memory_order_release);
 }
 
 auto scheduler::enter_context(worker_id wid, workgroup_id needy_wg) noexcept -> bool
@@ -375,8 +377,11 @@ void scheduler::finish_pending_tasks()
   // First: Signal stop to prevent new task submissions
   stop_.store(true, std::memory_order_seq_cst);
 
-  // Wake up all workers
-  wake_tokens_.release(worker_count_);
+  auto thread_count = static_cast<uint32_t>(worker_count_ - 1);
+  while (finished_.load(std::memory_order_acquire) < thread_count)
+  {
+    wake_tokens_.release(thread_count);
+  }
 }
 
 void scheduler::create_group(workgroup_id group, uint32_t start_thread_idx, uint32_t thread_count, uint32_t priority)

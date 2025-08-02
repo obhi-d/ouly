@@ -205,7 +205,6 @@ public:
 template <typename StateData, typename Traits = auto_partitioner_traits>
 struct auto_range
 {
-  using value_type  = typename StateData::value_type;
   using iterator    = typename StateData::iterator;
   using range_type  = typename StateData::range_type;
   using lambda_type = typename StateData::lambda_type;
@@ -366,7 +365,6 @@ struct auto_parallel_for_state
 {
   auto_parallel_for_state(L& lambda, FwIt f) noexcept : first_(f), lambda_instance_(lambda) {}
 
-  using value_type  = typename std::iterator_traits<FwIt>::value_type;
   using range_type  = ouly::subrange<uint32_t>;
   using iterator    = FwIt;
   using lambda_type = L;
