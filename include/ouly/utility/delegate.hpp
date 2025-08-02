@@ -4,6 +4,7 @@
 #include "ouly/utility/common.hpp"
 #include "ouly/utility/tuple.hpp"
 #include "ouly/utility/type_traits.hpp"
+#include "ouly/utility/utils.hpp"
 
 #include <concepts>
 #include <cstddef>
@@ -96,11 +97,15 @@ class basic_delegate<SmallSize, Ret(Args...)>
 
     invocable_impl(Lambda&& lambda) noexcept : invocable_base{&invocable_impl::execute}, lambda_(std::move(lambda)) {}
     invocable_impl(Lambda const& lambda) noexcept : invocable_base{&invocable_impl::execute}, lambda_(lambda) {}
+    invocable_impl(fnptr callable, Lambda&& lambda) noexcept : invocable_base{callable}, lambda_(std::move(lambda)) {}
+    invocable_impl(fnptr callable, Lambda const& lambda) noexcept : invocable_base{callable}, lambda_(lambda) {}
 
     Lambda lambda_;
   };
 
 public:
+  using function_type = fnptr;
+
   struct noinit_t
   {};
   static constexpr noinit_t noinit{};
@@ -127,9 +132,25 @@ public:
     static_assert(std::is_trivially_destructible_v<LambdaType> && std::is_trivially_copyable_v<LambdaType>,
                   "Lambda must be trivially destructible and copyable for basic_delegate");
 
-    basic_delegate ret;
+    basic_delegate ret{noinit};
     new (ret.buffer_.data()) invocable_impl<LambdaType>(std::forward<Lambda>(lambda));
     return ret;
+  }
+
+  template <typename... PackArgs>
+  static auto bind(fnptr fn, PackArgs&&... args) -> basic_delegate<SmallSize, Ret(Args...)>
+  {
+    using ArgPack = std::tuple<std::decay_t<PackArgs>...>;
+    basic_delegate ret{noinit};
+    new (ret.buffer_.data()) invocable_impl<ArgPack>(fn, ArgPack(std::forward<PackArgs>(args)...));
+    return ret;
+  }
+
+  template <typename... PackArgs>
+  auto packed_args() const noexcept -> std::tuple<PackArgs...> const&
+  {
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    return *reinterpret_cast<std::tuple<PackArgs...> const*>(buffer_.data() + sizeof(invocable_base));
   }
 
   // Invocation operator

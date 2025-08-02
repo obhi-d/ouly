@@ -128,30 +128,11 @@ public:
   void submit(ouly::v1::task_context const& src, workgroup_id group, C const& task_obj) noexcept
   {
     submit_internal(src.get_worker(), group,
-                    ouly::detail::v1::work_item::bind(
+                    ouly::v1::task_delegate::bind(
                      [address = task_obj.address()](ouly::v1::task_context const&)
                      {
                        std::coroutine_handle<>::from_address(address).resume();
                      }));
-  }
-
-  /**
-   * @brief Submits a work item to be executed by the scheduler.
-   *
-   * @tparam Lambda Type of the callable work item
-   * @param src ID of the worker submitting the work item
-   * @param group ID of the workgroup this item belongs to
-   * @param data Callable object to be executed
-   *
-   * @requires Lambda must be callable with ouly::task_context const& parameter
-   *
-   * @note This function is noexcept and will forward the lambda to the internal submit implementation
-   */
-  template <typename Lambda>
-    requires(std::invocable<Lambda, ouly::v1::task_context const&>)
-  void submit(ouly::v1::task_context const& src, workgroup_id group, Lambda&& data) noexcept
-  {
-    submit_internal(src.get_worker(), group, ouly::detail::v1::work_item::bind(std::forward<Lambda>(data)));
   }
 
   /**
@@ -169,12 +150,62 @@ public:
     submit(current, current.get_workgroup(), task_obj);
   }
 
+  /**
+   * @brief Submits a work item to be executed by the scheduler.
+   *
+   * @tparam Lambda Type of the callable work item
+   * @param src ID of the worker submitting the work item
+   * @param group ID of the workgroup this item belongs to
+   * @param data Callable object to be executed
+   *
+   * @requires Lambda must be callable with ouly::task_context const& parameter
+   *
+   * @note This function is noexcept and will forward the lambda to the internal submit implementation
+   */
+  template <typename Lambda>
+    requires(std::invocable<Lambda, ouly::v1::task_context const&> &&
+             !std::is_same_v<std::decay_t<Lambda>, ouly::v1::task_delegate>)
+  void submit(ouly::v1::task_context const& src, workgroup_id group, Lambda&& data) noexcept
+  {
+    submit_internal(src.get_worker(), group, ouly::v1::task_delegate::bind(std::forward<Lambda>(data)));
+  }
+
   // Callable/lambda submission without explicit group
   template <typename Lambda>
-    requires(std::invocable<Lambda, ouly::v1::task_context const&>)
+    requires(std::invocable<Lambda, ouly::v1::task_context const&> &&
+             !std::is_same_v<std::decay_t<Lambda>, ouly::v1::task_delegate>)
   void submit(ouly::v1::task_context const& current, Lambda&& data) noexcept
   {
     submit(current, current.get_workgroup(), std::forward<Lambda>(data));
+  }
+
+  /**
+   * @brief Submits a work item to the scheduler
+   * @param src The current task context submitting the work
+   * @param group The workgroup ID that this task belongs to
+   * @param ptr The function pointer to be executed
+   * @param args The arguments to be passed to the function pointer as packaged arguments
+   */
+  template <typename... PackArgs>
+  void submit(ouly::v1::task_context const& src, workgroup_id group, ouly::v1::task_delegate::function_type ptr,
+              PackArgs&&... args) noexcept
+  {
+    submit_internal(src.get_worker(), group, ouly::v1::task_delegate::bind(ptr, std::forward<PackArgs>(args)...));
+  }
+
+  /**
+   * @brief Submits a work item to the scheduler
+   * @param src The current task context submitting the work
+   * @param group The workgroup ID that this task belongs to
+   * @param ptr The function pointer to be executed
+   * @param args The arguments to be passed to the function pointer as packaged arguments
+   */
+  template <typename... PackArgs>
+  void submit(ouly::v1::task_context const& src, ouly::v1::task_delegate::function_type ptr,
+              PackArgs&&... args) noexcept
+  {
+    submit_internal(src.get_worker(), src.get_workgroup(),
+                    ouly::v1::task_delegate::bind(ptr, std::forward<PackArgs>(args)...));
   }
 
   /**
@@ -255,16 +286,16 @@ private:
   /**
    * @brief Submit a work for execution
    */
-  void submit_internal(worker_id src, workgroup_id dst, ouly::detail::v1::work_item const& work);
+  void submit_internal(worker_id src, workgroup_id dst, ouly::v1::task_delegate const& work);
 
   void assign_priority_order();
   auto compute_group_range(uint32_t worker_index) -> bool;
 
   void        finish_pending_tasks();
-  inline void do_work(workgroup_id id, worker_id /*thread*/, ouly::detail::v1::work_item& /*work*/) noexcept;
+  inline void do_work(workgroup_id id, worker_id /*thread*/, ouly::v1::task_delegate& /*work*/) noexcept;
   void        wake_up(worker_id /*thread*/) noexcept;
   void        run_worker(worker_id /*thread*/);
-  auto        get_work(worker_id thread, ouly::detail::v1::work_item& work) noexcept -> workgroup_id;
+  auto        get_work(worker_id thread, ouly::v1::task_delegate& work) noexcept -> workgroup_id;
 
   auto work(worker_id /*thread*/) noexcept -> bool;
 

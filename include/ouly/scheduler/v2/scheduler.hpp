@@ -85,36 +85,30 @@ public:
 
   /**
    * @brief Submits a coroutine-based task to be executed by the scheduler
-   * @param current The current task context submitting the task
+   *
+   * @param src The ID of the worker submitting the task
    * @param group The workgroup ID that this task belongs to
    * @param task_obj The task object containing the coroutine to be resumed
    *
-   * This overload wraps the coroutine resume function in a delegate and binds the
-   * workgroup ID as compressed data. This allows execute_work() to recover the
-   * correct workgroup when the task runs.
+   * @details This overload takes a task object that contains a coroutine and wraps it
+   * in a work item that will resume the coroutine when executed. The task is associated
+   * with the specified workgroup and submitted from the given worker.
+   *
+   * @note This function is noexcept and will not throw exceptions
+   *
+   * @see worker_id
+   * @see workgroup_id
+   * @see task_context
    */
   template <CoroutineTask C>
-  void submit(ouly::v2::task_context const& current, workgroup_id group, C const& task_obj) noexcept
+  void submit(ouly::v2::task_context const& src, workgroup_id group, C const& task_obj) noexcept
   {
-    auto work_fn = [address = task_obj.address()](ouly::v2::task_context const&)
-    {
-      std::coroutine_handle<>::from_address(address).resume();
-    };
-    submit_internal(current, group, detail::v2::work_item::bind(std::move(work_fn)));
-  }
-
-  /**
-   * @brief Submits a work item to be executed by the scheduler.
-   * @tparam Lambda Type of the callable work item
-   * @param current ID of the worker submitting the work item
-   * @param group ID of the workgroup this item belongs to
-   * @param data Callable object to be executed
-   */
-  template <typename Lambda>
-    requires(std::invocable<Lambda, ouly::v2::task_context const&>)
-  void submit(ouly::v2::task_context const& current, workgroup_id group, Lambda&& data) noexcept
-  {
-    submit_internal(current, group, detail::v2::work_item::bind(std::forward<Lambda>(data)));
+    submit_internal(src, group,
+                    ouly::v2::task_delegate::bind(
+                     [address = task_obj.address()](ouly::v2::task_context const&)
+                     {
+                       std::coroutine_handle<>::from_address(address).resume();
+                     }));
   }
 
   /**
@@ -132,12 +126,61 @@ public:
     submit(current, current.get_workgroup(), task_obj);
   }
 
+  /**
+   * @brief Submits a work item to be executed by the scheduler.
+   *
+   * @tparam Lambda Type of the callable work item
+   * @param src ID of the worker submitting the work item
+   * @param group ID of the workgroup this item belongs to
+   * @param data Callable object to be executed
+   *
+   * @requires Lambda must be callable with ouly::task_context const& parameter
+   *
+   * @note This function is noexcept and will forward the lambda to the internal submit implementation
+   */
+  template <typename Lambda>
+    requires(std::invocable<Lambda, ouly::v2::task_context const&> &&
+             !std::is_same_v<std::decay_t<Lambda>, ouly::v2::task_delegate>)
+  void submit(ouly::v2::task_context const& src, workgroup_id group, Lambda&& data) noexcept
+  {
+    submit_internal(src, group, ouly::v2::task_delegate::bind(std::forward<Lambda>(data)));
+  }
+
   // Callable/lambda submission without explicit group
   template <typename Lambda>
-    requires(std::invocable<Lambda, ouly::v2::task_context const&>)
+    requires(std::invocable<Lambda, ouly::v2::task_context const&> &&
+             !std::is_same_v<std::decay_t<Lambda>, ouly::v2::task_delegate>)
   void submit(ouly::v2::task_context const& current, Lambda&& data) noexcept
   {
     submit(current, current.get_workgroup(), std::forward<Lambda>(data));
+  }
+
+  /**
+   * @brief Submits a work item to the scheduler
+   * @param src The current task context submitting the work
+   * @param group The workgroup ID that this task belongs to
+   * @param ptr The function pointer to be executed
+   * @param args The arguments to be passed to the function pointer as packaged arguments
+   */
+  template <typename... PackArgs>
+  void submit(ouly::v2::task_context const& src, workgroup_id group, ouly::v2::task_delegate::function_type ptr,
+              PackArgs&&... args) noexcept
+  {
+    submit_internal(src, group, ouly::v2::task_delegate::bind(ptr, std::forward<PackArgs>(args)...));
+  }
+
+  /**
+   * @brief Submits a work item to the scheduler
+   * @param src The current task context submitting the work
+   * @param group The workgroup ID that this task belongs to
+   * @param ptr The function pointer to be executed
+   * @param args The arguments to be passed to the function pointer as packaged arguments
+   */
+  template <typename... PackArgs>
+  void submit(ouly::v2::task_context const& src, ouly::v2::task_delegate::function_type ptr,
+              PackArgs&&... args) noexcept
+  {
+    submit_internal(src, src.get_workgroup(), ouly::v2::task_delegate::bind(ptr, std::forward<PackArgs>(args)...));
   }
 
   /**
