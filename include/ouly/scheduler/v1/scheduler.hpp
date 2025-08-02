@@ -347,7 +347,7 @@ private:
 
   auto work(worker_id /*thread*/) noexcept -> bool;
 
-  auto has_work() const -> bool;
+  [[nodiscard]] auto has_work() const -> bool;
 
   uint32_t         worker_count_ = 0;
   std::atomic_bool stop_         = false;

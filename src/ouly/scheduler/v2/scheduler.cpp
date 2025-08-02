@@ -10,6 +10,7 @@
 #include <barrier>
 #include <cstdint>
 #include <latch>
+#include <ranges>
 #include <thread>
 
 namespace ouly::inline v2
@@ -260,7 +261,7 @@ void scheduler::execute_work(worker_id wid, detail::v2::work_item& work) noexcep
 {
   auto& worker = workers_[wid.get_index()];
   // Create a copy since work_item expects mutable reference
-  auto& current_context = worker.get_context();
+  auto const& current_context = worker.get_context();
   work(current_context);
 
   workgroups_[current_context.get_workgroup().get_index()].sink_one_work();
@@ -347,14 +348,11 @@ void scheduler::end_execution()
 
 auto scheduler::has_work() const -> bool
 {
-  for (uint32_t i = 0; i < workgroup_count_; ++i)
-  {
-    if (workgroups_[i].has_work_strong())
-    {
-      return true; // At least one workgroup has work
-    }
-  }
-  return false; // No work found
+  return std::ranges::any_of(std::span(workgroups_.get(), workgroup_count_),
+                             [](const auto& group)
+                             {
+                               return group.has_work_strong();
+                             });
 }
 
 void scheduler::wait_for_tasks()

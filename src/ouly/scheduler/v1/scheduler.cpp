@@ -10,6 +10,7 @@
 #include <barrier>
 #include <cstdint>
 #include <latch>
+#include <ranges>
 #include <semaphore>
 #include <span>
 
@@ -505,15 +506,11 @@ void scheduler::clear_group(workgroup_id group)
 
 auto scheduler::has_work() const -> bool
 {
-  auto workers = std::span(workers_.get(), worker_count_);
-  for (const auto& group : workgroups_)
-  {
-    if (group.has_work_strong())
-    {
-      return true;
-    }
-  }
-  return false;
+  return std::ranges::any_of(workgroups_,
+                             [](const auto& group)
+                             {
+                               return group.has_work_strong();
+                             });
 }
 
 void scheduler::wait_for_tasks()

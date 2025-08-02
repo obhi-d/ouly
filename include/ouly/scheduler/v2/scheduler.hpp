@@ -302,8 +302,8 @@ private:
   void wake_up_workers(uint32_t count) noexcept;
 
   /*  */
-  void finish_pending_tasks();
-  auto has_work() const -> bool;
+  void               finish_pending_tasks();
+  [[nodiscard]] auto has_work() const -> bool;
 
   struct worker_initializer;
 

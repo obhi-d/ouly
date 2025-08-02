@@ -116,7 +116,7 @@ struct workgroup
   }
 
   // Pop item from a specific worker's queue within this workgroup
-  [[nodiscard]] auto pop_item_from_worker(uint32_t worker_offset, work_item& item) -> bool
+  [[nodiscard]] auto pop_item_from_worker(uint32_t worker_offset, work_item& item) const -> bool
   {
     if (worker_offset >= thread_count_)
     {
