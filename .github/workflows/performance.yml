@@ -178,6 +178,17 @@ jobs:
         else
           echo "⚠️ No last_results directory found"
         fi
+   
+    - name: Cleanup old results
+      run: |
+        if [ -f "scripts/cleanup_old_results.py" ]; then
+          echo "🧹 Cleaning up old results (keeping last 30 builds)..."
+          echo "Results before cleanup: $(find results -name '*.json' -o -name '*.txt' 2>/dev/null | wc -l) files"
+          python3 scripts/cleanup_old_results.py results --keep 30
+          echo "Results after cleanup: $(find results -name '*.json' -o -name '*.txt' 2>/dev/null | wc -l) files"
+        else
+          echo "⚠️ Cleanup script not found, keeping all results"
+        fi
         
     - name: Generate comprehensive performance report
       run: |
