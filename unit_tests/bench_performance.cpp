@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #define ANKERL_NANOBENCH_IMPLEMENT
 #include "nanobench.h"
 #include "ouly/allocators/coalescing_arena_allocator.hpp"

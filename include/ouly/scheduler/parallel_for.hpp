@@ -1,4 +1,5 @@
-
+#pragma once
+// SPDX-License-Identifier: MIT
 
 #include "ouly/scheduler/auto_parallel_for.hpp"
 #include "ouly/scheduler/default_parallel_for.hpp"
