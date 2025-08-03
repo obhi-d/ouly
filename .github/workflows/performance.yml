@@ -12,9 +12,6 @@ on:
         - all
         - scheduler
         - allocator
-  schedule:
-    # Run performance benchmarks daily at 2 AM UTC
-    - cron: '0 2 * * *'
   push:
     branches: [ main ]
   workflow_run:
