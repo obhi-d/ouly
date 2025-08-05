@@ -130,7 +130,7 @@ jobs:
       run: |
         export PATH=$PWD/coverity-linux64/bin:$PATH
         # Remove third-party deps and tests from the emit repo
-        cov-manage-emit --dir cov-int --tu-pattern "file('.*/_deps/.*') || file('.*/(unit_tests|tests)/.*')" delete
+        cov-manage-emit --dir cov-int --tu-pattern "file('.*/_deps/.*') || file('.*/(unit_tests|tests)/.*') || file('.*/include/c++/.*')" delete
 
     - name: Submit to Coverity Scan
       shell: bash
