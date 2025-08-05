@@ -46,7 +46,7 @@
 namespace ouly
 {
 
-using string_view_pair = std::pair<std::string, std::string>;
+using string_view_pair = std::pair<std::string_view, std::string_view>;
 
 static constexpr inline int32_t                k_default_uchar = 0xFFFD;
 static constexpr inline int32_t                k_wrong_uchar   = 0xFFFF;
@@ -243,14 +243,14 @@ inline auto split(std::string_view name, char by = ':', bool is_prefix = true) -
   size_t seperator = name.find_first_of(by);
   if (seperator < name.size())
   {
-    return string_view_pair(name.substr(0, seperator), name.substr(seperator + 1));
+    return {name.substr(0, seperator), name.substr(seperator + 1)};
   }
   if (is_prefix)
   {
-    return string_view_pair(name, std::string_view());
+    return {name, std::string_view()};
   }
 
-  return string_view_pair(std::string_view(), name);
+  return {std::string_view(), name};
 }
 
 /**
@@ -263,14 +263,14 @@ inline auto split_last(const std::string_view& name, char by = ':', bool is_pref
   size_t seperator = name.find_last_of(by);
   if (seperator < name.size())
   {
-    return string_view_pair(name.substr(0, seperator), name.substr(seperator + 1));
+    return {name.substr(0, seperator), name.substr(seperator + 1)};
   }
   if (is_prefix)
   {
-    return string_view_pair(name, std::string_view());
+    return {name, std::string_view()};
   }
 
-  return string_view_pair(std::string_view(), name);
+  return {std::string_view(), name};
 }
 
 enum class response : uint8_t
