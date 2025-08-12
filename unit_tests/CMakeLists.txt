@@ -145,6 +145,7 @@ add_unit_test(NAME binary_serializer FILES "binary_serializer.cpp" "binary_strea
 add_unit_test(NAME yaml_serializer FILES "yaml_input_serializer.cpp" "yaml_output_serializer.cpp" SANITIZE)
 add_unit_test(NAME yaml_object FILES "yaml_object.cpp" SANITIZE)
 add_unit_test(NAME pool_allocator FILES "pool_allocator.cpp" SANITIZE)
+add_unit_test(NAME object_pool FILES "object_pool.cpp" SANITIZE)
 add_unit_test(NAME linear_allocator FILES "linear_allocator.cpp" SANITIZE)
 add_unit_test(NAME microexpr FILES "microexpr_tests.cpp" SANITIZE)
 add_unit_test(NAME thread_safe_allocators FILES "thread_safe_allocators.cpp" SANITIZE)
