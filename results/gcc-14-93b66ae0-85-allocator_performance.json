@@ -1,0 +1,418 @@
+{
+    "results": [
+        {
+            "title": "Ouly Performance Benchmarks",
+            "name": "ts_shared_linear_single_thread",
+            "unit": "operation",
+            "batch": 1,
+            "complexityN": -1,
+            "epochs": 11,
+            "clockResolution": 2e-08,
+            "clockResolutionMultiple": 1000,
+            "maxEpochTime": 0.1,
+            "minEpochTime": 0.001,
+            "minEpochIterations": 1,
+            "epochIterations": 100,
+            "warmup": 3,
+            "relative": 0,
+            "median(elapsed)": 6.01e-09,
+            "medianAbsolutePercentError(elapsed)": 0.0163666121112928,
+            "median(instructions)": 0,
+            "medianAbsolutePercentError(instructions)": 0,
+            "median(cpucycles)": 0,
+            "median(contextswitches)": 0,
+            "median(pagefaults)": 0,
+            "median(branchinstructions)": 0,
+            "median(branchmisses)": 0,
+            "totalTime": 0.001874877,
+            "measurements": [
+                {
+                    "iterations": 144105,
+                    "elapsed": 5.88207210020471e-09,
+                    "pagefaults": 0,
+                    "cpucycles": 0,
+                    "contextswitches": 0,
+                    "instructions": 0,
+                    "branchinstructions": 0,
+                    "branchmisses": 0
+                },
+                {
+                    "iterations": 174806,
+                    "elapsed": 5.84522842465362e-09,
+                    "pagefaults": 0,
+                    "cpucycles": 0,
+                    "contextswitches": 0,
+                    "instructions": 0,
+                    "branchinstructions": 0,
+                    "branchmisses": 0
+                },
+                {
+                    "iterations": 100,
+                    "elapsed": 6.01e-09,
+                    "pagefaults": 0,
+                    "cpucycles": 0,
+                    "contextswitches": 0,
+                    "instructions": 0,
+                    "branchinstructions": 0,
+                    "branchmisses": 0
+                },
+                {
+                    "iterations": 100,
+                    "elapsed": 6.11e-09,
+                    "pagefaults": 0,
+                    "cpucycles": 0,
+                    "contextswitches": 0,
+                    "instructions": 0,
+                    "branchinstructions": 0,
+                    "branchmisses": 0
+                },
+                {
+                    "iterations": 100,
+                    "elapsed": 6.01e-09,
+                    "pagefaults": 0,
+                    "cpucycles": 0,
+                    "contextswitches": 0,
+                    "instructions": 0,
+                    "branchinstructions": 0,
+                    "branchmisses": 0
+                },
+                {
+                    "iterations": 100,
+                    "elapsed": 6.12e-09,
+                    "pagefaults": 0,
+                    "cpucycles": 0,
+                    "contextswitches": 0,
+                    "instructions": 0,
+                    "branchinstructions": 0,
+                    "branchmisses": 0
+                },
+                {
+                    "iterations": 100,
+                    "elapsed": 6.11e-09,
+                    "pagefaults": 0,
+                    "cpucycles": 0,
+                    "contextswitches": 0,
+                    "instructions": 0,
+                    "branchinstructions": 0,
+                    "branchmisses": 0
+                },
+                {
+                    "iterations": 100,
+                    "elapsed": 6.01e-09,
+                    "pagefaults": 0,
+                    "cpucycles": 0,
+                    "contextswitches": 0,
+                    "instructions": 0,
+                    "branchinstructions": 0,
+                    "branchmisses": 0
+                },
+                {
+                    "iterations": 100,
+                    "elapsed": 6.11e-09,
+                    "pagefaults": 0,
+                    "cpucycles": 0,
+                    "contextswitches": 0,
+                    "instructions": 0,
+                    "branchinstructions": 0,
+                    "branchmisses": 0
+                },
+                {
+                    "iterations": 100,
+                    "elapsed": 6.11e-09,
+                    "pagefaults": 0,
+                    "cpucycles": 0,
+                    "contextswitches": 0,
+                    "instructions": 0,
+                    "branchinstructions": 0,
+                    "branchmisses": 0
+                },
+                {
+                    "iterations": 100,
+                    "elapsed": 6.01e-09,
+                    "pagefaults": 0,
+                    "cpucycles": 0,
+                    "contextswitches": 0,
+                    "instructions": 0,
+                    "branchinstructions": 0,
+                    "branchmisses": 0
+                }
+            ]
+        },
+        {
+            "title": "Ouly Performance Benchmarks",
+            "name": "ts_thread_local_single_thread",
+            "unit": "operation",
+            "batch": 1,
+            "complexityN": -1,
+            "epochs": 11,
+            "clockResolution": 2e-08,
+            "clockResolutionMultiple": 1000,
+            "maxEpochTime": 0.1,
+            "minEpochTime": 0.001,
+            "minEpochIterations": 1,
+            "epochIterations": 100,
+            "warmup": 3,
+            "relative": 0,
+            "median(elapsed)": 4.21e-09,
+            "medianAbsolutePercentError(elapsed)": 0.00238095238095232,
+            "median(instructions)": 0,
+            "medianAbsolutePercentError(instructions)": 0,
+            "median(cpucycles)": 0,
+            "median(contextswitches)": 0,
+            "median(pagefaults)": 0,
+            "median(branchinstructions)": 0,
+            "median(branchmisses)": 0,
+            "totalTime": 0.002019998,
+            "measurements": [
+                {
+                    "iterations": 216656,
+                    "elapsed": 4.0690218595377e-09,
+                    "pagefaults": 0,
+                    "cpucycles": 0,
+                    "contextswitches": 0,
+                    "instructions": 0,
+                    "branchinstructions": 0,
+                    "branchmisses": 0
+                },
+                {
+                    "iterations": 281291,
+                    "elapsed": 4.03355244213288e-09,
+                    "pagefaults": 0,
+                    "cpucycles": 0,
+                    "contextswitches": 0,
+                    "instructions": 0,
+                    "branchinstructions": 0,
+                    "branchmisses": 0
+                },
+                {
+                    "iterations": 100,
+                    "elapsed": 4.31e-09,
+                    "pagefaults": 0,
+                    "cpucycles": 0,
+                    "contextswitches": 0,
+                    "instructions": 0,
+                    "branchinstructions": 0,
+                    "branchmisses": 0
+                },
+                {
+                    "iterations": 100,
+                    "elapsed": 4.2e-09,
+                    "pagefaults": 0,
+                    "cpucycles": 0,
+                    "contextswitches": 0,
+                    "instructions": 0,
+                    "branchinstructions": 0,
+                    "branchmisses": 0
+                },
+                {
+                    "iterations": 100,
+                    "elapsed": 4.31e-09,
+                    "pagefaults": 0,
+                    "cpucycles": 0,
+                    "contextswitches": 0,
+                    "instructions": 0,
+                    "branchinstructions": 0,
+                    "branchmisses": 0
+                },
+                {
+                    "iterations": 100,
+                    "elapsed": 4.21e-09,
+                    "pagefaults": 0,
+                    "cpucycles": 0,
+                    "contextswitches": 0,
+                    "instructions": 0,
+                    "branchinstructions": 0,
+                    "branchmisses": 0
+                },
+                {
+                    "iterations": 100,
+                    "elapsed": 4.21e-09,
+                    "pagefaults": 0,
+                    "cpucycles": 0,
+                    "contextswitches": 0,
+                    "instructions": 0,
+                    "branchinstructions": 0,
+                    "branchmisses": 0
+                },
+                {
+                    "iterations": 100,
+                    "elapsed": 4.21e-09,
+                    "pagefaults": 0,
+                    "cpucycles": 0,
+                    "contextswitches": 0,
+                    "instructions": 0,
+                    "branchinstructions": 0,
+                    "branchmisses": 0
+                },
+                {
+                    "iterations": 100,
+                    "elapsed": 4.31e-09,
+                    "pagefaults": 0,
+                    "cpucycles": 0,
+                    "contextswitches": 0,
+                    "instructions": 0,
+                    "branchinstructions": 0,
+                    "branchmisses": 0
+                },
+                {
+                    "iterations": 100,
+                    "elapsed": 4.21e-09,
+                    "pagefaults": 0,
+                    "cpucycles": 0,
+                    "contextswitches": 0,
+                    "instructions": 0,
+                    "branchinstructions": 0,
+                    "branchmisses": 0
+                },
+                {
+                    "iterations": 100,
+                    "elapsed": 4.21e-09,
+                    "pagefaults": 0,
+                    "cpucycles": 0,
+                    "contextswitches": 0,
+                    "instructions": 0,
+                    "branchinstructions": 0,
+                    "branchmisses": 0
+                }
+            ]
+        },
+        {
+            "title": "Ouly Performance Benchmarks",
+            "name": "coalescing_arena_alloc_dealloc",
+            "unit": "operation",
+            "batch": 1,
+            "complexityN": -1,
+            "epochs": 11,
+            "clockResolution": 2e-08,
+            "clockResolutionMultiple": 1000,
+            "maxEpochTime": 0.1,
+            "minEpochTime": 0.001,
+            "minEpochIterations": 1,
+            "epochIterations": 100,
+            "warmup": 3,
+            "relative": 0,
+            "median(elapsed)": 1.9617e-07,
+            "medianAbsolutePercentError(elapsed)": 0.00254232979102055,
+            "median(instructions)": 0,
+            "medianAbsolutePercentError(instructions)": 0,
+            "median(cpucycles)": 0,
+            "median(contextswitches)": 0,
+            "median(pagefaults)": 0,
+            "median(branchinstructions)": 0,
+            "median(branchmisses)": 0,
+            "totalTime": 0.002285021,
+            "measurements": [
+                {
+                    "iterations": 4876,
+                    "elapsed": 1.96702830188679e-07,
+                    "pagefaults": 0,
+                    "cpucycles": 0,
+                    "contextswitches": 0,
+                    "instructions": 0,
+                    "branchinstructions": 0,
+                    "branchmisses": 0
+                },
+                {
+                    "iterations": 5819,
+                    "elapsed": 1.97310018903592e-07,
+                    "pagefaults": 0,
+                    "cpucycles": 0,
+                    "contextswitches": 0,
+                    "instructions": 0,
+                    "branchinstructions": 0,
+                    "branchmisses": 0
+                },
+                {
+                    "iterations": 100,
+                    "elapsed": 1.9236e-07,
+                    "pagefaults": 0,
+                    "cpucycles": 0,
+                    "contextswitches": 0,
+                    "instructions": 0,
+                    "branchinstructions": 0,
+                    "branchmisses": 0
+                },
+                {
+                    "iterations": 100,
+                    "elapsed": 1.9146e-07,
+                    "pagefaults": 0,
+                    "cpucycles": 0,
+                    "contextswitches": 0,
+                    "instructions": 0,
+                    "branchinstructions": 0,
+                    "branchmisses": 0
+                },
+                {
+                    "iterations": 100,
+                    "elapsed": 2.164e-07,
+                    "pagefaults": 0,
+                    "cpucycles": 0,
+                    "contextswitches": 0,
+                    "instructions": 0,
+                    "branchinstructions": 0,
+                    "branchmisses": 0
+                },
+                {
+                    "iterations": 100,
+                    "elapsed": 1.9617e-07,
+                    "pagefaults": 0,
+                    "cpucycles": 0,
+                    "contextswitches": 0,
+                    "instructions": 0,
+                    "branchinstructions": 0,
+                    "branchmisses": 0
+                },
+                {
+                    "iterations": 100,
+                    "elapsed": 1.9667e-07,
+                    "pagefaults": 0,
+                    "cpucycles": 0,
+                    "contextswitches": 0,
+                    "instructions": 0,
+                    "branchinstructions": 0,
+                    "branchmisses": 0
+                },
+                {
+                    "iterations": 100,
+                    "elapsed": 1.9596e-07,
+                    "pagefaults": 0,
+                    "cpucycles": 0,
+                    "contextswitches": 0,
+                    "instructions": 0,
+                    "branchinstructions": 0,
+                    "branchmisses": 0
+                },
+                {
+                    "iterations": 100,
+                    "elapsed": 1.9606e-07,
+                    "pagefaults": 0,
+                    "cpucycles": 0,
+                    "contextswitches": 0,
+                    "instructions": 0,
+                    "branchinstructions": 0,
+                    "branchmisses": 0
+                },
+                {
+                    "iterations": 100,
+                    "elapsed": 1.9636e-07,
+                    "pagefaults": 0,
+                    "cpucycles": 0,
+                    "contextswitches": 0,
+                    "instructions": 0,
+                    "branchinstructions": 0,
+                    "branchmisses": 0
+                },
+                {
+                    "iterations": 100,
+                    "elapsed": 1.9607e-07,
+                    "pagefaults": 0,
+                    "cpucycles": 0,
+                    "contextswitches": 0,
+                    "instructions": 0,
+                    "branchinstructions": 0,
+                    "branchmisses": 0
+                }
+            ]
+        }
+    ]
+}
