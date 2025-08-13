@@ -438,7 +438,7 @@ void flow_graph<SchedulerType, AvgNodeCount>::execute_node(uint32_t node_id, con
   }
 
   // Submit all tasks for this node
-  for (size_t i = 0; i < tasks.size(); ++i)
+  for (uint32_t i = 0; i < tasks.size(); ++i)
   {
     // Create a simple lambda that captures minimal data
     auto* graph_ptr = this;

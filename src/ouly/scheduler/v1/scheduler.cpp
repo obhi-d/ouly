@@ -206,17 +206,13 @@ auto scheduler::get_work(worker_id thread, ouly::detail::v1::work_item& work) no
       return workgroup_id{group_idx};
     }
 
-    // Then try to steal from other workers' queues within this workgroup
-    // Start with adjacent workers for better cache locality
-    uint32_t start_steal_offset = update_seed() % workgroup.thread_count_;
-
     // First try nearby workers (cache-friendly)
     for (uint32_t distance = 1; distance <= workgroup.thread_count_ / 2; ++distance)
     {
       // Try both directions from starting point
       for (int32_t direction = -1; direction <= 1; direction += 2)
       {
-        auto offset_calc = static_cast<int32_t>(start_steal_offset) + (direction * static_cast<int32_t>(distance));
+        auto offset_calc = static_cast<int32_t>(thread.get_index()) + (direction * static_cast<int32_t>(distance));
         auto target_worker_offset = static_cast<uint32_t>(
          (offset_calc + static_cast<int32_t>(workgroup.thread_count_)) % static_cast<int32_t>(workgroup.thread_count_));
 
@@ -233,6 +229,10 @@ auto scheduler::get_work(worker_id thread, ouly::detail::v1::work_item& work) no
         }
       }
     }
+
+    // Then try to steal from other workers' queues within this workgroup
+    // Start with adjacent workers for better cache locality
+    uint32_t start_steal_offset = update_seed() % workgroup.thread_count_;
 
     // If nearby stealing failed, try remaining workers
     for (uint32_t steal_attempt = 0; steal_attempt < workgroup.thread_count_; ++steal_attempt)
