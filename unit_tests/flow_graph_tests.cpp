@@ -51,26 +51,26 @@ TEST_CASE("flow_graph execution with v2 scheduler", "[flow_graph][scheduler]")
   graph.connect(node2, node3);
 
   // Add tasks to nodes
-  graph.add(node1, SchedulerType::delegate_type::bind(
-                    [&](auto const&)
-                    {
-                      node1_order.store(execution_order.fetch_add(1));
-                      std::this_thread::sleep_for(std::chrono::milliseconds(10));
-                    }));
+  graph.add(node1,
+            [&](auto const&)
+            {
+              node1_order.store(execution_order.fetch_add(1));
+              std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            });
 
-  graph.add(node2, SchedulerType::delegate_type::bind(
-                    [&](auto const&)
-                    {
-                      node2_order.store(execution_order.fetch_add(1));
-                      std::this_thread::sleep_for(std::chrono::milliseconds(10));
-                    }));
+  graph.add(node2,
+            [&](auto const&)
+            {
+              node2_order.store(execution_order.fetch_add(1));
+              std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            });
 
-  graph.add(node3, SchedulerType::delegate_type::bind(
-                    [&](auto const&)
-                    {
-                      node3_order.store(execution_order.fetch_add(1));
-                      std::this_thread::sleep_for(std::chrono::milliseconds(10));
-                    }));
+  graph.add(node3,
+            [&](auto const&)
+            {
+              node3_order.store(execution_order.fetch_add(1));
+              std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            });
 
   // Start execution
 
@@ -103,17 +103,17 @@ TEST_CASE("flow_graph reusability", "[flow_graph][scheduler]")
   graph.connect(node1, node2);
 
   // Add tasks to nodes
-  graph.add(node1, SchedulerType::delegate_type::bind(
-                    [&](auto const&)
-                    {
-                      run1_count.fetch_add(1);
-                    }));
+  graph.add(node1,
+            [&](auto const&)
+            {
+              run1_count.fetch_add(1);
+            });
 
-  graph.add(node2, SchedulerType::delegate_type::bind(
-                    [&](auto const&)
-                    {
-                      run1_count.fetch_add(1);
-                    }));
+  graph.add(node2,
+            [&](auto const&)
+            {
+              run1_count.fetch_add(1);
+            });
 
   auto ctx = SchedulerType::context_type::this_context::get();
 
@@ -125,17 +125,17 @@ TEST_CASE("flow_graph reusability", "[flow_graph][scheduler]")
   REQUIRE(run1_count.load() == 2);
 
   // Add more tasks for second run
-  graph.add(node1, SchedulerType::delegate_type::bind(
-                    [&](auto const&)
-                    {
-                      run2_count.fetch_add(1);
-                    }));
+  graph.add(node1,
+            [&](auto const&)
+            {
+              run2_count.fetch_add(1);
+            });
 
-  graph.add(node2, SchedulerType::delegate_type::bind(
-                    [&](auto const&)
-                    {
-                      run2_count.fetch_add(1);
-                    }));
+  graph.add(node2,
+            [&](auto const&)
+            {
+              run2_count.fetch_add(1);
+            });
 
   // Second run - should execute all tasks (original + new ones)
   graph.start(ctx);
@@ -161,11 +161,11 @@ TEST_CASE("flow_graph with v1 scheduler", "[flow_graph][scheduler]")
   auto node1 = graph.create_node();
 
   // Add task to node
-  graph.add(node1, SchedulerType::delegate_type::bind(
-                    [&](auto const&)
-                    {
-                      task_executed.store(true);
-                    }));
+  graph.add(node1,
+            [&](auto const&)
+            {
+              task_executed.store(true);
+            });
 
   // Start execution
 
@@ -190,6 +190,7 @@ TEST_CASE("flow_graph multiple tasks per node", "[flow_graph][scheduler]")
   std::atomic<int> node1_task_count{0};
   std::atomic<int> node2_task_count{0};
   std::atomic<int> total_executions{0};
+  std::atomic<int> fails{0};
 
   auto node1 = graph.create_node();
   auto node2 = graph.create_node();
@@ -199,27 +200,30 @@ TEST_CASE("flow_graph multiple tasks per node", "[flow_graph][scheduler]")
   // Add multiple tasks to node1
   for (int i = 0; i < 5; ++i)
   {
-    graph.add(node1, SchedulerType::delegate_type::bind(
-                      [&](auto const&)
-                      {
-                        node1_task_count.fetch_add(1);
-                        total_executions.fetch_add(1);
-                        // Small delay to ensure concurrent execution
-                        std::this_thread::sleep_for(std::chrono::microseconds(100));
-                      }));
+    graph.add(node1,
+              [&](auto const&)
+              {
+                node1_task_count.fetch_add(1);
+                total_executions.fetch_add(1);
+                // Small delay to ensure concurrent execution
+                std::this_thread::sleep_for(std::chrono::microseconds(100));
+              });
   }
 
   // Add multiple tasks to node2
   for (int i = 0; i < 3; ++i)
   {
-    graph.add(node2, SchedulerType::delegate_type::bind(
-                      [&](auto const&)
-                      {
-                        node2_task_count.fetch_add(1);
-                        total_executions.fetch_add(1);
-                        // Verify node1 completed before node2 starts
-                        REQUIRE(node1_task_count.load() == 5);
-                      }));
+    graph.add(node2,
+              [&](auto const&)
+              {
+                node2_task_count.fetch_add(1);
+                total_executions.fetch_add(1);
+                // Verify node1 completed before node2 starts
+                if (node1_task_count.load() != 5)
+                {
+                  fails.fetch_add(1);
+                }
+              });
   }
 
   auto ctx = SchedulerType::context_type::this_context::get();
@@ -229,6 +233,7 @@ TEST_CASE("flow_graph multiple tasks per node", "[flow_graph][scheduler]")
   REQUIRE(node1_task_count.load() == 5);
   REQUIRE(node2_task_count.load() == 3);
   REQUIRE(total_executions.load() == 8);
+  REQUIRE(fails.load() == 0); // Ensure no tasks in node2 executed before node1 completed
 
   scheduler.end_execution();
 }
@@ -273,12 +278,12 @@ TEST_CASE("flow_graph complex dependency tree", "[flow_graph][scheduler]")
   // Add tasks to each node
   for (uint32_t i = 0; i < 7; ++i)
   {
-    graph.add(i, SchedulerType::delegate_type::bind(
-                  [&, i](auto const&)
-                  {
-                    node_execution_order[i].store(execution_counter.fetch_add(1));
-                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
-                  }));
+    graph.add(i,
+              [&, i](auto const&)
+              {
+                node_execution_order[i].store(execution_counter.fetch_add(1));
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+              });
   }
 
   auto ctx = SchedulerType::context_type::this_context::get();
@@ -313,19 +318,19 @@ TEST_CASE("flow_graph parallel independent branches", "[flow_graph][scheduler]")
   auto branch1_node = graph.create_node();
   auto branch2_node = graph.create_node();
 
-  graph.add(branch1_node, SchedulerType::delegate_type::bind(
-                           [&](auto const&)
-                           {
-                             branch1_start_time.store(time_counter.fetch_add(1));
-                             std::this_thread::sleep_for(std::chrono::milliseconds(50));
-                           }));
+  graph.add(branch1_node,
+            [&](auto const&)
+            {
+              branch1_start_time.store(time_counter.fetch_add(1));
+              std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            });
 
-  graph.add(branch2_node, SchedulerType::delegate_type::bind(
-                           [&](auto const&)
-                           {
-                             branch2_start_time.store(time_counter.fetch_add(1));
-                             std::this_thread::sleep_for(std::chrono::milliseconds(50));
-                           }));
+  graph.add(branch2_node,
+            [&](auto const&)
+            {
+              branch2_start_time.store(time_counter.fetch_add(1));
+              std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            });
 
   auto ctx = SchedulerType::context_type::this_context::get();
 
@@ -365,11 +370,11 @@ TEST_CASE("flow_graph empty nodes", "[flow_graph][scheduler]")
   graph.connect(empty_node2, final_node);
 
   // Only add task to final node
-  graph.add(final_node, SchedulerType::delegate_type::bind(
-                         [&](auto const&)
-                         {
-                           final_task_executed.store(true);
-                         }));
+  graph.add(final_node,
+            [&](auto const&)
+            {
+              final_task_executed.store(true);
+            });
 
   auto ctx = SchedulerType::context_type::this_context::get();
   graph.start(ctx);
@@ -396,11 +401,11 @@ TEST_CASE("flow_graph single node with no dependencies", "[flow_graph][scheduler
   // Add multiple tasks to a single node with no dependencies
   for (int i = 0; i < 10; ++i)
   {
-    graph.add(single_node, SchedulerType::delegate_type::bind(
-                            [&](auto const&)
-                            {
-                              execution_count.fetch_add(1);
-                            }));
+    graph.add(single_node,
+              [&](auto const&)
+              {
+                execution_count.fetch_add(1);
+              });
   }
 
   auto ctx = SchedulerType::context_type::this_context::get();
@@ -423,6 +428,7 @@ TEST_CASE("flow_graph stress test with many nodes", "[flow_graph][scheduler]")
 
   constexpr int                            NUM_NODES = 50;
   std::array<std::atomic<bool>, NUM_NODES> node_executed;
+  std::atomic_int                          fails{0};
   for (auto& executed : node_executed)
   {
     executed.store(false);
@@ -444,16 +450,19 @@ TEST_CASE("flow_graph stress test with many nodes", "[flow_graph][scheduler]")
   // Add tasks to each node
   for (int i = 0; i < NUM_NODES; ++i)
   {
-    graph.add(nodes[i], SchedulerType::delegate_type::bind(
-                         [&, i](auto const&)
-                         {
-                           node_executed[i].store(true);
-                           // Verify execution order
-                           if (i > 0)
-                           {
-                             REQUIRE(node_executed[i - 1].load() == true);
-                           }
-                         }));
+    graph.add(nodes[i],
+              [&, i](auto const&)
+              {
+                node_executed[i].store(true);
+                // Verify execution order
+                if (i > 0)
+                {
+                  if (node_executed[i - 1].load() != true)
+                  {
+                    fails.fetch_add(1);
+                  }
+                }
+              });
   }
 
   auto ctx = SchedulerType::context_type::this_context::get();
@@ -465,6 +474,9 @@ TEST_CASE("flow_graph stress test with many nodes", "[flow_graph][scheduler]")
   {
     REQUIRE(node_executed[i].load() == true);
   }
+
+  // Ensure no execution order violations
+  REQUIRE(fails.load() == 0);
 
   scheduler.end_execution();
 }
@@ -486,18 +498,18 @@ TEST_CASE("flow_graph exception safety", "[flow_graph][scheduler]")
   graph.connect(failing_node, recovery_node);
 
   // Add a task that might throw (though the scheduler should handle it gracefully)
-  graph.add(failing_node, SchedulerType::delegate_type::bind(
-                           [&](auto const&)
-                           {
-                             // Simulate some work that might fail but doesn't throw
-                             // in this case, just complete normally
-                           }));
+  graph.add(failing_node,
+            [&](auto const&)
+            {
+              // Simulate some work that might fail but doesn't throw
+              // in this case, just complete normally
+            });
 
-  graph.add(recovery_node, SchedulerType::delegate_type::bind(
-                            [&](auto const&)
-                            {
-                              recovery_task_executed.store(true);
-                            }));
+  graph.add(recovery_node,
+            [&](auto const&)
+            {
+              recovery_task_executed.store(true);
+            });
 
   auto ctx = SchedulerType::context_type::this_context::get();
   graph.start(ctx);
@@ -520,11 +532,11 @@ TEST_CASE("flow_graph multiple starts without prepare", "[flow_graph][scheduler]
   std::atomic<int> execution_count{0};
 
   auto node = graph.create_node();
-  graph.add(node, SchedulerType::delegate_type::bind(
-                   [&](auto const&)
-                   {
-                     execution_count.fetch_add(1);
-                   }));
+  graph.add(node,
+            [&](auto const&)
+            {
+              execution_count.fetch_add(1);
+            });
 
   auto ctx = SchedulerType::context_type::this_context::get();
 
@@ -577,12 +589,12 @@ TEST_CASE("flow_graph diamond dependency pattern", "[flow_graph][scheduler]")
   // Add tasks to each node
   for (uint32_t i = 0; i < 4; ++i)
   {
-    graph.add(i, SchedulerType::delegate_type::bind(
-                  [&, i](auto const&)
-                  {
-                    node_order[i].store(execution_order.fetch_add(1));
-                    std::this_thread::sleep_for(std::chrono::milliseconds(5));
-                  }));
+    graph.add(i,
+              [&, i](auto const&)
+              {
+                node_order[i].store(execution_order.fetch_add(1));
+                std::this_thread::sleep_for(std::chrono::milliseconds(5));
+              });
   }
 
   auto ctx = SchedulerType::context_type::this_context::get();
@@ -615,20 +627,20 @@ TEST_CASE("flow_graph add tasks after prepare", "[flow_graph][scheduler]")
   auto node = graph.create_node();
 
   // Add initial task
-  graph.add(node, SchedulerType::delegate_type::bind(
-                   [&](auto const&)
-                   {
-                     execution_count.fetch_add(1);
-                   }));
+  graph.add(node,
+            [&](auto const&)
+            {
+              execution_count.fetch_add(1);
+            });
 
   // Prepare first
 
   // Add another task after prepare (potential issue)
-  graph.add(node, SchedulerType::delegate_type::bind(
-                   [&](auto const&)
-                   {
-                     execution_count.fetch_add(1);
-                   }));
+  graph.add(node,
+            [&](auto const&)
+            {
+              execution_count.fetch_add(1);
+            });
 
   auto ctx = SchedulerType::context_type::this_context::get();
   graph.start(ctx);

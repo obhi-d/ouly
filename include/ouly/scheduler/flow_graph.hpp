@@ -61,23 +61,23 @@ namespace ouly
  * graph.connect(process_node, finalize_node);
  *
  * // Add tasks to nodes
- * graph.add(setup_node, SchedulerType::delegate_type::bind(
+ * graph.add(setup_node,
  *     [](auto const& ctx) {
  *         // Setup work
  *         std::cout << "Setting up...\n";
- *     }));
+ *     });
  *
- * graph.add(process_node, SchedulerType::delegate_type::bind(
+ * graph.add(process_node,
  *     [](auto const& ctx) {
  *         // Main processing work
  *         std::cout << "Processing...\n";
- *     }));
+ *     });
  *
- * graph.add(finalize_node, SchedulerType::delegate_type::bind(
+ * graph.add(finalize_node,
  *     [](auto const& ctx) {
  *         // Cleanup work
  *         std::cout << "Finalizing...\n";
- *     }));
+ *     });
  *
  * // Execute the graph
  * auto ctx = SchedulerType::context_type::this_context::get();
@@ -152,16 +152,23 @@ public:
   /**
    * @brief Add a task to a specific node
    *
-   * Adds a task delegate to the specified node. Multiple tasks can be added to the
+   * Adds a task lambda to the specified node. Multiple tasks can be added to the
    * same node, and they will execute in parallel when the node's dependencies are satisfied.
    *
    * @param id The node identifier to add the task to
-   * @param exec_delegate The task delegate to execute
+   * @param exec_delegate The task lambda to execute
    *
    * @note Tasks can be added dynamically up until start() is called
    * @note This operation is not thread-safe during graph construction
    */
-  void add(node_id id, delegate_type&& exec_delegate) noexcept;
+  template <typename Func>
+  void add(node_id id, Func&& exec_delegate) noexcept
+  {
+    if (id < nodes_.size())
+    {
+      nodes_[id].add(delegate_type::bind(std::forward<Func>(exec_delegate)));
+    }
+  }
 
   /**
    * @brief Create a dependency between two nodes
@@ -370,15 +377,6 @@ auto flow_graph<SchedulerType, AvgNodeCount>::create_node() -> node_id
   nodes_.emplace_back();
   dependency_counts_.emplace_back(0);
   return id;
-}
-
-template <typename SchedulerType, size_t AvgNodeCount>
-void flow_graph<SchedulerType, AvgNodeCount>::add(node_id id, delegate_type&& exec_delegate) noexcept
-{
-  if (id < nodes_.size())
-  {
-    nodes_[id].add(std::move(exec_delegate));
-  }
 }
 
 template <typename SchedulerType, size_t AvgNodeCount>
