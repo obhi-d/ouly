@@ -32,7 +32,6 @@ public:
 
   void add(node_id id, delegate_type&& exec_delegate) noexcept;
   void connect(node_id from, node_id to) noexcept;
-  void prepare();
 
   void start(context_type const& ctx);
 
@@ -192,17 +191,6 @@ void flow_graph<SchedulerType, AvgNodeCount>::connect(node_id from, node_id to) 
 }
 
 template <typename SchedulerType, size_t AvgNodeCount>
-void flow_graph<SchedulerType, AvgNodeCount>::prepare()
-{
-  uint32_t total_tasks = 0;
-  for (uint32_t i = 0; i < nodes_.size(); ++i)
-  {
-    total_tasks += static_cast<uint32_t>(nodes_[i].get_tasks().size());
-  }
-  total_tasks_ = total_tasks;
-}
-
-template <typename SchedulerType, size_t AvgNodeCount>
 void flow_graph<SchedulerType, AvgNodeCount>::start(context_type const& ctx)
 {
   // Reset state for reusability
@@ -214,6 +202,13 @@ void flow_graph<SchedulerType, AvgNodeCount>::start(context_type const& ctx)
     nodes_[node].reset_dependencies(dependency_counts_[node]);
     nodes_[node].reset_run_count();
   }
+
+  uint32_t total_tasks = 0;
+  for (uint32_t i = 0; i < nodes_.size(); ++i)
+  {
+    total_tasks += static_cast<uint32_t>(nodes_[i].get_tasks().size());
+  }
+  total_tasks_ = total_tasks;
 
   // Initialize dependency counts and find ready nodes
   remaining_tasks_.store(total_tasks_, std::memory_order_relaxed);

@@ -8,7 +8,7 @@
       "name": "(gdb) Attach",
       "type": "cppdbg",
       "request": "attach",
-      "program": "/home/obhi/code/ouly/build/linux-default/unit_tests/test_scheduler_tests",
+      "program": "/home/obhi/code/ouly/build/linux-default/unit_tests/test_flow_graph_tests",
       "MIMode": "gdb",
       "setupCommands": [
         {
