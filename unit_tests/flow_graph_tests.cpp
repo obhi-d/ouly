@@ -4,7 +4,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <chrono>
 #include <thread>
-
+// NOLINTBEGIN
 using namespace ouly;
 
 TEST_CASE("flow_graph basic operations", "[flow_graph]")
@@ -200,7 +200,7 @@ TEST_CASE("flow_graph multiple tasks per node", "[flow_graph][scheduler]")
   for (int i = 0; i < 5; ++i)
   {
     graph.add(node1, SchedulerType::delegate_type::bind(
-                      [&, i](auto const&)
+                      [&](auto const&)
                       {
                         node1_task_count.fetch_add(1);
                         total_executions.fetch_add(1);
@@ -213,7 +213,7 @@ TEST_CASE("flow_graph multiple tasks per node", "[flow_graph][scheduler]")
   for (int i = 0; i < 3; ++i)
   {
     graph.add(node2, SchedulerType::delegate_type::bind(
-                      [&, i](auto const&)
+                      [&](auto const&)
                       {
                         node2_task_count.fetch_add(1);
                         total_executions.fetch_add(1);
@@ -640,3 +640,4 @@ TEST_CASE("flow_graph add tasks after prepare", "[flow_graph][scheduler]")
 
   scheduler.end_execution();
 }
+// NOLINTEND
