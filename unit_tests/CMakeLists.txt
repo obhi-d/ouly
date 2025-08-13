@@ -153,6 +153,7 @@ add_unit_test(NAME memory_mapped_allocators FILES "memory_mapped_allocators.cpp"
 add_unit_test(NAME coalescing_allocator FILES "coalescing_allocator.cpp" SANITIZE)
 add_unit_test(NAME spmc_ring FILES "spmc_ring.cpp" SANITIZE)
 add_unit_test(NAME scheduler_tests FILES "scheduler_tests.cpp" LINK_LIBS glm::glm SANITIZE)
+add_unit_test(NAME flow_graph_tests FILES "flow_graph_tests.cpp" LINK_LIBS glm::glm SANITIZE)
 add_unit_test(NAME auto_parallel_for FILES "test_auto_parallel_for.cpp" LINK_LIBS glm::glm SANITIZE)
 add_unit_test(NAME debug_auto_parallel_for FILES "debug_auto_parallel_for.cpp" LINK_LIBS glm::glm SANITIZE)
 add_executable(
