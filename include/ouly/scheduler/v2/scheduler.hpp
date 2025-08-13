@@ -53,6 +53,9 @@ class scheduler
 public:
   static constexpr uint32_t work_scale = 4;
 
+  using delegate_type = ouly::v2::task_delegate;
+  using context_type  = ouly::v2::task_context;
+
   OULY_API scheduler() noexcept                      = default;
   OULY_API scheduler(const scheduler&)               = delete;
   auto     operator=(const scheduler&) -> scheduler& = delete;
