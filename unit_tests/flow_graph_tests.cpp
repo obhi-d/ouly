@@ -18,9 +18,9 @@ TEST_CASE("flow_graph basic operations", "[flow_graph]")
     auto node2 = graph.create_node();
     auto node3 = graph.create_node();
 
-    REQUIRE(node1 == 0);
-    REQUIRE(node2 == 1);
-    REQUIRE(node3 == 2);
+    REQUIRE(node1.value() == 0);
+    REQUIRE(node2.value() == 1);
+    REQUIRE(node3.value() == 2);
 
     // Test connections
     graph.connect(node1, node2);
@@ -242,6 +242,7 @@ TEST_CASE("flow_graph complex dependency tree", "[flow_graph][scheduler]")
 {
   using SchedulerType = ouly::v2::scheduler;
   flow_graph<SchedulerType> graph;
+  using node_type = typename flow_graph<SchedulerType>::node_id;
 
   SchedulerType scheduler;
   scheduler.create_group(default_workgroup_id, 0, 4);
@@ -278,7 +279,7 @@ TEST_CASE("flow_graph complex dependency tree", "[flow_graph][scheduler]")
   // Add tasks to each node
   for (uint32_t i = 0; i < 7; ++i)
   {
-    graph.add(i,
+    graph.add(node_type{i},
               [&, i](auto const&)
               {
                 node_execution_order[i].store(execution_counter.fetch_add(1));
@@ -421,6 +422,7 @@ TEST_CASE("flow_graph stress test with many nodes", "[flow_graph][scheduler]")
 {
   using SchedulerType = ouly::v2::scheduler;
   flow_graph<SchedulerType> graph;
+  using node_type = typename flow_graph<SchedulerType>::node_id;
 
   SchedulerType scheduler;
   scheduler.create_group(default_workgroup_id, 0, 4);
@@ -435,7 +437,7 @@ TEST_CASE("flow_graph stress test with many nodes", "[flow_graph][scheduler]")
   }
 
   // Create linear chain of nodes
-  std::vector<uint32_t> nodes;
+  std::vector<node_type> nodes;
   for (int i = 0; i < NUM_NODES; ++i)
   {
     nodes.push_back(graph.create_node());
@@ -560,6 +562,7 @@ TEST_CASE("flow_graph diamond dependency pattern", "[flow_graph][scheduler]")
 {
   using SchedulerType = ouly::v2::scheduler;
   flow_graph<SchedulerType> graph;
+  using node_type = typename flow_graph<SchedulerType>::node_id;
 
   SchedulerType scheduler;
   scheduler.create_group(default_workgroup_id, 0, 4);
@@ -589,7 +592,7 @@ TEST_CASE("flow_graph diamond dependency pattern", "[flow_graph][scheduler]")
   // Add tasks to each node
   for (uint32_t i = 0; i < 4; ++i)
   {
-    graph.add(i,
+    graph.add(node_type{i},
               [&, i](auto const&)
               {
                 node_order[i].store(execution_order.fetch_add(1));
@@ -649,6 +652,486 @@ TEST_CASE("flow_graph add tasks after prepare", "[flow_graph][scheduler]")
   // This test might fail if the implementation doesn't handle
   // tasks added after prepare() correctly
   REQUIRE(execution_count.load() == 2);
+
+  scheduler.end_execution();
+}
+
+TEST_CASE("flow_graph task removal basic functionality", "[flow_graph][task_removal]")
+{
+  using SchedulerType = ouly::v2::scheduler;
+  flow_graph<SchedulerType> graph;
+
+  SchedulerType scheduler;
+  scheduler.create_group(default_workgroup_id, 0, 2);
+  scheduler.begin_execution();
+
+  std::atomic<int> execution_count{0};
+  std::atomic<int> removed_task_count{0};
+
+  auto node = graph.create_node();
+
+  // Add multiple tasks
+  [[maybe_unused]] auto task1 = graph.add(node,
+                                          [&](auto const&)
+                                          {
+                                            execution_count.fetch_add(1);
+                                          });
+  auto                  task2 = graph.add(node,
+                                          [&](auto const&)
+                                          {
+                           removed_task_count.fetch_add(1);
+                         });
+  [[maybe_unused]] auto task3 = graph.add(node,
+                                          [&](auto const&)
+                                          {
+                                            execution_count.fetch_add(1);
+                                          });
+
+  // Remove the middle task
+  graph.remove(node, task2);
+
+  auto ctx = SchedulerType::context_type::this_context::get();
+  graph.start(ctx);
+  graph.cooperative_wait(ctx);
+
+  // Only task1 and task3 should execute
+  REQUIRE(execution_count.load() == 2);
+  REQUIRE(removed_task_count.load() == 0);
+
+  scheduler.end_execution();
+}
+
+TEST_CASE("flow_graph task removal with invalid node ID", "[flow_graph][task_removal]")
+{
+  using SchedulerType = ouly::v2::scheduler;
+  flow_graph<SchedulerType> graph;
+  using node_type = typename flow_graph<SchedulerType>::node_id;
+  using task_type = typename flow_graph<SchedulerType>::task_id;
+
+  auto                  node = graph.create_node();
+  [[maybe_unused]] auto task = graph.add(node, [](auto const&) {});
+
+  // Try to remove from invalid node - should not crash
+  graph.remove(node_type{999}, task);
+
+  // Try to remove invalid task from valid node - should not crash
+  graph.remove(node, task_type{999});
+
+  // This should succeed
+  REQUIRE(true);
+}
+
+TEST_CASE("flow_graph task removal with empty task ID", "[flow_graph][task_removal]")
+{
+  using SchedulerType = ouly::v2::scheduler;
+  flow_graph<SchedulerType> graph;
+  using task_type = typename flow_graph<SchedulerType>::task_id;
+
+  auto                  node = graph.create_node();
+  [[maybe_unused]] auto task = graph.add(node, [](auto const&) {});
+
+  // Try to remove with empty/default task ID - should not crash
+  graph.remove(node, task_type{});
+
+  // This should succeed
+  REQUIRE(true);
+}
+
+TEST_CASE("flow_graph task removal reuses slots", "[flow_graph][task_removal]")
+{
+  using SchedulerType = ouly::v2::scheduler;
+  flow_graph<SchedulerType> graph;
+
+  SchedulerType scheduler;
+  scheduler.create_group(default_workgroup_id, 0, 2);
+  scheduler.begin_execution();
+
+  std::atomic<int> execution_count{0};
+  std::vector<int> execution_order;
+  std::mutex       order_mutex;
+
+  auto node = graph.create_node();
+
+  // Add tasks
+  [[maybe_unused]] auto task1 = graph.add(node,
+                                          [&](auto const&)
+                                          {
+                                            std::lock_guard<std::mutex> lock(order_mutex);
+                                            execution_order.push_back(1);
+                                            execution_count.fetch_add(1);
+                                          });
+
+  auto task2 = graph.add(node,
+                         [&](auto const&)
+                         {
+                           std::lock_guard<std::mutex> lock(order_mutex);
+                           execution_order.push_back(2);
+                           execution_count.fetch_add(1);
+                         });
+
+  [[maybe_unused]] auto task3 = graph.add(node,
+                                          [&](auto const&)
+                                          {
+                                            std::lock_guard<std::mutex> lock(order_mutex);
+                                            execution_order.push_back(3);
+                                            execution_count.fetch_add(1);
+                                          });
+
+  // Remove middle task
+  graph.remove(node, task2);
+
+  // Add a new task - should reuse the slot from removed task2
+  [[maybe_unused]] auto task4 = graph.add(node,
+                                          [&](auto const&)
+                                          {
+                                            std::lock_guard<std::mutex> lock(order_mutex);
+                                            execution_order.push_back(4);
+                                            execution_count.fetch_add(1);
+                                          });
+
+  auto ctx = SchedulerType::context_type::this_context::get();
+  graph.start(ctx);
+  graph.cooperative_wait(ctx);
+
+  // Should execute task1, task3, and task4 (not task2)
+  REQUIRE(execution_count.load() == 3);
+  REQUIRE(execution_order.size() == 3);
+
+  // Make sure task2 didn't execute
+  for (int val : execution_order)
+  {
+    REQUIRE(val != 2);
+  }
+
+  // Should contain 1, 3, and 4
+  std::sort(execution_order.begin(), execution_order.end());
+  REQUIRE(execution_order[0] == 1);
+  REQUIRE(execution_order[1] == 3);
+  REQUIRE(execution_order[2] == 4);
+
+  scheduler.end_execution();
+}
+
+TEST_CASE("flow_graph remove all tasks from node", "[flow_graph][task_removal]")
+{
+  using SchedulerType = ouly::v2::scheduler;
+  flow_graph<SchedulerType> graph;
+
+  SchedulerType scheduler;
+  scheduler.create_group(default_workgroup_id, 0, 2);
+  scheduler.begin_execution();
+
+  std::atomic<bool> successor_executed{false};
+
+  auto node1 = graph.create_node();
+  auto node2 = graph.create_node();
+
+  graph.connect(node1, node2);
+
+  // Add tasks to first node
+  auto task1 = graph.add(node1, [](auto const&) {});
+  auto task2 = graph.add(node1, [](auto const&) {});
+
+  // Add task to second node
+  graph.add(node2,
+            [&](auto const&)
+            {
+              successor_executed.store(true);
+            });
+
+  // Remove all tasks from first node
+  graph.remove(node1, task1);
+  graph.remove(node1, task2);
+
+  auto ctx = SchedulerType::context_type::this_context::get();
+  graph.start(ctx);
+  graph.cooperative_wait(ctx);
+
+  // Even with no tasks in node1, node2 should still execute
+  // because empty nodes trigger their successors
+  REQUIRE(successor_executed.load());
+
+  scheduler.end_execution();
+}
+
+TEST_CASE("flow_graph task removal with dependencies", "[flow_graph][task_removal]")
+{
+  using SchedulerType = ouly::v2::scheduler;
+  flow_graph<SchedulerType> graph;
+
+  SchedulerType scheduler;
+  scheduler.create_group(default_workgroup_id, 0, 2);
+  scheduler.begin_execution();
+
+  std::atomic<int> node1_execution_count{0};
+  std::atomic<int> node2_execution_count{0};
+  std::atomic<int> removed_task_executions{0};
+
+  auto node1 = graph.create_node();
+  auto node2 = graph.create_node();
+
+  graph.connect(node1, node2);
+
+  // Add multiple tasks to first node
+  [[maybe_unused]] auto task1a = graph.add(node1,
+                                           [&](auto const&)
+                                           {
+                                             node1_execution_count.fetch_add(1);
+                                           });
+  auto                  task1b = graph.add(node1,
+                                           [&](auto const&)
+                                           {
+                            removed_task_executions.fetch_add(1);
+                          });
+  [[maybe_unused]] auto task1c = graph.add(node1,
+                                           [&](auto const&)
+                                           {
+                                             node1_execution_count.fetch_add(1);
+                                           });
+
+  // Add task to second node
+  graph.add(node2,
+            [&](auto const&)
+            {
+              node2_execution_count.fetch_add(1);
+            });
+
+  // Remove middle task from first node
+  graph.remove(node1, task1b);
+
+  auto ctx = SchedulerType::context_type::this_context::get();
+  graph.start(ctx);
+  graph.cooperative_wait(ctx);
+
+  // Node1 should execute 2 tasks (not the removed one), node2 should execute after
+  REQUIRE(node1_execution_count.load() == 2);
+  REQUIRE(node2_execution_count.load() == 1);
+  REQUIRE(removed_task_executions.load() == 0);
+
+  scheduler.end_execution();
+}
+
+TEST_CASE("flow_graph multiple removes and graph reusability", "[flow_graph][task_removal]")
+{
+  using SchedulerType = ouly::v2::scheduler;
+  flow_graph<SchedulerType> graph;
+
+  SchedulerType scheduler;
+  scheduler.create_group(default_workgroup_id, 0, 2);
+  scheduler.begin_execution();
+
+  std::atomic<int> execution_count{0};
+
+  auto node = graph.create_node();
+
+  // Add multiple tasks
+  [[maybe_unused]] auto task1 = graph.add(node,
+                                          [&](auto const&)
+                                          {
+                                            execution_count.fetch_add(1);
+                                          });
+  auto                  task2 = graph.add(node,
+                                          [&](auto const&)
+                                          {
+                           execution_count.fetch_add(1);
+                         });
+  [[maybe_unused]] auto task3 = graph.add(node,
+                                          [&](auto const&)
+                                          {
+                                            execution_count.fetch_add(1);
+                                          });
+  auto                  task4 = graph.add(node,
+                                          [&](auto const&)
+                                          {
+                           execution_count.fetch_add(1);
+                         });
+
+  // Remove some tasks
+  graph.remove(node, task2);
+  graph.remove(node, task4);
+
+  auto ctx = SchedulerType::context_type::this_context::get();
+
+  // First execution - should execute 2 remaining tasks
+  graph.start(ctx);
+  graph.cooperative_wait(ctx);
+  REQUIRE(execution_count.load() == 2);
+
+  // Second execution - should execute the same 2 tasks again (graph reusability)
+  graph.start(ctx);
+  graph.cooperative_wait(ctx);
+  REQUIRE(execution_count.load() == 4);
+
+  // Add a new task and execute again
+  graph.add(node,
+            [&](auto const&)
+            {
+              execution_count.fetch_add(1);
+            });
+  graph.start(ctx);
+  graph.cooperative_wait(ctx);
+  REQUIRE(execution_count.load() == 7); // 2 original + 1 new = 3 per run, total = 4 + 3 = 7
+
+  scheduler.end_execution();
+}
+
+TEST_CASE("flow_graph remove task then double remove", "[flow_graph][task_removal]")
+{
+  using SchedulerType = ouly::v2::scheduler;
+  flow_graph<SchedulerType> graph;
+
+  SchedulerType scheduler;
+  scheduler.create_group(default_workgroup_id, 0, 2);
+  scheduler.begin_execution();
+
+  std::atomic<int> execution_count{0};
+
+  auto node = graph.create_node();
+
+  auto                  task1 = graph.add(node,
+                                          [&](auto const&)
+                                          {
+                           execution_count.fetch_add(1);
+                         });
+  [[maybe_unused]] auto task2 = graph.add(node,
+                                          [&](auto const&)
+                                          {
+                                            execution_count.fetch_add(1);
+                                          });
+
+  // Remove task1
+  graph.remove(node, task1);
+
+  // Remove task1 again - should be safe
+  graph.remove(node, task1);
+
+  auto ctx = SchedulerType::context_type::this_context::get();
+  graph.start(ctx);
+  graph.cooperative_wait(ctx);
+
+  // Only task2 should execute
+  REQUIRE(execution_count.load() == 1);
+
+  scheduler.end_execution();
+}
+
+TEST_CASE("flow_graph remove tasks stress test", "[flow_graph][task_removal]")
+{
+  using SchedulerType = ouly::v2::scheduler;
+  flow_graph<SchedulerType> graph;
+  using task_type = typename flow_graph<SchedulerType>::task_id;
+
+  SchedulerType scheduler;
+  scheduler.create_group(default_workgroup_id, 0, 4);
+  scheduler.begin_execution();
+
+  std::atomic<int> execution_count{0};
+  constexpr int    NUM_TASKS = 100;
+
+  auto                   node = graph.create_node();
+  std::vector<task_type> task_ids;
+
+  // Add many tasks
+  for (int i = 0; i < NUM_TASKS; ++i)
+  {
+    auto task_id = graph.add(node,
+                             [&](auto const&)
+                             {
+                               execution_count.fetch_add(1);
+                             });
+    task_ids.push_back(task_id);
+  }
+
+  // Remove every other task
+  for (int i = 1; i < NUM_TASKS; i += 2)
+  {
+    graph.remove(node, task_ids[i]);
+  }
+
+  auto ctx = SchedulerType::context_type::this_context::get();
+  graph.start(ctx);
+  graph.cooperative_wait(ctx);
+
+  // Should execute NUM_TASKS/2 tasks (every other one)
+  REQUIRE(execution_count.load() == NUM_TASKS / 2);
+
+  scheduler.end_execution();
+}
+
+TEST_CASE("flow_graph complex removal with diamond pattern", "[flow_graph][task_removal]")
+{
+  using SchedulerType = ouly::v2::scheduler;
+  flow_graph<SchedulerType> graph;
+
+  SchedulerType scheduler;
+  scheduler.create_group(default_workgroup_id, 0, 4);
+  scheduler.begin_execution();
+
+  std::atomic<int> top_count{0};
+  std::atomic<int> left_count{0};
+  std::atomic<int> right_count{0};
+  std::atomic<int> bottom_count{0};
+  std::atomic<int> removed_count{0};
+
+  // Create diamond pattern
+  auto top_node    = graph.create_node();
+  auto left_node   = graph.create_node();
+  auto right_node  = graph.create_node();
+  auto bottom_node = graph.create_node();
+
+  graph.connect(top_node, left_node);
+  graph.connect(top_node, right_node);
+  graph.connect(left_node, bottom_node);
+  graph.connect(right_node, bottom_node);
+
+  // Add tasks and some that will be removed
+  graph.add(top_node,
+            [&](auto const&)
+            {
+              top_count.fetch_add(1);
+            });
+
+  [[maybe_unused]] auto left_task1 = graph.add(left_node,
+                                               [&](auto const&)
+                                               {
+                                                 left_count.fetch_add(1);
+                                               });
+  auto                  left_task2 = graph.add(left_node,
+                                               [&](auto const&)
+                                               {
+                                removed_count.fetch_add(1);
+                              }); // Will be removed
+
+  graph.add(right_node,
+            [&](auto const&)
+            {
+              right_count.fetch_add(1);
+            });
+  auto right_task2 = graph.add(right_node,
+                               [&](auto const&)
+                               {
+                                 removed_count.fetch_add(1);
+                               }); // Will be removed
+
+  graph.add(bottom_node,
+            [&](auto const&)
+            {
+              bottom_count.fetch_add(1);
+            });
+
+  // Remove some tasks
+  graph.remove(left_node, left_task2);
+  graph.remove(right_node, right_task2);
+
+  auto ctx = SchedulerType::context_type::this_context::get();
+  graph.start(ctx);
+  graph.cooperative_wait(ctx);
+
+  REQUIRE(top_count.load() == 1);
+  REQUIRE(left_count.load() == 1);
+  REQUIRE(right_count.load() == 1);
+  REQUIRE(bottom_count.load() == 1);
+  REQUIRE(removed_count.load() == 0); // Removed tasks should not execute
 
   scheduler.end_execution();
 }

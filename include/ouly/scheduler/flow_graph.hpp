@@ -4,6 +4,7 @@
 
 #include "ouly/containers/small_vector.hpp"
 #include "ouly/scheduler/worker_structs.hpp"
+#include "ouly/utility/tagged_int.hpp"
 #include <atomic>
 #include <cstdint>
 #include <semaphore>
@@ -133,7 +134,12 @@ template <typename SchedulerType, size_t AvgNodeCount = 4>
 class flow_graph
 {
 public:
-  using node_id       = uint32_t;                              ///< Type for node identifiers
+  struct node_tag
+  {};
+  struct task_tag
+  {};
+  using node_id       = ouly::tagged_int<node_tag, uint32_t>;
+  using task_id       = ouly::tagged_int<task_tag, uint32_t>;  ///< Type for node identifiers
   using delegate_type = typename SchedulerType::delegate_type; ///< Task delegate type from scheduler
   using context_type  = typename SchedulerType::context_type;  ///< Scheduler context type
 
@@ -162,11 +168,30 @@ public:
    * @note This operation is not thread-safe during graph construction
    */
   template <typename Func>
-  void add(node_id id, Func&& exec_delegate) noexcept
+  auto add(node_id id, Func&& exec_delegate) noexcept -> task_id
   {
-    if (id < nodes_.size())
+    if (id.value() < nodes_.size())
     {
-      nodes_[id].add(delegate_type::bind(std::forward<Func>(exec_delegate)));
+      return nodes_[id.value()].add(delegate_type::bind(std::forward<Func>(exec_delegate)));
+    }
+
+    return task_id(); // Return null task_id if node does not exist
+  }
+
+  /**
+   * @brief Enqueue removal of a task from the graph
+   *
+   * @param id The node identifier to remove the task from
+   * @param task_id The task identifier to remove
+   *
+   * @note This operation is not thread-safe if the task is being executed
+   * @note Tasks can be removed dynamically up until start() is called or after a wait()
+   */
+  void remove(node_id id, task_id task_id) noexcept
+  {
+    if (id.value() < nodes_.size())
+    {
+      nodes_[id.value()].remove(task_id);
     }
   }
 
@@ -227,13 +252,6 @@ public:
   void wait(context_type const& ctx);
 
 private:
-  /// @brief Status returned by task execution indicating whether all tasks in a node are complete
-  enum class status : uint8_t
-  {
-    all_done,  ///< All tasks in the node have completed
-    more_tasks ///< More tasks in the node are still running
-  };
-
   /**
    * @brief Internal task node representation
    *
@@ -273,9 +291,32 @@ private:
     auto operator=(const task_node&) -> task_node& = delete;
 
     /// Add a task delegate to this node
-    void add(delegate_type&& task) noexcept
+    auto add(delegate_type&& task) noexcept -> task_id
     {
+      valid_task_count_++;
+      for (auto& t : tasks_)
+      {
+        if (!t)
+        {
+          t = std::move(task);
+          return task_id{static_cast<uint32_t>(&t - tasks_.data()) + 1};
+        }
+      }
       tasks_.emplace_back(std::move(task));
+      return task_id{static_cast<uint32_t>(tasks_.size())};
+    }
+
+    void remove(task_id id) noexcept
+    {
+      auto index = id.value() - 1;
+      if (index < tasks_.size())
+      {
+        if (tasks_[index])
+        {
+          valid_task_count_--;
+          tasks_[index] = delegate_type(); // Clear the task
+        }
+      }
     }
 
     /// Set the workgroup for task execution (currently unused but reserved for future multi-workgroup support)
@@ -333,24 +374,33 @@ private:
     }
 
     /// Execute a specific task by index and return completion status
-    auto execute_task(uint32_t index, context_type const& ctx) noexcept -> status
+    auto execute_task(uint32_t index, context_type const& ctx) noexcept -> bool
     {
       tasks_[index](ctx);
       // Check if this is the last task in this node to complete
       auto completed_count = run_count_.fetch_add(1, std::memory_order_acq_rel) + 1;
-      if (completed_count == static_cast<uint32_t>(tasks_.size()))
-      {
-        return status::all_done;
-      }
-      return status::more_tasks;
+      return (completed_count == valid_task_count_);
+    }
+
+    /// Get the number of valid tasks in this node
+    [[nodiscard]] auto get_valid_task_count() const noexcept -> uint32_t
+    {
+      return valid_task_count_;
+    }
+
+    /// Check if this node has no tasks
+    [[nodiscard]] auto has_no_tasks() const noexcept -> bool
+    {
+      return valid_task_count_ == 0;
     }
 
   private:
     workgroup_id                               workgroup_{default_workgroup_id}; ///< Workgroup for task execution
-    std::vector<delegate_type>                 tasks_;                           ///< Tasks to execute in this node
-    ouly::small_vector<uint32_t, AvgNodeCount> next_nodes_;                      ///< Successor node IDs
-    std::atomic<uint32_t>                      pending_dependencies_{0};         ///< Number of unfinished dependencies
-    std::atomic_uint32_t                       run_count_{0};                    ///< Completed task count in this node
+    uint32_t                                   valid_task_count_ = 0;
+    std::vector<delegate_type>                 tasks_;                   ///< Tasks to execute in this node
+    ouly::small_vector<uint32_t, AvgNodeCount> next_nodes_;              ///< Successor node IDs
+    std::atomic<uint32_t>                      pending_dependencies_{0}; ///< Number of unfinished dependencies
+    std::atomic_uint32_t                       run_count_{0};            ///< Completed task count in this node
   };
 
   // Graph state
@@ -362,10 +412,10 @@ private:
   std::binary_semaphore                       done_{0};            ///< Signaled when all tasks complete
 
   /// Execute all tasks in a specific node
-  void execute_node(uint32_t node_id, context_type const& ctx);
+  void execute_node(uint32_t node_index, context_type const& ctx);
 
   /// Notify successor nodes when a node completes
-  void notify_successors(uint32_t node_id, context_type const& ctx);
+  void notify_successors(uint32_t node_index, context_type const& ctx);
 };
 
 //
@@ -384,10 +434,10 @@ auto flow_graph<SchedulerType, AvgNodeCount>::create_node(workgroup_id workgroup
 template <typename SchedulerType, size_t AvgNodeCount>
 void flow_graph<SchedulerType, AvgNodeCount>::connect(node_id from, node_id to) noexcept
 {
-  if (from < nodes_.size() && to < nodes_.size())
+  if (from.value() < nodes_.size() && to.value() < nodes_.size())
   {
-    nodes_[from].add_successor(to);
-    dependency_counts_[to]++;
+    nodes_[from.value()].add_successor(to.value());
+    dependency_counts_[to.value()]++;
   }
 }
 
@@ -407,7 +457,7 @@ void flow_graph<SchedulerType, AvgNodeCount>::start(context_type const& ctx)
   uint32_t total_tasks = 0;
   for (uint32_t i = 0; i < nodes_.size(); ++i)
   {
-    total_tasks += static_cast<uint32_t>(nodes_[i].get_tasks().size());
+    total_tasks += nodes_[i].get_valid_task_count();
   }
   total_tasks_ = total_tasks;
 
@@ -426,33 +476,36 @@ void flow_graph<SchedulerType, AvgNodeCount>::start(context_type const& ctx)
 }
 
 template <typename SchedulerType, size_t AvgNodeCount>
-void flow_graph<SchedulerType, AvgNodeCount>::execute_node(uint32_t node_id, context_type const& ctx)
+void flow_graph<SchedulerType, AvgNodeCount>::execute_node(uint32_t node_index, context_type const& ctx)
 {
-  auto& node      = nodes_[node_id];
+  auto& node      = nodes_[node_index];
   auto  tasks     = node.get_tasks();
   auto  workgroup = node.get_workgroup();
 
-  if (tasks.empty())
+  if (node.has_no_tasks())
   {
     // Node has no tasks, just notify successors
-    notify_successors(node_id, ctx);
+    notify_successors(node_index, ctx);
     return;
   }
 
   // Submit all tasks for this node
   for (uint32_t i = 0; i < tasks.size(); ++i)
   {
+    if (!tasks[i])
+    {
+      continue; // Skip empty tasks
+    }
     // Create a simple lambda that captures minimal data
     auto* graph_ptr = this;
     ctx.get_scheduler().submit(ctx, workgroup,
-                               [graph_ptr, node_id, i](context_type const& task_ctx) mutable
+                               [graph_ptr, node_index, i](context_type const& task_ctx) mutable
                                {
                                  // Execute the actual task
-                                 if (graph_ptr->nodes_[node_id].execute_task(static_cast<uint32_t>(i), task_ctx) ==
-                                     status::all_done)
+                                 if (graph_ptr->nodes_[node_index].execute_task(i, task_ctx))
                                  {
                                    // Last task in this node, notify successors
-                                   graph_ptr->notify_successors(node_id, task_ctx);
+                                   graph_ptr->notify_successors(node_index, task_ctx);
                                  }
                                  // Each task decrements the global task count
                                  if (graph_ptr->remaining_tasks_.fetch_sub(1, std::memory_order_acq_rel) == 1)
@@ -464,14 +517,14 @@ void flow_graph<SchedulerType, AvgNodeCount>::execute_node(uint32_t node_id, con
 }
 
 template <typename SchedulerType, size_t AvgNodeCount>
-void flow_graph<SchedulerType, AvgNodeCount>::notify_successors(uint32_t node_id, context_type const& ctx)
+void flow_graph<SchedulerType, AvgNodeCount>::notify_successors(uint32_t node_index, context_type const& ctx)
 {
-  if (node_id >= nodes_.size())
+  if (node_index >= nodes_.size())
   {
     return;
   }
 
-  auto& node       = nodes_[node_id];
+  auto& node       = nodes_[node_index];
   auto  successors = node.get_successors();
 
   // Notify all successor nodes
