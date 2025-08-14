@@ -1,3 +1,7 @@
+
+
+#define OULY_ASSERT(expr)
+
 #include "ouly/scheduler/flow_graph.hpp"
 #include "ouly/scheduler/scheduler.hpp"
 #include <atomic>

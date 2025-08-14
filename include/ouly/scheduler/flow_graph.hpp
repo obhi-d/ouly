@@ -5,8 +5,10 @@
 #include "ouly/containers/small_vector.hpp"
 #include "ouly/scheduler/worker_structs.hpp"
 #include "ouly/utility/tagged_int.hpp"
+#include "ouly/utility/user_config.hpp"
 #include <atomic>
 #include <cstdint>
+#include <limits>
 #include <semaphore>
 #include <span>
 #include <vector>
@@ -138,8 +140,8 @@ public:
   {};
   struct task_tag
   {};
-  using node_id       = ouly::tagged_int<node_tag, uint32_t>;
-  using task_id       = ouly::tagged_int<task_tag, uint32_t>;  ///< Type for node identifiers
+  using node_id       = ouly::tagged_int<node_tag, uint32_t, std::numeric_limits<uint32_t>::max()>;
+  using task_id       = ouly::tagged_int<task_tag, uint32_t, std::numeric_limits<uint32_t>::max()>;
   using delegate_type = typename SchedulerType::delegate_type; ///< Task delegate type from scheduler
   using context_type  = typename SchedulerType::context_type;  ///< Scheduler context type
 
@@ -168,14 +170,15 @@ public:
    * @note This operation is not thread-safe during graph construction
    */
   template <typename Func>
-  auto add(node_id id, Func&& exec_delegate) noexcept -> task_id
+  auto add(node_id id, Func&& exec_delegate) -> task_id
   {
+    OULY_ASSERT(id.value() < nodes_.size() && !started_.load(std::memory_order_acquire));
     if (id.value() < nodes_.size())
     {
       return nodes_[id.value()].add(delegate_type::bind(std::forward<Func>(exec_delegate)));
     }
 
-    return task_id(); // Return null task_id if node does not exist
+    return task_id{};
   }
 
   /**
@@ -187,8 +190,9 @@ public:
    * @note This operation is not thread-safe if the task is being executed
    * @note Tasks can be removed dynamically up until start() is called or after a wait()
    */
-  void remove(node_id id, task_id task_id) noexcept
+  void remove(node_id id, task_id task_id)
   {
+    OULY_ASSERT(id.value() < nodes_.size() && !started_.load(std::memory_order_acquire));
     if (id.value() < nodes_.size())
     {
       nodes_[id.value()].remove(task_id);
@@ -208,7 +212,7 @@ public:
    * @note Circular dependencies are not detected and will cause deadlocks
    * @note This operation is not thread-safe during graph construction
    */
-  void connect(node_id from, node_id to) noexcept;
+  void connect(node_id from, node_id to);
 
   /**
    * @brief Start execution of the flow graph
@@ -291,7 +295,7 @@ private:
     auto operator=(const task_node&) -> task_node& = delete;
 
     /// Add a task delegate to this node
-    auto add(delegate_type&& task) noexcept -> task_id
+    auto add(delegate_type&& task) -> task_id
     {
       valid_task_count_++;
       for (auto& t : tasks_)
@@ -299,16 +303,16 @@ private:
         if (!t)
         {
           t = std::move(task);
-          return task_id{static_cast<uint32_t>(&t - tasks_.data()) + 1};
+          return task_id{static_cast<uint32_t>(&t - tasks_.data())};
         }
       }
       tasks_.emplace_back(std::move(task));
-      return task_id{static_cast<uint32_t>(tasks_.size())};
+      return task_id{static_cast<uint32_t>(tasks_.size() - 1)};
     }
 
     void remove(task_id id) noexcept
     {
-      auto index = id.value() - 1;
+      auto index = id.value();
       if (index < tasks_.size())
       {
         if (tasks_[index])
@@ -425,6 +429,8 @@ private:
 template <typename SchedulerType, size_t AvgNodeCount>
 auto flow_graph<SchedulerType, AvgNodeCount>::create_node(workgroup_id workgroup) -> node_id
 {
+  OULY_ASSERT(!started_.load(std::memory_order_acquire));
+
   auto id = static_cast<node_id>(nodes_.size());
   nodes_.emplace_back(workgroup);
   dependency_counts_.emplace_back(0);
@@ -432,8 +438,10 @@ auto flow_graph<SchedulerType, AvgNodeCount>::create_node(workgroup_id workgroup
 }
 
 template <typename SchedulerType, size_t AvgNodeCount>
-void flow_graph<SchedulerType, AvgNodeCount>::connect(node_id from, node_id to) noexcept
+void flow_graph<SchedulerType, AvgNodeCount>::connect(node_id from, node_id to)
 {
+  OULY_ASSERT(!started_.load(std::memory_order_acquire));
+
   if (from.value() < nodes_.size() && to.value() < nodes_.size())
   {
     nodes_[from.value()].add_successor(to.value());
@@ -444,9 +452,7 @@ void flow_graph<SchedulerType, AvgNodeCount>::connect(node_id from, node_id to) 
 template <typename SchedulerType, size_t AvgNodeCount>
 void flow_graph<SchedulerType, AvgNodeCount>::start(context_type const& ctx)
 {
-  // Reset state for reusability
-  started_.store(false, std::memory_order_relaxed);
-  remaining_tasks_.store(0, std::memory_order_relaxed);
+  OULY_ASSERT(!started_.load(std::memory_order_acquire));
 
   for (uint32_t node = 0; node < nodes_.size(); ++node)
   {
@@ -551,6 +557,10 @@ void flow_graph<SchedulerType, AvgNodeCount>::cooperative_wait(context_type cons
   }
 
   ctx.busy_wait(done_);
+
+  // Reset state for reusability
+  started_.store(false, std::memory_order_relaxed);
+  remaining_tasks_.store(0, std::memory_order_relaxed);
 }
 
 template <typename SchedulerType, size_t AvgNodeCount>
@@ -562,6 +572,10 @@ void flow_graph<SchedulerType, AvgNodeCount>::wait(context_type const& /* ctx */
   }
 
   done_.acquire();
+
+  // Reset state for reusability
+  started_.store(false, std::memory_order_relaxed);
+  remaining_tasks_.store(0, std::memory_order_relaxed);
 }
 
 } // namespace ouly
