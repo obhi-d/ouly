@@ -133,16 +133,14 @@ allocator.smart_rewind(); // may release unused arenas
 ```
 
 #### Arena Allocators
-Coalescing arena allocator (unit_tests/coalescing_allocator.cpp):
+Coalescing arena allocator (unit_tests/coalescing_allocator.cpp) meant for GPU/Memory range allocations:
 
 ```cpp
 #include <ouly/allocators/coalescing_arena_allocator.hpp>
 
 ouly::coalescing_arena_allocator arena;
-auto* p1 = ouly::allocate<std::uint8_t>(arena, 128);
-auto* p2 = ouly::allocate<std::uint8_t>(arena, 256);
-arena.deallocate(p2, 256);
-arena.deallocate(p1, 128);
+auto p1 = arena.allocate(128);
+arena.deallocate(p1);
 ```
 
 #### Pool Allocators
@@ -339,8 +337,8 @@ auto n1 = graph.create_node();
 auto n2 = graph.create_node();
 graph.connect(n1, n2);
 
-graph.add(n1, Scheduler::delegate_type::bind([](auto const&) {/*work*/}));
-graph.add(n2, Scheduler::delegate_type::bind([](auto const&) {/*work*/}));
+graph.add(n1, [](auto const&) {/*work*/});
+graph.add(n2, [](auto const&) {/*work*/});
 
 graph.start(ctx);
 graph.cooperative_wait(ctx);
@@ -455,7 +453,11 @@ Binary in-memory and stream adapters (unit_tests/binary_stream.cpp, binary_seria
 
 struct Test 
 { 
-  int a; std::string b; 
+  int a; 
+  std::string b; 
+  Test () : a(0), b("") {}
+  Test (char const* custom_init) : a(0), b(custom_init) {}
+  // Explicit reflection for non aggregate types
   static auto reflect() noexcept {
     return ouly::bind(ouly::bind<"a", &Test::a>(), ouly::bind<"b", &Test::b>());
   }
@@ -484,6 +486,7 @@ Human-readable YAML for reflected types and STL (unit_tests/yaml_output_serializ
 #include <ouly/serializers/lite_yml.hpp>
 #include <ouly/reflection/reflection.hpp>
 
+// Implicit reflection for aggregate types with upto 64 members
 struct Cfg { int a; std::string b; };
 
 Cfg cfg{100, "value"};

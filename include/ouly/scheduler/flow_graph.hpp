@@ -147,7 +147,7 @@ public:
    *
    * @note This operation is not thread-safe and should be done during graph construction
    */
-  auto create_node() -> node_id;
+  auto create_node(workgroup_id workgroup = default_workgroup_id) -> node_id;
 
   /**
    * @brief Add a task to a specific node
@@ -243,8 +243,10 @@ private:
   class task_node
   {
   public:
-    task_node()  = default;
-    ~task_node() = default;
+    task_node() noexcept  = default;
+    ~task_node() noexcept = default;
+
+    explicit task_node(workgroup_id group) noexcept : workgroup_(group) {}
 
     /// Custom move constructor to handle atomic members properly
     task_node(task_node&& other) noexcept
@@ -371,10 +373,10 @@ private:
 //
 
 template <typename SchedulerType, size_t AvgNodeCount>
-auto flow_graph<SchedulerType, AvgNodeCount>::create_node() -> node_id
+auto flow_graph<SchedulerType, AvgNodeCount>::create_node(workgroup_id workgroup) -> node_id
 {
   auto id = static_cast<node_id>(nodes_.size());
-  nodes_.emplace_back();
+  nodes_.emplace_back(workgroup);
   dependency_counts_.emplace_back(0);
   return id;
 }
