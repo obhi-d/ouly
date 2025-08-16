@@ -132,7 +132,7 @@ namespace ouly
  * - Empty nodes (nodes without tasks) are supported and will trigger their successors
  */
 
-template <typename SchedulerType, size_t AvgNodeCount = 4>
+template <typename SchedulerType, size_t AvgNodeCount = 4, size_t AvgDepCount = 4>
 class flow_graph
 {
 public:
@@ -155,7 +155,15 @@ public:
    *
    * @note This operation is not thread-safe and should be done during graph construction
    */
-  auto create_node(workgroup_id workgroup = default_workgroup_id) -> node_id;
+  auto create_node(workgroup_id workgroup = default_workgroup_id) -> node_id
+  {
+    OULY_ASSERT(!started_.load(std::memory_order_acquire));
+
+    auto id = static_cast<node_id>(nodes_.size());
+    nodes_.emplace_back(workgroup);
+    dependency_counts_.emplace_back(0);
+    return id;
+  }
 
   /**
    * @brief Add a task to a specific node
@@ -212,7 +220,16 @@ public:
    * @note Circular dependencies are not detected and will cause deadlocks
    * @note This operation is not thread-safe during graph construction
    */
-  void connect(node_id from, node_id to);
+  void connect(node_id from, node_id to)
+  {
+    OULY_ASSERT(!started_.load(std::memory_order_acquire));
+
+    if (from.value() < nodes_.size() && to.value() < nodes_.size())
+    {
+      nodes_[from.value()].add_successor(to.value());
+      dependency_counts_[to.value()]++;
+    }
+  }
 
   /**
    * @brief Start execution of the flow graph
@@ -227,7 +244,36 @@ public:
    * @note All tasks added to nodes up to this point will be executed
    * @note This method calculates total task count dynamically to handle late additions
    */
-  void start(context_type const& ctx);
+  void start(context_type const& ctx)
+  {
+    OULY_ASSERT(!started_.load(std::memory_order_acquire));
+
+    for (uint32_t node = 0; node < nodes_.size(); ++node)
+    {
+      nodes_[node].reset_dependencies(dependency_counts_[node]);
+      nodes_[node].reset_run_count();
+    }
+
+    uint32_t total_tasks = 0;
+    for (uint32_t i = 0; i < nodes_.size(); ++i)
+    {
+      total_tasks += nodes_[i].get_valid_task_count();
+    }
+    total_tasks_ = total_tasks;
+
+    // Initialize dependency counts and find ready nodes
+    remaining_tasks_.store(total_tasks_, std::memory_order_relaxed);
+    started_.store(true, std::memory_order_release);
+
+    // Submit all ready nodes (nodes with 0 dependencies)
+    for (uint32_t i = 0; i < nodes_.size(); ++i)
+    {
+      if (dependency_counts_[i] == 0)
+      {
+        execute_node(i, ctx);
+      }
+    }
+  }
 
   /**
    * @brief Wait for graph completion with cooperative multitasking
@@ -241,19 +287,41 @@ public:
    * @warning Always use this method instead of wait() when using a single workgroup
    *          to prevent deadlocks, as the main thread is considered a worker
    */
-  void cooperative_wait(context_type const& ctx);
+  void cooperative_wait(context_type const& ctx)
+  {
+    if (!started_.load(std::memory_order_acquire))
+    {
+      return;
+    }
+
+    ctx.busy_wait(done_);
+
+    // Reset state for reusability
+    started_.store(false, std::memory_order_relaxed);
+    remaining_tasks_.store(0, std::memory_order_relaxed);
+  }
 
   /**
    * @brief Wait for graph completion (blocking)
    *
    * Blocks the calling thread until the flow graph execution is complete.
    *
-   * @param ctx The scheduler context (unused in this implementation)
-   *
    * @warning Do not use this method when the main thread is part of a single workgroup
    *          as it can cause deadlocks. Use cooperative_wait() instead.
    */
-  void wait(context_type const& ctx);
+  void wait()
+  {
+    if (!started_.load(std::memory_order_acquire))
+    {
+      return;
+    }
+
+    done_.acquire();
+
+    // Reset state for reusability
+    started_.store(false, std::memory_order_relaxed);
+    remaining_tasks_.store(0, std::memory_order_relaxed);
+  }
 
 private:
   /**
@@ -399,12 +467,12 @@ private:
     }
 
   private:
-    workgroup_id                               workgroup_{default_workgroup_id}; ///< Workgroup for task execution
-    uint32_t                                   valid_task_count_ = 0;
-    std::vector<delegate_type>                 tasks_;                   ///< Tasks to execute in this node
-    ouly::small_vector<uint32_t, AvgNodeCount> next_nodes_;              ///< Successor node IDs
-    std::atomic<uint32_t>                      pending_dependencies_{0}; ///< Number of unfinished dependencies
-    std::atomic_uint32_t                       run_count_{0};            ///< Completed task count in this node
+    workgroup_id                              workgroup_{default_workgroup_id}; ///< Workgroup for task execution
+    uint32_t                                  valid_task_count_ = 0;
+    std::vector<delegate_type>                tasks_;                   ///< Tasks to execute in this node
+    ouly::small_vector<uint32_t, AvgDepCount> next_nodes_;              ///< Successor node IDs
+    std::atomic<uint32_t>                     pending_dependencies_{0}; ///< Number of unfinished dependencies
+    std::atomic_uint32_t                      run_count_{0};            ///< Completed task count in this node
   };
 
   // Graph state
@@ -416,166 +484,71 @@ private:
   std::binary_semaphore                       done_{0};            ///< Signaled when all tasks complete
 
   /// Execute all tasks in a specific node
-  void execute_node(uint32_t node_index, context_type const& ctx);
+  void execute_node(uint32_t node_index, context_type const& ctx)
+  {
+    auto& node      = nodes_[node_index];
+    auto  tasks     = node.get_tasks();
+    auto  workgroup = node.get_workgroup();
+
+    if (node.has_no_tasks())
+    {
+      // Node has no tasks, just notify successors
+      notify_successors(node_index, ctx);
+      return;
+    }
+
+    // Submit all tasks for this node
+    for (uint32_t i = 0; i < tasks.size(); ++i)
+    {
+      if (!tasks[i])
+      {
+        continue; // Skip empty tasks
+      }
+      // Create a simple lambda that captures minimal data
+      auto* graph_ptr = this;
+      ctx.get_scheduler().submit(ctx, workgroup,
+                                 [graph_ptr, node_index, i](context_type const& task_ctx) mutable
+                                 {
+                                   // Execute the actual task
+                                   if (graph_ptr->nodes_[node_index].execute_task(i, task_ctx))
+                                   {
+                                     // Last task in this node, notify successors
+                                     graph_ptr->notify_successors(node_index, task_ctx);
+                                   }
+                                   // Each task decrements the global task count
+                                   if (graph_ptr->remaining_tasks_.fetch_sub(1, std::memory_order_acq_rel) == 1)
+                                   {
+                                     graph_ptr->done_.release();
+                                   }
+                                 });
+    }
+  }
 
   /// Notify successor nodes when a node completes
-  void notify_successors(uint32_t node_index, context_type const& ctx);
-};
-
-//
-// Implementation
-//
-
-template <typename SchedulerType, size_t AvgNodeCount>
-auto flow_graph<SchedulerType, AvgNodeCount>::create_node(workgroup_id workgroup) -> node_id
-{
-  OULY_ASSERT(!started_.load(std::memory_order_acquire));
-
-  auto id = static_cast<node_id>(nodes_.size());
-  nodes_.emplace_back(workgroup);
-  dependency_counts_.emplace_back(0);
-  return id;
-}
-
-template <typename SchedulerType, size_t AvgNodeCount>
-void flow_graph<SchedulerType, AvgNodeCount>::connect(node_id from, node_id to)
-{
-  OULY_ASSERT(!started_.load(std::memory_order_acquire));
-
-  if (from.value() < nodes_.size() && to.value() < nodes_.size())
+  void notify_successors(uint32_t node_index, context_type const& ctx)
   {
-    nodes_[from.value()].add_successor(to.value());
-    dependency_counts_[to.value()]++;
-  }
-}
-
-template <typename SchedulerType, size_t AvgNodeCount>
-void flow_graph<SchedulerType, AvgNodeCount>::start(context_type const& ctx)
-{
-  OULY_ASSERT(!started_.load(std::memory_order_acquire));
-
-  for (uint32_t node = 0; node < nodes_.size(); ++node)
-  {
-    nodes_[node].reset_dependencies(dependency_counts_[node]);
-    nodes_[node].reset_run_count();
-  }
-
-  uint32_t total_tasks = 0;
-  for (uint32_t i = 0; i < nodes_.size(); ++i)
-  {
-    total_tasks += nodes_[i].get_valid_task_count();
-  }
-  total_tasks_ = total_tasks;
-
-  // Initialize dependency counts and find ready nodes
-  remaining_tasks_.store(total_tasks_, std::memory_order_relaxed);
-  started_.store(true, std::memory_order_release);
-
-  // Submit all ready nodes (nodes with 0 dependencies)
-  for (uint32_t i = 0; i < nodes_.size(); ++i)
-  {
-    if (dependency_counts_[i] == 0)
+    if (node_index >= nodes_.size())
     {
-      execute_node(i, ctx);
+      return;
     }
-  }
-}
 
-template <typename SchedulerType, size_t AvgNodeCount>
-void flow_graph<SchedulerType, AvgNodeCount>::execute_node(uint32_t node_index, context_type const& ctx)
-{
-  auto& node      = nodes_[node_index];
-  auto  tasks     = node.get_tasks();
-  auto  workgroup = node.get_workgroup();
+    auto& node       = nodes_[node_index];
+    auto  successors = node.get_successors();
 
-  if (node.has_no_tasks())
-  {
-    // Node has no tasks, just notify successors
-    notify_successors(node_index, ctx);
-    return;
-  }
-
-  // Submit all tasks for this node
-  for (uint32_t i = 0; i < tasks.size(); ++i)
-  {
-    if (!tasks[i])
+    // Notify all successor nodes
+    for (uint32_t successor_id : successors)
     {
-      continue; // Skip empty tasks
-    }
-    // Create a simple lambda that captures minimal data
-    auto* graph_ptr = this;
-    ctx.get_scheduler().submit(ctx, workgroup,
-                               [graph_ptr, node_index, i](context_type const& task_ctx) mutable
-                               {
-                                 // Execute the actual task
-                                 if (graph_ptr->nodes_[node_index].execute_task(i, task_ctx))
-                                 {
-                                   // Last task in this node, notify successors
-                                   graph_ptr->notify_successors(node_index, task_ctx);
-                                 }
-                                 // Each task decrements the global task count
-                                 if (graph_ptr->remaining_tasks_.fetch_sub(1, std::memory_order_acq_rel) == 1)
-                                 {
-                                   graph_ptr->done_.release();
-                                 }
-                               });
-  }
-}
-
-template <typename SchedulerType, size_t AvgNodeCount>
-void flow_graph<SchedulerType, AvgNodeCount>::notify_successors(uint32_t node_index, context_type const& ctx)
-{
-  if (node_index >= nodes_.size())
-  {
-    return;
-  }
-
-  auto& node       = nodes_[node_index];
-  auto  successors = node.get_successors();
-
-  // Notify all successor nodes
-  for (uint32_t successor_id : successors)
-  {
-    if (successor_id < nodes_.size())
-    {
-      auto& successor = nodes_[successor_id];
-      if (successor.decrement_dependencies() == 0)
+      if (successor_id < nodes_.size())
       {
-        // All dependencies satisfied, execute this node
-        execute_node(successor_id, ctx);
+        auto& successor = nodes_[successor_id];
+        if (successor.decrement_dependencies() == 0)
+        {
+          // All dependencies satisfied, execute this node
+          execute_node(successor_id, ctx);
+        }
       }
     }
   }
-}
-
-template <typename SchedulerType, size_t AvgNodeCount>
-void flow_graph<SchedulerType, AvgNodeCount>::cooperative_wait(context_type const& ctx)
-{
-  if (!started_.load(std::memory_order_acquire))
-  {
-    return;
-  }
-
-  ctx.busy_wait(done_);
-
-  // Reset state for reusability
-  started_.store(false, std::memory_order_relaxed);
-  remaining_tasks_.store(0, std::memory_order_relaxed);
-}
-
-template <typename SchedulerType, size_t AvgNodeCount>
-void flow_graph<SchedulerType, AvgNodeCount>::wait(context_type const& /* ctx */)
-{
-  if (!started_.load(std::memory_order_acquire))
-  {
-    return;
-  }
-
-  done_.acquire();
-
-  // Reset state for reusability
-  started_.store(false, std::memory_order_relaxed);
-  remaining_tasks_.store(0, std::memory_order_relaxed);
-}
+};
 
 } // namespace ouly

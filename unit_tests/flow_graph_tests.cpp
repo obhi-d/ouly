@@ -80,7 +80,7 @@ TEST_CASE("flow_graph execution with v2 scheduler", "[flow_graph][scheduler]")
 
   auto ctx = SchedulerType::context_type::this_context::get();
   graph.start(ctx);
-  graph.wait(ctx);
+  graph.wait();
 
   // Check execution order
   REQUIRE(node1_order.load() < node2_order.load());
@@ -124,7 +124,7 @@ TEST_CASE("flow_graph reusability", "[flow_graph][scheduler]")
   // First run
 
   graph.start(ctx);
-  graph.wait(ctx);
+  graph.wait();
 
   REQUIRE(run1_count.load() == 2);
 
@@ -143,7 +143,7 @@ TEST_CASE("flow_graph reusability", "[flow_graph][scheduler]")
 
   // Second run - should execute all tasks (original + new ones)
   graph.start(ctx);
-  graph.wait(ctx);
+  graph.wait();
 
   REQUIRE(run1_count.load() == 4); // Original tasks executed again
   REQUIRE(run2_count.load() == 2); // New tasks executed
@@ -175,7 +175,7 @@ TEST_CASE("flow_graph with v1 scheduler", "[flow_graph][scheduler]")
 
   auto ctx = SchedulerType::context_type::this_context::get();
   graph.start(ctx);
-  graph.wait(ctx);
+  graph.wait();
 
   REQUIRE(task_executed.load());
 
