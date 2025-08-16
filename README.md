@@ -313,7 +313,7 @@ auto const& ctx = ouly::v2::task_context::this_context::get();
 
 auto task = my_task();
 scheduler.submit(ctx, ouly::default_workgroup_id, task);
-task.sync_wait_result();
+task.wait();
 
 scheduler.end_execution();
 ```

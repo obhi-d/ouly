@@ -76,7 +76,7 @@ public:
     return group_id_;
   }
 
-  void busy_wait(std::binary_semaphore& event) const;
+  void cooperative_wait(std::binary_semaphore& event) const;
 
   auto operator<=>(task_context const&) const noexcept = default;
 

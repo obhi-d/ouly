@@ -82,6 +82,6 @@ concept TaskContext = requires(const T& ctx) {
   { ctx.get_group_offset() } -> std::convertible_to<uint32_t>;
   { ctx.template get_user_context<void>() } -> std::convertible_to<void*>;
   { T::this_context::get() } -> std::convertible_to<const T&>;
-  { ctx.busy_wait(std::declval<std::binary_semaphore&>()) } -> std::same_as<void>;
+  { ctx.cooperative_wait(std::declval<std::binary_semaphore&>()) } -> std::same_as<void>;
 };
 } // namespace ouly

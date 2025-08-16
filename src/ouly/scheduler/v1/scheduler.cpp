@@ -540,7 +540,7 @@ void scheduler::wait_for_tasks()
 
 } // namespace ouly::v1
 
-void ouly::v1::task_context::busy_wait(std::binary_semaphore& event) const
+void ouly::v1::task_context::cooperative_wait(std::binary_semaphore& event) const
 {
   while (!event.try_acquire())
   {

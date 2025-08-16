@@ -508,7 +508,7 @@ void scheduler::busy_work(worker_id thread) noexcept
 
 } // namespace ouly::inline v2
 
-void ouly::v2::task_context::busy_wait(std::binary_semaphore& event) const
+void ouly::v2::task_context::cooperative_wait(std::binary_semaphore& event) const
 {
   while (!event.try_acquire())
   {

@@ -79,7 +79,7 @@ public:
   /**
    * @brief Returns result after waiting for the task to finish, blocks the current thread until work is done
    */
-  auto sync_wait_result() noexcept -> R
+  auto wait() noexcept -> R
   {
     std::binary_semaphore event{0};
     ouly::detail::wait(&event, this);
@@ -95,11 +95,11 @@ public:
    * this coro is not available
    */
   template <TaskContext WC>
-  auto busy_wait_result(WC const& ctx) noexcept -> R
+  auto cooperative_wait(WC const& ctx) noexcept -> R
   {
     std::binary_semaphore event{0};
     ouly::detail::wait(&event, this);
-    ctx.busy_wait(event);
+    ctx.cooperative_wait(event);
     if constexpr (!std::is_same_v<R, void>)
     {
       return coro_.promise().result();

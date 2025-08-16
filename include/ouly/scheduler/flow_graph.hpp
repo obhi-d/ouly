@@ -294,7 +294,7 @@ public:
       return;
     }
 
-    ctx.busy_wait(done_);
+    ctx.cooperative_wait(done_);
 
     // Reset state for reusability
     started_.store(false, std::memory_order_relaxed);
