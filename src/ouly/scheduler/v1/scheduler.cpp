@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 
 #include "ouly/scheduler/v1/scheduler.hpp"
+#include "ouly/scheduler/co_task.hpp"
 #include "ouly/scheduler/detail/pause.hpp"
-#include "ouly/scheduler/task.hpp"
 #include "ouly/scheduler/v1/task_context.hpp"
 #include "ouly/scheduler/worker_structs.hpp"
 #include "ouly/utility/common.hpp"

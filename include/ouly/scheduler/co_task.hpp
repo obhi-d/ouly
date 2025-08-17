@@ -16,7 +16,7 @@ concept CoroutineTask = requires(T a) {
  * @brief Use a coroutine task to defer execute a task, inital state is suspended. Coroutine is only resumed manually
  * and mostly by a scheduler. This task allows waiting on another task and be suspended during execution from any
  * thread. This task can only be waited from a single wait point.
- * @tparam R
+ * @tparam R Return type of the task
  */
 template <typename R>
 struct co_task : public ouly::detail::co_task<R, ouly::detail::promise_type<co_task, R>>
@@ -37,10 +37,10 @@ struct co_task : public ouly::detail::co_task<R, ouly::detail::promise_type<co_t
   }
 };
 /**
- * @brief Use a sequence task to immediately executed. The expectation is you will co_await this task on another task,
- * which will result in suspension of execution. This task allows waiting on another task and be suspended during
- * execution from any thread. This task can only be waited from a single wait point.
- * @tparam R
+ * @brief Use a sequence task to immediately start execution. The expectation is you will co_await this task on another
+ * task, which will result in suspension of execution of the co awaiting task. This task also allows waiting on another
+ * task and be suspended during* execution from any thread. This task can only be waited from a single wait point.
+ * @tparam R Return type of the task
  */
 template <typename R>
 struct co_sequence : public ouly::detail::co_task<R, ouly::detail::sequence_promise<co_sequence, R>>

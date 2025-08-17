@@ -300,7 +300,7 @@ ouly::parallel_for(
 Submit co_task<T> directly (unit_tests/scheduler_comparison_tests.cpp):
 
 ```cpp
-#include <ouly/scheduler/task.hpp>
+#include <ouly/scheduler/co_task.hpp>
 
 ouly::co_task<void> my_task() {
     co_return;
