@@ -1224,7 +1224,6 @@ TEMPLATE_TEST_CASE("Intrusive list - Memory layout and alignment", "[intrusive_l
                    (ouly::intrusive_list<&sobject::hook, true, true>),
                    (ouly::intrusive_list<&object::hook, true, true>))
 {
-  TestType il;
 
   // Test that the intrusive_list itself has reasonable size
   // (should be small since it only stores pointers and counters)
