@@ -6,9 +6,14 @@
 
 namespace ouly::detail
 {
+
+inline auto completed_sentinel() noexcept -> std::coroutine_handle<>
+{
+  return std::noop_coroutine();
+}
+
 struct coro_state
 {
-  std::coroutine_handle<> continuation_       = nullptr;
-  std::atomic_bool        continuation_state_ = false;
+  std::atomic<std::coroutine_handle<>> continuation_{nullptr};
 };
 } // namespace ouly::detail
