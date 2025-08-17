@@ -251,9 +251,9 @@ public:
 
   /**
    * @brief Removes an entity and automatically handles value array swapping
-   * @tparam ValueContainer A container type that supports operator[], size(), and pop_back()
+   * @tparam ValueContainer... Container types that support operator[], size(), and pop_back()
    * @param entity The entity to remove
-   * @param values The external value container to update
+   * @param values The external value containers to update
    *
    * This convenience function handles the common pattern of removing an entity
    * and updating an external value array. It performs the swap-and-pop operation
@@ -266,15 +266,11 @@ public:
    * map.erase_and_swap_values(entity, components);
    * @endcode
    */
-  template <typename ValueContainer>
-  void erase_and_swap_values(entity_type entity, ValueContainer& values) noexcept
+  template <typename... ValueContainer>
+  void erase_and_swap_values(entity_type entity, ValueContainer&... values) noexcept
   {
     auto swap_idx = erase_and_get_swap_index(entity);
-    if (swap_idx < values.size() - 1)
-    {
-      values[swap_idx] = std::move(values[values.size() - 1]);
-    }
-    values.pop_back();
+    (swap_value(swap_idx, values), ...);
   }
 
   /**
@@ -428,6 +424,16 @@ public:
   }
 
 private:
+  template <typename ValueContainer>
+  void swap_value(size_type swap_idx, ValueContainer& values) noexcept
+  {
+    if (swap_idx < values.size() - 1)
+    {
+      values[swap_idx] = std::move(values.back());
+    }
+    values.pop_back();
+  }
+
   void validate(entity_type l) const noexcept
   {
     auto lnk  = l.get();

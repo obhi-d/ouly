@@ -405,9 +405,14 @@ TEST_CASE("ecs::map: Multiple erases with external arrays", "[ecs][map]")
   SECTION("Remove every other entity")
   {
     // Remove entities at indices 1, 3, 5, 7, 9
-    for (uint32_t i = 9; i >= 1; i -= 2)
+    for (int32_t i = 9; i >= 1; i -= 2)
     {
-      map.erase_and_swap_values(entities[i], components);
+      if (i < 0)
+      {
+        continue;
+      }
+
+      map.erase_and_swap_values(entities[static_cast<uint32_t>(i)], components);
     }
 
     REQUIRE(map.size() == 5);
