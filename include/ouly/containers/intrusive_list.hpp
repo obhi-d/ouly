@@ -50,7 +50,6 @@ class intrusive_list
   using traits    = ouly::detail::intrusive_list_type_traits<M>;
   using node_type = typename traits::value_type;
   using hook_type = typename traits::hook_type;
-  using size_type = SizeType;
   using list_data_type =
    ouly::detail::list_data<node_type, M, ouly::detail::size_counter<SizeType, CacheSize>, CacheTail>;
 
@@ -65,6 +64,13 @@ class intrusive_list
   public:
     constexpr iterator_type() noexcept = default;
     constexpr iterator_type(V* item) noexcept : item_(item) {}
+
+    // Allow conversion from non-const to const iterator
+    template <typename U>
+    constexpr iterator_type(const iterator_type<U>& other) noexcept
+      requires(std::is_same_v<V, const U>)
+        : item_(other.item_)
+    {}
 
     auto operator->() const noexcept
     {
@@ -118,7 +124,9 @@ class intrusive_list
       return *item_;
     }
 
-    auto operator++() noexcept -> auto& requires(is_dlist) {
+    auto operator++() noexcept -> auto&
+      requires(is_dlist)
+    {
       OULY_ASSERT(item_);
       item_ = traits::prev(*item_);
       return *this;
@@ -143,6 +151,7 @@ class intrusive_list
 
 public:
   using value_type               = node_type;
+  using size_type                = SizeType;
   using iterator                 = iterator_type<value_type>;
   using const_iterator           = iterator_type<value_type const>;
   using reverse_iterator         = std::conditional_t<bidir, reverse_iterator_type<value_type>, void>;
@@ -256,9 +265,9 @@ public:
     return begin();
   }
 
-  constexpr auto cend() const noexcept -> iterator
+  constexpr auto cend() const noexcept -> const_iterator
   {
-    return iterator();
+    return const_iterator();
   }
 
   auto front() noexcept -> value_type&
@@ -266,7 +275,11 @@ public:
     return *data_.head_;
   }
 
-  auto back() noexcept -> value_type& requires(CacheTail) { return *data_.tail_; }
+  auto back() noexcept -> value_type&
+    requires(CacheTail)
+  {
+    return *data_.tail_;
+  }
 
   auto front() const noexcept -> value_type const&
   {
@@ -323,6 +336,11 @@ public:
   void append_front(intrusive_list&& other) noexcept
     requires(is_dlist && CacheTail)
   {
+    if (other.empty())
+    {
+      return;
+    }
+
     if (data_.head_)
     {
       traits::next(other.back(), data_.head_);
@@ -341,6 +359,11 @@ public:
   void append_back(intrusive_list&& other) noexcept
     requires(is_dlist && CacheTail)
   {
+    if (other.empty())
+    {
+      return;
+    }
+
     if (data_.tail_)
     {
       traits::next(*data_.tail_, &other.front());
@@ -445,6 +468,11 @@ public:
   // NOLINTNEXTLINE
   void append_after(value_type& l, intrusive_list&& other) noexcept
   {
+    if (other.empty())
+    {
+      return;
+    }
+
     auto next = traits::next(l);
     traits::next(l, &other.front());
     if (!next)
@@ -503,6 +531,11 @@ public:
   void append(value_type& l, intrusive_list&& other) noexcept
     requires(is_dlist && CacheTail)
   {
+    if (other.empty())
+    {
+      return;
+    }
+
     if (&l == data_.head_)
     {
       append_front(std::move(other));
