@@ -145,7 +145,7 @@ TEST_CASE("ecs::map: Entity value access", "[ecs][map]")
   SECTION("Iteration over dense array")
   {
     std::vector<typename ouly::ecs::entity<>::size_type> entity_values;
-    for (size_t i = 0; i < map.size(); ++i)
+    for (uint32_t i = 0; i < map.size(); ++i)
     {
       entity_values.push_back(map.get_entity_at(i));
     }
@@ -386,13 +386,13 @@ TEST_CASE("ecs::map: Multiple erases with external arrays", "[ecs][map]")
 
   // Create multiple entities
   std::vector<ouly::ecs::entity<>> entities;
-  for (int i = 0; i < 10; ++i)
+  for (uint32_t i = 0; i < 10; ++i)
   {
     entities.emplace_back(i * 10);
   }
 
   // Insert all entities with components
-  for (size_t i = 0; i < entities.size(); ++i)
+  for (uint32_t i = 0; i < static_cast<uint32_t>(entities.size()); ++i)
   {
     auto idx = map.emplace(entities[i]);
     components.resize(map.size());
@@ -405,7 +405,7 @@ TEST_CASE("ecs::map: Multiple erases with external arrays", "[ecs][map]")
   SECTION("Remove every other entity")
   {
     // Remove entities at indices 1, 3, 5, 7, 9
-    for (int i = 9; i >= 1; i -= 2)
+    for (uint32_t i = 9; i >= 1; i -= 2)
     {
       map.erase_and_swap_values(entities[i], components);
     }
@@ -414,7 +414,7 @@ TEST_CASE("ecs::map: Multiple erases with external arrays", "[ecs][map]")
     REQUIRE(components.size() == 5);
 
     // Verify remaining entities are still correct
-    for (int i = 0; i < 10; i += 2)
+    for (uint32_t i = 0; i < 10; i += 2)
     {
       REQUIRE(map.contains(entities[i]));
       auto idx = map.key(entities[i]);
@@ -429,11 +429,11 @@ TEST_CASE("ecs::map: Performance characteristics", "[ecs][map]")
 
   SECTION("Large number of insertions")
   {
-    const size_t                     count = 10000;
+    const uint32_t                   count = 10000;
     std::vector<ouly::ecs::entity<>> entities;
     entities.reserve(count);
 
-    for (size_t i = 0; i < count; ++i)
+    for (uint32_t i = 0; i < count; ++i)
     {
       entities.emplace_back(i);
       map.emplace(entities.back());
