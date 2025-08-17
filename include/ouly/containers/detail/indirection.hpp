@@ -189,7 +189,7 @@ public:
     links_.shrink_to_fit();
   }
 
-  void resize(size_type new_cap, size_type value) {}
+  void resize([[maybe_unused]] size_type new_cap, [[maybe_unused]] size_type value) {}
 
 private:
   sparse_vector<size_type, index_traits> links_;
