@@ -84,6 +84,11 @@ public:
     return i < links_.size() && links_[i] != Traits::null_v && ouly::detail::is_valid(links_[i]);
   }
 
+  void resize(size_type new_cap, size_type value)
+  {
+    links_.resize(new_cap, value);
+  }
+
 private:
   vector<size_type, custom_allocator_t<Traits>> links_;
 };
@@ -183,6 +188,8 @@ public:
   {
     links_.shrink_to_fit();
   }
+
+  void resize(size_type new_cap, size_type value) {}
 
 private:
   sparse_vector<size_type, index_traits> links_;

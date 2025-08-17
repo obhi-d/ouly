@@ -83,7 +83,7 @@ private:
   static constexpr bool      has_self_index     = ouly::detail::HasSelfIndexValue<config>;
   static constexpr bool      has_direct_mapping = ouly::detail::HasDirectMapping<config>;
   static constexpr bool      has_sparse_storage = ouly::detail::HasUseSparseAttrib<config>;
-  static constexpr size_type tombstone          = std::numeric_limits<uint32_t>::max();
+  static constexpr size_type tombstone          = std::numeric_limits<size_type>::max();
 
   using this_type     = components<value_type, entity_type, config>;
   using optional_val  = ouly::optional_ref<reference>;
@@ -170,7 +170,9 @@ public:
     return *this;
   }
 
-  auto operator=(components const& other) noexcept -> components& requires(std::is_copy_constructible_v<value_type>) {
+  auto operator=(components const& other) noexcept -> components&
+    requires(std::is_copy_constructible_v<value_type>)
+  {
     if (this == &other)
     {
       return *this;
