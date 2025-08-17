@@ -320,6 +320,7 @@
 <li class="toctree-l4"><a class="reference internal" href="#_CPPv4I0I0E0EN4ouly3ecs14basic_registryE"><code class="docutils literal notranslate"><span class="pre">ouly::ecs::basic_registry</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#_CPPv4I00EN4ouly3ecs10collectionE"><code class="docutils literal notranslate"><span class="pre">ouly::ecs::collection</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#_CPPv4I000EN4ouly3ecs10componentsE"><code class="docutils literal notranslate"><span class="pre">ouly::ecs::components</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#_CPPv4I00EN4ouly3ecs3mapE"><code class="docutils literal notranslate"><span class="pre">ouly::ecs::map</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -3170,6 +3171,324 @@ This class provides a efficient storage and management system for components in 
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>size</strong> – The maximum number of elements to accommodate </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4I00EN4ouly3ecs3mapE">
+<span id="_CPPv3I00EN4ouly3ecs3mapE"></span><span id="_CPPv2I00EN4ouly3ecs3mapE"></span><span class="k"><span class="pre">template</span></span><span class="p"><span class="pre">&lt;</span></span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">EntityTy</span></span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="n"><span class="pre">ouly</span></span><span class="p"><span class="pre">::</span></span><a class="reference internal" href="#_CPPv4N4ouly3ecsE" title="ouly::ecs"><span class="n"><span class="pre">ecs</span></span></a><span class="p"><span class="pre">::</span></span><a class="reference internal" href="#_CPPv4I0EN4ouly3ecs6entityE" title="ouly::ecs::entity"><span class="n"><span class="pre">entity</span></span></a><span class="p"><span class="pre">&lt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Config</span></span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="n"><span class="pre">ouly</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">default_config</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4I00EN4ouly3ecs3mapE" title="ouly::ecs::map::EntityTy"><span class="n"><span class="pre">EntityTy</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><br /><span class="target" id="classouly_1_1ecs_1_1map"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">map</span></span></span><a class="headerlink" href="#_CPPv4I00EN4ouly3ecs3mapE" title="Link to this definition"></a><br /></dt>
+<dd><div class="docutils container">
+<em>#include &lt;map.hpp&gt;</em></div>
+<p>A high-performance map that maps sparse entity indices to dense continuous indices. </p>
+<p>This class is designed for Entity Component Systems (ECS) where you need to map discontinuous entity IDs to continuous array indices for efficient iteration and cache-friendly access patterns. It maintains two internal containers:<ul class="simple">
+<li><p>A sparse mapping from entity IDs to dense indices</p></li>
+<li><p>A dense array of entity values for efficient iteration</p></li>
+</ul>
+</p>
+<p>The map supports efficient insertion, lookup, and removal operations while maintaining dense packing of the stored values.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Template Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>EntityTy</strong> – The entity type to use as keys (default: ouly::ecs::entity&lt;&gt;) </p></li>
+<li><p><strong>Config</strong> – Configuration type that controls allocation and indexing behavior</p></li>
+</ul>
+</dd>
+</dl>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-types">Public Types</p>
+<dl class="cpp type">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly3ecs3map11entity_typeE">
+<span id="_CPPv3N4ouly3ecs3map11entity_typeE"></span><span id="_CPPv2N4ouly3ecs3map11entity_typeE"></span><span class="target" id="classouly_1_1ecs_1_1map_1a34355108702ec3f354a0016a1b19fb9f"></span><span class="k"><span class="pre">using</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">entity_type</span></span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4I00EN4ouly3ecs3mapE" title="ouly::ecs::map::EntityTy"><span class="n"><span class="pre">EntityTy</span></span></a><a class="headerlink" href="#_CPPv4N4ouly3ecs3map11entity_typeE" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp type">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly3ecs3map6configE">
+<span id="_CPPv3N4ouly3ecs3map6configE"></span><span id="_CPPv2N4ouly3ecs3map6configE"></span><span class="target" id="classouly_1_1ecs_1_1map_1aec711f004d4f144da485c064ac9d0e3c"></span><span class="k"><span class="pre">using</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">config</span></span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4I00EN4ouly3ecs3mapE" title="ouly::ecs::map::Config"><span class="n"><span class="pre">Config</span></span></a><a class="headerlink" href="#_CPPv4N4ouly3ecs3map6configE" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp type">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly3ecs3map9size_typeE">
+<span id="_CPPv3N4ouly3ecs3map9size_typeE"></span><span id="_CPPv2N4ouly3ecs3map9size_typeE"></span><span class="target" id="classouly_1_1ecs_1_1map_1abab13e94667fbc8d50d6dc6e825e6583"></span><span class="k"><span class="pre">using</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">size_type</span></span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N4ouly3ecs3map11entity_typeE" title="ouly::ecs::map::entity_type"><span class="n"><span class="pre">entity_type</span></span></a><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">size_type</span></span><a class="headerlink" href="#_CPPv4N4ouly3ecs3map9size_typeE" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp type">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly3ecs3map10ssize_typeE">
+<span id="_CPPv3N4ouly3ecs3map10ssize_typeE"></span><span id="_CPPv2N4ouly3ecs3map10ssize_typeE"></span><span class="target" id="classouly_1_1ecs_1_1map_1a733172ca35712922720813dffe463bc6"></span><span class="k"><span class="pre">using</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ssize_type</span></span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">make_signed_t</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N4ouly3ecs3map9size_typeE" title="ouly::ecs::map::size_type"><span class="n"><span class="pre">size_type</span></span></a><span class="p"><span class="pre">&gt;</span></span><a class="headerlink" href="#_CPPv4N4ouly3ecs3map10ssize_typeE" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp type">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly3ecs3map13revision_typeE">
+<span id="_CPPv3N4ouly3ecs3map13revision_typeE"></span><span id="_CPPv2N4ouly3ecs3map13revision_typeE"></span><span class="target" id="classouly_1_1ecs_1_1map_1a84e857c869da0864fa6bcae3e844b8dc"></span><span class="k"><span class="pre">using</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">revision_type</span></span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4I00EN4ouly3ecs3mapE" title="ouly::ecs::map::EntityTy"><span class="n"><span class="pre">EntityTy</span></span></a><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">revision_type</span></span><a class="headerlink" href="#_CPPv4N4ouly3ecs3map13revision_typeE" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp type">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly3ecs3map14allocator_typeE">
+<span id="_CPPv3N4ouly3ecs3map14allocator_typeE"></span><span id="_CPPv2N4ouly3ecs3map14allocator_typeE"></span><span class="target" id="classouly_1_1ecs_1_1map_1a9ae034e5f44866ea1cefc00f358ab69a"></span><span class="k"><span class="pre">using</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">allocator_type</span></span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="n"><span class="pre">ouly</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">detail</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">custom_allocator_t</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4I00EN4ouly3ecs3mapE" title="ouly::ecs::map::Config"><span class="n"><span class="pre">Config</span></span></a><span class="p"><span class="pre">&gt;</span></span><a class="headerlink" href="#_CPPv4N4ouly3ecs3map14allocator_typeE" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly3ecs3map3mapEv">
+<span id="_CPPv3N4ouly3ecs3map3mapEv"></span><span id="_CPPv2N4ouly3ecs3map3mapEv"></span><span id="ouly::ecs::map::map"></span><span class="target" id="classouly_1_1ecs_1_1map_1ad605cec07a0d76e9c2cfcf24e3be6c21"></span><span class="sig-name descname"><span class="n"><span class="pre">map</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N4ouly3ecs3map3mapEv" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly3ecs3map3mapERR14allocator_type">
+<span id="_CPPv3N4ouly3ecs3map3mapERR14allocator_type"></span><span id="_CPPv2N4ouly3ecs3map3mapERR14allocator_type"></span><span id="ouly::ecs::map::map__allocator_typeRR"></span><span class="target" id="classouly_1_1ecs_1_1map_1a8d0cfdd802c87cac0f0f557b2cd16b5d"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">map</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N4ouly3ecs3map14allocator_typeE" title="ouly::ecs::map::allocator_type"><span class="n"><span class="pre">allocator_type</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">alloc</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><a class="headerlink" href="#_CPPv4N4ouly3ecs3map3mapERR14allocator_type" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly3ecs3map3mapERK14allocator_type">
+<span id="_CPPv3N4ouly3ecs3map3mapERK14allocator_type"></span><span id="_CPPv2N4ouly3ecs3map3mapERK14allocator_type"></span><span id="ouly::ecs::map::map__allocator_typeCR"></span><span class="target" id="classouly_1_1ecs_1_1map_1a667d56dec0a8afdec80ad0ddb778dea0"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">map</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N4ouly3ecs3map14allocator_typeE" title="ouly::ecs::map::allocator_type"><span class="n"><span class="pre">allocator_type</span></span></a><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">alloc</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><a class="headerlink" href="#_CPPv4N4ouly3ecs3map3mapERK14allocator_type" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly3ecs3map3mapERR3map">
+<span id="_CPPv3N4ouly3ecs3map3mapERR3map"></span><span id="_CPPv2N4ouly3ecs3map3mapERR3map"></span><span id="ouly::ecs::map::map__mapRR"></span><span class="target" id="classouly_1_1ecs_1_1map_1afb42fcb7e953c62ab6c07956fdb80b58"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">map</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N4ouly3ecs3map3mapERR3map" title="ouly::ecs::map::map"><span class="n"><span class="pre">map</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">other</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><a class="headerlink" href="#_CPPv4N4ouly3ecs3map3mapERR3map" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly3ecs3map3mapERK3map">
+<span id="_CPPv3N4ouly3ecs3map3mapERK3map"></span><span id="_CPPv2N4ouly3ecs3map3mapERK3map"></span><span id="ouly::ecs::map::map__mapCR"></span><span class="target" id="classouly_1_1ecs_1_1map_1a5f9e83a5f58bbb40d879d28eb0000a5d"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">map</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N4ouly3ecs3map3mapERK3map" title="ouly::ecs::map::map"><span class="n"><span class="pre">map</span></span></a><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">other</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><a class="headerlink" href="#_CPPv4N4ouly3ecs3map3mapERK3map" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly3ecs3mapD0Ev">
+<span id="_CPPv3N4ouly3ecs3mapD0Ev"></span><span id="_CPPv2N4ouly3ecs3mapD0Ev"></span><span id="ouly::ecs::map::~map"></span><span class="target" id="classouly_1_1ecs_1_1map_1ac2e7197cd59ca860630e85f591e42cae"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">~map</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N4ouly3ecs3mapD0Ev" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly3ecs3mapaSERR3map">
+<span id="_CPPv3N4ouly3ecs3mapaSERR3map"></span><span id="_CPPv2N4ouly3ecs3mapaSERR3map"></span><span id="ouly::ecs::map::assign-operator__mapRR"></span><span class="target" id="classouly_1_1ecs_1_1map_1a09674eb87fd4735ea80948723fd585b1"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="k"><span class="pre">operator</span></span><span class="o"><span class="pre">=</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4I00EN4ouly3ecs3mapE" title="ouly::ecs::map"><span class="n"><span class="pre">map</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">other</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4I00EN4ouly3ecs3mapE" title="ouly::ecs::map"><span class="n"><span class="pre">map</span></span></a><span class="p"><span class="pre">&amp;</span></span><a class="headerlink" href="#_CPPv4N4ouly3ecs3mapaSERR3map" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly3ecs3mapaSERK3map">
+<span id="_CPPv3N4ouly3ecs3mapaSERK3map"></span><span id="_CPPv2N4ouly3ecs3mapaSERK3map"></span><span id="ouly::ecs::map::assign-operator__mapCR"></span><span class="target" id="classouly_1_1ecs_1_1map_1a89c140878bf42b143d5b14fc9a733eeb"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="k"><span class="pre">operator</span></span><span class="o"><span class="pre">=</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4I00EN4ouly3ecs3mapE" title="ouly::ecs::map"><span class="n"><span class="pre">map</span></span></a><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">other</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4I00EN4ouly3ecs3mapE" title="ouly::ecs::map"><span class="n"><span class="pre">map</span></span></a><span class="p"><span class="pre">&amp;</span></span><a class="headerlink" href="#_CPPv4N4ouly3ecs3mapaSERK3map" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK4ouly3ecs3map4sizeEv">
+<span id="_CPPv3NK4ouly3ecs3map4sizeEv"></span><span id="_CPPv2NK4ouly3ecs3map4sizeEv"></span><span id="ouly::ecs::map::sizeC"></span><span class="target" id="classouly_1_1ecs_1_1map_1ad6c1bfacd19b5d489a31cb803ec39887"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">size</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N4ouly3ecs3map9size_typeE" title="ouly::ecs::map::size_type"><span class="n"><span class="pre">size_type</span></span></a><a class="headerlink" href="#_CPPv4NK4ouly3ecs3map4sizeEv" title="Link to this definition"></a><br /></dt>
+<dd><p>Returns size of packed array. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly3ecs3map7emplaceE11entity_type">
+<span id="_CPPv3N4ouly3ecs3map7emplaceE11entity_type"></span><span id="_CPPv2N4ouly3ecs3map7emplaceE11entity_type"></span><span id="ouly::ecs::map::emplace__entity_type"></span><span class="target" id="classouly_1_1ecs_1_1map_1a6a1f744a7a8443aa058c2b180671a53a"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">emplace</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N4ouly3ecs3map11entity_typeE" title="ouly::ecs::map::entity_type"><span class="n"><span class="pre">entity_type</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">point</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N4ouly3ecs3map9size_typeE" title="ouly::ecs::map::size_type"><span class="n"><span class="pre">size_type</span></span></a><a class="headerlink" href="#_CPPv4N4ouly3ecs3map7emplaceE11entity_type" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly3ecs3map5eraseE11entity_type">
+<span id="_CPPv3N4ouly3ecs3map5eraseE11entity_type"></span><span id="_CPPv2N4ouly3ecs3map5eraseE11entity_type"></span><span id="ouly::ecs::map::erase__entity_type"></span><span class="target" id="classouly_1_1ecs_1_1map_1a03fe50ad876aecf0e769c1a2604420b7"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">erase</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N4ouly3ecs3map11entity_typeE" title="ouly::ecs::map::entity_type"><span class="n"><span class="pre">entity_type</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">l</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N4ouly3ecs3map9size_typeE" title="ouly::ecs::map::size_type"><span class="n"><span class="pre">size_type</span></span></a><a class="headerlink" href="#_CPPv4N4ouly3ecs3map5eraseE11entity_type" title="Link to this definition"></a><br /></dt>
+<dd><p>Erase a single element at <code class="docutils literal notranslate"><span class="pre">l</span></code> (legacy API) </p>
+<p><dl>
+<dt class="sig sig-object cpp">
+<em><span class="pre">Deprecated:</span></em></dt>
+<dd><p>Use <a class="reference internal" href="#classouly_1_1ecs_1_1map_1a8d72ac5bcb2eca9b54c3f5fbf7ba7048"><span class="std std-ref">erase_and_get_swap_index()</span></a> for better API clarity </p>
+</dd></dl>
+
+</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The final operation would require values to move the last element to returned index followed by a pop_back </p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>l</strong> – The entity to remove </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The index which needs to be swapped with the back of the values </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly3ecs3map24erase_and_get_swap_indexE11entity_type">
+<span id="_CPPv3N4ouly3ecs3map24erase_and_get_swap_indexE11entity_type"></span><span id="_CPPv2N4ouly3ecs3map24erase_and_get_swap_indexE11entity_type"></span><span id="ouly::ecs::map::erase_and_get_swap_index__entity_type"></span><span class="target" id="classouly_1_1ecs_1_1map_1a8d72ac5bcb2eca9b54c3f5fbf7ba7048"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">erase_and_get_swap_index</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N4ouly3ecs3map11entity_typeE" title="ouly::ecs::map::entity_type"><span class="n"><span class="pre">entity_type</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">entity</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N4ouly3ecs3map9size_typeE" title="ouly::ecs::map::size_type"><span class="n"><span class="pre">size_type</span></span></a><a class="headerlink" href="#_CPPv4N4ouly3ecs3map24erase_and_get_swap_indexE11entity_type" title="Link to this definition"></a><br /></dt>
+<dd><p>Removes an entity from the map using swap-and-pop strategy. </p>
+<p>
+This is the low-level erase operation that returns the index that needs to be handled externally. After calling this function, external value arrays need to:<ol class="upperalpha simple">
+<li><p>Move the last element to the returned index position</p></li>
+<li><p>Pop the last element</p></li>
+</ol>
+</p>
+<p>
+Example: <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">auto</span> <span class="n">swap_idx</span> <span class="o">=</span> <span class="nb">map</span><span class="o">.</span><span class="n">erase_and_get_swap_index</span><span class="p">(</span><span class="n">entity</span><span class="p">);</span>
+<span class="k">if</span> <span class="p">(</span><span class="n">swap_idx</span> <span class="o">&lt;</span> <span class="n">values</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">values</span><span class="p">[</span><span class="n">swap_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">std</span><span class="p">::</span><span class="n">move</span><span class="p">(</span><span class="n">values</span><span class="o">.</span><span class="n">back</span><span class="p">());</span>
+<span class="p">}</span>
+<span class="n">values</span><span class="o">.</span><span class="n">pop_back</span><span class="p">();</span>
+</pre></div>
+</div>
+ </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This API is designed for performance-critical code where you want full control over the value array management. For convenience, consider using <a class="reference internal" href="#classouly_1_1ecs_1_1map_1a7a67a3c71284abe683226976c86215f8"><span class="std std-ref">erase_and_swap_values()</span></a> instead.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>entity</strong> – The entity to remove </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The dense index that was swapped with the last element</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4IDpEN4ouly3ecs3map21erase_and_swap_valuesEv11entity_typeDpR14ValueContainer">
+<span id="_CPPv3IDpEN4ouly3ecs3map21erase_and_swap_valuesE11entity_typeDpR14ValueContainer"></span><span id="_CPPv2IDpEN4ouly3ecs3map21erase_and_swap_valuesE11entity_typeDpR14ValueContainer"></span><span class="k"><span class="pre">template</span></span><span class="p"><span class="pre">&lt;</span></span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="sig-name descname"><span class="n"><span class="pre">ValueContainer</span></span></span><span class="p"><span class="pre">&gt;</span></span><br /><span class="target" id="classouly_1_1ecs_1_1map_1a7a67a3c71284abe683226976c86215f8"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">erase_and_swap_values</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N4ouly3ecs3map11entity_typeE" title="ouly::ecs::map::entity_type"><span class="n"><span class="pre">entity_type</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">entity</span></span>, <a class="reference internal" href="#_CPPv4IDpEN4ouly3ecs3map21erase_and_swap_valuesEv11entity_typeDpR14ValueContainer" title="ouly::ecs::map::erase_and_swap_values::ValueContainer"><span class="n"><span class="pre">ValueContainer</span></span></a><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">...</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">values</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><a class="headerlink" href="#_CPPv4IDpEN4ouly3ecs3map21erase_and_swap_valuesEv11entity_typeDpR14ValueContainer" title="Link to this definition"></a><br /></dt>
+<dd><p>Removes an entity and automatically handles value array swapping. </p>
+<p>
+This convenience function handles the common pattern of removing an entity and updating an external value array. It performs the swap-and-pop operation on the value container automatically.</p>
+<p>Example: <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">std</span><span class="p">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ComponentData</span><span class="o">&gt;</span> <span class="n">components</span><span class="p">;</span>
+<span class="o">//</span> <span class="o">...</span> <span class="n">fill</span> <span class="n">components</span> <span class="n">parallel</span> <span class="n">to</span> <span class="nb">map</span> <span class="o">...</span>
+<span class="nb">map</span><span class="o">.</span><span class="n">erase_and_swap_values</span><span class="p">(</span><span class="n">entity</span><span class="p">,</span> <span class="n">components</span><span class="p">);</span>
+</pre></div>
+</div>
+</p>
+<dl class="field-list simple">
+<dt class="field-odd">Template Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ValueContainer...</strong> – Container types that support operator[], <a class="reference internal" href="#classouly_1_1ecs_1_1map_1ad6c1bfacd19b5d489a31cb803ec39887"><span class="std std-ref">size()</span></a>, and pop_back() </p>
+</dd>
+<dt class="field-even">Parameters<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>entity</strong> – The entity to remove </p></li>
+<li><p><strong>values</strong> – The external value containers to update</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK4ouly3ecs3map3keyE11entity_type">
+<span id="_CPPv3NK4ouly3ecs3map3keyE11entity_type"></span><span id="_CPPv2NK4ouly3ecs3map3keyE11entity_type"></span><span id="ouly::ecs::map::key__entity_typeC"></span><span class="target" id="classouly_1_1ecs_1_1map_1a5c199b698e85385f44e6029375f96ae8"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">key</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N4ouly3ecs3map11entity_typeE" title="ouly::ecs::map::entity_type"><span class="n"><span class="pre">entity_type</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">point</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N4ouly3ecs3map9size_typeE" title="ouly::ecs::map::size_type"><span class="n"><span class="pre">size_type</span></span></a><a class="headerlink" href="#_CPPv4NK4ouly3ecs3map3keyE11entity_type" title="Link to this definition"></a><br /></dt>
+<dd><p>For indirectly mapped map, returns the key (index) associated with the entity. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The key associated with the entity or <code class="docutils literal notranslate"><span class="pre">tombstone</span></code> if not found (which is std::numeric_limits&lt;uint32_t&gt;::max()) </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK4ouly3ecs3map13get_entity_atE9size_type">
+<span id="_CPPv3NK4ouly3ecs3map13get_entity_atE9size_type"></span><span id="_CPPv2NK4ouly3ecs3map13get_entity_atE9size_type"></span><span id="ouly::ecs::map::get_entity_at__size_typeC"></span><span class="target" id="classouly_1_1ecs_1_1map_1a09f3b3d807b0a81afcb08c9fc473654e"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">get_entity_at</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N4ouly3ecs3map9size_typeE" title="ouly::ecs::map::size_type"><span class="n"><span class="pre">size_type</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">dense_index</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N4ouly3ecs3map11entity_typeE" title="ouly::ecs::map::entity_type"><span class="n"><span class="pre">entity_type</span></span></a><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">size_type</span></span><a class="headerlink" href="#_CPPv4NK4ouly3ecs3map13get_entity_atE9size_type" title="Link to this definition"></a><br /></dt>
+<dd><p>Gets the entity value stored at a specific dense index. </p>
+<p>
+This allows iteration over the dense array to access all stored entities in order. Useful for efficient processing of all entities.</p>
+<p>Example: <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="p">(</span><span class="n">size_t</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="nb">map</span><span class="o">.</span><span class="n">size</span><span class="p">();</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">auto</span> <span class="n">entity_value</span> <span class="o">=</span> <span class="nb">map</span><span class="o">.</span><span class="n">get_entity_at</span><span class="p">(</span><span class="n">i</span><span class="p">);</span>
+    <span class="n">auto</span> <span class="n">entity</span> <span class="o">=</span> <span class="n">entity_type</span><span class="p">(</span><span class="n">entity_value</span><span class="p">);</span>
+    <span class="o">//</span> <span class="n">Process</span> <span class="n">entity</span><span class="o">...</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>No bounds checking is performed. Ensure dense_index &lt; <a class="reference internal" href="#classouly_1_1ecs_1_1map_1ad6c1bfacd19b5d489a31cb803ec39887"><span class="std std-ref">size()</span></a>. </p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>dense_index</strong> – The dense array index (must be &lt; <a class="reference internal" href="#classouly_1_1ecs_1_1map_1ad6c1bfacd19b5d489a31cb803ec39887"><span class="std std-ref">size()</span></a>) </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The entity value at the specified dense index</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK4ouly3ecs3map4keysEv">
+<span id="_CPPv3NK4ouly3ecs3map4keysEv"></span><span id="_CPPv2NK4ouly3ecs3map4keysEv"></span><span id="ouly::ecs::map::keysC"></span><span class="target" id="classouly_1_1ecs_1_1map_1a5cafe5e1bd048e91b31b524bfb8acef5"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">keys</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="p"><span class="pre">&amp;</span></span><a class="headerlink" href="#_CPPv4NK4ouly3ecs3map4keysEv" title="Link to this definition"></a><br /></dt>
+<dd><p>Returns a const reference to the internal keys container. </p>
+<p>This function is only available when the class does not use direct mapping </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Const reference to the container holding the keys &#64;requires !has_direct_mapping </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly3ecs3map13shrink_to_fitEv">
+<span id="_CPPv3N4ouly3ecs3map13shrink_to_fitEv"></span><span id="_CPPv2N4ouly3ecs3map13shrink_to_fitEv"></span><span id="ouly::ecs::map::shrink_to_fit"></span><span class="target" id="classouly_1_1ecs_1_1map_1a8457d48edb536d5da47dddc76548c78e"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">shrink_to_fit</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><a class="headerlink" href="#_CPPv4N4ouly3ecs3map13shrink_to_fitEv" title="Link to this definition"></a><br /></dt>
+<dd><p>Drop unused pages. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly3ecs3map5clearEv">
+<span id="_CPPv3N4ouly3ecs3map5clearEv"></span><span id="_CPPv2N4ouly3ecs3map5clearEv"></span><span id="ouly::ecs::map::clear"></span><span class="target" id="classouly_1_1ecs_1_1map_1a35f0316d1c09c24b2844ceb1000a23c6"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">clear</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><a class="headerlink" href="#_CPPv4N4ouly3ecs3map5clearEv" title="Link to this definition"></a><br /></dt>
+<dd><p>Set size to 0, memory is not released, objects are destroyed. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK4ouly3ecs3map2atE11entity_type">
+<span id="_CPPv3NK4ouly3ecs3map2atE11entity_type"></span><span id="_CPPv2NK4ouly3ecs3map2atE11entity_type"></span><span id="ouly::ecs::map::at__entity_typeC"></span><span class="target" id="classouly_1_1ecs_1_1map_1a6564dba8de5df24d13818268ae289cfc"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">at</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N4ouly3ecs3map11entity_typeE" title="ouly::ecs::map::entity_type"><span class="n"><span class="pre">entity_type</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">l</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N4ouly3ecs3map9size_typeE" title="ouly::ecs::map::size_type"><span class="n"><span class="pre">size_type</span></span></a><a class="headerlink" href="#_CPPv4NK4ouly3ecs3map2atE11entity_type" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK4ouly3ecs3mapixE11entity_type">
+<span id="_CPPv3NK4ouly3ecs3mapixE11entity_type"></span><span id="_CPPv2NK4ouly3ecs3mapixE11entity_type"></span><span id="ouly::ecs::map::subscript-operator__entity_typeC"></span><span class="target" id="classouly_1_1ecs_1_1map_1ae4da32f752aaf480fbe4e86c8f895e29"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="k"><span class="pre">operator</span></span><span class="o"><span class="pre">[]</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N4ouly3ecs3map11entity_typeE" title="ouly::ecs::map::entity_type"><span class="n"><span class="pre">entity_type</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">l</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N4ouly3ecs3map9size_typeE" title="ouly::ecs::map::size_type"><span class="n"><span class="pre">size_type</span></span></a><a class="headerlink" href="#_CPPv4NK4ouly3ecs3mapixE11entity_type" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK4ouly3ecs3map8containsE11entity_type">
+<span id="_CPPv3NK4ouly3ecs3map8containsE11entity_type"></span><span id="_CPPv2NK4ouly3ecs3map8containsE11entity_type"></span><span id="ouly::ecs::map::contains__entity_typeC"></span><span class="target" id="classouly_1_1ecs_1_1map_1ab9328ada4d64bb77963dbbff08a80685"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">contains</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N4ouly3ecs3map11entity_typeE" title="ouly::ecs::map::entity_type"><span class="n"><span class="pre">entity_type</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">l</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><span class="kt"><span class="pre">bool</span></span><a class="headerlink" href="#_CPPv4NK4ouly3ecs3map8containsE11entity_type" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK4ouly3ecs3map5emptyEv">
+<span id="_CPPv3NK4ouly3ecs3map5emptyEv"></span><span id="_CPPv2NK4ouly3ecs3map5emptyEv"></span><span id="ouly::ecs::map::emptyC"></span><span class="target" id="classouly_1_1ecs_1_1map_1a16f8f29c90ef3ed7364d00efded8f0b1"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">empty</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><span class="kt"><span class="pre">bool</span></span><a class="headerlink" href="#_CPPv4NK4ouly3ecs3map5emptyEv" title="Link to this definition"></a><br /></dt>
+<dd><p>Checks if the map contains no entities. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>true if the map is empty, false otherwise </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK4ouly3ecs3map18validate_integrityEv">
+<span id="_CPPv3NK4ouly3ecs3map18validate_integrityEv"></span><span id="_CPPv2NK4ouly3ecs3map18validate_integrityEv"></span><span id="ouly::ecs::map::validate_integrityC"></span><span class="target" id="classouly_1_1ecs_1_1map_1a68212a842773b37a5767729e8be3606f"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">validate_integrity</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK4ouly3ecs3map18validate_integrityEv" title="Link to this definition"></a><br /></dt>
+<dd><p>Validates the internal consistency of the map data structures. </p>
+<p>This method performs extensive validation to ensure the mapping between sparse keys and dense indices is consistent. It checks:<ul class="simple">
+<li><p>All dense indices have valid mappings back to sparse keys</p></li>
+<li><p>All sparse keys point to valid dense indices</p></li>
+</ul>
+</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This method uses OULY_ASSERT internally and is typically used for debugging and testing. In release builds, assertions may be disabled. </p>
+</div>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly3ecs3map7set_maxE9size_type">
+<span id="_CPPv3N4ouly3ecs3map7set_maxE9size_type"></span><span id="_CPPv2N4ouly3ecs3map7set_maxE9size_type"></span><span id="ouly::ecs::map::set_max__size_type"></span><span class="target" id="classouly_1_1ecs_1_1map_1a285b80dccf8938a402d9559ebe67085a"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">set_max</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N4ouly3ecs3map9size_typeE" title="ouly::ecs::map::size_type"><span class="n"><span class="pre">size_type</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">size</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N4ouly3ecs3map7set_maxE9size_type" title="Link to this definition"></a><br /></dt>
+<dd><p>Pre-allocates space in the sparse mapping for efficient insertion. </p>
+<p>
+This method pre-allocates space in the sparse key mapping to accommodate entities up to the specified index. This can improve performance when you know the range of entity IDs that will be used, as it avoids repeated allocations during insertion.</p>
+<p>Example: <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">//</span> <span class="n">If</span> <span class="n">you</span> <span class="n">know</span> <span class="n">entities</span> <span class="n">will</span> <span class="n">have</span> <span class="n">IDs</span> <span class="kn">from</span><span class="w"> </span><span class="mi">0</span> <span class="n">to</span> <span class="mi">999</span>
+<span class="nb">map</span><span class="o">.</span><span class="n">set_max</span><span class="p">(</span><span class="mi">1000</span><span class="p">);</span>
+<span class="o">//</span> <span class="n">Now</span> <span class="n">insertions</span> <span class="k">for</span> <span class="n">entities</span> <span class="mi">0</span><span class="o">-</span><span class="mi">999</span> <span class="n">will</span> <span class="n">be</span> <span class="n">more</span> <span class="n">efficient</span>
+</pre></div>
+</div>
+</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>size</strong> – The maximum entity index to accommodate</p></li>
+<li><p><strong>size</strong> – The maximum number of elements to accommodate </p></li>
+</ul>
 </dd>
 </dl>
 </dd></dl>
