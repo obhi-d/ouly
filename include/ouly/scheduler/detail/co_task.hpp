@@ -107,6 +107,9 @@ public:
   }
 
 protected:
+  template <typename C>
+  friend struct co_lambda_executor;
+
   auto release() noexcept -> handle
   {
     auto h = coro_;
@@ -117,4 +120,22 @@ protected:
 private:
   handle coro_ = {};
 };
+
+template <typename C>
+struct co_lambda_executor
+{
+  using handle_type = typename C::handle;
+  // NOLINTNEXTLINE
+  co_lambda_executor(C&& c) : coro_(c.release()) {}
+
+  template <typename TC>
+  void operator()([[maybe_unused]] TC const& ctx)
+  {
+    auto assume_coro = C(coro_);
+    assume_coro.resume();
+  }
+
+  handle_type coro_ = {};
+};
+
 } // namespace ouly::detail

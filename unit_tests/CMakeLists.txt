@@ -164,6 +164,7 @@ add_executable(
 )
 add_executable(bench_performance "bench_performance.cpp")
 add_executable(bench_scheduler_comparison "bench_scheduler_comparison.cpp")
+add_executable(bench_coroutine_comparison "bench_coroutine_comparison.cpp")
 
 target_link_libraries(bench_arena_allocator ouly::ouly nanobench::nanobench)
 target_compile_features(bench_arena_allocator PRIVATE cxx_std_20)
@@ -191,6 +192,19 @@ target_link_libraries(
 target_compile_features(bench_scheduler_comparison PRIVATE cxx_std_20)
 target_compile_definitions(
     bench_scheduler_comparison
+    PRIVATE -DOULY_REC_STATS -DOULY_THROW_ON_ERROR
+)
+
+target_link_libraries(
+    bench_coroutine_comparison
+    ouly::ouly
+    nanobench::nanobench
+    TBB::tbb
+    glm::glm
+)
+target_compile_features(bench_coroutine_comparison PRIVATE cxx_std_20)
+target_compile_definitions(
+    bench_coroutine_comparison
     PRIVATE -DOULY_REC_STATS -DOULY_THROW_ON_ERROR
 )
 
@@ -223,6 +237,19 @@ if(WIN32)
         COMMAND_EXPAND_LISTS
         COMMENT "Copying TBB libraries to bench_scheduler_comparison directory"
     )
+
+    add_custom_command(
+        TARGET bench_coroutine_comparison
+        POST_BUILD
+        COMMAND
+            ${CMAKE_COMMAND} -E echo
+            "Copying TBB DLLs for bench_coroutine_comparison..."
+        COMMAND
+            ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbb>"
+            "$<TARGET_FILE_DIR:bench_coroutine_comparison>/"
+        COMMAND_EXPAND_LISTS
+        COMMENT "Copying TBB libraries to bench_coroutine_comparison directory"
+    )
 elseif(APPLE)
     # macOS: Use CMake script to find and copy TBB dylibs
     add_custom_command(
@@ -249,6 +276,19 @@ elseif(APPLE)
             -DTARGET_DIR=$<TARGET_FILE_DIR:bench_scheduler_comparison> -P
             ${CMAKE_CURRENT_SOURCE_DIR}/copy_tbb_libs.cmake
         COMMENT "Copying TBB dylibs to bench_scheduler_comparison directory"
+    )
+
+    add_custom_command(
+        TARGET bench_coroutine_comparison
+        POST_BUILD
+        COMMAND
+            ${CMAKE_COMMAND} -E echo
+            "Copying TBB dylibs for bench_coroutine_comparison..."
+        COMMAND
+            ${CMAKE_COMMAND} -DTBB_BUILD_DIR=${CMAKE_BINARY_DIR}
+            -DTARGET_DIR=$<TARGET_FILE_DIR:bench_coroutine_comparison> -P
+            ${CMAKE_CURRENT_SOURCE_DIR}/copy_tbb_libs.cmake
+        COMMENT "Copying TBB dylibs to bench_coroutine_comparison directory"
     )
 else()
     # Linux: Use CMake script to find and copy TBB shared libraries
@@ -277,6 +317,20 @@ else()
             ${CMAKE_CURRENT_SOURCE_DIR}/copy_tbb_libs.cmake
         COMMENT
             "Copying TBB shared libraries to bench_scheduler_comparison directory"
+    )
+
+    add_custom_command(
+        TARGET bench_coroutine_comparison
+        POST_BUILD
+        COMMAND
+            ${CMAKE_COMMAND} -E echo
+            "Copying TBB shared libraries for bench_coroutine_comparison..."
+        COMMAND
+            ${CMAKE_COMMAND} -DTBB_BUILD_DIR=${CMAKE_BINARY_DIR}
+            -DTARGET_DIR=$<TARGET_FILE_DIR:bench_coroutine_comparison> -P
+            ${CMAKE_CURRENT_SOURCE_DIR}/copy_tbb_libs.cmake
+        COMMENT
+            "Copying TBB shared libraries to bench_coroutine_comparison directory"
     )
 endif()
 

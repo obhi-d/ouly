@@ -104,14 +104,22 @@ public:
    * @see task_context
    */
   template <CoroutineTask C>
-  void submit(ouly::v2::task_context const& src, workgroup_id group, C const& task_obj) noexcept
+  void submit(ouly::v2::task_context const& src, workgroup_id group, C&& task_obj) noexcept
   {
-    submit_internal(src, group,
-                    ouly::v2::task_delegate::bind(
-                     [address = task_obj.address()](ouly::v2::task_context const&)
-                     {
-                       std::coroutine_handle<>::from_address(address).resume();
-                     }));
+    if constexpr (std::is_rvalue_reference_v<C&&>)
+    {
+      submit_internal(src, group,
+                      ouly::v2::task_delegate::bind(ouly::detail::co_lambda_executor<C>(std::forward<C>(task_obj))));
+    }
+    else
+    {
+      submit_internal(src, group,
+                      ouly::v2::task_delegate::bind(
+                       [address = task_obj.address()](ouly::v2::task_context const&)
+                       {
+                         std::coroutine_handle<>::from_address(address).resume();
+                       }));
+    }
   }
 
   /**
@@ -124,9 +132,9 @@ public:
 
   // Coroutine task submission without explicit group
   template <CoroutineTask C>
-  void submit(ouly::v2::task_context const& current, C const& task_obj) noexcept
+  void submit(ouly::v2::task_context const& current, C&& task_obj) noexcept
   {
-    submit(current, current.get_workgroup(), task_obj);
+    submit(current, current.get_workgroup(), std::forward<C>(task_obj));
   }
 
   /**
