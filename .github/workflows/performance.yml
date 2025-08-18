@@ -98,6 +98,16 @@ jobs:
           fi
         fi
         
+        # Run coroutine comparison benchmarks
+        if [[ "$BENCHMARK_TYPE" == "all" || "$BENCHMARK_TYPE" == "scheduler" ]]; then
+          echo "🔄 Running coroutine comparison benchmarks..."
+          if [ -f "./bench_coroutine_comparison" ]; then
+            ./bench_coroutine_comparison
+          else
+            echo "⚠️ Coroutine benchmark executable not found"
+          fi
+        fi
+        
         # Run general performance benchmarks with proper naming
         if [[ "$BENCHMARK_TYPE" == "all" || "$BENCHMARK_TYPE" == "allocator" ]]; then
           echo "🔄 Running general performance benchmarks..."

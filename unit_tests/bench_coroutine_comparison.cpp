@@ -662,13 +662,19 @@ private:
   }
 
 public:
-  static void save_results(ankerl::nanobench::Bench& bench, const std::string& test_id)
+  static void save_results(ankerl::nanobench::Bench& bench, const std::string& test_id,
+                           const std::string& commit_hash = "", const std::string& build_number = "")
   {
-    const std::string compiler      = get_compiler_info();
-    const std::string timestamp     = get_timestamp();
-    const std::string json_filename = "coroutine_" + test_id + "_" + compiler + "_" + timestamp + ".json";
-    const std::string txt_filename  = "coroutine_" + test_id + "_" + compiler + "_" + timestamp + ".txt";
+    const std::string compiler = get_compiler_info();
 
+    // Generate short commit hash (8 chars) and build number for filename
+    std::string short_commit = commit_hash.empty() ? "local" : commit_hash.substr(0, 8);
+    std::string build_num    = build_number.empty() ? "0" : build_number;
+
+    // New filename format: <compiler-id>-<small-commit-hash>-<build-number>-<test_id>.json
+    const std::string json_filename = compiler + "-" + short_commit + "-" + build_num + "-" + test_id + ".json";
+
+    // Output test_id to console for CI tracking
     std::cout << "TEST_ID: " << test_id << std::endl;
 
     std::ofstream json_file(json_filename);
@@ -679,7 +685,9 @@ public:
       std::cout << "✅ JSON results saved to: " << json_filename << std::endl;
     }
 
-    std::ofstream txt_file(txt_filename);
+    // Save human-readable results with same naming pattern
+    const std::string txt_filename = compiler + "-" + short_commit + "-" + build_num + "-" + test_id + ".txt";
+    std::ofstream     txt_file(txt_filename);
     if (txt_file.is_open())
     {
       bench.render(
@@ -688,6 +696,12 @@ public:
       txt_file.close();
       std::cout << "📄 Text results saved to: " << txt_filename << std::endl;
     }
+  }
+
+  // Legacy function for backward compatibility
+  static void save_results(ankerl::nanobench::Bench& bench, const std::string& test_type)
+  {
+    save_results(bench, test_type, "", "");
   }
 
   static void print_system_info()
@@ -737,7 +751,14 @@ void run_coroutine_benchmarks(int benchmark_set = -1)
     CoroutineOverheadBenchmark<ouly::v1::scheduler, ouly::v1::task_context>::run_memory_overhead(bench, "V1");
     CoroutineOverheadBenchmark<ouly::v2::scheduler, ouly::v2::task_context>::run_memory_overhead(bench, "V2");
 
-    CoroutineBenchmarkReporter::save_results(bench, "overhead_comparison");
+    // Get environment variables for CI integration
+    const char* commit_hash_env  = std::getenv("GITHUB_SHA");
+    const char* build_number_env = std::getenv("GITHUB_RUN_NUMBER");
+
+    std::string commit_hash  = (commit_hash_env != nullptr) ? commit_hash_env : "";
+    std::string build_number = (build_number_env != nullptr) ? build_number_env : "";
+
+    CoroutineBenchmarkReporter::save_results(bench, "overhead_comparison", commit_hash, build_number);
     bench = ankerl::nanobench::Bench{};
     bench.title("Coroutine Performance Comparison")
      .unit("operation")
@@ -767,7 +788,14 @@ void run_coroutine_benchmarks(int benchmark_set = -1)
     TBBCoroutineStyleBenchmarks::run_tbb_chaining_equivalent(bench);
     TBBCoroutineStyleBenchmarks::run_tbb_fan_out_in_equivalent(bench);
 
-    CoroutineBenchmarkReporter::save_results(bench, "performance_comparison");
+    // Get environment variables for CI integration
+    const char* commit_hash_env  = std::getenv("GITHUB_SHA");
+    const char* build_number_env = std::getenv("GITHUB_RUN_NUMBER");
+
+    std::string commit_hash  = (commit_hash_env != nullptr) ? commit_hash_env : "";
+    std::string build_number = (build_number_env != nullptr) ? build_number_env : "";
+
+    CoroutineBenchmarkReporter::save_results(bench, "performance_comparison", commit_hash, build_number);
     bench = ankerl::nanobench::Bench{};
     bench.title("Coroutine Performance Comparison")
      .unit("operation")
