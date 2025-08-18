@@ -338,10 +338,10 @@ TEST_CASE("flow_graph parallel independent branches", "[flow_graph][scheduler]")
 
   auto ctx = SchedulerType::context_type::this_context::get();
 
-  auto start_time = std::chrono::high_resolution_clock::now();
+  // auto start_time = std::chrono::high_resolution_clock::now();
   graph.start(ctx);
   graph.cooperative_wait(ctx);
-  auto end_time = std::chrono::high_resolution_clock::now();
+  // auto end_time = std::chrono::high_resolution_clock::now();
 
   // Both branches should start around the same time (parallel execution)
   auto start_time_diff =
