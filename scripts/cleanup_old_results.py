@@ -13,6 +13,24 @@ from typing import Dict, List, Tuple
 
 def parse_filename(filename: str) -> Dict[str, str]:
     """Parse benchmark filename to extract metadata."""
+    # Pattern for coroutine benchmarks: coroutine_<test_type>_<compiler>_<timestamp>.ext
+    coroutine_pattern = r'coroutine_([^_]+_[^_]+)_([^_]+)_(\d{8})_(\d{6})\.(json|txt)'
+    match = re.match(coroutine_pattern, filename)
+    if match:
+        test_type = match.group(1)
+        compiler = match.group(2)
+        date = match.group(3)
+        time = match.group(4)
+        timestamp = f"{date}{time}"  # YYYYMMDDHHMMSS
+        return {
+            'test_type': f'coroutine_{test_type}',
+            'compiler': compiler,
+            'date': date,
+            'time': time,
+            'build_number': int(timestamp),
+            'extension': match.group(5)
+        }
+    
     # Pattern for files like: scheduler_comparison_gcc-4.2_20250729_000346.json
     # or extended-benchmark-results-ubuntu-latest-gcc-14-12345.json
     

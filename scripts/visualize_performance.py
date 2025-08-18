@@ -37,7 +37,27 @@ def parse_filename(filename: str) -> Optional[Dict[str, str]]:
     
     Expected format: <compiler-id>-<commit-hash>-<build-number>-<test_id>.json
     For example: gcc-14-abc12345-100-allocator.json
+    
+    Also handles coroutine benchmark format: coroutine_<test_type>_<compiler>_<timestamp>.json
+    For example: coroutine_overhead_comparison_gcc-15.2_20250818_034152.json
     """
+    # New pattern for coroutine benchmarks: coroutine_<test_type>_<compiler>_<timestamp>.json
+    coroutine_pattern = r'coroutine_([^_]+_[^_]+)_([^_]+)_(\d{8})_(\d{6})\.json'
+    match = re.match(coroutine_pattern, filename)
+    
+    if match:
+        test_type = match.group(1)
+        compiler = match.group(2)
+        date = match.group(3)
+        time = match.group(4)
+        timestamp = f"{date}{time}"  # YYYYMMDDHHMMSS
+        return {
+            'compiler': compiler,
+            'commit_hash': 'unknown',
+            'build_number': timestamp,  # Use timestamp as sortable build number
+            'test_id': f'coroutine_{test_type}'
+        }
+    
     # Updated pattern to handle compound compiler names like "gcc-14" or "clang-18"
     pattern = r'([^-]+-[^-]+)-([^-]+)-(\d+)-([^.]+)\.json'
     match = re.match(pattern, filename)
@@ -89,7 +109,7 @@ def load_benchmark_data(results_dir: Path) -> pd.DataFrame:
                 # Convert build_number to int, default to 0 if not numeric
                 try:
                     build_number = int(file_info['build_number'])
-                except ValueError:
+                except (ValueError, TypeError):
                     build_number = 0
                     
                 # Calculate additional metrics
@@ -125,15 +145,22 @@ def load_benchmark_data(results_dir: Path) -> pd.DataFrame:
 
 def extract_measurement_type(benchmark_name: str) -> str:
     """Extract the base measurement type from benchmark name."""
-    # Handle scheduler comparison benchmarks
-    if '_V1' in benchmark_name or '_V2' in benchmark_name or '_TBB' in benchmark_name:
-        return benchmark_name.rsplit('_', 1)[0]  # Remove _V1, _V2, _TBB suffix
+    # Handle coroutine benchmarks - group by logical categories
+    if 'CoroutineCreation' in benchmark_name:
+        return 'coroutine_creation'
+    elif 'CoroutineSubmission' in benchmark_name or 'LambdaSubmission' in benchmark_name:
+        return 'coroutine_submission'
+    elif 'SuspensionOverhead' in benchmark_name:
+        return 'coroutine_suspension'
+    elif 'CoroutineMemory' in benchmark_name:
+        return 'coroutine_memory'
+    elif 'ParallelCompute' in benchmark_name:
+        return 'coroutine_parallel_compute'
+    elif 'TaskChaining' in benchmark_name:
+        return 'coroutine_task_chaining'
+    elif 'FanOutIn' in benchmark_name:
+        return 'coroutine_fan_out_in'
     
-    # Handle allocator benchmarks - return as-is since they don't have variants
-    return benchmark_name
-
-def extract_measurement_type(benchmark_name: str) -> str:
-    """Extract the base measurement type from benchmark name."""
     # Handle scheduler comparison benchmarks
     if '_V1' in benchmark_name or '_V2' in benchmark_name or '_TBB' in benchmark_name:
         return benchmark_name.rsplit('_', 1)[0]  # Remove _V1, _V2, _TBB suffix
@@ -262,6 +289,126 @@ def create_performance_plots(df: pd.DataFrame, output_dir: Path) -> List[str]:
     
     return generated_files
 
+def get_benchmark_description(measurement_type: str) -> str:
+    """Get detailed description for benchmark measurement types."""
+    descriptions = {
+        'coalescingarenaallocdealloc': (
+            "**Coalescing Arena Allocator Performance**\n\n"
+            "Measures the performance of the coalescing arena allocator, which manages memory by "
+            "coalescing adjacent free blocks to reduce fragmentation. This benchmark tests allocation "
+            "and deallocation operations using the arena-based memory management system. Lower times "
+            "indicate better allocator performance."
+        ),
+        'tssharedlinearsinglethread': (
+            "**Thread-Safe Shared Linear Allocator (Single Thread)**\n\n"
+            "Tests the performance of a thread-safe shared linear allocator when used in single-threaded "
+            "scenarios. Linear allocators provide O(1) allocation by simply incrementing a pointer, but "
+            "this variant includes thread-safety mechanisms. Measures the overhead of synchronization "
+            "primitives when not actually needed (single-threaded usage)."
+        ),
+        'tsthreadlocalsinglethread': (
+            "**Thread-Safe Thread-Local Allocator (Single Thread)**\n\n"
+            "Evaluates a thread-local allocator's performance in single-threaded contexts. Thread-local "
+            "allocators avoid synchronization overhead by maintaining separate memory pools per thread. "
+            "This benchmark shows the baseline performance when thread-local storage is accessed from "
+            "the owning thread."
+        ),
+        'tasksubmission': (
+            "**Task Submission Performance**\n\n"
+            "Measures the overhead of submitting tasks to the scheduler work queues. This includes the "
+            "time to package work items, enqueue them into the scheduler's internal data structures, "
+            "and wake up worker threads. Lower submission times enable better work distribution and "
+            "reduced latency for fine-grained parallel workloads."
+        ),
+        'parallelforvectorops': (
+            "**Parallel For Vector Operations**\n\n"
+            "Benchmarks parallel execution of vector operations using the auto_parallel_for construct. "
+            "Tests the scheduler's ability to efficiently distribute vector computations across worker "
+            "threads, including work stealing and load balancing. Measures both the overhead of "
+            "parallelization and the effectiveness of parallel execution for computational workloads."
+        ),
+        'matrixops': (
+            "**Matrix Operations Performance**\n\n"
+            "Evaluates parallel matrix computations including transformations, multiplications, and "
+            "other linear algebra operations. Tests the scheduler's performance on computationally "
+            "intensive tasks that benefit from parallel execution. Includes both CPU-bound calculations "
+            "and memory access patterns typical of numerical computing workloads."
+        ),
+        'mixedworkload': (
+            "**Mixed Workload Performance**\n\n"
+            "Tests scheduler performance under heterogeneous workloads combining different types of "
+            "tasks: I/O-bound, CPU-bound, memory-intensive, and short-duration tasks. Measures the "
+            "scheduler's ability to handle diverse work characteristics simultaneously while maintaining "
+            "good load balancing and thread utilization."
+        ),
+        'taskthroughput': (
+            "**Task Throughput Measurement**\n\n"
+            "Measures the maximum task processing rate (tasks per second) that the scheduler can sustain. "
+            "Uses minimal-work tasks to focus on scheduler overhead rather than computation time. "
+            "Higher throughput indicates better efficiency in task management, queue operations, and "
+            "thread coordination mechanisms."
+        ),
+        'nestedparallel': (
+            "**Nested Parallel Execution**\n\n"
+            "Benchmarks performance when parallel constructs are nested within other parallel regions. "
+            "Tests the scheduler's handling of hierarchical parallelism, including dynamic thread "
+            "allocation, work stealing across nested contexts, and avoiding oversubscription. Critical "
+            "for applications using recursive parallel algorithms."
+        ),
+        'coroutine_creation': (
+            "**Coroutine Creation Overhead**\n\n"
+            "Measures the fundamental cost of creating coroutine objects compared to regular function calls. "
+            "This includes coroutine frame allocation, initial suspension setup, and coroutine handle creation. "
+            "Tests both V1 and V2 scheduler implementations to identify any scheduler-specific overhead in "
+            "coroutine management. Lower creation times enable efficient use of coroutines for fine-grained "
+            "asynchronous operations."
+        ),
+        'coroutine_submission': (
+            "**Coroutine vs Lambda Submission**\n\n"
+            "Compares the submission overhead of coroutines versus equivalent lambda functions to the task "
+            "scheduler. Measures the cost of packaging coroutines as schedulable tasks including any "
+            "additional metadata, type erasure, and scheduler integration overhead. Helps quantify the "
+            "runtime cost difference between coroutine-based and traditional callback-based asynchronous patterns."
+        ),
+        'coroutine_suspension': (
+            "**Coroutine Suspension/Resumption Overhead**\n\n"
+            "Measures the performance cost of coroutine suspension points and subsequent resumption. "
+            "This includes saving coroutine state, yielding control back to the scheduler, and later "
+            "restoring execution context. Critical for understanding the overhead of using 'co_await' "
+            "constructs and designing efficient coroutine-based control flow."
+        ),
+        'coroutine_memory': (
+            "**Coroutine Memory Overhead**\n\n"
+            "Evaluates the memory allocation overhead of creating large numbers of coroutines simultaneously. "
+            "Tests coroutine frame allocation patterns, memory fragmentation effects, and the efficiency of "
+            "the coroutine memory management system. Important for applications that create many concurrent "
+            "coroutines and need to understand memory scalability characteristics."
+        ),
+        'coroutine_parallel_compute': (
+            "**Coroutine vs Regular Task Parallel Computation**\n\n"
+            "Compares coroutine-based parallel computation against traditional task-based approaches for "
+            "CPU-intensive workloads. Measures whether coroutines introduce significant overhead when used "
+            "for computational tasks versus their traditional use for I/O-bound operations. Tests both "
+            "scheduler versions to identify performance differences in computational contexts."
+        ),
+        'coroutine_task_chaining': (
+            "**Coroutine Task Chaining Performance**\n\n"
+            "Benchmarks sequential task dependencies implemented using coroutines versus traditional nested "
+            "task submission patterns. Measures the efficiency of coroutine-based pipelines where each "
+            "stage waits for the previous stage to complete. Compares against both manual task chaining "
+            "and TBB equivalent implementations to understand the performance trade-offs."
+        ),
+        'coroutine_fan_out_in': (
+            "**Coroutine Fan-Out/Fan-In Patterns**\n\n"
+            "Evaluates the performance of scatter-gather patterns implemented using coroutines compared to "
+            "traditional parallel_for constructs and TBB equivalents. Tests scenarios where work is "
+            "distributed across multiple coroutines and results are collected back. Critical for understanding "
+            "coroutine performance in data-parallel and map-reduce style algorithms."
+        )
+    }
+    
+    return descriptions.get(measurement_type, f"Performance metrics for {measurement_type.replace('_', ' ').title()}")
+
 def generate_performance_md(df: pd.DataFrame, plot_files: List[str], output_path: Path):
     """Generate PERFORMANCE.md with latest results and embedded plots."""
     
@@ -313,22 +460,41 @@ def generate_performance_md(df: pd.DataFrame, plot_files: List[str], output_path
         measurement_types = set()
         for plot_file in plot_files:
             if 'performance_trend_' in plot_file:
-                measurement_type = plot_file.replace('performance_trend_', '').replace('.svg', '')
-                measurement_types.add(measurement_type)
+                safe_name = plot_file.replace('performance_trend_', '').replace('.svg', '')
+                measurement_types.add(safe_name)
             elif 'throughput_trend_' in plot_file:
-                measurement_type = plot_file.replace('throughput_trend_', '').replace('.svg', '')
-                measurement_types.add(measurement_type)
+                safe_name = plot_file.replace('throughput_trend_', '').replace('.svg', '')
+                measurement_types.add(safe_name)
         
-        for measurement_type in sorted(measurement_types):
-            # Create a nice display name from the measurement type
-            display_name = measurement_type.replace('_', ' ').title()
+        # Create mapping from safe names back to original measurement types for description lookup
+        safe_to_original = {
+            'coroutinecreation': 'coroutine_creation',
+            'coroutinesubmission': 'coroutine_submission', 
+            'coroutinesuspension': 'coroutine_suspension',
+            'coroutinememory': 'coroutine_memory',
+            'coroutineparallelcompute': 'coroutine_parallel_compute',
+            'coroutinetaskchaining': 'coroutine_task_chaining',
+            'coroutinefanoutin': 'coroutine_fan_out_in'
+        }
+        
+        for safe_name in sorted(measurement_types):
+            # Get original measurement type for description lookup
+            original_measurement_type = safe_to_original.get(safe_name, safe_name)
             
-            # For safe filenames, we need to reverse the process
-            perf_plot = f'performance_trend_{measurement_type}.svg'
-            throughput_plot = f'throughput_trend_{measurement_type}.svg'
+            # Create a nice display name from the original measurement type
+            display_name = original_measurement_type.replace('_', ' ').title()
+            
+            # Use safe name for filenames
+            perf_plot = f'performance_trend_{safe_name}.svg'
+            throughput_plot = f'throughput_trend_{safe_name}.svg'
             
             if perf_plot in plot_files or throughput_plot in plot_files:
                 md_content.append(f"### {display_name} Performance")
+                md_content.append("")
+                
+                # Add detailed description using original measurement type
+                description = get_benchmark_description(original_measurement_type)
+                md_content.append(description)
                 md_content.append("")
                 
                 if perf_plot in plot_files:
