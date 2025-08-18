@@ -101,6 +101,7 @@ void scheduler::submit_internal(task_context const& current, workgroup_id dst,
 
 void scheduler::wake_up_workers(uint32_t count) noexcept
 {
+  park_epoch_.fetch_add(1, std::memory_order_relaxed);
   auto sleeping_count = sleeping_.load(std::memory_order_acquire);
   auto wake_count     = std::min(count, static_cast<uint32_t>(sleeping_count));
 
@@ -125,13 +126,28 @@ void scheduler::run_worker(worker_id wid)
   // Main worker loop
   while (!stop_.load(std::memory_order_relaxed))
   {
-    bool found_work = false;
+    const auto park_token = park_epoch_.load(std::memory_order_acquire);
 
-    // Try to find work
-    found_work = find_work_for_worker(wid);
-
-    if (!found_work)
+    if (!find_work_for_worker(wid))
     {
+      // Enter sleep state
+      sleeping_.fetch_add(1, std::memory_order_relaxed);
+
+      if (find_work_for_worker(wid))
+      {
+        // Try to find work again with sleep already armed, in which case, disarm sleep
+        sleeping_.fetch_sub(1, std::memory_order_relaxed);
+        continue;
+      }
+
+      if (park_token != park_epoch_.load(std::memory_order_acquire))
+      {
+        sleeping_.fetch_sub(1, std::memory_order_relaxed);
+        // If the epoch has changed, we need to exit the context
+        // This means we have new work or a stop signal
+        continue;
+      }
+
       // exit context
       auto& worker = workers_[wid.get_index()];
       if (worker.get_workgroup())
@@ -140,8 +156,6 @@ void scheduler::run_worker(worker_id wid)
         workgroup.exit(static_cast<int>(worker.get_group_offset()));
         worker.set_workgroup_info(0, workgroup_id{});
       }
-      // Enter sleep state
-      sleeping_.fetch_add(1, std::memory_order_relaxed);
 
       wake_tokens_.acquire();
 
@@ -226,6 +240,7 @@ auto scheduler::find_work_for_worker(worker_id wid) noexcept -> bool
   // Priority 3: Work stealing from any workgroup with priority-based selection
   // Start with higher priority workgroups and overloaded workgroups
   uint32_t steal_start_idx = update_seed();
+  bool     should_retry    = false;
 
   for (uint32_t attempt = 0; attempt < workgroup_count_; ++attempt)
   {
@@ -236,6 +251,8 @@ auto scheduler::find_work_for_worker(worker_id wid) noexcept -> bool
     {
       continue;
     }
+
+    should_retry = true;
 
     if (!enter_context(wid, workgroup_id(i)))
     {
@@ -256,7 +273,7 @@ auto scheduler::find_work_for_worker(worker_id wid) noexcept -> bool
     }
   }
 
-  return false;
+  return should_retry;
 }
 
 void scheduler::execute_work(worker_id wid, detail::v2::work_item& work) noexcept

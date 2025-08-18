@@ -302,6 +302,7 @@ private:
   std::atomic_uint32_t                finished_{0};    // Used to ack all finished workers
   std::counting_semaphore<INT_MAX>    wake_tokens_{0}; // Used to wake up workers when work is available
   std::atomic_int32_t                 sleeping_{0};
+  std::atomic_uint64_t                park_epoch_{0};
   std::shared_ptr<worker_initializer> initializer_ = nullptr;
 
   std::unique_ptr<worker_v2[]> workers_;

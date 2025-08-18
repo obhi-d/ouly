@@ -40,6 +40,8 @@ struct co_task : public ouly::detail::co_task<R, ouly::detail::promise_type<co_t
  * @brief Use a sequence task to immediately start execution. The expectation is you will co_await this task on another
  * task, which will result in suspension of execution of the co awaiting task. This task also allows waiting on another
  * task and be suspended during* execution from any thread. This task can only be waited from a single wait point.
+ * @note IMPORTANT: This task should not be submitted to a scheduler unless you are sure it is already suspended, it
+ * should only be used to sequence other tasks.
  * @tparam R Return type of the task
  */
 template <typename R>

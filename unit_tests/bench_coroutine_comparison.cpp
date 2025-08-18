@@ -246,13 +246,13 @@ public:
   // Compare coroutine vs regular task submission overhead
   static void run_submission_overhead_comparison(ankerl::nanobench::Bench& bench, const std::string& name_suffix)
   {
-    auto        scheduler = setup_scheduler();
-    const auto& main_ctx  = get_main_context();
+    auto scheduler = setup_scheduler();
 
     // Coroutine submission benchmark
     bench.run(std::string("CoroutineSubmission_") + name_suffix,
-              [&main_ctx]()
+              []()
               {
+                auto&                 main_ctx = task_context_type::this_context::get();
                 std::atomic<uint32_t> counter{0};
 
                 for (uint32_t i = 0; i < coroutine_benchmark_config::TASK_COUNT_SMALL; ++i)
@@ -269,8 +269,9 @@ public:
 
     // Regular lambda submission benchmark for comparison
     bench.run(std::string("LambdaSubmission_") + name_suffix,
-              [&main_ctx]()
+              []()
               {
+                auto&                 main_ctx = task_context_type::this_context::get();
                 std::atomic<uint32_t> counter{0};
 
                 for (uint32_t i = 0; i < coroutine_benchmark_config::TASK_COUNT_SMALL; ++i)
@@ -296,14 +297,14 @@ public:
   // Measure suspension/resumption overhead
   static void run_suspension_overhead(ankerl::nanobench::Bench& bench, const std::string& name_suffix)
   {
-    auto        scheduler = setup_scheduler();
-    const auto& main_ctx  = get_main_context();
+    auto scheduler = setup_scheduler();
 
     bench.run(std::string("SuspensionOverhead_") + name_suffix,
-              [&main_ctx]()
+              []()
               {
-                auto task = simple_coroutines::chain_task(1.0F, coroutine_benchmark_config::CHAIN_LENGTH_MEDIUM,
-                                                          coroutine_benchmark_config::WORK_INTENSITY_LOW);
+                auto& main_ctx = task_context_type::this_context::get();
+                auto  task     = simple_coroutines::chain_task(1.0F, coroutine_benchmark_config::CHAIN_LENGTH_MEDIUM,
+                                                               coroutine_benchmark_config::WORK_INTENSITY_LOW);
 
                 ouly::async(main_ctx, ouly::workgroup_id(0), std::move(task));
 
@@ -368,13 +369,14 @@ public:
     constexpr size_t       DATA_SIZE = 10000;
     CoroutineBenchmarkData data(DATA_SIZE);
 
-    auto        scheduler = setup_scheduler();
-    const auto& main_ctx  = get_main_context();
+    auto scheduler = setup_scheduler();
 
     // Coroutine-based parallel computation
     bench.run(std::string("ParallelCompute_Coroutines_") + name_suffix,
-              [&data, &main_ctx]()
+              [&data]()
               {
+                auto& main_ctx = task_context_type::this_context::get();
+
                 std::vector<ouly::co_task<void>> tasks;
                 tasks.reserve(data.vectors.size() / coroutine_benchmark_config::BATCH_SIZE);
 
@@ -399,8 +401,9 @@ public:
 
     // Regular task-based parallel computation for comparison
     bench.run(std::string("ParallelCompute_RegularTasks_") + name_suffix,
-              [&data, &main_ctx]()
+              [&data]()
               {
+                auto& main_ctx = task_context_type::this_context::get();
                 data.result.store(0, std::memory_order_relaxed);
 
                 ouly::auto_parallel_for(
@@ -421,13 +424,12 @@ public:
   // Task chaining: coroutines vs callback-style
   static void run_task_chaining_comparison(ankerl::nanobench::Bench& bench, const std::string& name_suffix)
   {
-    auto        scheduler = setup_scheduler();
-    const auto& main_ctx  = get_main_context();
-
+    auto scheduler = setup_scheduler();
     // Coroutine-based chaining
     bench.run(std::string("TaskChaining_Coroutines_") + name_suffix,
-              [&main_ctx]()
+              []()
               {
+                auto&                             main_ctx = task_context_type::this_context::get();
                 std::vector<ouly::co_task<float>> chains;
                 chains.reserve(coroutine_benchmark_config::TASK_COUNT_SMALL);
 
@@ -445,48 +447,50 @@ public:
               });
 
     // Regular nested task submission for comparison
-    bench.run(
-     std::string("TaskChaining_NestedSubmission_") + name_suffix,
-     [&main_ctx]()
-     {
-       std::atomic<uint32_t> completed_chains{0};
+    bench.run(std::string("TaskChaining_NestedSubmission_") + name_suffix,
+              []()
+              {
+                std::atomic<uint32_t> completed_chains{0};
 
-       for (uint32_t i = 0; i < coroutine_benchmark_config::TASK_COUNT_SMALL; ++i)
-       {
-         // Simulate chaining with nested lambda submissions
-         auto chain_lambda = [&main_ctx, &completed_chains, i](auto&& self, float value, uint32_t remaining) -> void
-         {
-           float result = value;
-           CoroutineComputationKernels::intensive_computation(coroutine_benchmark_config::WORK_INTENSITY_LOW, result);
+                for (uint32_t i = 0; i < coroutine_benchmark_config::TASK_COUNT_SMALL; ++i)
+                {
+                  // Simulate chaining with nested lambda submissions
+                  auto chain_lambda = [&completed_chains, i](auto&& self, float value, uint32_t remaining) -> void
+                  {
+                    auto& main_ctx = task_context_type::this_context::get();
+                    float result   = value;
+                    CoroutineComputationKernels::intensive_computation(coroutine_benchmark_config::WORK_INTENSITY_LOW,
+                                                                       result);
 
-           if (remaining > 0)
-           {
-             ouly::async(main_ctx, ouly::workgroup_id(0),
-                         [self, result, remaining, &completed_chains](const task_context_type&)
-                         {
-                           self(self, result, remaining - 1);
-                         });
-           }
-           else
-           {
-             completed_chains.fetch_add(1, std::memory_order_relaxed);
-           }
-         };
+                    if (remaining > 0)
+                    {
+                      ouly::async(main_ctx, ouly::workgroup_id(0),
+                                  [self, result, remaining, &completed_chains](const task_context_type&)
+                                  {
+                                    self(self, result, remaining - 1);
+                                  });
+                    }
+                    else
+                    {
+                      completed_chains.fetch_add(1, std::memory_order_relaxed);
+                    }
+                  };
 
-         ouly::async(main_ctx, ouly::workgroup_id(0),
-                     [chain_lambda, i](const task_context_type&)
-                     {
-                       chain_lambda(chain_lambda, static_cast<float>(i),
-                                    coroutine_benchmark_config::CHAIN_LENGTH_SHORT);
-                     });
-       }
+                  auto& main_ctx = task_context_type::this_context::get();
+                  ouly::async(main_ctx, ouly::workgroup_id(0),
+                              [chain_lambda, i](const task_context_type&)
+                              {
+                                chain_lambda(chain_lambda, static_cast<float>(i),
+                                             coroutine_benchmark_config::CHAIN_LENGTH_SHORT);
+                              });
+                }
 
-       // Wait for all chains to complete
-       while (completed_chains.load() < coroutine_benchmark_config::TASK_COUNT_SMALL)
-       {
-         std::this_thread::sleep_for(std::chrono::milliseconds(1));
-       }
-     });
+                // Wait for all chains to complete
+                while (completed_chains.load() < coroutine_benchmark_config::TASK_COUNT_SMALL)
+                {
+                  std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                }
+              });
 
     teardown_scheduler(scheduler);
   }
@@ -498,15 +502,15 @@ public:
     std::vector<float> data(FAN_OUT_SIZE);
     std::iota(data.begin(), data.end(), 1.0F);
 
-    auto        scheduler = setup_scheduler();
-    const auto& main_ctx  = get_main_context();
+    auto scheduler = setup_scheduler();
 
     // Coroutine-based fan-out/fan-in
     bench.run(std::string("FanOutIn_Coroutines_") + name_suffix,
-              [&data, &main_ctx]()
+              [&data]()
               {
-                auto fan_out_task = simple_coroutines::fan_out_task(std::span<float>(data),
-                                                                    coroutine_benchmark_config::WORK_INTENSITY_LOW);
+                auto& main_ctx     = task_context_type::this_context::get();
+                auto  fan_out_task = simple_coroutines::fan_out_task(std::span<float>(data),
+                                                                     coroutine_benchmark_config::WORK_INTENSITY_LOW);
 
                 ouly::async(main_ctx, ouly::workgroup_id(0), std::move(fan_out_task));
 
@@ -516,8 +520,9 @@ public:
 
     // Regular parallel_for equivalent
     bench.run(std::string("FanOutIn_ParallelFor_") + name_suffix,
-              [&data, &main_ctx]()
+              [&data]()
               {
+                auto&              main_ctx = task_context_type::this_context::get();
                 std::atomic<float> total{0.0F};
 
                 ouly::auto_parallel_for(
@@ -533,116 +538,6 @@ public:
                  data, main_ctx);
 
                 ankerl::nanobench::doNotOptimizeAway(total.load());
-              });
-
-    teardown_scheduler(scheduler);
-  }
-
-private:
-  static auto setup_scheduler() -> scheduler_type
-  {
-    scheduler_type scheduler;
-    scheduler.create_group(ouly::workgroup_id(0), 0, std::thread::hardware_concurrency());
-    scheduler.begin_execution();
-    return scheduler;
-  }
-
-  static void teardown_scheduler(scheduler_type& scheduler)
-  {
-    scheduler.end_execution();
-  }
-
-  static auto get_main_context() -> const task_context_type&
-  {
-    return task_context_type::this_context::get();
-  }
-};
-
-// co_task vs co_sequence comparison
-template <typename SchedulerType, typename TaskContextType>
-class CoTaskVsCoSequenceBenchmark
-{
-public:
-  using scheduler_type    = SchedulerType;
-  using task_context_type = TaskContextType;
-
-  // Compare co_task (suspended start) vs co_sequence (immediate start)
-  static void run_startup_behavior_comparison(ankerl::nanobench::Bench& bench, const std::string& name_suffix)
-  {
-    auto        scheduler = setup_scheduler();
-    const auto& main_ctx  = get_main_context();
-
-    // co_task (suspended start) benchmark
-    bench.run(std::string("CoTask_SuspendedStart_") + name_suffix,
-              [&main_ctx]()
-              {
-                std::vector<ouly::co_task<float>> tasks;
-                tasks.reserve(coroutine_benchmark_config::TASK_COUNT_MEDIUM);
-
-                for (uint32_t i = 0; i < coroutine_benchmark_config::TASK_COUNT_MEDIUM; ++i)
-                {
-                  tasks.emplace_back(simple_coroutines::compute_task(static_cast<float>(i),
-                                                                     coroutine_benchmark_config::WORK_INTENSITY_LOW));
-
-                  ouly::async(main_ctx, ouly::workgroup_id(0), std::move(tasks.back()));
-                }
-
-                // Wait for completion
-                main_ctx.get_scheduler().wait_for_tasks();
-              });
-
-    // co_sequence (immediate start) benchmark
-    bench.run(std::string("CoSequence_ImmediateStart_") + name_suffix,
-              [&main_ctx]()
-              {
-                std::vector<ouly::co_sequence<float>> sequences;
-                sequences.reserve(coroutine_benchmark_config::TASK_COUNT_MEDIUM);
-
-                for (uint32_t i = 0; i < coroutine_benchmark_config::TASK_COUNT_MEDIUM; ++i)
-                {
-                  sequences.emplace_back(simple_coroutines::sequence_compute(
-                   static_cast<float>(i), coroutine_benchmark_config::WORK_INTENSITY_LOW));
-
-                  ouly::async(main_ctx, ouly::workgroup_id(0), std::move(sequences.back()));
-                }
-
-                // Wait for completion
-                main_ctx.get_scheduler().wait_for_tasks();
-              });
-
-    teardown_scheduler(scheduler);
-  }
-
-  // Compare chaining behavior
-  static void run_chaining_behavior_comparison(ankerl::nanobench::Bench& bench, const std::string& name_suffix)
-  {
-    auto        scheduler = setup_scheduler();
-    const auto& main_ctx  = get_main_context();
-
-    // co_task chaining
-    bench.run(std::string("CoTask_Chaining_") + name_suffix,
-              [&main_ctx]()
-              {
-                auto task = simple_coroutines::chain_task(1.0F, coroutine_benchmark_config::CHAIN_LENGTH_MEDIUM,
-                                                          coroutine_benchmark_config::WORK_INTENSITY_LOW);
-
-                ouly::async(main_ctx, ouly::workgroup_id(0), std::move(task));
-
-                // Wait for chain completion
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-              });
-
-    // co_sequence chaining
-    bench.run(std::string("CoSequence_Chaining_") + name_suffix,
-              [&main_ctx]()
-              {
-                auto sequence = simple_coroutines::sequence_chain(1.0F, coroutine_benchmark_config::CHAIN_LENGTH_MEDIUM,
-                                                                  coroutine_benchmark_config::WORK_INTENSITY_LOW);
-
-                ouly::async(main_ctx, ouly::workgroup_id(0), std::move(sequence));
-
-                // Wait for chain completion
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
               });
 
     teardown_scheduler(scheduler);
@@ -880,23 +775,6 @@ void run_coroutine_benchmarks(int benchmark_set = -1)
      .epochIterations(10)
      .minEpochIterations(5)
      .relative(true);
-  }
-
-  if (benchmark_set < 0 || benchmark_set == 2)
-  {
-    std::cout << "⚡ Running co_task vs co_sequence Comparison..." << std::endl;
-
-    CoTaskVsCoSequenceBenchmark<ouly::v1::scheduler, ouly::v1::task_context>::run_startup_behavior_comparison(bench,
-                                                                                                              "V1");
-    CoTaskVsCoSequenceBenchmark<ouly::v2::scheduler, ouly::v2::task_context>::run_startup_behavior_comparison(bench,
-                                                                                                              "V2");
-
-    CoTaskVsCoSequenceBenchmark<ouly::v1::scheduler, ouly::v1::task_context>::run_chaining_behavior_comparison(bench,
-                                                                                                               "V1");
-    CoTaskVsCoSequenceBenchmark<ouly::v2::scheduler, ouly::v2::task_context>::run_chaining_behavior_comparison(bench,
-                                                                                                               "V2");
-
-    CoroutineBenchmarkReporter::save_results(bench, "cotask_vs_cosequence");
   }
 
   std::cout << "✅ All coroutine benchmarks completed!" << std::endl;
