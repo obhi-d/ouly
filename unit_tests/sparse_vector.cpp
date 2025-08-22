@@ -315,4 +315,75 @@ TEST_CASE("sparse_vector: fill", "[sparse_vector][fill]")
      REQUIRE(0xbadf00d == v);
    });
 }
+
+TEST_CASE("sparse_vector: Test swap functionality", "[sparse_vector][swap]")
+{
+  ouly::sparse_vector<pod> v1;
+  v1.emplace_at(1, 100, 120);
+  v1.emplace_at(10, 200, 220);
+
+  ouly::sparse_vector<pod> v2;
+  v2.emplace_at(5, 500, 520);
+  v2.emplace_at(15, 600, 620);
+  v2.emplace_at(25, 700, 720);
+
+  // Store original values
+  pod         v1_1_orig    = v1[1];
+  pod         v1_10_orig   = v1[10];
+  pod         v2_5_orig    = v2[5];
+  pod         v2_15_orig   = v2[15];
+  pod         v2_25_orig   = v2[25];
+  std::size_t v1_size_orig = v1.size();
+  std::size_t v2_size_orig = v2.size();
+
+  // Test member swap
+  v1.swap(v2);
+
+  // Verify values are swapped
+  REQUIRE(v1.size() == v2_size_orig);
+  REQUIRE(v2.size() == v1_size_orig);
+
+  REQUIRE(v1.contains(5) == true);
+  REQUIRE(v1.contains(15) == true);
+  REQUIRE(v1.contains(25) == true);
+  REQUIRE(v1.contains(1) == false);
+  REQUIRE(v1.contains(10) == false);
+
+  REQUIRE(v2.contains(1) == true);
+  REQUIRE(v2.contains(10) == true);
+  REQUIRE(v2.contains(5) == false);
+  REQUIRE(v2.contains(15) == false);
+  REQUIRE(v2.contains(25) == false);
+
+  REQUIRE(v1[5].a == v2_5_orig.a);
+  REQUIRE(v1[5].b == v2_5_orig.b);
+  REQUIRE(v1[15].a == v2_15_orig.a);
+  REQUIRE(v1[15].b == v2_15_orig.b);
+  REQUIRE(v1[25].a == v2_25_orig.a);
+  REQUIRE(v1[25].b == v2_25_orig.b);
+
+  REQUIRE(v2[1].a == v1_1_orig.a);
+  REQUIRE(v2[1].b == v1_1_orig.b);
+  REQUIRE(v2[10].a == v1_10_orig.a);
+  REQUIRE(v2[10].b == v1_10_orig.b);
+
+  // Test friend swap function
+  swap(v1, v2);
+
+  // Should be back to original state
+  REQUIRE(v1.size() == v1_size_orig);
+  REQUIRE(v2.size() == v2_size_orig);
+
+  REQUIRE(v1[1].a == v1_1_orig.a);
+  REQUIRE(v1[1].b == v1_1_orig.b);
+  REQUIRE(v1[10].a == v1_10_orig.a);
+  REQUIRE(v1[10].b == v1_10_orig.b);
+
+  REQUIRE(v2[5].a == v2_5_orig.a);
+  REQUIRE(v2[5].b == v2_5_orig.b);
+  REQUIRE(v2[15].a == v2_15_orig.a);
+  REQUIRE(v2[15].b == v2_15_orig.b);
+  REQUIRE(v2[25].a == v2_25_orig.a);
+  REQUIRE(v2[25].b == v2_25_orig.b);
+}
 // NOLINTEND

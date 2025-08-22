@@ -341,6 +341,21 @@ public:
     self_.clear();
   }
 
+  void swap(sparse_table& other) noexcept
+  {
+    using std::swap;
+    swap(items_, other.items_);
+    swap(self_, other.self_);
+    swap(length_, other.length_);
+    swap(extents_, other.extents_);
+    swap(free_slot_, other.free_slot_);
+  }
+
+  friend void swap(sparse_table& lhs, sparse_table& rhs) noexcept
+  {
+    lhs.swap(rhs);
+  }
+
   auto at(link l) noexcept -> value_type&
   {
     if constexpr (ouly::debug)
@@ -374,7 +389,7 @@ public:
 
   auto get_if(link l) noexcept -> value_type*
   {
-    auto idx = ouly::detail::index_val(l.value());
+    auto idx = ouly::detail::index_val(l);
     if (idx < extents_)
     {
       if constexpr (has_self_index)
@@ -387,7 +402,7 @@ public:
       }
       else
       {
-        if (get_ref_at_idx(idx) == l.value())
+        if (get_ref_at_idx(idx) == l)
         {
           return &(item_at_idx(idx));
         }
@@ -399,9 +414,9 @@ public:
 
   auto contains(link l) const noexcept -> bool
   {
-    OULY_ASSERT(is_valid_ref(l.value()));
-    auto idx = ouly::detail::index_val(l.value());
-    return idx < extents_ && (l.value() == get_ref_at_idx(idx));
+    OULY_ASSERT(is_valid_ref(l));
+    auto idx = ouly::detail::index_val(l);
+    return idx < extents_ && (l == get_ref_at_idx(idx));
   }
 
   [[nodiscard]] auto empty() const noexcept -> bool

@@ -87,4 +87,62 @@ TEST_CASE("blackboard: push_back", "[blackboard][push_back]")
   // check decl
   ouly::blackboard<ouly::config<ouly::cfg::name_map<custom_map>>> map;
 }
+
+TEST_CASE("blackboard: Test swap functionality", "[blackboard][swap]")
+{
+  ouly::blackboard board1;
+  board1.emplace<int>("param1", 100);
+  board1.emplace<std::string>("param2", "hello");
+
+  ouly::blackboard board2;
+  board2.emplace<int>("param3", 200);
+  board2.emplace<std::string>("param4", "world");
+  board2.emplace<double>("param5", 3.14);
+
+  // Test member swap
+  board1.swap(board2);
+
+  // Verify contents are swapped
+  REQUIRE(board1.contains("param3"));
+  REQUIRE(board1.contains("param4"));
+  REQUIRE(board1.contains("param5"));
+  REQUIRE(!board1.contains("param1"));
+  REQUIRE(!board1.contains("param2"));
+
+  REQUIRE(board2.contains("param1"));
+  REQUIRE(board2.contains("param2"));
+  REQUIRE(!board2.contains("param3"));
+  REQUIRE(!board2.contains("param4"));
+  REQUIRE(!board2.contains("param5"));
+
+  REQUIRE(board1.get<int>("param3") == 200);
+  REQUIRE(board1.get<std::string>("param4") == "world");
+  REQUIRE(board1.get<double>("param5") == 3.14);
+
+  REQUIRE(board2.get<int>("param1") == 100);
+  REQUIRE(board2.get<std::string>("param2") == "hello");
+
+  // Test friend swap function (swap back)
+  swap(board1, board2);
+
+  // Verify we're back to original state
+  REQUIRE(board1.contains("param1"));
+  REQUIRE(board1.contains("param2"));
+  REQUIRE(!board1.contains("param3"));
+  REQUIRE(!board1.contains("param4"));
+  REQUIRE(!board1.contains("param5"));
+
+  REQUIRE(board2.contains("param3"));
+  REQUIRE(board2.contains("param4"));
+  REQUIRE(board2.contains("param5"));
+  REQUIRE(!board2.contains("param1"));
+  REQUIRE(!board2.contains("param2"));
+
+  REQUIRE(board1.get<int>("param1") == 100);
+  REQUIRE(board1.get<std::string>("param2") == "hello");
+
+  REQUIRE(board2.get<int>("param3") == 200);
+  REQUIRE(board2.get<std::string>("param4") == "world");
+  REQUIRE(board2.get<double>("param5") == 3.14);
+}
 // NOLINTEND

@@ -7,8 +7,8 @@
 #include "ouly/containers/config.hpp"
 #include "ouly/containers/detail/blackboard_defs.hpp"
 #include "ouly/utility/config.hpp"
-#include "ouly/utility/utils.hpp"
 #include "ouly/utility/user_config.hpp"
+#include "ouly/utility/utils.hpp"
 #include <cstdint>
 #include <memory>
 
@@ -194,6 +194,19 @@ public:
   {
     auto it = lookup_.find(index);
     return it != lookup_.end() && it->second.destructor_ != nullptr;
+  }
+
+  void swap(blackboard& other) noexcept
+  {
+    using std::swap;
+    swap(head_, other.head_);
+    swap(current_, other.current_);
+    swap(lookup_, other.lookup_);
+  }
+
+  friend void swap(blackboard& lhs, blackboard& rhs) noexcept
+  {
+    lhs.swap(rhs);
   }
 
 private:

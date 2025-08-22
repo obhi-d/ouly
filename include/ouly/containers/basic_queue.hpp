@@ -96,7 +96,9 @@ public:
     other.back_  = 0;
   }
 
-  auto operator=(basic_queue const& other) -> basic_queue& requires(std::is_copy_constructible_v<Ty>) {
+  auto operator=(basic_queue const& other) -> basic_queue&
+    requires(std::is_copy_constructible_v<Ty>)
+  {
     if (this == &other)
     {
       return *this;
@@ -236,6 +238,22 @@ public:
     front_ = 0;
     back_  = 0;
     size_  = 0;
+  }
+
+  void swap(basic_queue& other) noexcept
+  {
+    using std::swap;
+    swap(head_, other.head_);
+    swap(tail_, other.tail_);
+    swap(free_, other.free_);
+    swap(size_, other.size_);
+    swap(front_, other.front_);
+    swap(back_, other.back_);
+  }
+
+  friend void swap(basic_queue& lhs, basic_queue& rhs) noexcept
+  {
+    lhs.swap(rhs);
   }
 
   template <typename L>

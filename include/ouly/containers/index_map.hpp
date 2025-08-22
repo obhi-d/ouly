@@ -132,6 +132,17 @@ public:
     return data_.indices_.size();
   }
 
+  void swap(index_map& other) noexcept
+  {
+    using std::swap;
+    swap(data_, other.data_);
+  }
+
+  friend void swap(index_map& lhs, index_map& rhs) noexcept
+  {
+    lhs.swap(rhs);
+  }
+
   auto begin() noexcept
   {
     return data_.indices_.begin();

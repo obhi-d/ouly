@@ -389,6 +389,17 @@ public:
     data_.clear();
   }
 
+  void swap(intrusive_list& other) noexcept
+  {
+    using std::swap;
+    swap(data_, other.data_);
+  }
+
+  friend void swap(intrusive_list& lhs, intrusive_list& rhs) noexcept
+  {
+    lhs.swap(rhs);
+  }
+
   void erase_after(iterator it) noexcept
   {
     auto& l = *it;

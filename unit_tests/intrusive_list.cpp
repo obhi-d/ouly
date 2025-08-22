@@ -1513,4 +1513,62 @@ TEST_CASE("Simple intrusive list test", "[intrusive_list][simple]")
   REQUIRE(il.empty());
 }
 
+TEST_CASE("intrusive_list: Test swap functionality", "[intrusive_list][swap]")
+{
+  ouly::intrusive_list<&sobject::hook, true, true> list1;
+  sobject                                          obj1("first");
+  sobject                                          obj2("second");
+  list1.push_back(obj1);
+  list1.push_back(obj2);
+
+  ouly::intrusive_list<&sobject::hook, true, true> list2;
+  sobject                                          obj3("third");
+  sobject                                          obj4("fourth");
+  sobject                                          obj5("fifth");
+  list2.push_back(obj3);
+  list2.push_back(obj4);
+  list2.push_back(obj5);
+
+  // Store original sizes
+  std::size_t size1 = list1.size();
+  std::size_t size2 = list2.size();
+
+  // Test member swap
+  list1.swap(list2);
+
+  // Verify sizes are swapped
+  REQUIRE(list1.size() == size2);
+  REQUIRE(list2.size() == size1);
+
+  // Verify elements are swapped by checking first elements
+  REQUIRE(&list1.front() == &obj3);
+  REQUIRE(&list2.front() == &obj1);
+
+  // Verify contents by iteration
+  auto it1 = list1.begin();
+  REQUIRE(&(*it1) == &obj3);
+  ++it1;
+  REQUIRE(&(*it1) == &obj4);
+  ++it1;
+  REQUIRE(&(*it1) == &obj5);
+  ++it1;
+  REQUIRE(it1 == list1.end());
+
+  auto it2 = list2.begin();
+  REQUIRE(&(*it2) == &obj1);
+  ++it2;
+  REQUIRE(&(*it2) == &obj2);
+  ++it2;
+  REQUIRE(it2 == list2.end());
+
+  // Test friend swap function (swap back)
+  swap(list1, list2);
+
+  // Verify we're back to original state
+  REQUIRE(list1.size() == size1);
+  REQUIRE(list2.size() == size2);
+  REQUIRE(&list1.front() == &obj1);
+  REQUIRE(&list2.front() == &obj3);
+}
+
 // NOLINTEND

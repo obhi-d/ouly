@@ -152,6 +152,18 @@ public:
     return static_cast<uint32_t>(pool_.size());
   }
 
+  void swap(table& other) noexcept
+  {
+    using std::swap;
+    swap(pool_, other.pool_);
+    swap(free_pool_, other.free_pool_);
+  }
+
+  friend void swap(table& lhs, table& rhs) noexcept
+  {
+    lhs.swap(rhs);
+  }
+
 private:
   vector   pool_;
   freepool free_pool_;

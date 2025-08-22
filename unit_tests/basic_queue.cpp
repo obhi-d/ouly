@@ -162,4 +162,60 @@ TEST_CASE("Validate basic_queue initialization", "[basic_queue]")
   CHECK(queue4.empty() == true);
 }
 
+TEST_CASE("basic_queue: Test swap functionality", "[basic_queue][swap]")
+{
+  ouly::basic_queue<std::string, string_traits> queue1;
+  queue1.emplace_back("first");
+  queue1.emplace_back("second");
+
+  ouly::basic_queue<std::string, string_traits> queue2;
+  queue2.emplace_back("third");
+  queue2.emplace_back("fourth");
+  queue2.emplace_back("fifth");
+
+  // Store original sizes
+  std::size_t size1 = queue1.size();
+  std::size_t size2 = queue2.size();
+
+  // Test member swap
+  queue1.swap(queue2);
+
+  // Verify sizes are swapped
+  REQUIRE(queue1.size() == size2);
+  REQUIRE(queue2.size() == size1);
+
+  // Verify contents are swapped
+  REQUIRE(queue1.pop_front() == "third");
+  REQUIRE(queue1.pop_front() == "fourth");
+  REQUIRE(queue1.pop_front() == "fifth");
+  REQUIRE(queue1.empty() == true);
+
+  REQUIRE(queue2.pop_front() == "first");
+  REQUIRE(queue2.pop_front() == "second");
+  REQUIRE(queue2.empty() == true);
+
+  // Setup for friend swap test
+  queue1.emplace_back("a");
+  queue1.emplace_back("b");
+  queue2.emplace_back("x");
+  queue2.emplace_back("y");
+  queue2.emplace_back("z");
+
+  // Test friend swap function
+  swap(queue1, queue2);
+
+  // Verify contents are swapped back
+  REQUIRE(queue1.size() == 3);
+  REQUIRE(queue2.size() == 2);
+
+  REQUIRE(queue1.pop_front() == "x");
+  REQUIRE(queue1.pop_front() == "y");
+  REQUIRE(queue1.pop_front() == "z");
+  REQUIRE(queue1.empty() == true);
+
+  REQUIRE(queue2.pop_front() == "a");
+  REQUIRE(queue2.pop_front() == "b");
+  REQUIRE(queue2.empty() == true);
+}
+
 // NOLINTEND
