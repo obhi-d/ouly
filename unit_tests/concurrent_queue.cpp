@@ -515,11 +515,11 @@ TEST_CASE("concurrent_queue large object handling", "[concurrent_queue]")
 {
   struct LargeObject
   {
-    std::array<int, 64> data{}; // NOLINT(readability-magic-numbers) Moderately large but not excessive
+    std::array<int, 32> data{}; // NOLINT(readability-magic-numbers) Moderately large but not excessive
     int                 id = 0;
 
     LargeObject() = default;
-    explicit LargeObject(int i) : id(i) // NOLINT(google-explicit-constructor)
+    LargeObject(int i) : id(i) // NOLINT(google-explicit-constructor)
     {
       data.fill(i);
     }
@@ -529,7 +529,7 @@ TEST_CASE("concurrent_queue large object handling", "[concurrent_queue]")
 
   SECTION("large object enqueue/dequeue")
   {
-    constexpr int count = 10; // NOLINT(readability-magic-numbers) Reduced count for AddressSanitizer
+    constexpr int count = 100; // NOLINT(readability-magic-numbers) Reduced count for AddressSanitizer
 
     // Enqueue large objects
     for (int i = 0; i < count; ++i)
@@ -546,7 +546,7 @@ TEST_CASE("concurrent_queue large object handling", "[concurrent_queue]")
       REQUIRE(queue.try_dequeue(obj));
       REQUIRE(obj.id == (count - 1 - i)); // LIFO order
       REQUIRE(obj.data[0] == (count - 1 - i));
-      REQUIRE(obj.data[63] == (count - 1 - i)); // NOLINT(readability-magic-numbers)
+      REQUIRE(obj.data[31] == (count - 1 - i)); // NOLINT(readability-magic-numbers)
     }
 
     REQUIRE(queue.empty());

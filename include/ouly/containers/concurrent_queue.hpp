@@ -7,6 +7,7 @@
 #include "ouly/utility/utils.hpp"
 #include <atomic>
 #include <mutex>
+#include <span>
 #include <thread>
 #include <type_traits>
 
@@ -188,7 +189,7 @@ public:
    */
   template <typename... Args>
   void emplace(Args&&... args)
-    requires(std::is_constructible_v<T, Args...> && is_fast_variant)
+    requires(is_fast_variant)
   {
     // Fast variant: optimized for single-threaded consumer with for_each
     // Use fetch_add for faster enqueue since we don't need to handle concurrent dequeue
@@ -231,7 +232,7 @@ public:
    */
   template <typename... Args>
   void emplace(Args&&... args)
-    requires(std::is_constructible_v<T, Args...> && !is_fast_variant)
+    requires(!is_fast_variant)
   {
 
     // Regular mode: use compare_exchange for thread-safe enqueue/dequeue
