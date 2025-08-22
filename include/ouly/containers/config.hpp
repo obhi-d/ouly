@@ -37,4 +37,9 @@ struct name_map
   using name_map_type = H<blackboard_offset>;
 };
 
+/** Assumes concurrent_queue is a fast variant where enqueue is multi-threaded, while traveral is single-threaded and
+ * traversal is not invoked during enqueue, and there is no dequeue */
+struct single_threaded_consumer_for_each
+{};
+
 } // namespace ouly::cfg
