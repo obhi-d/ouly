@@ -129,8 +129,10 @@ jobs:
       shell: bash
       run: |
         export PATH=$PWD/coverity-linux64/bin:$PATH
-        # Remove third-party deps, tests, and system headers from the emit repo
-        cov-manage-emit --dir cov-int --tu-pattern "file('.*/_deps/.*') || file('.*/(unit_tests|tests)/.*') || file('/usr/include/.*') || file('/usr/local/include/.*') || file('.*/include/c\\+\\+/.*')" delete
+        # Remove third-party deps and tests by primary file
+        cov-manage-emit --dir cov-int --tu-pattern "file('.*/_deps/.*') || file('.*/(unit_tests|tests)/.*')" delete
+        # Also drop TUs that include libstdc++ charconv to avoid analyzing std headers
+        cov-manage-emit --dir cov-int --tu-pattern 'header(".*/c\+\+/.*")' delete
 
     - name: Submit to Coverity Scan
       shell: bash

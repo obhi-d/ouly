@@ -119,8 +119,10 @@ public:
    */
   concurrent_queue()
   {
-    // Initialize with one bucket
-    auto* initial_bucket = allocate_bucket();
+    // Initialize with one bucket (constructor context is single-threaded)
+    bucket* initial_bucket = bucket_pool_.allocate();
+    // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
+    new (initial_bucket) bucket();
     head_.store(initial_bucket, std::memory_order_relaxed);
     tail_.store(initial_bucket, std::memory_order_relaxed);
   }
@@ -473,12 +475,11 @@ public:
 
 private:
   /**
-   * @brief Allocate a new bucket from the pool
+   * @brief Allocate a new bucket from the pool (must be called under mutex protection)
    */
   auto allocate_bucket() -> bucket*
   {
-    std::lock_guard<std::mutex> lock(bucket_mutex_);
-    bucket*                     new_bucket = bucket_pool_.allocate();
+    bucket* new_bucket = bucket_pool_.allocate();
     // Placement new to ensure proper construction of atomics
     // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
     return new (new_bucket) bucket();
@@ -491,40 +492,27 @@ private:
    */
   auto ensure_next_bucket(bucket* current_bucket) -> bool
   {
-    // Double-checked locking pattern
+    std::lock_guard<std::mutex> lock(bucket_mutex_);
+
+    // Check if next bucket already exists (double-checked locking)
     bucket* next = current_bucket->next_.load(std::memory_order_acquire);
     if (next != nullptr)
     {
-      // Someone else already created the next bucket
-      // Try to advance tail pointer
+      // Someone else already created the next bucket, advance tail pointer
       tail_.compare_exchange_weak(current_bucket, next, std::memory_order_acq_rel, std::memory_order_relaxed);
       return true;
     }
 
-    // Need to allocate new bucket
-    bucket* new_bucket = allocate_bucket();
+    // Allocate and construct new bucket (already protected by mutex)
+    bucket* new_bucket = bucket_pool_.allocate();
+    // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
+    new (new_bucket) bucket();
 
-    // Try to set it as next bucket
-    bucket* expected = nullptr;
-    if (current_bucket->next_.compare_exchange_strong(expected, new_bucket, std::memory_order_acq_rel,
-                                                      std::memory_order_relaxed))
-    {
+    // Link the new bucket atomically
+    current_bucket->next_.store(new_bucket, std::memory_order_release);
 
-      // Successfully linked new bucket, try to advance tail
-      tail_.compare_exchange_weak(current_bucket, new_bucket, std::memory_order_acq_rel, std::memory_order_relaxed);
-      return true;
-    }
-
-    // Someone else beat us to it, deallocate our bucket
-    new_bucket->~bucket();
-    bucket_pool_.deallocate(new_bucket);
-
-    // Try to advance tail to the bucket that was actually linked
-    bucket* actual_next = current_bucket->next_.load(std::memory_order_acquire);
-    if (actual_next != nullptr)
-    {
-      tail_.compare_exchange_weak(current_bucket, actual_next, std::memory_order_acq_rel, std::memory_order_relaxed);
-    }
+    // Advance tail pointer to the new bucket
+    tail_.compare_exchange_weak(current_bucket, new_bucket, std::memory_order_acq_rel, std::memory_order_relaxed);
 
     return true;
   }
