@@ -286,6 +286,7 @@
 <li class="toctree-l4"><a class="reference internal" href="#_CPPv4N4ouly13sparse_vector4growE9size_type"><code class="docutils literal notranslate"><span class="pre">grow()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#_CPPv4N4ouly13sparse_vector13shrink_to_fitEv"><code class="docutils literal notranslate"><span class="pre">shrink_to_fit()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#_CPPv4N4ouly13sparse_vector5clearEv"><code class="docutils literal notranslate"><span class="pre">clear()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#_CPPv4N4ouly13sparse_vector4swapER13sparse_vector"><code class="docutils literal notranslate"><span class="pre">swap()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#_CPPv4N4ouly13sparse_vector2atE9size_type"><code class="docutils literal notranslate"><span class="pre">at()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#_CPPv4NK4ouly13sparse_vector2atE9size_type"><code class="docutils literal notranslate"><span class="pre">at()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#_CPPv4N4ouly13sparse_vectorixE9size_type"><code class="docutils literal notranslate"><span class="pre">operator[]()</span></code></a></li>
@@ -303,6 +304,7 @@
 <li class="toctree-l4"><a class="reference internal" href="#_CPPv4N4ouly13sparse_vector4viewEv"><code class="docutils literal notranslate"><span class="pre">view()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#_CPPv4N4ouly13sparse_vector5indexE9size_type"><code class="docutils literal notranslate"><span class="pre">index()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#_CPPv4N4ouly13sparse_vector16is_sparse_vectorE"><code class="docutils literal notranslate"><span class="pre">is_sparse_vector</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#_CPPv4N4ouly13sparse_vector4swapER13sparse_vectorR13sparse_vector"><code class="docutils literal notranslate"><span class="pre">swap</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#_CPPv4I0EN4ouly13sparse_vector9data_viewE"><code class="docutils literal notranslate"><span class="pre">ouly::sparse_vector::data_view</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#_CPPv4N4ouly13sparse_vector7index_tE"><code class="docutils literal notranslate"><span class="pre">ouly::sparse_vector::index_t</span></code></a></li>
 </ul>
@@ -1797,6 +1799,11 @@ Features:<ul class="simple">
 </dd></dl>
 
 <dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly13sparse_vector4swapER13sparse_vector">
+<span id="_CPPv3N4ouly13sparse_vector4swapER13sparse_vector"></span><span id="_CPPv2N4ouly13sparse_vector4swapER13sparse_vector"></span><span id="ouly::sparse_vector::swap__sparse_vectorR"></span><span class="target" id="classouly_1_1sparse__vector_1afb51ced14bc665483a57a564630a105a"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">swap</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4I00EN4ouly13sparse_vectorE" title="ouly::sparse_vector"><span class="n"><span class="pre">sparse_vector</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">other</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><a class="headerlink" href="#_CPPv4N4ouly13sparse_vector4swapER13sparse_vector" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N4ouly13sparse_vector2atE9size_type">
 <span id="_CPPv3N4ouly13sparse_vector2atE9size_type"></span><span id="_CPPv2N4ouly13sparse_vector2atE9size_type"></span><span id="ouly::sparse_vector::at__size_type"></span><span class="target" id="classouly_1_1sparse__vector_1a521276f9baccba1f2b35da7d5fdddb3b"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">at</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N4ouly13sparse_vector9size_typeE" title="ouly::sparse_vector::size_type"><span class="n"><span class="pre">size_type</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">l</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N4ouly13sparse_vector10value_typeE" title="ouly::sparse_vector::value_type"><span class="n"><span class="pre">value_type</span></span></a><span class="p"><span class="pre">&amp;</span></span><a class="headerlink" href="#_CPPv4N4ouly13sparse_vector2atE9size_type" title="Link to this definition"></a><br /></dt>
 <dd></dd></dl>
@@ -1885,6 +1892,14 @@ Features:<ul class="simple">
 <dl class="cpp var">
 <dt class="sig sig-object cpp" id="_CPPv4N4ouly13sparse_vector16is_sparse_vectorE">
 <span id="_CPPv3N4ouly13sparse_vector16is_sparse_vectorE"></span><span id="_CPPv2N4ouly13sparse_vector16is_sparse_vectorE"></span><span id="ouly::sparse_vector::is_sparse_vector__b"></span><span class="target" id="classouly_1_1sparse__vector_1ac39f6e2ac854943aa10451f146c9bcbe"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">constexpr</span></span><span class="w"> </span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">is_sparse_vector</span></span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">true</span></span><a class="headerlink" href="#_CPPv4N4ouly13sparse_vector16is_sparse_vectorE" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-friends">Friends</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly13sparse_vector4swapER13sparse_vectorR13sparse_vector">
+<span id="_CPPv3N4ouly13sparse_vector4swapER13sparse_vectorR13sparse_vector"></span><span id="_CPPv2N4ouly13sparse_vector4swapER13sparse_vectorR13sparse_vector"></span><span id="ouly::sparse_vector::swap__sparse_vectorR.sparse_vectorR"></span><span class="target" id="classouly_1_1sparse__vector_1a6d7250b5dfcd8b21743b6adc09b22043"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">friend</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">swap</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4I00EN4ouly13sparse_vectorE" title="ouly::sparse_vector"><span class="n"><span class="pre">sparse_vector</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">lhs</span></span>, <a class="reference internal" href="#_CPPv4I00EN4ouly13sparse_vectorE" title="ouly::sparse_vector"><span class="n"><span class="pre">sparse_vector</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">rhs</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><a class="headerlink" href="#_CPPv4N4ouly13sparse_vector4swapER13sparse_vectorR13sparse_vector" title="Link to this definition"></a><br /></dt>
 <dd></dd></dl>
 
 </div>
