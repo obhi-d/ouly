@@ -108,43 +108,44 @@ public:
     return *this;
   }
 
-  auto operator=(sparse_table const& other) noexcept
-   -> sparse_table& requires(std::is_copy_constructible_v<value_type>) {
-     if (this != &other)
-     {
-       clear_data();
+  auto operator=(sparse_table const& other) noexcept -> sparse_table&
+    requires(std::is_copy_constructible_v<value_type>)
+  {
+    if (this != &other)
+    {
+      clear_data();
 
-       static_cast<allocator_type&>(*this) = static_cast<allocator_type const&>(other);
-       items_.resize(other.items_.size());
-       for (auto& data : items_)
-       {
-         data = ouly::allocate<storage>(*this, sizeof(storage) * pool_size);
-       }
+      static_cast<allocator_type&>(*this) = static_cast<allocator_type const&>(other);
+      items_.resize(other.items_.size());
+      for (auto& data : items_)
+      {
+        data = ouly::allocate<storage>(*this, sizeof(storage) * pool_size);
+      }
 
-       for (size_type first = 1; first != other.extents_; ++first)
-       {
-         // NOLINTNEXTLINE
-         auto const& src = reinterpret_cast<value_type const&>(other.item_at_idx(first));
-         // NOLINTNEXTLINE
-         auto& dst = reinterpret_cast<value_type&>(item_at_idx(first));
+      for (size_type first = 1; first != other.extents_; ++first)
+      {
+        // NOLINTNEXTLINE
+        auto const& src = reinterpret_cast<value_type const&>(other.item_at_idx(first));
+        // NOLINTNEXTLINE
+        auto& dst = reinterpret_cast<value_type&>(item_at_idx(first));
 
-         auto ref = other.get_ref_at_idx(first);
-         if (is_valid_ref(ref))
-         {
-           std::construct_at(&dst, src);
-         }
-         if constexpr (has_self_index)
-         {
-           set_ref_at_idx(first, ref);
-         }
-       }
-       self_      = other.self_;
-       extents_   = other.extents_;
-       length_    = other.length_;
-       free_slot_ = other.free_slot_;
-     }
-     return *this;
-   }
+        auto ref = other.get_ref_at_idx(first);
+        if (is_valid_ref(ref))
+        {
+          std::construct_at(&dst, src);
+        }
+        if constexpr (has_self_index)
+        {
+          set_ref_at_idx(first, ref);
+        }
+      }
+      self_      = other.self_;
+      extents_   = other.extents_;
+      length_    = other.length_;
+      free_slot_ = other.free_slot_;
+    }
+    return *this;
+  }
 
   /**
    * @brief Lambda called for each element
@@ -518,7 +519,7 @@ private:
   }
 
   template <typename Lambda, typename Cast>
-  void internal_for_each(size_type first, size_type last, Lambda& lambda) noexcept
+  void internal_for_each(size_type first, size_type last, Lambda lambda) noexcept
   {
     constexpr auto arity = function_traits<Lambda>::arity;
 

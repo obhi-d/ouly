@@ -343,7 +343,7 @@ public:
    * @note This method assumes single-threaded access and no concurrent enqueue operations
    */
   template <typename F>
-  void for_each(F&& func)
+  void for_each(F func)
     requires(is_fast_variant)
   {
     bucket* current = head_.load(std::memory_order_relaxed);
@@ -357,7 +357,7 @@ public:
       for (size_type i = 0; i < count; ++i)
       {
         T* element_ptr = get_element_ptr(current, i);
-        std::forward<F>(func)(*element_ptr);
+        func(*element_ptr);
       }
 
       // Move to next bucket
@@ -372,7 +372,7 @@ public:
    * @note This method assumes single-threaded access and no concurrent enqueue operations
    */
   template <typename F>
-  void for_each_bucket(F&& func)
+  void for_each_bucket(F func)
     requires(is_fast_variant)
   {
     bucket* current = head_.load(std::memory_order_relaxed);
@@ -380,7 +380,7 @@ public:
     while (current != nullptr)
     {
       std::span<T> elements = get_elements_span(current);
-      std::forward<F>(func)(elements);
+      func(elements);
 
       // Move to next bucket
       current = current->next_.load(std::memory_order_relaxed);
