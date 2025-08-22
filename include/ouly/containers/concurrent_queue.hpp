@@ -10,6 +10,11 @@
 #include <thread>
 #include <type_traits>
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4324) // structure was padded due to alignment specifier
+#endif
+
 namespace ouly
 {
 
@@ -358,6 +363,28 @@ public:
   }
 
   /**
+   * @brief Traverse all elements in the queue with a function that accepts a span<T> (fast variant only)
+   * @tparam F Function type that accepts span<T> or span<const T>
+   * @param func Function to call for each element
+   * @note This method assumes single-threaded access and no concurrent enqueue operations
+   */
+  template <typename F>
+  void for_each_bucket(F&& func)
+    requires(is_fast_variant)
+  {
+    bucket* current = head_.load(std::memory_order_relaxed);
+
+    while (current != nullptr)
+    {
+      std::span<T> elements = get_elements_span(current);
+      std::forward<F>(func)(elements);
+
+      // Move to next bucket
+      current = current->next_.load(std::memory_order_relaxed);
+    }
+  }
+
+  /**
    * @brief Clear all elements from the queue (fast variant only)
    * @note This method assumes single-threaded access and no concurrent enqueue operations
    */
@@ -509,6 +536,19 @@ private:
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     return bucket_ptr->data_[pos].template as<T>();
   }
+
+  /**
+   * @brief Get a span of elements in the bucket
+   */
+  static auto get_elements_span(bucket* bucket_ptr) noexcept -> std::span<T>
+  {
+    size_type count = bucket_ptr->tail_.load(std::memory_order_relaxed);
+    return std::span<T>(get_element_ptr(bucket_ptr, 0), count);
+  }
 };
 
 } // namespace ouly
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
