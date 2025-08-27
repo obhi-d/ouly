@@ -64,7 +64,7 @@ auto ts_shared_linear_allocator::deallocate(void* ptr, std::size_t size) noexcep
 }
 void ts_shared_linear_allocator::reset() noexcept
 {
-  std::lock_guard<std::mutex> lg{page_mutex_};
+  std::unique_lock<std::shared_mutex> lg{page_mutex_};
 
   // Reset all available pages for reuse
   arena_t* page = available_pages_;
@@ -98,8 +98,8 @@ void ts_shared_linear_allocator::release() noexcept
 {
   reset(); // Reset all arenas and free the global list
 
-  std::lock_guard<std::mutex> lg{page_mutex_};
-  arena_t*                    page = available_pages_;
+  std::unique_lock<std::shared_mutex> lg{page_mutex_};
+  arena_t*                            page = available_pages_;
   while (page != nullptr)
   {
     arena_t* next = page->next_;
@@ -150,7 +150,7 @@ auto ts_shared_linear_allocator::try_allocate_from_page(arena_t* arena, std::siz
 }
 auto ts_shared_linear_allocator::allocate_slow_path(std::size_t size) noexcept -> void*
 {
-  std::lock_guard<std::mutex> lg{page_mutex_};
+  std::unique_lock<std::shared_mutex> lg{page_mutex_};
 
   // Re‑check: another thread could already have installed a fresh arena_t
   // while we were waiting for the lock.

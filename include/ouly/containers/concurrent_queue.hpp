@@ -7,6 +7,7 @@
 #include "ouly/utility/utils.hpp"
 #include <atomic>
 #include <mutex>
+#include <shared_mutex>
 #include <span>
 #include <thread>
 #include <type_traits>
@@ -110,7 +111,7 @@ private:
   // Separate cache lines for head and tail to minimize false sharing
   alignas(cache_line_size) std::atomic<bucket*> head_{nullptr};
   alignas(cache_line_size) std::atomic<bucket*> tail_{nullptr};
-  alignas(cache_line_size) mutable std::mutex bucket_mutex_;
+  alignas(cache_line_size) mutable std::shared_mutex bucket_mutex_;
   alignas(cache_line_size) object_pool<bucket, Config> bucket_pool_;
 
 public:
@@ -492,7 +493,7 @@ private:
    */
   auto ensure_next_bucket(bucket* current_bucket) -> bool
   {
-    std::lock_guard<std::mutex> lock(bucket_mutex_);
+    std::unique_lock<std::shared_mutex> lock(bucket_mutex_);
 
     // Check if next bucket already exists (double-checked locking)
     bucket* next = current_bucket->next_.load(std::memory_order_acquire);

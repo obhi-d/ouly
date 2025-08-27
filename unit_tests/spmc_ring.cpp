@@ -7,6 +7,7 @@
 #include <mutex>
 #include <numeric>
 #include <set>
+#include <shared_mutex>
 #include <thread>
 #include <unordered_set>
 #include <vector>
@@ -681,7 +682,7 @@ TEST_CASE("spmc_ring memory ordering verification", "[spmc_ring][multithreaded]"
 
     std::atomic<bool>    start_flag{false};
     std::vector<IntPair> stolen_pairs;
-    std::mutex           stolen_mutex;
+    std::shared_mutex    stolen_mutex;
 
     // Producer thread - pushes pairs where second = first + 1
     std::thread producer(
@@ -713,7 +714,7 @@ TEST_CASE("spmc_ring memory ordering verification", "[spmc_ring][multithreaded]"
        {
          if (ring.steal(pair))
          {
-           std::lock_guard<std::mutex> lock(stolen_mutex);
+           std::unique_lock<std::shared_mutex> lock(stolen_mutex);
            stolen_pairs.push_back(pair);
            consumed++;
          }

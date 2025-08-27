@@ -7,6 +7,7 @@
 #include <atomic>
 #include <catch2/catch_test_macros.hpp>
 #include <chrono>
+#include <shared_mutex>
 #include <thread>
 // NOLINTBEGIN
 using namespace ouly;
@@ -750,9 +751,9 @@ TEST_CASE("flow_graph task removal reuses slots", "[flow_graph][task_removal]")
   scheduler.create_group(default_workgroup_id, 0, 2);
   scheduler.begin_execution();
 
-  std::atomic<int> execution_count{0};
-  std::vector<int> execution_order;
-  std::mutex       order_mutex;
+  std::atomic<int>  execution_count{0};
+  std::vector<int>  execution_order;
+  std::shared_mutex order_mutex;
 
   auto node = graph.create_node();
 
@@ -760,7 +761,7 @@ TEST_CASE("flow_graph task removal reuses slots", "[flow_graph][task_removal]")
   [[maybe_unused]] auto task1 = graph.add(node,
                                           [&](auto const&)
                                           {
-                                            std::lock_guard<std::mutex> lock(order_mutex);
+                                            std::unique_lock<std::shared_mutex> lock(order_mutex);
                                             execution_order.push_back(1);
                                             execution_count.fetch_add(1);
                                           });
@@ -768,7 +769,7 @@ TEST_CASE("flow_graph task removal reuses slots", "[flow_graph][task_removal]")
   auto task2 = graph.add(node,
                          [&](auto const&)
                          {
-                           std::lock_guard<std::mutex> lock(order_mutex);
+                           std::unique_lock<std::shared_mutex> lock(order_mutex);
                            execution_order.push_back(2);
                            execution_count.fetch_add(1);
                          });
@@ -776,7 +777,7 @@ TEST_CASE("flow_graph task removal reuses slots", "[flow_graph][task_removal]")
   [[maybe_unused]] auto task3 = graph.add(node,
                                           [&](auto const&)
                                           {
-                                            std::lock_guard<std::mutex> lock(order_mutex);
+                                            std::unique_lock<std::shared_mutex> lock(order_mutex);
                                             execution_order.push_back(3);
                                             execution_count.fetch_add(1);
                                           });
@@ -788,7 +789,7 @@ TEST_CASE("flow_graph task removal reuses slots", "[flow_graph][task_removal]")
   [[maybe_unused]] auto task4 = graph.add(node,
                                           [&](auto const&)
                                           {
-                                            std::lock_guard<std::mutex> lock(order_mutex);
+                                            std::unique_lock<std::shared_mutex> lock(order_mutex);
                                             execution_order.push_back(4);
                                             execution_count.fetch_add(1);
                                           });

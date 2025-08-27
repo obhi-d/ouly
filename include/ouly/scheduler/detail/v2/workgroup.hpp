@@ -1,18 +1,14 @@
 #pragma once
 
-#include "ouly/allocators/default_allocator.hpp"
-#include "ouly/containers/basic_queue.hpp"
 #include "ouly/scheduler/detail/cache_optimized_data.hpp"
 #include "ouly/scheduler/detail/mpmc_ring.hpp"
 #include "ouly/scheduler/detail/spmc_ring.hpp"
-#include "ouly/scheduler/spin_lock.hpp"
 #include "ouly/scheduler/v2/task_context.hpp"
 #include <atomic>
 #include <bit>
 #include <cstdint>
 #include <mutex>
-#include <numeric>
-#include <span>
+#include <shared_mutex>
 #include <utility>
 
 #ifdef _MSC_VER
@@ -233,7 +229,7 @@ public:
    */
   void clear() noexcept
   {
-    std::scoped_lock lock(slot_mutex_);
+    std::unique_lock<std::shared_mutex> lock(slot_mutex_);
     small_mask_.store(0, std::memory_order_relaxed);
     bitfield_.reset();
     bitfield_words_ = 0;
@@ -297,7 +293,7 @@ public:
       return -1; // no free slots
     }
 
-    std::scoped_lock lock(slot_mutex_);
+    std::unique_lock<std::shared_mutex> lock(slot_mutex_);
     for (uint32_t w = 0; w < bitfield_words_; ++w)
     {
       uint64_t offset_mask = bitfield_[w];
@@ -328,10 +324,10 @@ public:
       return;
     }
 
-    std::scoped_lock lock(slot_mutex_);
-    auto             index = static_cast<uint32_t>(slot_index) - max_fast_context_switch;
-    uint32_t         w     = index / word_size;
-    uint32_t         bit   = index % word_size;
+    std::unique_lock<std::shared_mutex> lock(slot_mutex_);
+    auto                                index = static_cast<uint32_t>(slot_index) - max_fast_context_switch;
+    uint32_t                            w     = index / word_size;
+    uint32_t                            bit   = index % word_size;
     bitfield_[w] |= (uint64_t{1} << bit);
   }
 
@@ -354,7 +350,7 @@ private:
   // Mailbox for cross-workgroup work submission
   mailbox mailbox_;
 
-  alignas(cache_line_size) std::mutex slot_mutex_;
+  alignas(cache_line_size) std::shared_mutex slot_mutex_;
   alignas(cache_line_size) std::unique_ptr<uint64_t[]> bitfield_; // for >64 threads
   uint32_t bitfield_words_{0};
 };

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 #pragma once
-#include <cstdint>
 #include <cstring>
 #include <functional>
 #include <mutex>
+#include <shared_mutex>
 #include <sstream>
 #include <unordered_map>
 #include <unordered_set>
@@ -92,7 +92,7 @@ struct memory_tracker_impl
 
   void when_allocate(void* i_data, std::size_t i_size)
   {
-    std::unique_lock<std::mutex> ul(lock_);
+    std::unique_lock<std::shared_mutex> ul(lock_);
     if (ignore_first_ == nullptr)
     {
       ignore_first_ = i_data;
@@ -108,8 +108,8 @@ struct memory_tracker_impl
     {
       return;
     }
-    std::unique_lock<std::mutex> ul(lock_);
-    std::stringstream            ss;
+    std::unique_lock<std::shared_mutex> ul(lock_);
+    std::stringstream                   ss;
     if (i_data == ignore_first_)
     {
       ignore_first_ = reinterpret_cast<void*>(0x1); // NOLINT
@@ -126,6 +126,18 @@ struct memory_tracker_impl
     out_(ss.str());
   }
 
+  [[nodiscard]] auto get_memory_usage() const noexcept -> std::size_t
+  {
+    std::shared_lock<std::shared_mutex> sl(lock_);
+    return memory_counter_;
+  }
+
+  [[nodiscard]] auto get_allocation_count() const noexcept -> std::size_t
+  {
+    std::shared_lock<std::shared_mutex> sl(lock_);
+    return pointer_map_.size();
+  }
+
   std::unordered_map<void*, std::pair<std::size_t, std::reference_wrapper<const backtrace>>> pointer_map_;
   std::unordered_set<backtrace, hasher>                                                      regions_;
 
@@ -135,10 +147,10 @@ struct memory_tracker_impl
     return instance;
   }
 
-  out_stream  out_;
-  void*       ignore_first_   = nullptr;
-  std::size_t memory_counter_ = 0;
-  std::mutex  lock_;
+  out_stream                out_;
+  void*                     ignore_first_   = nullptr;
+  std::size_t               memory_counter_ = 0;
+  mutable std::shared_mutex lock_;
 };
 
 template <typename TagArg, typename DebugTracer>
@@ -162,6 +174,16 @@ struct memory_tracker<TagArg, DebugTracer, true>
       memory_tracker_impl<TagArg, DebugTracer>::get_instance().when_deallocate(i_data, i_size);
     }
     return i_data;
+  }
+
+  static auto get_memory_usage() noexcept -> std::size_t
+  {
+    return memory_tracker_impl<TagArg, DebugTracer>::get_instance().get_memory_usage();
+  }
+
+  static auto get_allocation_count() noexcept -> std::size_t
+  {
+    return memory_tracker_impl<TagArg, DebugTracer>::get_instance().get_allocation_count();
   }
 };
 } // namespace ouly::detail

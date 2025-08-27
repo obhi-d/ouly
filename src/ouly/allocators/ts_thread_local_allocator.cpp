@@ -96,7 +96,7 @@ void ts_thread_local_allocator::reset() noexcept
   generation_++;
 
   // 2. Reclaim every arena_t in the global free list.
-  std::lock_guard<std::mutex> lg{page_mutex_};
+  std::unique_lock<std::shared_mutex> lg{page_mutex_};
   if (page_list_tail_ != nullptr)
   {
     page_list_tail_->next_ = available_pages_;
@@ -162,14 +162,14 @@ auto ts_thread_local_allocator::allocate_slow_path(std::size_t size) -> void*
     arena->size_ = payload;
     arena->used_ = size; // Only mark the requested size as used, not the entire payload
 
-    std::lock_guard<std::mutex> lg{page_mutex_};
+    std::unique_lock<std::shared_mutex> lg{page_mutex_};
 
     arena->next_   = pages_to_free_;
     pages_to_free_ = arena; // Add to the free list for reset
     return &arena->data_[0];
   }
 
-  std::lock_guard<std::mutex> lg{page_mutex_};
+  std::unique_lock<std::shared_mutex> lg{page_mutex_};
 
   // 1) Try to steal a recycled arena_t from the global free list
   arena_t* page = pop_free_list(payload);

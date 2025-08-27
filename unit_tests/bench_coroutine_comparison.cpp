@@ -14,13 +14,13 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
-#include <cmath>
 #include <cstdlib>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <numeric>
 #include <random>
+#include <span>
 #include <sstream>
 #include <string>
 #include <thread>

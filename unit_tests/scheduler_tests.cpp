@@ -1220,7 +1220,7 @@ TEMPLATE_TEST_CASE("Scheduler Varying Workgroup Sizes", "[scheduler][workgroup][
   using SchedulerType   = typename TestRunner::scheduler_type;
   using TaskContextType = typename TestRunner::task_context_type;
 
-  const uint32_t available_workers = 4; // std::min(6u, std::thread::hardware_concurrency());
+  const uint32_t available_workers = 6; // std::min(6u, std::thread::hardware_concurrency());
   if (available_workers < 3)
     return; // Skip if not enough workers
 

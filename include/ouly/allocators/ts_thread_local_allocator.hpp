@@ -5,12 +5,10 @@
 #pragma once
 
 #include "ouly/utility/common.hpp"
-#include <atomic>
 #include <cstddef>
 #include <cstdint>
-#include <mutex>
+#include <shared_mutex>
 #include <utility>
-#include <vector>
 
 namespace ouly
 {
@@ -199,7 +197,7 @@ private:
   std::size_t default_page_size_ = default_page_size;
 
   /** @brief Mutex protecting shared data structures */
-  std::mutex page_mutex_;
+  std::shared_mutex page_mutex_;
 
   /** @brief Head of the arena list (LIFO) */
   arena_t* page_list_head_ = nullptr;

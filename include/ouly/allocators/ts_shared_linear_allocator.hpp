@@ -8,7 +8,7 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
-#include <mutex>
+#include <shared_mutex>
 #include <utility>
 
 namespace ouly
@@ -212,6 +212,6 @@ private:
   arena_t* available_pages_ = nullptr;
 
   /** @brief Mutex protecting shared data structures */
-  std::mutex page_mutex_;
+  std::shared_mutex page_mutex_;
 };
 } // namespace ouly
