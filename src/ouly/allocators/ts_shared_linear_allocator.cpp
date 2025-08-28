@@ -2,6 +2,7 @@
 #include "ouly/allocators/ts_shared_linear_allocator.hpp"
 #include "ouly/allocators/config.hpp"
 #include "ouly/utility/common.hpp"
+#include <mutex>
 
 namespace ouly
 {

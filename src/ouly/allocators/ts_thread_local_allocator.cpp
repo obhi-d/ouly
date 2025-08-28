@@ -2,8 +2,10 @@
 #include "ouly/allocators/ts_thread_local_allocator.hpp"
 #include "ouly/allocators/config.hpp"
 #include "ouly/utility/common.hpp"
+#include <atomic>
 #include <cstdint>
 #include <limits>
+#include <mutex>
 
 namespace ouly
 {
