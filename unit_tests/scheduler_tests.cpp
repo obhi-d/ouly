@@ -336,6 +336,7 @@ TEMPLATE_TEST_CASE("Cross-Workgroup Task Submission", "[scheduler][workgroup][te
                    (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
                    (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
 {
+  // Seed: 3363517192 failed with 499 executed out of 500
   using TestRunner      = TestType;
   using SchedulerType   = typename TestRunner::scheduler_type;
   using TaskContextType = typename TestRunner::task_context_type;
@@ -1221,8 +1222,6 @@ TEMPLATE_TEST_CASE("Scheduler Varying Workgroup Sizes", "[scheduler][workgroup][
   using TaskContextType = typename TestRunner::task_context_type;
 
   const uint32_t available_workers = 6; // std::min(6u, std::thread::hardware_concurrency());
-  if (available_workers < 3)
-    return; // Skip if not enough workers
 
   SchedulerType scheduler;
   scheduler.create_group(ouly::workgroup_id(0), 0, 1);                     // Single worker
