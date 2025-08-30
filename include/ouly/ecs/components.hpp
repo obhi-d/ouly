@@ -929,7 +929,7 @@ private:
     }
   }
 
-  void validate(entity_type l) const noexcept
+  void validate([[maybe_unused]] entity_type l) const noexcept
   {
     if constexpr (has_direct_mapping)
     {
