@@ -156,26 +156,21 @@ public:
   class iterator_base
   {
   public:
-    using parent_type       = std::conditional_t<IsConst, const sparse_vector, sparse_vector>;
+    using parent_type       = std::conditional_t<IsConst, sparse_vector const, sparse_vector>;
     using value_ref         = std::conditional_t<IsConst, const_reference, reference>;
     using value_ptr         = std::conditional_t<IsConst, const_pointer, pointer>;
     using difference_type   = std::ptrdiff_t;
     using iterator_category = std::forward_iterator_tag;
     using value_type        = Ty; // standard associated type
-    using reference         = value_ref;
-    using pointer           = value_ptr;
 
     iterator_base() noexcept = default;
-    iterator_base(parent_type* p, size_type idx) noexcept : p_(p), idx_(idx)
-    {
-      satisfy();
-    }
+    iterator_base(parent_type* p, size_type idx) noexcept : p_(p), idx_(idx) {}
 
-    auto operator*() const noexcept -> reference
+    auto operator*() const noexcept -> auto&
     {
       return (*p_).at(idx_);
     }
-    auto operator->() const noexcept -> pointer
+    auto operator->() const noexcept -> auto*
     {
       return std::addressof((*p_).at(idx_));
     }
@@ -183,7 +178,6 @@ public:
     auto operator++() noexcept -> iterator_base&
     {
       ++idx_;
-      satisfy();
       return *this;
     }
     auto operator++(int) noexcept -> iterator_base
@@ -203,32 +197,6 @@ public:
     }
 
   private:
-    void satisfy() noexcept
-    {
-      if (p_ == nullptr)
-      {
-        return;
-      }
-      auto const len = p_->size();
-      while (idx_ < len)
-      {
-        // Fast skip empty pools via data_view
-        auto const block = (idx_ >> pool_mul);
-        auto const dv    = p_->view();
-        if (!dv.contains(index(idx_)))
-        {
-          idx_ = (block + 1) << pool_mul;
-          continue;
-        }
-        if (!p_->contains(idx_))
-        {
-          ++idx_;
-          continue;
-        }
-        break; // valid
-      }
-    }
-
     parent_type* p_   = nullptr;
     size_type    idx_ = 0;
   };
