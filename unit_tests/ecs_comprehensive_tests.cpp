@@ -146,9 +146,9 @@ TEMPLATE_TEST_CASE("registry: basic entity creation and destruction", "[registry
 
   SECTION("Entity reuse after deletion")
   {
-    auto e1 = registry.emplace();
-    auto e2 = registry.emplace();
-    auto e3 = registry.emplace();
+    [[maybe_unused]] auto e1 = registry.emplace();
+    [[maybe_unused]] auto e2 = registry.emplace();
+    [[maybe_unused]] auto e3 = registry.emplace();
 
     REQUIRE(registry.max_size() == 4);
 
@@ -246,10 +246,10 @@ TEMPLATE_TEST_CASE("registry: for_each_index functionality", "[registry][iterati
 
   SECTION("Iteration with gaps from deletions")
   {
-    auto e1 = registry.emplace(); // index 1
-    auto e2 = registry.emplace(); // index 2
-    auto e3 = registry.emplace(); // index 3
-    auto e4 = registry.emplace(); // index 4
+    [[maybe_unused]] auto e1 = registry.emplace(); // index 1
+    [[maybe_unused]] auto e2 = registry.emplace(); // index 2
+    [[maybe_unused]] auto e3 = registry.emplace(); // index 3
+    [[maybe_unused]] auto e4 = registry.emplace(); // index 4
 
     registry.erase(e2); // Remove index 2
     registry.erase(e4); // Remove index 4
@@ -271,8 +271,8 @@ TEMPLATE_TEST_CASE("registry: for_each_index functionality", "[registry][iterati
   {
     const auto& const_registry = registry;
 
-    auto e1 = registry.emplace();
-    auto e2 = registry.emplace();
+    [[maybe_unused]] auto e1 = registry.emplace();
+    [[maybe_unused]] auto e2 = registry.emplace();
 
     int count = 0;
     const_registry.for_each_index(
