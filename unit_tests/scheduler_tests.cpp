@@ -1199,10 +1199,9 @@ TEMPLATE_TEST_CASE("Scheduler API Worker Information", "[scheduler][api][templat
   for (uint32_t i = 0; i < 10; ++i)
   {
     scheduler.submit(main_ctx, ouly::workgroup_id(0),
-                     [&context_checks](TaskContextType const& ctx)
+                     [&context_checks]([[maybe_unused]] TaskContextType const& ctx)
                      {
                        // Verify we have a valid context
-                       (void)ctx; // Use the context parameter
                        context_checks.fetch_add(1, std::memory_order_relaxed);
                      });
   }
@@ -1596,8 +1595,7 @@ TEMPLATE_TEST_CASE("Auto Parallel For with Subrange in Async Tasks",
                         {
                           for (uint32_t i = begin; i < end_val; ++i)
                           {
-                            volatile uint32_t computation = i * 2 + 1;
-                            (void)computation; // Prevent optimization
+                            [[maybe_unused]] volatile uint32_t computation = i * 2 + 1;
                             task_processed.fetch_add(1, std::memory_order_relaxed);
                           }
                         },

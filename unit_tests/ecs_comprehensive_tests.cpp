@@ -1168,7 +1168,7 @@ TEST_CASE("map: iteration and access patterns", "[map][iteration]")
     }
 
     // Should be densely packed 0, 1, 2, 3, 4
-    for (size_t i = 0; i < entities.size(); ++i)
+    for (uint32_t i = 0, end = static_cast<uint32_t>(entities.size()); i < end; ++i)
     {
       REQUIRE(entity_map.key(entities[i]) == i);
       REQUIRE(entity_map.entity_at(i) == entities[i]);

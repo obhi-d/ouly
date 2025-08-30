@@ -5,6 +5,7 @@
 #include "ouly/ecs/entity.hpp"
 #include "ouly/utility/detail/vector_abstraction.hpp"
 #include "ouly/utility/optional_ref.hpp"
+#include <iterator>
 
 namespace ouly::ecs
 {
@@ -276,6 +277,260 @@ public:
     return values_;
   }
 
+  // Helper: check if index has a valid value (used by iterators)
+  auto is_present_at_index(size_type idx) const noexcept -> bool
+  {
+    if constexpr (has_direct_mapping)
+    {
+      return test_present(idx);
+    }
+    else
+    {
+      // For non-direct mapping, iterators traverse packed values_ without holes
+      // so presence-by-index is equivalent to bound check on packed storage.
+      return idx < static_cast<size_type>(values_.size());
+    }
+  }
+
+  // Helper: map packed index to entity
+  auto entity_at_index(size_type idx) const noexcept -> entity_type
+  {
+    if constexpr (has_direct_mapping)
+    {
+      return entity_type(static_cast<typename entity_type::size_type>(idx));
+    }
+    else if constexpr (has_self_index)
+    {
+      return entity_type(self_.get(values_[idx]));
+    }
+    else
+    {
+      return entity_type(self_.get(idx));
+    }
+  }
+
+  // Helper: access value at packed index
+  auto value_at_index(size_type idx) noexcept -> reference
+  {
+    return values_.at(idx);
+  }
+  auto value_at_index(size_type idx) const noexcept -> const_reference
+  {
+    return values_.at(idx);
+  }
+
+  // -------- Iterators over component values (skipping holes for direct mapping) --------
+  template <bool IsConst>
+  class value_iterator_base
+  {
+  public:
+    using parent_type       = std::conditional_t<IsConst, const components, components>;
+    using difference_type   = std::ptrdiff_t;
+    using iterator_category = std::forward_iterator_tag;
+    using reference_t       = std::conditional_t<IsConst, const_reference, reference>;
+    using pointer_t         = std::conditional_t<IsConst, const_pointer, pointer>;
+
+    value_iterator_base() noexcept = default;
+    value_iterator_base(parent_type* p, size_type idx) noexcept : p_(p), idx_(idx)
+    {
+      satisfy();
+    }
+
+    auto operator*() const noexcept -> reference_t
+    {
+      return deref();
+    }
+    auto operator->() const noexcept -> pointer_t
+    {
+      return std::addressof(deref());
+    }
+
+    auto operator++() noexcept -> value_iterator_base&
+    {
+      ++idx_;
+      satisfy();
+      return *this;
+    }
+    auto operator++(int) noexcept -> value_iterator_base
+    {
+      auto tmp = *this;
+      ++(*this);
+      return tmp;
+    }
+
+    friend auto operator==(value_iterator_base const& a, value_iterator_base const& b) noexcept -> bool
+    {
+      return a.p_ == b.p_ && a.idx_ == b.idx_;
+    }
+    friend auto operator!=(value_iterator_base const& a, value_iterator_base const& b) noexcept -> bool
+    {
+      return !(a == b);
+    }
+
+  private:
+    auto deref() const noexcept -> reference_t
+    {
+      return const_cast<parent_type*>(p_)->value_at_index(idx_);
+    }
+
+    void satisfy() noexcept
+    {
+      if (p_ == nullptr)
+      {
+        return;
+      }
+      auto const len = p_->range();
+      while (idx_ < len)
+      {
+        if (!p_->is_present_at_index(idx_))
+        {
+          ++idx_;
+          continue;
+        }
+        break; // valid
+      }
+    }
+
+    parent_type* p_   = nullptr;
+    size_type    idx_ = 0;
+  };
+
+  using iterator       = value_iterator_base<false>;
+  using const_iterator = value_iterator_base<true>;
+
+  auto begin() noexcept -> iterator
+  {
+    return iterator(this, 0);
+  }
+  auto end() noexcept -> iterator
+  {
+    return iterator(this, range());
+  }
+  auto begin() const noexcept -> const_iterator
+  {
+    return const_iterator(this, 0);
+  }
+  auto end() const noexcept -> const_iterator
+  {
+    return const_iterator(this, range());
+  }
+  auto cbegin() const noexcept -> const_iterator
+  {
+    return const_iterator(this, 0);
+  }
+  auto cend() const noexcept -> const_iterator
+  {
+    return const_iterator(this, range());
+  }
+
+  // -------- Iteration yielding (entity, component&) pairs --------
+  template <bool IsConst>
+  class entity_iterator_base
+  {
+  public:
+    using parent_type       = std::conditional_t<IsConst, const components, components>;
+    using difference_type   = std::ptrdiff_t;
+    using iterator_category = std::forward_iterator_tag;
+    using ref_t             = std::conditional_t<IsConst, const_reference, reference>;
+
+    struct pair_proxy
+    {
+      entity_type e_;
+      ref_t       v_;
+    };
+
+    entity_iterator_base() noexcept = default;
+    entity_iterator_base(parent_type* p, size_type idx) noexcept : p_(p), idx_(idx)
+    {
+      satisfy();
+    }
+
+    auto operator*() const noexcept -> pair_proxy
+    {
+      return {entity_at(), value_at()};
+    }
+    auto operator++() noexcept -> entity_iterator_base&
+    {
+      ++idx_;
+      satisfy();
+      return *this;
+    }
+    auto operator++(int) noexcept -> entity_iterator_base
+    {
+      auto tmp = *this;
+      ++(*this);
+      return tmp;
+    }
+    friend auto operator==(entity_iterator_base const& a, entity_iterator_base const& b) noexcept -> bool
+    {
+      return a.p_ == b.p_ && a.idx_ == b.idx_;
+    }
+    friend auto operator!=(entity_iterator_base const& a, entity_iterator_base const& b) noexcept -> bool
+    {
+      return !(a == b);
+    }
+
+  private:
+    auto entity_at() const noexcept -> entity_type
+    {
+      return p_->entity_at_index(idx_);
+    }
+
+    auto value_at() const noexcept -> ref_t
+    {
+      return const_cast<parent_type*>(p_)->value_at_index(idx_);
+    }
+
+    void satisfy() noexcept
+    {
+      if (p_ == nullptr)
+      {
+        return;
+      }
+      auto const len = p_->range();
+      while (idx_ < len)
+      {
+        if (!p_->is_present_at_index(idx_))
+        {
+          ++idx_;
+          continue;
+        }
+        break;
+      }
+    }
+
+    parent_type* p_   = nullptr;
+    size_type    idx_ = 0;
+  };
+
+  using entity_iterator       = entity_iterator_base<false>;
+  using const_entity_iterator = entity_iterator_base<true>;
+
+  auto begin_entities() noexcept -> entity_iterator
+  {
+    return entity_iterator(this, 0);
+  }
+  auto end_entities() noexcept -> entity_iterator
+  {
+    return entity_iterator(this, range());
+  }
+  auto begin_entities() const noexcept -> const_entity_iterator
+  {
+    return const_entity_iterator(this, 0);
+  }
+  auto end_entities() const noexcept -> const_entity_iterator
+  {
+    return const_entity_iterator(this, range());
+  }
+  auto cbegin_entities() const noexcept -> const_entity_iterator
+  {
+    return const_entity_iterator(this, 0);
+  }
+  auto cend_entities() const noexcept -> const_entity_iterator
+  {
+    return const_entity_iterator(this, range());
+  }
+
   /**
    * @brief Construct an item in a given location, assuming the location was empty
    */
@@ -297,8 +552,10 @@ public:
     }
     else
     {
-      auto& k = keys_.ensure_at(point.get());
-      k       = static_cast<size_type>(values_.size());
+      auto  ent_idx     = point.get();
+      bool  was_present = test_present(ent_idx);
+      auto& k           = keys_.ensure_at(ent_idx);
+      k                 = static_cast<size_type>(values_.size());
 
       values_.emplace_back(std::forward<Args>(args)...);
       if constexpr (has_self_index)
@@ -308,6 +565,14 @@ public:
       else
       {
         self_.ensure_at(k) = point.value();
+      }
+
+      // Track presence by entity id universally
+      set_present(ent_idx);
+      if (!was_present)
+      {
+        count_present_++;
+        max_index_ = std::max(max_index_, ent_idx);
       }
 
       return values_.back();
@@ -357,7 +622,8 @@ public:
     }
     else
     {
-      auto k = keys_.get_if(point.get());
+      auto idx = point.get();
+      auto k   = keys_.get_if(idx);
       if (k == tombstone)
       {
         return emplace_at(point, std::forward<value_type>(args));
@@ -371,6 +637,13 @@ public:
       else
       {
         self_.get(k) = point.value();
+      }
+      bool was_present = test_present(idx);
+      set_present(idx);
+      if (!was_present)
+      {
+        count_present_++;
+        max_index_ = std::max(max_index_, idx);
       }
       return val;
     }
@@ -395,13 +668,22 @@ public:
     }
     else
     {
-      auto k = keys_.get_if(point.get());
+      auto idx = point.get();
+      auto k   = keys_.get_if(idx);
       if (k == tombstone)
       {
         return emplace_at(point);
       }
 
       auto& val = values_[k];
+      // Ensure presence bit remains consistent
+      bool was_present = test_present(idx);
+      set_present(idx);
+      if (!was_present)
+      {
+        count_present_++;
+        max_index_ = std::max(max_index_, idx);
+      }
       return val;
     }
   }
@@ -469,10 +751,8 @@ public:
       keys_.shrink_to_fit();
       self_.shrink_to_fit();
     }
-    else
-    {
-      present_.shrink_to_fit();
-    }
+    // Always trim presence bitfield
+    present_.shrink_to_fit();
   }
 
   /**
@@ -481,12 +761,10 @@ public:
   void clear() noexcept
   {
     values_.clear();
-    if constexpr (has_direct_mapping)
-    {
-      count_present_ = 0;
-      max_index_     = 0;
-      present_.clear();
-    }
+    // Reset presence tracking and bookkeeping
+    count_present_ = 0;
+    max_index_     = 0;
+    present_.clear();
     if constexpr (!has_direct_mapping)
     {
       keys_.clear();
@@ -525,38 +803,13 @@ public:
   auto contains(entity_type l) const noexcept -> bool
   {
     auto idx = l.get();
-    if constexpr (has_direct_mapping)
-    {
-      return test_present(idx);
-    }
-    else
-    {
-      if (keys_.contains(idx))
-      {
-        auto val = keys_.get(idx);
-        if constexpr (has_self_index)
-        {
-          return self_.get(values_[val]) == l.value();
-        }
-        else
-        {
-          return self_.get(val) == l.value();
-        }
-      }
-    }
-    return false;
+    // Presence bit is the single source of truth
+    return test_present(idx);
   }
 
   [[nodiscard]] auto empty() const noexcept -> bool
   {
-    if constexpr (has_direct_mapping)
-    {
-      return count_present_ == 0;
-    }
-    else
-    {
-      return values_.empty();
-    }
+    return count_present_ == 0;
   }
 
   void validate_integrity() const
@@ -640,30 +893,16 @@ private:
       {
         return nullptr;
       }
-      return ouly::detail::get_if(cont, idx);
+      return ouly::detail::get_if(cont.values_, idx);
     }
     else
     {
       auto idx = lnk.get();
-      if (cont.keys_.contains(idx))
+      if (!cont.test_present(idx))
       {
-        if constexpr (has_self_index)
-        {
-          auto& val = cont.values_[cont.keys_.get(idx)];
-          if (cont.self_.get(val) == lnk.value())
-          {
-            return &val;
-          }
-        }
-        else
-        {
-          auto val_idx = cont.keys_.get(idx);
-          if (cont.self_.get(val_idx) == lnk.value())
-          {
-            return &cont.values_[val_idx];
-          }
-        }
+        return nullptr;
       }
+      return &cont.values_[cont.keys_.get(idx)];
     }
     return {};
   }
@@ -678,31 +917,16 @@ private:
       {
         return def;
       }
-      return ouly::detail::get_or(cont, idx, def);
+      return ouly::detail::get_or(cont.values_, idx, def);
     }
     else
     {
       auto idx = lnk.get();
-      if (cont.keys_.contains(idx))
+      if (!cont.test_present(idx))
       {
-        if constexpr (has_self_index)
-        {
-          auto& val = cont.values_[cont.keys_.get(idx)];
-          if (cont.self_.get(val) == lnk.value())
-          {
-            return val;
-          }
-        }
-        else
-        {
-          auto val_idx = cont.keys_.get(idx);
-          if (cont.self_.get(val_idx) == lnk.value())
-          {
-            return cont.values_[val_idx];
-          }
-        }
+        return def;
       }
-      return def;
+      return cont.values_[cont.keys_.get(idx)];
     }
   }
 
@@ -714,10 +938,8 @@ private:
     }
     else
     {
-      auto lnk  = l.get();
-      auto idx  = keys_.get(lnk);
-      auto self = get_ref_at_idx(idx);
-      OULY_ASSERT(self == l.value());
+      // Presence bit is the reliable indicator
+      OULY_ASSERT(test_present(l.get()));
     }
   }
 
@@ -749,64 +971,111 @@ private:
     return values_[item_id];
   }
 
+  // Direct-mapped erase
   void erase_at(entity_type l) noexcept
+    requires(has_direct_mapping)
   {
-    if constexpr (has_direct_mapping)
+    auto idx = l.get();
+    if (test_present(idx))
     {
-      auto idx = l.get();
-      if (test_present(idx))
+      // Reset underlying storage to a default/null value for determinism
+      values_[idx] = value_type();
+      clear_present(idx);
+      // Do not shrink container for direct mapping, only adjust count
+      if (count_present_ > 0)
       {
-        // Reset underlying storage to a default/null value for determinism
-        values_[idx] = value_type();
-        clear_present(idx);
-        // Do not shrink container for direct mapping, only adjust count
-        if (count_present_ > 0)
+        count_present_--;
+      }
+      // max_index_ is not decreased here to keep range monotonic; optional optimization could scan backwards
+    }
+  }
+
+  // Indirect mapping with self backref
+  void erase_at(entity_type l) noexcept
+    requires(!has_direct_mapping && has_self_index)
+  {
+    auto      lnk     = l.get();
+    size_type item_id = keys_.get(lnk);
+    keys_.get(lnk)    = tombstone;
+
+    reference lb   = values_[item_id];
+    reference back = values_.back();
+    if (&back != &lb)
+    {
+      // Update key of moved-back element using self index on value
+      keys_.get(entity_type(self_.get(back)).get()) = item_id;
+
+      if constexpr (ouly::detail::is_tuple<value_type>::value)
+      {
+        // move each tuple element reference
+        [&]<std::size_t... I>(std::index_sequence<I...>)
         {
-          count_present_--;
-        }
-        // max_index_ is not decreased here to keep range monotonic; optional optimization could scan backwards
+          (ouly::detail::move(std::get<I>(lb), std::get<I>(back)), ...);
+        }(std::make_index_sequence<std::tuple_size_v<value_type>>());
+      }
+      else
+      {
+        lb = std::move(back);
+      }
+    }
+
+    values_.pop_back();
+
+    // Clear presence by entity id and update counters
+    if (test_present(lnk))
+    {
+      clear_present(lnk);
+      if (count_present_ > 0)
+      {
+        count_present_--;
+      }
+    }
+  }
+
+  // Indirect mapping without self backref
+  void erase_at(entity_type l) noexcept
+    requires(!has_direct_mapping && !has_self_index)
+  {
+    auto      lnk     = l.get();
+    size_type item_id = keys_.get(lnk);
+    keys_.get(lnk)    = tombstone;
+
+    reference lb   = values_[item_id];
+    reference back = values_.back();
+    if (&back != &lb)
+    {
+      // best_erase returns the original entity id stored at item_id (before erase)
+      keys_.get(entity_type(self_.best_erase(item_id)).get()) = item_id;
+
+      if constexpr (ouly::detail::is_tuple<value_type>::value)
+      {
+        // move each tuple element reference
+        [&]<std::size_t... I>(std::index_sequence<I...>)
+        {
+          (ouly::detail::move(std::get<I>(lb), std::get<I>(back)), ...);
+        }(std::make_index_sequence<std::tuple_size_v<value_type>>());
+      }
+      else
+      {
+        lb = std::move(back);
       }
     }
     else
     {
-      auto lnk       = l.get();
-      auto item_id   = keys_.get(lnk);
-      keys_.get(lnk) = tombstone;
-      reference lb   = values_[item_id];
-      reference back = values_.back();
-      if (&back != &lb)
-      {
-        if constexpr (has_self_index)
-        {
-          keys_.get(entity_type(self_.get(back)).get()) = item_id;
-        }
-        else
-        {
-          keys_.get(entity_type(self_.best_erase(item_id)).get()) = item_id;
-        }
+      // If erasing the last, drop the parallel self_ entry
+      self_.pop_back();
+    }
 
-        if constexpr (ouly::detail::is_tuple<value_type>::value)
-        {
-          // move each tuple element reference
-          [&]<std::size_t... I>(std::index_sequence<I...>)
-          {
-            (ouly::detail::move(std::get<I>(lb), std::get<I>(back)), ...);
-          }(std::make_index_sequence<std::tuple_size_v<value_type>>());
-        }
-        else
-        {
-          lb = std::move(back);
-        }
-      }
-      else
-      {
-        if constexpr (!has_self_index)
-        {
-          self_.pop_back();
-        }
-      }
+    values_.pop_back();
 
-      values_.pop_back();
+    // Clear presence by entity id and update counters
+    if (test_present(lnk))
+    {
+      clear_present(lnk);
+      if (count_present_ > 0)
+      {
+        count_present_--;
+      }
     }
   }
 

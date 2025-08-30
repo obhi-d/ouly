@@ -242,6 +242,25 @@ public:
   }
 
   /**
+   * @brief Number of currently alive entities
+   * @return active entity count
+   */
+  [[nodiscard]] auto size() const noexcept -> size_type
+  {
+    auto const maxv  = max_size_.load();
+    auto const freed = static_cast<size_type>(std::max<ssize_type>(0, free_slot_.load()));
+    return maxv > 0 ? (maxv - 1U) - freed : 0U;
+  }
+
+  /**
+   * @brief True when there are no alive entities
+   */
+  [[nodiscard]] auto empty() const noexcept -> bool
+  {
+    return size() == 0;
+  }
+
+  /**
    * @brief Sorts the free list based on entity types.
    *
    * This function sorts the internal free list of entities in ascending order based on their types.

@@ -1,11 +1,8 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 
-#include "ouly/allocators/default_allocator.hpp"
 #include "ouly/allocators/detail/custom_allocator.hpp"
-#include "ouly/ecs/entity.hpp"
 #include "ouly/utility/config.hpp"
-#include "ouly/utility/type_traits.hpp"
 #include "ouly/utility/utils.hpp"
 #include <limits>
 #include <vector>
@@ -73,7 +70,7 @@ private:
   static constexpr auto pool_mod     = pool_size - 1;
   using this_type                    = collection<EntityTy, Config>;
   using base_type                    = allocator_type;
-  using storage                      = uint8_t;
+  using storage                      = uint64_t; // 64-bit words for presence bitfield
   static constexpr bool has_revision = std::same_as<typename EntityTy::revision_type, uint8_t> && ouly::debug;
 
 public:
@@ -103,16 +100,18 @@ public:
     // Free any existing allocated pages before copying
     clear();
     shrink_to_fit();
-    constexpr auto bit_page_size = sizeof(storage) * (pool_size >> 3);
-    constexpr auto haz_page_size = sizeof(storage) * pool_size;
+    // Bit pages hold 64-bit words, each word represents 64 entity bits (ceil division)
+    constexpr auto bit_page_size = sizeof(storage) * ((pool_size + word_mask) >> word_shift);
+    // Hazard pages store one uint8_t per entity slot
+    constexpr auto haz_page_size = sizeof(uint8_t) * pool_size;
 
     items_.resize(other.items_.size());
     if constexpr (has_revision)
     {
       for (std::size_t i = 0, end = items_.size() / 2; i < end; ++i)
       {
-        items_[(i * 2) + 0] = ouly::allocate<storage>(*this, bit_page_size);
-        items_[(i * 2) + 1] = ouly::allocate<storage>(*this, haz_page_size);
+        items_[(i * 2) + 0] = static_cast<void*>(ouly::allocate<storage>(*this, bit_page_size));
+        items_[(i * 2) + 1] = static_cast<void*>(ouly::allocate<uint8_t>(*this, haz_page_size));
         std::memcpy(items_[(i * 2) + 0], other.items_[(i * 2) + 0], bit_page_size);
         std::memcpy(items_[(i * 2) + 1], other.items_[(i * 2) + 1], haz_page_size);
       }
@@ -121,7 +120,7 @@ public:
     {
       for (std::size_t i = 0, end = items_.size(); i < end; ++i)
       {
-        items_[i] = ouly::allocate<storage>(*this, bit_page_size);
+        items_[i] = static_cast<void*>(ouly::allocate<storage>(*this, bit_page_size));
         std::memcpy(items_[i], other.items_[i], bit_page_size);
       }
     }
@@ -301,22 +300,24 @@ public:
   {
     if (!length_)
     {
-      constexpr auto bit_page_size = sizeof(storage) * (pool_size >> 3);
-      constexpr auto haz_page_size = sizeof(storage) * pool_size;
+      constexpr auto bit_page_size = sizeof(storage) * ((pool_size + word_mask) >> word_shift);
+      constexpr auto haz_page_size = sizeof(uint8_t) * pool_size;
 
       if constexpr (has_revision)
       {
         for (size_type i = 0, end = static_cast<size_type>(items_.size()) / 2; i < end; ++i)
         {
-          ouly::deallocate(static_cast<allocator_type&>(*this), items_[(i * 2) + 0], bit_page_size);
-          ouly::deallocate(static_cast<allocator_type&>(*this), items_[(i * 2) + 1], haz_page_size);
+          ouly::deallocate(static_cast<allocator_type&>(*this), static_cast<storage*>(items_[(i * 2) + 0]),
+                           bit_page_size);
+          ouly::deallocate(static_cast<allocator_type&>(*this), static_cast<uint8_t*>(items_[(i * 2) + 1]),
+                           haz_page_size);
         }
       }
       else
       {
         for (auto* i : items_)
         {
-          ouly::deallocate(static_cast<allocator_type&>(*this), i, bit_page_size);
+          ouly::deallocate(static_cast<allocator_type&>(*this), static_cast<storage*>(i), bit_page_size);
         }
       }
     }
@@ -329,12 +330,15 @@ public:
   }
 
 private:
+  // Bitfield word parameters for 64-bit storage
+  static constexpr size_type word_shift = 6;  // log2(64)
+  static constexpr size_type word_mask  = 63; // 64 - 1
   void validate_hazard([[maybe_unused]] size_type nb, [[maybe_unused]] std::uint8_t hz) const noexcept
   {
     [[maybe_unused]] auto block = hazard_page(nb >> pool_mul);
     [[maybe_unused]] auto index = nb & pool_mod;
 
-    OULY_ASSERT(items_[block][index] == hz);
+    OULY_ASSERT(static_cast<uint8_t const*>(items_[block])[index] == hz);
   }
 
   auto bit_page(size_type p) const noexcept -> size_type
@@ -363,22 +367,26 @@ private:
 
   auto is_bit_set(size_type nb) const noexcept -> bool
   {
-    auto                   block = bit_page(nb >> pool_mul);
-    auto                   index = nb & pool_mod;
-    constexpr std::uint8_t one   = 1;
-    constexpr uint8_t      mask  = 0x7;
-
-    return (block < items_.size()) && (items_[block][index >> 3] & (one << static_cast<std::uint8_t>(index & mask)));
+    auto block      = bit_page(nb >> pool_mul);
+    auto index      = nb & pool_mod;
+    auto word_index = static_cast<size_type>(index >> word_shift);
+    auto bit_offset = static_cast<size_type>(index & word_mask);
+    if (block >= items_.size())
+    {
+      return false;
+    }
+    auto* words = static_cast<storage*>(items_[block]);
+    return (words[word_index] & (storage{1} << bit_offset)) != 0;
   }
 
   void unset_bit(size_type nb) noexcept
   {
-    auto              block = bit_page(nb >> pool_mul);
-    auto              index = nb & pool_mod;
-    constexpr uint8_t mask  = 0x7;
-
-    constexpr std::uint8_t one = 1;
-    items_[block][index >> 3] &= ~(one << static_cast<std::uint8_t>(index & mask));
+    auto  block      = bit_page(nb >> pool_mul);
+    auto  index      = nb & pool_mod;
+    auto  word_index = static_cast<size_type>(index >> word_shift);
+    auto  bit_offset = static_cast<size_type>(index & word_mask);
+    auto* words      = static_cast<storage*>(items_[block]);
+    words[word_index] &= ~(storage{1} << bit_offset);
   }
 
   void set_bit(size_type nb) noexcept
@@ -388,35 +396,36 @@ private:
 
     if (block >= items_.size())
     {
-      constexpr auto bit_page_size = sizeof(storage) * (pool_size >> 3);
-      constexpr auto haz_page_size = sizeof(storage) * pool_size;
+      constexpr auto bit_page_size = sizeof(storage) * ((pool_size + word_mask) >> word_shift);
+      constexpr auto haz_page_size = sizeof(uint8_t) * pool_size;
 
-      items_.emplace_back(ouly::allocate<storage>(*this, bit_page_size));
+      items_.emplace_back(static_cast<void*>(ouly::allocate<storage>(*this, bit_page_size)));
       std::memset(items_.back(), 0, bit_page_size);
       if constexpr (has_revision)
       {
-        items_.emplace_back(ouly::allocate<storage>(*this, haz_page_size));
+        items_.emplace_back(static_cast<void*>(ouly::allocate<uint8_t>(*this, haz_page_size)));
         std::memset(items_.back(), 0, haz_page_size);
       }
     }
 
-    constexpr std::uint8_t one  = 1;
-    constexpr uint8_t      mask = 0x7;
-    items_[block][index >> 3] |= one << static_cast<std::uint8_t>(index & mask);
+    auto  word_index = static_cast<size_type>(index >> word_shift);
+    auto  bit_offset = static_cast<size_type>(index & word_mask);
+    auto* words      = static_cast<storage*>(items_[block]);
+    words[word_index] |= (storage{1} << bit_offset);
   }
 
   void set_hazard(size_type nb, std::uint8_t hz) noexcept
   {
-    auto block           = hazard_page(nb >> pool_mul);
-    auto index           = nb & pool_mod;
-    items_[block][index] = hz;
+    auto block                                  = hazard_page(nb >> pool_mul);
+    auto index                                  = nb & pool_mod;
+    static_cast<uint8_t*>(items_[block])[index] = hz;
   }
 
   auto get_hazard(size_type nb) noexcept -> std::uint8_t
   {
     auto block = hazard_page(nb >> pool_mul);
     auto index = nb & pool_mod;
-    return items_[block][index];
+    return static_cast<uint8_t*>(items_[block])[index];
   }
 
   template <typename ContT, typename Lambda>
@@ -427,14 +436,38 @@ private:
       if (is_bit_set(first))
       {
         entity_type l = has_revision ? entity_type(first, get_hazard(first)) : entity_type(first);
-        lambda(l, cont.at(l));
+        // Prefer a safe lookup if available, otherwise fall back to contains/at
+        if constexpr (requires(ContT& c, entity_type e) { c.find(e); })
+        {
+          auto opt = cont.find(l);
+          if (!opt.has_value())
+          {
+            continue;
+          }
+          lambda(l, opt.get());
+        }
+        else if constexpr (requires(ContT const& c, entity_type e) { c.contains(e); })
+        {
+          if (!cont.contains(l))
+          {
+            continue;
+          }
+          lambda(l, cont.at(l));
+        }
+        else
+        {
+          lambda(l, cont.at(l));
+        }
       }
     }
   }
 
-  std::vector<storage*> items_;
-  size_type             length_  = 0;
-  size_type             max_lnk_ = 0;
+  // Interleaved array of allocated pages as void* to allow mixed types when has_revision=true
+  // When has_revision=false: items_[p] points to uint64_t bitfield words for pool p
+  // When has_revision=true:  items_[2p] is uint64_t* bitfield, items_[2p+1] is uint8_t* hazard array
+  std::vector<void*> items_;
+  size_type          length_  = 0;
+  size_type          max_lnk_ = 0;
 };
 
 } // namespace ouly::ecs

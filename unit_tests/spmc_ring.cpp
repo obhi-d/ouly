@@ -385,7 +385,7 @@ TEST_CASE("spmc_ring stress test with queue size validation", "[spmc_ring][multi
              int value;
              if (ring.pop_back(value))
              {
-               (void)value;
+               [[maybe_unused]] auto sink = value;
                popped.fetch_add(1);
              }
            }

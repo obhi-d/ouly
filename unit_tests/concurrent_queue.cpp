@@ -758,8 +758,8 @@ TEST_CASE("concurrent_queue threading edge cases",
     for (int i = 0; i < operations; ++i)
     {
       queue.enqueue(i);
-      int value = 0;                  // NOLINT(readability-isolate-declaration)
-      (void)queue.try_dequeue(value); // Ignore return value for this test
+      int                   value   = 0;                        // NOLINT(readability-isolate-declaration)
+      [[maybe_unused]] auto ignored = queue.try_dequeue(value); // Ignore return value for this test
     }
 
     stop.store(true);

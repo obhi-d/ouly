@@ -915,9 +915,8 @@ TEMPLATE_TEST_CASE("Intrusive list - Large scale operations", "[intrusive_list][
 
   // Test iterator traversal
   size_t count = 0;
-  for (auto& node : il)
+  for ([[maybe_unused]] auto& node : il)
   {
-    (void)node; // Suppress unused variable warning
     ++count;
   }
   REQUIRE(count == N);
@@ -1268,9 +1267,8 @@ TEMPLATE_TEST_CASE("Intrusive list - Exception safety simulation", "[intrusive_l
 
   // List should still be traversable
   size_t count = 0;
-  for (auto& node : il)
+  for ([[maybe_unused]] auto& node : il)
   {
-    (void)node;
     ++count;
   }
   REQUIRE(count == initial_size);
@@ -1319,9 +1317,8 @@ TEMPLATE_TEST_CASE("Intrusive list - Stress test operations", "[intrusive_list][
 
   // Verify list integrity
   size_t count = 0;
-  for (auto& node : il)
+  for ([[maybe_unused]] auto& node : il)
   {
-    (void)node;
     ++count;
   }
   REQUIRE(count == il.size());

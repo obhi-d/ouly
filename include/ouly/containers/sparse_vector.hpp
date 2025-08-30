@@ -4,8 +4,11 @@
 #include "ouly/allocators/detail/custom_allocator.hpp"
 #include "ouly/utility/type_traits.hpp"
 #include "ouly/utility/utils.hpp"
+#include <cstring>
 #include <functional>
+#include <iterator>
 #include <memory>
+#include <vector>
 
 namespace ouly
 {
@@ -56,15 +59,22 @@ private:
   static constexpr bool has_trivial_copy   = std::is_trivially_copyable_v<Ty> || has_pod;
   static constexpr bool has_self_index     = ouly::detail::HasSelfIndexValue<Config>;
 
-  static constexpr auto pool_mul       = ouly::detail::log2(ouly::detail::pool_size_v<Config>);
-  static constexpr auto pool_size      = static_cast<size_type>(1) << pool_mul;
-  static constexpr auto pool_bytes     = pool_size * sizeof(value_type);
-  static constexpr auto allocate_bytes = has_pool_tracking ? pool_bytes + sizeof(uint32_t) : pool_bytes;
+  static constexpr auto pool_mul   = ouly::detail::log2(ouly::detail::pool_size_v<Config>);
+  static constexpr auto pool_size  = static_cast<size_type>(1) << pool_mul;
+  static constexpr auto pool_bytes = pool_size * sizeof(value_type);
+  // We allocate only the pool bytes; occupancy is tracked separately in pool_storage
+  static constexpr auto allocate_bytes = pool_bytes;
   static constexpr auto pool_mod       = pool_size - 1;
 
   using allocator_tag             = typename allocator_type::tag;
   using allocator_is_always_equal = typename ouly::allocator_traits<allocator_tag>::is_always_equal;
   using check_type                = std::conditional_t<has_pool_tracking, std::true_type, std::false_type>;
+
+  struct pool_storage
+  {
+    storage* data_      = nullptr;
+    size_t   occupancy_ = 0; // valid only when has_pool_tracking
+  };
 
   constexpr static auto cast(storage* src) -> value_type* requires(std::is_same_v<storage, value_type>) { return src; }
 
@@ -81,15 +91,9 @@ private:
     return reinterpret_cast<value_type*>(src);
   }
 
-  constexpr static auto cast(storage& src) -> value_type&
-    requires(std::is_same_v<storage, value_type>)
-  {
-    return src;
-  }
+  constexpr static auto cast(storage& src) -> value_type& requires(std::is_same_v<storage, value_type>) { return src; }
 
-  constexpr static auto cast(storage& src) -> value_type&
-    requires(!std::is_same_v<storage, value_type>)
-  {
+  constexpr static auto cast(storage& src) -> value_type& requires(!std::is_same_v<storage, value_type>) {
     // NOLINTNEXTLINE
     return reinterpret_cast<value_type&>(src);
   }
@@ -145,6 +149,118 @@ public:
     shrink_to_fit();
   }
 
+  // ------------------- Iterators -------------------
+  // Lightweight forward iterator over present elements.
+  // Skips null entries when pool tracking/null semantics are enabled.
+  template <bool IsConst>
+  class iterator_base
+  {
+  public:
+    using parent_type       = std::conditional_t<IsConst, const sparse_vector, sparse_vector>;
+    using value_ref         = std::conditional_t<IsConst, const_reference, reference>;
+    using value_ptr         = std::conditional_t<IsConst, const_pointer, pointer>;
+    using difference_type   = std::ptrdiff_t;
+    using iterator_category = std::forward_iterator_tag;
+    using value_type        = Ty; // standard associated type
+    using reference         = value_ref;
+    using pointer           = value_ptr;
+
+    iterator_base() noexcept = default;
+    iterator_base(parent_type* p, size_type idx) noexcept : p_(p), idx_(idx)
+    {
+      satisfy();
+    }
+
+    auto operator*() const noexcept -> reference
+    {
+      return (*p_).at(idx_);
+    }
+    auto operator->() const noexcept -> pointer
+    {
+      return std::addressof((*p_).at(idx_));
+    }
+
+    auto operator++() noexcept -> iterator_base&
+    {
+      ++idx_;
+      satisfy();
+      return *this;
+    }
+    auto operator++(int) noexcept -> iterator_base
+    {
+      auto tmp = *this;
+      ++(*this);
+      return tmp;
+    }
+
+    friend auto operator==(iterator_base const& a, iterator_base const& b) noexcept -> bool
+    {
+      return a.idx_ == b.idx_ && a.p_ == b.p_;
+    }
+    friend auto operator!=(iterator_base const& a, iterator_base const& b) noexcept -> bool
+    {
+      return !(a == b);
+    }
+
+  private:
+    void satisfy() noexcept
+    {
+      if (p_ == nullptr)
+      {
+        return;
+      }
+      auto const len = p_->size();
+      while (idx_ < len)
+      {
+        // Fast skip empty pools via data_view
+        auto const block = (idx_ >> pool_mul);
+        auto const dv    = p_->view();
+        if (!dv.contains(index(idx_)))
+        {
+          idx_ = (block + 1) << pool_mul;
+          continue;
+        }
+        if (!p_->contains(idx_))
+        {
+          ++idx_;
+          continue;
+        }
+        break; // valid
+      }
+    }
+
+    parent_type* p_   = nullptr;
+    size_type    idx_ = 0;
+  };
+
+  using iterator       = iterator_base<false>;
+  using const_iterator = iterator_base<true>;
+
+  auto begin() noexcept -> iterator
+  {
+    return iterator(this, 0);
+  }
+  auto end() noexcept -> iterator
+  {
+    return iterator(this, length_);
+  }
+  auto begin() const noexcept -> const_iterator
+  {
+    return const_iterator(this, 0);
+  }
+  auto end() const noexcept -> const_iterator
+  {
+    return const_iterator(this, length_);
+  }
+  auto cbegin() const noexcept -> const_iterator
+  {
+    return const_iterator(this, 0);
+  }
+  auto cend() const noexcept -> const_iterator
+  {
+    return const_iterator(this, length_);
+  }
+
   struct index_t
   {
     size_type block_;
@@ -166,53 +282,53 @@ public:
   }
 
   // NOLINTNEXTLINE
-  auto operator=(sparse_vector const& other) noexcept -> sparse_vector&
-    requires(std::is_copy_constructible_v<value_type>)
-  {
-    if (this != &other)
-    {
-      clear();
-      items_.resize(other.items_.size());
-      for (size_type i = 0; i < items_.size(); ++i)
-      {
-        auto const src_storage = other.items_[i];
-        if (src_storage)
-        {
-          items_[i] = ouly::allocate<storage>(*this, allocate_bytes, alignarg<Ty>);
+  auto operator=(sparse_vector const& other) noexcept
+   -> sparse_vector& requires(std::is_copy_constructible_v<value_type>) {
+     if (this != &other)
+     {
+       clear();
+       items_.resize(other.items_.size());
+       for (size_type i = 0; i < items_.size(); ++i)
+       {
+         auto const src_pool = other.items_[i].data_;
+         if (src_pool)
+         {
+           items_[i].data_ = ouly::allocate<storage>(*this, allocate_bytes, alignarg<Ty>);
 
-          if constexpr (std::is_trivially_copyable_v<Ty> || has_pod)
-          {
-            std::memcpy(items_[i], src_storage, allocate_bytes);
-          }
-          else
-          {
-            if constexpr (has_pool_tracking)
-            {
-              pool_occupation(i) = other.pool_occupation(i);
-            }
-            for (size_type e = 0; e < pool_size; ++e)
-            {
-              auto const& src = cast(src_storage[e]);
-              auto&       dst = cast(items_[i][e]);
+           if constexpr (std::is_trivially_copyable_v<Ty> || has_pod)
+           {
+             std::memcpy(items_[i].data_, src_pool, allocate_bytes);
+           }
+           else
+           {
+             if constexpr (has_pool_tracking)
+             {
+               pool_occupation(i) = other.pool_occupation(i);
+             }
+             for (size_type e = 0; e < pool_size; ++e)
+             {
+               auto const& src = cast(src_pool[e]);
+               auto&       dst = cast(items_[i].data_[e]);
 
-              if (!is_null(src))
-              {
-                std::construct_at(&dst, src);
-              }
-            }
-          }
-        }
-        else
-        {
-          items_[i] = nullptr;
-        }
-      }
+               if (!is_null(src))
+               {
+                 std::construct_at(&dst, src);
+               }
+             }
+           }
+         }
+         else
+         {
+           items_[i].data_      = nullptr;
+           items_[i].occupancy_ = 0;
+         }
+       }
 
-      static_cast<base_type&>(*this) = static_cast<base_type const&>(other);
-      length_                        = other.length_;
-    }
-    return *this;
-  }
+       static_cast<base_type&>(*this) = static_cast<base_type const&>(other);
+       length_                        = other.length_;
+     }
+     return *this;
+   }
 
   /**
    * @brief Lambda called for each element
@@ -335,12 +451,12 @@ public:
    */
   auto get_pool(size_type i) const noexcept -> std::tuple<value_type const*, size_type>
   {
-    return cast(items_[i]);
+    return {cast(items_[i].data_), pool_size};
   }
 
   auto get_pool(size_type i) noexcept -> std::tuple<value_type*, size_type>
   {
-    return cast(items_[i]);
+    return {cast(items_[i].data_), pool_size};
   }
 
   auto back() -> auto&
@@ -432,25 +548,25 @@ public:
     }
     else if (other_back_length)
     {
-      auto back              = items_.back();
+      auto back              = items_.back().data_;
       auto length_to_move_in = std::min(pool_size - other_back_length, back_length);
       items_.pop_back();
       items_.insert(items_.end(), other.items_.begin(), other.items_.end());
 
       if constexpr (has_trivial_copy)
       {
-        std::memcpy(items_.back() + other_back_length, back, length_to_move_in * sizeof(storage));
+        std::memcpy(items_.back().data_ + other_back_length, back, length_to_move_in * sizeof(storage));
       }
       else
       {
-        auto dest = cast(items_.back() + other_back_length);
+        auto dest = cast(items_.back().data_ + other_back_length);
         auto src  = cast(back);
         std::move(src, src + length_to_move_in, dest);
       }
       auto length_to_shift = back_length - length_to_move_in;
       if (length_to_shift)
       {
-        items_.push_back(back);
+        items_.push_back(pool_storage{back, 0});
         if constexpr (has_trivial_copy)
         {
           std::memmove(back, back + length_to_move_in, length_to_shift * sizeof(storage));
@@ -469,10 +585,10 @@ public:
     }
     else
     {
-      auto back = items_.back();
+      auto back = items_.back().data_;
       items_.pop_back();
       items_.insert(items_.end(), other.items_.begin(), other.items_.end());
-      items_.push_back(back);
+      items_.push_back(pool_storage{back, 0});
     }
 
     length_ += other.length_;
@@ -550,11 +666,11 @@ public:
 
   void fill(value_type const& v) noexcept
   {
-    for (auto block : items_)
+    for (auto const& pool : items_)
     {
-      if (block)
+      if (pool.data_)
       {
-        std::fill(cast(block), cast(block + pool_size), v);
+        std::fill(cast(pool.data_), cast(pool.data_ + pool_size), v);
       }
     }
   }
@@ -601,9 +717,11 @@ public:
     auto from = (length_ + pool_mod) >> pool_mul;
     for (size_type block = from; block < items_.size(); ++block)
     {
-      if (items_[block])
+      if (items_[block].data_)
       {
-        ouly::deallocate(static_cast<allocator_type&>(*this), items_[block], allocate_bytes, alignarg<Ty>);
+        ouly::deallocate(static_cast<allocator_type&>(*this), items_[block].data_, allocate_bytes, alignarg<Ty>);
+        items_[block].data_      = nullptr;
+        items_[block].occupancy_ = 0;
       }
     }
     items_.resize(from);
@@ -668,44 +786,45 @@ public:
     }
 
     auto block = (idx >> pool_mul);
-    return block < items_.size() && items_[block] && !is_null(cast(items_[block][idx & pool_mod]));
+    return block < items_.size() && items_[block].data_ && !is_null(cast(items_[block].data_[idx & pool_mod]));
   }
 
   auto get_if(size_type idx) const noexcept -> Ty const*
   {
     auto block = (idx >> pool_mul);
-    return block < items_.size() && items_[block] ? &cast(items_[block][idx & pool_mod]) : nullptr;
+    return block < items_.size() && items_[block].data_ ? &cast(items_[block].data_[idx & pool_mod]) : nullptr;
   }
 
   auto get_if(size_type idx) noexcept -> Ty*
   {
     auto block = (idx >> pool_mul);
-    return block < items_.size() && items_[block] ? &cast(items_[block][idx & pool_mod]) : nullptr;
+    return block < items_.size() && items_[block].data_ ? &cast(items_[block].data_[idx & pool_mod]) : nullptr;
   }
 
   auto get_or(size_type idx, Ty&& other) const noexcept -> Ty const& = delete;
   auto get_or(size_type idx, Ty const& other) const noexcept -> Ty const&
   {
     auto block = (idx >> pool_mul);
-    return block < items_.size() && items_[block] ? cast(items_[block][idx & pool_mod]) : other;
+    return block < items_.size() && items_[block].data_ ? cast(items_[block].data_[idx & pool_mod]) : other;
   }
 
   auto get_or(size_type idx, Ty& other) noexcept -> Ty&
   {
     auto block = (idx >> pool_mul);
-    return block < items_.size() && items_[block] ? cast(items_[block][idx & pool_mod]) : other;
+    return block < items_.size() && items_[block].data_ ? cast(items_[block].data_[idx & pool_mod]) : other;
   }
 
   auto get_value(size_type idx) const noexcept -> Ty
     requires(has_null_value)
   {
     auto block = (idx >> pool_mul);
-    return block < items_.size() && items_[block] ? cast(items_[block][idx & pool_mod]) : config::null_v;
+    return block < items_.size() && items_[block].data_ ? cast(items_[block].data_[idx & pool_mod]) : config::null_v;
   }
 
   auto get_unsafe(size_type idx) const noexcept -> Ty&
   {
-    return cast(items_[(idx >> pool_mul)][idx & pool_mod]);
+    auto block = (idx >> pool_mul);
+    return cast(items_[block].data_[idx & pool_mod]);
   }
 
   [[nodiscard]] auto empty() const noexcept -> bool
@@ -723,17 +842,24 @@ public:
   {
   public:
     data_view() noexcept = default;
-    data_view(VTy* const* items, size_type block_count) noexcept : items_(items), block_count_(block_count) {}
+    data_view(pool_storage const* items, size_type block_count) noexcept : items_(items), block_count_(block_count) {}
 
     auto contains(index_t i) const noexcept -> bool
     {
-      return i.block_ < block_count_ && items_[i.block_];
+      return i.block_ < block_count_ && items_[i.block_].data_;
     }
 
     auto operator[](index_t i) const noexcept -> VTy&
     {
       OULY_ASSERT(contains(i));
-      return items_[i.block_][i.item_];
+      if constexpr (std::is_const_v<VTy>)
+      {
+        return cast(static_cast<storage const*>(items_[i.block_].data_)[i.item_]);
+      }
+      else
+      {
+        return cast(items_[i.block_].data_[i.item_]);
+      }
     }
 
     auto operator()(uint32_t i, VTy& default_value) const noexcept -> VTy&
@@ -741,7 +867,18 @@ public:
       auto block = (i >> pool_mul);
       if (block < block_count_)
       {
-        return items_[block] ? items_[block][i & pool_mod] : default_value;
+        if (items_[block].data_)
+        {
+          if constexpr (std::is_const_v<VTy>)
+          {
+            return cast(static_cast<storage const*>(items_[block].data_)[i & pool_mod]);
+          }
+          else
+          {
+            return cast(items_[block].data_[i & pool_mod]);
+          }
+        }
+        return default_value;
       }
       return default_value;
     }
@@ -753,7 +890,11 @@ public:
       auto block = (i >> pool_mul);
       if (block < block_count_)
       {
-        return items_[block] ? items_[block][i & pool_mod] : default_value;
+        if (items_[block].data_)
+        {
+          return cast(static_cast<storage const*>(items_[block].data_)[i & pool_mod]);
+        }
+        return default_value;
       }
       return default_value.get();
     }
@@ -762,12 +903,19 @@ public:
     {
       auto block = (i >> pool_mul);
       OULY_ASSERT(block < block_count_);
-      return items_[block][i & pool_mod];
+      if constexpr (std::is_const_v<VTy>)
+      {
+        return cast(static_cast<storage const*>(items_[block].data_)[i & pool_mod]);
+      }
+      else
+      {
+        return cast(items_[block].data_[i & pool_mod]);
+      }
     }
 
   private:
-    VTy* const* items_;
-    size_type   block_count_ = 0;
+    pool_storage const* items_;
+    size_type           block_count_ = 0;
   };
 
   using readonly_view  = data_view<value_type const>;
@@ -789,18 +937,18 @@ private:
   {
     if (block >= items_.size())
     {
-      items_.resize(block + 1, nullptr);
+      items_.resize(block + 1);
     }
 
-    if (!items_[block])
+    if (!items_[block].data_)
     {
       if constexpr (has_zero_memory)
       {
-        items_[block] = ouly::zallocate<storage>(*this, allocate_bytes, alignarg<Ty>);
+        items_[block].data_ = ouly::zallocate<storage>(*this, allocate_bytes, alignarg<Ty>);
       }
       else
       {
-        items_[block] = ouly::allocate<storage>(*this, allocate_bytes, alignarg<Ty>);
+        items_[block].data_ = ouly::allocate<storage>(*this, allocate_bytes, alignarg<Ty>);
         if constexpr (!has_no_fill)
         {
           if constexpr (has_pod ||
@@ -808,20 +956,20 @@ private:
           {
             if constexpr (has_null_value)
             {
-              std::fill(cast(items_[block]), cast(items_[block] + pool_size), config::null_v);
+              std::fill(cast(items_[block].data_), cast(items_[block].data_ + pool_size), config::null_v);
             }
             else if constexpr (has_null_construct)
             {
-              std::for_each(cast(items_[block]), cast(items_[block] + pool_size), config::null_construct);
+              std::for_each(cast(items_[block].data_), cast(items_[block].data_ + pool_size), config::null_construct);
             }
             else
             {
-              std::fill(cast(items_[block]), cast(items_[block] + pool_size), value_type());
+              std::fill(cast(items_[block].data_), cast(items_[block].data_ + pool_size), value_type());
             }
           }
           else
           {
-            std::for_each(cast(items_[block]), cast(items_[block] + pool_size),
+            std::for_each(cast(items_[block].data_), cast(items_[block].data_ + pool_size),
                           [](value_type& dst)
                           {
                             if constexpr (has_null_value)
@@ -840,33 +988,19 @@ private:
           }
         }
       }
+      if constexpr (has_pool_tracking)
+      {
+        items_[block].occupancy_ = 0;
+      }
     }
   }
 
-  auto pool_occupation(storage* p) noexcept -> uint32_t&
-    requires(has_pool_tracking)
-  {
-    // NOLINTNEXTLINE
-    return *reinterpret_cast<uint32_t*>(reinterpret_cast<std::uint8_t*>(p) + pool_bytes);
-  }
+  auto pool_occupation(size_type p) noexcept -> size_t& requires(has_pool_tracking) { return items_[p].occupancy_; }
 
-  auto pool_occupation(storage const* p) const noexcept -> uint32_t
+  auto pool_occupation(size_type p) const noexcept -> size_t
     requires(has_pool_tracking)
   {
-    // NOLINTNEXTLINE
-    return *reinterpret_cast<uint32_t*>(reinterpret_cast<std::uint8_t const*>(p) + pool_bytes);
-  }
-
-  auto pool_occupation(size_type p) noexcept -> uint32_t&
-    requires(has_pool_tracking)
-  {
-    return pool_occupation(items_[p]);
-  }
-
-  auto pool_occupation(size_type p) const noexcept -> uint32_t
-    requires(has_pool_tracking)
-  {
-    return pool_occupation(items_[p]);
+    return items_[p].occupancy_;
   }
 
   void validate([[maybe_unused]] size_type idx) const noexcept
@@ -878,13 +1012,13 @@ private:
   {
     auto block = (idx >> pool_mul);
     ensure_block(block);
-    return cast(items_[block][idx & pool_mod]);
+    return cast(items_[block].data_[idx & pool_mod]);
   }
 
   auto item_at(size_type idx) const noexcept -> auto&
   {
     auto block = (idx >> pool_mul);
-    return cast(items_[block][idx & pool_mod]);
+    return cast(items_[block].data_[idx & pool_mod]);
   }
 
   void erase_at(size_type idx) noexcept
@@ -893,15 +1027,15 @@ private:
 
     if constexpr (has_null_value)
     {
-      cast(items_[block][idx & pool_mod]) = config::null_v;
+      cast(items_[block].data_[idx & pool_mod]) = config::null_v;
     }
     else if constexpr (has_null_construct)
     {
-      config::null_reset(cast(items_[block][idx & pool_mod]));
+      config::null_reset(cast(items_[block].data_[idx & pool_mod]));
     }
     else
     {
-      cast(items_[block][idx & pool_mod]) = value_type();
+      cast(items_[block].data_[idx & pool_mod]) = value_type();
     }
     if constexpr (has_pool_tracking)
     {
@@ -928,16 +1062,18 @@ private:
   void delete_block(size_type block)
   {
     auto& store = items_[block];
-    delete_block(store);
-    store = nullptr;
+    delete_block(store.data_);
+    store.data_      = nullptr;
+    store.occupancy_ = 0;
   }
 
   /**
    * @brief Lambda called for each element
    * @tparam Lambda Lambda should accept value_type& parameter
    */
-  template <typename Lambda, typename Store, typename Check>
-  static void for_each(Store& items_, size_type start, size_type end, Lambda&& lambda, Check /*unused*/) noexcept
+  template <typename Lambda, typename StoreContainer, typename Check>
+  static void for_each(StoreContainer& items_, size_type start, size_type end, Lambda&& lambda,
+                       Check /*unused*/) noexcept
   {
     if (start == end)
     {
@@ -950,7 +1086,7 @@ private:
     constexpr auto arity = function_traits<std::remove_reference_t<Lambda>>::arity;
     for (size_type block = bstart; block != bend; ++block)
     {
-      auto store = items_[block];
+      storage* store = items_[block].data_;
       if constexpr (arity == 2)
       {
         for_each_value(store, block, item_start, pool_size, std::forward<Lambda>(lambda), Check());
@@ -966,17 +1102,17 @@ private:
     {
       if constexpr (arity == 2)
       {
-        for_each_value(items_[bend], bend, item_start, end & pool_mod, std::forward<Lambda>(lambda), Check());
+        for_each_value(items_[bend].data_, bend, item_start, end & pool_mod, std::forward<Lambda>(lambda), Check());
       }
       else
       {
-        for_each_value(items_[bend], item_start, end & pool_mod, std::forward<Lambda>(lambda), Check());
+        for_each_value(items_[bend].data_, item_start, end & pool_mod, std::forward<Lambda>(lambda), Check());
       }
     }
   }
 
-  template <typename Lambda, typename Store, typename Check>
-  static void for_each_value(Store* store, size_type start, size_type end, Lambda lambda, Check /*unused*/) noexcept
+  template <typename Lambda, typename Check>
+  static void for_each_value(storage* store, size_type start, size_type end, Lambda lambda, Check /*unused*/) noexcept
   {
     if (store)
     {
@@ -994,8 +1130,8 @@ private:
     }
   }
 
-  template <typename Lambda, typename Store, typename Check>
-  static void for_each_value(Store* store, size_type block, size_type start, size_type end, Lambda lambda,
+  template <typename Lambda, typename Check>
+  static void for_each_value(storage* store, size_type block, size_type start, size_type end, Lambda lambda,
                              Check /*unused*/) noexcept
   {
     if (store)
@@ -1022,7 +1158,7 @@ private:
 
     ensure_block(block);
 
-    value_type& dst = *cast((items_[block] + index));
+    value_type& dst = *cast((items_[block].data_ + index));
     dst             = value_type(std::forward<Args>(args)...);
     if constexpr (has_pool_tracking)
     {
@@ -1031,8 +1167,8 @@ private:
     return dst;
   }
 
-  std::vector<storage*> items_;
-  size_type             length_ = 0;
+  std::vector<pool_storage> items_;
+  size_type                 length_ = 0;
 };
 
 namespace detail
