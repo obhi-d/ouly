@@ -68,6 +68,16 @@ auto ensure_at(V& vector, I i, Args&& args) -> auto&
   return vector[i];
 }
 
+template <IsNormalVector V, typename I>
+auto ensure_at(V& vector, I i) -> auto&
+{
+  if (i >= vector.size())
+  {
+    vector.resize(i + 1);
+  }
+  return vector[i];
+}
+
 template <IsSparseVector V, typename I>
 auto get_if(V& vector, I i) -> auto*
 {
