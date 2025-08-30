@@ -341,7 +341,7 @@ public:
   {
     if constexpr (has_direct_mapping)
     {
-      return ouly::detail::ensure_at(point.get());
+      return ouly::detail::ensure_at(values_, point.get());
     }
     else
     {
