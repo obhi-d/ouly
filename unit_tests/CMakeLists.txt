@@ -50,7 +50,7 @@ FetchContent_MakeAvailable(oneTBB)
 FetchContent_MakeAvailable(glm)
 
 function(add_unit_test)
-    set(config SKIP_TEST SANITIZE)
+    set(config SKIP_TEST SANITIZE NO_COVERAGE)
     set(one_value_arg NAME)
     set(multi_value_arg FILES LINK_LIBS DEFINES CCARGS)
     cmake_parse_arguments(
@@ -90,15 +90,17 @@ function(add_unit_test)
         CMAKE_CXX_COMPILER_ID STREQUAL "GNU"
         OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang"
     )
-        message("Building with coverage info : ${target_name}")
-        target_compile_options(
-            ${target_name}
-            PRIVATE --coverage -fprofile-update=atomic
-        )
-        target_link_options(
-            ${target_name}
-            PRIVATE --coverage -fprofile-update=atomic
-        )
+        if(NOT unit_test_NO_COVERAGE)
+            message("Building with coverage info : ${target_name}")
+            target_compile_options(
+                ${target_name}
+                PRIVATE --coverage -fprofile-update=atomic
+            )
+            target_link_options(
+                ${target_name}
+                PRIVATE --coverage -fprofile-update=atomic
+            )
+        endif()
         if(unit_test_SANITIZE)
             message("Santizers active on : ${target_name}")
             target_compile_options(${target_name} PUBLIC -fsanitize=address)
@@ -158,9 +160,30 @@ add_unit_test(NAME thread_safe_allocators FILES "thread_safe_allocators.cpp" SAN
 add_unit_test(NAME memory_mapped_allocators FILES "memory_mapped_allocators.cpp" SANITIZE)
 add_unit_test(NAME coalescing_allocator FILES "coalescing_allocator.cpp" SANITIZE)
 add_unit_test(NAME spmc_ring FILES "spmc_ring.cpp" SANITIZE)
-add_unit_test(NAME scheduler FILES "scheduler_tests.cpp" LINK_LIBS glm::glm SANITIZE)
-add_unit_test(NAME flow_graph FILES "flow_graph_tests.cpp" LINK_LIBS glm::glm SANITIZE)
-add_unit_test(NAME auto_parallel_for FILES "test_auto_parallel_for.cpp" LINK_LIBS glm::glm SANITIZE)
+# Build scheduler tests with ThreadSanitizer instead of AddressSanitizer
+# Note: Do not pass SANITIZE here (that enables ASan). We want TSAN for race detection.
+add_unit_test(
+    NAME scheduler
+    FILES "scheduler_tests.cpp"
+    LINK_LIBS glm::glm
+    CCARGS "-fsanitize=thread"
+    NO_COVERAGE
+)
+# These two also exercise the scheduler heavily; build them with TSAN as well
+add_unit_test(
+    NAME flow_graph
+    FILES "flow_graph_tests.cpp"
+    LINK_LIBS glm::glm
+    CCARGS "-fsanitize=thread"
+    NO_COVERAGE
+)
+add_unit_test(
+    NAME auto_parallel_for
+    FILES "test_auto_parallel_for.cpp"
+    LINK_LIBS glm::glm
+    CCARGS "-fsanitize=thread"
+    NO_COVERAGE
+)
 add_unit_test(NAME debug_auto_parallel_for FILES "debug_auto_parallel_for.cpp" LINK_LIBS glm::glm SANITIZE)
 add_executable(
     bench_arena_allocator
