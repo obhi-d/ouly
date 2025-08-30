@@ -63,13 +63,13 @@ namespace ouly
 template <typename Iterator, typename L>
 struct parallel_for_data
 {
-  parallel_for_data(L& lambda, Iterator f, uint32_t task_count) noexcept
-      : first_(f), counter_(static_cast<ptrdiff_t>(task_count)), lambda_instance_(lambda)
+  parallel_for_data(L lambda, Iterator f, uint32_t task_count) noexcept
+      : first_(f), counter_(static_cast<ptrdiff_t>(task_count)), lambda_instance_(std::move(lambda))
   {}
 
-  Iterator                  first_;
-  std::latch                counter_;
-  std::reference_wrapper<L> lambda_instance_;
+  Iterator   first_;
+  std::latch counter_;
+  L          lambda_instance_;
 };
 
 template <typename L, TaskContext WC>
@@ -169,7 +169,7 @@ auto create_task_lambda(parallel_for_data<Iterator, L>& pfor_instance, uint32_t 
     using iterator_t = Iterator;
     if constexpr (ouly::detail::RangeExecutor<L, iterator_t, WC>)
     {
-      instance->lambda_instance_.get()(instance->first_ + start, instance->first_ + end, wc);
+      instance->lambda_instance_(instance->first_ + start, instance->first_ + end, wc);
     }
     else
     {
@@ -177,11 +177,11 @@ auto create_task_lambda(parallel_for_data<Iterator, L>& pfor_instance, uint32_t 
       {
         if constexpr (std::is_integral_v<std::decay_t<decltype(instance->first_)>>)
         {
-          instance->lambda_instance_.get()((instance->first_ + pos), wc);
+          instance->lambda_instance_((instance->first_ + pos), wc);
         }
         else
         {
-          instance->lambda_instance_.get()(*(instance->first_ + pos), wc);
+          instance->lambda_instance_(*(instance->first_ + pos), wc);
         }
       }
     }
