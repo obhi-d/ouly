@@ -164,15 +164,20 @@ public:
     clear();
     shrink_to_fit();
 
-    values_ = std::move(other.values_);
-    keys_   = std::move(other.keys_);
-    self_   = std::move(other.self_);
+    values_        = std::move(other.values_);
+    keys_          = std::move(other.keys_);
+    self_          = std::move(other.self_);
+    count_present_ = other.count_present_;
+    max_index_     = other.max_index_;
+    present_       = std::move(other.present_);
+    // leave other in valid empty state
+    other.count_present_ = 0;
+    other.max_index_     = 0;
+    other.present_.clear();
     return *this;
   }
 
-  auto operator=(components const& other) noexcept -> components&
-    requires(std::is_copy_constructible_v<value_type>)
-  {
+  auto operator=(components const& other) noexcept -> components& requires(std::is_copy_constructible_v<value_type>) {
     if (this == &other)
     {
       return *this;
@@ -180,9 +185,12 @@ public:
     clear();
     shrink_to_fit();
 
-    values_ = other.values_;
-    keys_   = other.keys_;
-    self_   = other.self_;
+    values_        = other.values_;
+    keys_          = other.keys_;
+    self_          = other.self_;
+    count_present_ = other.count_present_;
+    max_index_     = other.max_index_;
+    present_       = other.present_;
     return *this;
   }
 
@@ -232,7 +240,15 @@ public:
    */
   auto size() const noexcept -> size_type
   {
-    return static_cast<size_type>(values_.size());
+    if constexpr (has_direct_mapping)
+    {
+      // Effective element count when using direct mapping
+      return count_present_;
+    }
+    else
+    {
+      return static_cast<size_type>(values_.size());
+    }
   }
 
   /**
@@ -240,7 +256,14 @@ public:
    */
   auto range() const noexcept -> size_type
   {
-    return static_cast<size_type>(values_.size());
+    if constexpr (has_direct_mapping)
+    {
+      return max_index_ + 1;
+    }
+    else
+    {
+      return static_cast<size_type>(values_.size());
+    }
   }
 
   auto data() -> vector_type&
@@ -261,7 +284,16 @@ public:
   {
     if constexpr (has_direct_mapping)
     {
-      return ouly::detail::emplace_at(values_, point.get(), std::forward<Args>(args)...);
+      auto  idx         = point.get();
+      bool  was_present = test_present(idx);
+      auto& ref         = ouly::detail::emplace_at(values_, idx, std::forward<Args>(args)...);
+      set_present(idx);
+      if (!was_present)
+      {
+        count_present_++;
+        max_index_ = std::max(max_index_, idx);
+      }
+      return ref;
     }
     else
     {
@@ -312,7 +344,16 @@ public:
   {
     if constexpr (has_direct_mapping)
     {
-      return ouly::detail::replace_at(values_, point.get(), std::move(args));
+      auto  idx         = point.get();
+      bool  was_present = test_present(idx);
+      auto& ref         = ouly::detail::replace_at(values_, idx, std::move(args));
+      set_present(idx);
+      if (!was_present)
+      {
+        count_present_++;
+        max_index_ = std::max(max_index_, idx);
+      }
+      return ref;
     }
     else
     {
@@ -341,7 +382,16 @@ public:
   {
     if constexpr (has_direct_mapping)
     {
-      return ouly::detail::ensure_at(values_, point.get());
+      auto  idx         = point.get();
+      bool  was_present = test_present(idx);
+      auto& ref         = ouly::detail::ensure_at(values_, idx);
+      set_present(idx);
+      if (!was_present)
+      {
+        count_present_++;
+        max_index_ = std::max(max_index_, idx);
+      }
+      return ref;
     }
     else
     {
@@ -419,6 +469,10 @@ public:
       keys_.shrink_to_fit();
       self_.shrink_to_fit();
     }
+    else
+    {
+      present_.shrink_to_fit();
+    }
   }
 
   /**
@@ -427,6 +481,12 @@ public:
   void clear() noexcept
   {
     values_.clear();
+    if constexpr (has_direct_mapping)
+    {
+      count_present_ = 0;
+      max_index_     = 0;
+      present_.clear();
+    }
     if constexpr (!has_direct_mapping)
     {
       keys_.clear();
@@ -467,14 +527,7 @@ public:
     auto idx = l.get();
     if constexpr (has_direct_mapping)
     {
-      if constexpr (has_sparse_storage)
-      {
-        return values_.contains(idx);
-      }
-      else
-      {
-        return idx < values_.size();
-      }
+      return test_present(idx);
     }
     else
     {
@@ -496,13 +549,21 @@ public:
 
   [[nodiscard]] auto empty() const noexcept -> bool
   {
-    return values_.empty();
+    if constexpr (has_direct_mapping)
+    {
+      return count_present_ == 0;
+    }
+    else
+    {
+      return values_.empty();
+    }
   }
 
   void validate_integrity() const
   {
     if constexpr (has_direct_mapping)
     {
+      // Nothing to validate for direct mapping beyond bounds
     }
     else
     {
@@ -561,6 +622,8 @@ public:
       if (size)
       {
         ouly::detail::ensure_at(values_, size - 1);
+        max_index_ = std::max<size_type>(max_index_, size ? size - 1 : 0);
+        ensure_bit_capacity(size - 1);
       }
     }
   }
@@ -572,7 +635,12 @@ private:
   {
     if constexpr (has_direct_mapping)
     {
-      return ouly::detail::get_if(cont, lnk.get());
+      auto idx = lnk.get();
+      if (!cont.test_present(idx))
+      {
+        return nullptr;
+      }
+      return ouly::detail::get_if(cont, idx);
     }
     else
     {
@@ -605,7 +673,12 @@ private:
   {
     if constexpr (has_direct_mapping)
     {
-      return ouly::detail::get_or(cont, lnk.get(), def);
+      auto idx = lnk.get();
+      if (!cont.test_present(idx))
+      {
+        return def;
+      }
+      return ouly::detail::get_or(cont, idx, def);
     }
     else
     {
@@ -637,7 +710,7 @@ private:
   {
     if constexpr (has_direct_mapping)
     {
-      OULY_ASSERT(get_if(values_, l.get()));
+      OULY_ASSERT(test_present(l.get()));
     }
     else
     {
@@ -680,7 +753,19 @@ private:
   {
     if constexpr (has_direct_mapping)
     {
-      values_[l.get()] = value_type();
+      auto idx = l.get();
+      if (test_present(idx))
+      {
+        // Reset underlying storage to a default/null value for determinism
+        values_[idx] = value_type();
+        clear_present(idx);
+        // Do not shrink container for direct mapping, only adjust count
+        if (count_present_ > 0)
+        {
+          count_present_--;
+        }
+        // max_index_ is not decreased here to keep range monotonic; optional optimization could scan backwards
+      }
     }
     else
     {
@@ -732,28 +817,63 @@ private:
   template <typename Lambda>
   void for_each_l(Lambda&& lambda) noexcept
   {
-    for_each_l<Lambda>(0, static_cast<size_type>(values_.size()), std::forward<Lambda>(lambda));
+    if constexpr (has_direct_mapping)
+    {
+      for_each_l<Lambda>(0, range(), std::forward<Lambda>(lambda));
+    }
+    else
+    {
+      for_each_l<Lambda>(0, static_cast<size_type>(values_.size()), std::forward<Lambda>(lambda));
+    }
   }
 
   template <typename Lambda>
   void for_each_l(Lambda&& lambda) const noexcept
   {
-    for_each_l<Lambda>(0, static_cast<size_type>(values_.size()), std::forward<Lambda>(lambda));
+    if constexpr (has_direct_mapping)
+    {
+      for_each_l<Lambda>(0, range(), std::forward<Lambda>(lambda));
+    }
+    else
+    {
+      for_each_l<Lambda>(0, static_cast<size_type>(values_.size()), std::forward<Lambda>(lambda));
+    }
   }
 
   template <typename Lambda>
   void for_each_l(size_type first, size_type last, Lambda lambda) noexcept
   {
     constexpr auto arity = function_traits<Lambda>::arity;
-    for (; first != last; ++first)
+    if constexpr (has_direct_mapping)
     {
-      if constexpr (arity == 2)
+      for (; first != last; ++first)
       {
-        lambda(entity_type(get_ref_at_idx(first)), values_[first]);
+        if (!test_present(first))
+        {
+          continue;
+        }
+        if constexpr (arity == 2)
+        {
+          lambda(entity_type(get_ref_at_idx(first)), values_[first]);
+        }
+        else
+        {
+          lambda(values_[first]);
+        }
       }
-      else
+    }
+    else
+    {
+      for (; first != last; ++first)
       {
-        lambda(values_[first]);
+        if constexpr (arity == 2)
+        {
+          lambda(entity_type(get_ref_at_idx(first)), values_[first]);
+        }
+        else
+        {
+          lambda(values_[first]);
+        }
       }
     }
   }
@@ -762,15 +882,36 @@ private:
   void for_each_l(size_type first, size_type last, Lambda lambda) const noexcept
   {
     constexpr auto arity = function_traits<Lambda>::arity;
-    for (; first != last; ++first)
+    if constexpr (has_direct_mapping)
     {
-      if constexpr (arity == 2)
+      for (; first != last; ++first)
       {
-        lambda(entity_type(get_ref_at_idx(first)), values_[first]);
+        if (!test_present(first))
+        {
+          continue;
+        }
+        if constexpr (arity == 2)
+        {
+          lambda(entity_type(get_ref_at_idx(first)), values_[first]);
+        }
+        else
+        {
+          lambda(values_[first]);
+        }
       }
-      else
+    }
+    else
+    {
+      for (; first != last; ++first)
       {
-        lambda(values_[first]);
+        if constexpr (arity == 2)
+        {
+          lambda(entity_type(get_ref_at_idx(first)), values_[first]);
+        }
+        else
+        {
+          lambda(values_[first]);
+        }
       }
     }
   }
@@ -778,6 +919,53 @@ private:
   vector_type values_;
   key_index   keys_;
   self_index  self_;
+  // Tracking for direct mapping mode
+  size_type count_present_ = 0; // number of valid entries when using direct mapping
+  size_type max_index_     = 0; // highest seen index when using direct mapping
+  // Presence bitfield for direct mapping storage (used for both sparse and normal vectors)
+  std::vector<std::uint64_t> present_;
+
+  // --- bitfield helpers (only meaningful for has_direct_mapping) ---
+  static constexpr size_type word_mask  = 63;
+  static constexpr size_type word_shift = 6;
+
+  static constexpr auto word_index(size_type bit) noexcept -> size_type
+  {
+    return bit >> word_shift;
+  }
+
+  static constexpr auto bit_mask(size_type bit) noexcept -> std::uint64_t
+  {
+    return std::uint64_t{1} << (bit & word_mask);
+  }
+
+  void ensure_bit_capacity(size_type bit)
+  {
+    auto need = static_cast<size_type>(word_index(bit) + 1);
+    if (present_.size() < need)
+    {
+      present_.resize(need, 0);
+    }
+  }
+
+  void set_present(size_type bit)
+  {
+    ensure_bit_capacity(bit);
+    present_[word_index(bit)] |= bit_mask(bit);
+  }
+  void clear_present(size_type bit) noexcept
+  {
+    auto wi = word_index(bit);
+    if (wi < present_.size())
+    {
+      present_[wi] &= ~bit_mask(bit);
+    }
+  }
+  auto test_present(size_type bit) const noexcept -> bool
+  {
+    auto wi = word_index(bit);
+    return wi < present_.size() && ((present_[wi] & bit_mask(bit)) != 0);
+  }
 };
 
 } // namespace ouly::ecs

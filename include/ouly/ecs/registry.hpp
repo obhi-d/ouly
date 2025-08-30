@@ -3,8 +3,8 @@
 
 #include "ouly/ecs/detail/registry_defs.hpp"
 #include "ouly/ecs/entity.hpp"
-#include <algorithm>
 #include "ouly/utility/user_config.hpp"
+#include <algorithm>
 #include <span>
 
 namespace ouly::ecs
@@ -156,7 +156,9 @@ public:
   auto is_valid(type l) const noexcept -> bool
     requires(!std::is_same_v<revision_type, void>)
   {
-    return static_cast<revision_type>(l.revision()) == base::revisions_[l.get()];
+    auto idx = l.get();
+    auto cur = idx < base::revisions_.size() ? base::revisions_[idx] : static_cast<revision_type>(0);
+    return static_cast<revision_type>(l.revision()) == cur;
   }
 
   /**

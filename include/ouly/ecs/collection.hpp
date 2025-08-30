@@ -100,6 +100,9 @@ public:
     {
       return *this;
     }
+    // Free any existing allocated pages before copying
+    clear();
+    shrink_to_fit();
     constexpr auto bit_page_size = sizeof(storage) * (pool_size >> 3);
     constexpr auto haz_page_size = sizeof(storage) * pool_size;
 
@@ -215,12 +218,16 @@ public:
   {
     auto idx = l.get();
     max_lnk_ = std::max(idx, max_lnk_);
-    set_bit(idx);
-    if constexpr (has_revision)
+    // Only insert if not already present
+    if (!is_bit_set(idx))
     {
-      set_hazard(idx, static_cast<uint8_t>(l.revision()));
+      set_bit(idx);
+      if constexpr (has_revision)
+      {
+        set_hazard(idx, static_cast<uint8_t>(l.revision()));
+      }
+      length_++;
     }
-    length_++;
   }
 
   /**
@@ -240,12 +247,15 @@ public:
   void erase(entity_type l) noexcept
   {
     auto idx = l.get();
-    if constexpr (has_revision)
+    if (is_bit_set(idx))
     {
-      validate_hazard(idx, static_cast<uint8_t>(l.revision()));
+      if constexpr (has_revision)
+      {
+        validate_hazard(idx, static_cast<uint8_t>(l.revision()));
+      }
+      unset_bit(idx);
+      length_--;
     }
-    unset_bit(idx);
-    length_--;
   }
 
   /**
@@ -262,6 +272,11 @@ public:
   auto size() const noexcept -> size_type
   {
     return length_;
+  }
+
+  [[nodiscard]] auto empty() const noexcept -> bool
+  {
+    return length_ == 0;
   }
 
   auto capacity() const noexcept -> size_type

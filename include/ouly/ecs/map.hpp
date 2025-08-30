@@ -308,6 +308,17 @@ public:
   }
 
   /**
+   * @brief Gets the entity object at the specified dense index
+   * @param dense_index The dense index to retrieve the entity from
+   * @return The entity object at the specified dense index
+   * @note No bounds checking is performed. Ensure dense_index < size().
+   */
+  [[nodiscard]] auto entity_at(size_type dense_index) const noexcept -> entity_type
+  {
+    return entity_type(self_.get(dense_index));
+  }
+
+  /**
    * @brief Returns a const reference to the internal keys container
    * @details This function is only available when the class does not use direct mapping
    * @return Const reference to the container holding the keys
@@ -356,7 +367,7 @@ public:
     if (keys_.contains(idx))
     {
       auto val = keys_.get(idx);
-      return self_.get(val) == l.value();
+      return self_.get_if(val) == l.value();
     }
     return false;
   }
@@ -444,10 +455,16 @@ private:
 
   auto erase_at(entity_type l) noexcept -> size_type
   {
-    auto lnk                                                = l.get();
-    auto item_id                                            = keys_.get(lnk);
-    keys_.get(lnk)                                          = tombstone;
-    keys_.get(entity_type(self_.best_erase(item_id)).get()) = item_id;
+    auto lnk       = l.get();
+    auto item_id   = keys_.get(lnk);
+    keys_.get(lnk) = tombstone;
+    // best_erase moves the last dense element to item_id and returns the moved value
+    auto moved = self_.best_erase(item_id);
+    if (item_id < self_.size())
+    {
+      // Only update mapping if we actually moved an element into item_id
+      keys_.get(entity_type(moved).get()) = item_id;
+    }
     return item_id;
   }
 
