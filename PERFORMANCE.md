@@ -1,11 +1,22 @@
 # OULY Performance Tracking
 
-**Generated:** 2025-08-30 11:10:57 UTC
+**Generated:** 2025-08-30 20:18:29 UTC
 
 ## 📊 Latest Performance Results
 
 **Build Number:** 112
 **Commit Hash:** 3a10444a
+
+### Allocator Performance
+
+| Compiler | Benchmark | Median Time (ns) | Ops/sec | Error % |
+|----------|-----------|------------------|---------|---------|
+| clang-18 | ts_shared_linear_single_thread | 6.51 | 153609831 | 0.00 |
+| clang-18 | ts_thread_local_single_thread | 3.91 | 255754476 | 0.00 |
+| clang-18 | coalescing_arena_alloc_dealloc | 220.21 | 4541120 | 0.00 |
+| gcc-14 | ts_shared_linear_single_thread | 6.10 | 163934426 | 0.00 |
+| gcc-14 | ts_thread_local_single_thread | 4.30 | 232558140 | 0.00 |
+| gcc-14 | coalescing_arena_alloc_dealloc | 194.77 | 5134261 | 0.00 |
 
 ### Overhead Comparison
 
@@ -31,17 +42,6 @@
 | gcc-4.2 | SuspensionOverhead_V2 | 50111400.20 | 20 | 0.00 |
 | gcc-4.2 | CoroutineMemory_V1 | 8650486.80 | 116 | 0.00 |
 | gcc-4.2 | CoroutineMemory_V2 | 8558736.30 | 117 | 0.00 |
-
-### Allocator Performance
-
-| Compiler | Benchmark | Median Time (ns) | Ops/sec | Error % |
-|----------|-----------|------------------|---------|---------|
-| clang-18 | ts_shared_linear_single_thread | 6.51 | 153609831 | 0.00 |
-| clang-18 | ts_thread_local_single_thread | 3.91 | 255754476 | 0.00 |
-| clang-18 | coalescing_arena_alloc_dealloc | 220.21 | 4541120 | 0.00 |
-| gcc-14 | ts_shared_linear_single_thread | 6.10 | 163934426 | 0.00 |
-| gcc-14 | ts_thread_local_single_thread | 4.30 | 232558140 | 0.00 |
-| gcc-14 | coalescing_arena_alloc_dealloc | 194.77 | 5134261 | 0.00 |
 
 ### Scheduler Comparison
 
