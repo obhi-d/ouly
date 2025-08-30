@@ -108,7 +108,9 @@ struct workgroup
 
     if (per_worker_queues_[worker_offset].emplace(item))
     {
-      tally_.fetch_add(1, std::memory_order_relaxed);
+      // Publish the increase in available work with release semantics so
+      // threads performing acquire loads observe the update reliably.
+      tally_.fetch_add(1, std::memory_order_release);
       return true;
     }
 
@@ -128,7 +130,9 @@ struct workgroup
 
   void sink_one_work() noexcept
   {
-    tally_.fetch_sub(1, std::memory_order_relaxed);
+    // Use release to pair with acquire loads in has_work_strong();
+    // this prevents the scheduler from prematurely observing no work.
+    tally_.fetch_sub(1, std::memory_order_release);
   }
 
   [[nodiscard]] auto has_work() const noexcept -> bool
