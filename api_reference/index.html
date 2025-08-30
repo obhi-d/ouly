@@ -2771,6 +2771,11 @@ The function:<ul class="simple">
 <dd></dd></dl>
 
 <dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK4ouly3ecs10collection5emptyEv">
+<span id="_CPPv3NK4ouly3ecs10collection5emptyEv"></span><span id="_CPPv2NK4ouly3ecs10collection5emptyEv"></span><span id="ouly::ecs::collection::emptyC"></span><span class="target" id="classouly_1_1ecs_1_1collection_1a53218f2e9e922a3b8c6993ed80dfd02e"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">empty</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><span class="kt"><span class="pre">bool</span></span><a class="headerlink" href="#_CPPv4NK4ouly3ecs10collection5emptyEv" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4NK4ouly3ecs10collection8capacityEv">
 <span id="_CPPv3NK4ouly3ecs10collection8capacityEv"></span><span id="_CPPv2NK4ouly3ecs10collection8capacityEv"></span><span id="ouly::ecs::collection::capacityC"></span><span class="target" id="classouly_1_1ecs_1_1collection_1ad5252d2eb17c57aa223f5ce3acfcb7a8"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">capacity</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N4ouly3ecs10collection9size_typeE" title="ouly::ecs::collection::size_type"><span class="n"><span class="pre">size_type</span></span></a><a class="headerlink" href="#_CPPv4NK4ouly3ecs10collection8capacityEv" title="Link to this definition"></a><br /></dt>
 <dd></dd></dl>
@@ -3417,6 +3422,24 @@ This allows iteration over the dense array to access all stored entities in orde
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>The entity value at the specified dense index</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK4ouly3ecs3map9entity_atE9size_type">
+<span id="_CPPv3NK4ouly3ecs3map9entity_atE9size_type"></span><span id="_CPPv2NK4ouly3ecs3map9entity_atE9size_type"></span><span id="ouly::ecs::map::entity_at__size_typeC"></span><span class="target" id="classouly_1_1ecs_1_1map_1a201530fc6886bfe83eaad948796b9c3b"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">entity_at</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N4ouly3ecs3map9size_typeE" title="ouly::ecs::map::size_type"><span class="n"><span class="pre">size_type</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">dense_index</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N4ouly3ecs3map11entity_typeE" title="ouly::ecs::map::entity_type"><span class="n"><span class="pre">entity_type</span></span></a><a class="headerlink" href="#_CPPv4NK4ouly3ecs3map9entity_atE9size_type" title="Link to this definition"></a><br /></dt>
+<dd><p>Gets the entity object at the specified dense index. </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>No bounds checking is performed. Ensure dense_index &lt; <a class="reference internal" href="#classouly_1_1ecs_1_1map_1ad6c1bfacd19b5d489a31cb803ec39887"><span class="std std-ref">size()</span></a>. </p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>dense_index</strong> – The dense index to retrieve the entity from </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The entity object at the specified dense index </p>
 </dd>
 </dl>
 </dd></dl>
@@ -4167,6 +4190,11 @@ The function:<ul class="simple">
 <dl class="cpp function">
 <dt class="sig sig-object cpp">
 <span class="target" id="classouly_1_1ecs_1_1collection_1a9c87e86fb8f12734b04a0517ee6f9979"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">size</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N4ouly3ecs10collection9size_typeE" title="ouly::ecs::collection::size_type"><span class="n"><span class="pre">size_type</span></span></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp">
+<span class="target" id="classouly_1_1ecs_1_1collection_1a53218f2e9e922a3b8c6993ed80dfd02e"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">empty</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><span class="kt"><span class="pre">bool</span></span><br /></dt>
 <dd></dd></dl>
 
 <dl class="cpp function">
