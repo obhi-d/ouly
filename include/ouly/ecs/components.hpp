@@ -904,7 +904,6 @@ private:
       }
       return &cont.values_[cont.keys_.get(idx)];
     }
-    return {};
   }
 
   template <typename T>
