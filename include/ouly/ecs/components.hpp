@@ -257,14 +257,7 @@ public:
    */
   auto range() const noexcept -> size_type
   {
-    if constexpr (has_direct_mapping)
-    {
-      return max_index_ + 1;
-    }
-    else
-    {
-      return static_cast<size_type>(values_.size());
-    }
+    return static_cast<size_type>(values_.size());
   }
 
   auto data() -> vector_type&
