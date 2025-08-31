@@ -61,38 +61,40 @@ inline void scheduler::do_work(workgroup_id id, worker_id thread, ouly::detail::
 
 void scheduler::busy_work(worker_id thread) noexcept
 {
-  // Optimized work stealing with adaptive attempts
-  constexpr uint32_t min_attempts      = 1;
-  constexpr uint32_t max_attempts      = 3;
-  constexpr uint32_t failure_threshold = 5;
+  // Per-worker exponential backoff on idle, reset when work is done
+  constexpr uint32_t quick_attempts      = 3U;
+  constexpr uint32_t max_backoff_pow     = 16U;   // cap at 2^16
+  constexpr uint32_t max_pause_spins     = 1024U; // cap pause spins per call
+  constexpr uint32_t yield_after_backoff = 64U;
+  auto&              backoff             = workers_[thread.get_index()].get().busy_backoff_;
 
-  // Use thread_local failure tracking for better performance
-  thread_local uint32_t local_recent_failures = 0;
-  uint32_t              attempts = (local_recent_failures > failure_threshold) ? min_attempts : max_attempts;
-
-  for (uint32_t attempt = 0; attempt < attempts; ++attempt)
+  // Try a few attempts quickly before backing off more
+  for (uint32_t attempt = 0; attempt < quick_attempts; ++attempt)
   {
     if (work(thread)) [[likely]]
     {
       if (thread.get_index() == 0)
       {
-        auto& worker = workers_[0].get();
-        // reset the context
+        auto& worker            = workers_[0].get();
         worker.current_context_ = &worker.contexts_[0];
       }
-      local_recent_failures = std::max(0U, local_recent_failures - 1);
-      return; // Found and executed work
+      backoff = 0; // reset backoff after successful work
+      return;
     }
-
-    // Shorter pause for first attempts, longer for subsequent ones
-    if (attempt < attempts - 1)
-    {
-      ouly::detail::pause_exec();
-    }
+    ouly::detail::pause_exec();
   }
 
-  // No work found, increment failure count
-  local_recent_failures++;
+  // Escalate backoff if still idle
+  backoff        = std::min<uint32_t>(backoff == 0 ? 1U : backoff * 2U, 1U << max_backoff_pow);
+  uint32_t spins = std::min<uint32_t>(backoff, max_pause_spins);
+  for (uint32_t i = 0; i < spins; ++i)
+  {
+    ouly::detail::pause_exec();
+  }
+  if (backoff > yield_after_backoff)
+  {
+    std::this_thread::yield();
+  }
 }
 
 void scheduler::run_worker(worker_id thread)
@@ -322,6 +324,7 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
   workers_      = std::make_unique<aligned_worker[]>(worker_count_);
   group_ranges_ = std::make_unique<ouly::detail::v1::group_range[]>(worker_count_);
   wake_data_    = std::make_unique<aligned_wake_data[]>(worker_count_);
+  // per-worker backoff is stored in each worker structure; no global init required
 
   threads_.reserve(worker_count_ - 1);
 

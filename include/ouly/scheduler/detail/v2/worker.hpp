@@ -43,6 +43,8 @@ private:
   friend class ouly::v2::scheduler;
 
   task_context current_context_;
+  // Per-worker adaptive backoff counter for busy-wait
+  uint32_t busy_backoff_ = 0;
 };
 
 } // namespace ouly::detail::v2

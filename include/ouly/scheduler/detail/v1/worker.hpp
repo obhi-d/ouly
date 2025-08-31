@@ -51,6 +51,9 @@ struct worker
   worker_id min_steal_friend_id_ = worker_id{0};
   worker_id max_steal_friend_id_ = worker_id{0};
 
+  // Per-worker adaptive backoff counter for busy-wait
+  uint32_t busy_backoff_ = 0;
+
   ouly::v1::task_context* current_context_ = nullptr;
 
   // No local queues needed - work is organized per workgroup per worker
