@@ -14,6 +14,7 @@
 #include <new>
 #include <semaphore>
 #include <thread>
+#include <vector>
 
 namespace ouly::inline v2
 {
@@ -315,6 +316,8 @@ private:
 
   uint32_t worker_count_    = 0;
   uint32_t workgroup_count_ = 0;
+
+  // Per-worker adaptive backoff is stored inline in each worker
 };
 
 } // namespace ouly::inline v2

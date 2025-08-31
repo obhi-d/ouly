@@ -1,6 +1,6 @@
-
-
+#ifndef OULY_ASSERT
 #define OULY_ASSERT(expr)
+#endif
 
 #include "ouly/scheduler/flow_graph.hpp"
 #include "ouly/scheduler/scheduler.hpp"
@@ -239,6 +239,69 @@ TEST_CASE("flow_graph multiple tasks per node", "[flow_graph][scheduler]")
   REQUIRE(node2_task_count.load() == 3);
   REQUIRE(total_executions.load() == 8);
   REQUIRE(fails.load() == 0); // Ensure no tasks in node2 executed before node1 completed
+
+  scheduler.end_execution();
+}
+
+TEST_CASE("flow_graph main-thread-only nodes execute on start thread", "[flow_graph][scheduler][main_thread]")
+{
+  using SchedulerType = ouly::v2::scheduler;
+  flow_graph<SchedulerType> graph;
+
+  SchedulerType scheduler;
+  scheduler.create_group(default_workgroup_id, 0, 2);
+  scheduler.begin_execution();
+
+  std::thread::id  start_thread;
+  std::thread::id  main_node_thread;
+  std::thread::id  worker_node_thread;
+  std::atomic<int> order{0};
+  int              a_order{-1}, b_order{-1}, c_order{-1};
+
+  auto a = graph.create_node();             // worker node
+  auto b = graph.create_main_thread_node(); // must run on start thread
+  auto c = graph.create_node();             // worker node
+
+  graph.connect(a, b);
+  graph.connect(b, c);
+
+  graph.add(a,
+            [&](auto const& ctx)
+            {
+              (void)ctx;
+              worker_node_thread = std::this_thread::get_id();
+              a_order            = order++;
+            });
+
+  graph.add(b,
+            [&](auto const& ctx)
+            {
+              (void)ctx;
+              main_node_thread = std::this_thread::get_id();
+              b_order          = order++;
+            });
+
+  graph.add(c,
+            [&](auto const& ctx)
+            {
+              (void)ctx;
+              c_order = order++;
+            });
+
+  auto ctx     = SchedulerType::context_type::this_context::get();
+  start_thread = std::this_thread::get_id();
+  graph.start(ctx);
+  graph.cooperative_wait(ctx);
+
+  REQUIRE(a_order != -1);
+  REQUIRE(b_order != -1);
+  REQUIRE(c_order != -1);
+  REQUIRE(a_order < b_order);
+  REQUIRE(b_order < c_order);
+  // b must run on the calling thread
+  REQUIRE(main_node_thread == start_thread);
+  // a likely runs on a worker thread and can differ from start thread
+  // (we don't assert inequality strictly to avoid flakiness if start thread participates)
 
   scheduler.end_execution();
 }

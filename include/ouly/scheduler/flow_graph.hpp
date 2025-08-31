@@ -9,8 +9,10 @@
 #include <atomic>
 #include <cstdint>
 #include <limits>
+#include <mutex>
 #include <semaphore>
 #include <span>
+#include <thread>
 #include <vector>
 namespace ouly
 {
@@ -166,6 +168,21 @@ public:
   }
 
   /**
+   * @brief Create a node that will execute on the main/start thread
+   *
+   * Tasks added to this node will be executed inline on the thread that calls
+   * start() and subsequently wait()/cooperative_wait(). Dependencies are fully
+   * respected, but tasks within such a node execute sequentially.
+   */
+  auto create_main_thread_node() -> node_id
+  {
+    auto id = create_node(default_workgroup_id);
+    nodes_[id.value()].set_main_thread_only();
+    inline_nodes_.push_back(id.value());
+    return id;
+  }
+
+  /**
    * @brief Add a task to a specific node
    *
    * Adds a task lambda to the specified node. Multiple tasks can be added to the
@@ -248,10 +265,15 @@ public:
   {
     OULY_ASSERT(!started_.load(std::memory_order_acquire));
 
+    // mark the thread that initiated start; inline nodes will run here
+    main_worker_id_              = ctx.get_worker();
+    total_inline_nodes_executed_ = 0;
+
     for (uint32_t node = 0; node < nodes_.size(); ++node)
     {
       nodes_[node].reset_dependencies(dependency_counts_[node]);
       nodes_[node].reset_run_count();
+      nodes_[node].set_already_executed(false);
     }
 
     uint32_t total_tasks = 0;
@@ -260,6 +282,13 @@ public:
       total_tasks += nodes_[i].get_valid_task_count();
     }
     total_tasks_ = total_tasks;
+
+    if (total_tasks_ == 0)
+    {
+      // If there are no tasks, mark as done immediately
+      done_.release();
+      return;
+    }
 
     // Initialize dependency counts and find ready nodes
     remaining_tasks_.store(total_tasks_, std::memory_order_relaxed);
@@ -270,7 +299,30 @@ public:
     {
       if (dependency_counts_[i] == 0)
       {
-        execute_node(i, ctx);
+        // For main-thread nodes, enqueue for inline execution; otherwise submit to scheduler
+        if (!nodes_[i].is_main_thread_only())
+        {
+          execute_node(i, ctx);
+        }
+      }
+    }
+
+    poll_inline_nodes(ctx);
+  }
+
+  void poll_inline_nodes(context_type const& ctx)
+  {
+    if (inline_nodes_.size() == total_inline_nodes_executed_)
+    {
+      return;
+    }
+
+    for (auto node_index : inline_nodes_)
+    {
+      auto& node = nodes_[node_index];
+      if (!node.is_already_executed() && !node.has_pending_dependencies())
+      {
+        execute_node_inline(node_index, ctx);
       }
     }
   }
@@ -293,12 +345,14 @@ public:
     {
       return;
     }
+    // If there are no inline nodes, we can defer to scheduler's cooperative wait
+    if (inline_nodes_.empty())
+    {
+      ctx.cooperative_wait(done_);
+      return;
+    }
 
-    ctx.cooperative_wait(done_);
-
-    // Reset state for reusability
-    started_.store(false, std::memory_order_relaxed);
-    remaining_tasks_.store(0, std::memory_order_relaxed);
+    drive_inline_until_done(ctx);
   }
 
   /**
@@ -316,11 +370,18 @@ public:
       return;
     }
 
-    done_.acquire();
+    // If there are no inline nodes, we can defer to scheduler's cooperative wait
+    if (inline_nodes_.empty())
+    {
+      done_.acquire();
+      return;
+    }
 
-    // Reset state for reusability
-    started_.store(false, std::memory_order_relaxed);
-    remaining_tasks_.store(0, std::memory_order_relaxed);
+    // With inline nodes present, block while driving them to completion on the calling thread
+    // Note: tasks will execute on the same thread that called start() if wait() is invoked there too.
+    // It's recommended to call wait()/cooperative_wait() from the same thread that called start().
+    // Otherwise, inline tasks will execute on the thread calling wait().
+    drive_inline_until_done(context_type::this_context::get());
   }
 
 private:
@@ -341,7 +402,8 @@ private:
     /// Custom move constructor to handle atomic members properly
     task_node(task_node&& other) noexcept
         : workgroup_(other.workgroup_), tasks_(std::move(other.tasks_)), next_nodes_(std::move(other.next_nodes_)),
-          pending_dependencies_(other.pending_dependencies_.load(std::memory_order_relaxed))
+          pending_dependencies_(other.pending_dependencies_.load(std::memory_order_relaxed)),
+          is_main_thread_only_(other.is_main_thread_only_), is_already_executed_(other.is_already_executed_)
     {}
 
     /// Custom move assignment operator for atomic member handling
@@ -354,6 +416,8 @@ private:
         next_nodes_ = std::move(other.next_nodes_);
         pending_dependencies_.store(other.pending_dependencies_.load(std::memory_order_relaxed),
                                     std::memory_order_relaxed);
+        is_main_thread_only_ = other.is_main_thread_only_;
+        is_already_executed_ = other.is_already_executed_;
       }
       return *this;
     }
@@ -395,6 +459,26 @@ private:
     void set_workgroup(workgroup_id group) noexcept
     {
       workgroup_ = group;
+    }
+
+    void set_main_thread_only() noexcept
+    {
+      is_main_thread_only_ = true;
+    }
+
+    [[nodiscard]] auto is_main_thread_only() const noexcept -> bool
+    {
+      return is_main_thread_only_;
+    }
+
+    void set_already_executed(bool value = true) noexcept
+    {
+      is_already_executed_ = value;
+    }
+
+    [[nodiscard]] auto is_already_executed() const noexcept -> bool
+    {
+      return is_already_executed_;
     }
 
     /// Get the assigned workgroup ID
@@ -473,15 +557,21 @@ private:
     ouly::small_vector<uint32_t, AvgDepCount> next_nodes_;              ///< Successor node IDs
     std::atomic<uint32_t>                     pending_dependencies_{0}; ///< Number of unfinished dependencies
     std::atomic_uint32_t                      run_count_{0};            ///< Completed task count in this node
+    bool                                      is_main_thread_only_{false};
+    bool                                      is_already_executed_{false};
   };
 
   // Graph state
-  ouly::small_vector<task_node, AvgNodeCount> nodes_;              ///< All nodes in the graph
-  ouly::small_vector<uint32_t, AvgNodeCount>  dependency_counts_;  ///< Initial dependency count per node
-  uint32_t                                    total_tasks_{0};     ///< Total number of tasks across all nodes
-  std::atomic<uint32_t>                       remaining_tasks_{0}; ///< Remaining unfinished tasks
-  std::atomic_bool                            started_{false};     ///< Whether graph execution has started
-  std::binary_semaphore                       done_{0};            ///< Signaled when all tasks complete
+  ouly::small_vector<task_node, AvgNodeCount> nodes_;             ///< All nodes in the graph
+  ouly::small_vector<uint32_t, AvgNodeCount>  dependency_counts_; ///< Initial dependency count per node
+  ouly::small_vector<uint32_t, AvgNodeCount>  inline_nodes_;      ///< Temporary storage for dependency updates
+  uint32_t                                    total_tasks_{0};    ///< Total number of tasks across all nodes
+
+  uint32_t              total_inline_nodes_executed_{0}; ///< Total number of inline nodes executed
+  std::atomic<uint32_t> remaining_tasks_{0};             ///< Remaining unfinished tasks
+  std::atomic_bool      started_{false};                 ///< Whether graph execution has started
+  std::binary_semaphore done_{0};                        ///< Signaled when all tasks complete
+  worker_id             main_worker_id_;
 
   /// Execute all tasks in a specific node
   void execute_node(uint32_t node_index, context_type const& ctx)
@@ -524,6 +614,51 @@ private:
     }
   }
 
+  // Execute a node's tasks inline on the main/start thread
+  void execute_node_inline(uint32_t node_index, context_type const& ctx)
+  {
+    auto& node  = nodes_[node_index];
+    auto  tasks = node.get_tasks();
+
+    total_inline_nodes_executed_++;
+    node.set_already_executed();
+
+    if (node.has_no_tasks())
+    {
+      notify_successors(node_index, ctx);
+      // no remaining_tasks_ change for empty nodes
+      return;
+    }
+
+    for (uint32_t i = 0; i < tasks.size(); ++i)
+    {
+      if (!tasks[i])
+      {
+        continue;
+      }
+      // Execute sequentially
+      bool is_last = node.execute_task(i, ctx);
+      if (remaining_tasks_.fetch_sub(1, std::memory_order_acq_rel) == 1)
+      {
+        done_.release();
+      }
+      if (is_last)
+      {
+        notify_successors(node_index, ctx);
+      }
+    }
+  }
+
+  // Drive inline node execution on the calling thread until all tasks complete
+  void drive_inline_until_done(context_type const& ctx)
+  {
+    while (!done_.try_acquire())
+    {
+      poll_inline_nodes(ctx);
+      ctx.get_scheduler().busy_work(ctx);
+    }
+  }
+
   /// Notify successor nodes when a node completes
   void notify_successors(uint32_t node_index, context_type const& ctx)
   {
@@ -543,8 +678,11 @@ private:
         auto& successor = nodes_[successor_id];
         if (successor.decrement_dependencies() == 0)
         {
-          // All dependencies satisfied, execute this node
-          execute_node(successor_id, ctx);
+          // All dependencies satisfied
+          if (!successor.is_main_thread_only())
+          {
+            execute_node(successor_id, ctx);
+          }
         }
       }
     }
