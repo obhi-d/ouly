@@ -293,6 +293,7 @@ private:
 
   /*  */
   void               finish_pending_tasks();
+  void               reset_to_workgroup(worker_id thread, workgroup_id group);
   [[nodiscard]] auto has_work() const -> bool;
 
   struct worker_initializer;
