@@ -188,6 +188,9 @@ public:
   }
 
 private:
+  template <typename U, typename Del2>
+  friend class intrusive_ptr;
+
   explicit constexpr intrusive_ptr(std::false_type /*unused*/, T* self) noexcept : self_(self) {}
 
   T* self_ = nullptr;
