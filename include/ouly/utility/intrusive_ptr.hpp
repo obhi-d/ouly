@@ -7,6 +7,7 @@
 #include <concepts>
 #include <memory>
 #include <type_traits>
+#include <utility>
 
 namespace ouly
 {
@@ -172,15 +173,38 @@ public:
 
   auto operator<=>(intrusive_ptr const&) const noexcept = default;
 
+  template <typename U, template <typename> typename TDeleter>
+  friend auto static_pointer_cast(intrusive_ptr<U, TDeleter<U>>&& r) noexcept -> intrusive_ptr<T, TDeleter<T>>
+  {
+    auto p = static_cast<typename intrusive_ptr<T, TDeleter<T>>::element_type*>(std::move(r).release());
+    return intrusive_ptr<T, TDeleter<T>>(std::false_type{}, p);
+  }
+
+  template <typename U, typename Deleter>
+  friend auto static_pointer_cast(intrusive_ptr<U, Deleter>&& r) noexcept -> intrusive_ptr<T, Deleter>
+  {
+    auto p = static_cast<typename intrusive_ptr<T, Deleter>::element_type*>(std::move(r).release());
+    return intrusive_ptr<T, Deleter>(std::false_type{}, p);
+  }
+
 private:
+  explicit constexpr intrusive_ptr(std::false_type /*unused*/, T* self) noexcept : self_(self) {}
+
   T* self_ = nullptr;
 };
 
-template <typename T, typename U>
-auto static_pointer_cast(const intrusive_ptr<U>& r) noexcept -> intrusive_ptr<T>
+template <typename T, typename U, template <typename> typename Del>
+auto static_pointer_cast(const intrusive_ptr<U, Del<U>>& r) noexcept -> intrusive_ptr<T, Del<T>>
 {
-  auto p = static_cast<typename intrusive_ptr<T>::element_type*>(r.get());
-  return intrusive_ptr<T>(p);
+  auto p = static_cast<typename intrusive_ptr<T, Del<T>>::element_type*>(r.get());
+  return intrusive_ptr<T, Del<T>>(p);
+}
+
+template <typename T, typename U, typename Del>
+auto static_pointer_cast(const intrusive_ptr<U, Del>& r) noexcept -> intrusive_ptr<T, Del>
+{
+  auto p = static_cast<typename intrusive_ptr<T, Del>::element_type*>(r.get());
+  return intrusive_ptr<T, Del>(p);
 }
 
 } // namespace ouly
