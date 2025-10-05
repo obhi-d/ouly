@@ -889,9 +889,14 @@ public:
   using readonly_view  = data_view<value_type const>;
   using readwrite_view = data_view<value_type>;
 
-  auto view() const noexcept
+  auto c_view() const noexcept
   {
     return readonly_view(items_.data(), static_cast<size_type>(items_.size()));
+  }
+
+  auto view() const noexcept
+  {
+    return c_view();
   }
 
   auto view() noexcept
