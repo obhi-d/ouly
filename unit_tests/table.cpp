@@ -2,6 +2,7 @@
 #include "ouly/containers/table.hpp"
 #include "catch2/catch_all.hpp"
 #include "ouly/containers/soavector.hpp"
+#include <limits>
 #include <string>
 
 // NOLINTBEGIN
@@ -93,6 +94,80 @@ TEST_CASE("table: Test swap functionality", "[table][swap]")
   REQUIRE(table2[b1] == val_b1);
   REQUIRE(table2[b2] == val_b2);
   REQUIRE(table2[b3] == val_b3);
+}
+
+struct pod_entry
+{
+  std::uint32_t id;
+  std::uint32_t next;
+};
+
+TEST_CASE("table: POD erase with projection reuses indices", "[table][erase][projection]")
+{
+  ouly::table<pod_entry> table;
+
+  auto first  = table.emplace(pod_entry{1U, 10U});
+  auto second = table.emplace(pod_entry{2U, 20U});
+  auto third  = table.emplace(pod_entry{3U, 30U});
+
+  REQUIRE(table.size() == 3);
+
+  table.erase(second, &pod_entry::next);
+  REQUIRE(table.size() == 2);
+  REQUIRE(table[second].next == std::numeric_limits<std::uint32_t>::max());
+
+  table.erase(third, &pod_entry::next);
+  REQUIRE(table.size() == 1);
+  REQUIRE(table[third].next == second);
+
+  auto reuse_third = table.emplace(pod_entry{4U, 40U});
+  REQUIRE(reuse_third == third);
+  REQUIRE(table.size() == 2);
+  REQUIRE(table[reuse_third].id == 4U);
+  REQUIRE(table[reuse_third].next == 40U);
+
+  auto reuse_second = table.emplace(pod_entry{5U, 50U});
+  REQUIRE(reuse_second == second);
+  REQUIRE(table.size() == 3);
+  REQUIRE(table[reuse_second].id == 5U);
+  REQUIRE(table[reuse_second].next == 50U);
+
+  REQUIRE(table[first].id == 1U);
+  REQUIRE(table[first].next == 10U);
+}
+
+TEST_CASE("table: Projection policy stores free indices in member", "[table][erase][projection][policy]")
+{
+  ouly::table<pod_entry, &pod_entry::next> table;
+
+  auto first  = table.emplace(pod_entry{1U, 10U});
+  auto second = table.emplace(pod_entry{2U, 20U});
+  auto third  = table.emplace(pod_entry{3U, 30U});
+
+  REQUIRE(table.size() == 3);
+
+  table.erase(second);
+  REQUIRE(table.size() == 2);
+  REQUIRE(table[second].next == std::numeric_limits<std::uint32_t>::max());
+
+  table.erase(third);
+  REQUIRE(table.size() == 1);
+  REQUIRE(table[third].next == second);
+
+  auto reuse_third = table.emplace(pod_entry{4U, 40U});
+  REQUIRE(reuse_third == third);
+  REQUIRE(table.size() == 2);
+  REQUIRE(table[reuse_third].id == 4U);
+  REQUIRE(table[reuse_third].next == 40U);
+
+  auto reuse_second = table.emplace(pod_entry{5U, 50U});
+  REQUIRE(reuse_second == second);
+  REQUIRE(table.size() == 3);
+  REQUIRE(table[reuse_second].id == 5U);
+  REQUIRE(table[reuse_second].next == 50U);
+
+  REQUIRE(table[first].id == 1U);
+  REQUIRE(table[first].next == 10U);
 }
 
 // NOLINTEND
