@@ -6,8 +6,8 @@
 #include "ouly/reflection/detail/base_concepts.hpp"
 #include "ouly/reflection/detail/field_helpers.hpp"
 #include "ouly/utility/type_traits.hpp"
-#include "ouly/utility/utils.hpp"
 #include "ouly/utility/user_config.hpp"
+#include "ouly/utility/utils.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -73,14 +73,14 @@ public:
      std::conditional_t<IsConst, ouly::detail::tuple_of_cptrs<tuple_type>, ouly::detail::tuple_of_ptrs<tuple_type>>;
     using const_reference = ouly::detail::tuple_of_crefs<tuple_type>;
 
-    value_wrapper(auto... args) : pointer_{args...} {}
-    value_wrapper(pointer pointer_) : pointer_(pointer_) {}
+    value_wrapper(auto... args) : vw_pointer_{args...} {}
+    value_wrapper(pointer vw_pointer_) : vw_pointer_(vw_pointer_) {}
 
     auto operator=(value_type const& value) -> value_wrapper&
     {
-      [&]<std::size_t... I>(std::index_sequence<I...>)
+      [&]<std::size_t... I>(std::index_sequence<I...>) -> void
       {
-        ((std::get<I>(pointer_) = get_ref<I>(value)), ...);
+        ((std::get<I>(vw_pointer_) = get_ref<I>(value)), ...);
       }(std::make_index_sequence<field_count>());
       return *this;
     }
@@ -88,11 +88,11 @@ public:
     operator value_type() const
     {
       return std::apply(
-       [&](auto... arg)
+       [&](auto... arg) -> value_type
        {
          return value_type{*arg...};
        },
-       pointer_);
+       vw_pointer_);
     }
 
     auto get() const -> value_type
@@ -101,7 +101,7 @@ public:
     }
 
   private:
-    pointer pointer_ = {};
+    pointer vw_pointer_ = {};
   };
 
   template <bool const IsConst>
@@ -814,7 +814,7 @@ private:
   template <std::size_t I, typename T>
   static auto get_ref(T&& tup) -> auto&
   {
-    if constexpr (requires { ouly::detail::get_field_ref<I>(std::forward<T &&>(tup)); })
+    if constexpr (requires { ouly::detail::get_field_ref<I>(std::forward<T&&>(tup)); })
     {
       return ouly::detail::get_field_ref<I>(std::forward<T>(tup));
     }
@@ -1026,7 +1026,7 @@ private:
     if constexpr (!std::is_trivially_destructible_v<T>)
     {
       std::for_each(data, data + size,
-                    [](T& d)
+                    [](T& d) -> void
                     {
                       std::destroy_at(&d);
                     });
@@ -1133,7 +1133,7 @@ private:
   auto assign_move(soavector& x, std::false_type /*unused*/) -> soavector&
   {
     if constexpr (allocator_is_always_equal::value ||
-        static_cast<const allocator_type&>(x) == static_cast<const allocator_type&>(*this))
+                  static_cast<const allocator_type&>(x) == static_cast<const allocator_type&>(*this))
     {
       destroy_and_deallocate();
       data_       = x.data_;
