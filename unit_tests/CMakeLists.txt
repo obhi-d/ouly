@@ -209,7 +209,9 @@ add_executable(
 add_executable(bench_performance "bench_performance.cpp")
 add_executable(bench_scheduler_comparison "bench_scheduler_comparison.cpp")
 add_executable(bench_coroutine_comparison "bench_coroutine_comparison.cpp")
+add_executable(print_deduced_name "print_deduced_name.cpp")
 
+target_link_libraries(print_deduced_name ouly::ouly)
 target_link_libraries(bench_arena_allocator ouly::ouly nanobench::nanobench)
 target_compile_features(bench_arena_allocator PRIVATE cxx_std_20)
 
