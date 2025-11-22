@@ -76,6 +76,10 @@ extern T const xobj{};
 
 template <class T, class Fn>
 // NOLINTNEXTLINE
+[[nodiscard]] constexpr auto aggregate_lookup(Fn&& fn, T&& obj) noexcept -> decltype(auto);
+
+template <class T, class Fn>
+// NOLINTNEXTLINE
 [[nodiscard]] constexpr auto aggregate_lookup(Fn&& fn) noexcept -> decltype(auto)
 {
   return aggregate_lookup(std::forward<Fn>(fn), xobj<std::remove_cvref_t<T>>);

@@ -107,20 +107,22 @@ consteval auto deduce_field_name() -> decltype(auto)
 }
 
 template <Aggregate T>
-consteval auto get_field_names() noexcept -> decltype(auto)
+struct field_names_factory
 {
-  auto constexpr names = aggregate_lookup<T>(
+  static constexpr auto names = aggregate_lookup<T>(
    [](auto&&... args) constexpr -> decltype(auto)
    {
      return std::make_tuple(field_ref{args}...);
    });
+};
 
-  using tup_t = std::remove_cvref_t<decltype(names)>;
-
+template <Aggregate T>
+consteval auto get_field_names() noexcept -> decltype(auto)
+{
   return [&]<std::size_t... I>(std::index_sequence<I...>) constexpr -> decltype(auto)
   {
-    return std::make_tuple(deduce_field_name<T, std::get<I>(names)>()...);
-  }(std::make_index_sequence<std::tuple_size_v<tup_t>>());
+    return std::make_tuple(deduce_field_name<T, std::get<I>(field_names_factory<T>::names)>()...);
+  }(std::make_index_sequence<std::tuple_size_v<std::remove_cvref_t<decltype(field_names_factory<T>::names)>>>{});
 }
 
 template <Aggregate T>
@@ -206,18 +208,12 @@ auto transform_field_name(std::string_view name) -> std::string
 template <Aggregate T, typename Transform>
 auto get_cached_field_names() -> auto const&
 {
-  auto constexpr names = aggregate_lookup<T>(
-   [](auto&&... args) constexpr -> decltype(auto)
-   {
-     return std::make_tuple(field_ref{args}...);
-   });
+  constexpr auto raw_names = get_field_names<T>();
 
-  using tup_t = std::remove_cvref_t<decltype(names)>;
-
-  static auto field_names = [&]<std::size_t... I>(std::index_sequence<I...>) constexpr -> decltype(auto)
+  static auto field_names = [&]<std::size_t... I>(std::index_sequence<I...>)
   {
-    return std::make_tuple(transform_field_name<Transform>(deduce_field_name<T, std::get<I>(names)>())...);
-  }(std::make_index_sequence<std::tuple_size_v<tup_t>>());
+    return std::make_tuple(transform_field_name<Transform>(std::get<I>(raw_names))...);
+  }(std::make_index_sequence<std::tuple_size_v<std::remove_cvref_t<decltype(raw_names)>>>{});
 
   return field_names;
 }
