@@ -1,119 +1,119 @@
 # OULY Performance Tracking
 
-**Generated:** 2025-10-21 17:13:35 UTC
+**Generated:** 2025-11-22 20:17:49 UTC
 
 ## 📊 Latest Performance Results
 
-**Build Number:** 121
-**Commit Hash:** cbcadcad
-
-### Allocator Performance
-
-| Compiler | Benchmark | Median Time (ns) | Ops/sec | Error % |
-|----------|-----------|------------------|---------|---------|
-| clang-18 | ts_shared_linear_single_thread | 6.51 | 153609831 | 0.00 |
-| clang-18 | ts_thread_local_single_thread | 3.91 | 255754476 | 0.00 |
-| clang-18 | coalescing_arena_alloc_dealloc | 218.60 | 4574565 | 0.00 |
-| gcc-14 | ts_shared_linear_single_thread | 6.01 | 166389351 | 0.00 |
-| gcc-14 | ts_thread_local_single_thread | 4.30 | 232558140 | 0.00 |
-| gcc-14 | coalescing_arena_alloc_dealloc | 207.99 | 4807923 | 0.00 |
-
-### Overhead Comparison
-
-| Compiler | Benchmark | Median Time (ns) | Ops/sec | Error % |
-|----------|-----------|------------------|---------|---------|
-| gcc-14.2 | CoroutineCreation_V1 | 583311.90 | 1714 | 0.00 |
-| gcc-14.2 | CoroutineCreation_V2 | 564767.30 | 1771 | 0.00 |
-| gcc-14.2 | CoroutineSubmission_V1 | 166444.70 | 6008 | 0.00 |
-| gcc-14.2 | LambdaSubmission_V1 | 126549.30 | 7902 | 0.00 |
-| gcc-14.2 | CoroutineSubmission_V2 | 195403.80 | 5118 | 0.00 |
-| gcc-14.2 | LambdaSubmission_V2 | 157764.50 | 6339 | 0.00 |
-| gcc-14.2 | SuspensionOverhead_V1 | 50066768.20 | 20 | 0.00 |
-| gcc-14.2 | SuspensionOverhead_V2 | 50121317.90 | 20 | 0.00 |
-| gcc-14.2 | CoroutineMemory_V1 | 7308086.80 | 137 | 0.00 |
-| gcc-14.2 | CoroutineMemory_V2 | 7310653.60 | 137 | 0.00 |
-| gcc-4.2 | CoroutineCreation_V1 | 520444.30 | 1921 | 0.00 |
-| gcc-4.2 | CoroutineCreation_V2 | 515767.50 | 1939 | 0.00 |
-| gcc-4.2 | CoroutineSubmission_V1 | 275037.60 | 3636 | 0.00 |
-| gcc-4.2 | LambdaSubmission_V1 | 146922.80 | 6806 | 0.00 |
-| gcc-4.2 | CoroutineSubmission_V2 | 147260.30 | 6791 | 0.00 |
-| gcc-4.2 | LambdaSubmission_V2 | 146556.10 | 6823 | 0.00 |
-| gcc-4.2 | SuspensionOverhead_V1 | 50064449.20 | 20 | 0.00 |
-| gcc-4.2 | SuspensionOverhead_V2 | 50117787.80 | 20 | 0.00 |
-| gcc-4.2 | CoroutineMemory_V1 | 8555320.00 | 117 | 0.00 |
-| gcc-4.2 | CoroutineMemory_V2 | 8471135.90 | 118 | 0.00 |
-
-### Scheduler Comparison
-
-| Compiler | Benchmark | Median Time (ns) | Ops/sec | Error % |
-|----------|-----------|------------------|---------|---------|
-| gcc-4.2 | TaskSubmission_V1 | 150811.50 | 6631 | 0.00 |
-| gcc-4.2 | TaskSubmission_V2 | 149087.30 | 6707 | 0.00 |
-| gcc-4.2 | TaskSubmission_TBB | 244375.90 | 4092 | 0.00 |
-| gcc-4.2 | ParallelFor_VectorOps_V1 | 87788.70 | 11391 | 0.00 |
-| gcc-4.2 | ParallelFor_VectorOps_V2 | 88189.50 | 11339 | 0.00 |
-| gcc-4.2 | ParallelFor_VectorOps_TBB | 227186.00 | 4402 | 0.00 |
-| gcc-4.2 | MatrixOps_V1 | 65039.50 | 15375 | 0.00 |
-| gcc-4.2 | MatrixOps_V2 | 69279.07 | 14434 | 0.00 |
-| gcc-4.2 | MatrixOps_TBB | 78917.20 | 12672 | 0.00 |
-| gcc-4.2 | MixedWorkload_V1 | 240824.40 | 4152 | 0.00 |
-| gcc-4.2 | MixedWorkload_V2 | 238610.20 | 4191 | 0.00 |
-| gcc-4.2 | MixedWorkload_TBB | 264507.30 | 3781 | 0.00 |
-| gcc-4.2 | TaskThroughput_V1 | 60327522.70 | 17 | 0.00 |
-| gcc-4.2 | TaskThroughput_V2 | 60010318.20 | 17 | 0.00 |
-| gcc-4.2 | TaskThroughput_TBB | 59979189.60 | 17 | 0.00 |
-| gcc-4.2 | NestedParallel_V1 | 64269.30 | 15560 | 0.00 |
-| gcc-4.2 | NestedParallel_V2 | 64974.70 | 15391 | 0.00 |
-| gcc-14.2 | TaskSubmission_V1 | 144866.00 | 6903 | 0.00 |
-| gcc-14.2 | TaskSubmission_V2 | 145371.20 | 6879 | 0.00 |
-| gcc-14.2 | TaskSubmission_TBB | 232837.50 | 4295 | 0.00 |
-| gcc-14.2 | ParallelFor_VectorOps_V1 | 244070.50 | 4097 | 0.00 |
-| gcc-14.2 | ParallelFor_VectorOps_V2 | 272006.30 | 3676 | 0.00 |
-| gcc-14.2 | ParallelFor_VectorOps_TBB | 252924.80 | 3954 | 0.00 |
-| gcc-14.2 | MatrixOps_V1 | 146330.90 | 6834 | 0.00 |
-| gcc-14.2 | MatrixOps_V2 | 159882.20 | 6255 | 0.00 |
-| gcc-14.2 | MatrixOps_TBB | 154212.60 | 6485 | 0.00 |
-| gcc-14.2 | MixedWorkload_V1 | 607875.80 | 1645 | 0.00 |
-| gcc-14.2 | MixedWorkload_V2 | 509866.00 | 1961 | 0.00 |
-| gcc-14.2 | MixedWorkload_TBB | 443594.40 | 2254 | 0.00 |
-| gcc-14.2 | TaskThroughput_V1 | 51063317.90 | 20 | 0.00 |
-| gcc-14.2 | TaskThroughput_V2 | 51089465.30 | 20 | 0.00 |
-| gcc-14.2 | TaskThroughput_TBB | 51123727.00 | 20 | 0.00 |
-| gcc-14.2 | NestedParallel_V1 | 115998.50 | 8621 | 0.00 |
-| gcc-14.2 | NestedParallel_V2 | 117455.50 | 8514 | 0.00 |
+**Build Number:** 122
+**Commit Hash:** 9a4795dc
 
 ### Performance Comparison
 
 | Compiler | Benchmark | Median Time (ns) | Ops/sec | Error % |
 |----------|-----------|------------------|---------|---------|
-| gcc-14.2 | ParallelCompute_Coroutines_V1 | 100078801.10 | 10 | 0.00 |
-| gcc-14.2 | ParallelCompute_RegularTasks_V1 | 41064558.30 | 24 | 0.00 |
-| gcc-14.2 | ParallelCompute_Coroutines_V2 | 100093524.80 | 10 | 0.00 |
-| gcc-14.2 | ParallelCompute_RegularTasks_V2 | 41029472.80 | 24 | 0.00 |
-| gcc-14.2 | TaskChaining_Coroutines_V1 | 100241534.70 | 10 | 0.00 |
-| gcc-14.2 | TaskChaining_NestedSubmission_V1 | 1838530.80 | 544 | 0.00 |
-| gcc-14.2 | TaskChaining_Coroutines_V2 | 100262327.70 | 10 | 0.00 |
-| gcc-14.2 | TaskChaining_NestedSubmission_V2 | 1158795.60 | 863 | 0.00 |
-| gcc-14.2 | FanOutIn_Coroutines_V1 | 50061792.20 | 20 | 0.00 |
-| gcc-14.2 | FanOutIn_ParallelFor_V1 | 12685.70 | 78829 | 0.00 |
-| gcc-14.2 | FanOutIn_Coroutines_V2 | 50117135.70 | 20 | 0.00 |
-| gcc-14.2 | FanOutIn_ParallelFor_V2 | 12668.60 | 78935 | 0.00 |
-| gcc-14.2 | TaskChaining_TBB_Equivalent | 119081.30 | 8398 | 0.00 |
-| gcc-14.2 | FanOutIn_TBB_Equivalent | 18221.10 | 54881 | 0.00 |
-| gcc-4.2 | ParallelCompute_Coroutines_V1 | 100073600.10 | 10 | 0.00 |
-| gcc-4.2 | ParallelCompute_RegularTasks_V1 | 48100118.30 | 21 | 0.00 |
-| gcc-4.2 | ParallelCompute_Coroutines_V2 | 100090759.50 | 10 | 0.00 |
-| gcc-4.2 | ParallelCompute_RegularTasks_V2 | 48076172.00 | 21 | 0.00 |
-| gcc-4.2 | TaskChaining_Coroutines_V1 | 100226878.30 | 10 | 0.00 |
-| gcc-4.2 | TaskChaining_NestedSubmission_V1 | 1794799.50 | 557 | 0.00 |
-| gcc-4.2 | TaskChaining_Coroutines_V2 | 100276889.50 | 10 | 0.00 |
-| gcc-4.2 | TaskChaining_NestedSubmission_V2 | 1152607.70 | 868 | 0.00 |
-| gcc-4.2 | FanOutIn_Coroutines_V1 | 50064578.20 | 20 | 0.00 |
-| gcc-4.2 | FanOutIn_ParallelFor_V1 | 15277.30 | 65457 | 0.00 |
-| gcc-4.2 | FanOutIn_Coroutines_V2 | 50117566.80 | 20 | 0.00 |
-| gcc-4.2 | FanOutIn_ParallelFor_V2 | 14972.80 | 66788 | 0.00 |
-| gcc-4.2 | TaskChaining_TBB_Equivalent | 257827.80 | 3879 | 0.00 |
-| gcc-4.2 | FanOutIn_TBB_Equivalent | 18528.67 | 53970 | 0.00 |
+| gcc-4.2 | ParallelCompute_Coroutines_V1 | 100072895.20 | 10 | 0.00 |
+| gcc-4.2 | ParallelCompute_RegularTasks_V1 | 48070431.60 | 21 | 0.00 |
+| gcc-4.2 | ParallelCompute_Coroutines_V2 | 100090844.80 | 10 | 0.00 |
+| gcc-4.2 | ParallelCompute_RegularTasks_V2 | 48182803.20 | 21 | 0.00 |
+| gcc-4.2 | TaskChaining_Coroutines_V1 | 100223865.10 | 10 | 0.00 |
+| gcc-4.2 | TaskChaining_NestedSubmission_V1 | 1782623.50 | 561 | 0.00 |
+| gcc-4.2 | TaskChaining_Coroutines_V2 | 100264990.80 | 10 | 0.00 |
+| gcc-4.2 | TaskChaining_NestedSubmission_V2 | 1160285.70 | 862 | 0.00 |
+| gcc-4.2 | FanOutIn_Coroutines_V1 | 50064539.20 | 20 | 0.00 |
+| gcc-4.2 | FanOutIn_ParallelFor_V1 | 15274.50 | 65469 | 0.00 |
+| gcc-4.2 | FanOutIn_Coroutines_V2 | 50115162.20 | 20 | 0.00 |
+| gcc-4.2 | FanOutIn_ParallelFor_V2 | 14977.00 | 66769 | 0.00 |
+| gcc-4.2 | TaskChaining_TBB_Equivalent | 256850.20 | 3893 | 0.00 |
+| gcc-4.2 | FanOutIn_TBB_Equivalent | 18235.00 | 54840 | 0.00 |
+| gcc-14.2 | ParallelCompute_Coroutines_V1 | 100083174.80 | 10 | 0.00 |
+| gcc-14.2 | ParallelCompute_RegularTasks_V1 | 43897679.40 | 23 | 0.00 |
+| gcc-14.2 | ParallelCompute_Coroutines_V2 | 100117683.00 | 10 | 0.00 |
+| gcc-14.2 | ParallelCompute_RegularTasks_V2 | 43990557.90 | 23 | 0.00 |
+| gcc-14.2 | TaskChaining_Coroutines_V1 | 100379280.70 | 10 | 0.00 |
+| gcc-14.2 | TaskChaining_NestedSubmission_V1 | 2247560.60 | 445 | 0.00 |
+| gcc-14.2 | TaskChaining_Coroutines_V2 | 100324353.60 | 10 | 0.00 |
+| gcc-14.2 | TaskChaining_NestedSubmission_V2 | 1210235.30 | 826 | 0.00 |
+| gcc-14.2 | FanOutIn_Coroutines_V1 | 50069354.20 | 20 | 0.00 |
+| gcc-14.2 | FanOutIn_ParallelFor_V1 | 14139.64 | 70723 | 0.00 |
+| gcc-14.2 | FanOutIn_Coroutines_V2 | 50132615.20 | 20 | 0.00 |
+| gcc-14.2 | FanOutIn_ParallelFor_V2 | 16068.50 | 62234 | 0.00 |
+| gcc-14.2 | TaskChaining_TBB_Equivalent | 126662.00 | 7895 | 0.00 |
+| gcc-14.2 | FanOutIn_TBB_Equivalent | 15801.40 | 63286 | 0.00 |
+
+### Scheduler Comparison
+
+| Compiler | Benchmark | Median Time (ns) | Ops/sec | Error % |
+|----------|-----------|------------------|---------|---------|
+| gcc-4.2 | TaskSubmission_V1 | 155188.60 | 6444 | 0.00 |
+| gcc-4.2 | TaskSubmission_V2 | 155029.20 | 6450 | 0.00 |
+| gcc-4.2 | TaskSubmission_TBB | 168314.00 | 5941 | 0.00 |
+| gcc-4.2 | ParallelFor_VectorOps_V1 | 87922.00 | 11374 | 0.00 |
+| gcc-4.2 | ParallelFor_VectorOps_V2 | 88200.60 | 11338 | 0.00 |
+| gcc-4.2 | ParallelFor_VectorOps_TBB | 230361.80 | 4341 | 0.00 |
+| gcc-4.2 | MatrixOps_V1 | 65049.40 | 15373 | 0.00 |
+| gcc-4.2 | MatrixOps_V2 | 70041.70 | 14277 | 0.00 |
+| gcc-4.2 | MatrixOps_TBB | 79507.30 | 12577 | 0.00 |
+| gcc-4.2 | MixedWorkload_V1 | 297101.30 | 3366 | 0.00 |
+| gcc-4.2 | MixedWorkload_V2 | 430158.50 | 2325 | 0.00 |
+| gcc-4.2 | MixedWorkload_TBB | 307183.00 | 3255 | 0.00 |
+| gcc-4.2 | TaskThroughput_V1 | 60097989.30 | 17 | 0.00 |
+| gcc-4.2 | TaskThroughput_V2 | 60078287.40 | 17 | 0.00 |
+| gcc-4.2 | TaskThroughput_TBB | 60006889.20 | 17 | 0.00 |
+| gcc-4.2 | NestedParallel_V1 | 60789.40 | 16450 | 0.00 |
+| gcc-4.2 | NestedParallel_V2 | 64123.60 | 15595 | 0.00 |
+| gcc-14.2 | TaskSubmission_V1 | 140311.20 | 7127 | 0.00 |
+| gcc-14.2 | TaskSubmission_V2 | 138223.50 | 7235 | 0.00 |
+| gcc-14.2 | TaskSubmission_TBB | 187539.60 | 5332 | 0.00 |
+| gcc-14.2 | ParallelFor_VectorOps_V1 | 217436.90 | 4599 | 0.00 |
+| gcc-14.2 | ParallelFor_VectorOps_V2 | 221294.60 | 4519 | 0.00 |
+| gcc-14.2 | ParallelFor_VectorOps_TBB | 235134.40 | 4253 | 0.00 |
+| gcc-14.2 | MatrixOps_V1 | 103733.20 | 9640 | 0.00 |
+| gcc-14.2 | MatrixOps_V2 | 101646.10 | 9838 | 0.00 |
+| gcc-14.2 | MatrixOps_TBB | 110638.60 | 9038 | 0.00 |
+| gcc-14.2 | MixedWorkload_V1 | 442814.50 | 2258 | 0.00 |
+| gcc-14.2 | MixedWorkload_V2 | 816456.50 | 1225 | 0.00 |
+| gcc-14.2 | MixedWorkload_TBB | 452923.30 | 2208 | 0.00 |
+| gcc-14.2 | TaskThroughput_V1 | 54049060.20 | 19 | 0.00 |
+| gcc-14.2 | TaskThroughput_V2 | 54108027.80 | 18 | 0.00 |
+| gcc-14.2 | TaskThroughput_TBB | 53846518.10 | 19 | 0.00 |
+| gcc-14.2 | NestedParallel_V1 | 136133.70 | 7346 | 0.00 |
+| gcc-14.2 | NestedParallel_V2 | 136745.90 | 7313 | 0.00 |
+
+### Overhead Comparison
+
+| Compiler | Benchmark | Median Time (ns) | Ops/sec | Error % |
+|----------|-----------|------------------|---------|---------|
+| gcc-4.2 | CoroutineCreation_V1 | 520571.20 | 1921 | 0.00 |
+| gcc-4.2 | CoroutineCreation_V2 | 523311.30 | 1911 | 0.00 |
+| gcc-4.2 | CoroutineSubmission_V1 | 132668.50 | 7538 | 0.00 |
+| gcc-4.2 | LambdaSubmission_V1 | 137510.50 | 7272 | 0.00 |
+| gcc-4.2 | CoroutineSubmission_V2 | 152870.20 | 6541 | 0.00 |
+| gcc-4.2 | LambdaSubmission_V2 | 151398.40 | 6605 | 0.00 |
+| gcc-4.2 | SuspensionOverhead_V1 | 50064840.10 | 20 | 0.00 |
+| gcc-4.2 | SuspensionOverhead_V2 | 50113680.60 | 20 | 0.00 |
+| gcc-4.2 | CoroutineMemory_V1 | 8784520.90 | 114 | 0.00 |
+| gcc-4.2 | CoroutineMemory_V2 | 8557265.90 | 117 | 0.00 |
+| gcc-14.2 | CoroutineCreation_V1 | 441395.00 | 2266 | 0.00 |
+| gcc-14.2 | CoroutineCreation_V2 | 425671.70 | 2349 | 0.00 |
+| gcc-14.2 | CoroutineSubmission_V1 | 282633.50 | 3538 | 0.00 |
+| gcc-14.2 | LambdaSubmission_V1 | 216957.20 | 4609 | 0.00 |
+| gcc-14.2 | CoroutineSubmission_V2 | 393875.60 | 2539 | 0.00 |
+| gcc-14.2 | LambdaSubmission_V2 | 275181.80 | 3634 | 0.00 |
+| gcc-14.2 | SuspensionOverhead_V1 | 50066751.70 | 20 | 0.00 |
+| gcc-14.2 | SuspensionOverhead_V2 | 50135480.40 | 20 | 0.00 |
+| gcc-14.2 | CoroutineMemory_V1 | 7534465.10 | 133 | 0.00 |
+| gcc-14.2 | CoroutineMemory_V2 | 7393288.80 | 135 | 0.00 |
+
+### Allocator Performance
+
+| Compiler | Benchmark | Median Time (ns) | Ops/sec | Error % |
+|----------|-----------|------------------|---------|---------|
+| gcc-14 | ts_shared_linear_single_thread | 22.05 | 45351474 | 0.00 |
+| gcc-14 | ts_thread_local_single_thread | 3.64 | 274725275 | 0.00 |
+| gcc-14 | coalescing_arena_alloc_dealloc | 133.23 | 7505817 | 0.00 |
+| clang-18 | ts_shared_linear_single_thread | 6.51 | 153609831 | 0.00 |
+| clang-18 | ts_thread_local_single_thread | 3.81 | 262467192 | 0.00 |
+| clang-18 | coalescing_arena_alloc_dealloc | 203.38 | 4916904 | 0.00 |
 
 ## 📈 Performance Trends
 
@@ -331,9 +331,9 @@ Evaluates a thread-local allocator's performance in single-threaded contexts. Th
 
 ## 📋 Data Summary
 
-- **Total benchmark runs:** 2856
-- **Build range:** 71 - 121
-- **Date range:** 2025-10-21 to 2025-10-21
+- **Total benchmark runs:** 2944
+- **Build range:** 71 - 122
+- **Date range:** 2025-11-22 to 2025-11-22
 - **Compilers tested:** clang-18, gcc-14, gcc-14.2, gcc-4.2
 - **Test categories:** allocator_performance, scheduler_comparison, overhead_comparison, performance_comparison
 
