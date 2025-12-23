@@ -11,9 +11,9 @@
 #include "ouly/allocators/default_allocator.hpp"
 #include "ouly/allocators/detail/custom_allocator.hpp"
 #include "ouly/utility/type_traits.hpp"
+#include "ouly/utility/user_config.hpp"
 #include "ouly/utility/utils.hpp"
 #include <array>
-#include "ouly/utility/user_config.hpp"
 #include <cstdint>
 #include <cstring>
 #include <memory>
@@ -984,7 +984,7 @@ private:
   constexpr auto assign_move(small_vector& other, std::false_type /*unused*/) -> small_vector&
   {
     if constexpr (allocator_is_always_equal::value ||
-        static_cast<const allocator_type&>(other) == static_cast<const allocator_type&>(*this))
+                  static_cast<const allocator_type&>(other) == static_cast<const allocator_type&>(*this))
     {
       clear();
       if (other.is_inlined())
@@ -1015,7 +1015,7 @@ private:
       }
       else
       {
-        []<bool Flag = false>()
+        []<bool Flag = false>() -> void
         {
           static_assert(Flag, "This type is not assign_moveable");
         };

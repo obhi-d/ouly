@@ -34,7 +34,7 @@ inline static constexpr bool debug = false;
 #endif // _MSC_VER
 
 #ifdef __GNUC__
-#if defined(__x86_64__)
+#ifdef __x86_64__
 #define OULY_PACK_TAGGED_POINTER
 #endif // __GNUC__
 #endif // defined(__x86_64__)

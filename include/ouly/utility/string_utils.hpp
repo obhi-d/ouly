@@ -433,10 +433,10 @@ template <typename L>
 inline void word_wrap_multiline(L line_accept, uint32_t width, std::string_view input, uint32_t tab_width = 2)
 {
   tokenize(
-   [&](std::size_t token_start, std::size_t token_end, char)
+   [&](std::size_t token_start, std::size_t token_end, char) -> response
    {
      word_wrap(
-      [&line_accept, &token_start](std::size_t line_start, std::size_t line_end)
+      [&line_accept, &token_start](std::size_t line_start, std::size_t line_end) -> void
       {
         line_accept(line_start + token_start, line_end + token_start);
       },
@@ -450,7 +450,7 @@ template <typename StringType>
 auto is_number(const StringType& s) -> bool
 {
   return !s.empty() && std::find_if(s[0] == '-' ? s.begin() + 1 : s.begin(), s.end(),
-                                    [](char c)
+                                    [](char c) -> bool
                                     {
                                       return !std::isdigit(c);
                                     }) == s.end();

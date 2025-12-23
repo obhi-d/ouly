@@ -27,7 +27,7 @@ namespace ouly::detail
 inline void pause_exec() noexcept
 {
 #if defined(__i386__) || defined(__x86_64__) // 32- & 64-bit x86
-#if defined(_MSC_VER)
+#ifdef _MSC_VER
   _mm_pause(); // MSVC / Intel C++
 #else
   __builtin_ia32_pause(); // GCC / Clang

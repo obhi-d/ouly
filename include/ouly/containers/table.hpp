@@ -205,6 +205,16 @@ public:
     return static_cast<uint32_t>(pool_.size());
   }
 
+  [[nodiscard]] auto max_size() const -> std::uint32_t
+  {
+    return static_cast<std::uint32_t>(pool_.max_size());
+  }
+
+  [[nodiscard]] auto empty() const -> bool
+  {
+    return size() == 0;
+  }
+
   void swap(table& other) noexcept
   {
     using std::swap;

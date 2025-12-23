@@ -10,7 +10,7 @@
 #include <xmmintrin.h>
 #endif
 
-#if defined(_MSC_VER)
+#ifdef _MSC_VER
 #include <intrin.h>
 #define OULY_EXPORT      __declspec(dllexport)
 #define OULY_IMPORT      __declspec(dllimport)

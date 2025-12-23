@@ -157,6 +157,14 @@ auto lite_stream::next_token() -> lite_stream::token
      .type_ = token_type::newline, .content_ = {.start_ = current_pos_ - 1, .count_ = 1}
     };
   }
+  case '\0':
+  {
+    auto pos     = current_pos_;
+    current_pos_ = static_cast<uint32_t>(content_.length());
+    return token{
+     .type_ = token_type::eof, .content_ = {.start_ = pos, .count_ = 0}
+    };
+  }
   case '"':
   {
     // Quoted string

@@ -100,13 +100,10 @@ auto coalescing_arena_allocator::deallocate(allocation_id id) -> arena_id
   // NOLINTNEXTLINE
   [[maybe_unused]] auto measure = statistics::report_deallocate(size);
 
-  enum : std::uint8_t
-  {
-    f_left  = 1 << 0,
-    f_right = 1 << 1,
-  };
+  constexpr uint8_t f_left  = 1 << 0;
+  constexpr uint8_t f_right = 1 << 1;
 
-  enum merge_type : std::uint8_t
+  enum class merge_type : std::uint8_t
   {
     e_none,
     e_left,
@@ -122,7 +119,7 @@ auto coalescing_arena_allocator::deallocate(allocation_id id) -> arena_id
   OULY_ASSERT(arena.free_size_ <= arena.size_);
   std::uint32_t left   = 0;
   std::uint32_t right  = 0;
-  std::uint32_t merges = 0;
+  std::uint8_t  merges = 0;
   auto const    order  = block_entries_.ordering_[node];
   if (node != node_list.front() && block_entries_.free_marker_[order.prev_])
   {
@@ -155,7 +152,7 @@ auto coalescing_arena_allocator::deallocate(allocation_id id) -> arena_id
     return arena_id{.id_ = arena_idx};
   }
 
-  switch (merges)
+  switch (static_cast<merge_type>(merges))
   {
   case merge_type::e_none:
     add_free(node);

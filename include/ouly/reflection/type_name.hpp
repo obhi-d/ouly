@@ -8,7 +8,7 @@ namespace ouly
 template <typename T>
 [[nodiscard]] constexpr auto type_name() -> decltype(auto)
 {
-#if defined(__clang__)
+#ifdef __clang__
   std::string_view constexpr start = "T = ";
   std::string_view constexpr end   = "]";
 #elif defined(__GNUC__) || defined(__GNUG__)
