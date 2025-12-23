@@ -320,7 +320,7 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
 
   auto start_counter = std::latch(worker_count_);
 
-  entry_fn_ = [cust_entry = std::move(entry), &start_counter](ouly::worker_id worker)
+  entry_fn_ = [cust_entry = std::move(entry), &start_counter](ouly::worker_id worker) -> void
   {
     if (cust_entry)
     {
@@ -370,7 +370,7 @@ void scheduler::end_execution()
 auto scheduler::has_work() const -> bool
 {
   return std::ranges::any_of(std::span(workgroups_.get(), workgroup_count_),
-                             [](const auto& group)
+                             [](const auto& group) -> bool
                              {
                                return group.has_work_strong();
                              });

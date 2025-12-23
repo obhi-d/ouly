@@ -22,7 +22,7 @@ void for_each_field(Fn fn, Class& obj)
 {
   using ClassType = std::remove_const_t<Class>;
   static_assert(field_count<ClassType> > 0, "Invalid tuple size");
-  return [&]<std::size_t... I>(std::index_sequence<I...>, auto tup)
+  return [&]<std::size_t... I>(std::index_sequence<I...>, auto tup) -> void
   {
     (fn(obj, std::get<I>(tup), std::integral_constant<std::size_t, I>()), ...);
   }(std::make_index_sequence<field_count<ClassType>>(), reflect<ClassType>());
@@ -38,7 +38,7 @@ void for_each_field(Fn fn)
 {
   using ClassType = std::remove_const_t<Class>;
   static_assert(field_count<ClassType> > 0, "Invalid tuple size");
-  return [&]<std::size_t... I>(std::index_sequence<I...>, auto tup)
+  return [&]<std::size_t... I>(std::index_sequence<I...>, auto tup) -> void
   {
     (fn(std::get<I>(tup), std::integral_constant<std::size_t, I>()), ...);
   }(std::make_index_sequence<field_count<ClassType>>(), reflect<ClassType>());
@@ -78,7 +78,7 @@ template <typename T, auto const A>
 consteval auto deduce_field_name() -> decltype(auto)
 {
 #if __cpp_lib_source_location >= 201907L
-#if defined(_MSC_VER)
+#ifdef _MSC_VER
   constexpr auto name = std::string_view{std::source_location::current().function_name()};
 #elif defined(__clang__)
   constexpr auto name = function_name_member<T, &A.member_>();
@@ -90,7 +90,7 @@ consteval auto deduce_field_name() -> decltype(auto)
 #else
   constexpr auto name = std::string_view{__PRETTY_FUNCTION__};
 #endif
-#if defined(__clang__)
+#ifdef __clang__
   constexpr auto beg_mem     = name.substr(name.find("A ="));
   constexpr auto end_mem     = beg_mem.substr(0, beg_mem.find_first_of(']'));
   constexpr auto member_name = end_mem.substr(end_mem.find_last_of('.') + 1);
@@ -210,7 +210,7 @@ auto get_cached_field_names() -> auto const&
 {
   constexpr auto raw_names = get_field_names<T>();
 
-  static auto field_names = [&]<std::size_t... I>(std::index_sequence<I...>)
+  static auto field_names = [&]<std::size_t... I>(std::index_sequence<I...>) -> decltype(auto)
   {
     return std::make_tuple(transform_field_name<Transform>(std::get<I>(raw_names))...);
   }(std::make_index_sequence<std::tuple_size_v<std::remove_cvref_t<decltype(raw_names)>>>{});

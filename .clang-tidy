@@ -15,6 +15,7 @@ Checks:
   - "-cppcoreguidelines-pro-type-union-access"
   - "-readability-identifier-length"
   - "-cppcoreguidelines-pro-bounds-constant-array-index"
+  - "-portability-avoid-pragma-once"
 
 WarningsAsErrors: "*"
 FormatStyle: file

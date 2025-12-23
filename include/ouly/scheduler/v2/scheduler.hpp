@@ -116,7 +116,7 @@ public:
     {
       submit_internal(src, group,
                       ouly::v2::task_delegate::bind(
-                       [address = task_obj.address()](ouly::v2::task_context const&)
+                       [address = task_obj.address()](ouly::v2::task_context const&) -> void
                        {
                          std::coroutine_handle<>::from_address(address).resume();
                        }));

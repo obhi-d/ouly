@@ -704,7 +704,7 @@ public:
     if constexpr (!std::is_trivially_destructible_v<value_type> && !has_pod)
     {
       for_each(
-       [](Ty& v)
+       [](Ty& v) -> void
        {
          std::destroy_at(std::addressof(v));
        });
@@ -943,7 +943,7 @@ private:
           else
           {
             std::for_each(cast(items_[block].data_), cast(items_[block].data_ + pool_size),
-                          [](value_type& dst)
+                          [](value_type& dst) -> void
                           {
                             if constexpr (has_null_value)
                             {

@@ -306,7 +306,7 @@ auto scheduler::compute_group_range(uint32_t worker_index) -> bool
   auto& range  = group_ranges_[worker_index];
 
   std::sort(range.priority_order_.data(), range.priority_order_.data() + range.count_,
-            [&](uint8_t first, uint8_t second)
+            [&](uint8_t first, uint8_t second) -> bool
             {
               return workgroups_[first].priority_ == workgroups_[second].priority_
                       ? first < second
@@ -349,7 +349,7 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
   stop_              = false;
   auto start_counter = std::latch(worker_count_);
 
-  entry_fn_ = [cust_entry = std::move(entry), &start_counter](ouly::worker_id worker)
+  entry_fn_ = [cust_entry = std::move(entry), &start_counter](ouly::worker_id worker) -> void
   {
     if (cust_entry)
     {
@@ -508,7 +508,7 @@ void scheduler::clear_group(workgroup_id group)
 auto scheduler::has_work() const -> bool
 {
   return std::ranges::any_of(workgroups_,
-                             [](const auto& group)
+                             [](const auto& group) -> bool
                              {
                                return group.has_work_strong();
                              });

@@ -171,7 +171,7 @@ TEST_CASE("Validate string functions", "[string_utils]")
   lines.clear();
   rec.clear();
   ouly::word_wrap_multiline(
-   [&lines, &text_wall_ml](size_t start, size_t end)
+   [&lines, &text_wall_ml](size_t start, size_t end) -> void
    {
      lines.emplace_back(text_wall_ml.begin() + start, text_wall_ml.begin() + end);
    },
