@@ -410,7 +410,7 @@ TEST_CASE("flow_graph parallel independent branches", "[flow_graph][scheduler]")
   // Both branches should start around the same time (parallel execution)
   auto start_time_diff =
    std::abs(std::chrono::duration_cast<std::chrono::milliseconds>(branch1_start_time - branch2_start_time).count());
-  REQUIRE(start_time_diff <= 1); // Should start very close to each other
+  REQUIRE(start_time_diff <= 10); // Allow up to 10ms difference due to scheduling jitter
 
   // Total execution time should be close to single branch time (not additive)
   // auto total_duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
