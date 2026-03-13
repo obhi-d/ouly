@@ -60,7 +60,7 @@ public:
   OULY_API scheduler() noexcept                      = default;
   OULY_API scheduler(const scheduler&)               = delete;
   auto     operator=(const scheduler&) -> scheduler& = delete;
-  ~scheduler() noexcept;
+  OULY_API ~scheduler() noexcept;
 
   scheduler(scheduler&& other) noexcept
       : stop_(other.stop_.load()), initializer_(std::move(other.initializer_)), workers_(std::move(other.workers_)),
@@ -234,15 +234,15 @@ public:
   /**
    * @brief Get worker count in this group
    */
-  [[nodiscard]] auto get_worker_count(workgroup_id g) const noexcept -> uint32_t;
+  [[nodiscard]] OULY_API auto get_worker_count(workgroup_id g) const noexcept -> uint32_t;
   /**
    * @brief Get worker start index
    */
-  [[nodiscard]] auto get_worker_start_idx(workgroup_id g) const noexcept -> uint32_t;
+  [[nodiscard]] OULY_API auto get_worker_start_idx(workgroup_id g) const noexcept -> uint32_t;
   /**
    * @brief Get logical divisor for workgroup
    */
-  [[nodiscard]] auto get_logical_divisor(workgroup_id g) const noexcept -> uint32_t;
+  [[nodiscard]] OULY_API auto get_logical_divisor(workgroup_id g) const noexcept -> uint32_t;
 
   /**
    * @brief If multiple schedulers are active, this function should be called from main thread before using the

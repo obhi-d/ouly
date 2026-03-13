@@ -3,6 +3,7 @@
 #pragma once
 
 #include "ouly/allocators/config.hpp"
+#include "ouly/utility/common.hpp"
 #include <limits>
 #include <vector>
 
@@ -36,8 +37,8 @@ class coalescing_allocator
 public:
   using size_type = coalescing_allocator_size_type;
 
-  auto allocate(size_type size) -> size_type;
-  void deallocate(size_type offset, size_type size);
+  OULY_API auto allocate(size_type size) -> size_type;
+  OULY_API void deallocate(size_type offset, size_type size);
 
 private:
   // Free blocks

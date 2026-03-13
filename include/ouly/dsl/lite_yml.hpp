@@ -83,7 +83,7 @@ public:
   explicit lite_stream(std::string_view content, context* ctx) : content_(content), ctx_(ctx) {}
 
   // Main parse function that processes the yml content
-  void parse();
+  OULY_API void parse();
 
 private:
   enum class token_type : uint8_t

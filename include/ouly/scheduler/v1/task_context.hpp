@@ -76,7 +76,7 @@ public:
     return group_id_;
   }
 
-  void cooperative_wait(std::binary_semaphore& event) const;
+  OULY_API void cooperative_wait(std::binary_semaphore& event) const;
 
   auto operator<=>(task_context const&) const noexcept = default;
 

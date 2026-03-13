@@ -82,7 +82,7 @@ public:
     OULY_API static auto get() noexcept -> task_context const&;
   };
 
-  void cooperative_wait(std::binary_semaphore& event) const;
+  OULY_API void cooperative_wait(std::binary_semaphore& event) const;
 
   auto operator<=>(task_context const&) const noexcept = default;
 

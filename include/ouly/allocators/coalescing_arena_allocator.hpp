@@ -184,7 +184,7 @@ public:
   }
 
 private:
-  auto add_arena(size_type size, bool empty) -> std::pair<arena_id, allocation_id>;
+  OULY_API auto add_arena(size_type size, bool empty) -> std::pair<arena_id, allocation_id>;
 
   template <CoalescingMemoryManager M>
   auto add_arena_filled(size_type size, M& manager) -> std::pair<arena_id, allocation_id>
@@ -209,11 +209,11 @@ private:
     free_ordering_.push_back(block);
   }
 
-  void grow_free_node(uint32_t /*block*/, size_type size);
-  void replace_and_grow(uint32_t right, uint32_t node, size_type new_size);
-  void add_free(uint32_t node);
-  void erase(uint32_t node);
-  auto deallocate(allocation_id id) -> arena_id;
+  OULY_API void grow_free_node(uint32_t /*block*/, size_type size);
+  OULY_API void replace_and_grow(uint32_t right, uint32_t node, size_type new_size);
+  OULY_API void add_free(uint32_t node);
+  OULY_API void erase(uint32_t node);
+  OULY_API auto deallocate(allocation_id id) -> arena_id;
 
   static auto mini2(size_type const* it, size_t size, size_type key) noexcept
   {
@@ -278,9 +278,9 @@ private:
      .offset_ = block_entries_.offsets_[id], .id_ = {.id_ = id}, .arena_ = {.id_ = block_entries_.arenas_[id]}};
   }
 
-  void reinsert_left(size_t of, size_type size, std::uint32_t node);
-  void reinsert_right(size_t of, size_type size, std::uint32_t node);
-  auto commit(size_type size, size_type const* found) -> uint32_t;
+  OULY_API void reinsert_left(size_t of, size_type size, std::uint32_t node);
+  OULY_API void reinsert_right(size_t of, size_type size, std::uint32_t node);
+  OULY_API auto commit(size_type size, size_type const* found) -> uint32_t;
 
   // Free blocks
   ouly::detail::ca_arena_entries arena_entries_{};
