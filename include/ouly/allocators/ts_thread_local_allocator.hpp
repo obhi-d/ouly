@@ -39,7 +39,7 @@ namespace ouly
  * @warning reset() must be called when no worker threads are calling allocate()
  * @warning All allocated memory becomes invalid after reset() or release()
  */
-class OULY_API ts_thread_local_allocator
+class ts_thread_local_allocator
 {
 public:
   /** @brief Default page size for new arenas (1 MiB) */
@@ -115,7 +115,7 @@ public:
    * @note Returns nullptr on allocation failure
    * @note Thread-safe with zero synchronization in the fast path
    */
-  auto allocate(std::size_t size) -> void*;
+  OULY_API auto allocate(std::size_t size) -> void*;
 
   /**
    * @brief Optional stack-style deallocation for the most recent allocation
@@ -126,7 +126,7 @@ public:
    * @note Safe even with concurrent access from other threads
    * @note Thread-safe - each thread owns its arena
    */
-  auto deallocate(void* ptr, std::size_t size) const -> bool;
+  OULY_API auto deallocate(void* ptr, std::size_t size) const -> bool;
 
   /**
    * @brief Reset all arenas for reuse (end-of-frame cleanup)
@@ -135,7 +135,7 @@ public:
    * @note Advances generation counter to invalidate stale thread-local pages
    * @note Recycles arenas to avoid future allocations
    */
-  void reset() noexcept;
+  OULY_API void reset() noexcept;
 
   /**
    * @brief Release all memory and reset allocator to initial state
@@ -143,7 +143,7 @@ public:
    * @warning All previously allocated memory becomes invalid after this call
    * @note Calls reset() then frees all recycled arenas
    */
-  void release() noexcept;
+  OULY_API void release() noexcept;
 
   struct tls_t;
 
@@ -190,7 +190,7 @@ private:
    */
   static auto remove_tls_slot(tls_t* slot) noexcept -> void;
 
-  static auto generate_random_id(void* ptr) -> uintptr_t;
+  static OULY_API auto generate_random_id(void* ptr) -> uintptr_t;
   /* ---------- Data members -------------------------------------------- */
 
   /** @brief Default size for new arenas */

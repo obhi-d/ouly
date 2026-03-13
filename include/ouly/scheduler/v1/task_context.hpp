@@ -65,10 +65,10 @@ public:
     return static_cast<T*>(user_context_);
   }
 
-  struct OULY_API this_context
+  struct this_context
   {
-    static auto get_worker_id() noexcept -> worker_id;
-    static auto get() noexcept -> task_context const&;
+    OULY_API static auto get_worker_id() noexcept -> worker_id;
+    OULY_API static auto get() noexcept -> task_context const&;
   };
 
   [[nodiscard]] auto get_workgroup() const noexcept -> workgroup_id

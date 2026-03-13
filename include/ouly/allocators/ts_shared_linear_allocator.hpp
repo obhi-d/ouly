@@ -44,7 +44,7 @@ namespace ouly
  * @warning reset() and release() must be called from a single thread
  * @warning All allocated memory becomes invalid after reset() or release()
  */
-class OULY_API ts_shared_linear_allocator
+class ts_shared_linear_allocator
 {
 public:
   /** @brief Default page size for new arenas (1 MiB) */
@@ -119,7 +119,7 @@ public:
    * @note Returns nullptr on allocation failure
    * @note Lock-free using atomic compare-and-swap operations
    */
-  auto allocate(std::size_t size) noexcept -> void*;
+  OULY_API auto allocate(std::size_t size) noexcept -> void*;
 
   /**
    * @brief Optional stack-style deallocation for the most recent allocation
@@ -130,7 +130,7 @@ public:
    * @note May fail due to race conditions with other threads
    * @note Thread-safe but not guaranteed to succeed
    */
-  auto deallocate(void* ptr, std::size_t size) noexcept -> bool;
+  OULY_API auto deallocate(void* ptr, std::size_t size) noexcept -> bool;
 
   /**
    * @brief Reset all arenas for reuse
@@ -138,7 +138,7 @@ public:
    * @warning All previously allocated memory becomes invalid after this call
    * @note Resets all arena offsets to 0 and recycles arenas for reuse
    */
-  void reset() noexcept;
+  OULY_API void reset() noexcept;
 
   /**
    * @brief Release all memory and reset allocator to initial state
@@ -146,7 +146,7 @@ public:
    * @warning All previously allocated memory becomes invalid after this call
    * @note Calls reset() then frees all recycled arenas
    */
-  void release() noexcept;
+  OULY_API void release() noexcept;
 
 private:
   /**

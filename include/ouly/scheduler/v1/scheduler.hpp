@@ -71,7 +71,7 @@ static constexpr uint32_t default_logical_task_divisior = 64;
  * @note Work group creation is frozen after begin_execution() is called
  * @note Only one scheduler should be active at a time, use take_ownership() if multiple exist
  */
-class OULY_API scheduler
+class scheduler
 {
 
 public:
@@ -109,7 +109,7 @@ public:
     return *this;
   }
 
-  ~scheduler() noexcept;
+  OULY_API ~scheduler() noexcept;
 
   /**
    * @brief Submits a coroutine-based task to be executed by the scheduler
@@ -224,12 +224,12 @@ public:
    * @brief Begin scheduler execution, group creation is frozen after this call.
    * @param entry An entry function can be provided that will be executed on all worker threads upon entry.
    */
-  void begin_execution(scheduler_worker_entry&& entry = {}, void* user_context = nullptr);
+  OULY_API void begin_execution(scheduler_worker_entry&& entry = {}, void* user_context = nullptr);
   /**
    * @brief Wait for threads to finish executing and end scheduler execution. Scheduler execution can be restarted
    * using begin_execution. Unlocks scheduler and makes it mutable.
    */
-  void end_execution();
+  OULY_API void end_execution();
 
   /**
    * @brief Get worker count in the scheduler
@@ -242,16 +242,16 @@ public:
   /**
    * @brief Ensure a work-group by id and set a name
    */
-  void create_group(workgroup_id group, uint32_t thread_offset, uint32_t thread_count, uint32_t priority = 0);
+  OULY_API void create_group(workgroup_id group, uint32_t thread_offset, uint32_t thread_count, uint32_t priority = 0);
   /**
    * @brief Get the next available group. Group priority controls if a thread is shared between multiple groups, which
    * group is executed first by the thread
    */
-  auto create_group(uint32_t thread_offset, uint32_t thread_count, uint32_t priority = 0) -> workgroup_id;
+  OULY_API auto create_group(uint32_t thread_offset, uint32_t thread_count, uint32_t priority = 0) -> workgroup_id;
   /**
    * @brief Clear a group, and re-create it
    */
-  void clear_group(workgroup_id group);
+  OULY_API void clear_group(workgroup_id group);
   /**
    * @brief Get worker count in this group
    */
@@ -285,9 +285,9 @@ public:
    * @brief If multiple schedulers are active, this function should be called from main thread before using the
    * scheduler
    */
-  void take_ownership() noexcept;
-  void busy_work(worker_id /*thread*/) noexcept;
-  void busy_work(v1::task_context const& ctx) noexcept
+  OULY_API void take_ownership() noexcept;
+  OULY_API void busy_work(worker_id /*thread*/) noexcept;
+  void          busy_work(v1::task_context const& ctx) noexcept
   {
     busy_work(ctx.get_worker());
   }
@@ -298,7 +298,7 @@ private:
   /**
    * @brief Submit a work for execution
    */
-  void submit_internal(worker_id src, workgroup_id dst, ouly::v1::task_delegate const& work);
+  OULY_API void submit_internal(worker_id src, workgroup_id dst, ouly::v1::task_delegate const& work);
 
   void assign_priority_order();
   auto compute_group_range(uint32_t worker_index) -> bool;
