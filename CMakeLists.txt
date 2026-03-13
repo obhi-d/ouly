@@ -29,8 +29,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 #     set(CMAKE_CUDA_COMPILER_LAUNCHER "${CCACHE_PROGRAM}") # CMake 3.9+
 # endif()
 
-add_library(
-    ${OULY_TARGET_NAME}
+set(OULY_SOURCES
     "src/ouly/allocators/coalescing_allocator.cpp"
     "src/ouly/allocators/coalescing_arena_allocator.cpp"
     "src/ouly/allocators/platform_memory.cpp"
@@ -42,6 +41,18 @@ add_library(
     "src/ouly/scheduler/v2/scheduler.cpp"
     "src/ouly/utility/string_utils.cpp"
 )
+
+add_library(${OULY_TARGET_NAME} ${OULY_SOURCES})
+
+if(BUILD_SHARED_LIBS)
+    target_compile_definitions(${OULY_TARGET_NAME}
+        PRIVATE OULY_EXPORT_SYMBOLS
+        PUBLIC OULY_DLL_IMPL
+    )
+    set_target_properties(${OULY_TARGET_NAME} PROPERTIES
+        POSITION_INDEPENDENT_CODE ON
+    )
+endif()
 
 set_property(TARGET ${OULY_TARGET_NAME} PROPERTY CXX_STANDARD 20)
 

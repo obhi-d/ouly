@@ -23,12 +23,16 @@
 
 #ifdef OULY_DLL_IMPL
 #ifdef OULY_EXPORT_SYMBOLS
+#undef OULY_API
 #define OULY_API OULY_EXPORT
 #else
+#undef OULY_API
 #define OULY_API OULY_IMPORT
 #endif
 #else
+#ifndef OULY_API
 #define OULY_API
+#endif
 #endif
 
 #ifdef _DEBUG
