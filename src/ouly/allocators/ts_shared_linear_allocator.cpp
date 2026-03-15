@@ -168,9 +168,9 @@ auto ts_shared_linear_allocator::allocate_slow_path(std::size_t size) noexcept -
   // Need a brand‑new arena_t, large enough for this request.
   std::size_t page_size = std::max(default_page_size_, size);
 
-  if (page_size <= default_page_size_) [[likely]]
+  if (page_size <= default_page_size_)
   {
-    if (available_pages_ != nullptr) [[likely]]
+    if (available_pages_ != nullptr)
     {
       // Try to reuse an available page if it is large enough
       arena            = available_pages_;

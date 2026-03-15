@@ -2,6 +2,7 @@
 #pragma once
 
 #include "ouly/scheduler/detail/cache_optimized_data.hpp"
+#include "ouly/utility/user_config.hpp"
 #include "ouly/utility/utils.hpp"
 #include <array>
 #include <memory>
@@ -60,7 +61,7 @@ public:
   {
     for (std::size_t i = 0; i < capacity_pow2; ++i)
     {
-      buffer_[i].sequence_.store(i, std::memory_order_relaxed);
+      ouly::detail::vector_access(buffer_, i).sequence_.store(i, std::memory_order_relaxed);
     }
   }
 
@@ -77,7 +78,7 @@ public:
     std::size_t pos      = head_.load(std::memory_order_relaxed);
     for (;;)
     {
-      node_ptr         = &buffer_[pos & mask];
+      node_ptr         = &ouly::detail::vector_access(buffer_, pos & mask);
       std::size_t seq  = node_ptr->sequence_.load(std::memory_order_acquire);
       intptr_t    diff = static_cast<intptr_t>(seq) - static_cast<intptr_t>(pos);
       if (diff == 0)
@@ -109,7 +110,7 @@ public:
     std::size_t pos      = head_.load(std::memory_order_relaxed);
     for (;;)
     {
-      node_ptr         = &buffer_[pos & mask];
+      node_ptr         = &ouly::detail::vector_access(buffer_, pos & mask);
       std::size_t seq  = node_ptr->sequence_.load(std::memory_order_acquire);
       intptr_t    diff = static_cast<intptr_t>(seq) - static_cast<intptr_t>(pos);
       if (diff == 0)
@@ -140,7 +141,7 @@ public:
     std::size_t pos      = tail_.load(std::memory_order_relaxed);
     for (;;)
     {
-      node_ptr         = &buffer_[pos & mask];
+      node_ptr         = &ouly::detail::vector_access(buffer_, pos & mask);
       std::size_t seq  = node_ptr->sequence_.load(std::memory_order_acquire);
       intptr_t    diff = static_cast<intptr_t>(seq) - static_cast<intptr_t>(pos + 1);
       if (diff == 0)
@@ -176,7 +177,7 @@ public:
   {
     for (std::size_t i = 0; i < capacity_pow2; ++i)
     {
-      buffer_[i].sequence_.store(i, std::memory_order_relaxed);
+      ouly::detail::vector_access(buffer_, i).sequence_.store(i, std::memory_order_relaxed);
     }
     head_.store(0, std::memory_order_relaxed);
     tail_.store(0, std::memory_order_relaxed);

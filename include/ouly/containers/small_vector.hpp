@@ -75,13 +75,13 @@ public:
   using reverse_iterator          = std::reverse_iterator<iterator>;
   using const_reverse_iterator    = std::reverse_iterator<const_iterator>;
   using allocator                 = allocator_type;
-  using allocator_tag             = typename allocator_type::tag;
-  using allocator_is_always_equal = typename ouly::allocator_traits<allocator_tag>::is_always_equal;
+  using allocator_tag             = allocator_type::tag;
+  using allocator_is_always_equal = ouly::allocator_traits<allocator_tag>::is_always_equal;
   using propagate_allocator_on_move =
-   typename ouly::allocator_traits<allocator_tag>::propagate_on_container_move_assignment;
+   ouly::allocator_traits<allocator_tag>::propagate_on_container_move_assignment;
   using propagate_allocator_on_copy =
-   typename ouly::allocator_traits<allocator_tag>::propagate_on_container_copy_assignment;
-  using propagate_allocator_on_swap = typename ouly::allocator_traits<allocator_tag>::propagate_on_container_swap;
+   ouly::allocator_traits<allocator_tag>::propagate_on_container_copy_assignment;
+  using propagate_allocator_on_swap = ouly::allocator_traits<allocator_tag>::propagate_on_container_swap;
 
 private:
   using config                                          = Config;
@@ -609,7 +609,7 @@ public:
     auto pos  = const_cast<iterator>(position); // NOLINT
     if constexpr (std::is_trivially_copyable_v<Ty> || has_pod)
     {
-      std::memmove(pos, position + 1, static_cast<std::size_t>((data + size_) - (position)) * sizeof(Ty));
+      std::memmove(pos, position + 1, static_cast<std::size_t>((data + size_) - position) * sizeof(Ty));
       if constexpr (!has_trivial_dtor && !has_trivially_destroyed_on_move)
       {
         std::destroy_at(data + size_);
@@ -647,7 +647,7 @@ public:
     if constexpr (std::is_trivially_copyable_v<Ty> || has_pod)
     {
       auto data = get_data();
-      std::memmove(first_pos, last, static_cast<std::size_t>((data + size_) - (last)) * sizeof(Ty));
+      std::memmove(first_pos, last, static_cast<std::size_t>((data + size_) - last) * sizeof(Ty));
     }
     else
     {

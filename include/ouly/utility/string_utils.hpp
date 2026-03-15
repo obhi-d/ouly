@@ -292,7 +292,7 @@ inline auto tokenize(A acceptor, std::string_view value, std::string_view sepera
     auto end     = what == std::string_view::npos ? value.length() : what;
     if (end > start)
     {
-      r = acceptor(start, end, what == std::string_view::npos ? 0 : value[what]);
+      r = acceptor(start, end, what == std::string_view::npos ? 0 : ouly::detail::vector_access(value, what));
       if (r != response::e_continue)
       {
         return r;

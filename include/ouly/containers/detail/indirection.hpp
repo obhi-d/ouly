@@ -201,7 +201,7 @@ class back_indirection
 {
 protected:
   using size_type  = ouly::detail::choose_size_t<uint32_t, Traits>;
-  using self_index = typename Traits::self_index;
+  using self_index = Traits::self_index;
 
 public:
   template <typename T>

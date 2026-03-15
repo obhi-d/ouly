@@ -257,7 +257,7 @@ public:
    */
   [[nodiscard]] auto get_worker_count(workgroup_id g) const noexcept -> uint32_t
   {
-    return workgroups_[g.get_index()].thread_count_;
+    return ouly::detail::vector_access(workgroups_, g.get_index()).thread_count_;
   }
 
   /**
@@ -265,7 +265,7 @@ public:
    */
   [[nodiscard]] auto get_worker_start_idx(workgroup_id g) const noexcept -> uint32_t
   {
-    return workgroups_[g.get_index()].start_thread_idx_;
+    return ouly::detail::vector_access(workgroups_, g.get_index()).start_thread_idx_;
   }
 
   /**
@@ -273,12 +273,13 @@ public:
    */
   [[nodiscard]] auto get_logical_divisor(workgroup_id g) const noexcept -> uint32_t
   {
-    return workgroups_[g.get_index()].thread_count_ * work_scale;
+    return ouly::detail::vector_access(workgroups_, g.get_index()).thread_count_ * work_scale;
   }
 
   [[nodiscard]] auto get_context(task_context const& wctx, workgroup_id group) const -> task_context const&
   {
-    return workers_[wctx.get_worker().get_index()].get().contexts_[group.get_index()];
+    return ouly::detail::vector_access(
+     ouly::detail::vector_access(workers_, wctx.get_worker().get_index()).get().contexts_, group.get_index());
   }
 
   /**

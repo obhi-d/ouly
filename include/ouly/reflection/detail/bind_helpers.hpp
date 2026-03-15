@@ -42,7 +42,7 @@ class decl_member_ptr : public decl_base<Name, Class, MPtr>
 {
 public:
   using super = decl_base<Name, Class, MPtr>;
-  using M     = typename super::MemTy;
+  using M     = super::MemTy;
 
   static void value(Class& obj, M const& value) noexcept
   {
@@ -75,7 +75,7 @@ class decl_get_set : public decl_base<Name, Class, RetTy>
 {
 public:
   using super = decl_base<Name, Class, RetTy>;
-  using M     = typename super::MemTy;
+  using M     = super::MemTy;
 
   static void value(Class& obj, M&& value) noexcept
   {
@@ -93,7 +93,7 @@ class decl_free_get_set : public decl_base<Name, Class, RetTy>
 {
 public:
   using super = decl_base<Name, Class, RetTy>;
-  using M     = typename super::MemTy;
+  using M     = super::MemTy;
 
   static void value(Class& obj, M const& value) noexcept
   {

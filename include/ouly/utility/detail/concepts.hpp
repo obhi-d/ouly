@@ -117,11 +117,11 @@ struct choose_size_ty<S, T1>
 template <typename S, HasSizeType T1>
 struct choose_size_ty<S, T1>
 {
-  using type = typename T1::size_type;
+  using type = T1::size_type;
 };
 
 template <typename S, typename... Args>
-using choose_size_t = typename choose_size_ty<S, Args...>::type;
+using choose_size_t = choose_size_ty<S, Args...>::type;
 
 template <typename T, bool>
 struct link_value;
@@ -129,7 +129,7 @@ struct link_value;
 template <typename T>
 struct link_value<T, true>
 {
-  using type = typename T::link_type;
+  using type = T::link_type;
 };
 
 template <typename T>
@@ -139,7 +139,7 @@ struct link_value<T, false>
 };
 
 template <typename T>
-using link_value_t = typename link_value<T, HasLinkType<T>>::type;
+using link_value_t = link_value<T, HasLinkType<T>>::type;
 
 template <typename UaT, class = std::void_t<>>
 struct tag
@@ -149,11 +149,11 @@ struct tag
 template <typename UaT>
 struct tag<UaT, std::void_t<typename UaT::tag>>
 {
-  using type = typename UaT::tag;
+  using type = UaT::tag;
 };
 
 template <typename UaT>
-using tag_t = typename tag<UaT>::type;
+using tag_t = tag<UaT>::type;
 
 template <typename UaT, class = std::void_t<>>
 struct size_type
@@ -163,7 +163,7 @@ struct size_type
 template <typename UaT>
 struct size_type<UaT, std::void_t<typename UaT::size_type>>
 {
-  using type = typename UaT::size_type;
+  using type = UaT::size_type;
 };
 
 template <typename T>
@@ -195,6 +195,6 @@ struct transform_type<T>
 };
 
 template <typename T>
-using transform_t = typename transform_type<T>::type;
+using transform_t = transform_type<T>::type;
 
 } // namespace ouly::detail

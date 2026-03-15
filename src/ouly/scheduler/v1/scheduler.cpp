@@ -33,7 +33,7 @@ static auto update_seed() -> uint32_t;
 
 static auto update_seed() -> uint32_t
 {
-  return (g_random_seed = (g_random_seed * lcg_multiplier + lcg_increment) & initial_seed_mask);
+  return (g_random_seed = ((g_random_seed * lcg_multiplier) + lcg_increment) & initial_seed_mask);
 }
 
 auto task_context::this_context::get() noexcept -> task_context const&
@@ -52,11 +52,11 @@ scheduler::~scheduler() noexcept
 // NOLINTNEXTLINE
 inline void scheduler::do_work(workgroup_id id, worker_id thread, ouly::detail::v1::work_item& work) noexcept
 {
-  auto& worker            = workers_[thread.get_index()].get();
-  worker.current_context_ = &worker.contexts_[id.get_index()];
+  auto& worker            = ouly::detail::vector_access(workers_, thread.get_index()).get();
+  worker.current_context_ = &ouly::detail::vector_access(worker.contexts_, id.get_index());
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
   work(*worker.current_context_);
-  workgroups_[id.get_index()].sink_one_work();
+  ouly::detail::vector_access(workgroups_, id.get_index()).sink_one_work();
 }
 
 void scheduler::busy_work(worker_id thread) noexcept
@@ -67,7 +67,7 @@ void scheduler::busy_work(worker_id thread) noexcept
   constexpr uint32_t failure_threshold = 5;
 
   // Use thread_local failure tracking for better performance
-  auto&    local_recent_failures = workers_[thread.get_index()].get().busy_backoff_;
+  auto&    local_recent_failures = ouly::detail::vector_access(workers_, thread.get_index()).get().busy_backoff_;
   uint32_t attempts              = (local_recent_failures > failure_threshold) ? min_attempts : max_attempts;
 
   for (uint32_t attempt = 0; attempt < attempts; ++attempt)
@@ -76,9 +76,9 @@ void scheduler::busy_work(worker_id thread) noexcept
     {
       if (thread.get_index() == 0)
       {
-        auto& worker = workers_[0].get();
+        auto& worker = ouly::detail::vector_access(workers_, 0).get();
         // reset the context
-        worker.current_context_ = &worker.contexts_[0];
+        worker.current_context_ = &ouly::detail::vector_access(worker.contexts_, 0);
       }
       local_recent_failures = std::max(0U, local_recent_failures - 1);
       return; // Found and executed work
@@ -97,7 +97,7 @@ void scheduler::busy_work(worker_id thread) noexcept
 
 void scheduler::run_worker(worker_id thread)
 {
-  g_worker    = &workers_[thread.get_index()].get();
+  g_worker    = &ouly::detail::vector_access(workers_, thread.get_index()).get();
   g_worker_id = thread;
 
   // LCG constants for fast PRNG
@@ -113,8 +113,8 @@ void scheduler::run_worker(worker_id thread)
     {
     }
 
-    wake_data_[thread.get_index()].get().status_.store(false, std::memory_order_relaxed);
-    wake_data_[thread.get_index()].get().event_.release();
+    ouly::detail::vector_access(wake_data_, thread.get_index()).get().status_.store(false, std::memory_order_relaxed);
+    ouly::detail::vector_access(wake_data_, thread.get_index()).get().event_.release();
   }
 
   g_worker    = nullptr;
@@ -133,7 +133,9 @@ inline auto scheduler::work(worker_id thread) noexcept -> bool
   {
     return false;
   }
-  OULY_ASSERT(&workers_[thread.get_index()].get().contexts_[id.get_index()].get_scheduler() == this);
+  OULY_ASSERT(&ouly::detail::vector_access(ouly::detail::vector_access(workers_, thread.get_index()).get().contexts_,
+                                           id.get_index())
+                .get_scheduler() == this);
   OULY_ASSERT(available_work);
   do_work(id, thread, available_work);
   return true;
@@ -188,13 +190,13 @@ thread_local uint32_t adaptive_work_stealer::success_streak  = 0;
 // NOLINTNEXTLINE
 auto scheduler::get_work(worker_id thread, ouly::detail::v1::work_item& work) noexcept -> workgroup_id
 {
-  auto& range = group_ranges_[thread.get_index()];
+  auto& range = ouly::detail::vector_access(group_ranges_, thread.get_index());
 
   // Check workgroups in priority order - each worker's queue within each workgroup
   for (uint32_t i = 0; i < range.count_; ++i)
   {
-    uint32_t group_idx = range.priority_order_[i];
-    auto&    workgroup = workgroups_[group_idx];
+    uint32_t group_idx = ouly::detail::vector_access(range.priority_order_, i);
+    auto&    workgroup = ouly::detail::vector_access(workgroups_, group_idx);
 
     // Calculate this worker's offset within the workgroup
     uint32_t worker_offset = thread.get_index() - workgroup.start_thread_idx_;
@@ -275,7 +277,7 @@ auto scheduler::get_work(worker_id thread, ouly::detail::v1::work_item& work) no
 // NOLINTNEXTLINE
 void scheduler::wake_up(worker_id thread) noexcept
 {
-  auto& wake = wake_data_[thread.get_index()].get();
+  auto& wake = ouly::detail::vector_access(wake_data_, thread.get_index()).get();
   if (!wake.status_.exchange(true, std::memory_order_acq_rel))
   {
     wake.event_.release();
@@ -288,29 +290,31 @@ void scheduler::assign_priority_order()
 
   for (uint32_t group = 0; group < wgroup_count; ++group)
   {
-    auto const& g = workgroups_[group];
+    auto const& g = ouly::detail::vector_access(workgroups_, group);
 
     for (uint32_t i = g.start_thread_idx_, end = g.thread_count_ + i; i < end; ++i)
     {
-      auto& range = group_ranges_[i];
+      auto& range = ouly::detail::vector_access(group_ranges_, i);
       range.mask_ |= 1U << group;
-      range.priority_order_[range.count_++] = static_cast<uint8_t>(group);
+      ouly::detail::vector_access(range.priority_order_, range.count_++) = static_cast<uint8_t>(group);
     }
   }
 }
 
 auto scheduler::compute_group_range(uint32_t worker_index) -> bool
 {
-  auto& worker = workers_[worker_index].get();
+  auto& worker = ouly::detail::vector_access(workers_, worker_index).get();
   worker.id_   = worker_id(worker_index);
-  auto& range  = group_ranges_[worker_index];
+  auto& range  = ouly::detail::vector_access(group_ranges_, worker_index);
 
   std::sort(range.priority_order_.data(), range.priority_order_.data() + range.count_,
             [&](uint8_t first, uint8_t second) -> bool
             {
-              return workgroups_[first].priority_ == workgroups_[second].priority_
+              return ouly::detail::vector_access(workgroups_, first).priority_ ==
+                       ouly::detail::vector_access(workgroups_, second).priority_
                       ? first < second
-                      : workgroups_[first].priority_ > workgroups_[second].priority_;
+                      : ouly::detail::vector_access(workgroups_, first).priority_ >
+                         ouly::detail::vector_access(workgroups_, second).priority_;
             });
 
   // No need for complex steal range calculation with new design
@@ -330,7 +334,7 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
 
   for (uint32_t worker_index = 0; worker_index < worker_count_; ++worker_index)
   {
-    auto& worker = workers_[worker_index].get();
+    auto& worker = ouly::detail::vector_access(workers_, worker_index).get();
     worker.id_   = worker_id(worker_index);
 
     compute_group_range(worker_index);
@@ -339,11 +343,12 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
     worker.contexts_  = std::make_unique<task_context[]>(wgroup_count);
     for (uint32_t g = 0; g < wgroup_count; ++g)
     {
-      worker.contexts_[g] =
-       task_context(*this, user_context, worker_id(worker_index), workgroup_id(g), group_ranges_[worker_index].mask_,
-                    worker_index - workgroups_[g].start_thread_idx_);
+      ouly::detail::vector_access(worker.contexts_, g) =
+       task_context(*this, user_context, worker_id(worker_index), workgroup_id(g),
+                    ouly::detail::vector_access(group_ranges_, worker_index).mask_,
+                    worker_index - ouly::detail::vector_access(workgroups_, g).start_thread_idx_);
     }
-    wake_data_[worker_index].get().status_.store(true, std::memory_order_relaxed);
+    ouly::detail::vector_access(wake_data_, worker_index).get().status_.store(true, std::memory_order_relaxed);
   }
 
   stop_              = false;
@@ -363,10 +368,10 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
     threads_.emplace_back(&scheduler::run_worker, this, worker_id(thread));
   }
 
-  auto& main_worker            = workers_[0].get();
+  auto& main_worker            = ouly::detail::vector_access(workers_, 0).get();
   g_worker                     = &main_worker;
   g_worker_id                  = worker_id(0);
-  main_worker.current_context_ = &main_worker.contexts_[0];
+  main_worker.current_context_ = &ouly::detail::vector_access(main_worker.contexts_, 0);
 
   entry_fn_(worker_id(0));
 
@@ -377,7 +382,7 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
 // NOLINTNEXTLINE
 void scheduler::take_ownership() noexcept
 {
-  g_worker    = &workers_[0].get();
+  g_worker    = &ouly::detail::vector_access(workers_, 0).get();
   g_worker_id = worker_id(0);
 }
 
@@ -404,7 +409,7 @@ void scheduler::end_execution()
   finish_pending_tasks();
   for (uint32_t thread = 1; thread < worker_count_; ++thread)
   {
-    threads_[thread - 1].join();
+    ouly::detail::vector_access(threads_, thread - 1).join();
   }
   threads_.clear();
 }
@@ -412,7 +417,7 @@ void scheduler::end_execution()
 void scheduler::submit_internal([[maybe_unused]] worker_id src, workgroup_id dst,
                                 ouly::detail::v1::work_item const& work)
 {
-  auto& wg = workgroups_[dst.get_index()];
+  auto& wg = ouly::detail::vector_access(workgroups_, dst.get_index());
 
   // Load balancing: Try to distribute work among threads in the workgroup
   // Use round-robin assignment to balance load
@@ -424,7 +429,7 @@ void scheduler::submit_internal([[maybe_unused]] worker_id src, workgroup_id dst
     uint32_t worker_offset = (start_offset + attempt) % wg.thread_count_;
     uint32_t worker_index  = wg.start_thread_idx_ + worker_offset;
 
-    auto& worker_wake_data = wake_data_[worker_index].get();
+    auto& worker_wake_data = ouly::detail::vector_access(wake_data_, worker_index).get();
 
     // If worker is sleeping, try to assign work directly to its workgroup queue
     if (!worker_wake_data.status_.load(std::memory_order_acquire))
@@ -483,8 +488,9 @@ void scheduler::create_group(workgroup_id group, uint32_t thread_offset, uint32_
     workgroups_.resize(group.get_index() + 1);
   }
   // thread_count = ouly::next_pow2(thread_count);
-  worker_count_ =
-   std::max(workgroups_[group.get_index()].create_group(thread_offset, thread_count, priority), worker_count_);
+  worker_count_ = std::max(
+   ouly::detail::vector_access(workgroups_, group.get_index()).create_group(thread_offset, thread_count, priority),
+   worker_count_);
 }
 
 auto scheduler::create_group(uint32_t thread_offset, uint32_t thread_count, uint32_t priority) -> workgroup_id
@@ -498,7 +504,7 @@ auto scheduler::create_group(uint32_t thread_offset, uint32_t thread_count, uint
 
 void scheduler::clear_group(workgroup_id group)
 {
-  auto& wg = workgroups_[group.get_index()];
+  auto& wg = ouly::detail::vector_access(workgroups_, group.get_index());
 
   // Safely clear the workgroup by ensuring all operations are complete
   wg.start_thread_idx_ = 0;

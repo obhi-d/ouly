@@ -151,7 +151,8 @@ private:
   auto count_indent() -> string_slice
   {
     auto start = current_pos_;
-    while (current_pos_ < content_.length() && (content_[current_pos_] == ' ' || content_[current_pos_] == '\t'))
+    while (current_pos_ < content_.length() && (ouly::detail::vector_access(content_, current_pos_) == ' ' ||
+                                                ouly::detail::vector_access(content_, current_pos_) == '\t'))
     {
       current_pos_++;
     }
@@ -160,7 +161,8 @@ private:
 
   void skip_whitespace()
   {
-    while (current_pos_ < content_.length() && (content_[current_pos_] == ' ' || content_[current_pos_] == '\t'))
+    while (current_pos_ < content_.length() && (ouly::detail::vector_access(content_, current_pos_) == ' ' ||
+                                                ouly::detail::vector_access(content_, current_pos_) == '\t'))
     {
       current_pos_++;
     }
@@ -168,13 +170,14 @@ private:
 
   [[nodiscard]] auto peek(uint32_t offset) const -> char
   {
-    return (current_pos_ + offset < content_.length()) ? content_[current_pos_ + offset] : '\0';
+    return (current_pos_ + offset < content_.length()) ? ouly::detail::vector_access(content_, current_pos_ + offset)
+                                                       : '\0';
   }
 
   auto get_current_line() -> string_slice
   {
     auto start = current_pos_;
-    while (current_pos_ < content_.length() && content_[current_pos_] != '\n')
+    while (current_pos_ < content_.length() && ouly::detail::vector_access(content_, current_pos_) != '\n')
     {
       current_pos_++;
     }

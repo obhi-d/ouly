@@ -60,9 +60,9 @@ struct memory_tracker
 template <typename TagArg, typename DebugTracer>
 struct memory_tracker_impl
 {
-  using out_stream = typename DebugTracer::trace_output;
-  using backtrace  = typename DebugTracer::backtrace;
-  using hasher     = typename DebugTracer::hasher;
+  using out_stream = DebugTracer::trace_output;
+  using backtrace  = DebugTracer::backtrace;
+  using hasher     = DebugTracer::hasher;
 
   memory_tracker_impl() noexcept                                     = default;
   memory_tracker_impl(const memory_tracker_impl&)                    = delete;

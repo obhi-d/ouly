@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "ouly/dsl/lite_yml.hpp"
+#include "ouly/utility/user_config.hpp"
 
 namespace ouly::yml
 {
@@ -100,7 +101,7 @@ auto lite_stream::next_token() -> lite_stream::token
     };
   }
 
-  char c = content_[current_pos_];
+  char c = ouly::detail::vector_access(content_, current_pos_);
   switch (c)
   {
   case '-':
@@ -172,7 +173,7 @@ auto lite_stream::next_token() -> lite_stream::token
     current_pos_++;
     while (current_pos_ < content_.length())
     {
-      c = content_[current_pos_];
+      c = ouly::detail::vector_access(content_, current_pos_);
       if (c == '"')
       {
         current_pos_++;
@@ -194,7 +195,7 @@ auto lite_stream::next_token() -> lite_stream::token
   auto start = current_pos_;
   while (current_pos_ < content_.length())
   {
-    c = content_[current_pos_];
+    c = ouly::detail::vector_access(content_, current_pos_);
     if (c == ':' && (std::isspace(peek(1)) != 0))
     {
       auto slice = string_slice{.start_ = start, .count_ = (current_pos_ - start)};
@@ -365,7 +366,7 @@ void lite_stream::collect_block_scalar()
       {
         result += (block_style_ == token_type::pipe) ? '\n' : ' ';
       }
-      result += get_view(block_lines_[i]);
+      result += get_view(ouly::detail::vector_access(block_lines_, i));
     }
     ctx_->set_value(result);
     block_lines_.clear();

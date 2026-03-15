@@ -4,6 +4,7 @@
 #include "ouly/scheduler/detail/mpmc_ring.hpp"
 #include "ouly/scheduler/detail/spmc_ring.hpp"
 #include "ouly/scheduler/v2/task_context.hpp"
+#include "ouly/utility/user_config.hpp"
 #include <atomic>
 #include <bit>
 #include <cstdint>
@@ -109,14 +110,14 @@ public:
       bitfield_                  = std::make_unique<uint64_t[]>(bitfield_words_);
       for (uint32_t w = 0; w < bitfield_words_; ++w)
       {
-        bitfield_[w] = ~uint64_t{0};
+        ouly::detail::vector_access(bitfield_, w) = ~uint64_t{0};
       }
 
       // clear unused high bits in the last word
       uint32_t unused = (bitfield_words_ * word_size) - thread_count;
       if (unused != 0U)
       {
-        bitfield_[bitfield_words_ - 1] >>= unused;
+        ouly::detail::vector_access(bitfield_, bitfield_words_ - 1) >>= unused;
       }
     }
 
@@ -131,7 +132,7 @@ public:
   {
     OULY_ASSERT(std::cmp_less(worker_offset, thread_count_));
 
-    if (work_queues_[worker_offset].push_back(item))
+    if (ouly::detail::vector_access(work_queues_, worker_offset).push_back(item))
     {
       advertise_work_available();
       return true;
@@ -145,7 +146,7 @@ public:
   auto pop_work_from_worker(work_item& out, uint32_t worker_offset) noexcept -> bool
   {
     OULY_ASSERT(std::cmp_less(worker_offset, thread_count_));
-    return work_queues_[worker_offset].pop_back(out);
+    return ouly::detail::vector_access(work_queues_, worker_offset).pop_back(out);
   }
 
   /**
@@ -161,7 +162,7 @@ public:
     {
       uint64_t worker_idx = (steal_offset + i) % attempts;
 
-      if (work_queues_[worker_idx].steal(out))
+      if (ouly::detail::vector_access(work_queues_, worker_idx).steal(out))
       {
         return true;
       }
@@ -296,11 +297,11 @@ public:
     std::unique_lock<std::shared_mutex> lock(slot_mutex_);
     for (uint32_t w = 0; w < bitfield_words_; ++w)
     {
-      uint64_t offset_mask = bitfield_[w];
+      uint64_t offset_mask = ouly::detail::vector_access(bitfield_, w);
       if (offset_mask != 0U)
       {
         auto bit = std::countr_zero(offset_mask);
-        bitfield_[w] &= ~(uint64_t{1} << static_cast<uint32_t>(bit));
+        ouly::detail::vector_access(bitfield_, w) &= ~(uint64_t{1} << static_cast<uint32_t>(bit));
         return static_cast<int>(w * word_size) + bit + max_fast_context_switch;
       }
     }
@@ -328,7 +329,7 @@ public:
     auto                                index = static_cast<uint32_t>(slot_index) - max_fast_context_switch;
     uint32_t                            w     = index / word_size;
     uint32_t                            bit   = index % word_size;
-    bitfield_[w] |= (uint64_t{1} << bit);
+    ouly::detail::vector_access(bitfield_, w) |= (uint64_t{1} << bit);
   }
 
 private:

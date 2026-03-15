@@ -14,7 +14,7 @@ auto format_snake_case(const std::string& str) -> std::string
   size_t i     = 0;
   while (i < str.length())
   {
-    if (str[i] == '_')
+    if (ouly::detail::vector_access(str, i) == '_')
     {
       if (!upper)
       {
@@ -24,7 +24,8 @@ auto format_snake_case(const std::string& str) -> std::string
     }
     else
     {
-      ret += static_cast<char>(upper ? ::toupper(str[i]) : ::tolower(str[i]));
+      ret += static_cast<char>(upper ? ::toupper(ouly::detail::vector_access(str, i))
+                                     : ::tolower(ouly::detail::vector_access(str, i)));
       upper = false;
     }
     i++;
@@ -37,14 +38,14 @@ auto format_camel_case(const std::string& str) -> std::string
   std::string ret;
   ret.reserve(str.length() + 4);
   size_t i = 1;
-  ret += static_cast<char>(::toupper(str[0]));
+  ret += static_cast<char>(::toupper(ouly::detail::vector_access(str, 0)));
   while (i < str.length())
   {
-    if (::isupper(str[i]) != 0)
+    if (::isupper(ouly::detail::vector_access(str, i)) != 0)
     {
       ret += ' ';
     }
-    ret += str[i];
+    ret += ouly::detail::vector_access(str, i);
     i++;
   }
   return ret;

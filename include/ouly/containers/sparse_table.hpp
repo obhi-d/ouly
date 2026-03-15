@@ -65,7 +65,7 @@ private:
   template <ouly::detail::HasSelfIndexValue TrTy>
   struct self_index_traits<TrTy> : self_index_traits_base
   {
-    using self_index = typename TrTy::self_index;
+    using self_index = TrTy::self_index;
   };
 
   using self_index = ouly::detail::self_index_type<self_index_traits<Config>>;
@@ -301,7 +301,7 @@ public:
    * @remarks Only available if backref is available
    */
   void erase(value_type const& obj) noexcept
-    requires(has_self_index)
+    requires has_self_index
   {
     erase_at(self_.get(obj));
   }
@@ -438,19 +438,19 @@ private:
   }
 
   auto get_ref_at_idx(size_type idx) const noexcept
-    requires(has_self_index)
+    requires has_self_index
   {
     return self_.get(item_at_idx(idx));
   }
 
   auto set_ref_at_idx(size_type idx, size_type lnk) noexcept
-    requires(!has_self_index)
+    requires (!has_self_index)
   {
     return self_.ensure_at(idx) = lnk;
   }
 
   auto set_ref_at_idx(size_type idx, size_type lnk) noexcept
-    requires(has_self_index)
+    requires has_self_index
   {
     return self_.get(item_at_idx(idx)) = lnk;
   }

@@ -21,7 +21,7 @@ struct function_traits<R (*)(Args...)>
   using return_type                  = R;
   using args                         = std::tuple<Args...>;
   template <std::size_t Index>
-  using arg_type                           = typename std::tuple_element_t<Index, std::tuple<Args...>>;
+  using arg_type                           = std::tuple_element_t<Index, std::tuple<Args...>>;
   constexpr static bool is_free_function   = true;
   constexpr static bool is_member_function = false;
   constexpr static bool is_const_function  = false;
@@ -36,7 +36,7 @@ struct function_traits<R (C::*)(Args...)>
   using return_type                  = R;
   using args                         = std::tuple<Args...>;
   template <std::size_t Index>
-  using arg_type                           = typename std::tuple_element_t<Index, std::tuple<Args...>>;
+  using arg_type                           = std::tuple_element_t<Index, std::tuple<Args...>>;
   constexpr static bool is_free_function   = false;
   constexpr static bool is_member_function = true;
   constexpr static bool is_const_function  = false;
@@ -50,7 +50,7 @@ struct function_traits<R (C::*)(Args...) const>
   using return_type                  = R;
   using args                         = std::tuple<Args...>;
   template <std::size_t Index>
-  using arg_type                           = typename std::tuple_element_t<Index, std::tuple<Args...>>;
+  using arg_type                           = std::tuple_element_t<Index, std::tuple<Args...>>;
   constexpr static bool is_free_function   = false;
   constexpr static bool is_member_function = true;
   constexpr static bool is_const_function  = true;
@@ -77,7 +77,7 @@ struct member_function<M>
   using return_type        = Ret;
   using args               = std::tuple<Args...>;
   template <std::size_t Index>
-  using arg_type = typename std::tuple_element_t<Index, std::tuple<Args...>>;
+  using arg_type = std::tuple_element_t<Index, std::tuple<Args...>>;
 
   static auto invoke(C& instance, Args&&... args)
   {
@@ -96,7 +96,7 @@ struct member_function<M>
   using return_type        = Ret;
   using args               = std::tuple<Args...>;
   template <std::size_t Index>
-  using arg_type = typename std::tuple_element_t<Index, std::tuple<Args...>>;
+  using arg_type = std::tuple_element_t<Index, std::tuple<Args...>>;
 
   static auto invoke(C const& instance, Args&&... args)
   {

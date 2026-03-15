@@ -82,8 +82,8 @@ class table
 
   using vector                    = std::vector<T>;
   using freepool                  = std::conditional_t<is_pod, free_idx, std::vector<std::uint32_t>>;
-  using projection_member_pointer = typename traits::member_pointer;
-  using projection_member_type    = typename traits::member_type;
+  using projection_member_pointer = traits::member_pointer;
+  using projection_member_type    = traits::member_type;
 
   static_assert(is_pod || !use_projection, "projection requires POD policy");
   static_assert(!use_projection || sizeof(projection_member_type) >= sizeof(std::uint32_t),
@@ -237,22 +237,22 @@ public:
     return pool_.data();
   }
 
-  auto begin() noexcept -> typename vector::iterator
+  auto begin() noexcept -> vector::iterator
   {
     return pool_.begin();
   }
 
-  auto end() noexcept -> typename vector::iterator
+  auto end() noexcept -> vector::iterator
   {
     return pool_.end();
   }
 
-  auto begin() const noexcept -> typename vector::const_iterator
+  auto begin() const noexcept -> vector::const_iterator
   {
     return pool_.begin();
   }
 
-  auto end() const noexcept -> typename vector::const_iterator
+  auto end() const noexcept -> vector::const_iterator
   {
     return pool_.end();
   }

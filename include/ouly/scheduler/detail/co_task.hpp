@@ -124,7 +124,7 @@ private:
 template <typename C>
 struct co_lambda_executor
 {
-  using handle_type = typename C::handle;
+  using handle_type = C::handle;
   // NOLINTNEXTLINE
   co_lambda_executor(C&& c) : coro_(c.release()) {}
 

@@ -52,11 +52,11 @@ struct debug_tracer
 template <HasDebugTracer T>
 struct debug_tracer<T>
 {
-  using type = typename T::debug_tracer_t;
+  using type = T::debug_tracer_t;
 };
 
 template <typename T>
-using debug_tracer_t = typename debug_tracer<T>::type;
+using debug_tracer_t = debug_tracer<T>::type;
 
 template <typename T>
 struct min_alignment
@@ -98,12 +98,12 @@ struct protection
 template <HasProtection T>
 struct protection<T>
 {
-  using type                  = typename T::protection_t;
+  using type                  = T::protection_t;
   static constexpr auto value = T::protection_v;
 };
 
 template <typename T>
-using protection_t = typename protection<T>::type;
+using protection_t = protection<T>::type;
 
 template <typename T>
 constexpr auto protection_v = protection<T>::value;

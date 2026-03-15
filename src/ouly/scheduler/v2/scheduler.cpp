@@ -38,7 +38,7 @@ static auto update_seed() -> uint32_t;
 
 static auto update_seed() -> uint32_t
 {
-  return (g_random_seed = (g_random_seed * lcg_multiplier + lcg_increment) & initial_seed_mask);
+  return (g_random_seed = ((g_random_seed * lcg_multiplier) + lcg_increment) & initial_seed_mask);
 }
 
 auto task_context::this_context::get() noexcept -> task_context const&
@@ -74,7 +74,7 @@ scheduler::~scheduler() noexcept
 void scheduler::submit_internal(task_context const& current, workgroup_id dst,
                                 ::ouly::detail::v2::work_item const& work)
 {
-  auto& target_workgroup = workgroups_[dst.get_index()];
+  auto& target_workgroup = ouly::detail::vector_access(workgroups_, dst.get_index());
 
   // First try to submit to the worker's own queue if it belongs to this workgroup
   worker_id current_worker = current.get_worker();
@@ -115,7 +115,7 @@ void scheduler::run_worker(worker_id wid)
 {
   // Set thread-local storage for this worker
   g_worker_id = wid;
-  g_worker    = &workers_[wid.get_index()];
+  g_worker    = &ouly::detail::vector_access(workers_, wid.get_index());
 
   // Execute the entry function if provided
   if (entry_fn_)
@@ -149,10 +149,10 @@ void scheduler::run_worker(worker_id wid)
       }
 
       // exit context
-      auto& worker = workers_[wid.get_index()];
+      auto& worker = ouly::detail::vector_access(workers_, wid.get_index());
       if (worker.get_workgroup())
       {
-        auto& workgroup = workgroups_[worker.get_workgroup().get_index()];
+        auto& workgroup = ouly::detail::vector_access(workgroups_, worker.get_workgroup().get_index());
         workgroup.exit(static_cast<int>(worker.get_group_offset()));
         worker.set_workgroup_info(0, workgroup_id{});
       }
@@ -177,11 +177,11 @@ void scheduler::run_worker(worker_id wid)
 
 auto scheduler::enter_context(worker_id wid, workgroup_id needy_wg) noexcept -> bool
 {
-  auto& worker = workers_[wid.get_index()];
+  auto& worker = ouly::detail::vector_access(workers_, wid.get_index());
 
   if (worker.get_workgroup() != needy_wg)
   {
-    auto& needy_workgroup = workgroups_[needy_wg.get_index()];
+    auto& needy_workgroup = ouly::detail::vector_access(workgroups_, needy_wg.get_index());
     int   enter_ctx       = needy_workgroup.enter();
     if (enter_ctx < 0)
     {
@@ -190,7 +190,7 @@ auto scheduler::enter_context(worker_id wid, workgroup_id needy_wg) noexcept -> 
 
     if (worker.get_workgroup())
     {
-      auto& current_group = workgroups_[worker.get_workgroup().get_index()];
+      auto& current_group = ouly::detail::vector_access(workgroups_, worker.get_workgroup().get_index());
       current_group.exit(static_cast<int>(worker.get_group_offset()));
     }
 
@@ -203,12 +203,12 @@ auto scheduler::enter_context(worker_id wid, workgroup_id needy_wg) noexcept -> 
 auto scheduler::find_work_for_worker(worker_id wid) noexcept -> bool
 {
   // Try to drain work from the worker's own workgroup first
-  auto&                 worker        = workers_[wid.get_index()];
+  auto&                 worker        = ouly::detail::vector_access(workers_, wid.get_index());
   thread_local uint32_t random_victim = update_seed();
 
   if (worker.get_workgroup())
   {
-    auto& workgroup = workgroups_[worker.get_workgroup().get_index()];
+    auto& workgroup = ouly::detail::vector_access(workgroups_, worker.get_workgroup().get_index());
 
     if (workgroup.has_work())
     {
@@ -245,7 +245,7 @@ auto scheduler::find_work_for_worker(worker_id wid) noexcept -> bool
   for (uint32_t attempt = 0; attempt < workgroup_count_; ++attempt)
   {
     uint32_t i         = (steal_start_idx + attempt) % workgroup_count_;
-    auto&    workgroup = workgroups_[i];
+    auto&    workgroup = ouly::detail::vector_access(workgroups_, i);
 
     if (!workgroup.has_work())
     {
@@ -278,12 +278,12 @@ auto scheduler::find_work_for_worker(worker_id wid) noexcept -> bool
 
 void scheduler::execute_work(worker_id wid, detail::v2::work_item& work) noexcept
 {
-  auto& worker = workers_[wid.get_index()];
+  auto& worker = ouly::detail::vector_access(workers_, wid.get_index());
   // Create a copy since work_item expects mutable reference
   auto const& current_context = worker.get_context();
   work(current_context);
 
-  workgroups_[current_context.get_workgroup().get_index()].sink_one_work();
+  ouly::detail::vector_access(workgroups_, current_context.get_workgroup().get_index()).sink_one_work();
 }
 
 void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_context)
@@ -293,10 +293,11 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
   // Initialize worker contexts
   for (uint32_t i = 0; i < detail::v2::max_workgroup; ++i)
   {
-    if (workgroup_descs[i].thread_count_ > 0)
+    if (ouly::detail::vector_access(workgroup_descs, i).thread_count_ > 0)
     {
       workgroup_count_ = std::max(workgroup_count_, i + 1);
-      worker_count_    = std::max(worker_count_, workgroup_descs[i].start_ + workgroup_descs[i].thread_count_);
+      worker_count_    = std::max(worker_count_, ouly::detail::vector_access(workgroup_descs, i).start_ +
+                                                  ouly::detail::vector_access(workgroup_descs, i).thread_count_);
     }
   }
 
@@ -304,10 +305,12 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
 
   for (uint32_t i = 0; i < workgroup_count_; ++i)
   {
-    if (workgroup_descs[i].thread_count_ > 0)
+    if (ouly::detail::vector_access(workgroup_descs, i).thread_count_ > 0)
     {
-      workgroups_[i].create_group(workgroup_descs[i].start_, workgroup_descs[i].thread_count_,
-                                  workgroup_descs[i].priority_);
+      ouly::detail::vector_access(workgroups_, i)
+       .create_group(ouly::detail::vector_access(workgroup_descs, i).start_,
+                     ouly::detail::vector_access(workgroup_descs, i).thread_count_,
+                     ouly::detail::vector_access(workgroup_descs, i).priority_);
     }
   }
 
@@ -334,14 +337,14 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
 
   for (uint32_t thread = 1; thread < worker_count_; ++thread)
   {
-    workers_[thread].current_context_.init(*this, user_context, 0, worker_id(thread));
+    ouly::detail::vector_access(workers_, thread).current_context_.init(*this, user_context, 0, worker_id(thread));
     threads_.emplace_back(&scheduler::run_worker, this, worker_id(thread));
   }
 
-  workers_[0].current_context_.init(*this, user_context, 0, worker_id(0));
+  ouly::detail::vector_access(workers_, 0).current_context_.init(*this, user_context, 0, worker_id(0));
   enter_context(worker_id(0), workgroup_id(0));
 
-  g_worker    = &workers_[0];
+  g_worker    = &ouly::detail::vector_access(workers_, 0);
   g_worker_id = worker_id(0);
 
   entry_fn_(worker_id(0));
@@ -420,7 +423,7 @@ void scheduler::create_group(workgroup_id group, uint32_t start_thread_idx, uint
     workgroup_count_ = group.get_index() + 1;
   }
 
-  auto& wg         = initializer_->workgroup_descriptions_[group.get_index()];
+  auto& wg         = ouly::detail::vector_access(initializer_->workgroup_descriptions_, group.get_index());
   wg.start_        = start_thread_idx;
   wg.thread_count_ = thread_count;
   wg.priority_     = priority;
@@ -433,7 +436,7 @@ auto scheduler::create_group(uint32_t start_thread_idx, uint32_t thread_count, u
   auto& workgroup_descs = initializer_->workgroup_descriptions_;
   for (uint32_t i = 0; i < detail::v2::max_workgroup; ++i)
   {
-    if (workgroup_descs[i].thread_count_ == 0)
+    if (ouly::detail::vector_access(workgroup_descs, i).thread_count_ == 0)
     {
       workgroup_id new_group{i};
       create_group(new_group, start_thread_idx, thread_count, priority);
@@ -448,18 +451,18 @@ void scheduler::clear_group(workgroup_id group)
 {
   if (group.get_index() < detail::v2::max_workgroup)
   {
-    workgroups_[group.get_index()].clear();
+    ouly::detail::vector_access(workgroups_, group.get_index()).clear();
   }
 }
 
 auto scheduler::get_worker_count(workgroup_id g) const noexcept -> uint32_t
 {
-  return workgroups_[g.get_index()].get_thread_count();
+  return ouly::detail::vector_access(workgroups_, g.get_index()).get_thread_count();
 }
 
 auto scheduler::get_worker_start_idx(workgroup_id g) const noexcept -> uint32_t
 {
-  return workgroups_[g.get_index()].get_start_thread_idx();
+  return ouly::detail::vector_access(workgroups_, g.get_index()).get_start_thread_idx();
 }
 
 auto scheduler::get_logical_divisor(workgroup_id g) const noexcept -> uint32_t
@@ -477,7 +480,7 @@ void scheduler::take_ownership() noexcept
 
 void scheduler::reset_to_workgroup(worker_id thread, workgroup_id group)
 {
-  auto& worker = workers_[thread.get_index()];
+  auto& worker = ouly::detail::vector_access(workers_, thread.get_index());
   if (worker.get_workgroup() != group)
   {
     constexpr uint32_t max_context_enter_attempts = 1000;
@@ -497,7 +500,7 @@ void scheduler::reset_to_workgroup(worker_id thread, workgroup_id group)
 
 void scheduler::busy_work(worker_id thread) noexcept
 {
-  auto& worker = workers_[thread.get_index()];
+  auto& worker = ouly::detail::vector_access(workers_, thread.get_index());
   // We need to preserve the worker's context and group information and restore it after busy work
   auto preserve_group = worker.get_workgroup();
 
@@ -508,7 +511,7 @@ void scheduler::busy_work(worker_id thread) noexcept
   constexpr uint32_t failure_threshold = 5;
 
   // Use thread_local failure tracking for better performance
-  auto&    local_recent_failures = workers_[thread.get_index()].busy_backoff_;
+  auto&    local_recent_failures = ouly::detail::vector_access(workers_, thread.get_index()).busy_backoff_;
   uint32_t attempts              = (local_recent_failures > failure_threshold) ? min_attempts : max_attempts;
 
   // If thi

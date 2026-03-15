@@ -8,7 +8,7 @@ namespace ouly::detail
 {
 
 template <HasValueType Class>
-using container_value_type = typename Class::value_type;
+using container_value_type = Class::value_type;
 
 template <typename T>
 constexpr auto get_pointer_class_type()

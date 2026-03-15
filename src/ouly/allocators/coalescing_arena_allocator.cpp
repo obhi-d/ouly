@@ -9,7 +9,7 @@ namespace ouly
 auto coalescing_arena_allocator::add_arena(size_type size, bool empty) -> std::pair<arena_id, allocation_id>
 {
   uint16_t arena_idx = static_cast<uint16_t>(arena_entries_.push(ouly::detail::ca_arena()));
-  auto&    arena_ref = arena_entries_.entries_[arena_idx];
+  auto&    arena_ref = ouly::detail::vector_access(arena_entries_.entries_, arena_idx);
   arena_ref.size_    = size;
   auto block_id      = block_entries_.push(0, size, arena_idx, empty);
   if (empty)
@@ -29,20 +29,21 @@ auto coalescing_arena_allocator::add_arena(size_type size, bool empty) -> std::p
 auto coalescing_arena_allocator::commit(size_type size, size_type const* found) -> std::uint32_t
 {
   auto          free_idx  = static_cast<size_type>(std::distance(static_cast<size_type const*>(sizes_.data()), found));
-  std::uint32_t free_node = free_ordering_[free_idx];
+  std::uint32_t free_node = ouly::detail::vector_access(free_ordering_, free_idx);
 
   // Marker
-  block_entries_.free_marker_[free_node] = false;
+  ouly::detail::vector_access(block_entries_.free_marker_, free_node) = false;
 
-  auto  arena_id                   = block_entries_.arenas_[free_node];
-  auto& arena                      = arena_entries_.entries_[arena_id];
-  auto  remaining                  = *found - size;
-  block_entries_.sizes_[free_node] = size;
+  auto  arena_id  = ouly::detail::vector_access(block_entries_.arenas_, free_node);
+  auto& arena     = ouly::detail::vector_access(arena_entries_.entries_, arena_id);
+  auto  remaining = *found - size;
+  ouly::detail::vector_access(block_entries_.sizes_, free_node) = size;
   arena.free_size_ -= size;
   if (remaining > 0)
   {
     auto& list     = arena.blocks_;
-    auto  new_node = block_entries_.push(block_entries_.offsets_[free_node] + size, remaining, arena_id, true);
+    auto  new_node = block_entries_.push(ouly::detail::vector_access(block_entries_.offsets_, free_node) + size,
+                                         remaining, arena_id, true);
 
     list.insert_after(block_entries_, free_node, new_node);
     // reinsert the left-over size in free list
@@ -62,8 +63,8 @@ void coalescing_arena_allocator::reinsert_left(size_t of, size_type size, std::u
 {
   if (of == 0U)
   {
-    free_ordering_[of] = node;
-    sizes_[of]         = size;
+    ouly::detail::vector_access(free_ordering_, of) = node;
+    ouly::detail::vector_access(sizes_, of)         = size;
   }
   else
   {
@@ -82,13 +83,13 @@ void coalescing_arena_allocator::reinsert_left(size_t of, size_type size, std::u
         std::memmove(dest, src, count * sizeof(std::uint32_t));
       }
 
-      free_ordering_[it] = node;
-      sizes_[it]         = size;
+      ouly::detail::vector_access(free_ordering_, it) = node;
+      ouly::detail::vector_access(sizes_, it)         = size;
     }
     else
     {
-      free_ordering_[of] = node;
-      sizes_[of]         = size;
+      ouly::detail::vector_access(free_ordering_, of) = node;
+      ouly::detail::vector_access(sizes_, of)         = size;
     }
   }
 }
@@ -96,7 +97,7 @@ void coalescing_arena_allocator::reinsert_left(size_t of, size_type size, std::u
 auto coalescing_arena_allocator::deallocate(allocation_id id) -> arena_id
 {
   auto const node = id.id_;
-  auto const size = block_entries_.sizes_[node];
+  auto const size = ouly::detail::vector_access(block_entries_.sizes_, node);
   // NOLINTNEXTLINE
   [[maybe_unused]] auto measure = statistics::report_deallocate(size);
 
@@ -111,7 +112,8 @@ auto coalescing_arena_allocator::deallocate(allocation_id id) -> arena_id
     e_left_and_right
   };
 
-  auto& arena     = arena_entries_.entries_[block_entries_.arenas_[node]];
+  auto& arena =
+   ouly::detail::vector_access(arena_entries_.entries_, ouly::detail::vector_access(block_entries_.arenas_, node));
   auto& node_list = arena.blocks_;
 
   // last index is not used
@@ -120,14 +122,14 @@ auto coalescing_arena_allocator::deallocate(allocation_id id) -> arena_id
   std::uint32_t left   = 0;
   std::uint32_t right  = 0;
   std::uint8_t  merges = 0;
-  auto const    order  = block_entries_.ordering_[node];
-  if (node != node_list.front() && block_entries_.free_marker_[order.prev_])
+  auto const    order  = ouly::detail::vector_access(block_entries_.ordering_, node);
+  if (node != node_list.front() && ouly::detail::vector_access(block_entries_.free_marker_, order.prev_))
   {
     left = order.prev_;
     merges |= f_left;
   }
 
-  if (node != node_list.back() && block_entries_.free_marker_[order.next_])
+  if (node != node_list.back() && ouly::detail::vector_access(block_entries_.free_marker_, order.next_))
   {
     right = order.next_;
     merges |= f_right;
@@ -145,7 +147,7 @@ auto coalescing_arena_allocator::deallocate(allocation_id id) -> arena_id
       erase(right);
     }
 
-    std::uint16_t arena_idx = block_entries_.arenas_[node];
+    std::uint16_t arena_idx = ouly::detail::vector_access(block_entries_.arenas_, node);
     arena.size_             = 0;
     arena.blocks_.clear(block_entries_);
     arenas_.erase(arena_entries_, arena_idx);
@@ -156,27 +158,27 @@ auto coalescing_arena_allocator::deallocate(allocation_id id) -> arena_id
   {
   case merge_type::e_none:
     add_free(node);
-    block_entries_.free_marker_[node] = true;
+    ouly::detail::vector_access(block_entries_.free_marker_, node) = true;
     break;
   case merge_type::e_left:
   {
-    auto left_size = block_entries_.sizes_[left];
+    auto left_size = ouly::detail::vector_access(block_entries_.sizes_, left);
     grow_free_node(left, left_size + size);
     node_list.erase(block_entries_, node);
   }
   break;
   case merge_type::e_right:
   {
-    auto right_size = block_entries_.sizes_[right];
+    auto right_size = ouly::detail::vector_access(block_entries_.sizes_, right);
     replace_and_grow(right, node, right_size + size);
     node_list.erase(block_entries_, right);
-    block_entries_.free_marker_[node] = true;
+    ouly::detail::vector_access(block_entries_.free_marker_, node) = true;
   }
   break;
   case merge_type::e_left_and_right:
   {
-    auto left_size  = block_entries_.sizes_[left];
-    auto right_size = block_entries_.sizes_[right];
+    auto left_size  = ouly::detail::vector_access(block_entries_.sizes_, left);
+    auto right_size = ouly::detail::vector_access(block_entries_.sizes_, right);
     erase(right);
     grow_free_node(left, left_size + right_size + size);
     node_list.erase2(block_entries_, node);
@@ -191,9 +193,9 @@ auto coalescing_arena_allocator::deallocate(allocation_id id) -> arena_id
 
 void coalescing_arena_allocator::add_free(std::uint32_t node)
 {
-  block_entries_.free_marker_[node] = true;
-  auto size                         = block_entries_.sizes_[node];
-  auto it                           = mini2_it(sizes_.data(), sizes_.size(), size);
+  ouly::detail::vector_access(block_entries_.free_marker_, node) = true;
+  auto size = ouly::detail::vector_access(block_entries_.sizes_, node);
+  auto it   = mini2_it(sizes_.data(), sizes_.size(), size);
   free_ordering_.emplace(free_ordering_.begin() + it, node);
   sizes_.emplace(sizes_.begin() + it, size);
 }
@@ -201,24 +203,26 @@ void coalescing_arena_allocator::add_free(std::uint32_t node)
 void coalescing_arena_allocator::grow_free_node(std::uint32_t block, size_type newsize)
 {
 
-  auto it = static_cast<size_type>(mini2_it(sizes_.data(), sizes_.size(), block_entries_.sizes_[block]));
-  for (auto end = static_cast<decltype(it)>(free_ordering_.size()); it != end && free_ordering_[it] != block; ++it)
+  auto it = static_cast<size_type>(
+   mini2_it(sizes_.data(), sizes_.size(), ouly::detail::vector_access(block_entries_.sizes_, block)));
+  for (auto end = static_cast<decltype(it)>(free_ordering_.size());
+       it != end && ouly::detail::vector_access(free_ordering_, it) != block; ++it)
   {
     ;
   }
 
   OULY_ASSERT(it != free_ordering_.size());
-  block_entries_.sizes_[block] = newsize;
+  ouly::detail::vector_access(block_entries_.sizes_, block) = newsize;
   reinsert_right(it, newsize, block);
 }
 
 void coalescing_arena_allocator::replace_and_grow(std::uint32_t right, std::uint32_t node, size_type new_size)
 {
-  size_type size              = block_entries_.sizes_[right];
-  block_entries_.sizes_[node] = new_size;
+  size_type size                                           = ouly::detail::vector_access(block_entries_.sizes_, right);
+  ouly::detail::vector_access(block_entries_.sizes_, node) = new_size;
 
   auto it = static_cast<size_type>(mini2_it(sizes_.data(), sizes_.size(), size));
-  for (auto end = free_ordering_.size(); it != end && free_ordering_[it] != right; ++it)
+  for (auto end = free_ordering_.size(); it != end && ouly::detail::vector_access(free_ordering_, it) != right; ++it)
   {
     ;
   }
@@ -229,8 +233,9 @@ void coalescing_arena_allocator::replace_and_grow(std::uint32_t right, std::uint
 
 void coalescing_arena_allocator::erase(std::uint32_t node)
 {
-  auto it = static_cast<size_type>(mini2_it(sizes_.data(), sizes_.size(), block_entries_.sizes_[node]));
-  for (auto end = free_ordering_.size(); it != end && free_ordering_[it] != node; ++it)
+  auto it = static_cast<size_type>(
+   mini2_it(sizes_.data(), sizes_.size(), ouly::detail::vector_access(block_entries_.sizes_, node)));
+  for (auto end = free_ordering_.size(); it != end && ouly::detail::vector_access(free_ordering_, it) != node; ++it)
   {
     ;
   }
@@ -245,8 +250,8 @@ void coalescing_arena_allocator::reinsert_right(size_t of, size_type size, std::
   auto next = of + 1;
   if (next == sizes_.size())
   {
-    free_ordering_[of] = node;
-    sizes_[of]         = size;
+    ouly::detail::vector_access(free_ordering_, of) = node;
+    ouly::detail::vector_access(sizes_, of)         = size;
   }
   else
   {
@@ -272,8 +277,8 @@ void coalescing_arena_allocator::reinsert_right(size_t of, size_type size, std::
     }
     else
     {
-      free_ordering_[of] = node;
-      sizes_[of]         = size;
+      ouly::detail::vector_access(free_ordering_, of) = node;
+      ouly::detail::vector_access(sizes_, of)         = size;
     }
   }
 }
@@ -290,7 +295,7 @@ void coalescing_arena_allocator::validate_integrity() const
          blk_it != blk_end_it; ++blk_it)
     {
       auto blk = *blk_it;
-      if (block_entries_.free_marker_[blk])
+      if (ouly::detail::vector_access(block_entries_.free_marker_, blk))
       {
         counted_free_nodes++;
       }
@@ -309,26 +314,27 @@ void coalescing_arena_allocator::validate_integrity() const
          blk_it != blk_end_it; ++blk_it)
     {
       auto blk = *blk_it;
-      OULY_ASSERT(block_entries_.offsets_[blk] == expected_offset);
-      expected_offset += block_entries_.sizes_[blk];
+      OULY_ASSERT(ouly::detail::vector_access(block_entries_.offsets_, blk) == expected_offset);
+      expected_offset += ouly::detail::vector_access(block_entries_.sizes_, blk);
     }
   }
 
   OULY_ASSERT(free_ordering_.size() == sizes_.size());
   for (size_t i = 1; i < sizes_.size(); ++i)
   {
-    OULY_ASSERT(sizes_[i - 1] <= sizes_[i]);
+    OULY_ASSERT(ouly::detail::vector_access(sizes_, i - 1) <= ouly::detail::vector_access(sizes_, i));
   }
 
   [[maybe_unused]] size_type sz = 0;
   // NOLINTNEXTLINE
   for (size_t free_idx = 0; free_idx < free_ordering_.size(); ++free_idx)
   {
-    auto fn = free_ordering_[free_idx];
-    OULY_ASSERT(sz <= block_entries_.sizes_[fn]);
-    OULY_ASSERT(block_entries_.sizes_[fn] == sizes_[free_idx]);
+    auto fn = ouly::detail::vector_access(free_ordering_, free_idx);
+    OULY_ASSERT(sz <= ouly::detail::vector_access(block_entries_.sizes_, fn));
+    OULY_ASSERT(ouly::detail::vector_access(block_entries_.sizes_, fn) ==
+                ouly::detail::vector_access(sizes_, free_idx));
     // NOLINTNEXTLINE
-    sz = block_entries_.sizes_[fn];
+    sz = ouly::detail::vector_access(block_entries_.sizes_, fn);
   }
 }
 } // namespace ouly

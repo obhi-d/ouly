@@ -16,7 +16,7 @@ template <typename Accessor>
 class vlist
 {
 public:
-  using container = typename Accessor::container;
+  using container = Accessor::container;
 
   std::uint32_t first_ = 0;
   std::uint32_t last_  = 0;
@@ -25,7 +25,7 @@ public:
   struct iterator_t
   {
     using iterator_category = std::bidirectional_iterator_tag;
-    using value_type        = typename Accessor::value_type;
+    using value_type        = Accessor::value_type;
     using difference_type   = std::ptrdiff_t;
     using pointer           = value_type*;
     using reference         = value_type&;

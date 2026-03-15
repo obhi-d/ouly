@@ -7,6 +7,7 @@
 #include "ouly/scheduler/detail/mpmc_ring.hpp"
 #include "ouly/scheduler/spin_lock.hpp"
 #include "ouly/scheduler/v1/task_context.hpp"
+#include "ouly/utility/user_config.hpp"
 #include <cstdint>
 
 #ifdef _MSC_VER
@@ -106,7 +107,7 @@ struct workgroup
       return false;
     }
 
-    if (per_worker_queues_[worker_offset].emplace(item))
+    if (ouly::detail::vector_access(per_worker_queues_, worker_offset).emplace(item))
     {
       // Publish the increase in available work with release semantics so
       // threads performing acquire loads observe the update reliably.
@@ -125,7 +126,7 @@ struct workgroup
       return false;
     }
 
-    return per_worker_queues_[worker_offset].pop(item);
+    return ouly::detail::vector_access(per_worker_queues_, worker_offset).pop(item);
   }
 
   void sink_one_work() noexcept

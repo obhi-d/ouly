@@ -51,7 +51,7 @@ public:
       return false;
     }
 
-    buffer_[b & module_mask] = item;
+    ouly::detail::vector_access(buffer_, b & module_mask) = item;
 
     // A release store ensures that the write to the buffer is visible
     // to other threads before the update to 'bottom'.
@@ -83,7 +83,7 @@ public:
     t = top_.load(std::memory_order_relaxed);
     if (t <= b)
     {
-      out = buffer_[b & module_mask];
+      out = ouly::detail::vector_access(buffer_, b & module_mask);
       if (t == b)
       {
         // last element: compete with thieves
@@ -118,7 +118,7 @@ public:
     size_t b = bottom_.load(std::memory_order_acquire);
     if (t < b)
     {
-      dst                  = buffer_[t & module_mask];
+      dst                  = ouly::detail::vector_access(buffer_, t & module_mask);
       std::size_t expected = t;
       if (top_.compare_exchange_strong(expected, t + 1, std::memory_order_seq_cst, std::memory_order_seq_cst))
       {

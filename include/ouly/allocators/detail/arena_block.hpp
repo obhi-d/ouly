@@ -110,7 +110,7 @@ struct block_accessor
   using bank_type  = block_bank<UsizeType, Uextension>;
   using size_type  = UsizeType;
   using container  = bank_type;
-  using block_link = typename bank_type::link;
+  using block_link = bank_type::link;
 
   static void erase(bank_type& bank, std::uint32_t node)
   {

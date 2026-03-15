@@ -13,11 +13,11 @@ struct custom_allocator
 template <ouly::detail::HasAllocatorAttribs T>
 struct custom_allocator<T>
 {
-  using type = typename T::allocator_t;
+  using type = T::allocator_t;
 };
 
 template <typename Traits>
-using custom_allocator_t = typename custom_allocator<Traits>::type;
+using custom_allocator_t = custom_allocator<Traits>::type;
 
 template <typename T>
 struct underlying_allocator
@@ -28,9 +28,9 @@ struct underlying_allocator
 template <ouly::detail::HasUnderlyingAllocator T>
 struct underlying_allocator<T>
 {
-  using type = typename T::underlying_allocator_t;
+  using type = T::underlying_allocator_t;
 };
 
 template <typename Traits>
-using underlying_allocator_t = typename underlying_allocator<Traits>::type;
+using underlying_allocator_t = underlying_allocator<Traits>::type;
 } // namespace ouly::detail

@@ -2,6 +2,7 @@
 
 #include "ouly/dsl/microexpr.hpp"
 #include "ouly/utility/from_chars.hpp"
+#include "ouly/utility/user_config.hpp"
 #include <cstdint>
 
 namespace ouly
@@ -17,7 +18,7 @@ struct microexpr_state
 
   [[nodiscard]] auto get() const noexcept -> char
   {
-    return content_[read_];
+    return ouly::detail::vector_access(content_, read_);
   }
 
   [[nodiscard]] auto read_token() const -> std::string_view;
@@ -50,14 +51,14 @@ auto microexpr_state::conditional() -> int64_t
 {
   int64_t left = comparison();
   skip_white();
-  if (read_ >= content_.length() || content_[read_] != '?')
+  if (read_ >= content_.length() || ouly::detail::vector_access(content_, read_) != '?')
   {
     return left;
   }
   read_++;
   int64_t op_a = comparison();
   skip_white();
-  if (read_ >= content_.length() || content_[read_] != ':')
+  if (read_ >= content_.length() || ouly::detail::vector_access(content_, read_) != ':')
   {
     return left;
   }
@@ -75,10 +76,10 @@ auto microexpr_state::comparison() -> int64_t
     return left;
   }
 
-  char sview[2] = {content_[read_], 0};
+  char sview[2] = {ouly::detail::vector_access(content_, read_), 0};
   if (read_ + 1 < content_.length())
   {
-    sview[1] = content_[read_ + 1];
+    sview[1] = ouly::detail::vector_access(content_, read_ + 1);
   }
 
   if (sview[0] == '=' && sview[1] == '=')
@@ -124,10 +125,10 @@ auto microexpr_state::exec_binary(int64_t& left) -> bool
     return false;
   }
 
-  char sview[2] = {content_[read_], 0};
+  char sview[2] = {ouly::detail::vector_access(content_, read_), 0};
   if (read_ + 1 < content_.length())
   {
-    sview[1] = content_[read_ + 1];
+    sview[1] = ouly::detail::vector_access(content_, read_ + 1);
   }
 
   if (sview[0] == '&' && sview[1] == '&')
@@ -202,7 +203,7 @@ auto microexpr_state::binary() -> int64_t
 auto microexpr_state::read_token() const -> std::string_view
 {
   uint32_t token = read_;
-  while (token < content_.size() && (std::isalnum(content_[token]) != 0))
+  while (token < content_.size() && (std::isalnum(ouly::detail::vector_access(content_, token)) != 0))
   {
     token++;
   }

@@ -58,12 +58,12 @@ auto coalescing_allocator::allocate(size_type size) -> coalescing_allocator::siz
   // first fit
   for (uint32_t i = 0, end = static_cast<uint32_t>(sizes_.size()); i < end; ++i)
   {
-    if (size <= sizes_[i])
+    if (size <= ouly::detail::vector_access(sizes_, i))
     {
-      auto ret = offsets_[i];
-      sizes_[i] -= size;
-      offsets_[i] += size;
-      if (sizes_[i] == 0U)
+      auto ret = ouly::detail::vector_access(offsets_, i);
+      ouly::detail::vector_access(sizes_, i) -= size;
+      ouly::detail::vector_access(offsets_, i) += size;
+      if (ouly::detail::vector_access(sizes_, i) == 0U)
       {
         offsets_.erase(i + offsets_.begin());
         sizes_.erase(i + sizes_.begin());
@@ -110,21 +110,22 @@ void coalescing_allocator::deallocate(size_type offset, size_type size)
   else
   {
     auto idx = static_cast<size_type>(std::distance(static_cast<size_type const*>(offsets_.data()), it));
-    if (offsets_[idx - 1] + sizes_[idx - 1] == offset)
+    if (ouly::detail::vector_access(offsets_, idx - 1) + ouly::detail::vector_access(sizes_, idx - 1) == offset)
     {
-      sizes_[idx - 1] += size;
+      ouly::detail::vector_access(sizes_, idx - 1) += size;
 
-      if (offsets_[idx] == offsets_[idx - 1] + sizes_[idx - 1])
+      if (ouly::detail::vector_access(offsets_, idx) ==
+          ouly::detail::vector_access(offsets_, idx - 1) + ouly::detail::vector_access(sizes_, idx - 1))
       {
-        sizes_[idx - 1] += sizes_[idx];
+        ouly::detail::vector_access(sizes_, idx - 1) += ouly::detail::vector_access(sizes_, idx);
         offsets_.erase(offsets_.begin() + idx);
         sizes_.erase(sizes_.begin() + idx);
       }
     }
-    else if (offsets_[idx] == offset + size)
+    else if (ouly::detail::vector_access(offsets_, idx) == offset + size)
     {
-      offsets_[idx] -= size;
-      sizes_[idx] += size;
+      ouly::detail::vector_access(offsets_, idx) -= size;
+      ouly::detail::vector_access(sizes_, idx) += size;
     }
     else
     {

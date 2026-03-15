@@ -26,7 +26,7 @@ struct tuple_element_impl;
 template <std::size_t I, typename First, typename... Rest>
 struct tuple_element_impl<I, First, Rest...>
 {
-  using type = typename tuple_element_impl<I - 1, Rest...>::type;
+  using type = tuple_element_impl<I - 1, Rest...>::type;
 };
 
 // Base case for tuple_element when I == 0
@@ -48,7 +48,7 @@ struct tuple : tuple_impl<std::index_sequence_for<Args...>, Args...>
 {
   // Type alias for extracting the I-th type
   template <std::size_t I>
-  using type = typename tuple_element_impl<I, Args...>::type;
+  using type = tuple_element_impl<I, Args...>::type;
 
   // Accessor function to get the I-th element
   template <std::size_t I>
@@ -66,18 +66,20 @@ struct tuple : tuple_impl<std::index_sequence_for<Args...>, Args...>
 };
 
 template <std::size_t I, typename T>
-using tuple_element_t = typename T::template type<I>;
+using tuple_element_t = T::template type<I>;
 
 } // namespace ouly
 
-namespace std
+namespace std // NOLINT(cert-dcl58-cpp, bugprone-std-namespace-modification)
 {
 
 template <typename... T>
+// NOLINTNEXTLINE(cert-dcl58-cpp, bugprone-std-namespace-modification)
 struct tuple_size<ouly::tuple<T...>> : std::integral_constant<size_t, sizeof...(T)>
 {};
 
 template <size_t I, class... T>
+// NOLINTNEXTLINE(cert-dcl58-cpp, bugprone-std-namespace-modification)
 struct tuple_element<I, ouly::tuple<T...>>
 {
   using type = ouly::tuple<T...>::template type<I>;

@@ -34,11 +34,11 @@ struct base_stat_type_deduction
 template <HasBaseStats Config>
 struct base_stat_type_deduction<Config>
 {
-  using type = typename Config::base_stat_type;
+  using type = Config::base_stat_type;
 };
 
 template <typename T>
-using base_stat_type = typename base_stat_type_deduction<T>::type;
+using base_stat_type = base_stat_type_deduction<T>::type;
 
 template <typename Config>
 struct stats_impl

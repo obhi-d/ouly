@@ -180,7 +180,7 @@ constexpr auto invalidate(SizeType val) -> SizeType
 template <typename SizeType>
 constexpr auto validate(SizeType val) -> SizeType
 {
-  return (~high_bit_mask_v<SizeType>)&(val);
+  return (~high_bit_mask_v<SizeType>)&val;
 }
 
 template <typename SizeType>

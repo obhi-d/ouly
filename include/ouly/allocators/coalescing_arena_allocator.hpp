@@ -114,19 +114,19 @@ public:
   /** @brief Given an allocation_id return the offset in the arena it belongs to */
   [[nodiscard]] auto get_size(allocation_id id) const noexcept -> size_type
   {
-    return block_entries_.sizes_[id.get()];
+    return ouly::detail::vector_access(block_entries_.sizes_, id.get());
   }
 
   /** @brief Given an allocation_id return the offset in the arena it belongs to */
   [[nodiscard]] auto get_offset(allocation_id id) const noexcept -> size_type
   {
-    return block_entries_.offsets_[id.get()];
+    return ouly::detail::vector_access(block_entries_.offsets_, id.get());
   }
 
   /** @brief Given an allocation_id return the arena it belongs to */
   [[nodiscard]] auto get_arena(allocation_id id) const noexcept -> arena_id
   {
-    return arena_id{block_entries_.arenas_[id.get()]};
+    return arena_id{ouly::detail::vector_access(block_entries_.arenas_, id.get())};
   }
   /** @brief The method `allocate` returns an allocation desc, with extra information about the allocation offset and
    * the arena the allocation belongs to. The information need not be stored, as the alllocation_id can be used to fetch
@@ -205,7 +205,7 @@ private:
 
   void add_free_arena(uint32_t block)
   {
-    sizes_.push_back(block_entries_.sizes_[block]);
+    sizes_.push_back(ouly::detail::vector_access(block_entries_.sizes_, block));
     free_ordering_.push_back(block);
   }
 
@@ -274,8 +274,9 @@ private:
     }
     const auto* it = find_free(size);
     auto        id = commit(size, it);
-    return ca_allocation{
-     .offset_ = block_entries_.offsets_[id], .id_ = {.id_ = id}, .arena_ = {.id_ = block_entries_.arenas_[id]}};
+    return ca_allocation{.offset_ = ouly::detail::vector_access(block_entries_.offsets_, id),
+                         .id_     = {.id_ = id},
+                         .arena_  = {.id_ = ouly::detail::vector_access(block_entries_.arenas_, id)}};
   }
 
   OULY_API void reinsert_left(size_t of, size_type size, std::uint32_t node);

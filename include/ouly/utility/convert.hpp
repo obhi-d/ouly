@@ -373,7 +373,7 @@ struct lower_pascal_case
     std::string result = pascal_case::transform(name);
     if (!result.empty())
     {
-      result[0] = tolower(result[0]);
+      ouly::detail::vector_access(result, 0) = tolower(ouly::detail::vector_access(result, 0));
     }
     return result;
   }

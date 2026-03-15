@@ -66,8 +66,8 @@ private:
   static constexpr auto allocate_bytes = pool_bytes;
   static constexpr auto pool_mod       = pool_size - 1;
 
-  using allocator_tag             = typename allocator_type::tag;
-  using allocator_is_always_equal = typename ouly::allocator_traits<allocator_tag>::is_always_equal;
+  using allocator_tag             = allocator_type::tag;
+  using allocator_is_always_equal = ouly::allocator_traits<allocator_tag>::is_always_equal;
   using check_type                = std::conditional_t<has_pool_tracking, std::true_type, std::false_type>;
 
   struct pool_storage
@@ -113,7 +113,7 @@ private:
   }
 
   static auto is_null(value_type const& other) noexcept -> bool
-    requires(has_null_method)
+    requires has_null_method
   {
     return config::is_null(other);
   }
@@ -665,8 +665,7 @@ public:
     ensure_block(block);
 
     if constexpr (!has_zero_memory && !has_no_fill &&
-                  !((has_pod ||
-                     (std::is_trivially_copyable_v<value_type> && std::is_trivially_constructible_v<value_type>))))
+                  !(has_pod || (std::is_trivially_copyable_v<value_type> && std::is_trivially_constructible_v<value_type>)))
     {
       for (size_type i = length_; i < idx; ++i)
       {
@@ -783,7 +782,7 @@ public:
   }
 
   auto get_value(size_type idx) const noexcept -> Ty
-    requires(has_null_value)
+    requires has_null_value
   {
     auto block = (idx >> pool_mul);
     return block < items_.size() && items_[block].data_ ? cast(items_[block].data_[idx & pool_mod]) : config::null_v;
@@ -968,10 +967,10 @@ private:
     }
   }
 
-  auto pool_occupation(size_type p) noexcept -> size_t& requires(has_pool_tracking) { return items_[p].occupancy_; }
+  auto pool_occupation(size_type p) noexcept -> size_t& requires has_pool_tracking { return items_[p].occupancy_; }
 
   auto pool_occupation(size_type p) const noexcept -> size_t
-    requires(has_pool_tracking)
+    requires has_pool_tracking
   {
     return items_[p].occupancy_;
   }

@@ -20,9 +20,9 @@ struct ca_bank
   {
     if (free_idx_ != 0U)
     {
-      auto entry      = free_idx_;
-      free_idx_       = entries_[free_idx_].order_.next_;
-      entries_[entry] = data;
+      auto entry                                   = free_idx_;
+      free_idx_                                    = ouly::detail::vector_access(entries_, free_idx_).order_.next_;
+      ouly::detail::vector_access(entries_, entry) = data;
       return entry;
     }
 
@@ -42,28 +42,28 @@ struct ca_accessor
 
   static void erase(bank_type& bank, std::uint32_t node)
   {
-    bank.entries_[node].order_.next_ = bank.free_idx_;
-    bank.free_idx_                   = node;
+    ouly::detail::vector_access(bank.entries_, node).order_.next_ = bank.free_idx_;
+    bank.free_idx_                                                = node;
   }
 
   static auto node(bank_type& bank, std::uint32_t node) -> ouly::detail::list_node&
   {
-    return bank.entries_[node].order_;
+    return ouly::detail::vector_access(bank.entries_, node).order_;
   }
 
   static auto node(bank_type const& bank, std::uint32_t node) -> ouly::detail::list_node const&
   {
-    return bank.entries_[node].order_;
+    return ouly::detail::vector_access(bank.entries_, node).order_;
   }
 
   static auto get(bank_type const& bank, std::uint32_t node) -> value_type const&
   {
-    return bank.entries_[node];
+    return ouly::detail::vector_access(bank.entries_, node);
   }
 
   static auto get(bank_type& bank, std::uint32_t node) -> value_type&
   {
-    return bank.entries_[node];
+    return ouly::detail::vector_access(bank.entries_, node);
   }
 };
 
@@ -84,7 +84,7 @@ struct ca_block_entries
     if (free_idx_ != 0U)
     {
       auto entry = free_idx_;
-      free_idx_  = offsets_[free_idx_];
+      free_idx_  = ouly::detail::vector_access(offsets_, free_idx_);
       return entry;
     }
 
@@ -101,13 +101,13 @@ struct ca_block_entries
   {
     if (free_idx_ != 0U)
     {
-      auto entry          = free_idx_;
-      free_idx_           = offsets_[free_idx_];
-      ordering_[entry]    = {};
-      offsets_[entry]     = offset;
-      sizes_[entry]       = size;
-      arenas_[entry]      = arena;
-      free_marker_[entry] = is_free;
+      auto entry                                       = free_idx_;
+      free_idx_                                        = ouly::detail::vector_access(offsets_, free_idx_);
+      ouly::detail::vector_access(ordering_, entry)    = {};
+      ouly::detail::vector_access(offsets_, entry)     = offset;
+      ouly::detail::vector_access(sizes_, entry)       = size;
+      ouly::detail::vector_access(arenas_, entry)      = arena;
+      ouly::detail::vector_access(free_marker_, entry) = is_free;
       return entry;
     }
 
@@ -128,18 +128,18 @@ struct ca_block_accessor
 
   static void erase(ca_block_entries& bank, std::uint32_t node)
   {
-    bank.offsets_[node] = bank.free_idx_;
-    bank.free_idx_      = node;
+    ouly::detail::vector_access(bank.offsets_, node) = bank.free_idx_;
+    bank.free_idx_                                   = node;
   }
 
   static auto node(ca_block_entries& bank, std::uint32_t node_id) -> ouly::detail::list_node&
   {
-    return bank.ordering_[node_id];
+    return ouly::detail::vector_access(bank.ordering_, node_id);
   }
 
   static auto node(ca_block_entries const& bank, std::uint32_t node_id) -> ouly::detail::list_node const&
   {
-    return bank.ordering_[node_id];
+    return ouly::detail::vector_access(bank.ordering_, node_id);
   }
 
   static auto get([[maybe_unused]] ca_block_entries const& bank, std::uint32_t node) -> value_type
