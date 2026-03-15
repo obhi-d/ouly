@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 
+#include "ouly/utility/user_config.hpp"
 #include <charconv>
 #include <concepts>
 #include <stdexcept>
