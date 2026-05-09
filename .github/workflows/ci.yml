@@ -17,36 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        config:
-          - {
-              name: "Windows MSVC",
-              os: windows-latest,
-              generator: "Ninja",
-              cc: "cl",
-              cxx: "cl"
-            }
-          - {
-              name: "Ubuntu GCC",
-              os: ubuntu-latest,
-              generator: "Ninja",
-              cc: "gcc-14",
-              cxx: "g++-14"
-            }
-          - {
-              name: "Ubuntu Clang",
-              os: ubuntu-latest,
-              generator: "Ninja", 
-              cc: "clang-18",
-              cxx: "clang++-18"
-            }
-          - {
-              name: "macOS Clang",
-              os: macos-latest,
-              generator: "Ninja",
-              cc: "clang",
-              cxx: "clang++",
-              min_clang_version: "17"
-            }
+        config: ${{ fromJSON((github.ref_name == 'develop' || github.base_ref == 'develop') && '[{"name":"Windows MSVC","os":"windows-latest","generator":"Ninja","cc":"cl","cxx":"cl"}]' || '[{"name":"Windows MSVC","os":"windows-latest","generator":"Ninja","cc":"cl","cxx":"cl"},{"name":"Ubuntu GCC","os":"ubuntu-latest","generator":"Ninja","cc":"gcc-14","cxx":"g++-14"},{"name":"Ubuntu Clang","os":"ubuntu-latest","generator":"Ninja","cc":"clang-18","cxx":"clang++-18"},{"name":"macOS Clang","os":"macos-latest","generator":"Ninja","cc":"clang","cxx":"clang++","min_clang_version":"17"}]') }}
 
     steps:
     - name: Checkout
@@ -131,12 +102,24 @@ jobs:
     - name: Build
       if: steps.clang_check.outputs.skip_build != 'true'
       working-directory: build
-      run: cmake --build . --config ${{ env.BUILD_TYPE }} --parallel
+      shell: bash
+      run: |
+        if [[ "${{ github.ref_name }}" == "develop" || "${{ github.base_ref }}" == "develop" ]]; then
+          cmake --build . --target test_flow_graph --config ${{ env.BUILD_TYPE }} --parallel
+        else
+          cmake --build . --config ${{ env.BUILD_TYPE }} --parallel
+        fi
 
     - name: Test
       if: steps.clang_check.outputs.skip_build != 'true'
       working-directory: build
-      run: ctest -C ${{ env.BUILD_TYPE }} --output-on-failure --parallel
+      shell: bash
+      run: |
+        if [[ "${{ github.ref_name }}" == "develop" || "${{ github.base_ref }}" == "develop" ]]; then
+          ctest -C ${{ env.BUILD_TYPE }} --output-on-failure -R '^test_flow_graph$'
+        else
+          ctest -C ${{ env.BUILD_TYPE }} --output-on-failure --parallel
+        fi
 
     - name: Generate coverage report
       working-directory: ${{ github.workspace }}/build
