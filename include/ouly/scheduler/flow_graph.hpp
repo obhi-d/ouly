@@ -348,10 +348,12 @@ public:
     if (inline_nodes_.empty())
     {
       ctx.cooperative_wait(done_);
+      started_.store(false, std::memory_order_release);
       return;
     }
 
     drive_inline_until_done(ctx);
+    started_.store(false, std::memory_order_release);
   }
 
   /**
@@ -373,6 +375,7 @@ public:
     if (inline_nodes_.empty())
     {
       done_.acquire();
+      started_.store(false, std::memory_order_release);
       return;
     }
 
@@ -381,6 +384,7 @@ public:
     // It's recommended to call wait()/cooperative_wait() from the same thread that called start().
     // Otherwise, inline tasks will execute on the thread calling wait().
     drive_inline_until_done(context_type::this_context::get());
+    started_.store(false, std::memory_order_release);
   }
 
 private:
@@ -660,7 +664,6 @@ private:
 
   void signal_done() noexcept
   {
-    started_.store(false, std::memory_order_release);
     done_.release();
   }
 

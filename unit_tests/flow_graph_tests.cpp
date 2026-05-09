@@ -5,12 +5,29 @@
 #include "ouly/scheduler/flow_graph.hpp"
 #include "ouly/scheduler/scheduler.hpp"
 #include <atomic>
+#include <catch2/catch_test_case_info.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/reporters/catch_reporter_event_listener.hpp>
+#include <catch2/reporters/catch_reporter_registrars.hpp>
 #include <chrono>
+#include <iostream>
 #include <shared_mutex>
 #include <thread>
 // NOLINTBEGIN
 using namespace ouly;
+
+class flow_graph_progress_listener final : public Catch::EventListenerBase
+{
+public:
+  using Catch::EventListenerBase::EventListenerBase;
+
+  void testCaseStarting(Catch::TestCaseInfo const& test_info) override
+  {
+    std::cerr << "[flow_graph] starting: " << test_info.name << '\n';
+  }
+};
+
+CATCH_REGISTER_LISTENER(flow_graph_progress_listener)
 
 TEST_CASE("flow_graph basic operations", "[flow_graph]")
 {
@@ -81,7 +98,7 @@ TEST_CASE("flow_graph execution with v2 scheduler", "[flow_graph][scheduler]")
 
   auto ctx = SchedulerType::context_type::this_context::get();
   graph.start(ctx);
-  graph.wait();
+  graph.cooperative_wait(ctx);
 
   // Check execution order
   REQUIRE(node1_order.load() < node2_order.load());
@@ -125,7 +142,7 @@ TEST_CASE("flow_graph reusability", "[flow_graph][scheduler]")
   // First run
 
   graph.start(ctx);
-  graph.wait();
+  graph.cooperative_wait(ctx);
 
   REQUIRE(run1_count.load() == 2);
 
@@ -144,7 +161,7 @@ TEST_CASE("flow_graph reusability", "[flow_graph][scheduler]")
 
   // Second run - should execute all tasks (original + new ones)
   graph.start(ctx);
-  graph.wait();
+  graph.cooperative_wait(ctx);
 
   REQUIRE(run1_count.load() == 4); // Original tasks executed again
   REQUIRE(run2_count.load() == 2); // New tasks executed
@@ -176,7 +193,7 @@ TEST_CASE("flow_graph with v1 scheduler", "[flow_graph][scheduler]")
 
   auto ctx = SchedulerType::context_type::this_context::get();
   graph.start(ctx);
-  graph.wait();
+  graph.cooperative_wait(ctx);
 
   REQUIRE(task_executed.load());
 
@@ -653,7 +670,7 @@ TEST_CASE("flow_graph waits are idempotent after completion", "[flow_graph][sche
   REQUIRE(execution_count.load() == 1);
 
   graph.start(ctx);
-  graph.wait();
+  graph.cooperative_wait(ctx);
   graph.wait();
   graph.cooperative_wait(ctx);
 
