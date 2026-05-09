@@ -264,6 +264,7 @@ public:
   void start(context_type const& ctx)
   {
     OULY_ASSERT(!started_.load(std::memory_order_acquire));
+    done_.try_acquire();
 
     // mark the thread that initiated start; inline nodes will run here
     main_worker_id_              = ctx.get_worker();

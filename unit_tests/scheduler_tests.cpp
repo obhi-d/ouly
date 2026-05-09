@@ -1166,6 +1166,7 @@ TEMPLATE_TEST_CASE("Simple Computational Patterns", "[scheduler][mixed][computat
                        {
                          sum += value;
                        }
+                       static_cast<void>(sum);
 
                        memory_tasks.fetch_add(1, std::memory_order_relaxed);
                      });
@@ -1248,6 +1249,7 @@ TEMPLATE_TEST_CASE("Scheduler Varying Workgroup Sizes", "[scheduler][workgroup][
                          {
                            work += i;
                          }
+                         static_cast<void>(work);
                          group_counters[group].fetch_add(1, std::memory_order_relaxed);
                        });
     }
@@ -1308,6 +1310,7 @@ TEMPLATE_TEST_CASE("Scheduler Error Handling Edge Cases", "[scheduler][edge][err
                        {
                          sum += val;
                        }
+                       static_cast<void>(sum);
                      }
                      successful_tasks.fetch_add(1, std::memory_order_relaxed);
                    });

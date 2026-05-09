@@ -9,6 +9,7 @@
 #include "ouly/utility/type_traits.hpp"
 #include <array>
 #include <atomic>
+#include <climits>
 #include <coroutine>
 #include <cstdint>
 #include <new>

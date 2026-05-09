@@ -62,25 +62,23 @@ template <typename Ty, std::size_t N = 0, typename Config = ouly::default_config
 class small_vector : public ouly::detail::custom_allocator_t<Config>
 {
 public:
-  using value_type                = Ty;
-  using allocator_type            = ouly::detail::custom_allocator_t<Config>;
-  using size_type                 = ouly::detail::choose_size_t<uint32_t, Config>;
-  using difference_type           = size_type;
-  using reference                 = value_type&;
-  using const_reference           = const value_type&;
-  using pointer                   = Ty*;
-  using const_pointer             = Ty const*;
-  using iterator                  = Ty*;
-  using const_iterator            = Ty const*;
-  using reverse_iterator          = std::reverse_iterator<iterator>;
-  using const_reverse_iterator    = std::reverse_iterator<const_iterator>;
-  using allocator                 = allocator_type;
-  using allocator_tag             = allocator_type::tag;
-  using allocator_is_always_equal = ouly::allocator_traits<allocator_tag>::is_always_equal;
-  using propagate_allocator_on_move =
-   ouly::allocator_traits<allocator_tag>::propagate_on_container_move_assignment;
-  using propagate_allocator_on_copy =
-   ouly::allocator_traits<allocator_tag>::propagate_on_container_copy_assignment;
+  using value_type                  = Ty;
+  using allocator_type              = ouly::detail::custom_allocator_t<Config>;
+  using size_type                   = ouly::detail::choose_size_t<uint32_t, Config>;
+  using difference_type             = size_type;
+  using reference                   = value_type&;
+  using const_reference             = const value_type&;
+  using pointer                     = Ty*;
+  using const_pointer               = Ty const*;
+  using iterator                    = Ty*;
+  using const_iterator              = Ty const*;
+  using reverse_iterator            = std::reverse_iterator<iterator>;
+  using const_reverse_iterator      = std::reverse_iterator<const_iterator>;
+  using allocator                   = allocator_type;
+  using allocator_tag               = allocator_type::tag;
+  using allocator_is_always_equal   = ouly::allocator_traits<allocator_tag>::is_always_equal;
+  using propagate_allocator_on_move = ouly::allocator_traits<allocator_tag>::propagate_on_container_move_assignment;
+  using propagate_allocator_on_copy = ouly::allocator_traits<allocator_tag>::propagate_on_container_copy_assignment;
   using propagate_allocator_on_swap = ouly::allocator_traits<allocator_tag>::propagate_on_container_swap;
 
 private:

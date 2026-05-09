@@ -40,8 +40,7 @@ template <typename T>
 constexpr auto fixed_max_per_slot_v =
  std::conditional_t<HasFixedMaxPerSlot<T>, T, ouly::cfg::fixed_max_per_slot<8>>::fixed_max_per_slot_v;
 template <typename T, typename D>
-using fallback_strat_t =
- std::conditional_t<HasFallbackStrat<T>, T, ouly::cfg::fallback_start<D>>::fallback_strat_t;
+using fallback_strat_t = std::conditional_t<HasFallbackStrat<T>, T, ouly::cfg::fallback_start<D>>::fallback_strat_t;
 
 template <typename UsizeType, typename Uextension>
 struct arena

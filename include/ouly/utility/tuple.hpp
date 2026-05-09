@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cstddef>
+#include <tuple>
 #include <utility>
 
 namespace ouly
@@ -54,14 +55,14 @@ struct tuple : tuple_impl<std::index_sequence_for<Args...>, Args...>
   template <std::size_t I>
   auto get() noexcept -> auto&
   {
-    return static_cast<tuple_leaf<I, typename tuple::type<I>>&>(*this).value;
+    return static_cast<tuple_leaf<I, typename tuple::type<I>>&>(*this).value_;
   }
 
   // Const accessor function
   template <std::size_t I>
   auto get() const noexcept -> const auto&
   {
-    return static_cast<tuple_leaf<I, typename tuple::type<I>> const&>(*this).value;
+    return static_cast<tuple_leaf<I, typename tuple::type<I>> const&>(*this).value_;
   }
 };
 
