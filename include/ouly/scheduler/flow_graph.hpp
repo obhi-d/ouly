@@ -286,8 +286,6 @@ public:
 
     if (total_tasks_ == 0)
     {
-      // If there are no tasks, mark as done immediately
-      done_.release();
       return;
     }
 
@@ -609,7 +607,7 @@ private:
                                    // Each task decrements the global task count
                                    if (graph_ptr->remaining_tasks_.fetch_sub(1, std::memory_order_acq_rel) == 1)
                                    {
-                                     graph_ptr->done_.release();
+                                     graph_ptr->signal_done();
                                    }
                                  });
     }
@@ -641,7 +639,7 @@ private:
       bool is_last = node.execute_task(i, ctx);
       if (remaining_tasks_.fetch_sub(1, std::memory_order_acq_rel) == 1)
       {
-        done_.release();
+        signal_done();
       }
       if (is_last)
       {
@@ -658,6 +656,12 @@ private:
       poll_inline_nodes(ctx);
       ctx.get_scheduler().busy_work(ctx);
     }
+  }
+
+  void signal_done() noexcept
+  {
+    started_.store(false, std::memory_order_release);
+    done_.release();
   }
 
   /// Notify successor nodes when a node completes

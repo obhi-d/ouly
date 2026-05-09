@@ -626,6 +626,42 @@ TEST_CASE("flow_graph multiple starts without prepare", "[flow_graph][scheduler]
   scheduler.end_execution();
 }
 
+TEST_CASE("flow_graph waits are idempotent after completion", "[flow_graph][scheduler]")
+{
+  using SchedulerType = ouly::v2::scheduler;
+  flow_graph<SchedulerType> graph;
+
+  SchedulerType scheduler;
+  scheduler.create_group(default_workgroup_id, 0, 2);
+  scheduler.begin_execution();
+
+  std::atomic<int> execution_count{0};
+
+  auto node = graph.create_node();
+  graph.add(node,
+            [&](auto const&)
+            {
+              execution_count.fetch_add(1);
+            });
+
+  auto ctx = SchedulerType::context_type::this_context::get();
+  graph.start(ctx);
+  graph.cooperative_wait(ctx);
+  graph.cooperative_wait(ctx);
+  graph.wait();
+
+  REQUIRE(execution_count.load() == 1);
+
+  graph.start(ctx);
+  graph.wait();
+  graph.wait();
+  graph.cooperative_wait(ctx);
+
+  REQUIRE(execution_count.load() == 2);
+
+  scheduler.end_execution();
+}
+
 TEST_CASE("flow_graph diamond dependency pattern", "[flow_graph][scheduler]")
 {
   using SchedulerType = ouly::v2::scheduler;
