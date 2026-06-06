@@ -76,12 +76,20 @@ void scheduler::submit_internal(task_context const& current, workgroup_id dst,
 {
   auto& target_workgroup = ouly::detail::vector_access(workgroups_, dst.get_index());
 
-  // First try to submit to the worker's own queue if it belongs to this workgroup
-  worker_id current_worker = current.get_worker();
+  // The per-worker Chase-Lev queues are single-producer: only the worker that currently *owns* a
+  // slot may push to that slot's queue. We must therefore identify the calling worker by its live
+  // thread-local identity (g_worker), NOT by the `current` task_context that was passed in: callers
+  // routinely cache a task_context (e.g. `auto ctx = this_context::get();`) and reuse it across many
+  // submits, but a worker's group/offset changes whenever it migrates between workgroups during a
+  // cooperative wait. Using a stale offset here would push into a queue owned by a *different*
+  // thread, corrupting the deque (single-producer invariant violated) and silently losing the task,
+  // which manifests as a phantom "work available" count and a hang. The live worker always owns the
+  // slot reported by its own current context, so pushing there is safe.
+  detail::v2::worker const* self = g_worker;
 
-  if (current.get_workgroup() == dst)
+  if (self != nullptr && self->get_workgroup() == dst)
   {
-    if (target_workgroup.push_work_to_worker(current.get_group_offset(), work))
+    if (target_workgroup.push_work_to_worker(self->get_group_offset(), work))
     {
       // Work was successfully pushed, workgroup will advertise availability
       wake_up_workers(1); // Wake up one worker
@@ -89,10 +97,12 @@ void scheduler::submit_internal(task_context const& current, workgroup_id dst,
     }
   }
 
+  // Either we are not running on a worker that owns a slot in `dst`, or that worker's queue is full:
+  // route through the multi-producer mailbox, which is safe to push to from any thread.
   while (!target_workgroup.submit_to_mailbox(work))
   {
-    // Possibly coop wait
-    busy_work(current_worker);
+    // Mailbox is full; help drain work before retrying. Use the live worker id when available.
+    busy_work(self != nullptr ? self->get_worker_id() : current.get_worker());
   }
 
   // Add to needy workgroups list for better work distribution
@@ -216,20 +226,20 @@ auto scheduler::find_work_for_worker(worker_id wid) noexcept -> bool
 
       if (workgroup.pop_work_from_worker(work, worker.get_group_offset()))
       {
-        execute_work(wid, work);
+        execute_work(wid, workgroup, work);
         return true;
       }
 
       // No work in mailbox, try stealing from this workgroup
       if (workgroup.steal_work(work, random_victim))
       {
-        execute_work(wid, work);
+        execute_work(wid, workgroup, work);
         return true;
       }
 
       if (workgroup.receive_from_mailbox(work))
       {
-        execute_work(wid, work);
+        execute_work(wid, workgroup, work);
         return true;
       }
 
@@ -262,13 +272,13 @@ auto scheduler::find_work_for_worker(worker_id wid) noexcept -> bool
     detail::v2::work_item work{detail::v2::work_item::noinit};
     if (workgroup.steal_work(work, steal_start_idx))
     {
-      execute_work(wid, work);
+      execute_work(wid, workgroup, work);
       return true;
     }
 
     if (workgroup.receive_from_mailbox(work))
     {
-      execute_work(wid, work);
+      execute_work(wid, workgroup, work);
       return true;
     }
   }
@@ -276,14 +286,22 @@ auto scheduler::find_work_for_worker(worker_id wid) noexcept -> bool
   return should_retry;
 }
 
-void scheduler::execute_work(worker_id wid, detail::v2::work_item& work) noexcept
+void scheduler::execute_work(worker_id wid, detail::v2::workgroup& src_group, detail::v2::work_item& work) noexcept
 {
   auto& worker = ouly::detail::vector_access(workers_, wid.get_index());
   // Create a copy since work_item expects mutable reference
   auto const& current_context = worker.get_context();
   work(current_context);
 
-  ouly::detail::vector_access(workgroups_, current_context.get_workgroup().get_index()).sink_one_work();
+  // Sink against the workgroup the item was actually taken from. `advertise_work_available()` bumped
+  // that same workgroup's has_work_ counter when the item was enqueued. We must NOT use the worker's
+  // *post-execution* current workgroup here: the task we just ran may have migrated this worker to a
+  // different workgroup (via a nested cooperative_wait -> busy_work -> enter_context, or by stealing
+  // from another group). Decrementing the wrong counter leaves the source group permanently advertised
+  // (phantom work -> workers spin / never quiesce) and underflows the destination group's unsigned
+  // counter (also permanently "has work"). Capturing src_group before execution keeps the per-group
+  // advertise/sink accounting exactly balanced regardless of migration.
+  src_group.sink_one_work();
 }
 
 void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_context)

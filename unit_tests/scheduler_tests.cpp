@@ -368,6 +368,61 @@ TEMPLATE_TEST_CASE("Cross-Workgroup Task Submission", "[scheduler][workgroup][te
   REQUIRE(counter.task_count.load() == 500);
 }
 
+// Regression test for the cross-workgroup migration desync in the v2 scheduler.
+//
+// A parent task popped/advertised on workgroup 0 performs a *nested* cooperative_wait while its child
+// runs on workgroup 1. The wait drives busy_work -> enter_context, which migrates the parent's worker
+// into workgroup 1 mid-execution. When the parent finally returns, the scheduler must sink the
+// has_work_ credit against the workgroup the parent was taken from (0), NOT the worker's post-migration
+// current workgroup (1). Sinking the wrong counter leaves workgroup 0 permanently advertised (phantom
+// work -> workers never quiesce -> hang) and underflows workgroup 1's unsigned counter. Before the fix
+// this would intermittently hang inside end_execution(); the harness timeout would catch it.
+TEMPLATE_TEST_CASE("Cross-Workgroup Nested Wait Quiescence", "[scheduler][workgroup][nested][template]",
+                   (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
+{
+  using TestRunner      = TestType;
+  using SchedulerType   = typename TestRunner::scheduler_type;
+  using TaskContextType = typename TestRunner::task_context_type;
+
+  TestCounter counter;
+
+  SchedulerType scheduler;
+  scheduler.create_group(ouly::workgroup_id(0), 0, 2);
+  scheduler.create_group(ouly::workgroup_id(1), 2, 2);
+
+  scheduler.begin_execution();
+  auto const& main_ctx = TestRunner::get_main_context();
+
+  constexpr uint32_t parent_count = 400;
+
+  for (uint32_t i = 0; i < parent_count; ++i)
+  {
+    // Parent runs on workgroup 0; it waits cooperatively on a child that runs on workgroup 1.
+    scheduler.submit(main_ctx, ouly::workgroup_id(0),
+                     [&counter, &scheduler](TaskContextType const& parent_ctx)
+                     {
+                       std::binary_semaphore done{0};
+
+                       scheduler.submit(parent_ctx, ouly::workgroup_id(1),
+                                        [&counter, &done](TaskContextType const&)
+                                        {
+                                          counter.sub_task_count_1.fetch_add(1, std::memory_order_relaxed);
+                                          done.release();
+                                        });
+
+                       // Nested wait: migrates this worker into workgroup 1 while it helps drain work.
+                       parent_ctx.cooperative_wait(done);
+                       counter.task_count.fetch_add(1, std::memory_order_relaxed);
+                     });
+  }
+
+  scheduler.end_execution();
+
+  REQUIRE(counter.task_count.load() == parent_count);
+  REQUIRE(counter.sub_task_count_1.load() == parent_count);
+}
+
 // Test async helper functions
 TEMPLATE_TEST_CASE("Async Helper Functions", "[scheduler][async][template]",
                    (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),

@@ -285,7 +285,7 @@ private:
   /**
    * @brief Execute a work item
    */
-  void execute_work(worker_id wid, detail::v2::work_item& work) noexcept;
+  void execute_work(worker_id wid, detail::v2::workgroup& src_group, detail::v2::work_item& work) noexcept;
 
   /**
    * @brief Wake up sleeping workers
