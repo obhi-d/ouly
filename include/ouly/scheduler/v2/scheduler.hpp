@@ -253,12 +253,13 @@ public:
 
   /**
    * @brief Worker busy work loop - called when worker has no immediate work
+   * @return true if at least one work item was executed
    */
-  OULY_API void busy_work(worker_id /*thread*/) noexcept;
+  OULY_API auto busy_work(worker_id /*thread*/) noexcept -> bool;
 
-  void busy_work(v2::task_context const& ctx) noexcept
+  auto busy_work(v2::task_context const& ctx) noexcept -> bool
   {
-    busy_work(ctx.get_worker());
+    return busy_work(ctx.get_worker());
   }
 
   OULY_API void wait_for_tasks();
@@ -285,7 +286,12 @@ private:
   /**
    * @brief Execute a work item
    */
-  void execute_work(worker_id wid, detail::v2::workgroup& src_group, detail::v2::work_item& work) noexcept;
+  void execute_work(worker_id wid, detail::v2::work_item& work) noexcept;
+
+  /**
+   * @brief Account for a dequeued item and recruit another worker if more work remains
+   */
+  void on_work_taken(detail::v2::workgroup& src_group) noexcept;
 
   /**
    * @brief Wake up sleeping workers
@@ -306,6 +312,7 @@ private:
   std::counting_semaphore<INT_MAX>    wake_tokens_{0}; // Used to wake up workers when work is available
   std::atomic_int32_t                 sleeping_{0};
   std::atomic_uint64_t                park_epoch_{0};
+  std::atomic_int64_t                 pending_{0}; // Submitted tasks not yet finished (queued + in-flight)
   std::shared_ptr<worker_initializer> initializer_ = nullptr;
 
   std::unique_ptr<worker_v2[]> workers_;

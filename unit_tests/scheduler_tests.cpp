@@ -53,7 +53,8 @@ struct SchedulerTestRunner
 // Test basic task submission
 TEMPLATE_TEST_CASE("Basic Task Submission", "[scheduler][template]",
                    (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
-                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>),
+                   (SchedulerTestRunner<ouly::v3::scheduler, ouly::v3::task_context>))
 {
   using TestRunner = TestType;
   // using SchedulerType   = typename TestRunner::scheduler_type;
@@ -103,7 +104,8 @@ struct small_loop_task_traits
 // Test parallel_for functionality
 TEMPLATE_TEST_CASE("Parallel For Small Loop", "[scheduler][parallel_for][template]",
                    (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
-                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>),
+                   (SchedulerTestRunner<ouly::v3::scheduler, ouly::v3::task_context>))
 {
 
   using TestRunner = TestType;
@@ -145,7 +147,8 @@ TEMPLATE_TEST_CASE("Parallel For Small Loop", "[scheduler][parallel_for][templat
 // Test parallel_for functionality
 TEMPLATE_TEST_CASE("Parallel For Execution", "[scheduler][parallel_for][template]",
                    (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
-                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>),
+                   (SchedulerTestRunner<ouly::v3::scheduler, ouly::v3::task_context>))
 {
   using TestRunner = TestType;
   // using SchedulerType   = typename TestRunner::scheduler_type;
@@ -186,7 +189,8 @@ TEMPLATE_TEST_CASE("Parallel For Execution", "[scheduler][parallel_for][template
 // Test GLM mathematical operations for task throughput
 TEMPLATE_TEST_CASE("GLM Mathematical Operations", "[scheduler][glm][math][template]",
                    (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
-                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>),
+                   (SchedulerTestRunner<ouly::v3::scheduler, ouly::v3::task_context>))
 {
   using TestRunner = TestType;
   // using SchedulerType   = typename TestRunner::scheduler_type;
@@ -281,7 +285,8 @@ TEMPLATE_TEST_CASE("GLM Mathematical Operations", "[scheduler][glm][math][templa
 // Test heavy computational workload
 TEMPLATE_TEST_CASE("Heavy Computation Stress Test", "[scheduler][stress][template]",
                    (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
-                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>),
+                   (SchedulerTestRunner<ouly::v3::scheduler, ouly::v3::task_context>))
 {
   using TestRunner = TestType;
   // using SchedulerType   = typename TestRunner::scheduler_type;
@@ -334,7 +339,8 @@ TEMPLATE_TEST_CASE("Heavy Computation Stress Test", "[scheduler][stress][templat
 // Test cross-workgroup task submission
 TEMPLATE_TEST_CASE("Cross-Workgroup Task Submission", "[scheduler][workgroup][template]",
                    (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
-                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>),
+                   (SchedulerTestRunner<ouly::v3::scheduler, ouly::v3::task_context>))
 {
   // Seed: 3363517192 failed with 499 executed out of 500
   using TestRunner      = TestType;
@@ -379,7 +385,8 @@ TEMPLATE_TEST_CASE("Cross-Workgroup Task Submission", "[scheduler][workgroup][te
 // this would intermittently hang inside end_execution(); the harness timeout would catch it.
 TEMPLATE_TEST_CASE("Cross-Workgroup Nested Wait Quiescence", "[scheduler][workgroup][nested][template]",
                    (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
-                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>),
+                   (SchedulerTestRunner<ouly::v3::scheduler, ouly::v3::task_context>))
 {
   using TestRunner      = TestType;
   using SchedulerType   = typename TestRunner::scheduler_type;
@@ -426,7 +433,8 @@ TEMPLATE_TEST_CASE("Cross-Workgroup Nested Wait Quiescence", "[scheduler][workgr
 // Test async helper functions
 TEMPLATE_TEST_CASE("Async Helper Functions", "[scheduler][async][template]",
                    (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
-                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>),
+                   (SchedulerTestRunner<ouly::v3::scheduler, ouly::v3::task_context>))
 {
   using TestRunner = TestType;
   // using SchedulerType   = typename TestRunner::scheduler_type;
@@ -461,7 +469,8 @@ TEMPLATE_TEST_CASE("Async Helper Functions", "[scheduler][async][template]",
 // Test multiple workgroups with different worker counts
 TEMPLATE_TEST_CASE("Multiple Workgroups Different Sizes", "[scheduler][workgroup][template]",
                    (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
-                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>),
+                   (SchedulerTestRunner<ouly::v3::scheduler, ouly::v3::task_context>))
 {
   using TestRunner      = TestType;
   using SchedulerType   = typename TestRunner::scheduler_type;
@@ -519,7 +528,8 @@ TEMPLATE_TEST_CASE("Multiple Workgroups Different Sizes", "[scheduler][workgroup
 // Test parallel_for within async tasks
 TEMPLATE_TEST_CASE("Parallel For Within Async Tasks", "[scheduler][parallel_for][async][template]",
                    (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
-                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>),
+                   (SchedulerTestRunner<ouly::v3::scheduler, ouly::v3::task_context>))
 {
   using TestRunner      = TestType;
   using TaskContextType = typename TestRunner::task_context_type;
@@ -575,7 +585,8 @@ TEMPLATE_TEST_CASE("Parallel For Within Async Tasks", "[scheduler][parallel_for]
 // Test nested async tasks (async tasks creating other async tasks) - simplified
 TEMPLATE_TEST_CASE("Nested Async Tasks Simple", "[scheduler][async][nested][template]",
                    (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
-                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>),
+                   (SchedulerTestRunner<ouly::v3::scheduler, ouly::v3::task_context>))
 {
   using TestRunner      = TestType;
   using SchedulerType   = typename TestRunner::scheduler_type;
@@ -616,7 +627,8 @@ TEMPLATE_TEST_CASE("Nested Async Tasks Simple", "[scheduler][async][nested][temp
 // Test simple parallel_for within async tasks
 TEMPLATE_TEST_CASE("Simple Parallel For Within Async", "[scheduler][parallel_for][async][template]",
                    (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
-                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>),
+                   (SchedulerTestRunner<ouly::v3::scheduler, ouly::v3::task_context>))
 {
   using TestRunner      = TestType;
   using TaskContextType = typename TestRunner::task_context_type;
@@ -653,7 +665,8 @@ TEMPLATE_TEST_CASE("Simple Parallel For Within Async", "[scheduler][parallel_for
 // Test simple task chain
 TEMPLATE_TEST_CASE("Simple Task Chain", "[scheduler][chain][template]",
                    (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
-                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>),
+                   (SchedulerTestRunner<ouly::v3::scheduler, ouly::v3::task_context>))
 {
   using TestRunner      = TestType;
   using TaskContextType = typename TestRunner::task_context_type;
@@ -692,7 +705,8 @@ TEMPLATE_TEST_CASE("Simple Task Chain", "[scheduler][chain][template]",
 // Test task dependencies and synchronization patterns
 TEMPLATE_TEST_CASE("Task Dependencies and Synchronization", "[scheduler][sync][template]",
                    (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
-                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>),
+                   (SchedulerTestRunner<ouly::v3::scheduler, ouly::v3::task_context>))
 {
   using TestRunner      = TestType;
   using TaskContextType = typename TestRunner::task_context_type;
@@ -788,7 +802,8 @@ TEMPLATE_TEST_CASE("Task Dependencies and Synchronization", "[scheduler][sync][t
 // Test work-stealing behavior with uneven workloads
 TEMPLATE_TEST_CASE("Work Stealing Uneven Workloads", "[scheduler][work-stealing][template]",
                    (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
-                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>),
+                   (SchedulerTestRunner<ouly::v3::scheduler, ouly::v3::task_context>))
 {
   using TestRunner      = TestType;
   using TaskContextType = typename TestRunner::task_context_type;
@@ -844,7 +859,8 @@ TEMPLATE_TEST_CASE("Work Stealing Uneven Workloads", "[scheduler][work-stealing]
 // Test scheduler API completeness - scheduler creation and destruction
 TEMPLATE_TEST_CASE("Scheduler Lifecycle Management", "[scheduler][lifecycle][template]",
                    (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
-                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>),
+                   (SchedulerTestRunner<ouly::v3::scheduler, ouly::v3::task_context>))
 {
   using TestRunner      = TestType;
   using SchedulerType   = typename TestRunner::scheduler_type;
@@ -885,7 +901,8 @@ TEMPLATE_TEST_CASE("Scheduler Lifecycle Management", "[scheduler][lifecycle][tem
 // Test edge cases and error conditions
 TEMPLATE_TEST_CASE("Edge Cases and Boundary Conditions", "[scheduler][edge-cases][template]",
                    (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
-                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>),
+                   (SchedulerTestRunner<ouly::v3::scheduler, ouly::v3::task_context>))
 {
   using TestRunner      = TestType;
   using SchedulerType   = typename TestRunner::scheduler_type;
@@ -937,7 +954,8 @@ TEMPLATE_TEST_CASE("Edge Cases and Boundary Conditions", "[scheduler][edge-cases
 // Test high-frequency task submission and completion
 TEMPLATE_TEST_CASE("High Frequency Task Submission", "[scheduler][performance][template]",
                    (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
-                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>),
+                   (SchedulerTestRunner<ouly::v3::scheduler, ouly::v3::task_context>))
 {
   using TestRunner      = TestType;
   using TaskContextType = typename TestRunner::task_context_type;
@@ -979,7 +997,8 @@ TEMPLATE_TEST_CASE("High Frequency Task Submission", "[scheduler][performance][t
 // Test scheduler with dynamic workgroup creation
 TEMPLATE_TEST_CASE("Dynamic Workgroup Management", "[scheduler][workgroup][dynamic][template]",
                    (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
-                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>),
+                   (SchedulerTestRunner<ouly::v3::scheduler, ouly::v3::task_context>))
 {
   using TestRunner      = TestType;
   using SchedulerType   = typename TestRunner::scheduler_type;
@@ -1047,7 +1066,8 @@ TEMPLATE_TEST_CASE("Dynamic Workgroup Management", "[scheduler][workgroup][dynam
 // Test complex nested parallel_for patterns
 TEMPLATE_TEST_CASE("Complex Nested Parallel For Patterns", "[scheduler][parallel_for][complex][template]",
                    (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
-                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>),
+                   (SchedulerTestRunner<ouly::v3::scheduler, ouly::v3::task_context>))
 {
   using TestRunner      = TestType;
   using TaskContextType = typename TestRunner::task_context_type;
@@ -1126,7 +1146,8 @@ TEMPLATE_TEST_CASE("Complex Nested Parallel For Patterns", "[scheduler][parallel
 // Test scheduler behavior under memory pressure
 TEMPLATE_TEST_CASE("Memory Pressure and Large Task Queues", "[scheduler][memory][stress][template]",
                    (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
-                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>),
+                   (SchedulerTestRunner<ouly::v3::scheduler, ouly::v3::task_context>))
 {
   using TestRunner      = TestType;
   using TaskContextType = typename TestRunner::task_context_type;
@@ -1172,7 +1193,8 @@ TEMPLATE_TEST_CASE("Memory Pressure and Large Task Queues", "[scheduler][memory]
 // Test scheduler with simple computational patterns
 TEMPLATE_TEST_CASE("Simple Computational Patterns", "[scheduler][mixed][computation][template]",
                    (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
-                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>),
+                   (SchedulerTestRunner<ouly::v3::scheduler, ouly::v3::task_context>))
 {
   using TestRunner      = TestType;
   using SchedulerType   = typename TestRunner::scheduler_type;
@@ -1236,7 +1258,8 @@ TEMPLATE_TEST_CASE("Simple Computational Patterns", "[scheduler][mixed][computat
 // Test scheduler API completeness - workgroup queries and worker information
 TEMPLATE_TEST_CASE("Scheduler API Worker Information", "[scheduler][api][template]",
                    (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
-                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>),
+                   (SchedulerTestRunner<ouly::v3::scheduler, ouly::v3::task_context>))
 {
   using TestRunner      = TestType;
   using SchedulerType   = typename TestRunner::scheduler_type;
@@ -1270,7 +1293,8 @@ TEMPLATE_TEST_CASE("Scheduler API Worker Information", "[scheduler][api][templat
 // Test scheduler with varying workgroup sizes
 TEMPLATE_TEST_CASE("Scheduler Varying Workgroup Sizes", "[scheduler][workgroup][sizes][template]",
                    (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
-                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>),
+                   (SchedulerTestRunner<ouly::v3::scheduler, ouly::v3::task_context>))
 {
   using TestRunner      = TestType;
   using SchedulerType   = typename TestRunner::scheduler_type;
@@ -1322,7 +1346,8 @@ TEMPLATE_TEST_CASE("Scheduler Varying Workgroup Sizes", "[scheduler][workgroup][
 // Test scheduler error handling and edge cases
 TEMPLATE_TEST_CASE("Scheduler Error Handling Edge Cases", "[scheduler][edge][error][template]",
                    (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
-                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>),
+                   (SchedulerTestRunner<ouly::v3::scheduler, ouly::v3::task_context>))
 {
   using TestRunner      = TestType;
   using SchedulerType   = typename TestRunner::scheduler_type;
@@ -1378,7 +1403,8 @@ TEMPLATE_TEST_CASE("Scheduler Error Handling Edge Cases", "[scheduler][edge][err
 // Test task submission patterns and timing
 TEMPLATE_TEST_CASE("Task Submission Patterns", "[scheduler][submission][patterns][template]",
                    (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
-                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>),
+                   (SchedulerTestRunner<ouly::v3::scheduler, ouly::v3::task_context>))
 {
   using TestRunner      = TestType;
   using SchedulerType   = typename TestRunner::scheduler_type;
@@ -1426,7 +1452,8 @@ TEMPLATE_TEST_CASE("Task Submission Patterns", "[scheduler][submission][patterns
 // Test auto_parallel_for with ouly::subrange<uint32_t> - Basic functionality
 TEMPLATE_TEST_CASE("Auto Parallel For with Subrange Basic", "[scheduler][auto_parallel_for][subrange][template]",
                    (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
-                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>),
+                   (SchedulerTestRunner<ouly::v3::scheduler, ouly::v3::task_context>))
 {
   using TestRunner      = TestType;
   using TaskContextType = typename TestRunner::task_context_type;
@@ -1465,7 +1492,8 @@ TEMPLATE_TEST_CASE("Auto Parallel For with Subrange Basic", "[scheduler][auto_pa
 TEMPLATE_TEST_CASE("Auto Parallel For with Subrange Element Based",
                    "[scheduler][auto_parallel_for][subrange][template]",
                    (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
-                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>),
+                   (SchedulerTestRunner<ouly::v3::scheduler, ouly::v3::task_context>))
 {
   using TestRunner      = TestType;
   using TaskContextType = typename TestRunner::task_context_type;
@@ -1501,7 +1529,8 @@ TEMPLATE_TEST_CASE("Auto Parallel For with Subrange Element Based",
 TEMPLATE_TEST_CASE("Auto Parallel For with Subrange Stress Test",
                    "[scheduler][auto_parallel_for][subrange][stress][template]",
                    (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
-                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>),
+                   (SchedulerTestRunner<ouly::v3::scheduler, ouly::v3::task_context>))
 {
   using TestRunner      = TestType;
   using TaskContextType = typename TestRunner::task_context_type;
@@ -1549,7 +1578,8 @@ TEMPLATE_TEST_CASE("Auto Parallel For with Subrange Stress Test",
 TEMPLATE_TEST_CASE("Auto Parallel For with Subrange Empty Range",
                    "[scheduler][auto_parallel_for][subrange][edge][template]",
                    (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
-                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>),
+                   (SchedulerTestRunner<ouly::v3::scheduler, ouly::v3::task_context>))
 {
   using TestRunner      = TestType;
   using TaskContextType = typename TestRunner::task_context_type;
@@ -1584,7 +1614,8 @@ TEMPLATE_TEST_CASE("Auto Parallel For with Subrange Empty Range",
 TEMPLATE_TEST_CASE("Auto Parallel For with Subrange Single Element",
                    "[scheduler][auto_parallel_for][subrange][edge][template]",
                    (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
-                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>),
+                   (SchedulerTestRunner<ouly::v3::scheduler, ouly::v3::task_context>))
 {
   using TestRunner      = TestType;
   using TaskContextType = typename TestRunner::task_context_type;
@@ -1619,7 +1650,8 @@ TEMPLATE_TEST_CASE("Auto Parallel For with Subrange Single Element",
 TEMPLATE_TEST_CASE("Auto Parallel For with Subrange in Async Tasks",
                    "[scheduler][auto_parallel_for][subrange][async][template]",
                    (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
-                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>))
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>),
+                   (SchedulerTestRunner<ouly::v3::scheduler, ouly::v3::task_context>))
 {
   using TestRunner      = TestType;
   using TaskContextType = typename TestRunner::task_context_type;

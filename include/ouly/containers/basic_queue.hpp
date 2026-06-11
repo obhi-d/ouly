@@ -72,9 +72,12 @@ public:
   basic_queue(allocator_type const& alloc) noexcept : allocator_type(alloc) {}
 
   basic_queue(basic_queue const& other, allocator_type const& alloc)
-      : allocator_type(alloc), head_(other.head_), tail_(other.tail_), free_(other.free_), size_(other.size_),
-        front_(other.front_), back_(other.back_)
+    requires(std::is_copy_constructible_v<Ty>)
+      : allocator_type(alloc)
   {
+    // Note: deliberately does not adopt other's block pointers; copy() allocates our own
+    // blocks. Sharing the pointers here would make clear() steal the source queue's
+    // blocks and free them twice.
     copy(other);
   }
 
@@ -301,6 +304,9 @@ private:
     if (free_)
     {
       free_ = free_->next_;
+      // The block still links into the free chain; detach it or traversal (for_each,
+      // copy) would walk past tail_ into free-list blocks and read destroyed slots.
+      db->next_ = nullptr;
     }
     else
     {

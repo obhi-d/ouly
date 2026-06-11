@@ -39,18 +39,21 @@ set(OULY_SOURCES
     "src/ouly/dsl/microexpr.cpp"
     "src/ouly/scheduler/v1/scheduler.cpp"
     "src/ouly/scheduler/v2/scheduler.cpp"
+    "src/ouly/scheduler/v3/scheduler.cpp"
     "src/ouly/utility/string_utils.cpp"
 )
 
 add_library(${OULY_TARGET_NAME} ${OULY_SOURCES})
 
 if(BUILD_SHARED_LIBS)
-    target_compile_definitions(${OULY_TARGET_NAME}
+    target_compile_definitions(
+        ${OULY_TARGET_NAME}
         PRIVATE OULY_EXPORT_SYMBOLS
         PUBLIC OULY_DLL_IMPL
     )
-    set_target_properties(${OULY_TARGET_NAME} PROPERTIES
-        POSITION_INDEPENDENT_CODE ON
+    set_target_properties(
+        ${OULY_TARGET_NAME}
+        PROPERTIES POSITION_INDEPENDENT_CODE ON
     )
 endif()
 

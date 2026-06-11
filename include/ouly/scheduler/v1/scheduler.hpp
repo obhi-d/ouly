@@ -287,10 +287,15 @@ public:
    * scheduler
    */
   OULY_API void take_ownership() noexcept;
-  OULY_API void busy_work(worker_id /*thread*/) noexcept;
-  void          busy_work(v1::task_context const& ctx) noexcept
+
+  /**
+   * @brief Try to execute queued work on the calling worker.
+   * @return true if at least one work item was executed
+   */
+  OULY_API auto busy_work(worker_id /*thread*/) noexcept -> bool;
+  auto          busy_work(v1::task_context const& ctx) noexcept -> bool
   {
-    busy_work(ctx.get_worker());
+    return busy_work(ctx.get_worker());
   }
 
   OULY_API void wait_for_tasks();
@@ -323,8 +328,12 @@ private:
   // Cache-aligned wake data to prevent false sharing
   struct wake_data
   {
-    std::atomic_bool      status_{false};
-    std::binary_semaphore event_{0};
+    std::atomic_bool status_{false};
+    // Counting (not binary) on purpose: the wake protocol can leave one stale token
+    // behind when a worker finds work during its pre-sleep double-check; a binary
+    // semaphore would hit UB (over-release) in that case. Stale tokens only cause a
+    // single spurious wakeup and are consumed by the next acquire.
+    std::counting_semaphore<> event_{0};
   };
 
   using aligned_worker    = ouly::detail::cache_optimized_data<ouly::detail::v1::worker>;

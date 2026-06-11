@@ -201,11 +201,14 @@ public:
   }
 
   /**
-   * @brief Check if this workgroup has work available
+   * @brief Check if this workgroup has work available (strong ordering)
+   *
+   * seq_cst so a worker that re-checks after arming its sleep state participates in a
+   * total order with the producer's advertise + sleeper check (lost-wakeup prevention).
    */
   [[nodiscard]] auto has_work_strong() const noexcept -> bool
   {
-    return has_work_.load(std::memory_order_acquire) > 0;
+    return has_work_.load(std::memory_order_seq_cst) > 0;
   }
 
   /**
@@ -213,7 +216,7 @@ public:
    */
   void advertise_work_available() noexcept
   {
-    has_work_.fetch_add(1, std::memory_order_relaxed);
+    has_work_.fetch_add(1, std::memory_order_seq_cst);
   }
 
   /**
@@ -241,9 +244,14 @@ public:
     has_work_.store(0, std::memory_order_relaxed);
   }
 
+  /**
+   * @brief Balance one advertise_work_available(). Called when an item is dequeued (not
+   * when it finishes executing), so has_work() accurately reflects queued items and idle
+   * workers can park while long tasks run.
+   */
   void sink_one_work()
   {
-    has_work_.fetch_sub(1, std::memory_order_relaxed);
+    has_work_.fetch_sub(1, std::memory_order_acq_rel);
   }
 
   /**

@@ -8,6 +8,9 @@
 #include "ouly/scheduler/v2/scheduler.hpp"
 #include "ouly/scheduler/v2/task_context.hpp"
 
+#include "ouly/scheduler/v3/scheduler.hpp"
+#include "ouly/scheduler/v3/task_context.hpp"
+
 namespace ouly
 {
 /**

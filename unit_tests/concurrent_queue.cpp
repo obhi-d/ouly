@@ -143,8 +143,8 @@ TEST_CASE("concurrent_queue basic operations",
     {
       int value = 0; // NOLINT(readability-isolate-declaration)
       REQUIRE(queue.try_dequeue(value));
-      // Note: LIFO order due to implementation
-      REQUIRE(value == (test_count - 1 - i));
+      // FIFO order
+      REQUIRE(value == i);
     }
 
     REQUIRE(queue.empty());
@@ -245,6 +245,126 @@ TEST_CASE("concurrent_queue stress test", "[concurrent_queue]") // NOLINT(readab
   REQUIRE(queue.size() == 0);
 }
 
+TEST_CASE("concurrent_queue MPMC integrity and per-producer FIFO", "[concurrent_queue]")
+{
+  // Validates the redesigned queue: no lost elements, no duplicates, no torn reads, and
+  // FIFO order per producer, under heavy contention spanning many bucket transitions.
+  ouly::concurrent_queue<uint64_t> queue;
+
+  constexpr int      num_producers      = 8;
+  constexpr int      num_consumers      = 8;
+  constexpr uint64_t items_per_producer = 20000;
+  constexpr uint64_t total_items        = num_producers * items_per_producer;
+
+  std::atomic<uint64_t> consumed_count{0};
+  std::atomic<bool>     producers_done{false};
+  std::atomic<int>      order_violations{0};
+  std::atomic<int>      duplicate_or_corrupt{0};
+
+  // One "seen" bitmap per producer, written only by the consumer that dequeued the item;
+  // cells are atomic to allow concurrent consumers.
+  std::vector<std::vector<std::atomic<uint8_t>>> seen(num_producers);
+  for (auto& s : seen)
+  {
+    s = std::vector<std::atomic<uint8_t>>(items_per_producer);
+  }
+
+  std::vector<std::thread> threads;
+
+  for (int p = 0; p < num_producers; ++p)
+  {
+    threads.emplace_back(
+     [&queue, p]()
+     {
+       for (uint64_t i = 0; i < items_per_producer; ++i)
+       {
+         queue.enqueue((static_cast<uint64_t>(p) << 32U) | i);
+       }
+     });
+  }
+
+  for (int c = 0; c < num_consumers; ++c)
+  {
+    threads.emplace_back(
+     [&]()
+     {
+       // Last sequence this consumer saw from each producer; my own dequeues must observe
+       // each producer's items in increasing order (per-producer FIFO).
+       std::array<int64_t, num_producers> last_seen{};
+       last_seen.fill(-1);
+
+       uint64_t value = 0;
+       for (;;)
+       {
+         if (queue.try_dequeue(value))
+         {
+           auto producer = static_cast<int>(value >> 32U);
+           auto seq      = static_cast<int64_t>(value & 0xFFFFFFFFU);
+
+           if (producer >= num_producers || seq >= static_cast<int64_t>(items_per_producer) ||
+               seen[static_cast<size_t>(producer)][static_cast<size_t>(seq)].exchange(1) != 0)
+           {
+             duplicate_or_corrupt.fetch_add(1);
+           }
+           if (seq <= last_seen[static_cast<size_t>(producer)])
+           {
+             order_violations.fetch_add(1);
+           }
+           last_seen[static_cast<size_t>(producer)] = seq;
+           consumed_count.fetch_add(1, std::memory_order_relaxed);
+         }
+         else if (producers_done.load(std::memory_order_acquire))
+         {
+           // Producers finished; one final successful drain pass already failed, so stop
+           // once the queue stays empty.
+           if (!queue.try_dequeue(value))
+           {
+             return;
+           }
+           auto producer = static_cast<int>(value >> 32U);
+           auto seq      = static_cast<int64_t>(value & 0xFFFFFFFFU);
+           if (producer >= num_producers || seq >= static_cast<int64_t>(items_per_producer) ||
+               seen[static_cast<size_t>(producer)][static_cast<size_t>(seq)].exchange(1) != 0)
+           {
+             duplicate_or_corrupt.fetch_add(1);
+           }
+           consumed_count.fetch_add(1, std::memory_order_relaxed);
+         }
+         else
+         {
+           std::this_thread::yield();
+         }
+       }
+     });
+  }
+
+  for (int p = 0; p < num_producers; ++p)
+  {
+    threads[static_cast<size_t>(p)].join();
+  }
+  producers_done.store(true, std::memory_order_release);
+
+  for (size_t t = num_producers; t < threads.size(); ++t)
+  {
+    threads[t].join();
+  }
+
+  REQUIRE(consumed_count.load() == total_items);
+  REQUIRE(order_violations.load() == 0);
+  REQUIRE(duplicate_or_corrupt.load() == 0);
+  REQUIRE(queue.empty());
+  REQUIRE(queue.size() == 0);
+
+  // Every single item must have been seen exactly once.
+  for (auto& s : seen)
+  {
+    for (auto& cell : s)
+    {
+      REQUIRE(cell.load() == 1);
+    }
+  }
+}
+
 TEST_CASE("concurrent_queue bucket overflow", "[concurrent_queue]")
 {
   // Test that the queue correctly handles bucket overflow
@@ -297,7 +417,7 @@ TEST_CASE("concurrent_queue fast variant mode",
      });
 
     REQUIRE(collected.size() == 3);
-    // Note: order may vary due to LIFO nature of bucket processing
+    // Order is insertion order for single-threaded enqueue; sort to stay robust anyway
     std::sort(collected.begin(), collected.end());
     REQUIRE(collected[0] == 1);
     REQUIRE(collected[1] == 2);
@@ -469,7 +589,7 @@ TEST_CASE("concurrent_queue edge cases", "[concurrent_queue]") // NOLINT(readabi
 
     int value = 0; // NOLINT(readability-isolate-declaration)
     REQUIRE(queue.try_dequeue(value));
-    REQUIRE(value == 2); // LIFO order
+    REQUIRE(value == 1); // FIFO order
     REQUIRE(queue.size() == 1);
 
     queue.enqueue(3);
@@ -477,11 +597,11 @@ TEST_CASE("concurrent_queue edge cases", "[concurrent_queue]") // NOLINT(readabi
     REQUIRE(queue.size() == 3);
 
     REQUIRE(queue.try_dequeue(value));
-    REQUIRE(value == 4); // NOLINT(readability-magic-numbers) Most recent
+    REQUIRE(value == 2); // NOLINT(readability-magic-numbers)
     REQUIRE(queue.try_dequeue(value));
     REQUIRE(value == 3); // NOLINT(readability-magic-numbers)
     REQUIRE(queue.try_dequeue(value));
-    REQUIRE(value == 1);
+    REQUIRE(value == 4); // NOLINT(readability-magic-numbers)
     REQUIRE(queue.empty());
   }
 }
@@ -506,6 +626,33 @@ TEST_CASE("concurrent_queue exception safety", "[concurrent_queue]")
     REQUIRE(queue.empty());
 
     // Clean up
+    ThrowingType::construction_count = 0;
+    ThrowingType::should_throw       = false;
+  }
+
+  SECTION("throwing constructor leaves queue functional")
+  {
+    ouly::concurrent_queue<ThrowingType> queue;
+    ThrowingType::construction_count = 0;
+    ThrowingType::should_throw       = false;
+
+    queue.enqueue(ThrowingType{1});
+
+    // The failed construction poisons its claimed slot; consumers must skip it.
+    ThrowingType::should_throw = true;
+    REQUIRE_THROWS(queue.emplace(2));
+    ThrowingType::should_throw = false;
+
+    queue.enqueue(ThrowingType{3});
+
+    ThrowingType result{0};
+    REQUIRE(queue.try_dequeue(result));
+    REQUIRE(result.value == 1);
+    REQUIRE(queue.try_dequeue(result));
+    REQUIRE(result.value == 3);
+    REQUIRE_FALSE(queue.try_dequeue(result));
+    REQUIRE(queue.empty());
+
     ThrowingType::construction_count = 0;
     ThrowingType::should_throw       = false;
   }
@@ -544,9 +691,9 @@ TEST_CASE("concurrent_queue large object handling", "[concurrent_queue]")
     {
       LargeObject obj;
       REQUIRE(queue.try_dequeue(obj));
-      REQUIRE(obj.id == (count - 1 - i)); // LIFO order
-      REQUIRE(obj.data[0] == (count - 1 - i));
-      REQUIRE(obj.data[31] == (count - 1 - i)); // NOLINT(readability-magic-numbers)
+      REQUIRE(obj.id == i); // FIFO order
+      REQUIRE(obj.data[0] == i);
+      REQUIRE(obj.data[31] == i); // NOLINT(readability-magic-numbers)
     }
 
     REQUIRE(queue.empty());
@@ -807,10 +954,10 @@ TEST_CASE("concurrent_queue type requirements", "[concurrent_queue]")
     std::unique_ptr<int> result;
     REQUIRE(queue.try_dequeue(result));
     REQUIRE(result != nullptr);
-    REQUIRE(*result == 3); // NOLINT(readability-magic-numbers) LIFO order
+    REQUIRE(*result == 1); // FIFO order
 
     REQUIRE(queue.try_dequeue(result));
-    REQUIRE(*result == 1);
+    REQUIRE(*result == 3); // NOLINT(readability-magic-numbers)
 
     REQUIRE(queue.empty());
   }
@@ -846,10 +993,10 @@ TEST_CASE("concurrent_queue type requirements", "[concurrent_queue]")
 
     NonDefaultConstructible result{0};
     REQUIRE(queue.try_dequeue(result));
-    REQUIRE(result.value == 100); // NOLINT(readability-magic-numbers) LIFO order
+    REQUIRE(result.value == 42); // NOLINT(readability-magic-numbers) FIFO order
 
     REQUIRE(queue.try_dequeue(result));
-    REQUIRE(result.value == 42); // NOLINT(readability-magic-numbers)
+    REQUIRE(result.value == 100); // NOLINT(readability-magic-numbers)
   }
 }
 

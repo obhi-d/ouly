@@ -8,6 +8,7 @@
 #include "ouly/utility/common.hpp"
 #include <atomic>
 #include <barrier>
+#include <chrono>
 #include <cstdint>
 #include <latch>
 #include <ranges>
@@ -59,7 +60,7 @@ inline void scheduler::do_work(workgroup_id id, worker_id thread, ouly::detail::
   ouly::detail::vector_access(workgroups_, id.get_index()).sink_one_work();
 }
 
-void scheduler::busy_work(worker_id thread) noexcept
+auto scheduler::busy_work(worker_id thread) noexcept -> bool
 {
   // Optimized work stealing with adaptive attempts
   constexpr uint32_t min_attempts      = 1;
@@ -67,21 +68,22 @@ void scheduler::busy_work(worker_id thread) noexcept
   constexpr uint32_t failure_threshold = 5;
 
   // Use thread_local failure tracking for better performance
-  auto&    local_recent_failures = ouly::detail::vector_access(workers_, thread.get_index()).get().busy_backoff_;
+  auto&    worker                = ouly::detail::vector_access(workers_, thread.get_index()).get();
+  auto&    local_recent_failures = worker.busy_backoff_;
   uint32_t attempts              = (local_recent_failures > failure_threshold) ? min_attempts : max_attempts;
+
+  // do_work() repoints current_context_ at the executed task's group context; restore the
+  // caller's context afterwards so this_context::get() stays correct after nested helping
+  // (e.g. inside cooperative_wait or parallel_for).
+  auto* preserved_context = worker.current_context_;
 
   for (uint32_t attempt = 0; attempt < attempts; ++attempt)
   {
     if (work(thread)) [[likely]]
     {
-      if (thread.get_index() == 0)
-      {
-        auto& worker = ouly::detail::vector_access(workers_, 0).get();
-        // reset the context
-        worker.current_context_ = &ouly::detail::vector_access(worker.contexts_, 0);
-      }
-      local_recent_failures = std::max(0U, local_recent_failures - 1);
-      return; // Found and executed work
+      worker.current_context_ = preserved_context;
+      local_recent_failures   = std::max(0U, local_recent_failures - 1);
+      return true; // Found and executed work
     }
 
     // Shorter pause for first attempts, longer for subsequent ones
@@ -93,6 +95,7 @@ void scheduler::busy_work(worker_id thread) noexcept
 
   // No work found, increment failure count
   local_recent_failures++;
+  return false;
 }
 
 void scheduler::run_worker(worker_id thread)
@@ -113,8 +116,28 @@ void scheduler::run_worker(worker_id thread)
     {
     }
 
-    ouly::detail::vector_access(wake_data_, thread.get_index()).get().status_.store(false, std::memory_order_relaxed);
-    ouly::detail::vector_access(wake_data_, thread.get_index()).get().event_.release();
+    auto& wake = ouly::detail::vector_access(wake_data_, thread.get_index()).get();
+
+    // Announce intent to sleep, then re-scan once: a producer that pushed work before
+    // observing status_ == false will not release a token, so the re-scan is what
+    // prevents a lost wakeup. The seq_cst fence orders status_ against the queue reads
+    // (Dekker-style pairing with the fence in wake_up()).
+    wake.status_.store(false, std::memory_order_relaxed);
+    std::atomic_thread_fence(std::memory_order_seq_cst);
+
+    if (work(thread))
+    {
+      wake.status_.store(true, std::memory_order_relaxed);
+      continue;
+    }
+
+    if (stop_.load(std::memory_order_acquire))
+    {
+      break;
+    }
+
+    wake.event_.acquire();
+    wake.status_.store(true, std::memory_order_relaxed);
   }
 
   g_worker    = nullptr;
@@ -277,6 +300,10 @@ auto scheduler::get_work(worker_id thread, ouly::detail::v1::work_item& work) no
 // NOLINTNEXTLINE
 void scheduler::wake_up(worker_id thread) noexcept
 {
+  // Pairs with the fence in run_worker(): the producer publishes work, fences, then
+  // reads status_; the worker writes status_ = false, fences, then re-scans for work.
+  // At least one side must observe the other, so a sleeping worker is always woken.
+  std::atomic_thread_fence(std::memory_order_seq_cst);
   auto& wake = ouly::detail::vector_access(wake_data_, thread.get_index()).get();
   if (!wake.status_.exchange(true, std::memory_order_acq_rel))
   {
@@ -351,7 +378,8 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
     ouly::detail::vector_access(wake_data_, worker_index).get().status_.store(true, std::memory_order_relaxed);
   }
 
-  stop_              = false;
+  stop_ = false;
+  finished_.store(0, std::memory_order_relaxed);
   auto start_counter = std::latch(worker_count_);
 
   entry_fn_ = [cust_entry = std::move(entry), &start_counter](ouly::worker_id worker) -> void
@@ -406,10 +434,20 @@ void scheduler::finish_pending_tasks()
 
 void scheduler::end_execution()
 {
-  finish_pending_tasks();
-  for (uint32_t thread = 1; thread < worker_count_; ++thread)
+  if (!workers_)
   {
-    ouly::detail::vector_access(threads_, thread - 1).join();
+    // begin_execution() was never called; nothing to wind down.
+    stop_.store(true, std::memory_order_relaxed);
+    return;
+  }
+
+  finish_pending_tasks();
+  for (auto& thread : threads_)
+  {
+    if (thread.joinable())
+    {
+      thread.join();
+    }
   }
   threads_.clear();
 }
@@ -530,6 +568,9 @@ void scheduler::wait_for_tasks()
     }
 
     busy_work(worker_id(0));
+    // The tally is only decremented after a task finishes, so during a long-running
+    // task there may be nothing to help with; yield instead of burning this core.
+    std::this_thread::yield();
   }
 }
 
@@ -537,10 +578,30 @@ void scheduler::wait_for_tasks()
 
 void ouly::v1::task_context::cooperative_wait(std::binary_semaphore& event) const
 {
+  using namespace std::chrono_literals;
+  constexpr uint32_t spin_limit = 64;
+
+  uint32_t idle_spins = 0;
   while (!event.try_acquire())
   {
-    // Use a busy wait loop to avoid blocking the thread
-    owner_->busy_work(index_);
+    // Help execute queued work while waiting.
+    if (owner_->busy_work(index_))
+    {
+      idle_spins = 0;
+      continue;
+    }
+
+    if (++idle_spins < spin_limit)
+    {
+      ouly::detail::pause_exec();
+      continue;
+    }
+
+    // No work and the event is not signaled: block with a short timeout instead of
+    // spinning, so a waiting thread does not pin a core.
+    if (event.try_acquire_for(100us))
+    {
+      return;
+    }
   }
-  // Wait until the semaphore is signaled
 }

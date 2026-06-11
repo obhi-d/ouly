@@ -5,12 +5,15 @@
 #include "ouly/allocators/object_pool.hpp"
 #include "ouly/utility/config.hpp"
 #include "ouly/utility/utils.hpp"
+#include <algorithm>
+#include <array>
 #include <atomic>
 #include <mutex>
+#include <new>
 #include <shared_mutex>
 #include <span>
-#include <thread>
 #include <type_traits>
+#include <utility>
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -21,35 +24,40 @@ namespace ouly
 {
 
 /**
- * @brief A high-performance lock-free concurrent queue with fallback mutex for bucket allocation
+ * @brief A multi-producer, multi-consumer FIFO queue built from a chain of fixed-size buckets
  *
  * @tparam T The type of elements stored in the queue
  * @tparam Config Configuration for the queue, affecting bucket size and allocation behavior
  *
- * concurrent_queue implements a multi-producer, multi-consumer (MPMC) queue optimized for
- * high-throughput scenarios. It uses a lock-free fast path for enqueue/dequeue operations
- * and only acquires a mutex when allocating new buckets.
+ * Design (regular mode):
+ * - Each bucket holds `pool_size` slots plus two monotonic cursors. Producers claim a slot
+ *   with a fetch_add on `enqueue_pos_`; a claim at or beyond `pool_size` means the bucket is
+ *   full and is never undone, so a bucket that has filled once can never accept new elements
+ *   again. Consumers claim committed slots with a CAS on the independent `dequeue_pos_`.
+ *   Slots are never reused within a bucket, which rules out ABA on either cursor.
+ * - A producer constructs the element first and then publishes it through a per-slot commit
+ *   flag (release store); consumers acquire-load the flag before claiming, so an element can
+ *   never be observed mid-construction. If a constructor throws, the slot is poisoned and
+ *   silently skipped by consumers; the queue stays functional.
+ * - Element operations run under a shared lock; bucket transitions (growing the tail,
+ *   retiring an exhausted head bucket, and all bucket-pool traffic) take the exclusive lock.
+ *   Because a bucket is only deallocated while the exclusive lock is held, no thread can
+ *   still hold a pointer into it, which makes reclamation safe without hazard pointers.
+ *   The uncontended shared lock costs two atomic operations, so the common path remains a
+ *   handful of atomics per element.
+ *
+ * Ordering: FIFO per bucket and across buckets. With a single producer the dequeue order is
+ * exactly the enqueue order; with concurrent producers, elements are ordered by their slot
+ * claims.
  *
  * Fast variant mode (single_threaded_consumer_for_each):
  * When the Config contains ouly::cfg::single_threaded_consumer_for_each:
  * - try_dequeue is disabled (not available)
- * - for_each method is available for single-threaded traversal
- * - clear method is available for single-threaded cleanup
- * - Optimized enqueue using fetch_add instead of compare_exchange
- * - Assumes traversal/clear are called in single-threaded context with no concurrent enqueue
- *
- * Key optimizations:
- * - Lock-free fast path for enqueue/dequeue operations
- * - Cache-aligned bucket structure to minimize false sharing
- * - Exponential backoff for contention handling
- * - Memory ordering optimizations for maximum performance
- * - Bucket reuse through object pool for memory efficiency
- *
- * Design:
- * - Uses linked list of fixed-size buckets
- * - Each bucket contains an array of elements and atomic tail counter
- * - Head and tail pointers are atomic for lock-free traversal
- * - Mutex only protects bucket allocation, not element operations
+ * - for_each / for_each_bucket are available for single-threaded traversal
+ * - clear is available for single-threaded cleanup
+ * - Producers share the regular enqueue path (fetch_add claim + commit flag)
+ * - Assumes traversal/clear are called in a single-threaded context with no concurrent
+ *   enqueue
  *
  * Usage example:
  * ```cpp
@@ -67,9 +75,9 @@ namespace ouly
  * fast_queue.clear();
  * ```
  *
- * @note This queue is optimized for scenarios with multiple producers and consumers
- * @note Elements must be movable or copyable
- * @warning Destructors are called on dequeue, not on queue destruction for remaining elements
+ * @note try_dequeue may transiently return false while a concurrent enqueue is still
+ *       committing the next element; this is inherent to "try" semantics.
+ * @note Remaining elements are destroyed when the queue is destroyed.
  */
 template <typename T, typename Config = ouly::default_config<T>>
 class concurrent_queue
@@ -87,15 +95,28 @@ private:
 
   // Cache line size for alignment
   static constexpr size_t cache_line_size = 64;
-  static constexpr int    max_backoff     = 256;
+
+  // Per-slot commit states
+  static constexpr uint8_t slot_empty    = 0; // not yet published by a producer
+  static constexpr uint8_t slot_ready    = 1; // construction finished, safe to consume
+  static constexpr uint8_t slot_poisoned = 2; // constructor threw; skip this slot
 
   struct alignas(cache_line_size) bucket
   {
-    // Hot data: frequently accessed atomics
-    alignas(cache_line_size) std::atomic<size_type> tail_{0};
+    // Producer cursor: monotonic, may overshoot pool_size (overshoot == "bucket full" and
+    // is never undone, so a filled bucket can never be written again).
+    alignas(cache_line_size) std::atomic<size_type> enqueue_pos_{0};
+
+    // Consumer cursor: only advanced past committed slots, bounded by pool_size.
+    alignas(cache_line_size) std::atomic<size_type> dequeue_pos_{0};
+
     alignas(cache_line_size) std::atomic<bucket*> next_{nullptr};
 
-    // Cold data: the actual storage (separate cache line)
+    // Commit flags, written once per slot by the owning producer (release), read by
+    // consumers (acquire). Never reset within a bucket's lifetime.
+    std::array<std::atomic<uint8_t>, pool_size> committed_{};
+
+    // The actual storage (separate cache line)
     alignas(cache_line_size) std::array<ouly::detail::aligned_storage<sizeof(T), alignof(T)>, pool_size> data_{};
 
     bucket()  = default;
@@ -106,11 +127,20 @@ private:
     bucket(bucket&&)                         = delete;
     auto operator=(const bucket&) -> bucket& = delete;
     auto operator=(bucket&&) -> bucket&      = delete;
+
+    /** Number of slots that producers have claimed in this bucket, clamped to capacity. */
+    [[nodiscard]] auto claimed_count() const noexcept -> size_type
+    {
+      return std::min(enqueue_pos_.load(std::memory_order_acquire), pool_size);
+    }
   };
 
   // Separate cache lines for head and tail to minimize false sharing
   alignas(cache_line_size) std::atomic<bucket*> head_{nullptr};
   alignas(cache_line_size) std::atomic<bucket*> tail_{nullptr};
+  // Element operations hold this shared; bucket-chain transitions hold it exclusive. The
+  // exclusive section is what makes bucket deallocation safe: it cannot overlap any element
+  // operation that might still hold a pointer to the bucket.
   alignas(cache_line_size) mutable std::shared_mutex bucket_mutex_;
   alignas(cache_line_size) object_pool<bucket, Config> bucket_pool_;
 
@@ -121,37 +151,21 @@ public:
   concurrent_queue()
   {
     // Initialize with one bucket (constructor context is single-threaded)
-    bucket* initial_bucket = bucket_pool_.allocate();
-    // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
-    new (initial_bucket) bucket();
+    bucket* initial_bucket = allocate_bucket();
     head_.store(initial_bucket, std::memory_order_relaxed);
     tail_.store(initial_bucket, std::memory_order_relaxed);
   }
 
   /**
    * @brief Destroy the concurrent queue
-   * @warning Any remaining elements will be destroyed
+   * @warning Any remaining elements will be destroyed; destruction must be single-threaded
    */
   ~concurrent_queue()
   {
-    if constexpr (is_fast_variant)
-    {
-      // Fast variant: use optimized clear for single-threaded cleanup
-      clear();
-    }
-    else
-    {
-      // Regular mode: drain remaining elements using try_dequeue
-      T dummy;
-      while (try_dequeue(dummy))
-      {
-      }
-    }
-
-    // Clean up remaining buckets
     bucket* current = head_.load(std::memory_order_relaxed);
     while (current != nullptr)
     {
+      destroy_remaining(current);
       bucket* next = current->next_.load(std::memory_order_relaxed);
       current->~bucket();
       bucket_pool_.deallocate(current);
@@ -192,148 +206,92 @@ public:
    */
   template <typename... Args>
   void emplace(Args&&... args)
-    requires(is_fast_variant)
   {
-    // Fast variant: optimized for single-threaded consumer with for_each
-    // Use fetch_add for faster enqueue since we don't need to handle concurrent dequeue
-    for (int backoff = 1;; backoff = std::min(backoff * 2, max_backoff))
+    for (;;)
     {
-      bucket* tail_bucket = tail_.load(std::memory_order_acquire);
-
-      // Try to claim a slot using fetch_add (faster than compare_exchange)
-      size_type claimed_pos = tail_bucket->tail_.fetch_add(1, std::memory_order_acq_rel);
-
-      if (claimed_pos < pool_size)
       {
-        // Successfully claimed slot, construct element
-        new (get_element_ptr(tail_bucket, claimed_pos)) T(std::forward<Args>(args)...);
-        return;
-      }
+        std::shared_lock<std::shared_mutex> guard(bucket_mutex_);
 
-      // Bucket is full, need to undo the increment and get new bucket
-      tail_bucket->tail_.fetch_sub(1, std::memory_order_acq_rel);
+        bucket*   tail_bucket = tail_.load(std::memory_order_acquire);
+        size_type pos         = tail_bucket->enqueue_pos_.fetch_add(1, std::memory_order_relaxed);
 
-      // Slow path: need new bucket
-      if (ensure_next_bucket(tail_bucket))
-      {
-        // Successfully added new bucket, retry enqueue
-        continue;
-      }
-
-      // Exponential backoff before retry
-      for (int i = 0; i < backoff; ++i)
-      {
-        std::this_thread::yield();
-      }
-    }
-  }
-
-  /**
-   * @brief Emplace an element directly in the queue
-   * @tparam Args Types of arguments to construct the element
-   * @param args Arguments to construct the element
-   */
-  template <typename... Args>
-  void emplace(Args&&... args)
-    requires(!is_fast_variant)
-  {
-
-    // Regular mode: use compare_exchange for thread-safe enqueue/dequeue
-    for (int backoff = 1;; backoff = std::min(backoff * 2, max_backoff))
-    {
-      bucket*   tail_bucket = tail_.load(std::memory_order_acquire);
-      size_type tail_pos    = tail_bucket->tail_.load(std::memory_order_relaxed);
-
-      // Fast path: try to claim a slot in current tail bucket
-      if (tail_pos < pool_size)
-      {
-        if (tail_bucket->tail_.compare_exchange_weak(tail_pos, tail_pos + 1, std::memory_order_acq_rel,
-                                                     std::memory_order_relaxed))
+        if (pos < pool_size)
         {
-
-          // Successfully claimed slot, construct element
-          new (get_element_ptr(tail_bucket, tail_pos)) T(std::forward<Args>(args)...);
+          construct_slot(tail_bucket, pos, std::forward<Args>(args)...);
           return;
         }
-        // CAS failed, retry immediately
-        continue;
+        // Bucket full. The overshoot is deliberately not undone: the cursor is monotonic,
+        // so no producer can ever claim a slot in this bucket again. Undoing it would let
+        // a slow producer claim a slot in a bucket consumers have already retired.
       }
-
-      // Slow path: need new bucket
-      if (ensure_next_bucket(tail_bucket))
-      {
-        // Successfully added new bucket, retry enqueue
-        continue;
-      }
-
-      // Exponential backoff before retry
-      for (int i = 0; i < backoff; ++i)
-      {
-        std::this_thread::yield();
-      }
+      grow_tail();
     }
   }
 
   /**
    * @brief Try to dequeue an element (only available in regular mode)
    * @param result Reference to store the dequeued element
-   * @return true if an element was dequeued, false if queue was empty
+   * @return true if an element was dequeued, false if no committed element was available
    */
   [[nodiscard]] auto try_dequeue(T& result) -> bool
     requires(!is_fast_variant)
   {
-    for (int backoff = 1;; backoff = std::min(backoff * 2, max_backoff))
+    for (;;)
     {
-      bucket* head_bucket = head_.load(std::memory_order_acquire);
-
-      // Try to decrement tail to claim an element
-      size_type tail_pos = head_bucket->tail_.load(std::memory_order_acquire);
-
-      while (tail_pos > 0)
+      bool head_exhausted = false;
       {
-        if (head_bucket->tail_.compare_exchange_weak(tail_pos, tail_pos - 1, std::memory_order_acq_rel,
-                                                     std::memory_order_relaxed))
+        std::shared_lock<std::shared_mutex> guard(bucket_mutex_);
+
+        bucket*   head_bucket = head_.load(std::memory_order_acquire);
+        size_type pos         = head_bucket->dequeue_pos_.load(std::memory_order_relaxed);
+
+        for (;;)
         {
-
-          // Successfully claimed element at position tail_pos - 1
-          T* element_ptr = get_element_ptr(head_bucket, tail_pos - 1);
-
-          // Move/copy the element
-          if constexpr (std::is_move_constructible_v<T>)
+          if (pos >= pool_size)
           {
-            result = std::move(*element_ptr);
-          }
-          else
-          {
-            result = *element_ptr;
+            // Bucket fully consumed; if a next bucket exists, retire this one and retry.
+            head_exhausted = head_bucket->next_.load(std::memory_order_acquire) != nullptr;
+            break;
           }
 
-          // Destroy the element
-          element_ptr->~T();
-          return true;
+          uint8_t state = head_bucket->committed_[pos].load(std::memory_order_acquire);
+          if (state == slot_empty)
+          {
+            // FIFO frontier not yet published (queue empty, or an enqueue is mid-flight).
+            return false;
+          }
+
+          if (!head_bucket->dequeue_pos_.compare_exchange_weak(pos, pos + 1, std::memory_order_acq_rel,
+                                                               std::memory_order_relaxed))
+          {
+            continue; // lost the claim; pos was reloaded
+          }
+
+          if (state == slot_ready)
+          {
+            T* element_ptr = get_element_ptr(head_bucket, pos);
+            if constexpr (std::is_move_constructible_v<T>)
+            {
+              result = std::move(*element_ptr);
+            }
+            else
+            {
+              result = *element_ptr;
+            }
+            std::destroy_at(element_ptr);
+            return true;
+          }
+
+          // Poisoned slot (constructor threw): we claimed it, skip to the next one.
+          pos += 1;
         }
-        // CAS failed, tail_pos is updated, try again if > 0
       }
 
-      // This bucket is empty (tail_pos == 0), try to advance head
-      bucket* next_bucket = head_bucket->next_.load(std::memory_order_acquire);
-      if (next_bucket == nullptr)
+      if (!head_exhausted)
       {
-        // Truly empty queue
         return false;
       }
-
-      // Try to advance head pointer
-      if (head_.compare_exchange_weak(head_bucket, next_bucket, std::memory_order_acq_rel, std::memory_order_relaxed))
-      {
-        // Successfully advanced, call destructor and deallocate old bucket
-        head_bucket->~bucket();
-        bucket_pool_.deallocate(head_bucket);
-      } // Exponential backoff before retry
-      for (int i = 0; i < backoff; ++i)
-      {
-        std::this_thread::yield();
-      }
+      retire_head();
     }
   }
 
@@ -347,44 +305,38 @@ public:
   void for_each(F func)
     requires(is_fast_variant)
   {
-    bucket* current = head_.load(std::memory_order_relaxed);
-
+    bucket* current = head_.load(std::memory_order_acquire);
     while (current != nullptr)
     {
-      // Get the count of elements in this bucket (relaxed since single-threaded)
-      size_type count = current->tail_.load(std::memory_order_relaxed);
-
-      // Process all elements in this bucket
+      size_type count = current->claimed_count();
       for (size_type i = 0; i < count; ++i)
       {
-        T* element_ptr = get_element_ptr(current, i);
-        func(*element_ptr);
+        if (current->committed_[i].load(std::memory_order_acquire) == slot_ready)
+        {
+          func(*get_element_ptr(current, i));
+        }
       }
-
-      // Move to next bucket
-      current = current->next_.load(std::memory_order_relaxed);
+      current = current->next_.load(std::memory_order_acquire);
     }
   }
 
   /**
    * @brief Traverse all elements in the queue with a function that accepts a span<T> (fast variant only)
    * @tparam F Function type that accepts span<T> or span<const T>
-   * @param func Function to call for each element
+   * @param func Function to call for each bucket's elements
    * @note This method assumes single-threaded access and no concurrent enqueue operations
+   * @note If an element constructor threw during enqueue, the corresponding slot in the
+   *       span holds an unconstructed element; prefer for_each() for non-nothrow types.
    */
   template <typename F>
   void for_each_bucket(F func)
     requires(is_fast_variant)
   {
-    bucket* current = head_.load(std::memory_order_relaxed);
-
+    bucket* current = head_.load(std::memory_order_acquire);
     while (current != nullptr)
     {
-      std::span<T> elements = get_elements_span(current);
-      func(elements);
-
-      // Move to next bucket
-      current = current->next_.load(std::memory_order_relaxed);
+      func(std::span<T>(get_element_ptr(current, 0), current->claimed_count()));
+      current = current->next_.load(std::memory_order_acquire);
     }
   }
 
@@ -395,44 +347,32 @@ public:
   void clear()
     requires(is_fast_variant)
   {
-    bucket* current = head_.load(std::memory_order_relaxed);
+    std::unique_lock<std::shared_mutex> guard(bucket_mutex_);
 
+    bucket* head_bucket = head_.load(std::memory_order_relaxed);
+    bucket* current     = head_bucket;
     while (current != nullptr)
     {
-      // Get the count of elements in this bucket
-      size_type count = current->tail_.load(std::memory_order_relaxed);
-
-      // Destroy all elements in this bucket
-      for (size_type i = 0; i < count; ++i)
-      {
-        T* element_ptr = get_element_ptr(current, i);
-        element_ptr->~T();
-      }
-
-      // Reset the tail count
-      current->tail_.store(0, std::memory_order_relaxed);
-
-      // Move to next bucket
+      destroy_remaining(current);
       bucket* next = current->next_.load(std::memory_order_relaxed);
-
-      // If this is not the head bucket, deallocate it
-      if (current != head_.load(std::memory_order_relaxed))
+      if (current != head_bucket)
       {
         current->~bucket();
         bucket_pool_.deallocate(current);
       }
-
       current = next;
     }
 
-    // Reset head and tail to point to the original head bucket
-    bucket* head_bucket = head_.load(std::memory_order_relaxed);
-    if (head_bucket != nullptr)
+    // Recycle the head bucket for reuse.
+    size_type claimed = head_bucket->claimed_count();
+    for (size_type i = 0; i < claimed; ++i)
     {
-      // Clear the next pointer of the head bucket
-      head_bucket->next_.store(nullptr, std::memory_order_relaxed);
-      tail_.store(head_bucket, std::memory_order_relaxed);
+      head_bucket->committed_[i].store(slot_empty, std::memory_order_relaxed);
     }
+    head_bucket->enqueue_pos_.store(0, std::memory_order_relaxed);
+    head_bucket->dequeue_pos_.store(0, std::memory_order_relaxed);
+    head_bucket->next_.store(nullptr, std::memory_order_relaxed);
+    tail_.store(head_bucket, std::memory_order_release);
   }
 
   /**
@@ -442,17 +382,17 @@ public:
    */
   [[nodiscard]] auto empty() const noexcept -> bool
   {
-    bucket*   head_bucket = head_.load(std::memory_order_acquire);
-    size_type tail_pos    = head_bucket->tail_.load(std::memory_order_acquire);
+    std::shared_lock<std::shared_mutex> guard(bucket_mutex_);
 
-    if (tail_pos > 0)
+    for (bucket* current = head_.load(std::memory_order_acquire); current != nullptr;
+         current         = current->next_.load(std::memory_order_acquire))
     {
-      return false;
+      if (current->claimed_count() > current->dequeue_pos_.load(std::memory_order_acquire))
+      {
+        return false;
+      }
     }
-
-    // Check if there's a next bucket with elements
-    bucket* next_bucket = head_bucket->next_.load(std::memory_order_acquire);
-    return next_bucket == nullptr || next_bucket->tail_.load(std::memory_order_acquire) == 0;
+    return true;
   }
 
   /**
@@ -462,21 +402,68 @@ public:
    */
   [[nodiscard]] auto size() const noexcept -> size_type
   {
-    size_type total   = 0;
-    bucket*   current = head_.load(std::memory_order_acquire);
+    std::shared_lock<std::shared_mutex> guard(bucket_mutex_);
 
-    while (current != nullptr)
+    size_type total = 0;
+    for (bucket* current = head_.load(std::memory_order_acquire); current != nullptr;
+         current         = current->next_.load(std::memory_order_acquire))
     {
-      total += current->tail_.load(std::memory_order_acquire);
-      current = current->next_.load(std::memory_order_acquire);
+      total += current->claimed_count() - current->dequeue_pos_.load(std::memory_order_acquire);
     }
-
     return total;
   }
 
 private:
   /**
-   * @brief Allocate a new bucket from the pool (must be called under mutex protection)
+   * @brief Construct an element into a claimed slot and publish it.
+   *
+   * On exception the slot is poisoned (consumers skip it) and the exception propagates;
+   * the queue remains fully functional.
+   */
+  template <typename... Args>
+  void construct_slot(bucket* bucket_ptr, size_type pos, Args&&... args)
+  {
+    if constexpr (std::is_nothrow_constructible_v<T, Args...>)
+    {
+      new (get_element_ptr(bucket_ptr, pos)) T(std::forward<Args>(args)...);
+    }
+    else
+    {
+      try
+      {
+        new (get_element_ptr(bucket_ptr, pos)) T(std::forward<Args>(args)...);
+      }
+      catch (...)
+      {
+        bucket_ptr->committed_[pos].store(slot_poisoned, std::memory_order_release);
+        throw;
+      }
+    }
+    bucket_ptr->committed_[pos].store(slot_ready, std::memory_order_release);
+  }
+
+  /**
+   * @brief Destroy all committed, not-yet-consumed elements of a bucket.
+   * @note Caller must guarantee exclusive access (destructor or clear()).
+   */
+  void destroy_remaining(bucket* bucket_ptr) noexcept
+  {
+    if constexpr (!std::is_trivially_destructible_v<T>)
+    {
+      size_type end = bucket_ptr->claimed_count();
+      for (size_type i = bucket_ptr->dequeue_pos_.load(std::memory_order_relaxed); i < end; ++i)
+      {
+        if (bucket_ptr->committed_[i].load(std::memory_order_relaxed) == slot_ready)
+        {
+          std::destroy_at(get_element_ptr(bucket_ptr, i));
+        }
+      }
+    }
+  }
+
+  /**
+   * @brief Allocate a new bucket from the pool (caller must hold the exclusive lock,
+   * except in the single-threaded constructor)
    */
   auto allocate_bucket() -> bucket*
   {
@@ -487,35 +474,52 @@ private:
   }
 
   /**
-   * @brief Ensure that the given bucket has a next bucket
-   * @param current_bucket The bucket that needs a next bucket
-   * @return true if next bucket exists or was created, false on failure
+   * @brief Advance tail_ to a bucket with free slots, linking a new bucket if needed.
    */
-  auto ensure_next_bucket(bucket* current_bucket) -> bool
+  void grow_tail()
   {
-    std::unique_lock<std::shared_mutex> lock(bucket_mutex_);
+    std::unique_lock<std::shared_mutex> guard(bucket_mutex_);
 
-    // Check if next bucket already exists (double-checked locking)
-    bucket* next = current_bucket->next_.load(std::memory_order_acquire);
-    if (next != nullptr)
+    bucket* tail_bucket = tail_.load(std::memory_order_relaxed);
+    if (tail_bucket->enqueue_pos_.load(std::memory_order_relaxed) < pool_size)
     {
-      // Someone else already created the next bucket, advance tail pointer
-      tail_.compare_exchange_weak(current_bucket, next, std::memory_order_acq_rel, std::memory_order_relaxed);
-      return true;
+      return; // another producer already advanced to a bucket with space
     }
 
-    // Allocate and construct new bucket (already protected by mutex)
-    bucket* new_bucket = bucket_pool_.allocate();
-    // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
-    new (new_bucket) bucket();
+    bucket* next = tail_bucket->next_.load(std::memory_order_relaxed);
+    if (next == nullptr)
+    {
+      next = allocate_bucket();
+      tail_bucket->next_.store(next, std::memory_order_release);
+    }
+    tail_.store(next, std::memory_order_release);
+  }
 
-    // Link the new bucket atomically
-    current_bucket->next_.store(new_bucket, std::memory_order_release);
+  /**
+   * @brief Retire the head bucket if it is fully consumed and a successor exists.
+   *
+   * Deallocation happens under the exclusive lock, which cannot overlap any element
+   * operation, so no thread can still hold a pointer into the retired bucket.
+   */
+  void retire_head()
+  {
+    std::unique_lock<std::shared_mutex> guard(bucket_mutex_);
 
-    // Advance tail pointer to the new bucket
-    tail_.compare_exchange_weak(current_bucket, new_bucket, std::memory_order_acq_rel, std::memory_order_relaxed);
+    bucket* head_bucket = head_.load(std::memory_order_relaxed);
+    if (head_bucket->dequeue_pos_.load(std::memory_order_relaxed) < pool_size)
+    {
+      return; // another consumer already retired it, or items remain
+    }
 
-    return true;
+    bucket* next = head_bucket->next_.load(std::memory_order_relaxed);
+    if (next == nullptr)
+    {
+      return;
+    }
+
+    head_.store(next, std::memory_order_release);
+    head_bucket->~bucket();
+    bucket_pool_.deallocate(head_bucket);
   }
 
   /**
@@ -525,15 +529,6 @@ private:
   {
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     return bucket_ptr->data_[pos].template as<T>();
-  }
-
-  /**
-   * @brief Get a span of elements in the bucket
-   */
-  static auto get_elements_span(bucket* bucket_ptr) noexcept -> std::span<T>
-  {
-    size_type count = bucket_ptr->tail_.load(std::memory_order_relaxed);
-    return std::span<T>(get_element_ptr(bucket_ptr, 0), count);
   }
 };
 
