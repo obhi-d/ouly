@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 #include "ouly/scheduler/co_task.hpp"
+#include "ouly/scheduler/detail/cache_optimized_data.hpp"
 #include "ouly/scheduler/detail/v3/worker.hpp"
 #include "ouly/scheduler/detail/v3/workgroup.hpp"
 #include "ouly/scheduler/v3/task_context.hpp"
@@ -67,11 +68,11 @@ public:
    * @brief Move is only valid before begin_execution() (no worker threads running).
    */
   scheduler(scheduler&& other) noexcept
-      : stop_(other.stop_.load(std::memory_order_relaxed)), workers_(std::move(other.workers_)),
-        workgroups_(std::move(other.workgroups_)), threads_(std::move(other.threads_)),
-        workgroup_descs_(other.workgroup_descs_), entry_fn_(std::move(other.entry_fn_)),
-        worker_count_(other.worker_count_), workgroup_count_(other.workgroup_count_),
-        idle_spin_limit_(other.idle_spin_limit_)
+      : workers_(std::move(other.workers_)), workgroups_(std::move(other.workgroups_)),
+        threads_(std::move(other.threads_)), workgroup_descs_(other.workgroup_descs_),
+        entry_fn_(std::move(other.entry_fn_)), worker_count_(other.worker_count_),
+        workgroup_count_(other.workgroup_count_), idle_spin_limit_(other.idle_spin_limit_),
+        stop_(other.stop_.load(std::memory_order_relaxed))
   {
     OULY_ASSERT(other.threads_.empty());
     other.worker_count_    = 0;
@@ -258,15 +259,12 @@ private:
 
   static constexpr uint32_t default_idle_spin_limit = 64;
 
-  std::atomic_bool stop_{false};
-
   // Eventcount for parking idle workers (futex via C++20 atomic wait).
-  alignas(ouly::detail::cache_line_size) std::atomic<uint32_t> wake_epoch_{0};
-  alignas(ouly::detail::cache_line_size) std::atomic<uint32_t> sleepers_{0};
+  ouly::detail::cache_aligned_atomic<uint32_t> wake_epoch_{uint32_t{0}};
+  ouly::detail::cache_aligned_atomic<uint32_t> sleepers_{uint32_t{0}};
 
   // Tasks submitted but not yet finished executing (queued + in-flight).
-  alignas(ouly::detail::cache_line_size) std::atomic<uint32_t> pending_{0};
-  std::atomic<uint32_t> pending_waiters_{0};
+  ouly::detail::cache_aligned_atomic<uint32_t> pending_{uint32_t{0}};
 
   std::unique_ptr<detail::v3::worker[]>    workers_;
   std::unique_ptr<detail::v3::workgroup[]> workgroups_;
@@ -279,6 +277,9 @@ private:
   uint32_t worker_count_    = 0;
   uint32_t workgroup_count_ = 0;
   uint32_t idle_spin_limit_ = default_idle_spin_limit;
+
+  std::atomic<uint32_t> pending_waiters_{0};
+  std::atomic_bool      stop_{false};
 };
 
 } // namespace ouly::v3

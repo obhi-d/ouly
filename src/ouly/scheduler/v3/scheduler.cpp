@@ -61,29 +61,29 @@ void scheduler::notify_workers(uint32_t count) noexcept
   // Bump the epoch first: a worker about to park rechecks the epoch (via the futex value
   // check inside atomic wait), so a bump that lands between its work recheck and the wait
   // call prevents it from sleeping through this notification.
-  wake_epoch_.fetch_add(1, std::memory_order_seq_cst);
-  auto sleeper_count = sleepers_.load(std::memory_order_seq_cst);
+  wake_epoch_.get().fetch_add(1, std::memory_order_seq_cst);
+  auto sleeper_count = sleepers_.get().load(std::memory_order_seq_cst);
   if (sleeper_count == 0)
   {
     return;
   }
   if (count > 1 && sleeper_count > 1)
   {
-    wake_epoch_.notify_all();
+    wake_epoch_.get().notify_all();
   }
   else
   {
-    wake_epoch_.notify_one();
+    wake_epoch_.get().notify_one();
   }
 }
 
 void scheduler::finish_task() noexcept
 {
-  if (pending_.fetch_sub(1, std::memory_order_acq_rel) == 1)
+  if (pending_.get().fetch_sub(1, std::memory_order_acq_rel) == 1)
   {
     if (pending_waiters_.load(std::memory_order_acquire) != 0)
     {
-      pending_.notify_all();
+      pending_.get().notify_all();
     }
   }
 }
@@ -188,17 +188,17 @@ void scheduler::run_worker(worker_id wid)
     // recheck) here against (queued increment, epoch bump, sleepers_ read) on the
     // producer side guarantees the producer either sees us sleeping (and notifies) or we
     // see the queued item / bumped epoch (and skip the wait).
-    auto epoch = wake_epoch_.load(std::memory_order_seq_cst);
-    sleepers_.fetch_add(1, std::memory_order_seq_cst);
+    auto epoch = wake_epoch_.get().load(std::memory_order_seq_cst);
+    sleepers_.get().fetch_add(1, std::memory_order_seq_cst);
 
     if (has_queued_work(wkr) || stop_.load(std::memory_order_seq_cst))
     {
-      sleepers_.fetch_sub(1, std::memory_order_relaxed);
+      sleepers_.get().fetch_sub(1, std::memory_order_relaxed);
       continue;
     }
 
-    wake_epoch_.wait(epoch);
-    sleepers_.fetch_sub(1, std::memory_order_relaxed);
+    wake_epoch_.get().wait(epoch);
+    sleepers_.get().fetch_sub(1, std::memory_order_relaxed);
   }
 
   g_worker    = nullptr;
@@ -213,7 +213,7 @@ void scheduler::submit_internal([[maybe_unused]] task_context const& current, wo
 
   auto& group = ouly::detail::vector_access(workgroups_, dst.get_index());
 
-  pending_.fetch_add(1, std::memory_order_relaxed);
+  pending_.get().fetch_add(1, std::memory_order_relaxed);
 
   // Identify the calling thread by its live thread-local identity; a cached task_context
   // may be stale, and only the owning thread may push to a Chase-Lev deque.
@@ -249,7 +249,7 @@ void scheduler::submit_internal([[maybe_unused]] task_context const& current, wo
   // so it can help drain groups it is the only member of (e.g. a main-thread group).
   if (pending_waiters_.load(std::memory_order_acquire) != 0)
   {
-    pending_.notify_all();
+    pending_.get().notify_all();
   }
 }
 
@@ -270,14 +270,14 @@ void scheduler::wait_for_tasks()
 {
   auto main_thread = g_worker_id;
 
-  while (pending_.load(std::memory_order_acquire) != 0)
+  while (pending_.get().load(std::memory_order_acquire) != 0)
   {
     if (try_execute_one(main_thread))
     {
       continue;
     }
 
-    auto snapshot = pending_.load(std::memory_order_acquire);
+    auto snapshot = pending_.get().load(std::memory_order_acquire);
     if (snapshot == 0)
     {
       break;
@@ -292,10 +292,10 @@ void scheduler::wait_for_tasks()
 
     pending_waiters_.fetch_add(1, std::memory_order_seq_cst);
     // Recheck after announcing ourselves; submit/finish paths notify when waiters != 0.
-    if (pending_.load(std::memory_order_seq_cst) == snapshot &&
+    if (pending_.get().load(std::memory_order_seq_cst) == snapshot &&
         !has_queued_work(ouly::detail::vector_access(workers_, main_thread.get_index())))
     {
-      pending_.wait(snapshot);
+      pending_.get().wait(snapshot);
     }
     pending_waiters_.fetch_sub(1, std::memory_order_relaxed);
   }
@@ -361,7 +361,7 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
   }
 
   stop_.store(false, std::memory_order_relaxed);
-  pending_.store(0, std::memory_order_relaxed);
+  pending_.get().store(0, std::memory_order_relaxed);
 
   auto start_counter = std::latch(worker_count_);
 
@@ -393,8 +393,8 @@ void scheduler::end_execution()
   wait_for_tasks();
 
   stop_.store(true, std::memory_order_seq_cst);
-  wake_epoch_.fetch_add(1, std::memory_order_seq_cst);
-  wake_epoch_.notify_all();
+  wake_epoch_.get().fetch_add(1, std::memory_order_seq_cst);
+  wake_epoch_.get().notify_all();
 
   for (auto& thread : threads_)
   {
