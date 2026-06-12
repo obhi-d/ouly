@@ -438,7 +438,11 @@ private:
   template <typename ValueContainer>
   void swap_value(size_type swap_idx, ValueContainer& values) noexcept
   {
-    if (swap_idx < values.size() - 1)
+    if (values.empty())
+    {
+      return;
+    }
+    if (swap_idx + 1 < values.size())
     {
       values[swap_idx] = std::move(values.back());
     }

@@ -72,7 +72,11 @@ public:
     auto count = free_slot_.load();
     if (count > 0)
     {
-      free_.resize(static_cast<size_t>(count));
+      // Trim stale entries consumed by emplace() before appending
+      if (static_cast<size_t>(count) != free_.size())
+      {
+        free_.resize(static_cast<size_t>(count));
+      }
       free_.emplace_back(l.revised());
     }
     else
@@ -117,7 +121,10 @@ public:
     auto count = free_slot_.load();
     if (count > 0)
     {
-      free_.resize(static_cast<size_t>(count));
+      if (static_cast<size_t>(count) != free_.size())
+      {
+        free_.resize(static_cast<size_t>(count));
+      }
       free_.reserve(static_cast<size_t>(count) + ls.size());
       for (auto const& l : ls)
       {

@@ -4,6 +4,7 @@
 #include "ouly/utility/common.hpp"
 #include "ouly/utility/utils.hpp"
 #include <limits>
+#include <memory>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -128,7 +129,16 @@ public:
       {
         index = free_pool_.back();
         free_pool_.pop_back();
-        pool_[index] = std::move(T(std::forward<Args>(args)...));
+        if constexpr (std::is_nothrow_constructible_v<T, Args...>)
+        {
+          // Construct in place instead of building a temporary and move-assigning
+          std::destroy_at(&pool_[index]);
+          std::construct_at(&pool_[index], std::forward<Args>(args)...);
+        }
+        else
+        {
+          pool_[index] = T(std::forward<Args>(args)...);
+        }
       }
       else
       {

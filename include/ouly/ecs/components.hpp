@@ -5,6 +5,7 @@
 #include "ouly/ecs/entity.hpp"
 #include "ouly/utility/detail/vector_abstraction.hpp"
 #include "ouly/utility/optional_ref.hpp"
+#include <bit>
 #include <iterator>
 
 namespace ouly::ecs
@@ -368,19 +369,18 @@ public:
 
     void satisfy() noexcept
     {
-      if (p_ == nullptr)
+      // Packed storage has no holes; only direct mapping needs to skip absent slots
+      if constexpr (has_direct_mapping)
       {
-        return;
-      }
-      auto const len = p_->range();
-      while (idx_ < len)
-      {
-        if (!p_->is_present_at_index(idx_))
+        if (p_ == nullptr)
+        {
+          return;
+        }
+        auto const len = p_->range();
+        while (idx_ < len && !p_->is_present_at_index(idx_))
         {
           ++idx_;
-          continue;
         }
-        break; // valid
       }
     }
 
@@ -476,19 +476,18 @@ public:
 
     void satisfy() noexcept
     {
-      if (p_ == nullptr)
+      // Packed storage has no holes; only direct mapping needs to skip absent slots
+      if constexpr (has_direct_mapping)
       {
-        return;
-      }
-      auto const len = p_->range();
-      while (idx_ < len)
-      {
-        if (!p_->is_present_at_index(idx_))
+        if (p_ == nullptr)
+        {
+          return;
+        }
+        auto const len = p_->range();
+        while (idx_ < len && !p_->is_present_at_index(idx_))
         {
           ++idx_;
-          continue;
         }
-        break;
       }
     }
 
@@ -545,10 +544,9 @@ public:
     }
     else
     {
-      auto  ent_idx     = point.get();
-      bool  was_present = test_present(ent_idx);
-      auto& k           = keys_.ensure_at(ent_idx);
-      k                 = static_cast<size_type>(values_.size());
+      auto  ent_idx = point.get();
+      auto& k       = keys_.ensure_at(ent_idx);
+      k             = static_cast<size_type>(values_.size());
 
       values_.emplace_back(std::forward<Args>(args)...);
       if constexpr (has_self_index)
@@ -558,14 +556,6 @@ public:
       else
       {
         self_.ensure_at(k) = point.value();
-      }
-
-      // Track presence by entity id universally
-      set_present(ent_idx);
-      if (!was_present)
-      {
-        count_present_++;
-        max_index_ = std::max(max_index_, ent_idx);
       }
 
       return values_.back();
@@ -631,13 +621,6 @@ public:
       {
         self_.get(k) = point.value();
       }
-      bool was_present = test_present(idx);
-      set_present(idx);
-      if (!was_present)
-      {
-        count_present_++;
-        max_index_ = std::max(max_index_, idx);
-      }
       return val;
     }
   }
@@ -668,16 +651,7 @@ public:
         return emplace_at(point);
       }
 
-      auto& val = values_[k];
-      // Ensure presence bit remains consistent
-      bool was_present = test_present(idx);
-      set_present(idx);
-      if (!was_present)
-      {
-        count_present_++;
-        max_index_ = std::max(max_index_, idx);
-      }
-      return val;
+      return values_[k];
     }
   }
 
@@ -796,13 +770,27 @@ public:
   auto contains(entity_type l) const noexcept -> bool
   {
     auto idx = l.get();
-    // Presence bit is the single source of truth
-    return test_present(idx);
+    if constexpr (has_direct_mapping)
+    {
+      return test_present(idx);
+    }
+    else
+    {
+      // The key map is the single source of truth for indirect storage
+      return keys_.get_if(idx) != tombstone;
+    }
   }
 
   [[nodiscard]] auto empty() const noexcept -> bool
   {
-    return count_present_ == 0;
+    if constexpr (has_direct_mapping)
+    {
+      return count_present_ == 0;
+    }
+    else
+    {
+      return values_.empty();
+    }
   }
 
   void validate_integrity() const
@@ -890,12 +878,12 @@ private:
     }
     else
     {
-      auto idx = lnk.get();
-      if (!cont.test_present(idx))
+      auto k = cont.keys_.get_if(lnk.get());
+      if (k == tombstone)
       {
         return nullptr;
       }
-      return &cont.values_[cont.keys_.get(idx)];
+      return &cont.values_[k];
     }
   }
 
@@ -913,26 +901,18 @@ private:
     }
     else
     {
-      auto idx = lnk.get();
-      if (!cont.test_present(idx))
+      auto k = cont.keys_.get_if(lnk.get());
+      if (k == tombstone)
       {
         return def;
       }
-      return cont.values_[cont.keys_.get(idx)];
+      return cont.values_[k];
     }
   }
 
   void validate([[maybe_unused]] entity_type l) const noexcept
   {
-    if constexpr (has_direct_mapping)
-    {
-      OULY_ASSERT(test_present(l.get()));
-    }
-    else
-    {
-      // Presence bit is the reliable indicator
-      OULY_ASSERT(test_present(l.get()));
-    }
+    OULY_ASSERT(contains(l));
   }
 
   auto get_ref_at_idx(size_type idx) const noexcept
@@ -1012,16 +992,6 @@ private:
     }
 
     values_.pop_back();
-
-    // Clear presence by entity id and update counters
-    if (test_present(lnk))
-    {
-      clear_present(lnk);
-      if (count_present_ > 0)
-      {
-        count_present_--;
-      }
-    }
   }
 
   // Indirect mapping without self backref
@@ -1059,16 +1029,6 @@ private:
     }
 
     values_.pop_back();
-
-    // Clear presence by entity id and update counters
-    if (test_present(lnk))
-    {
-      clear_present(lnk);
-      if (count_present_ > 0)
-      {
-        count_present_--;
-      }
-    }
   }
 
   /**
@@ -1101,25 +1061,44 @@ private:
     }
   }
 
-  template <typename Lambda>
-  void for_each_l(size_type first, size_type last, Lambda lambda) noexcept
+  template <typename Lambda, typename Self>
+  static void for_each_impl(Self& self, size_type first, size_type last, Lambda& lambda) noexcept
   {
     constexpr auto arity = function_traits<Lambda>::arity;
     if constexpr (has_direct_mapping)
     {
-      for (; first != last; ++first)
+      // Word-skip scan of the presence bitfield: empty 64-bit words are skipped wholesale
+      // and countr_zero jumps between set bits within a word.
+      auto const nwords = static_cast<size_type>(self.present_.size());
+      while (first < last)
       {
-        if (!test_present(first))
+        auto const wi = word_index(first);
+        if (wi >= nwords)
         {
-          continue;
+          break;
         }
-        if constexpr (arity == 2)
+        auto word = self.present_[wi] >> (first & word_mask);
+        auto base = first;
+        first     = (first | word_mask) + 1;
+        while (word != 0)
         {
-          lambda(entity_type(get_ref_at_idx(first)), values_[first]);
-        }
-        else
-        {
-          lambda(values_[first]);
+          auto const skip = static_cast<size_type>(std::countr_zero(word));
+          base += skip;
+          if (base >= last)
+          {
+            return;
+          }
+          if constexpr (arity == 2)
+          {
+            lambda(entity_type(self.get_ref_at_idx(base)), self.values_[base]);
+          }
+          else
+          {
+            lambda(self.values_[base]);
+          }
+          word >>= skip;
+          word >>= 1U;
+          base += 1;
         }
       }
     }
@@ -1129,52 +1108,26 @@ private:
       {
         if constexpr (arity == 2)
         {
-          lambda(entity_type(get_ref_at_idx(first)), values_[first]);
+          lambda(entity_type(self.get_ref_at_idx(first)), self.values_[first]);
         }
         else
         {
-          lambda(values_[first]);
+          lambda(self.values_[first]);
         }
       }
     }
   }
 
   template <typename Lambda>
+  void for_each_l(size_type first, size_type last, Lambda lambda) noexcept
+  {
+    for_each_impl(*this, first, last, lambda);
+  }
+
+  template <typename Lambda>
   void for_each_l(size_type first, size_type last, Lambda lambda) const noexcept
   {
-    constexpr auto arity = function_traits<Lambda>::arity;
-    if constexpr (has_direct_mapping)
-    {
-      for (; first != last; ++first)
-      {
-        if (!test_present(first))
-        {
-          continue;
-        }
-        if constexpr (arity == 2)
-        {
-          lambda(entity_type(get_ref_at_idx(first)), values_[first]);
-        }
-        else
-        {
-          lambda(values_[first]);
-        }
-      }
-    }
-    else
-    {
-      for (; first != last; ++first)
-      {
-        if constexpr (arity == 2)
-        {
-          lambda(entity_type(get_ref_at_idx(first)), values_[first]);
-        }
-        else
-        {
-          lambda(values_[first]);
-        }
-      }
-    }
+    for_each_impl(*this, first, last, lambda);
   }
 
   vector_type values_;

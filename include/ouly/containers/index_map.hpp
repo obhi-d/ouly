@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 #include "ouly/containers/small_vector.hpp"
+#include <algorithm>
 #include <cstdint>
 #include <limits>
 #include <vector>
@@ -193,11 +194,10 @@ private:
       data_.indices_.resize(data_.indices_.size() + amount, null);
       if (cur_size)
       {
-        for (auto i = static_cast<int64_t>(cur_size - 1); i >= 0; --i)
-        {
-          data_.indices_[amount + static_cast<T>(i)] = data_.indices_[static_cast<T>(i)];
-          data_.indices_[static_cast<T>(i)]          = null;
-        }
+        auto begin = data_.indices_.begin();
+        std::move_backward(begin, begin + static_cast<std::ptrdiff_t>(cur_size),
+                           begin + static_cast<std::ptrdiff_t>(cur_size + amount));
+        std::fill_n(begin, amount, null);
       }
     }
     return offset;

@@ -76,41 +76,24 @@ private:
     size_t   occupancy_ = 0; // valid only when has_pool_tracking
   };
 
-  constexpr static auto cast(storage* src) -> value_type*
-    requires(std::is_same_v<storage, value_type>)
-  {
-    return src;
-  }
+  constexpr static auto cast(storage* src) -> value_type* requires(std::is_same_v<storage, value_type>) { return src; }
 
-  constexpr static auto cast(storage* src) -> value_type*
-    requires(!std::is_same_v<storage, value_type>)
-  {
+  constexpr static auto cast(storage* src) -> value_type* requires(!std::is_same_v<storage, value_type>) {
     // NOLINTNEXTLINE
     return reinterpret_cast<value_type*>(src);
   }
 
-  constexpr static auto cast(storage const* src) -> value_type const*
-    requires(std::is_same_v<storage, value_type>)
-  {
-    return src;
-  }
+  constexpr static auto cast(storage const* src)
+   -> value_type const* requires(std::is_same_v<storage, value_type>) { return src; }
 
-  constexpr static auto cast(storage const* src) -> value_type const*
-    requires(!std::is_same_v<storage, value_type>)
-  {
+  constexpr static auto cast(storage const* src) -> value_type const* requires(!std::is_same_v<storage, value_type>) {
     // NOLINTNEXTLINE
     return reinterpret_cast<value_type*>(src);
   }
 
-  constexpr static auto cast(storage& src) -> value_type&
-    requires(std::is_same_v<storage, value_type>)
-  {
-    return src;
-  }
+  constexpr static auto cast(storage& src) -> value_type& requires(std::is_same_v<storage, value_type>) { return src; }
 
-  constexpr static auto cast(storage& src) -> value_type&
-    requires(!std::is_same_v<storage, value_type>)
-  {
+  constexpr static auto cast(storage& src) -> value_type& requires(!std::is_same_v<storage, value_type>) {
     // NOLINTNEXTLINE
     return reinterpret_cast<value_type&>(src);
   }
@@ -267,54 +250,53 @@ public:
   }
 
   // NOLINTNEXTLINE
-  auto operator=(sparse_vector const& other) noexcept -> sparse_vector&
-    requires(std::is_copy_constructible_v<value_type>)
-  {
-    if (this != &other)
-    {
-      clear();
-      items_.resize(other.items_.size());
-      for (size_type i = 0; i < items_.size(); ++i)
-      {
-        auto const src_pool = other.items_[i].data_;
-        if (src_pool)
-        {
-          items_[i].data_ = ouly::allocate<storage>(*this, allocate_bytes, alignarg<Ty>);
+  auto operator=(sparse_vector const& other) noexcept
+   -> sparse_vector& requires(std::is_copy_constructible_v<value_type>) {
+     if (this != &other)
+     {
+       clear();
+       items_.resize(other.items_.size());
+       for (size_type i = 0; i < items_.size(); ++i)
+       {
+         auto const src_pool = other.items_[i].data_;
+         if (src_pool)
+         {
+           items_[i].data_ = ouly::allocate<storage>(*this, allocate_bytes, alignarg<Ty>);
 
-          if constexpr (std::is_trivially_copyable_v<Ty> || has_pod)
-          {
-            std::memcpy(items_[i].data_, src_pool, allocate_bytes);
-          }
-          else
-          {
-            if constexpr (has_pool_tracking)
-            {
-              pool_occupation(i) = other.pool_occupation(i);
-            }
-            for (size_type e = 0; e < pool_size; ++e)
-            {
-              auto const& src = cast(src_pool[e]);
-              auto&       dst = cast(items_[i].data_[e]);
+           if constexpr (std::is_trivially_copyable_v<Ty> || has_pod)
+           {
+             std::memcpy(items_[i].data_, src_pool, allocate_bytes);
+           }
+           else
+           {
+             if constexpr (has_pool_tracking)
+             {
+               pool_occupation(i) = other.pool_occupation(i);
+             }
+             for (size_type e = 0; e < pool_size; ++e)
+             {
+               auto const& src = cast(src_pool[e]);
+               auto&       dst = cast(items_[i].data_[e]);
 
-              if (!is_null(src))
-              {
-                std::construct_at(&dst, src);
-              }
-            }
-          }
-        }
-        else
-        {
-          items_[i].data_      = nullptr;
-          items_[i].occupancy_ = 0;
-        }
-      }
+               if (!is_null(src))
+               {
+                 std::construct_at(&dst, src);
+               }
+             }
+           }
+         }
+         else
+         {
+           items_[i].data_      = nullptr;
+           items_[i].occupancy_ = 0;
+         }
+       }
 
-      static_cast<base_type&>(*this) = static_cast<base_type const&>(other);
-      length_                        = other.length_;
-    }
-    return *this;
-  }
+       static_cast<base_type&>(*this) = static_cast<base_type const&>(other);
+       length_                        = other.length_;
+     }
+     return *this;
+   }
 
   /**
    * @brief Lambda called for each element
@@ -502,7 +484,7 @@ public:
 
     ensure_block(block);
 
-    return *cast(items_[block] + index);
+    return *cast(items_[block].data_ + index);
   }
 
   /**
@@ -668,7 +650,11 @@ public:
     {
       for (size_type i = idx; i < length_; ++i)
       {
-        std::destroy_at(std::addressof(item_at(i)));
+        auto block = i >> pool_mul;
+        if (block < items_.size() && items_[block].data_)
+        {
+          std::destroy_at(std::addressof(cast(items_[block].data_[i & pool_mod])));
+        }
       }
     }
     length_ = idx;
@@ -677,10 +663,8 @@ public:
   void grow(size_type idx) noexcept
   {
     OULY_ASSERT(length_ < idx);
-    auto block = idx >> pool_mul;
-    // auto index = idx & pool_mod;
-
-    ensure_block(block);
+    // Only the final block is ensured; intermediate pages materialize lazily on access
+    ensure_block((idx - 1) >> pool_mul);
 
     if constexpr (!has_zero_memory && !has_no_fill &&
                   !(has_pod ||
@@ -1006,7 +990,12 @@ private:
   auto item_at(size_type idx) noexcept -> auto&
   {
     auto block = (idx >> pool_mul);
-    ensure_block(block);
+    // Reading a hole in a never-touched page materializes it null-filled (sparse contract);
+    // keep that path out of the hot lane so present-page access stays branch-predictable.
+    if (block >= items_.size() || items_[block].data_ == nullptr) [[unlikely]]
+    {
+      ensure_block(block);
+    }
     return cast(items_[block].data_[idx & pool_mod]);
   }
 
@@ -1154,10 +1143,30 @@ private:
     ensure_block(block);
 
     value_type& dst = *cast((items_[block].data_ + index));
-    dst             = value_type(std::forward<Args>(args)...);
     if constexpr (has_pool_tracking)
     {
-      pool_occupation(block)++;
+      // Overwriting an occupied slot must not inflate the occupancy count, otherwise
+      // the block can never be reclaimed. Detectable only when null semantics exist
+      // and slots are initialized.
+      if constexpr ((has_null_value || has_null_method) && !has_no_fill && !has_zero_memory)
+      {
+        if (is_null(dst))
+        {
+          pool_occupation(block)++;
+        }
+      }
+      else
+      {
+        pool_occupation(block)++;
+      }
+    }
+    if constexpr (sizeof...(Args) == 1 && (std::is_assignable_v<value_type&, Args&&> && ...))
+    {
+      ((dst = std::forward<Args>(args)), ...);
+    }
+    else
+    {
+      dst = value_type(std::forward<Args>(args)...);
     }
     return dst;
   }
