@@ -1748,13 +1748,16 @@ Features:<ul class="simple">
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4IDpEN4ouly13sparse_vector10emplace_atERDa9size_typeDpRR4Args">
 <span id="_CPPv3IDpEN4ouly13sparse_vector10emplace_atE9size_typeDpRR4Args"></span><span id="_CPPv2IDpEN4ouly13sparse_vector10emplace_atE9size_typeDpRR4Args"></span><span class="k"><span class="pre">template</span></span><span class="p"><span class="pre">&lt;</span></span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="sig-name descname"><span class="n"><span class="pre">Args</span></span></span><span class="p"><span class="pre">&gt;</span></span><br /><span class="target" id="classouly_1_1sparse__vector_1a8068240256f3c333d31c98cc43fc00d8"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">emplace_at</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N4ouly13sparse_vector9size_typeE" title="ouly::sparse_vector::size_type"><span class="n"><span class="pre">size_type</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">idx</span></span>, <a class="reference internal" href="#_CPPv4IDpEN4ouly13sparse_vector10emplace_atERDa9size_typeDpRR4Args" title="ouly::sparse_vector::emplace_at::Args"><span class="n"><span class="pre">Args</span></span></a><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">...</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">args</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="p"><span class="pre">&amp;</span></span><a class="headerlink" href="#_CPPv4IDpEN4ouly13sparse_vector10emplace_atERDa9size_typeDpRR4Args" title="Link to this definition"></a><br /></dt>
-<dd><p>Emplace back an element. Order is not guranteed. </p>
+<dd><p>Emplace an element at the given index, growing the container if required. </p>
 <dl class="field-list simple">
-<dt class="field-odd">Template Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>...Args</strong> – Constructor args for value_type </p>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>idx</strong> – Index at which the element is constructed </p>
 </dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Returns link to the element pushed. link can be used to destroy entry. </p>
+<dt class="field-even">Template Parameters<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>...Args</strong> – Constructor args for value_type </p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Returns a reference to the constructed element. </p>
 </dd>
 </dl>
 </dd></dl>
@@ -1762,13 +1765,13 @@ Features:<ul class="simple">
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4IDpEN4ouly13sparse_vector6ensureERDa9size_type">
 <span id="_CPPv3IDpEN4ouly13sparse_vector6ensureE9size_type"></span><span id="_CPPv2IDpEN4ouly13sparse_vector6ensureE9size_type"></span><span class="k"><span class="pre">template</span></span><span class="p"><span class="pre">&lt;</span></span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="sig-name descname"><span class="n"><span class="pre">Args</span></span></span><span class="p"><span class="pre">&gt;</span></span><br /><span class="target" id="classouly_1_1sparse__vector_1a7ed79cd1dd52b3e8e23b35a15cd81694"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ensure</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N4ouly13sparse_vector9size_typeE" title="ouly::sparse_vector::size_type"><span class="n"><span class="pre">size_type</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">idx</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="p"><span class="pre">&amp;</span></span><a class="headerlink" href="#_CPPv4IDpEN4ouly13sparse_vector6ensureERDa9size_type" title="Link to this definition"></a><br /></dt>
-<dd><p>Emplace back an element. Order is not guranteed. </p>
+<dd><p>Ensure a slot exists at the given index, default-constructing it if absent. </p>
 <dl class="field-list simple">
-<dt class="field-odd">Template Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>...Args</strong> – Constructor args for value_type </p>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>idx</strong> – Index of the slot to ensure </p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Returns link to the element pushed. link can be used to destroy entry. </p>
+<dd class="field-even"><p>Returns a reference to the element at the index. </p>
 </dd>
 </dl>
 </dd></dl>
@@ -2166,10 +2169,10 @@ This class provides a type-safe wrapper around entity identifiers with built-in 
 <dl class="field-list simple">
 <dt class="field-odd">Template Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
+<li><p><strong>Ty</strong> – Tag type used to distinguish entity categories at compile time </p></li>
 <li><p><strong>SizeType</strong> – The underlying type used for storing entity identifiers </p></li>
 <li><p><strong>RevisionBits</strong> – The number of bits reserved for revision tracking </p></li>
-<li><p><strong>NullValue</strong> – The value representing a null/invalid entity </p></li>
-<li><p><strong>min_revision_bit_count</strong> – Minimum number of bits required for revision tracking</p></li>
+<li><p><strong>NullValue</strong> – The value representing a null/invalid entity</p></li>
 </ul>
 </dd>
 </dl>
@@ -3156,7 +3159,7 @@ This class provides a efficient storage and management system for components in 
 <dd><p>Lambda called for each element. </p>
 <dl class="field-list simple">
 <dt class="field-odd">Template Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>Lambda</strong> – Lambda should accept A entity and value_type&amp; parameter </p>
+<dd class="field-odd"><p><strong>Lambda</strong> – Lambda should accept an entity and value_type&amp; parameter </p>
 </dd>
 </dl>
 </dd></dl>
@@ -3167,7 +3170,7 @@ This class provides a efficient storage and management system for components in 
 <dd><p>Lambda called for each element. </p>
 <dl class="field-list simple">
 <dt class="field-odd">Template Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>Lambda</strong> – Lambda should accept A entity and value_type const&amp; parameter </p>
+<dd class="field-odd"><p><strong>Lambda</strong> – Lambda should accept an entity and value_type const&amp; parameter </p>
 </dd>
 </dl>
 </dd></dl>
@@ -3178,12 +3181,12 @@ This class provides a efficient storage and management system for components in 
 <dd><p>Lambda called for each element in range. </p>
 <dl class="field-list simple">
 <dt class="field-odd">Template Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>Lambda</strong> – Lambda Lambda should accept A entity and value_type&amp; parameter </p>
+<dd class="field-odd"><p><strong>Lambda</strong> – Lambda should accept an entity and value_type&amp; parameter </p>
 </dd>
 <dt class="field-even">Parameters<span class="colon">:</span></dt>
 <dd class="field-even"><ul class="simple">
-<li><p><strong>first</strong> – first index in range. This should be between 1 and size()</p></li>
-<li><p><strong>last</strong> – last index in range. This should be between 1 and size()</p></li>
+<li><p><strong>first</strong> – First index in the range (0-based, inclusive) </p></li>
+<li><p><strong>last</strong> – Last index in the range (exclusive) </p></li>
 </ul>
 </dd>
 </dl>
@@ -3195,7 +3198,7 @@ This class provides a efficient storage and management system for components in 
 <dd><p>Lambda called for each element.   </p>
 <dl class="field-list simple">
 <dt class="field-odd">Template Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>Lambda</strong> – Lambda should accept A entity and value_type&amp; parameter   </p>
+<dd class="field-odd"><p><strong>Lambda</strong> – Lambda should accept an entity and value_type&amp; parameter   </p>
 </dd>
 </dl>
 </dd></dl>
@@ -3352,10 +3355,10 @@ This class provides a efficient storage and management system for components in 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N4ouly3ecs10components5eraseERK10value_type">
 <span id="_CPPv3N4ouly3ecs10components5eraseERK10value_type"></span><span id="_CPPv2N4ouly3ecs10components5eraseERK10value_type"></span><span id="ouly::ecs::components::erase__value_typeCR"></span><span class="target" id="classouly_1_1ecs_1_1components_1a074cc5e0c62595d0d053b3e0da836ab2"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">erase</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N4ouly3ecs10components10value_typeE" title="ouly::ecs::components::value_type"><span class="n"><span class="pre">value_type</span></span></a><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">obj</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><a class="headerlink" href="#_CPPv4N4ouly3ecs10components5eraseERK10value_type" title="Link to this definition"></a><br /></dt>
-<dd><p>Erase a single element by object when backref is available. </p>
+<dd><p>Erase a single element by object when a self index is available. </p>
 <p><div class="remark admonition">
 <p class="admonition-title">Remark</p>
-<p>Only available if backref is available </p>
+<p>Only available if the container is configured with a self index </p>
 </div>
 </p>
 </dd></dl>
@@ -4156,7 +4159,7 @@ This class provides a efficient storage and management system for components in 
 <dd><p>Lambda called for each element. </p>
 <dl class="field-list simple">
 <dt class="field-odd">Template Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>Lambda</strong> – Lambda should accept A entity and value_type&amp; parameter </p>
+<dd class="field-odd"><p><strong>Lambda</strong> – Lambda should accept an entity and value_type&amp; parameter </p>
 </dd>
 </dl>
 </dd></dl>
@@ -4167,7 +4170,7 @@ This class provides a efficient storage and management system for components in 
 <dd><p>Lambda called for each element. </p>
 <dl class="field-list simple">
 <dt class="field-odd">Template Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>Lambda</strong> – Lambda should accept A entity and value_type const&amp; parameter </p>
+<dd class="field-odd"><p><strong>Lambda</strong> – Lambda should accept an entity and value_type const&amp; parameter </p>
 </dd>
 </dl>
 </dd></dl>
@@ -4178,12 +4181,12 @@ This class provides a efficient storage and management system for components in 
 <dd><p>Lambda called for each element in range. </p>
 <dl class="field-list simple">
 <dt class="field-odd">Template Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>Lambda</strong> – Lambda Lambda should accept A entity and value_type&amp; parameter </p>
+<dd class="field-odd"><p><strong>Lambda</strong> – Lambda should accept an entity and value_type&amp; parameter </p>
 </dd>
 <dt class="field-even">Parameters<span class="colon">:</span></dt>
 <dd class="field-even"><ul class="simple">
-<li><p><strong>first</strong> – first index in range. This should be between 1 and size()</p></li>
-<li><p><strong>last</strong> – last index in range. This should be between 1 and size()</p></li>
+<li><p><strong>first</strong> – First index in the range (0-based, inclusive) </p></li>
+<li><p><strong>last</strong> – Last index in the range (exclusive) </p></li>
 </ul>
 </dd>
 </dl>
@@ -4195,7 +4198,7 @@ This class provides a efficient storage and management system for components in 
 <dd><p>Lambda called for each element.   </p>
 <dl class="field-list simple">
 <dt class="field-odd">Template Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>Lambda</strong> – Lambda should accept A entity and value_type&amp; parameter   </p>
+<dd class="field-odd"><p><strong>Lambda</strong> – Lambda should accept an entity and value_type&amp; parameter   </p>
 </dd>
 </dl>
 </dd></dl>
@@ -4352,10 +4355,10 @@ This class provides a efficient storage and management system for components in 
 <dl class="cpp function">
 <dt class="sig sig-object cpp">
 <span class="target" id="classouly_1_1ecs_1_1components_1a074cc5e0c62595d0d053b3e0da836ab2"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">erase</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N4ouly3ecs10components10value_typeE" title="ouly::ecs::components::value_type"><span class="n"><span class="pre">value_type</span></span></a><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">obj</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><br /></dt>
-<dd><p>Erase a single element by object when backref is available. </p>
+<dd><p>Erase a single element by object when a self index is available. </p>
 <p><div class="remark admonition">
 <p class="admonition-title">Remark</p>
-<p>Only available if backref is available </p>
+<p>Only available if the container is configured with a self index </p>
 </div>
 </p>
 </dd></dl>
