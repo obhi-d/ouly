@@ -14,8 +14,8 @@
 #include "ouly/serializers/byteswap.hpp"
 #include "ouly/serializers/config.hpp"
 
-#include <bit>
 #include "ouly/utility/user_config.hpp"
+#include <bit>
 #include <cstddef>
 #include <cstdint>
 #include <type_traits>
@@ -140,7 +140,7 @@ public:
         get().skip((count - std::size(obj)) * sizeof(typename Class::value_type));
       }
     }
-    else 
+    else
     {
       if constexpr (!ouly::detail::ContainerCanAppendValue<Class>)
       {
@@ -165,15 +165,10 @@ public:
     requires(ouly::detail::IntegerLike<Class> || ouly::detail::FloatLike<Class> || ouly::detail::EnumLike<Class>)
   void visit(Class& obj)
   {
-    if constexpr (has_fast_path)
+    // NOLINTNEXTLINE
+    get().read(reinterpret_cast<std::byte*>(&obj), sizeof(obj));
+    if constexpr (!has_fast_path)
     {
-      // NOLINTNEXTLINE
-      get().read(reinterpret_cast<std::byte*>(&obj), sizeof(obj));
-    }
-    else
-    {
-      // NOLINTNEXTLINE
-      get().read(reinterpret_cast<std::byte*>(&obj), sizeof(obj));
       obj = byteswap(obj);
     }
   }
@@ -210,7 +205,7 @@ private:
     std::string buffer;
     buffer.resize(count);
     // NOLINTNEXTLINE
-    serializer_->read(reinterpret_cast<std::byte*>(buffer.data()), count);
+    get().read(reinterpret_cast<std::byte*>(buffer.data()), count);
     return buffer;
   }
 

@@ -9,6 +9,7 @@
  */
 
 #include "ouly/reflection/reflection.hpp"
+#include "ouly/utility/to_chars.hpp"
 #include "ouly/utility/type_traits.hpp"
 
 namespace ouly::detail
@@ -76,20 +77,19 @@ public:
 
   void as_uint64(uint64_t value)
   {
-    stream_.append(std::to_string(value));
-    skip_indent_ = false;
+    append_chars(value);
   }
 
   void as_int64(int64_t value)
   {
-    stream_.append(std::to_string(value));
-    skip_indent_ = false;
+    append_chars(value);
   }
 
   void as_double(double value)
   {
-    stream_.append(std::to_string(value));
-    skip_indent_ = false;
+    // std::to_chars emits the shortest representation that round-trips, unlike
+    // std::to_string which truncates to 6 decimal places.
+    append_chars(value);
   }
 
   void as_bool(bool value)
@@ -119,12 +119,19 @@ public:
   }
 
 private:
+  template <typename V>
+  void append_chars(V value)
+  {
+    ouly::to_chars(stream_, value);
+    skip_indent_ = false;
+  }
+
   void indent()
   {
     if (!skip_indent_)
     {
       stream_.push_back('\n');
-      std::fill_n(std::back_inserter(stream_), static_cast<size_t>(indent_level_), ' ');
+      stream_.append(static_cast<size_t>(indent_level_), ' ');
     }
     skip_indent_ = true;
   }

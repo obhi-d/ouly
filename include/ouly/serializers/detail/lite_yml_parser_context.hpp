@@ -439,7 +439,7 @@ public:
       {
         ouly::convert<tclass_type>::from_type(obj, transform_type::transform(slice));
       }
-      else if constexpr (ouly::detail::ConvertibleFrom<class_type, std::string_view>)
+      else if constexpr (ouly::detail::ConvertibleFrom<tclass_type, std::string_view>)
       {
         ouly::convert<tclass_type>::from_type(obj, slice);
       }
@@ -502,11 +502,12 @@ public:
   template <typename TClassType>
   static void read_enum(TClassType& obj, std::string_view slice)
   {
+    using tclass_type = std::decay_t<TClassType>;
 
-    std::underlying_type_t<class_type> value;
+    std::underlying_type_t<tclass_type> value = {};
     from_chars(slice, value);
 
-    obj = static_cast<class_type>(value);
+    obj = static_cast<tclass_type>(value);
   }
 
   template <typename Base, typename TClassType>
@@ -518,13 +519,13 @@ public:
 
     if (!obj)
     {
-      if constexpr (std::same_as<class_type, std::shared_ptr<pvalue_type>>)
+      if constexpr (std::same_as<tclass_type, std::shared_ptr<pvalue_type>>)
       {
         obj = std::make_shared<pvalue_type>();
       }
       else
       {
-        obj = tclass_type(new pointer_class_type<class_type>());
+        obj = tclass_type(new pvalue_type());
       }
     }
 
@@ -546,13 +547,13 @@ public:
 
     if (!obj)
     {
-      if constexpr (std::same_as<class_type, std::shared_ptr<pvalue_type>>)
+      if constexpr (std::same_as<tclass_type, std::shared_ptr<pvalue_type>>)
       {
         obj = std::make_shared<pvalue_type>();
       }
       else
       {
-        obj = tclass_type(new pointer_class_type<class_type>());
+        obj = tclass_type(new pvalue_type());
       }
     }
 

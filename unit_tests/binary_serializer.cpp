@@ -582,6 +582,43 @@ TEMPLATE_TEST_CASE("stream: SignedIntLike Invalid", "[stream][int]", big_endian,
   REQUIRE_THROWS(ouly::read<TestType::value>(stream, read));
 }
 
+struct MagicHeaderObject
+{
+  int   a = 0;
+  int   b = 0;
+  float c = 0.0F;
+
+  static auto reflect() noexcept
+  {
+    return ouly::bind(ouly::bind<"a", &MagicHeaderObject::a>(), ouly::bind<"b", &MagicHeaderObject::b>(),
+                      ouly::bind<"c", &MagicHeaderObject::c>());
+  }
+
+  inline auto operator<=>(MagicHeaderObject const&) const noexcept = default;
+};
+
+template <>
+constexpr uint32_t ouly::cfg::magic_type_header<MagicHeaderObject> = 0xABCD1234;
+
+TEMPLATE_TEST_CASE("stream: Magic header on reflected object", "[stream][magic]", big_endian, little_endian)
+{
+  FileData data;
+  auto     stream = Stream(data);
+
+  MagicHeaderObject write;
+  write.a = 42;
+  write.b = -7;
+  write.c = 3.5F;
+  MagicHeaderObject read;
+
+  ouly::write<TestType::value>(stream, write);
+  ouly::read<TestType::value>(stream, read);
+
+  REQUIRE(read == write);
+  // The magic id must be written exactly once per object, not once per field.
+  REQUIRE_THROWS(ouly::read<TestType::value>(stream, read));
+}
+
 TEMPLATE_TEST_CASE("stream: FloatLike", "[stream][float]", big_endian, little_endian)
 {
   FileData data;

@@ -14,7 +14,7 @@ template <typename Class, typename Config = ouly::config<>>
 auto to_string(Class const& obj) -> std::string
 {
   auto state = ouly::detail::writer_state();
-  write(state, obj);
+  ouly::write<Config>(state, obj);
   return state.get();
 }
 

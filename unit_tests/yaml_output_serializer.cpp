@@ -1,9 +1,12 @@
 #include "catch2/catch_all.hpp"
 #include "ouly/reflection/detail/base_concepts.hpp"
 #include "ouly/serializers/lite_yml.hpp"
+#include "ouly/utility/to_chars.hpp"
+#include <array>
 #include <map>
 #include <memory>
 #include <optional>
+#include <string>
 #include <tuple>
 #include <variant>
 #include <vector>
@@ -25,6 +28,23 @@ TEST_CASE("yaml_output: Test write simple struct")
   auto             yml = ouly::yml::to_string(ts);
   REQUIRE(yml.find("a: 100") != std::string::npos);
   REQUIRE(yml.find("b: value") != std::string::npos);
+}
+
+TEST_CASE("yaml_output: Test to_chars wrapper")
+{
+  std::array<char, 32> buffer{};
+
+  auto const int_result = ouly::to_chars(buffer.data(), buffer.data() + buffer.size(), -42);
+  REQUIRE(int_result.ec == std::errc{});
+  REQUIRE(std::string(buffer.data(), int_result.ptr) == "-42");
+
+  auto const double_result = ouly::to_chars(buffer.data(), buffer.data() + buffer.size(), 3.5);
+  REQUIRE(double_result.ec == std::errc{});
+  REQUIRE(std::string(buffer.data(), double_result.ptr) == "3.5");
+
+  std::string stream;
+  ouly::to_chars(stream, 255, 16);
+  REQUIRE(stream == "ff");
 }
 
 TEST_CASE("yaml_output: Test write nested struct")

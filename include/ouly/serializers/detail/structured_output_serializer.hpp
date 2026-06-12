@@ -44,10 +44,21 @@ public:
   using config_type                  = Config;
   static constexpr bool mutate_enums = requires { typename Config::mutate_enums_type; };
 
-  auto operator=(const structured_output_serializer&) -> structured_output_serializer&     = default;
-  auto operator=(structured_output_serializer&&) noexcept -> structured_output_serializer& = default;
-  structured_output_serializer(structured_output_serializer const&)                        = default;
-  structured_output_serializer(structured_output_serializer&& i_other) noexcept : serializer_(i_other.serializer_) {}
+  auto operator=(const structured_output_serializer&) -> structured_output_serializer& = default;
+  auto operator=(structured_output_serializer&& i_other) noexcept -> structured_output_serializer&
+  {
+    serializer_         = i_other.serializer_;
+    type_               = i_other.type_;
+    first_              = i_other.first_;
+    i_other.serializer_ = nullptr;
+    return *this;
+  }
+  structured_output_serializer(structured_output_serializer const&) = default;
+  structured_output_serializer(structured_output_serializer&& i_other) noexcept
+      : serializer_(i_other.serializer_), type_(i_other.type_), first_(i_other.first_)
+  {
+    i_other.serializer_ = nullptr;
+  }
   structured_output_serializer(Stream& ser) : serializer_(&ser) {}
   ~structured_output_serializer() noexcept
   {
@@ -72,17 +83,17 @@ public:
                                std::string_view key)
       : serializer_{ser.serializer_}, type_{type::field}
   {
-    if (ser.first_)
-    {
-      ser.first_ = false;
-    }
-    else
-    {
-      serializer_->next_map_entry();
-    }
-
     if (serializer_)
     {
+      if (ser.first_)
+      {
+        ser.first_ = false;
+      }
+      else
+      {
+        serializer_->next_map_entry();
+      }
+
       serializer_->key(key);
     }
   }
@@ -91,13 +102,16 @@ public:
                                [[maybe_unused]] size_t index)
       : serializer_{ser.serializer_}, type_{type::field}
   {
-    if (ser.first_)
+    if (serializer_)
     {
-      ser.first_ = false;
-    }
-    else
-    {
-      serializer_->next_array_entry();
+      if (ser.first_)
+      {
+        ser.first_ = false;
+      }
+      else
+      {
+        serializer_->next_array_entry();
+      }
     }
   }
 

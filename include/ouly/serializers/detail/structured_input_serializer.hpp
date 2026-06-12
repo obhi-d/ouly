@@ -111,6 +111,10 @@ public:
     {
       ouly::detail::resize(obj, get().size());
     }
+    else
+    {
+      ouly::detail::reserve(obj, get().size());
+    }
 
     try
     {

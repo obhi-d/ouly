@@ -31,6 +31,7 @@ private:
   Stream* serializer_    = nullptr;
   type    type_          = type::object;
   bool    may_fast_path_ = false;
+  bool    id_written_    = false;
 
   static constexpr bool has_fast_path = (Endian == std::endian::native);
 
@@ -46,19 +47,21 @@ public:
   auto operator=(const binary_output_serializer&) -> binary_output_serializer&     = default;
   auto operator=(binary_output_serializer&&) noexcept -> binary_output_serializer& = default;
   binary_output_serializer(binary_output_serializer const&)                        = default;
-  binary_output_serializer(binary_output_serializer&& i_other) noexcept : serializer_(i_other.serializer_) {}
+  binary_output_serializer(binary_output_serializer&& i_other) noexcept            = default;
   binary_output_serializer(Stream& ser) : serializer_(&ser) {}
   ~binary_output_serializer() noexcept = default;
 
   binary_output_serializer(ouly::detail::field_visitor_tag /*unused*/, binary_output_serializer& ser,
                            std::string_view /*key*/)
-      : serializer_{ser.serializer_}, type_{type::field}, may_fast_path_(ser.may_fast_path_)
+      : serializer_{ser.serializer_}, type_{type::field}, may_fast_path_(ser.may_fast_path_),
+        id_written_(ser.id_written_)
   {
     // No-op
   }
 
   binary_output_serializer(ouly::detail::field_visitor_tag /*unused*/, binary_output_serializer& ser, size_t /*index*/)
-      : serializer_{ser.serializer_}, type_{type::field}, may_fast_path_(ser.may_fast_path_)
+      : serializer_{ser.serializer_}, type_{type::field}, may_fast_path_(ser.may_fast_path_),
+        id_written_(ser.id_written_)
   {
     // No-op
   }
@@ -70,7 +73,8 @@ public:
   }
 
   binary_output_serializer(ouly::detail::array_visitor_tag /*unused*/, binary_output_serializer& ser)
-      : serializer_{ser.serializer_}, type_{type::array}, may_fast_path_(ser.may_fast_path_)
+      : serializer_{ser.serializer_}, type_{type::array}, may_fast_path_(ser.may_fast_path_),
+        id_written_(ser.id_written_)
   {
     // No-op
   }
@@ -78,15 +82,19 @@ public:
   template <typename Class>
   auto can_visit([[maybe_unused]] Class const& obj) -> continue_token
   {
-    if (!may_fast_path_)
+    // Mirror the input serializer: the id is emitted once per object scope (the reader caches the id it
+    // read and does not consume one per field), so only write it the first time this scope checks it.
+    if (!may_fast_path_ && !id_written_)
     {
       if constexpr (requires { Class::magic_type_header; })
       {
         write_id(Class::magic_type_header);
+        id_written_ = true;
       }
       else if constexpr (ouly::cfg::magic_type_header<std::decay_t<Class>>)
       {
         write_id(cfg::magic_type_header<std::decay_t<Class>>);
+        id_written_ = true;
       }
     }
     return true;
