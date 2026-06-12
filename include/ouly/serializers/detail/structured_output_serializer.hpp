@@ -18,7 +18,7 @@
 namespace ouly::detail
 {
 
-// Given an input serializer, load
+// Given an output stream, write
 // a bound class
 template <typename Stream, typename Config = ouly::config<>>
 class structured_output_serializer

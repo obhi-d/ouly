@@ -63,7 +63,7 @@ concept MemoryManager = requires(T m) {
    * Add an arena
    */
   { m.add_arena(std::uint32_t(), std::size_t()) } -> std::same_as<std::uint32_t>;
-  // Remoe an arena
+  // Remove an arena
   m.remove_arena(std::uint32_t());
 };
 

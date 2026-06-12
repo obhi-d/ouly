@@ -62,17 +62,17 @@ public:
     return first_ == last_;
   }
 
-  // helpers
+  // iterator to the first element
   [[nodiscard]] constexpr auto front() const noexcept -> I
   {
     return first_;
   }
 
-  // iterator to first
+  // iterator to the last element (not the end iterator)
   [[nodiscard]] constexpr auto back() const noexcept -> I
   {
     return last_ - 1;
-  } // iterator to last
+  }
 
   // split into [first_, mid) and [mid, last_)
   [[nodiscard]] auto split() -> subrange

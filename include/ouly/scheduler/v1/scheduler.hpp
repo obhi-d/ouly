@@ -269,7 +269,7 @@ public:
   }
 
   /**
-   * @brief Get worker d
+   * @brief Get the logical divisor for a workgroup (its thread count scaled by work_scale)
    */
   [[nodiscard]] auto get_logical_divisor(workgroup_id g) const noexcept -> uint32_t
   {

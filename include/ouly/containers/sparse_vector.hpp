@@ -459,9 +459,10 @@ public:
     return emplace_at_idx(length_++, std::forward<Args>(args)...);
   }
   /**
-   * @brief Emplace back an element. Order is not guranteed.
+   * @brief Emplace an element at the given index, growing the container if required.
+   * @param idx Index at which the element is constructed
    * @tparam ...Args Constructor args for value_type
-   * @return Returns link to the element pushed. link can be used to destroy entry.
+   * @return Returns a reference to the constructed element.
    */
   template <typename... Args>
   auto emplace_at(size_type idx, Args&&... args) noexcept -> auto&
@@ -472,9 +473,9 @@ public:
   }
 
   /**
-   * @brief Emplace back an element. Order is not guranteed.
-   * @tparam ...Args Constructor args for value_type
-   * @return Returns link to the element pushed. link can be used to destroy entry.
+   * @brief Ensure a slot exists at the given index, default-constructing it if absent.
+   * @param idx Index of the slot to ensure
+   * @return Returns a reference to the element at the index.
    */
   template <typename... Args>
   auto ensure(size_type idx) noexcept -> auto&

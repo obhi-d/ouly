@@ -11,10 +11,10 @@ namespace ouly::ecs
 /**
  * @brief A basic entity class that manages entity identifiers with optional revision tracking
  *
+ * @tparam Ty Tag type used to distinguish entity categories at compile time
  * @tparam SizeType The underlying type used for storing entity identifiers
  * @tparam RevisionBits The number of bits reserved for revision tracking
  * @tparam NullValue The value representing a null/invalid entity
- * @tparam min_revision_bit_count Minimum number of bits required for revision tracking
  *
  * This class provides a type-safe wrapper around entity identifiers with built-in
  * support for optional revision tracking. The identifier is split into two parts:

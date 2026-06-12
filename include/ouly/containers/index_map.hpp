@@ -110,7 +110,7 @@ public:
     data_.indices_.clear();
   }
 
-  /** @brief This value must be substracted from the index value while doing a query */
+  /** @brief This value must be subtracted from the index value while doing a query */
   auto base_offset() const noexcept -> T
   {
     if constexpr (OffsetLimit > 0)

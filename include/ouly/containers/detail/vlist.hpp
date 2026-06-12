@@ -239,7 +239,7 @@ public:
     }
   }
 
-  // retunrs the next
+  // returns the next
   auto unlink(container& cont, std::uint32_t node) -> std::uint32_t
   {
     auto&         l_node = Accessor::node(cont, node);
@@ -268,7 +268,7 @@ public:
     return next;
   }
 
-  // special method to unlink two consequetive nodes
+  // special method to unlink two consecutive nodes
   // assumes current node's next is valid
   auto unlink2(container& cont, std::uint32_t node) -> std::uint32_t
   {

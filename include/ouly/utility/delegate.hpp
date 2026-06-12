@@ -74,7 +74,6 @@ namespace ouly
 template <size_t SmallSize, typename>
 class basic_delegate;
 
-/**  */
 template <size_t SmallSize, typename Ret, typename... Args>
 class basic_delegate<SmallSize, Ret(Args...)>
 {

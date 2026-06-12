@@ -198,7 +198,7 @@ public:
 
   /**
    * @brief Lambda called for each element
-   * @tparam Lambda Lambda should accept A entity and value_type& parameter
+   * @tparam Lambda Lambda should accept an entity and value_type& parameter
    */
   template <typename Lambda>
   void for_each(Lambda&& lambda) noexcept
@@ -208,7 +208,7 @@ public:
 
   /**
    * @brief Lambda called for each element
-   * @tparam Lambda Lambda should accept A entity and value_type const& parameter
+   * @tparam Lambda Lambda should accept an entity and value_type const& parameter
    */
   template <typename Lambda>
   void for_each(Lambda&& lambda) const noexcept
@@ -218,9 +218,9 @@ public:
 
   /**
    * @brief Lambda called for each element in range
-   * @tparam Lambda Lambda Lambda should accept A entity and value_type& parameter
-   * @param first first index in range. This should be between 1 and size()
-   * @param last last index in range. This should be between 1 and size()
+   * @tparam Lambda Lambda should accept an entity and value_type& parameter
+   * @param first First index in the range (0-based, inclusive)
+   * @param last Last index in the range (exclusive)
    */
   template <typename Lambda>
   void for_each(size_type first, size_type last, Lambda&& lambda) noexcept
@@ -669,8 +669,8 @@ public:
   }
 
   /**
-   * @brief Erase a single element by object when backref is available.
-   * @remarks Only available if backref is available
+   * @brief Erase a single element by object when a self index is available.
+   * @remarks Only available if the container is configured with a self index
    */
   void erase(value_type const& obj) noexcept
     requires(has_self_index)

@@ -39,16 +39,16 @@ concept StructuredInputStream = requires(V v) {
   // Must convert value_type to double
   { v.as_double() } -> ouly::detail::OptionalValueLike;
 
-  // Must convert value_type to float
+  // Must convert value_type to uint64
   { v.as_uint64() } -> ouly::detail::OptionalValueLike;
 
-  // Must convert value_type to float
+  // Must convert value_type to int64
   { v.as_int64() } -> ouly::detail::OptionalValueLike;
 
-  // Must convert value_type to float
+  // Must convert value_type to bool
   { v.as_bool() } -> ouly::detail::OptionalValueLike;
 
-  // Must convert value_type to float
+  // Must convert value_type to string
   { v.as_string() } -> ouly::detail::OptionalValueLike;
 };
 
@@ -63,7 +63,7 @@ concept StructuredOutputStream = requires(V v) {
   // begin object
   v.begin_object();
 
-  // end array
+  // end object
   v.end_object();
 
   // key

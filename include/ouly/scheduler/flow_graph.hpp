@@ -39,7 +39,7 @@ namespace ouly
  * - Data processing workflows
  * - Any scenario requiring ordered parallel execution
  *
- * @tparam SchedulerType The scheduler type (v1::scheduler or v2::scheduler) that will execute tasks
+ * @tparam SchedulerType The scheduler type (v1::scheduler, v2::scheduler or v3::scheduler) that will execute tasks
  * @tparam AvgNodeCount Expected average number of nodes for optimization (default: 4)
  *
  * ## Key Features:

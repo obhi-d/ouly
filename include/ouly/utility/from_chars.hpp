@@ -97,7 +97,7 @@ void from_chars(std::string_view sv, T& value)
 
   if constexpr (ouly::detail::has_fast_float)
   {
-    // Use fast_float for floating point types if available.
+    // Use fast_float for integral types if available.
     auto result = fast_float::from_chars(begin, end, value, base);
     if (result.ec != std::errc{})
     {

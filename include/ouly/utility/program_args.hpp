@@ -87,7 +87,8 @@ class program_args
     value_type value_;
     StringType doc_;
     StringType name_;
-    int        flag_ = no_flag; // -1 means its a flag, -999 means
+    int        flag_ = no_flag; // is_flag (-1): this argument is a flag, no_flag (-2): no associated flag,
+                                // otherwise: index of the associated flag argument
 
     constexpr arg() noexcept = default;
     constexpr arg(StringType name) noexcept : name_(name) {}
@@ -327,8 +328,8 @@ private:
   {
     V vector;
     using v_value_type = typename V::value_type;
-    auto start       = sv.find_first_of('[');
-    auto end         = sv.find_first_of(']');
+    auto start         = sv.find_first_of('[');
+    auto end           = sv.find_first_of(']');
     if (start != sv.npos && end != sv.npos)
     {
       while (start < end)

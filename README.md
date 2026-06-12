@@ -3,7 +3,6 @@
 <div align="center">
 
 [![CI](https://github.com/obhi-d/ouly/actions/workflows/ci.yml/badge.svg)](https://github.com/obhi-d/ouly/actions/workflows/ci.yml)
-[![Performance](https://github.com/obhi-d/ouly/actions/workflows/performance.yml/badge.svg)](https://github.com/obhi-d/ouly/actions/workflows/performance.yml)
 [![Coverity Scan](https://scan.coverity.com/projects/30824/badge.svg)](https://scan.coverity.com/projects/obhi-d-ouly)
 [![codecov](https://codecov.io/gh/obhi-d/ouly/graph/badge.svg?token=POS8O18G9B)](https://codecov.io/gh/obhi-d/ouly)
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue.svg)](https://isocpp.org/std/the-standard)
@@ -11,11 +10,22 @@
 
 **A modern C++20 high-performance utility library for performance-critical applications**
 
-Featuring memory allocators, containers, ECS, task schedulers, flow graphs, and serialization
+Task schedulers, memory allocators, cache-friendly containers, ECS, reflection-driven serialization, and supporting utilities
 
 </div>
 
 OULY is a comprehensive C++20 library designed for high-performance applications where every nanosecond counts. It provides zero-cost abstractions, cache-friendly data structures, and lock-free algorithms optimized for modern multi-core systems.
+
+## Library at a Glance
+
+| Module | Headers | What it provides |
+|---|---|---|
+| Task Scheduling | `ouly/scheduler/` | Work-stealing task schedulers (three implementations), `parallel_for`, adaptive `auto_parallel_for`, coroutine tasks, static and dynamic flow graphs |
+| Memory Allocators | `ouly/allocators/` | Linear/arena/pool allocators, thread-safe allocators, coalescing GPU-style suballocators with defragmentation, virtual memory and memory-mapped files |
+| Containers | `ouly/containers/` | Lock-free MPMC queue, SoA vector, small vector, sparse vector/table, intrusive list, blackboard |
+| Entity Component System | `ouly/ecs/` | Registries with revision tracking, configurable component storage, collections, sparse-to-dense maps |
+| Serialization and Reflection | `ouly/serializers/`, `ouly/reflection/` | Compile-time reflection driving binary, YAML, and user-defined structured formats |
+| Utilities and DSL | `ouly/utility/`, `ouly/dsl/` | Delegates, program argument parsing, views, intrusive pointers, hashing, a lightweight YAML parser and a macro expression evaluator |
 
 ## Core Principles
 
@@ -98,6 +108,136 @@ int main() {
 
 ## Core Components
 
+### Task Scheduling
+
+Work-stealing schedulers with workgroup organization, benchmarked against Intel TBB.
+OULY ships three scheduler implementations that share the same submission API:
+
+- `ouly::v1::scheduler`: the original implementation with per-workgroup worker queues
+- `ouly::v2::scheduler`: work-stealing design with Chase-Lev deques; it lives in an inline
+  namespace, so it is also available as `ouly::scheduler`
+- `ouly::v3::scheduler`: game-engine oriented design with fixed worker-to-workgroup membership
+  and bounded spinning followed by futex-based parking, so idle workers release their CPUs
+
+#### Basic Task Scheduling (v2)
+
+```cpp
+#include <ouly/scheduler/scheduler.hpp>
+
+ouly::v2::scheduler scheduler;
+scheduler.create_group(ouly::default_workgroup_id, 0, 4);
+scheduler.begin_execution();
+
+auto const& ctx = ouly::v2::task_context::this_context::get();
+scheduler.submit(ctx, ouly::default_workgroup_id,
+    [](ouly::v2::task_context const& wctx) {
+        // your work here
+    });
+
+scheduler.end_execution();
+```
+
+The v3 scheduler is a drop-in replacement for game loops: workgroup membership is fixed at
+`begin_execution()` time, queue accounting is exact, and idle workers park on a futex instead
+of spinning while long tasks run elsewhere:
+
+```cpp
+ouly::v3::scheduler scheduler;
+scheduler.create_group(ouly::default_workgroup_id, 0, 4);
+scheduler.begin_execution();
+
+auto const& ctx = ouly::v3::task_context::this_context::get();
+scheduler.submit(ctx, ouly::default_workgroup_id,
+    [](ouly::v3::task_context const&) { /* work */ });
+
+scheduler.end_execution();
+```
+
+#### Parallel Algorithms
+
+Use the provided context, not a group id (unit_tests/scheduler_tests.cpp):
+
+```cpp
+#include <ouly/scheduler/parallel_for.hpp>
+
+std::vector<uint32_t> data(10000);
+std::iota(data.begin(), data.end(), 0);
+
+auto const& ctx = ouly::v2::task_context::this_context::get();
+ouly::parallel_for(
+    [](uint32_t& elem, ouly::v2::task_context const&) { elem *= 2; },
+    data, ctx);
+
+// Range-based overload
+ouly::parallel_for(
+    [](auto begin, auto end, ouly::v2::task_context const&) {
+        for (auto it = begin; it != end; ++it) { *it += 1; }
+    },
+    data, ctx);
+```
+
+For irregular workloads, `ouly::auto_parallel_for` (in `ouly/scheduler/auto_parallel_for.hpp`)
+uses TBB-style adaptive partitioning that reacts to load imbalance and work-stealing patterns
+instead of splitting the range into fixed chunks (unit_tests/test_auto_parallel_for.cpp).
+
+#### Coroutine Support
+
+Submit co_task<T> directly (unit_tests/scheduler_comparison_tests.cpp):
+
+```cpp
+#include <ouly/scheduler/co_task.hpp>
+
+ouly::co_task<void> my_task() {
+    co_return;
+}
+
+ouly::v2::scheduler scheduler;
+scheduler.create_group(ouly::default_workgroup_id, 0, 2);
+scheduler.begin_execution();
+auto const& ctx = ouly::v2::task_context::this_context::get();
+
+auto task = my_task();
+scheduler.submit(ctx, ouly::default_workgroup_id, task);
+task.wait();
+
+scheduler.end_execution();
+```
+
+#### Flow Graphs for Task Dependencies
+
+`ouly::flow_graph` executes a static dependency graph: connect nodes, add tasks, start once
+(unit_tests/flow_graph_tests.cpp):
+
+```cpp
+#include <ouly/scheduler/flow_graph.hpp>
+
+using Scheduler = ouly::v2::scheduler;
+ouly::flow_graph<Scheduler> graph;
+
+Scheduler scheduler;
+scheduler.create_group(ouly::default_workgroup_id, 0, 2);
+scheduler.begin_execution();
+
+auto const& ctx = Scheduler::context_type::this_context::get();
+auto n1 = graph.create_node();
+auto n2 = graph.create_node();
+graph.connect(n1, n2);
+
+graph.add(n1, [](auto const&) {/*work*/});
+graph.add(n2, [](auto const&) {/*work*/});
+
+graph.start(ctx);
+graph.cooperative_wait(ctx);
+
+scheduler.end_execution();
+```
+
+`ouly::dynamic_flow_graph` (in `ouly/scheduler/dynamic_flow_graph.hpp`) extends this to the
+persistent game-loop pattern: nodes and edges can be added or removed while the graph is
+running, cycles are first class (a frame can loop back onto itself), and nodes fire each time
+they accumulate `in_degree` triggers. The graph is seeded with `signal()` and drained with
+`request_stop()` (unit_tests/dynamic_flow_graph_tests.cpp).
+
 ### Memory Allocators
 
 OULY provides specialized allocators optimized for different allocation patterns:
@@ -132,16 +272,49 @@ allocator.rewind();      // reset offsets in all arenas
 allocator.smart_rewind(); // may release unused arenas
 ```
 
-#### Arena Allocators
-Coalescing arena allocator (unit_tests/coalescing_allocator.cpp) meant for GPU/Memory range allocations:
+#### Thread-Safe Allocators
+Frame-oriented allocators for multi-threaded producers (unit_tests/thread_safe_allocators.cpp):
 
 ```cpp
-#include <ouly/allocators/coalescing_arena_allocator.hpp>
+#include <ouly/allocators/ts_shared_linear_allocator.hpp>
+#include <ouly/allocators/ts_thread_local_allocator.hpp>
 
-ouly::coalescing_arena_allocator arena;
-auto p1 = arena.allocate(128);
-arena.deallocate(p1);
+// Lock-free shared arenas: many threads bump-allocate from the same pages
+ouly::ts_shared_linear_allocator shared;
+void* p = shared.allocate(128);
+shared.reset();   // frame boundary: call from a single thread
+
+// Per-thread arenas: zero synchronization on the allocation fast path
+ouly::ts_thread_local_allocator scratch;
+void* q = scratch.allocate(64);
+scratch.reset();  // generation-based invalidation, single-threaded
 ```
+
+#### Coalescing Allocators
+Offset-based allocators meant for GPU/memory range suballocation (unit_tests/coalescing_allocator.cpp):
+
+```cpp
+#include <ouly/allocators/coalescing_allocator.hpp>
+
+ouly::coalescing_allocator allocator;
+auto off1 = allocator.allocate(256); // returns an offset, not a pointer
+auto off2 = allocator.allocate(256);
+allocator.deallocate(off1, 256);     // adjacent free blocks are merged
+```
+
+The arena variant, `ouly::coalescing_arena_allocator`, manages multiple arenas and reports arena
+add/remove events to a user-provided memory manager satisfying the `CoalescingMemoryManager`
+concept. See unit_tests/coalescing_allocator.cpp for a complete example with a manager.
+
+#### Defragmenting Allocators
+`ouly::coalescing_arena_defrag_allocator` and `ouly::coalescing_defrag_allocator`
+(unit_tests/coalescing_defrag_allocator.cpp) extend the coalescing allocators with compaction
+passes for long-lived heaps such as GPU memory:
+
+- Allocations keep stable `allocation_id` handles across defragmentation
+- A defragmentation pass emits `move_memory` callbacks to the user's memory manager in a
+  memmove-safe order, followed by `rebind_alloc` notifications with each allocation's new placement
+- Dedicated (pinned) allocations bypass compaction entirely
 
 #### Pool Allocators
 Fixed-size blocks with optional STL interop (unit_tests/pool_allocator.cpp):
@@ -156,18 +329,10 @@ std::vector<std::uint64_t, std_alloc_u64> v(std_alloc_u64(pool));
 v.resize(256);
 ```
 
-#### Allocator Wrappers
-Use custom allocators with STL containers (unit_tests/pool_allocator.cpp):
+`ouly::object_pool` (unit_tests/object_pool.cpp) provides an intrusive free-list pool for
+fixed-size object recycling.
 
-```cpp
-#include <ouly/allocators/std_allocator_wrapper.hpp>
-
-ouly::pool_allocator<> pool(8, 1000);
-using VecAlloc = ouly::allocator_ref<int, ouly::pool_allocator<>>;
-std::vector<int, VecAlloc> vec(VecAlloc(pool));
-```
-
-#### Memory-mapped Allocators and Virtual Memory
+#### Memory-mapped Files and Virtual Memory
 Map files or allocate virtual memory (unit_tests/memory_mapped_allocators.cpp):
 
 ```cpp
@@ -195,6 +360,36 @@ valloc.deallocate(ptr, 4096);
 
 Cache-friendly containers with STL-like interfaces:
 
+#### Concurrent Queue
+A lock-free multi-producer, multi-consumer FIFO queue built from a chain of fixed-size buckets
+with monotonic cursors and per-slot commit flags (unit_tests/concurrent_queue.cpp):
+
+```cpp
+#include <ouly/containers/concurrent_queue.hpp>
+
+ouly::concurrent_queue<int> queue;
+queue.emplace(42);   // multi-producer safe
+queue.enqueue(7);
+
+int value = 0;
+if (queue.try_dequeue(value)) { /* multi-consumer safe */ }
+```
+
+A fast variant (`ouly::cfg::single_threaded_consumer_for_each`) trades dequeue support for
+single-threaded `for_each` traversal, useful for collect-then-process patterns.
+
+#### Structure of Arrays (SoA) Vector
+Cache-friendly vector over aggregate types (unit_tests/soavector.cpp):
+
+```cpp
+#include <ouly/containers/soavector.hpp>
+
+struct Position { float x, y, z; };
+ouly::soavector<Position> positions;
+positions.emplace_back(Position{1,2,3});
+positions.emplace_back(Position{4,5,6});
+```
+
 #### Small Vector
 Stack-optimized for small sizes (unit_tests/small_vector.cpp):
 
@@ -208,8 +403,8 @@ v.insert(v.begin() + 1, "x");
 v.erase(v.begin());
 ```
 
-#### Sparse Vector
-Sparse index storage with views (unit_tests/sparse_vector.cpp):
+#### Sparse Vector and Sparse Table
+Sparse index storage with page-wise allocation (unit_tests/sparse_vector.cpp):
 
 ```cpp
 #include <ouly/containers/sparse_vector.hpp>
@@ -223,17 +418,9 @@ int  val1  = v[1];
 v.erase(10);
 ```
 
-#### Structure of Arrays (SoA) Vector
-Cache-friendly vector over aggregate types (unit_tests/soavector.cpp):
-
-```cpp
-#include <ouly/containers/soavector.hpp>
-
-struct Position { float x, y, z; };
-ouly::soavector<Position> positions;
-positions.emplace_back(Position{1,2,3});
-positions.emplace_back(Position{4,5,6});
-```
+`ouly::sparse_table` (unit_tests/sparse_table.cpp) builds on the same idea but hands out stable
+links on insertion, so elements can be erased and looked up through handles while iteration stays
+pool-contiguous.
 
 #### Intrusive List
 Zero-allocation linked lists (unit_tests/intrusive_list.cpp):
@@ -250,100 +437,15 @@ il.push_back(a); il.push_back(b); il.push_back(c);
 for (auto& it : il) { /* use it.value */ }
 ```
 
-### Multi-Threading and Task Scheduling
-
-Advanced work-stealing scheduler with workgroup organization:
-
-#### Basic Task Scheduling (v2)
+#### Blackboard
+Name-indexed (or type-indexed via config) blob storage for heterogeneous data (unit_tests/blackboard.cpp):
 
 ```cpp
-#include <ouly/scheduler/scheduler.hpp>
+#include <ouly/containers/blackboard.hpp>
 
-ouly::v2::scheduler scheduler;
-scheduler.create_group(ouly::default_workgroup_id, 0, 4);
-scheduler.begin_execution();
-
-auto const& ctx = ouly::v2::task_context::this_context::get();
-scheduler.submit(ctx, ouly::default_workgroup_id,
-    [](ouly::v2::task_context const& wctx) {
-        // your work here
-    });
-
-scheduler.end_execution();
-```
-
-#### Parallel Algorithms
-
-Use the provided context, not a group id (unit_tests/scheduler_tests.cpp):
-
-```cpp
-#include <ouly/scheduler/parallel_for.hpp>
-
-std::vector<uint32_t> data(10000);
-std::iota(data.begin(), data.end(), 0);
-
-auto const& ctx = ouly::v2::task_context::this_context::get();
-ouly::parallel_for(
-    [](uint32_t& elem, ouly::v2::task_context const&) { elem *= 2; },
-    data, ctx);
-
-// Range-based overload
-ouly::parallel_for(
-    [](auto begin, auto end, ouly::v2::task_context const&) {
-        for (auto it = begin; it != end; ++it) { *it += 1; }
-    },
-    data, ctx);
-```
-
-#### Coroutine Support
-
-Submit co_task<T> directly (unit_tests/scheduler_comparison_tests.cpp):
-
-```cpp
-#include <ouly/scheduler/co_task.hpp>
-
-ouly::co_task<void> my_task() {
-    co_return;
-}
-
-ouly::v2::scheduler scheduler;
-scheduler.create_group(ouly::default_workgroup_id, 0, 2);
-scheduler.begin_execution();
-auto const& ctx = ouly::v2::task_context::this_context::get();
-
-auto task = my_task();
-scheduler.submit(ctx, ouly::default_workgroup_id, task);
-task.wait();
-
-scheduler.end_execution();
-```
-
-#### Flow Graph for Complex Dependencies
-
-Use flow_graph with v2 scheduler (unit_tests/flow_graph_tests.cpp):
-
-```cpp
-#include <ouly/scheduler/flow_graph.hpp>
-
-using Scheduler = ouly::v2::scheduler;
-ouly::flow_graph<Scheduler> graph;
-
-Scheduler scheduler;
-scheduler.create_group(ouly::default_workgroup_id, 0, 2);
-scheduler.begin_execution();
-
-auto const& ctx = Scheduler::context_type::this_context::get();
-auto n1 = graph.create_node();
-auto n2 = graph.create_node();
-graph.connect(n1, n2);
-
-graph.add(n1, [](auto const&) {/*work*/});
-graph.add(n2, [](auto const&) {/*work*/});
-
-graph.start(ctx);
-graph.cooperative_wait(ctx);
-
-scheduler.end_execution();
+ouly::blackboard board;
+board.emplace<std::uint32_t>("param1", 50);
+auto value = board.get<std::uint32_t>("param1");
 ```
 
 ### Entity Component System (ECS)
@@ -365,6 +467,9 @@ ints.emplace_at(e, 42);
 bool has = ints.contains(e);
 ```
 
+Entities are typed handles with optional revision bits that detect stale references after an
+entity slot is recycled. Use `ouly::ecs::registry`/`entity` when revision tracking is not needed.
+
 #### Component Storage Strategies
 
 ```cpp
@@ -374,6 +479,9 @@ ouly::ecs::components<int, ouly::ecs::rxentity<>, Direct> fast_ints;
 fast_ints.set_max(registry.max_size());
 fast_ints.emplace_at(e, 7);
 ```
+
+Storage is configurable per component type: dense storage with a sparse index (default), direct
+mapping for components present on most entities, and an optional self index for erase-by-value.
 
 #### Efficient Component Access and Iteration
 
@@ -385,23 +493,24 @@ if (ints.contains(e)) { ints[e] += 5; }
 #### Collections for Grouped Processing
 
 ```cpp
-// Collections (unit_tests/ecs_tests.cpp)
+// Collections (unit_tests/ecs_collection_tests.cpp)
 ouly::ecs::collection<ouly::ecs::rxentity<>> subset;
 subset.emplace(e);
 ```
 
+Collections track entity membership in lazily allocated bitset pages, so dense subsets cost
+memory only where entities actually live. `ouly::ecs::map` provides sparse-to-dense index
+mapping with swap-and-pop removal (unit_tests/ecs_map_tests.cpp).
+
 #### Advanced ECS Patterns
 
 ```cpp
-// Entity archetypes with template specialization
-template<typename... Components>
-struct entity_archetype {
-    ouly::ecs::entity<> entity;
-    std::tuple<Components...> components;
-};
+struct Position { float x, y, z; };
+struct Velocity { float dx, dy, dz; };
 
-using MovableEntity = entity_archetype<Position, Velocity>;
-using RenderableEntity = entity_archetype<Position, Sprite>;
+ouly::ecs::components<Position, ouly::ecs::rxentity<>> positions;
+ouly::ecs::components<Velocity, ouly::ecs::rxentity<>> velocities;
+ouly::ecs::collection<ouly::ecs::rxentity<>>           physics_entities;
 
 // Batch entity creation
 auto create_projectile = [&](float x, float y, float dx, float dy) {
@@ -412,35 +521,24 @@ auto create_projectile = [&](float x, float y, float dx, float dy) {
     return projectile;
 };
 
-// System scheduling with dependencies
-class PhysicsSystem {
-public:
-    void update(float dt) {
-        // Update positions based on velocities
-        positions.for_each_with(velocities, 
-            [dt](auto e, Position& pos, Velocity const& vel) {
-                pos.x += vel.dx * dt;
-                pos.y += vel.dy * dt;
-                pos.z += vel.dz * dt;
-            });
-    }
-};
+// Iterate all stored components together with their entities
+positions.for_each([](auto entity, Position& pos) {
+    // process every stored position
+});
 
-class RenderSystem {
-public:
-    void render() {
-        // Render all entities with positions
-        render_entities.for_each(positions, 
-            [](auto e, Position const& pos) {
-                draw_sprite_at(e, pos.x, pos.y);
-            });
-    }
-};
+// Iterate only the subset of entities tracked by a collection
+physics_entities.for_each(positions, [](auto entity, Position& pos) {
+    // process positions of entities in the collection
+});
 ```
 
-### Serialization
+### Serialization and Reflection
 
-Flexible and high-performance serialization framework supporting multiple formats:
+Serialization in OULY is driven by compile-time reflection (`ouly/reflection/`): aggregate types
+with up to 64 members are reflected automatically, and any type can opt in explicitly with a
+static `reflect()` function built from `ouly::bind`. The same reflection data drives every
+format: binary, YAML, and any user-defined structured stream that models the
+`StructuredInputStream`/`StructuredOutputStream` concepts in `ouly/serializers/serializers.hpp`.
 
 #### Binary Serialization
 
@@ -451,13 +549,13 @@ Binary in-memory and stream adapters (unit_tests/binary_stream.cpp, binary_seria
 #include <ouly/serializers/serializers.hpp>
 #include <ouly/reflection/reflection.hpp>
 
-struct Test 
-{ 
-  int a; 
-  std::string b; 
-  Test () : a(0), b("") {}
-  Test (char const* custom_init) : a(0), b(custom_init) {}
-  // Explicit reflection for non aggregate types
+struct Test
+{
+  int a = 0;
+  std::string b;
+  Test() = default;
+  Test(int v, std::string s) : a(v), b(std::move(s)) {}
+  // Explicit reflection for non-aggregate types
   static auto reflect() noexcept {
     return ouly::bind(ouly::bind<"a", &Test::a>(), ouly::bind<"b", &Test::b>());
   }
@@ -486,7 +584,7 @@ Human-readable YAML for reflected types and STL (unit_tests/yaml_output_serializ
 #include <ouly/serializers/lite_yml.hpp>
 #include <ouly/reflection/reflection.hpp>
 
-// Implicit reflection for aggregate types with upto 64 members
+// Implicit reflection for aggregate types with up to 64 members
 struct Cfg { int a; std::string b; };
 
 Cfg cfg{100, "value"};
@@ -498,42 +596,24 @@ ouly::yml::from_string(parsed, y);
 
 #### Custom Serialization
 
-```cpp
-// Custom serializable types
-struct Transform {
-    ouly::vec3 position;
-    ouly::quat rotation;
-    ouly::vec3 scale;
-    
-    // Custom binary serialization
-    template<std::endian E, typename Stream>
-    void serialize(Stream& stream) const {
-        ouly::write<E>(stream, position);
-        ouly::write<E>(stream, rotation);
-        ouly::write<E>(stream, scale);
-    }
-    
-    template<std::endian E, typename Stream>
-    void deserialize(Stream& stream) {
-        ouly::read<E>(stream, position);
-        ouly::read<E>(stream, rotation);
-        ouly::read<E>(stream, scale);
-    }
-};
+Types that cannot use reflection can provide stream operators (`operator<<` / `operator>>`)
+accepting the serializer. Binary read and write accept an explicit endianness template argument
+(little-endian by default):
 
-// Batch serialization for performance
-std::vector<Transform> transforms;
+```cpp
+std::vector<Test> transforms;
 // ... populate transforms ...
 
-ouly::binary_stream batch_output;
-for (auto const& transform : transforms) {
-    ouly::write<std::endian::native>(batch_output, transform);
-}
+ouly::binary_output_stream out;
+ouly::write<std::endian::big>(out, transforms);   // explicit endianness
+
+ouly::binary_input_stream in(out.get_string());
+ouly::read<std::endian::big>(in, transforms);
 ```
 
-### Utilities and Support Libraries
+### Utilities and DSL
 
-Comprehensive utility components for common programming tasks:
+Supporting components for common programming tasks:
 
 #### Command-Line Argument Parsing
 
@@ -554,7 +634,7 @@ args.sink(ns,   "numbers", "n");
 
 #### Type-Safe Function Delegates
 
-Bind free, lambda, and member functions (unit_tests/basic_tests.cpp):
+Bind free, lambda, and member functions with small object optimization (unit_tests/basic_tests.cpp):
 
 ```cpp
 #include <ouly/utility/delegate.hpp>
@@ -567,20 +647,34 @@ int s = d1(2,3); // 5
 int p = d2(2,3); // 6
 ```
 
+#### Macro Expression Evaluator
 
-#### Memory Mapping
-
-Use mmap_source/mmap_sink (unit_tests/memory_mapped_allocators.cpp):
+`ouly::microexpr` (unit_tests/microexpr_tests.cpp) evaluates boolean macro expressions, useful
+for preprocessor-style configuration filters:
 
 ```cpp
-#include <ouly/allocators/mmap_file.hpp>
+#include <ouly/dsl/microexpr.hpp>
 
-ouly::mmap_sink sink; sink.map("file.bin");
-sink[0] = std::byte{0xFF};
+ouly::microexpr expr([](std::string_view name) -> std::optional<int> {
+    if (name == "FEATURE_A") return 1;
+    return std::nullopt; // undefined macro
+});
 
-ouly::mmap_source src; src.map("file.bin");
-auto first = src[0];
+bool enabled = expr.evaluate("$FEATURE_A && !$FEATURE_B");
 ```
+
+#### More Utilities
+
+- **Views**: `zip_view` for iterating multiple spans in lockstep, `projected_view` for iterating
+  a single member across an array of structs, and `subrange` with binary splitting for
+  divide-and-conquer algorithms
+- **Smart pointers**: `intrusive_ptr` for reference-counted objects without control blocks,
+  `tagged_ptr`/`compressed_ptr` for pointer tagging, `tagged_int` for type-safe integer handles
+- **Hashing**: `wyhash32`/`wyhash64` and `komihash64` fast non-cryptographic hashes
+- **Strings**: compile-time `string_literal`, string utilities, fast `from_chars`/`to_chars`
+  wrappers with optional fast_float support
+- **Optionals**: `optional_ref`, `optional_val`, and `nullable_optional` for storage-efficient
+  optional semantics
 
 ## Testing and Development
 
@@ -645,32 +739,22 @@ OULY includes comprehensive benchmarks comparing against industry standards:
 
 ### Debug Support
 
-OULY includes comprehensive debugging aids:
+OULY ships debugging aids in the `debug_helpers/` directory:
 
-```cpp
-// Debug helpers (Windows)
-#include "debug_helpers/containers.natvis"  // Visual Studio visualizers
+- `containers.natvis`: Visual Studio visualizers for OULY containers
+- `pretty_printer_lldb.py`: LLDB pretty printers (Linux/macOS)
+- `pretty_printer.py`: GDB pretty printers
 
-// LLDB/GDB pretty printers (Linux/macOS)  
-#include "debug_helpers/pretty_printer_lldb.py"
-#include "debug_helpers/pretty_printer.py"
-
-// Built-in assertions and validation
-#define OULY_DEBUG_MODE  // Enable debug checks
-#include <ouly/core/debug.hpp>
-
-void some_function() {
-    OULY_ASSERT(condition, "Custom error message");
-    OULY_DEBUG_ONLY(expensive_validation());
-}
-```
+Internal assertions use the `OULY_ASSERT` macro, which defaults to `assert` from `<cassert>`.
+It can be overridden by defining `OULY_ASSERT` before including OULY headers, or by providing
+a `user_defines.hpp` header that is picked up automatically by `ouly/utility/user_config.hpp`.
 
 ### Contributing
 
 We welcome contributions! See our [Contributing Guide](CONTRIBUTING.md) for details on:
 
 - Code style and conventions
-- Submitting pull requests  
+- Submitting pull requests
 - Running performance benchmarks
 - Adding new features
 - Writing tests
@@ -693,5 +777,3 @@ OULY works well with these complementary libraries:
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----

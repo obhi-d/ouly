@@ -1305,10 +1305,6 @@ private:
   {
     return (lesseq(std::get<I>(first), std::get<I>(second), n) && ...);
   }
-  /**
-   *
-   */
-
   friend auto operator==(soavector const& x, soavector const& y) -> bool
   {
     return x.size_ == y.size_ && equals(x.data_, y.data_, x.size_, index_seq);

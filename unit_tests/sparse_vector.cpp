@@ -180,9 +180,9 @@ TEST_CASE("sparse_vector: Move sparse_vector to another", "[sparse_vector][move]
 
 struct untracked_pod
 {
-  static constexpr std::uint32_t pool_size_v            = 4;
-  static constexpr pod           null_v                 = pod{};
-  static constexpr bool          disble_pool_tracking_v = true;
+  static constexpr std::uint32_t pool_size_v             = 4;
+  static constexpr pod           null_v                  = pod{};
+  static constexpr bool          disable_pool_tracking_v = true;
 };
 
 TEST_CASE("sparse_vector: for_each", "[sparse_vector][for_each]")

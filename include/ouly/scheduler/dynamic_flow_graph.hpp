@@ -84,8 +84,8 @@ namespace ouly
  * graph.cooperative_wait(ctx);
  * ```
  *
- * @tparam SchedulerType  The scheduler type (v1::scheduler or v2::scheduler) that executes tasks.
- * @tparam NodeChunkSize  Number of nodes per stable storage chunk (default 64).
+ * @tparam SchedulerType  The scheduler type (v1::scheduler, v2::scheduler or v3::scheduler) that executes tasks.
+ * @tparam NodeChunkSize  Number of nodes per stable storage chunk (default 32).
  * @tparam EdgeChunkSize  Number of edges per stable storage chunk (default 256).
  */
 constexpr uint32_t default_chunk_size      = 32;

@@ -115,7 +115,7 @@ using coalescing_arena_allocator_base = ouly::detail::statistics<ouly::detail::c
  * @note Arena size can only be increased, not decreased
  * @note Allocation information can be retrieved using allocation IDs
  * @note Dedicated allocations bypass block coalescing
- * @note Arena and allocation IDs are consequetive integers, and can be used as indexes.
+ * @note Arena and allocation IDs are consecutive integers, and can be used as indexes.
  */
 class coalescing_arena_allocator : coalescing_arena_allocator_base
 {

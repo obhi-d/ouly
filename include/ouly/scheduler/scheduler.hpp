@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 
-// Include the v2 implementation which uses inline v2 namespace, making it available as ouly::scheduler
+// Include all scheduler implementations (v1, v2 and v3). The v2 implementation uses an inline
+// namespace, making it available as ouly::scheduler; v1 and v3 must be referenced explicitly.
 #include "ouly/scheduler/v1/scheduler.hpp"
 #include "ouly/scheduler/v1/task_context.hpp"
 

@@ -18,7 +18,7 @@ namespace ouly
 /**
  * @brief Store data as name value pairs, value can be any blob of data, has no free memory management
  *
- * @remark Data is stored as a blob, names are stored seperately if required for lookup
+ * @remark Data is stored as a blob, names are stored separately if required for lookup
  *         Data can also be retrieved by index.
  *         There is no restriction on the data type that is supported (POD or non-POD both are supported).
  */
@@ -85,11 +85,7 @@ public:
   }
 
   template <typename T>
-  auto get() noexcept -> T&
-    requires(is_type_indexed)
-  {
-    return get<T>(std::type_index(typeid(T)));
-  }
+  auto get() noexcept -> T& requires(is_type_indexed) { return get<T>(std::type_index(typeid(T))); }
 
   template <typename T>
   auto get(key_type v) const noexcept -> T const&
@@ -133,14 +129,14 @@ public:
   }
 
   /**
-   *
+   * @brief Construct an object of type T in place and store it in the blackboard, keyed by its type.
+   * @tparam T Type of the object to construct
+   * @tparam ...Args Constructor argument types for T
+   * @return Returns a reference to the constructed object.
    */
   template <typename T, typename... Args>
-  auto emplace(Args&&... args) noexcept -> T&
-    requires(is_type_indexed)
-  {
-    return emplace<T>(std::type_index(typeid(T)), std::forward<Args>(args)...);
-  }
+  auto emplace(Args&&... args) noexcept
+   -> T& requires(is_type_indexed) { return emplace<T>(std::type_index(typeid(T)), std::forward<Args>(args)...); }
 
   template <typename T, typename... Args>
   auto emplace(key_type k, Args&&... args) noexcept -> T&

@@ -12,7 +12,7 @@ namespace ouly
 {
 
 /**
- * @brief This allocator grows the buffer size, and merges free sizes_.
+ * @brief Identifier for an allocation, used to track and look up allocation metadata in arena allocators.
  */
 struct allocation_id
 {

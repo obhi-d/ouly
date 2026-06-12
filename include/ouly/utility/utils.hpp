@@ -57,7 +57,7 @@ struct aligned_storage
   }
 
   template <typename T>
-  [[nodiscard]] [[nodiscard]] auto as() const noexcept -> T const*
+  [[nodiscard]] auto as() const noexcept -> T const*
   {
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     return std::launder(reinterpret_cast<T const*>(data_));

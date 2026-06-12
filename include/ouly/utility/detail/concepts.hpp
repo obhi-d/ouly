@@ -86,7 +86,7 @@ template <typename Traits>
 concept HasZeroMemoryAttrib = Traits::zero_out_memory_v;
 
 template <typename Traits>
-concept HasDisablePoolTrackingAttrib = Traits::disble_pool_tracking_v;
+concept HasDisablePoolTrackingAttrib = Traits::disable_pool_tracking_v;
 
 template <typename Traits>
 concept HasLinkType = requires { typename Traits::link_type; };

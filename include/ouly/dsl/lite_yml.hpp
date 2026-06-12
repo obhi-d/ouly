@@ -200,7 +200,7 @@ private:
   void throw_error(token tok, std::string_view error) const
   {
 #ifdef __clang__
-    // Write error handlign without using std::format
+    // Write error handling without using std::format
     std::string error_str = "parse-error - ";
     error_str += std::to_string(tok.content_.start_);
     error_str += " : (around ";
