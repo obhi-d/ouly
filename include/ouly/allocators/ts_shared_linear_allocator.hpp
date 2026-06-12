@@ -74,6 +74,7 @@ public:
         current_page_{other.current_page_.exchange(nullptr)},
         page_list_head_{std::exchange(other.page_list_head_, nullptr)},
         page_list_tail_{std::exchange(other.page_list_tail_, nullptr)},
+        pages_to_free_{std::exchange(other.pages_to_free_, nullptr)},
         available_pages_{std::exchange(other.available_pages_, nullptr)}
   {}
 
@@ -88,11 +89,12 @@ public:
     {
       return *this; // self-assignment, nothing to do
     }
-    reset(); // free any existing arenas
+    release(); // free any existing arenas
     default_page_size_ = std::exchange(other.default_page_size_, default_page_size);
     current_page_.store(other.current_page_.exchange(nullptr, std::memory_order_release));
     page_list_head_  = std::exchange(other.page_list_head_, nullptr);
     page_list_tail_  = std::exchange(other.page_list_tail_, nullptr);
+    pages_to_free_   = std::exchange(other.pages_to_free_, nullptr);
     available_pages_ = std::exchange(other.available_pages_, nullptr);
     return *this;
   }

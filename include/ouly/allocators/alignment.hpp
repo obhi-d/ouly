@@ -23,7 +23,10 @@ struct alignment
 
   constexpr explicit operator bool() const noexcept
   {
-    return Value > alignof(void*);
+    // Any non-trivial alignment must be honored: allocators do not round allocation sizes up, so
+    // even small alignments (<= alignof(void*)) are not implicitly guaranteed by previous
+    // allocations.
+    return Value > 1;
   }
 
   constexpr operator std::size_t() const noexcept
@@ -42,10 +45,12 @@ struct alignment
 template <typename T>
 constexpr auto alignarg = alignment<alignof(T)>();
 
+/** @brief Align a pointer up to the given power-of-two alignment. */
 inline auto align(void* ptr, std::size_t alignment) -> void*
 {
-  auto off = static_cast<std::size_t>(reinterpret_cast<uintptr_t>(ptr) & (alignment - 1)); // NOLINT
-  return static_cast<char*>(ptr) + off;
+  auto const mask  = alignment - 1;
+  auto const value = (reinterpret_cast<uintptr_t>(ptr) + mask) & ~static_cast<uintptr_t>(mask); // NOLINT
+  return reinterpret_cast<void*>(value);                                                        // NOLINT
 }
 
 } // namespace ouly

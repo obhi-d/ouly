@@ -158,8 +158,10 @@ public:
   {
     [[maybe_unused]] auto measure = statistics::report_deallocate(i_size);
 
-    for (size_type id = static_cast<size_type>(arenas_.size()) - 1; id >= current_arena_; --id)
+    // iterate downwards without underflowing the unsigned index when current_arena_ is 0
+    for (auto id = static_cast<size_type>(arenas_.size()); id > current_arena_;)
     {
+      --id;
       if (in_range(arenas_[id], i_data))
       {
         // merge back?

@@ -72,12 +72,18 @@ auto coalescing_allocator::allocate(size_type size) -> coalescing_allocator::siz
     }
   }
 
-  return std::numeric_limits<uint32_t>::max();
+  return std::numeric_limits<size_type>::max();
 }
 
 void coalescing_allocator::deallocate(size_type offset, size_type size)
 {
-  OULY_ASSERT(!offsets_.empty());
+  if (offsets_.empty())
+  {
+    // free list can be empty when the entire range was allocated
+    offsets_.emplace_back(offset);
+    sizes_.emplace_back(size);
+    return;
+  }
 
   const auto* it = mini2(offsets_.data(), offsets_.size(), offset);
 

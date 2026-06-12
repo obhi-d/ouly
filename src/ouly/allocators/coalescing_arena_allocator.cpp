@@ -195,7 +195,13 @@ void coalescing_arena_allocator::add_free(std::uint32_t node)
 {
   ouly::detail::vector_access(block_entries_.free_marker_, node) = true;
   auto size = ouly::detail::vector_access(block_entries_.sizes_, node);
-  auto it   = mini2_it(sizes_.data(), sizes_.size(), size);
+  if (sizes_.empty())
+  {
+    sizes_.emplace_back(size);
+    free_ordering_.emplace_back(node);
+    return;
+  }
+  auto it = mini2_it(sizes_.data(), sizes_.size(), size);
   free_ordering_.emplace(free_ordering_.begin() + it, node);
   sizes_.emplace(sizes_.begin() + it, size);
 }

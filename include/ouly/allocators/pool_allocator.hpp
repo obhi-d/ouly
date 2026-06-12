@@ -129,17 +129,13 @@ public:
   void deallocate(address i_ptr, size_type size_value, Alignment alignment = {})
   {
     constexpr auto alignment_value = (size_t)alignment;
-    constexpr auto           fixup           = alignment_value - 1;
+    constexpr auto fixup           = alignment_value - 1;
     address        orig_ptr        = i_ptr;
     if constexpr (alignment_value)
     {
       if ((k_atom_size_ < alignment_value) || (k_atom_size_ & fixup))
       {
         size_value += alignment_value + 4;
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-        std::uint32_t off_by = *(reinterpret_cast<std::uint32_t*>(i_ptr) - 1);
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-        i_ptr = reinterpret_cast<address>(reinterpret_cast<std::uint8_t*>(i_ptr) - off_by);
       }
     }
 
@@ -158,10 +154,22 @@ public:
 
     if (i_count > k_atom_count_)
     {
+      // allocate() returned the underlying allocator's pointer untouched, so there is no offset
+      // word to read before it
       underlying_allocator::deallocate(orig_ptr, size_value, alignment);
     }
     else
     {
+      if constexpr (alignment_value)
+      {
+        if ((k_atom_size_ < alignment_value) || (k_atom_size_ & fixup))
+        {
+          // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+          std::uint32_t off_by = *(reinterpret_cast<std::uint32_t*>(i_ptr) - 1);
+          // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+          i_ptr = reinterpret_cast<address>(reinterpret_cast<std::uint8_t*>(i_ptr) - off_by);
+        }
+      }
       [[maybe_unused]] auto measure = statistics::report_deallocate(size_value);
       if (i_count == 1)
       {

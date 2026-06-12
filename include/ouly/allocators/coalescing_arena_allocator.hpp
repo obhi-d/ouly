@@ -27,6 +27,37 @@ concept CoalescingMemoryManager = requires(T m) {
   { m.add(arena_id(), allocation_size_type()) } -> std::same_as<void>;
 };
 
+/**
+ * @brief Memory manager concept for coalescing allocators that additionally supports defragmentation.
+ *
+ * On top of the arena add/remove interface, the manager must implement:
+ * - begin_defragment/end_defragment: bracket a defragmentation pass
+ * - move_memory: copy `size` bytes from (src_arena, from) to (dst_arena, to). Calls are emitted in a
+ *   safe sequence (a destination region is always either free or already vacated by a previous call),
+ *   but a single call's source and destination ranges may overlap when src and dst arena are the same;
+ *   the implementation must behave like memmove (stage through a temporary if the backend cannot copy
+ *   overlapping ranges directly, e.g. GPU buffer-to-buffer copies).
+ * - rebind_alloc: an allocation kept its allocation_id but now lives at a new arena/offset.
+ */
+template <typename T, typename A>
+concept CoalescingDefragMemoryManager = CoalescingMemoryManager<T> && requires(T m, A& allocator) {
+  m.begin_defragment(allocator);
+  m.end_defragment(allocator);
+  m.move_memory(arena_id(), arena_id(), allocation_size_type(), allocation_size_type(), allocation_size_type());
+  m.rebind_alloc(allocation_id(), arena_id(), allocation_size_type());
+};
+
+/** @brief Outcome of a defragmentation pass. */
+struct coalescing_defrag_result
+{
+  allocation_size_type bytes_moved_       = 0;
+  uint32_t             moves_             = 0;
+  uint32_t             allocations_moved_ = 0;
+  uint32_t             arenas_removed_    = 0;
+  /** false when the pass stopped early because the move budget was exhausted */
+  bool completed_ = true;
+};
+
 struct ca_allocation
 {
   allocation_size_type offset_ = 0;
@@ -130,28 +161,35 @@ public:
   }
   /** @brief The method `allocate` returns an allocation desc, with extra information about the allocation offset and
    * the arena the allocation belongs to. The information need not be stored, as the alllocation_id can be used to fetch
-   * this information */
+   * this information.
+   * @note When an alignment is requested, the block is over-allocated by `alignment - 1` bytes and the
+   * returned offset is rounded up to the alignment; `get_offset`/`get_size` report the raw block. */
   template <CoalescingMemoryManager M, typename Alignment = ouly::alignment<>, typename Dedicated = std::false_type>
   auto allocate(size_type size, M& manager, Alignment alignment = {}, Dedicated /*unused*/ = {}) -> ca_allocation
   {
-    [[maybe_unused]] auto measure      = statistics::report_allocate(size);
-    auto                  vsize        = alignment ? size + static_cast<size_type>(alignment) : size;
-    bool                  is_dedicated = Dedicated::value || vsize >= arena_size_;
+    [[maybe_unused]] auto measure = statistics::report_allocate(size);
+
+    auto const align_value  = static_cast<size_type>(alignment);
+    auto const mask         = align_value > 1 ? align_value - 1 : size_type{0};
+    auto const vsize        = size + mask;
+    bool const is_dedicated = Dedicated::value || vsize >= arena_size_;
 
     if (is_dedicated)
     {
-      auto [arena, block] = add_arena_filled(vsize, manager);
+      // a dedicated allocation starts at offset 0, which is aligned for any power of two
+      auto [arena, block] = add_arena_filled(size, manager);
       return ca_allocation{.offset_ = 0, .id_ = block, .arena_ = arena};
     }
 
-    ca_allocation al = try_allocate(size);
+    ca_allocation al = try_allocate(vsize);
 
     if (al.get_allocation_id() == allocation_id())
     {
       add_arena(vsize, manager);
-      al = try_allocate(size);
+      al = try_allocate(vsize);
     }
 
+    al.offset_ = (al.offset_ + mask) & ~mask;
     return al;
   }
 
@@ -183,7 +221,7 @@ public:
     return block_entries_.arenas_;
   }
 
-private:
+protected:
   OULY_API auto add_arena(size_type size, bool empty) -> std::pair<arena_id, allocation_id>;
 
   template <CoalescingMemoryManager M>
@@ -283,6 +321,60 @@ private:
   OULY_API void reinsert_right(size_t of, size_type size, std::uint32_t node);
   OULY_API auto commit(size_type size, size_type const* found) -> uint32_t;
 
+  // Accessors for derived allocators (e.g. defragmentation support)
+  [[nodiscard]] auto arena_entries() noexcept -> ouly::detail::ca_arena_entries&
+  {
+    return arena_entries_;
+  }
+
+  [[nodiscard]] auto arena_entries() const noexcept -> ouly::detail::ca_arena_entries const&
+  {
+    return arena_entries_;
+  }
+
+  [[nodiscard]] auto block_entries() noexcept -> ouly::detail::ca_block_entries&
+  {
+    return block_entries_;
+  }
+
+  [[nodiscard]] auto block_entries() const noexcept -> ouly::detail::ca_block_entries const&
+  {
+    return block_entries_;
+  }
+
+  [[nodiscard]] auto arena_list() noexcept -> ouly::detail::ca_arena_list&
+  {
+    return arenas_;
+  }
+
+  [[nodiscard]] auto arena_list() const noexcept -> ouly::detail::ca_arena_list const&
+  {
+    return arenas_;
+  }
+
+  /** Free block sizes, ascending; parallel to `free_ordering()` */
+  [[nodiscard]] auto free_sizes() noexcept -> std::vector<size_type>&
+  {
+    return sizes_;
+  }
+
+  [[nodiscard]] auto free_sizes() const noexcept -> std::vector<size_type> const&
+  {
+    return sizes_;
+  }
+
+  /** Free block ids, ordered by block size; parallel to `free_sizes()` */
+  [[nodiscard]] auto free_ordering() noexcept -> std::vector<uint32_t>&
+  {
+    return free_ordering_;
+  }
+
+  [[nodiscard]] auto free_ordering() const noexcept -> std::vector<uint32_t> const&
+  {
+    return free_ordering_;
+  }
+
+private:
   // Free blocks
   ouly::detail::ca_arena_entries arena_entries_{};
   ouly::detail::ca_block_entries block_entries_{};

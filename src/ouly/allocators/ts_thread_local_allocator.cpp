@@ -209,6 +209,6 @@ auto ts_thread_local_allocator::remove_tls_slot(tls_t* slot) noexcept -> void
   // Since we can't easily remove from a singly-linked list atomically,
   // we just clear the slot's data and let reset() handle cleanup
   slot->page_       = nullptr;
-  slot->generation_ = std::numeric_limits<uint32_t>::max();
+  slot->generation_ = std::numeric_limits<uintptr_t>::max();
 }
 } // namespace ouly

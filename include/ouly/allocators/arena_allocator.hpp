@@ -345,7 +345,9 @@ public:
    -> alloc_info
   {
     [[maybe_unused]] auto measure = this->statistics::report_allocate(isize);
-    auto                  size    = isize + static_cast<size_type>(i_alignment);
+    // over-allocate by alignment - 1 so the aligned offset always fits inside the block
+    auto const align_value = static_cast<size_type>(i_alignment);
+    auto const size        = isize + (align_value > 1 ? align_value - 1 : size_type{0});
 
     if (Dedicated::value || size >= arena_size_)
     {
@@ -728,12 +730,14 @@ private:
   template <typename Alignment = alignment<>>
   auto finalize_commit(block& blk, std::uint32_t huser, Alignment ialign) -> size_type
   {
-    blk.data_      = huser;
-    blk.alignment_ = static_cast<std::uint8_t>(std::popcount(static_cast<uint32_t>(ialign)));
+    blk.data_ = huser;
+    // block::alignment_ stores log2(alignment); for a power-of-two value popcount(value - 1) is log2
+    auto const align_value = static_cast<size_type>(ialign);
+    auto const mask        = align_value > 1 ? align_value - 1 : size_type{0};
+    blk.alignment_         = static_cast<std::uint8_t>(std::popcount(static_cast<uint32_t>(mask)));
     ibank_.bank_.arenas()[blk.arena_].free_ -= blk.size_;
     ibank_.bank_.free_size_ -= blk.size_;
-    auto alignment = static_cast<size_type>(ialign);
-    return ((blk.offset_ + alignment) & ~alignment);
+    return ((blk.offset_ + mask) & ~mask);
   }
 
   static void copy(block const& src, block& dst)

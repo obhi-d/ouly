@@ -170,9 +170,9 @@ auto ts_shared_linear_allocator::allocate_slow_path(std::size_t size) noexcept -
 
   if (page_size <= default_page_size_)
   {
-    if (available_pages_ != nullptr)
+    if (available_pages_ != nullptr && available_pages_->size_ >= size)
     {
-      // Try to reuse an available page if it is large enough
+      // Reuse an available page only when it is large enough for this request
       arena            = available_pages_;
       available_pages_ = arena->next_;
       arena->offset_.store(0, std::memory_order_relaxed); // Reset the offset
