@@ -158,6 +158,9 @@ public:
   using const_reverse_iterator   = std::conditional_t<bidir, reverse_iterator_type<value_type const>, void>;
   static constexpr bool has_tail = CacheTail;
 
+  static constexpr iterator null_it = {};
+  static constexpr const_iterator null_cit = {};
+
   intrusive_list() noexcept = default;
   intrusive_list(value_type& from, size_type count) noexcept
     requires(!CacheTail)
@@ -400,48 +403,47 @@ public:
     lhs.swap(rhs);
   }
 
-  void erase_after(iterator it) noexcept
+  auto erase_after(iterator it) noexcept -> iterator
   {
     auto& l = *it;
-    erase_after(l);
+    return erase_after(l);
   }
 
-  void erase_after(value_type& l) noexcept
+  auto erase_after(value_type& l) noexcept -> iterator
   {
-    auto next = traits::next(l);
-    if (next)
+    auto* victim = traits::next(l);
+    if (!victim)
     {
-      auto next_next = traits::next(*next);
-      traits::next(l, next_next);
-      if constexpr (CacheTail)
+      return end();
+    }
+
+    auto* next = traits::next(*victim);
+
+    traits::next(l, next);
+
+    if constexpr (is_dlist)
+    {
+      if (next)
       {
-        if (next_next)
-        {
-          if constexpr (is_dlist)
-          {
-            traits::prev(*next_next, &l);
-          }
-        }
-        else
-        {
-          data_.tail_ = &l;
-        }
-      }
-      else if constexpr (is_dlist)
-      {
-        if (next_next)
-        {
-          traits::prev(*next_next, &l);
-        }
+        traits::prev(*next, &l);
       }
 
-      traits::next(*next, nullptr);
-      if constexpr (is_dlist)
-      {
-        traits::prev(*next, nullptr);
-      }
-      data_.erased();
+      traits::prev(*victim, nullptr);
     }
+
+    if constexpr (CacheTail)
+    {
+      if (data_.tail_ == victim)
+      {
+        data_.tail_ = &l;
+      }
+    }
+
+    traits::next(*victim, nullptr);
+
+    data_.erased();
+
+    return iterator(next);
   }
 
   void insert_after(iterator it, value_type& obj) noexcept
@@ -568,19 +570,18 @@ public:
     }
   }
 
-  void erase(iterator it) noexcept
+  auto erase(iterator it) noexcept -> iterator
     requires(is_dlist)
   {
-    erase(*it);
+    return erase(*it);
   }
 
-  void erase(value_type& l) noexcept
+  auto erase(value_type& l) noexcept -> iterator
     requires(is_dlist)
   {
-    auto prev = traits::prev(l);
-    auto next = traits::next(l);
-    traits::next(l, nullptr);
-    traits::prev(l, nullptr);
+    auto* prev = traits::prev(l);
+    auto* next = traits::next(l);
+
     if (prev)
     {
       traits::next(*prev, next);
@@ -589,6 +590,7 @@ public:
     {
       data_.head_ = next;
     }
+
     if (next)
     {
       traits::prev(*next, prev);
@@ -600,7 +602,13 @@ public:
         data_.tail_ = prev;
       }
     }
+
+    traits::next(l, nullptr);
+    traits::prev(l, nullptr);
+
     data_.erased();
+
+    return iterator(next);
   }
 
   void pop_back() noexcept
@@ -642,6 +650,43 @@ public:
     }
     data_.head_ = next;
     data_.erased();
+  }
+
+  void remove(value_type const& obj) noexcept
+  {
+    remove_if(
+     [&obj](value_type const& item) noexcept
+     {
+       return item == obj;
+     });
+  }
+
+  template <typename Pred>
+  void remove_if(Pred pred) noexcept
+  {
+    auto prev = null_it;
+    auto it   = begin();
+
+    while (it != end())
+    {
+      if (pred(*it))
+      {
+        if (prev == null_it)
+        {
+          pop_front();
+          it = begin();
+        }
+        else
+        {
+          it = erase_after(prev);
+        }
+      }
+      else
+      {
+        prev = it;
+        ++it;
+      }
+    }
   }
 
 private:

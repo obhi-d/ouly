@@ -11,6 +11,16 @@ struct sobject
   ouly::slist_hook hook;
 
   sobject(std::string val = {}) : value(val) {}
+
+  bool operator==(const sobject& other) const
+  {
+    return value == other.value;
+  }
+
+  bool operator!=(const sobject& other) const
+  {
+    return value != other.value;
+  }
 };
 
 struct object
@@ -19,6 +29,16 @@ struct object
   ouly::list_hook hook;
 
   object(std::string val = {}) : value(val) {}
+
+  bool operator==(const object& other) const
+  {
+    return value == other.value;
+  }
+
+  bool operator!=(const object& other) const
+  {
+    return value != other.value;
+  }
 };
 
 TEMPLATE_TEST_CASE(
@@ -286,7 +306,6 @@ TEMPLATE_TEST_CASE(
     il.push_front(v);
 
   il.erase_after(arr[1]);
-
   REQUIRE(il.size() == 3);
 
   auto b = il.begin();
@@ -1568,4 +1587,107 @@ TEST_CASE("intrusive_list: Test swap functionality", "[intrusive_list][swap]")
   REQUIRE(&list2.front() == &obj3);
 }
 
+TEST_CASE("Intrusive list - Remove", "[intrusive_list][remove]")
+{
+  using TestType = ouly::intrusive_list<&sobject::hook, true, true>;
+  TestType il;
+  using value_type = TestType::value_type;
+  using traits     = ouly::detail::intrusive_list_type_traits<&value_type::hook>;
+  std::array arr   = {value_type("a"), value_type("b"), value_type("c"), value_type("d")};
+
+  // Add all nodes
+  for (auto& v : arr)
+  {
+    il.push_front(v);
+  }
+
+  il.remove(value_type("a"));
+
+  auto to_string = [&]() -> std::string {
+    std::string result;
+    for (auto const& b : il)
+    {
+      result += b.value;
+    }
+    return result;
+  };
+
+  REQUIRE(to_string() == "dcb");
+
+  il.remove(value_type("d"));
+
+  REQUIRE(to_string() == "cb");
+
+  il.clear();
+
+  REQUIRE(to_string() == "");
+
+  for (auto& v : arr)
+  {
+    il.push_back(v);
+  }
+
+  il.remove(value_type("c"));
+
+  REQUIRE(to_string() == "abd");
+
+}
+
+TEST_CASE("Intrusive list - Remove_If", "[intrusive_list][remove]")
+{
+  using TestType = ouly::intrusive_list<&sobject::hook, true, true>;
+  TestType il;
+  using value_type = TestType::value_type;
+  using traits     = ouly::detail::intrusive_list_type_traits<&value_type::hook>;
+  std::array arr   = {value_type("a"), value_type("b"), value_type("c"), value_type("d")};
+
+  // Add all nodes
+  for (auto& v : arr)
+  {
+    il.push_front(v);
+  }
+
+  il.remove_if(
+   [](value_type const& v) -> bool
+   {
+     return v == value_type("a");
+   });
+
+  auto to_string = [&]() -> std::string
+  {
+    std::string result;
+    for (auto const& b : il)
+    {
+      result += b.value;
+    }
+    return result;
+  };
+
+  REQUIRE(to_string() == "dcb");
+
+  il.remove_if(
+   [](value_type const& v) -> bool
+   {
+     return v == value_type("d");
+   });
+
+  REQUIRE(to_string() == "cb");
+
+  il.clear();
+
+  REQUIRE(to_string() == "");
+
+  for (auto& v : arr)
+  {
+    il.push_back(v);
+  }
+
+  il.remove_if(
+   [](value_type const& v) -> bool
+   {
+     return v == value_type("c") || v==value_type("a");
+   });
+
+  REQUIRE(to_string() == "bd");
+}
 // NOLINTEND
