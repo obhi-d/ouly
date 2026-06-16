@@ -1058,4 +1058,49 @@ TEST_CASE("yaml_object: Test read nested array of arrays with empty array in the
 
   REQUIRE(ts2 == ts);
 }
+
+TEST_CASE("yaml_object: Test read with comments")
+{
+  std::string yml = R"(
+# Leading comment describing the document
+a: 100
+# A comment between fields
+b: 200.0
+  # An indented comment is still a full-line comment
+c: "value"
+)";
+
+  TestStruct ts;
+  ouly::yml::from_string(ts, yml);
+
+  REQUIRE(ts.a == 100);
+  REQUIRE(ts.b == 200.0);
+  REQUIRE(ts.c == "value");
+}
+
+TEST_CASE("yaml_object: Test read with comments inside nested and arrays")
+{
+  std::string yml = R"(
+# Top level comment
+a: 100
+b: 200.0
+c: "value"
+# Comment before nested object
+d:
+  # Comment inside nested object
+  a: 300
+  b: 400.0
+  c: "value2"
+)";
+
+  TestStruct2 ts;
+  ouly::yml::from_string(ts, yml);
+
+  REQUIRE(ts.a == 100);
+  REQUIRE(ts.b == 200.0);
+  REQUIRE(ts.c == "value");
+  REQUIRE(ts.d.a == 300);
+  REQUIRE(ts.d.b == 400.0);
+  REQUIRE(ts.d.c == "value2");
+}
 // NOLINTEND

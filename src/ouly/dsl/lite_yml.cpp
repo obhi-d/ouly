@@ -64,32 +64,43 @@ void lite_stream::parse()
   }
 }
 
+auto lite_stream::next_line_start_token() -> lite_stream::token
+{
+  can_be_sequence_ = true;
+  auto indent      = count_indent();
+  if (peek(0) == '\n')
+  {
+    current_pos_++;
+    return token{.type_ = token_type::newline, .content_ = indent};
+  }
+
+  // Full-line comment: '#' (optionally after indentation) runs to end of line.
+  // Treat it like a blank line so it does not affect the document structure.
+  if (peek(0) == '#')
+  {
+    skip_to_line_end();
+    return token{.type_ = token_type::newline, .content_ = indent};
+  }
+
+  at_line_start_ = false;
+  if (peek(0) == '-')
+  {
+    current_pos_++;
+    auto after_dash_indent = count_indent();
+    return token{
+     .type_    = token_type::dash,
+     .content_ = {.start_ = indent.start_, .count_ = indent.count_ + 1 + after_dash_indent.count_}
+    };
+  }
+  return token{.type_ = token_type::indent, .content_ = indent};
+}
+
 auto lite_stream::next_token() -> lite_stream::token
 {
-
   // Start of line - check indentation
-
   if (at_line_start_)
   {
-    can_be_sequence_ = true;
-    auto indent      = count_indent();
-    if (peek(0) == '\n')
-    {
-      current_pos_++;
-      return token{.type_ = token_type::newline, .content_ = indent};
-    }
-
-    at_line_start_ = false;
-    if (peek(0) == '-')
-    {
-      current_pos_++;
-      auto after_dash_indent = count_indent();
-      return token{
-       .type_    = token_type::dash,
-       .content_ = {.start_ = indent.start_, .count_ = indent.count_ + 1 + after_dash_indent.count_}
-      };
-    }
-    return token{.type_ = token_type::indent, .content_ = indent};
+    return next_line_start_token();
   }
 
   skip_whitespace();
