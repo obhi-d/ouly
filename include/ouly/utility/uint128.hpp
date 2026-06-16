@@ -482,11 +482,8 @@ constexpr void swap(uint128_t& lhs, uint128_t& rhs) noexcept
 
 } // namespace ouly
 
-namespace std
-{
-
 template <>
-struct numeric_limits<ouly::uint128_t>
+struct std::numeric_limits<ouly::uint128_t>
 {
   static constexpr bool is_specialized = true;
 
@@ -567,7 +564,7 @@ struct numeric_limits<ouly::uint128_t>
 };
 
 template <>
-struct hash<ouly::uint128_t>
+struct std::hash<ouly::uint128_t>
 {
   auto operator()(ouly::uint128_t const& value) const noexcept -> size_t
   {
@@ -580,8 +577,6 @@ struct hash<ouly::uint128_t>
     return h1 ^ (h2 + prime + (h1 << h1_shift) + (h1 >> h2_shift));
   }
 };
-
-} // namespace std
 
 namespace ouly
 {
