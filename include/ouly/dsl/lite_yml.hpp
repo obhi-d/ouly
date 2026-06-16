@@ -131,6 +131,7 @@ private:
 
   // Token processing
   auto next_token() -> token;
+  auto next_line_start_token() -> token;
   void process_token(token tok);
   // Context management
   void handle_indent(uint16_t new_indent);
@@ -163,6 +164,21 @@ private:
   {
     while (current_pos_ < content_.length() && (ouly::detail::vector_access(content_, current_pos_) == ' ' ||
                                                 ouly::detail::vector_access(content_, current_pos_) == '\t'))
+    {
+      current_pos_++;
+    }
+  }
+
+  // Advance past the remainder of the current line, consuming the trailing
+  // newline (if any). Leaves at_line_start_ untouched so the caller can decide
+  // how the skipped line affects parsing state.
+  void skip_to_line_end()
+  {
+    while (current_pos_ < content_.length() && ouly::detail::vector_access(content_, current_pos_) != '\n')
+    {
+      current_pos_++;
+    }
+    if (current_pos_ < content_.length())
     {
       current_pos_++;
     }
