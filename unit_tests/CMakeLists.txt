@@ -206,6 +206,7 @@ add_unit_test(NAME yaml_large_data FILES "yaml_large_data_test.cpp" SANITIZE)
 #add_unit_test(NAME flow_graph_san FILES "flow_graph_tests.cpp" LINK_LIBS glm::glm TSAN NO_COVERAGE)
 #add_unit_test(NAME auto_parallel_for_san FILES "test_auto_parallel_for.cpp" LINK_LIBS glm::glm TSAN NO_COVERAGE)
 add_unit_test(NAME debug_auto_parallel_for FILES "debug_auto_parallel_for.cpp" LINK_LIBS glm::glm SANITIZE)
+add_unit_test(NAME uint128 FILES "uint128_tests.cpp" SANITIZE)
 
 add_executable(
     bench_arena_allocator
