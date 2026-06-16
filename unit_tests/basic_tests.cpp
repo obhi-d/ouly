@@ -344,6 +344,51 @@ TEST_CASE("Test zip_view", "[zip_view]")
   }
 }
 
+TEST_CASE("Test enumerate", "[enumerate]")
+{
+  std::vector<std::string> strings;
+  std::vector<int32_t>     integers;
+
+  for (int i = 0; i < 10; ++i)
+  {
+    strings.emplace_back(std::to_string(i) + "-item");
+    integers.emplace_back(i * 10);
+  }
+
+  // Default index type is uint32_t
+  uint32_t start = 0;
+  for (auto&& [idx, val, ints] : ouly::enumerate(strings, integers))
+  {
+    static_assert(std::is_same_v<std::decay_t<decltype(idx)>, uint32_t>);
+    REQUIRE(idx == start);
+    REQUIRE(val == std::to_string(start) + "-item");
+    REQUIRE(ints == static_cast<int32_t>(start) * 10);
+    start++;
+  }
+  REQUIRE(start == 10);
+
+  // Single collection and mutation through the yielded reference
+  start = 0;
+  for (auto&& [idx, ints] : ouly::enumerate(integers))
+  {
+    REQUIRE(idx == start);
+    ints += 1;
+    start++;
+  }
+  REQUIRE(integers[0] == 1);
+  REQUIRE(integers[9] == 91);
+
+  // Custom index type
+  uint64_t expected = 0;
+  for (auto&& [idx, ints] : ouly::enumerate<uint64_t>(integers))
+  {
+    static_assert(std::is_same_v<std::decay_t<decltype(idx)>, uint64_t>);
+    REQUIRE(idx == expected);
+    expected++;
+  }
+  REQUIRE(expected == 10);
+}
+
 // Free function for testing
 int free_function(int a, int b)
 {
