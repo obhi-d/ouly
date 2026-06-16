@@ -153,11 +153,13 @@ TEST_CASE("uint128_t - Arithmetic operators", "[uint128]")
     CHECK(a.high() == 0);
     CHECK(a.low() == 200);
 
-    // Test multiplication that overflows to high part
-    uint128_t c{0, UINT32_MAX};
-    uint128_t d{0, UINT32_MAX};
+    // Test multiplication that overflows into the high 64 bits.
+    // (2^40) * (2^40) = 2^80, so low == 0 and high == 2^16.
+    uint128_t c{0, UINT64_C(1) << 40};
+    uint128_t d{0, UINT64_C(1) << 40};
     c *= d;
-    CHECK(c.high() != 0);
+    CHECK(c.high() == (UINT64_C(1) << 16));
+    CHECK(c.low() == 0);
 
     // Test binary operator
     uint128_t e = uint128_t{0, 7} * uint128_t{0, 6};
