@@ -17,6 +17,8 @@
 #endif
 #endif
 
+#include <thread> // For std::this_thread::yield() fallback
+
 namespace ouly::detail
 {
 
@@ -26,14 +28,14 @@ namespace ouly::detail
 #endif
 inline void pause_exec() noexcept
 {
-#if defined(__i386__) || defined(__x86_64__) // 32- & 64-bit x86
+#if defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64) // 32- & 64-bit x86
 #ifdef _MSC_VER
   _mm_pause(); // MSVC / Intel C++
 #else
   __builtin_ia32_pause(); // GCC / Clang
 #endif
 
-#elif defined(__aarch64__) || defined(__arm__) // Arm & AArch64
+#elif defined(__aarch64__) || defined(__arm__) || defined(_M_ARM) || defined(_M_ARM64) // Arm & AArch64
 #if defined(_MSC_VER)
   __yield(); // MSVC intrinsic
 #else
