@@ -56,25 +56,19 @@ scheduler::~scheduler() noexcept
   }
 }
 
-void scheduler::notify_workers(uint32_t count) noexcept
+void scheduler::notify_workers([[maybe_unused]] uint32_t count) noexcept
 {
   // Bump the epoch first: a worker about to park rechecks the epoch (via the futex value
   // check inside atomic wait), so a bump that lands between its work recheck and the wait
   // call prevents it from sleeping through this notification.
   wake_epoch_.get().fetch_add(1, std::memory_order_seq_cst);
-  auto sleeper_count = sleepers_.get().load(std::memory_order_seq_cst);
-  if (sleeper_count == 0)
+  if (sleepers_.get().load(std::memory_order_seq_cst) == 0)
   {
     return;
   }
-  if (count > 1 && sleeper_count > 1)
-  {
-    wake_epoch_.get().notify_all();
-  }
-  else
-  {
-    wake_epoch_.get().notify_one();
-  }
+
+  // Wake *all* parked workers.
+  wake_epoch_.get().notify_all();
 }
 
 void scheduler::finish_task() noexcept
