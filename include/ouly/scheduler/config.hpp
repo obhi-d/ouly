@@ -94,26 +94,26 @@ struct scheduler_config
 struct scheduler_metrics
 {
   // Task execution metrics
-  alignas(detail::cache_line_size) std::atomic<uint64_t> tasks_executed_{0};
-  alignas(detail::cache_line_size) std::atomic<uint64_t> tasks_stolen_{0};
-  alignas(detail::cache_line_size) std::atomic<uint64_t> steal_attempts_{0};
-  alignas(detail::cache_line_size) std::atomic<uint64_t> failed_steals_{0};
+  detail::cache_aligned_atomic<uint64_t> tasks_executed_{0U};
+  detail::cache_aligned_atomic<uint64_t> tasks_stolen_{0U};
+  detail::cache_aligned_atomic<uint64_t> steal_attempts_{0U};
+  detail::cache_aligned_atomic<uint64_t> failed_steals_{0U};
 
   // Synchronization metrics
-  alignas(detail::cache_line_size) std::atomic<uint64_t> wake_events_{0};
-  alignas(detail::cache_line_size) std::atomic<uint64_t> spurious_wakeups_{0};
+  detail::cache_aligned_atomic<uint64_t> wake_events_{0U};
+  detail::cache_aligned_atomic<uint64_t> spurious_wakeups_{0U};
 
   // Performance indicators
-  alignas(detail::cache_line_size) std::atomic<uint64_t> total_work_time_ns_{0};
-  alignas(detail::cache_line_size) std::atomic<uint64_t> total_idle_time_ns_{0};
+  detail::cache_aligned_atomic<uint64_t> total_work_time_ns_{0U};
+  detail::cache_aligned_atomic<uint64_t> total_idle_time_ns_{0U};
 
   /**
    * @brief Calculate work stealing success rate
    */
   [[nodiscard]] auto steal_success_rate() const noexcept -> double
   {
-    auto attempts = steal_attempts_.load(std::memory_order_relaxed);
-    auto failures = failed_steals_.load(std::memory_order_relaxed);
+    auto attempts = steal_attempts_.get().load(std::memory_order_relaxed);
+    auto failures = failed_steals_.get().load(std::memory_order_relaxed);
     return attempts > 0 ? 1.0 - (static_cast<double>(failures) / static_cast<double>(attempts)) : 0.0;
   }
 
@@ -122,8 +122,8 @@ struct scheduler_metrics
    */
   [[nodiscard]] auto worker_utilization() const noexcept -> double
   {
-    auto work_time  = total_work_time_ns_.load(std::memory_order_relaxed);
-    auto idle_time  = total_idle_time_ns_.load(std::memory_order_relaxed);
+    auto work_time  = total_work_time_ns_.get().load(std::memory_order_relaxed);
+    auto idle_time  = total_idle_time_ns_.get().load(std::memory_order_relaxed);
     auto total_time = work_time + idle_time;
     return total_time > 0 ? (static_cast<double>(work_time) / static_cast<double>(total_time)) * 100.0 : 0.0;
   }
@@ -133,14 +133,14 @@ struct scheduler_metrics
    */
   void reset() noexcept
   {
-    tasks_executed_.store(0, std::memory_order_relaxed);
-    tasks_stolen_.store(0, std::memory_order_relaxed);
-    steal_attempts_.store(0, std::memory_order_relaxed);
-    failed_steals_.store(0, std::memory_order_relaxed);
-    wake_events_.store(0, std::memory_order_relaxed);
-    spurious_wakeups_.store(0, std::memory_order_relaxed);
-    total_work_time_ns_.store(0, std::memory_order_relaxed);
-    total_idle_time_ns_.store(0, std::memory_order_relaxed);
+    tasks_executed_.get().store(0, std::memory_order_relaxed);
+    tasks_stolen_.get().store(0, std::memory_order_relaxed);
+    steal_attempts_.get().store(0, std::memory_order_relaxed);
+    failed_steals_.get().store(0, std::memory_order_relaxed);
+    wake_events_.get().store(0, std::memory_order_relaxed);
+    spurious_wakeups_.get().store(0, std::memory_order_relaxed);
+    total_work_time_ns_.get().store(0, std::memory_order_relaxed);
+    total_idle_time_ns_.get().store(0, std::memory_order_relaxed);
   }
 };
 
