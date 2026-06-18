@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: MIT
 #pragma once
+
+#include "ouly/scheduler/config.hpp"
+
 #include "ouly/scheduler/worker_structs.hpp"
 #include "ouly/utility/delegate.hpp"
 #include "ouly/utility/user_config.hpp"
@@ -13,10 +16,6 @@ namespace ouly::v3
 {
 class task_context;
 class scheduler;
-
-constexpr uint32_t max_task_base_size = 64;
-
-using task_delegate = ouly::basic_delegate<max_task_base_size, void(task_context const&)>;
 
 /**
  * @brief A task context identifies where a task is running: the current worker_id and the

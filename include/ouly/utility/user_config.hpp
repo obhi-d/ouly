@@ -15,6 +15,10 @@
 #include <type_traits>
 #include <utility>
 
+#ifndef OULY_SCHEDULER_VERSION
+#define OULY_SCHEDULER_VERSION v2
+#endif
+
 namespace ouly::detail
 {
 

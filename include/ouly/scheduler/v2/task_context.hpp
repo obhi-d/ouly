@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 #pragma once
+
+#include "ouly/scheduler/config.hpp"
+
 #include "ouly/scheduler/worker_structs.hpp"
-#include "ouly/utility/delegate.hpp"
 #include "ouly/utility/user_config.hpp"
 
 namespace ouly::detail::v2
@@ -9,14 +11,10 @@ namespace ouly::detail::v2
 class worker;
 }
 
-namespace ouly::inline v2
+namespace ouly::v2
 {
 class task_context;
 class scheduler;
-
-constexpr uint32_t max_task_base_size = 64;
-
-using task_delegate = ouly::basic_delegate<max_task_base_size, void(task_context const&)>;
 
 /**
  * @brief A worker context is a unique identifier that represents where a task can run, it stores the current
@@ -99,4 +97,4 @@ private:
 
 static_assert(TaskContext<task_context>, "task_context must satisfy TaskContext concept");
 
-} // namespace ouly::inline v2
+} // namespace ouly::v2

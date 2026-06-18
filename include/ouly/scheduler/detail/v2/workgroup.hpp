@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ouly/scheduler/config.hpp"
+
 #include "ouly/scheduler/detail/cache_optimized_data.hpp"
 #include "ouly/scheduler/detail/mpmc_ring.hpp"
 #include "ouly/scheduler/detail/spmc_ring.hpp"
@@ -18,7 +20,7 @@
 #endif
 
 // Forward declarations
-namespace ouly::inline v2
+namespace ouly::v2
 {
 class scheduler;
 }

@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MIT
 
-#include "ouly/scheduler/v2/scheduler.hpp"
+#include "ouly/scheduler/config.hpp"
+
 #include "ouly/scheduler/detail/pause.hpp"
 #include "ouly/scheduler/detail/v2/worker.hpp"
 #include "ouly/scheduler/detail/v2/workgroup.hpp"
+#include "ouly/scheduler/v2/scheduler.hpp"
 #include "ouly/scheduler/v2/task_context.hpp"
 #include "ouly/scheduler/worker_structs.hpp"
 #include <atomic>
@@ -14,7 +16,7 @@
 #include <ranges>
 #include <thread>
 
-namespace ouly::inline v2
+namespace ouly::v2
 {
 
 // Bring type aliases into scope
@@ -638,7 +640,7 @@ auto scheduler::busy_work(worker_id thread) noexcept -> bool
   return false;
 }
 
-} // namespace ouly::inline v2
+} // namespace ouly::v2
 
 void ouly::v2::task_context::cooperative_wait(std::binary_semaphore& event) const
 {
