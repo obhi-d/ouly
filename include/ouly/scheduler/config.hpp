@@ -2,11 +2,14 @@
 
 #pragma once
 
+#include "ouly/utility/user_config.hpp"
+
 #include <atomic>
 #include <chrono>
 #include <cstdint>
 
 #include "ouly/scheduler/detail/cache_optimized_data.hpp"
+#include "ouly/utility/delegate.hpp"
 
 /** The configuration is currently unused */
 namespace ouly::cfg
@@ -111,7 +114,7 @@ struct scheduler_metrics
   {
     auto attempts = steal_attempts_.load(std::memory_order_relaxed);
     auto failures = failed_steals_.load(std::memory_order_relaxed);
-    return attempts > 0 ? 1.0 - (double(failures) / double(attempts)) : 0.0;
+    return attempts > 0 ? 1.0 - (static_cast<double>(failures) / static_cast<double>(attempts)) : 0.0;
   }
 
   /**
@@ -122,7 +125,7 @@ struct scheduler_metrics
     auto work_time  = total_work_time_ns_.load(std::memory_order_relaxed);
     auto idle_time  = total_idle_time_ns_.load(std::memory_order_relaxed);
     auto total_time = work_time + idle_time;
-    return total_time > 0 ? (double(work_time) / double(total_time)) * 100.0 : 0.0;
+    return total_time > 0 ? (static_cast<double>(work_time) / static_cast<double>(total_time)) * 100.0 : 0.0;
   }
 
   /**
@@ -142,3 +145,41 @@ struct scheduler_metrics
 };
 
 } // namespace ouly::cfg
+
+namespace ouly::v1
+{
+class scheduler;
+class task_context;
+class workgroup;
+
+constexpr uint32_t max_task_base_size = 64;
+using task_delegate                   = ouly::basic_delegate<max_task_base_size, void(task_context const&)>;
+} // namespace ouly::v1
+
+namespace ouly::v2
+{
+class scheduler;
+class task_context;
+class workgroup;
+
+constexpr uint32_t max_task_base_size = 64;
+using task_delegate                   = ouly::basic_delegate<max_task_base_size, void(task_context const&)>;
+} // namespace ouly::v2
+
+namespace ouly::v3
+{
+class scheduler;
+class task_context;
+class workgroup;
+
+constexpr uint32_t max_task_base_size = 64;
+using task_delegate                   = ouly::basic_delegate<max_task_base_size, void(task_context const&)>;
+} // namespace ouly::v3
+
+namespace ouly
+{
+using scheduler     = OULY_SCHEDULER_VERSION::scheduler;
+using task_context  = OULY_SCHEDULER_VERSION::task_context;
+using workgroup     = OULY_SCHEDULER_VERSION::workgroup;
+using task_delegate = OULY_SCHEDULER_VERSION::task_delegate;
+} // namespace ouly
