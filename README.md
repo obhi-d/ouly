@@ -18,14 +18,14 @@ OULY is a comprehensive C++20 library designed for high-performance applications
 
 ## Library at a Glance
 
-| Module | Headers | What it provides |
-|---|---|---|
-| Task Scheduling | `ouly/scheduler/` | Work-stealing task schedulers (three implementations), `parallel_for`, adaptive `auto_parallel_for`, coroutine tasks, static and dynamic flow graphs |
-| Memory Allocators | `ouly/allocators/` | Linear/arena/pool allocators, thread-safe allocators, coalescing GPU-style suballocators with defragmentation, virtual memory and memory-mapped files |
-| Containers | `ouly/containers/` | Lock-free MPMC queue, SoA vector, small vector, sparse vector/table, intrusive list, blackboard |
-| Entity Component System | `ouly/ecs/` | Registries with revision tracking, configurable component storage, collections, sparse-to-dense maps |
-| Serialization and Reflection | `ouly/serializers/`, `ouly/reflection/` | Compile-time reflection driving binary, YAML, and user-defined structured formats |
-| Utilities and DSL | `ouly/utility/`, `ouly/dsl/` | Delegates, program argument parsing, views, intrusive pointers, hashing, a lightweight YAML parser and a macro expression evaluator |
+| Module                       | Headers                                 | What it provides                                                                                                                                      |
+| ---------------------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Task Scheduling              | `ouly/scheduler/`                       | Work-stealing task schedulers (three implementations), `parallel_for`, adaptive `auto_parallel_for`, coroutine tasks, static and dynamic flow graphs  |
+| Memory Allocators            | `ouly/allocators/`                      | Linear/arena/pool allocators, thread-safe allocators, coalescing GPU-style suballocators with defragmentation, virtual memory and memory-mapped files |
+| Containers                   | `ouly/containers/`                      | Lock-free MPMC queue, SoA vector, small vector, sparse vector/table, intrusive list, blackboard                                                       |
+| Entity Component System      | `ouly/ecs/`                             | Registries with revision tracking, configurable component storage, collections, sparse-to-dense maps                                                  |
+| Serialization and Reflection | `ouly/serializers/`, `ouly/reflection/` | Compile-time reflection driving binary, YAML, and user-defined structured formats                                                                     |
+| Utilities and DSL            | `ouly/utility/`, `ouly/dsl/`            | Delegates, program argument parsing, views, intrusive pointers, hashing, a lightweight YAML parser and a macro expression evaluator                   |
 
 ## Core Principles
 
@@ -747,7 +747,7 @@ OULY ships debugging aids in the `debug_helpers/` directory:
 
 Internal assertions use the `OULY_ASSERT` macro, which defaults to `assert` from `<cassert>`.
 It can be overridden by defining `OULY_ASSERT` before including OULY headers, or by providing
-a `user_defines.hpp` header that is picked up automatically by `ouly/utility/user_config.hpp`.
+a `ouly_user_defines.hpp` header that is picked up automatically by `ouly/utility/user_config.hpp`.
 
 ### Contributing
 

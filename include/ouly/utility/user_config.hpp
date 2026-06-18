@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 
-#if __has_include("user_defines.hpp")
-#include "user_defines.hpp"
+#if __has_include("ouly_user_defines.hpp")
+#include "ouly_user_defines.hpp"
 #endif
 
 #ifndef OULY_ASSERT
