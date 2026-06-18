@@ -13,7 +13,7 @@ class workgroup; // Forward declaration
 class worker
 {
 public:
-  [[nodiscard]] auto get_context() const noexcept -> task_context const&
+  [[nodiscard]] auto get_context() const noexcept -> ouly::v2::task_context const&
   {
     return current_context_;
   }
@@ -42,7 +42,7 @@ public:
 private:
   friend class ouly::v2::scheduler;
 
-  task_context current_context_;
+  ouly::v2::task_context current_context_;
   // Per-worker adaptive backoff counter for busy-wait
   uint32_t busy_backoff_ = 0;
 };
