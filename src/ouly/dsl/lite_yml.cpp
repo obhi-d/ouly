@@ -68,9 +68,12 @@ auto lite_stream::next_line_start_token() -> lite_stream::token
 {
   can_be_sequence_ = true;
   auto indent      = count_indent();
-  if (peek(0) == '\n')
+  if (peek(0) == '\r' || peek(0) == '\n')
   {
-    current_pos_++;
+    if (peek(0) == '\r')
+      current_pos_++;
+    if (peek(0) == '\n')
+      current_pos_++;
     return token{.type_ = token_type::newline, .content_ = indent};
   }
 
@@ -214,7 +217,7 @@ auto lite_stream::next_token() -> lite_stream::token
       return token{.type_ = token_type::key, .content_ = slice};
     }
     if (((c == ',' || (std::isspace(c) != 0 || c == ']')) && is_scope_of_type(container_type::compact_array)) ||
-        c == '\n' || c == '[')
+        c == '\n' || c == '\r' || c == '[')
     {
       break;
     }
