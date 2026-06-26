@@ -163,7 +163,8 @@ private:
   void skip_whitespace()
   {
     while (current_pos_ < content_.length() && (ouly::detail::vector_access(content_, current_pos_) == ' ' ||
-                                                ouly::detail::vector_access(content_, current_pos_) == '\t'))
+                                                ouly::detail::vector_access(content_, current_pos_) == '\t' ||
+                                                ouly::detail::vector_access(content_, current_pos_) == '\r'))
     {
       current_pos_++;
     }
