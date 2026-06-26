@@ -42,6 +42,11 @@ auto task_context::this_context::get() noexcept -> task_context const&
   return *g_worker->current_context_;
 }
 
+auto task_context::this_context::get_worker_id() noexcept -> worker_id
+{
+  return g_worker_id;
+}
+
 scheduler::~scheduler() noexcept
 {
   if (!stop_.load())
