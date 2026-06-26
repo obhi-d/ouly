@@ -71,9 +71,13 @@ auto lite_stream::next_line_start_token() -> lite_stream::token
   if (peek(0) == '\r' || peek(0) == '\n')
   {
     if (peek(0) == '\r')
+    {
       current_pos_++;
+    }
     if (peek(0) == '\n')
+    {
       current_pos_++;
+    }
     return token{.type_ = token_type::newline, .content_ = indent};
   }
 
