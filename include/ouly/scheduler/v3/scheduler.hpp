@@ -257,7 +257,7 @@ private:
 
   [[nodiscard]] auto has_queued_work(detail::v3::worker const& wkr) const noexcept -> bool;
 
-  static constexpr uint32_t default_idle_spin_limit = 64;
+  static constexpr uint32_t default_idle_spin_limit = OULY_V3_SCHEDULER_SPIN_COUNT;
 
   // Eventcount for parking idle workers (futex via C++20 atomic wait).
   ouly::detail::cache_aligned_atomic<uint32_t> wake_epoch_{uint32_t{0}};

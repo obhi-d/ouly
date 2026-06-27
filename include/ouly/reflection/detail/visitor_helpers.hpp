@@ -97,7 +97,8 @@ void visit_explicitly_reflected(Class& obj, Visitor& visitor)
   }
 
   for_each_field(
-   [&]<typename Decl, std::size_t I>(Class& lobj, Decl const& decl, std::integral_constant<std::size_t, I> /*unused*/)
+   [&]<typename Decl, std::size_t I>(Class& lobj, Decl const& decl,
+                                     std::integral_constant<std::size_t, I> /*unused*/) -> auto
    {
      process_field(lobj, object_visitor, decl);
    },
@@ -187,7 +188,7 @@ void visit_tuple(Class& obj, Visitor& visitor)
   {
     throw visitor_error(visitor_error::invalid_tuple);
   }
-  [&]<std::size_t... I>(std::index_sequence<I...>)
+  [&]<std::size_t... I>(std::index_sequence<I...>) -> auto
   {
     (visit_at(std::get<I>(obj), I, array_visitor), ...);
   }(std::make_index_sequence<std::tuple_size_v<std::decay_t<Class>>>{});
@@ -209,7 +210,7 @@ void visit_container(Class& obj, Visitor& visitor)
 
   size_t index = 0;
   array_visitor.for_each_entry(obj,
-                               [&](auto& field_visitor)
+                               [&](auto& field_visitor) -> auto
                                {
                                  std::pair<key_type, mapped_type> value;
 
@@ -232,7 +233,7 @@ void visit_container(Class const& obj, Visitor& visitor)
   }
 
   array_visitor.for_each_entry(obj,
-                               [&](auto const& value, auto& field_visitor)
+                               [&](auto const& value, auto& field_visitor) -> auto
                                {
                                  visit(value, field_visitor);
                                });
@@ -253,7 +254,7 @@ void visit_container(Class& obj, Visitor& visitor)
 
   size_t index = 0;
   array_visitor.for_each_entry(obj,
-                               [&](auto& field_visitor)
+                               [&](auto& field_visitor) -> auto
                                {
                                  value_type stream_val;
 
@@ -276,7 +277,7 @@ void visit_container(Class const& obj, Visitor& visitor)
   }
 
   array_visitor.for_each_entry(obj,
-                               [&](value_type const& stream_val, auto& field_visitor)
+                               [&](value_type const& stream_val, auto& field_visitor) -> auto
                                {
                                  visit(stream_val, field_visitor);
                                });
@@ -344,7 +345,7 @@ void visit_variant(Class& obj, Visitor& visitor)
       return true;
     };
 
-    [&]<std::size_t... I>(std::index_sequence<I...>)
+    [&]<std::size_t... I>(std::index_sequence<I...>) -> auto
     {
       (void)(((I == variant_index ? emplace_item(std::integral_constant<std::size_t, I>()) : false) || ...), false);
     }(std::make_index_sequence<variant_size>{});
@@ -394,7 +395,7 @@ void visit_variant(Class const& obj, Visitor& visitor)
     }
 
     std::visit(
-     [&](auto const& value)
+     [&](auto const& value) -> auto
      {
        visit(value, field_visitor);
      },
@@ -553,7 +554,7 @@ void visit_aggregate(Class& obj, Visitor& visitor)
 
   auto const& field_names = get_cached_field_names<tclass_type, typename Visitor::transform_type>();
 
-  [&]<std::size_t... I>(std::index_sequence<I...>)
+  [&]<std::size_t... I>(std::index_sequence<I...>) -> auto
   {
     ((process_field(obj, get_field_ref<I>(obj), object_visitor, std::get<I>(field_names))), ...);
   }(std::make_index_sequence<std::tuple_size_v<std::decay_t<decltype(field_names)>>>());

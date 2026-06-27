@@ -19,6 +19,10 @@
 #define OULY_SCHEDULER_VERSION v2
 #endif
 
+#ifndef OULY_V3_SCHEDULER_SPIN_COUNT
+#define OULY_V3_SCHEDULER_SPIN_COUNT 64
+#endif
+
 namespace ouly::detail
 {
 
