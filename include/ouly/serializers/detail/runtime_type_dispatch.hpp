@@ -15,6 +15,8 @@
 
 #include "ouly/utility/runtime_type.hpp"
 
+#include <string_view>
+
 namespace ouly::detail
 {
 class parser_state;
@@ -36,6 +38,18 @@ struct runtime_type_reader_base
 {
   virtual auto parse_value(type_id id, ouly::any& storage, parser_state* parser) -> in_context_base* = 0;
 
+  /// True when the registry resolves the serialized "type" scalar from a string name.
+  [[nodiscard]] virtual auto reads_type_by_name() const -> bool
+  {
+    return false;
+  }
+
+  /// Resolves a string name to a type_id (only called when reads_type_by_name() is true).
+  virtual auto type_id_from_name(std::string_view /*name*/) -> type_id
+  {
+    return {};
+  }
+
   runtime_type_reader_base()                                                   = default;
   runtime_type_reader_base(const runtime_type_reader_base&)                    = default;
   runtime_type_reader_base(runtime_type_reader_base&&)                         = default;
@@ -55,6 +69,19 @@ struct runtime_type_writer_base
 {
   virtual void write_value(type_id id, ouly::any const& storage,
                            structured_output_serializer<writer_state, Config>& visitor) = 0;
+
+  /// True when the registry emits the "type" scalar as a string name.
+  [[nodiscard]] virtual auto writes_type_by_name() const -> bool
+  {
+    return false;
+  }
+
+  /// Maps a type_id to its string name (only called when writes_type_by_name() is true).
+  /// The returned view must outlive the serialization call.
+  virtual auto type_name_from_id(type_id /*id*/) -> std::string_view
+  {
+    return {};
+  }
 
   runtime_type_writer_base()                                                   = default;
   runtime_type_writer_base(const runtime_type_writer_base&)                    = default;

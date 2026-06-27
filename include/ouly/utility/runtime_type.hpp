@@ -25,8 +25,7 @@ namespace ouly
  */
 struct type_id
 {
-  // NOLINTNEXTLINE(readability-identifier-naming)
-  int id = 0;
+  int id_ = 0;
 };
 
 /**
@@ -40,10 +39,8 @@ struct basic_runtime_type
   /// Tag used by ouly::detail::RuntimeTypeLike to recognize this type.
   using is_runtime_type = void;
 
-  // NOLINTNEXTLINE(readability-identifier-naming)
-  type_id id{};
-  // NOLINTNEXTLINE(readability-identifier-naming)
-  Any value{};
+  type_id id_{};
+  Any     value_{};
 };
 
 using runtime_type = basic_runtime_type<>;

@@ -224,14 +224,29 @@ public:
       {
         structured_output_serializer field_visitor{ouly::detail::field_visitor_tag{}, object_visitor,
                                                    cache_key<transform_type, "type">()};
-        ouly::visit(obj.id.id, field_visitor);
+        // Mirror the reader. When the registry resolves names, emit the type as a
+        // string name; otherwise emit through convert<type_id> when one is supplied,
+        // failing that write the raw integer id.
+        if (runtime_writer_ != nullptr && runtime_writer_->writes_type_by_name())
+        {
+          std::string_view name = runtime_writer_->type_name_from_id(obj.id_);
+          ouly::visit(name, field_visitor);
+        }
+        else if constexpr (ouly::detail::Convertible<ouly::type_id>)
+        {
+          ouly::visit(obj.id_, field_visitor);
+        }
+        else
+        {
+          ouly::visit(obj.id_.id_, field_visitor);
+        }
       }
       {
         structured_output_serializer field_visitor{ouly::detail::field_visitor_tag{}, object_visitor,
                                                    cache_key<transform_type, "value">()};
         if (runtime_writer_ != nullptr)
         {
-          runtime_writer_->write_value(obj.id, obj.value, field_visitor);
+          runtime_writer_->write_value(obj.id_, obj.value_, field_visitor);
         }
       }
     }

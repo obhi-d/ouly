@@ -9,6 +9,8 @@
 #include "ouly/utility/convert.hpp"
 #include "ouly/utility/runtime_type.hpp"
 
+#include <functional>
+#include <string_view>
 #include <unordered_map>
 
 namespace ouly::yml
@@ -57,9 +59,47 @@ class runtime_type_registry : public ouly::detail::runtime_type_reader_base,
     write_fn write_ = nullptr;
   };
 
-  std::unordered_map<int, entry> map_;
+  std::unordered_map<int, entry>                 map_;
+  std::function<ouly::type_id(std::string_view)> from_name_;
+  std::function<std::string_view(ouly::type_id)> to_name_;
 
 public:
+  /**
+   * @brief Installs name<->type_id resolvers used to (de)serialize the "type" scalar
+   *        as a string name instead of an integer.
+   *
+   * When set, the serializers route the "type" field through these functors. When left
+   * unset, the default path is used (a convert<type_id> specialization if present,
+   * otherwise a plain integer). The view returned by @p to_name must outlive the
+   * serialization call (e.g. a string literal or a string owned by the caller).
+   */
+  void set_name_resolver(std::function<ouly::type_id(std::string_view)> from_name,
+                         std::function<std::string_view(ouly::type_id)> to_name)
+  {
+    from_name_ = std::move(from_name);
+    to_name_   = std::move(to_name);
+  }
+
+  [[nodiscard]] auto reads_type_by_name() const -> bool override
+  {
+    return static_cast<bool>(from_name_);
+  }
+
+  auto type_id_from_name(std::string_view name) -> ouly::type_id override
+  {
+    return from_name_(name);
+  }
+
+  [[nodiscard]] auto writes_type_by_name() const -> bool override
+  {
+    return static_cast<bool>(to_name_);
+  }
+
+  auto type_name_from_id(ouly::type_id id) -> std::string_view override
+  {
+    return to_name_(id);
+  }
+
   /**
    * @brief Associates a type_id with a concrete type T.
    */
@@ -80,13 +120,13 @@ public:
         ouly::visit(*value, visitor);
       }
     };
-    map_[id.id] = e;
+    map_[id.id_] = e;
   }
 
   auto parse_value(ouly::type_id id, ouly::any& storage, ouly::detail::parser_state* parser)
    -> ouly::detail::in_context_base* override
   {
-    auto found = map_.find(id.id);
+    auto found = map_.find(id.id_);
     if (found == map_.end())
     {
       throw ouly::visitor_error(ouly::visitor_error::unknown_runtime_type);
@@ -96,7 +136,7 @@ public:
 
   void write_value(ouly::type_id id, ouly::any const& storage, writer_visitor& visitor) override
   {
-    auto found = map_.find(id.id);
+    auto found = map_.find(id.id_);
     if (found == map_.end())
     {
       throw ouly::visitor_error(ouly::visitor_error::unknown_runtime_type);
