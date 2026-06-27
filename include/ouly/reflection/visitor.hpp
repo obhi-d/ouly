@@ -97,7 +97,8 @@ struct visitor_error : std::exception
     invalid_value,
     invalid_key,
     type_is_not_an_object,
-    type_is_not_an_array
+    type_is_not_an_array,
+    unknown_runtime_type
   };
 
   explicit visitor_error(code errc) noexcept : code_(errc) {}
@@ -126,6 +127,9 @@ struct visitor_error : std::exception
       return "Type is not an object";
     case type_is_not_an_array:
       return "Type is not an array";
+    case unknown_runtime_type:
+      return "Unknown runtime type id";
+    case unknown:
     default:
       return "Unknown visitor error";
     }

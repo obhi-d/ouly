@@ -5,6 +5,7 @@
 #include "ouly/dsl/lite_yml.hpp"
 #include "ouly/reflection/visitor.hpp"
 #include "ouly/serializers/config.hpp"
+#include "ouly/serializers/detail/runtime_type_dispatch.hpp"
 #include "ouly/utility/detail/concepts.hpp"
 #include "ouly/utility/from_chars.hpp"
 #include <charconv>
@@ -97,6 +98,7 @@ class parser_state final : public ouly::yml::context
   ouly::yml::lite_stream         stream_;            ///< The YAML stream being parsed
   ouly::linear_arena_allocator<> allocator_;         ///< Allocator for context objects
   in_context_base*               context_ = nullptr; ///< Current parsing context
+  runtime_type_reader_base*      runtime_ = nullptr; ///< Optional registry for runtime_type values
 
 public:
   auto operator=(const parser_state&) -> parser_state& = delete;
@@ -129,6 +131,24 @@ public:
   void set_context(in_context_base* ctx) noexcept
   {
     context_ = ctx;
+  }
+
+  /**
+   * @brief Sets the optional registry used to resolve runtime_type values
+   *
+   * @param runtime The registry, or nullptr to disable runtime_type support
+   */
+  void set_runtime(runtime_type_reader_base* runtime) noexcept
+  {
+    runtime_ = runtime;
+  }
+
+  /**
+   * @brief Returns the registry used to resolve runtime_type values, if any
+   */
+  [[nodiscard]] auto runtime() const noexcept -> runtime_type_reader_base*
+  {
+    return runtime_;
   }
 
   /**
@@ -322,6 +342,10 @@ public:
     {
       return read_explicitly_reflected<Base>(obj, parser, key);
     }
+    else if constexpr (RuntimeTypeLike<tclass_type>)
+    {
+      return read_runtime_type(obj, parser, key);
+    }
     else if constexpr (Aggregate<tclass_type>)
     {
       return read_aggregate<Base>(obj, parser, key);
@@ -413,7 +437,7 @@ public:
       using value_type   = convertible_to_type<class_type>;
       proxy_             = parser->template create<in_context_impl<value_type, Config>>();
       proxy_->is_proxy_  = true;
-      proxy_->post_init_ = [](in_context_base* mapping, parser_state* /*parser_ptr*/)
+      proxy_->post_init_ = [](in_context_base* mapping, parser_state* /*parser_ptr*/) -> void
       {
         auto object = static_cast<in_context_impl<value_type, Config>*>(mapping);
         auto parent = static_cast<in_context_impl<Class, Config>*>(object->parent_);
@@ -612,7 +636,7 @@ public:
   static auto read_variant_type([[maybe_unused]] TClassType& obj, parser_state* parser)
   {
     auto mapping        = parser->template create<in_context_impl<std::string_view, Config>>();
-    mapping->post_init_ = [](in_context_base* mapping_base, parser_state* /* parser_ptr */)
+    mapping->post_init_ = [](in_context_base* mapping_base, parser_state* /* parser_ptr */) -> void
     {
       auto object              = static_cast<in_context_impl<std::string_view, Config>*>(mapping_base);
       object->parent_->xvalue_ = static_cast<uint32_t>(ouly::index_transform<class_type>::to_index(object->get()));
@@ -626,7 +650,7 @@ public:
     using type = std::variant_alternative_t<I, TClassType>;
 
     auto mapping        = parser->template create<in_context_impl<type, Config>>();
-    mapping->post_init_ = [](in_context_base* mapping_base, parser_state* /*parser_ptr*/)
+    mapping->post_init_ = [](in_context_base* mapping_base, parser_state* /*parser_ptr*/) -> void
     {
       auto object = static_cast<in_context_impl<type, Config>*>(mapping_base);
       auto parent = static_cast<in_context_impl<Class, Config>*>(object->parent_);
@@ -639,7 +663,7 @@ public:
   static auto read_variant_value(TClassType& obj, parser_state* parser, uint32_t i)
   {
     in_context_base* ret = nullptr;
-    [&]<std::size_t... I>(std::index_sequence<I...>)
+    [&]<std::size_t... I>(std::index_sequence<I...>) -> void
     {
       ((i == I ? (void)(ret = read_variant_at<TClassType, I>(obj, parser)) : void()), ...);
     }(std::make_index_sequence<std::variant_size_v<TClassType>>());
@@ -649,6 +673,69 @@ public:
       throw visitor_error(visitor_error::invalid_variant_type);
     }
     return ret;
+  }
+
+  template <typename TClassType>
+  static auto read_runtime_type(TClassType& obj, parser_state* parser, std::string_view key) -> in_context_base*
+  {
+    if (key == cache_key<transform_type, "type">())
+    {
+      return read_runtime_type_id(obj, parser);
+    }
+    if (key == cache_key<transform_type, "value">())
+    {
+      auto* runtime = parser->runtime();
+      if (runtime == nullptr)
+      {
+        throw visitor_error(visitor_error::unknown_runtime_type);
+      }
+      return runtime->parse_value(obj.id_, obj.value_, parser);
+    }
+
+    throw visitor_error(visitor_error::invalid_key);
+  }
+
+  template <typename TClassType>
+  static auto read_runtime_type_id([[maybe_unused]] TClassType& obj, parser_state* parser) -> in_context_base*
+  {
+    // When the registry supplies a string->type_id resolver, read the "type" field as a
+    // string name and resolve it through the registry.
+    if (auto* runtime = parser->runtime(); runtime != nullptr && runtime->reads_type_by_name())
+    {
+      auto mapping        = parser->template create<in_context_impl<std::string_view, Config>>();
+      mapping->post_init_ = [](in_context_base* mapping_base, parser_state* parser_ptr) -> void
+      {
+        auto object       = static_cast<in_context_impl<std::string_view, Config>*>(mapping_base);
+        auto parent       = static_cast<in_context_impl<Class, Config>*>(object->parent_);
+        parent->get().id_ = parser_ptr->runtime()->type_id_from_name(object->get());
+      };
+      return mapping;
+    }
+
+    // Otherwise, when a convert<type_id> specialization is available, parse the "type"
+    // field through it. Failing that, the id is read as a plain integer.
+    if constexpr (ouly::detail::Convertible<ouly::type_id>)
+    {
+      auto mapping        = parser->template create<in_context_impl<ouly::type_id, Config>>();
+      mapping->post_init_ = [](in_context_base* mapping_base, parser_state* /* parser_ptr */) -> void
+      {
+        auto object       = static_cast<in_context_impl<ouly::type_id, Config>*>(mapping_base);
+        auto parent       = static_cast<in_context_impl<Class, Config>*>(object->parent_);
+        parent->get().id_ = object->get();
+      };
+      return mapping;
+    }
+    else
+    {
+      auto mapping        = parser->template create<in_context_impl<int, Config>>();
+      mapping->post_init_ = [](in_context_base* mapping_base, parser_state* /* parser_ptr */) -> void
+      {
+        auto object           = static_cast<in_context_impl<int, Config>*>(mapping_base);
+        auto parent           = static_cast<in_context_impl<Class, Config>*>(object->parent_);
+        parent->get().id_.id_ = object->get();
+      };
+      return mapping;
+    }
   }
 
   auto read_tuple(parser_state* parser)
@@ -667,7 +754,7 @@ public:
   auto read_tuple_value(parser_state* parser, uint32_t i) -> in_context_base*
   {
     in_context_base* ret = nullptr;
-    [&]<std::size_t... I>(std::index_sequence<I...>)
+    [&]<std::size_t... I>(std::index_sequence<I...>) -> void
     {
       ((i == I ? (void)(ret = read_tuple_element<I>(parser)) : void()), ...);
     }(std::make_index_sequence<N>());
@@ -679,7 +766,7 @@ public:
   {
     using type      = array_value_type<class_type>;
     auto ret        = parser->template create<in_context_impl<type, Config>>();
-    ret->post_init_ = [](in_context_base* mapping, parser_state* /*parser_ptr*/)
+    ret->post_init_ = [](in_context_base* mapping, parser_state* /*parser_ptr*/) -> void
     {
       auto object = static_cast<in_context_impl<type, Config>*>(mapping);
       auto parent = static_cast<in_context_impl<Class, Config>*>(object->parent_);
@@ -697,7 +784,7 @@ public:
   {
     using type      = array_value_type<class_type>;
     auto ret        = parser->template create<in_context_impl<type, Config>>();
-    ret->post_init_ = [](in_context_base* mapping, parser_state* /*parser_ptr*/)
+    ret->post_init_ = [](in_context_base* mapping, parser_state* /*parser_ptr*/) -> void
     {
       auto object = static_cast<in_context_impl<type, Config>*>(mapping);
       auto parent = static_cast<in_context_impl<Class, Config>*>(object->parent_);
@@ -715,7 +802,7 @@ public:
   {
     using type      = typename class_type::value_type;
     auto ret        = parser->template create<in_context_impl<type, Config>>();
-    ret->post_init_ = [](in_context_base* mapping, parser_state* /*parser_ptr*/)
+    ret->post_init_ = [](in_context_base* mapping, parser_state* /*parser_ptr*/) -> void
     {
       auto object = static_cast<in_context_impl<type, Config>*>(mapping);
       auto parent = static_cast<in_context_impl<Class, Config>*>(object->parent_);
@@ -733,7 +820,7 @@ public:
   {
     using type      = std::pair<typename class_type::key_type, typename class_type::mapped_type>;
     auto ret        = parser->template create<in_context_impl<type, Config>>();
-    ret->post_init_ = [](in_context_base* mapping, parser_state* /*parser_ptr*/)
+    ret->post_init_ = [](in_context_base* mapping, parser_state* /*parser_ptr*/) -> void
     {
       auto object = static_cast<in_context_impl<type, Config>*>(mapping);
       auto parent = static_cast<in_context_impl<Class, Config>*>(object->parent_);
@@ -752,14 +839,14 @@ public:
     using tclass_type    = std::decay_t<TClassType>;
     in_context_base* ret = nullptr;
     for_each_field(
-     [&]<typename Decl>(tclass_type& /*lobj*/, Decl const& decl, auto)
+     [&]<typename Decl>(tclass_type& /*lobj*/, Decl const& decl, auto) -> void
      {
        if (decl.template cache_key<transform_type>() == key)
        {
          using mem_value_type = typename Decl::MemTy;
 
          ret             = parser->template create<in_context_impl<mem_value_type, Config>>();
-         ret->post_init_ = [](in_context_base* mapping, parser_state* /*parser_ptr*/)
+         ret->post_init_ = [](in_context_base* mapping, parser_state* /*parser_ptr*/) -> void
          {
            auto object = static_cast<in_context_impl<mem_value_type, Config>*>(mapping);
            auto parent = static_cast<Base*>(object->parent_);
@@ -805,11 +892,13 @@ public:
   };
 
   template <typename Base, typename TClassType, std::size_t I>
-  static inline void get_aggregate_field(in_context_base*& ret, parser_state* parser, std::string_view field_key,
-                                         auto const& field_names)
+  static void get_aggregate_field(in_context_base*& ret, parser_state* parser, std::string_view field_key,
+                                  auto const& field_names)
   {
     if (ret)
+    {
       return;
+    }
     if (std::get<I>(field_names) == field_key)
     {
       using type      = field_type<I, TClassType>;
@@ -826,7 +915,7 @@ public:
     auto const&      field_names = get_cached_field_names<tclass_type, transform_type>();
     in_context_base* ret         = nullptr;
 
-    [&]<std::size_t... I>(std::index_sequence<I...>, std::string_view key)
+    [&]<std::size_t... I>(std::index_sequence<I...>, std::string_view key) -> void
     {
       (get_aggregate_field<Base, tclass_type, I>(ret, parser, key, field_names), ...);
     }(std::make_index_sequence<std::tuple_size_v<std::decay_t<decltype(field_names)>>>(), field_key);

@@ -119,7 +119,7 @@ public:
     try
     {
       get().for_each_entry(
-       [&](Stream& value)
+       [&](Stream& value) -> void
        {
          structured_input_serializer visitor{value};
          fn(visitor);

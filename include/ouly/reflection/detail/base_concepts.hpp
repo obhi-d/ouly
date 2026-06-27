@@ -209,6 +209,11 @@ concept TupleLike = is_specialization_of<std::tuple, Class>::value || is_special
 template <typename Class>
 concept VariantLike = is_specialization_of<std::variant, Class>::value;
 
+// Runtime type (ouly::basic_runtime_type): a type_id plus a type-erased value whose
+// concrete type is resolved at (de)serialization time via a registry/context.
+template <typename Class>
+concept RuntimeTypeLike = requires { typename std::decay_t<Class>::is_runtime_type; };
+
 template <typename T>
 concept DeclBase = requires {
   typename T::ClassTy;

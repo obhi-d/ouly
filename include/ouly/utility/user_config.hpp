@@ -19,6 +19,11 @@
 #define OULY_SCHEDULER_VERSION v2
 #endif
 
+#ifndef OULY_V3_SCHEDULER_SPIN_COUNT
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+#define OULY_V3_SCHEDULER_SPIN_COUNT 64
+#endif
+
 namespace ouly::detail
 {
 
@@ -77,4 +82,10 @@ constexpr auto vector_access(C&& array, I index) -> decltype(auto)
 constexpr unsigned int ouly_cache_line_size = 64;
 #else
 constexpr unsigned int ouly_cache_line_size = OULY_CACHE_LINE_SIZE;
+#endif
+
+#ifndef OULY_ANY_DEFAULT_INLINE_SIZE
+constexpr unsigned long ouly_any_default_inline_size = 32;
+#else
+constexpr unsigned long ouly_any_default_inline_size = OULY_ANY_DEFAULT_INLINE_SIZE;
 #endif
