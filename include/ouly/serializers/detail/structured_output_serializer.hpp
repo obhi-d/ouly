@@ -11,6 +11,7 @@
 #include "ouly/reflection/reflection.hpp"
 #include "ouly/reflection/type_name.hpp"
 #include "ouly/reflection/visitor_impl.hpp"
+#include "ouly/serializers/detail/runtime_type_dispatch.hpp"
 #include "ouly/utility/detail/concepts.hpp"
 
 #include "ouly/utility/user_config.hpp"
@@ -33,9 +34,10 @@ private:
     field
   };
 
-  Stream* serializer_ = nullptr;
-  type    type_       = type::none;
-  bool    first_      = true;
+  Stream*                           serializer_     = nullptr;
+  type                              type_           = type::none;
+  bool                              first_          = true;
+  runtime_type_writer_base<Config>* runtime_writer_ = nullptr;
 
 public:
   using serializer_type              = Stream;
@@ -50,12 +52,14 @@ public:
     serializer_         = i_other.serializer_;
     type_               = i_other.type_;
     first_              = i_other.first_;
+    runtime_writer_     = i_other.runtime_writer_;
     i_other.serializer_ = nullptr;
     return *this;
   }
   structured_output_serializer(structured_output_serializer const&) = default;
   structured_output_serializer(structured_output_serializer&& i_other) noexcept
-      : serializer_(i_other.serializer_), type_(i_other.type_), first_(i_other.first_)
+      : serializer_(i_other.serializer_), type_(i_other.type_), first_(i_other.first_),
+        runtime_writer_(i_other.runtime_writer_)
   {
     i_other.serializer_ = nullptr;
   }
@@ -81,7 +85,7 @@ public:
 
   structured_output_serializer(ouly::detail::field_visitor_tag /*unused*/, structured_output_serializer& ser,
                                std::string_view key)
-      : serializer_{ser.serializer_}, type_{type::field}
+      : serializer_{ser.serializer_}, type_{type::field}, runtime_writer_{ser.runtime_writer_}
   {
     if (serializer_)
     {
@@ -100,7 +104,7 @@ public:
 
   structured_output_serializer(ouly::detail::field_visitor_tag /*unused*/, structured_output_serializer& ser,
                                [[maybe_unused]] size_t index)
-      : serializer_{ser.serializer_}, type_{type::field}
+      : serializer_{ser.serializer_}, type_{type::field}, runtime_writer_{ser.runtime_writer_}
   {
     if (serializer_)
     {
@@ -116,7 +120,7 @@ public:
   }
 
   structured_output_serializer(ouly::detail::object_visitor_tag /*unused*/, structured_output_serializer& ser)
-      : serializer_{ser.serializer_}, type_{type::object}
+      : serializer_{ser.serializer_}, type_{type::object}, runtime_writer_{ser.runtime_writer_}
   {
     if (serializer_)
     {
@@ -125,7 +129,7 @@ public:
   }
 
   structured_output_serializer(ouly::detail::array_visitor_tag /*unused*/, structured_output_serializer& ser)
-      : serializer_{ser.serializer_}, type_{type::array}
+      : serializer_{ser.serializer_}, type_{type::array}, runtime_writer_{ser.runtime_writer_}
   {
     if (serializer_)
     {
@@ -197,6 +201,45 @@ public:
   }
 
   void set_not_null() {}
+
+  /**
+   * @brief Sets the optional registry used to emit runtime_type values
+   */
+  void set_runtime_writer(runtime_type_writer_base<Config>* writer) noexcept
+  {
+    runtime_writer_ = writer;
+  }
+
+  /**
+   * @brief Emits a runtime_type as a { type, value } object, delegating the value
+   *        to the registry which knows the concrete bound type.
+   */
+  template <typename Class>
+    requires(ouly::detail::RuntimeTypeLike<Class>)
+  void write_runtime_type(Class const& obj)
+  {
+    if constexpr (std::same_as<Stream, writer_state>)
+    {
+      structured_output_serializer object_visitor{ouly::detail::object_visitor_tag{}, *this};
+      {
+        structured_output_serializer field_visitor{ouly::detail::field_visitor_tag{}, object_visitor,
+                                                   cache_key<transform_type, "type">()};
+        ouly::visit(obj.id.id, field_visitor);
+      }
+      {
+        structured_output_serializer field_visitor{ouly::detail::field_visitor_tag{}, object_visitor,
+                                                   cache_key<transform_type, "value">()};
+        if (runtime_writer_ != nullptr)
+        {
+          runtime_writer_->write_value(obj.id, obj.value, field_visitor);
+        }
+      }
+    }
+    else
+    {
+      static_assert(ouly::always_false<Class>, "runtime_type writing is only supported via ouly::yml::to_string");
+    }
+  }
 
 private:
   auto get() -> Stream&

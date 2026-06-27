@@ -15,6 +15,7 @@
 #include "ouly/reflection/detail/base_concepts.hpp"
 #include "ouly/reflection/detail/container_utils.hpp"
 #include "ouly/reflection/visitor.hpp"
+#include "ouly/utility/always_false.hpp"
 #include "ouly/utility/config.hpp"
 #include "ouly/utility/convert.hpp"
 #include <concepts>
@@ -402,6 +403,20 @@ void visit_variant(Class const& obj, Visitor& visitor)
      obj);
 
     post_read(obj);
+  }
+}
+
+template <typename Class, typename Visitor>
+void visit_runtime_type(Class& obj, Visitor& visitor)
+{
+  if constexpr (requires { visitor.write_runtime_type(obj); })
+  {
+    visitor.write_runtime_type(obj);
+  }
+  else
+  {
+    static_assert(ouly::always_false<Class>,
+                  "ouly::runtime_type is only supported via ouly::yml::from_string/to_string with a registry");
   }
 }
 

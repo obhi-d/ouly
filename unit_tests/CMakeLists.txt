@@ -188,6 +188,7 @@ add_unit_test(NAME output_serializer FILES "output_serializer.cpp" LINK_LIBS "nl
 add_unit_test(NAME binary_serializer FILES "binary_serializer.cpp" "binary_stream.cpp" SANITIZE)
 add_unit_test(NAME yaml_serializer FILES "yaml_input_serializer.cpp" "yaml_output_serializer.cpp" SANITIZE)
 add_unit_test(NAME yaml_object FILES "yaml_object.cpp" SANITIZE)
+add_unit_test(NAME yaml_runtime_type FILES "yaml_runtime_type.cpp" SANITIZE)
 add_unit_test(NAME pool_allocator FILES "pool_allocator.cpp" SANITIZE)
 add_unit_test(NAME object_pool FILES "object_pool.cpp" SANITIZE)
 add_unit_test(NAME linear_allocator FILES "linear_allocator.cpp" SANITIZE)

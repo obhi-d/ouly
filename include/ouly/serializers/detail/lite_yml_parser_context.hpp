@@ -5,6 +5,7 @@
 #include "ouly/dsl/lite_yml.hpp"
 #include "ouly/reflection/visitor.hpp"
 #include "ouly/serializers/config.hpp"
+#include "ouly/serializers/detail/runtime_type_dispatch.hpp"
 #include "ouly/utility/detail/concepts.hpp"
 #include "ouly/utility/from_chars.hpp"
 #include <charconv>
@@ -97,6 +98,7 @@ class parser_state final : public ouly::yml::context
   ouly::yml::lite_stream         stream_;            ///< The YAML stream being parsed
   ouly::linear_arena_allocator<> allocator_;         ///< Allocator for context objects
   in_context_base*               context_ = nullptr; ///< Current parsing context
+  runtime_type_reader_base*      runtime_ = nullptr; ///< Optional registry for runtime_type values
 
 public:
   auto operator=(const parser_state&) -> parser_state& = delete;
@@ -129,6 +131,24 @@ public:
   void set_context(in_context_base* ctx) noexcept
   {
     context_ = ctx;
+  }
+
+  /**
+   * @brief Sets the optional registry used to resolve runtime_type values
+   *
+   * @param runtime The registry, or nullptr to disable runtime_type support
+   */
+  void set_runtime(runtime_type_reader_base* runtime) noexcept
+  {
+    runtime_ = runtime;
+  }
+
+  /**
+   * @brief Returns the registry used to resolve runtime_type values, if any
+   */
+  [[nodiscard]] auto runtime() const noexcept -> runtime_type_reader_base*
+  {
+    return runtime_;
   }
 
   /**
@@ -321,6 +341,10 @@ public:
     if constexpr (ExplicitlyReflected<tclass_type>)
     {
       return read_explicitly_reflected<Base>(obj, parser, key);
+    }
+    else if constexpr (RuntimeTypeLike<tclass_type>)
+    {
+      return read_runtime_type(obj, parser, key);
     }
     else if constexpr (Aggregate<tclass_type>)
     {
@@ -649,6 +673,39 @@ public:
       throw visitor_error(visitor_error::invalid_variant_type);
     }
     return ret;
+  }
+
+  template <typename TClassType>
+  static auto read_runtime_type(TClassType& obj, parser_state* parser, std::string_view key) -> in_context_base*
+  {
+    if (key == cache_key<transform_type, "type">())
+    {
+      return read_runtime_type_id(obj, parser);
+    }
+    if (key == cache_key<transform_type, "value">())
+    {
+      auto* runtime = parser->runtime();
+      if (runtime == nullptr)
+      {
+        throw visitor_error(visitor_error::unknown_runtime_type);
+      }
+      return runtime->parse_value(obj.id, obj.value, parser);
+    }
+
+    throw visitor_error(visitor_error::invalid_key);
+  }
+
+  template <typename TClassType>
+  static auto read_runtime_type_id([[maybe_unused]] TClassType& obj, parser_state* parser)
+  {
+    auto mapping        = parser->template create<in_context_impl<int, Config>>();
+    mapping->post_init_ = [](in_context_base* mapping_base, parser_state* /* parser_ptr */)
+    {
+      auto object         = static_cast<in_context_impl<int, Config>*>(mapping_base);
+      auto parent         = static_cast<in_context_impl<Class, Config>*>(object->parent_);
+      parent->get().id.id = object->get();
+    };
+    return mapping;
   }
 
   auto read_tuple(parser_state* parser)
