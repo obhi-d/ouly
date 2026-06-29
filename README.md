@@ -117,7 +117,7 @@ OULY ships three scheduler implementations that share the same submission API:
 - `ouly::v2::scheduler`: work-stealing design with Chase-Lev deques; it lives in an inline
   namespace, so it is also available as `ouly::scheduler`
 - `ouly::v3::scheduler`: game-engine oriented design with fixed worker-to-workgroup membership
-  and bounded spinning followed by futex-based parking, so idle workers release their CPUs
+  and condition-variable parking, so idle workers release their CPUs without spinning
 
 #### Basic Task Scheduling (v2)
 
@@ -138,8 +138,8 @@ scheduler.end_execution();
 ```
 
 The v3 scheduler is a drop-in replacement for game loops: workgroup membership is fixed at
-`begin_execution()` time, queue accounting is exact, and idle workers park on a futex instead
-of spinning while long tasks run elsewhere:
+`begin_execution()` time, queue accounting is exact, and idle workers block on a
+condition variable instead of spinning while long tasks run elsewhere:
 
 ```cpp
 ouly::v3::scheduler scheduler;

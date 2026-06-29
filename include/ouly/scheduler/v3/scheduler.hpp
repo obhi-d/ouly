@@ -10,8 +10,10 @@
 #include "ouly/utility/type_traits.hpp"
 #include <array>
 #include <atomic>
+#include <condition_variable>
 #include <coroutine>
 #include <cstdint>
+#include <mutex>
 #include <thread>
 #include <vector>
 
@@ -35,14 +37,12 @@ namespace ouly::v3
  *   mailbox for cross-group and external submissions.
  * - Accurate queue accounting: a workgroup advertises only items actually sitting in its
  *   queues. Idle workers therefore park even while long tasks execute elsewhere.
- * - Bounded spinning: a worker that finds no work spins a short, configurable window
- *   (set_idle_spin_count), then parks on a futex (C++20 atomic wait) eventcount. Lost
- *   wakeups are prevented by an epoch + sleeper-count protocol; there are no semaphore
- *   tokens to leak.
+ * - Idle workers block on a condition variable coordinated by the work-queue mutex.
+ *   Submitters notify through the same mutex, preventing lost wakeups without spinning.
  * - Wake chaining: a worker that dequeues an item and observes more queued work wakes one
  *   more sleeper, so bursts (parallel_for) fan out without broadcast storms.
- * - wait_for_tasks() helps execute work, then blocks on a futex until all submitted tasks
- *   (queued and in-flight) complete — the main thread does not spin between frames.
+ * - wait_for_tasks() helps execute work, then blocks on the same condition variable
+ *   until all submitted tasks (queued and in-flight) complete.
  *
  * The public API mirrors v1/v2: submit() overloads, task_context, workgroup creation,
  * busy_work(), wait_for_tasks(), begin/end_execution().
@@ -71,8 +71,7 @@ public:
       : workers_(std::move(other.workers_)), workgroups_(std::move(other.workgroups_)),
         threads_(std::move(other.threads_)), workgroup_descs_(other.workgroup_descs_),
         entry_fn_(std::move(other.entry_fn_)), worker_count_(other.worker_count_),
-        workgroup_count_(other.workgroup_count_), idle_spin_limit_(other.idle_spin_limit_),
-        stop_(other.stop_.load(std::memory_order_relaxed))
+        workgroup_count_(other.workgroup_count_), stop_(other.stop_.load(std::memory_order_relaxed))
   {
     OULY_ASSERT(other.threads_.empty());
     other.worker_count_    = 0;
@@ -92,7 +91,6 @@ public:
       entry_fn_              = std::move(other.entry_fn_);
       worker_count_          = other.worker_count_;
       workgroup_count_       = other.workgroup_count_;
-      idle_spin_limit_       = other.idle_spin_limit_;
       other.worker_count_    = 0;
       other.workgroup_count_ = 0;
     }
@@ -228,20 +226,16 @@ public:
   }
 
   /**
-   * @brief Help execute work, then block (futex) until every submitted task has finished.
+   * @brief Help execute work, then block until every submitted task has finished.
    */
   OULY_API void wait_for_tasks();
 
   /**
-   * @brief Number of failed acquire attempts before an idle worker parks on the futex.
+   * @brief Deprecated: idle v3 workers now park immediately when no work is available.
    *
-   * Lower values release CPUs faster, higher values reduce wake latency under
-   * intermittent load. Must be called before begin_execution().
+   * Kept for API compatibility. Must be called before begin_execution().
    */
-  void set_idle_spin_count(uint32_t spins) noexcept
-  {
-    idle_spin_limit_ = spins;
-  }
+  void set_idle_spin_count(uint32_t /*spins*/) noexcept {}
 
 private:
   friend class task_context;
@@ -257,14 +251,13 @@ private:
 
   [[nodiscard]] auto has_queued_work(detail::v3::worker const& wkr) const noexcept -> bool;
 
-  static constexpr uint32_t default_idle_spin_limit = OULY_V3_SCHEDULER_SPIN_COUNT;
-
-  // Eventcount for parking idle workers (futex via C++20 atomic wait).
-  ouly::detail::cache_aligned_atomic<uint32_t> wake_epoch_{uint32_t{0}};
-  ouly::detail::cache_aligned_atomic<uint32_t> sleepers_{uint32_t{0}};
-
   // Tasks submitted but not yet finished executing (queued + in-flight).
   ouly::detail::cache_aligned_atomic<uint32_t> pending_{uint32_t{0}};
+
+  // Coordinates worker parking with submit/finish notifications. Queue operations remain
+  // lock-free; this mutex only serializes condition-variable wait/notify handoff.
+  std::mutex              work_queue_mutex_;
+  std::condition_variable work_available_;
 
   std::unique_ptr<detail::v3::worker[]>    workers_;
   std::unique_ptr<detail::v3::workgroup[]> workgroups_;
@@ -276,10 +269,8 @@ private:
 
   uint32_t worker_count_    = 0;
   uint32_t workgroup_count_ = 0;
-  uint32_t idle_spin_limit_ = default_idle_spin_limit;
 
-  std::atomic<uint32_t> pending_waiters_{0};
-  std::atomic_bool      stop_{false};
+  std::atomic_bool stop_{false};
 };
 
 } // namespace ouly::v3
