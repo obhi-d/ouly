@@ -11,6 +11,7 @@
 #include <chrono>
 #include <cstdint>
 #include <latch>
+#include <mutex>
 #include <thread>
 
 namespace ouly::v3
@@ -58,27 +59,20 @@ scheduler::~scheduler() noexcept
 
 void scheduler::notify_workers([[maybe_unused]] uint32_t count) noexcept
 {
-  // Bump the epoch first: a worker about to park rechecks the epoch (via the futex value
-  // check inside atomic wait), so a bump that lands between its work recheck and the wait
-  // call prevents it from sleeping through this notification.
-  wake_epoch_.get().fetch_add(1, std::memory_order_seq_cst);
-  if (sleepers_.get().load(std::memory_order_seq_cst) == 0)
+  // The lock serializes notify with a worker's predicate check + wait transition.
+  // Queue updates happen before this call; holding the mutex here prevents a worker
+  // from checking "no work", missing this notification, and then sleeping forever.
   {
-    return;
+    std::scoped_lock lock(work_queue_mutex_);
   }
-
-  // Wake *all* parked workers.
-  wake_epoch_.get().notify_all();
+  work_available_.notify_all();
 }
 
 void scheduler::finish_task() noexcept
 {
   if (pending_.get().fetch_sub(1, std::memory_order_acq_rel) == 1)
   {
-    if (pending_waiters_.load(std::memory_order_acquire) != 0)
-    {
-      pending_.get().notify_all();
-    }
+    notify_workers(worker_count_);
   }
 }
 
@@ -156,43 +150,19 @@ void scheduler::run_worker(worker_id wid)
     entry_fn_(wid);
   }
 
-  uint32_t idle_spins = 0;
-
   while (!stop_.load(std::memory_order_relaxed))
   {
     if (try_execute_one(wid))
     {
-      idle_spins = 0;
       continue;
     }
 
-    if (++idle_spins < idle_spin_limit_)
-    {
-      ouly::detail::pause_exec();
-      constexpr uint32_t yield_interval = 16;
-      if ((idle_spins % yield_interval) == 0)
-      {
-        std::this_thread::yield();
-      }
-      continue;
-    }
-    idle_spins = 0;
-
-    // Park: eventcount protocol. The seq_cst ordering of (sleepers_ increment, queued
-    // recheck) here against (queued increment, epoch bump, sleepers_ read) on the
-    // producer side guarantees the producer either sees us sleeping (and notifies) or we
-    // see the queued item / bumped epoch (and skip the wait).
-    auto epoch = wake_epoch_.get().load(std::memory_order_seq_cst);
-    sleepers_.get().fetch_add(1, std::memory_order_seq_cst);
-
-    if (has_queued_work(wkr) || stop_.load(std::memory_order_seq_cst))
-    {
-      sleepers_.get().fetch_sub(1, std::memory_order_relaxed);
-      continue;
-    }
-
-    wake_epoch_.get().wait(epoch);
-    sleepers_.get().fetch_sub(1, std::memory_order_relaxed);
+    std::unique_lock<std::mutex> lock(work_queue_mutex_);
+    work_available_.wait(lock,
+                         [this, &wkr]() noexcept -> bool
+                         {
+                           return stop_.load(std::memory_order_acquire) || has_queued_work(wkr);
+                         });
   }
 
   g_worker    = nullptr;
@@ -238,13 +208,6 @@ void scheduler::submit_internal([[maybe_unused]] task_context const& current, wo
   }
 
   notify_workers(1);
-
-  // A waiter inside wait_for_tasks() may be parked on `pending_`; new work must wake it
-  // so it can help drain groups it is the only member of (e.g. a main-thread group).
-  if (pending_waiters_.load(std::memory_order_acquire) != 0)
-  {
-    pending_.get().notify_all();
-  }
 }
 
 void scheduler::busy_work(worker_id thread) noexcept
@@ -277,21 +240,13 @@ void scheduler::wait_for_tasks()
       break;
     }
 
-    if (worker_count_ <= 1)
-    {
-      // No other workers exist; the remaining tasks can only be ours after a retry.
-      std::this_thread::yield();
-      continue;
-    }
-
-    pending_waiters_.fetch_add(1, std::memory_order_seq_cst);
-    // Recheck after announcing ourselves; submit/finish paths notify when waiters != 0.
-    if (pending_.get().load(std::memory_order_seq_cst) == snapshot &&
-        !has_queued_work(ouly::detail::vector_access(workers_, main_thread.get_index())))
-    {
-      pending_.get().wait(snapshot);
-    }
-    pending_waiters_.fetch_sub(1, std::memory_order_relaxed);
+    auto&                        wkr = ouly::detail::vector_access(workers_, main_thread.get_index());
+    std::unique_lock<std::mutex> lock(work_queue_mutex_);
+    work_available_.wait(lock,
+                         [this, &wkr]() noexcept -> bool
+                         {
+                           return pending_.get().load(std::memory_order_acquire) == 0 || has_queued_work(wkr);
+                         });
   }
 }
 
@@ -386,9 +341,8 @@ void scheduler::end_execution()
 {
   wait_for_tasks();
 
-  stop_.store(true, std::memory_order_seq_cst);
-  wake_epoch_.get().fetch_add(1, std::memory_order_seq_cst);
-  wake_epoch_.get().notify_all();
+  stop_.store(true, std::memory_order_release);
+  notify_workers(worker_count_);
 
   for (auto& thread : threads_)
   {
