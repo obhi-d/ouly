@@ -15,8 +15,8 @@ namespace ouly
  * offset until the OffsetLimit number of indices occupy the list, upon which the list will be fully grown to support
  * `0...N` elements.
  */
-constexpr uint32_t default_offset_limit = 16;
-template <typename T = uint32_t, T OffsetLimit = default_offset_limit>
+constexpr uint32_t index_map_default_offset_limit = 16;
+template <typename T = uint32_t, T OffsetLimit = index_map_default_offset_limit>
 class index_map
 {
   static constexpr T min_offset = std::max<T>(OffsetLimit, 1);
