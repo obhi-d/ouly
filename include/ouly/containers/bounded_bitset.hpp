@@ -56,11 +56,12 @@ class bounded_bitset
   using word_list = std::conditional_t<OffsetLimit == 0, without_offset_limit, with_offset_limit>;
 
 public:
-  using size_type       = T;
-  using word_type       = Word;
-  using value_type      = word_type;
-  using reference       = word_type&;
-  using const_reference = word_type const&;
+  using size_type         = T;
+  using word_type         = Word;
+  using value_type        = word_type;
+  using storage_size_type = typename decltype(std::declval<word_list&>().words_)::size_type;
+  using reference         = word_type&;
+  using const_reference   = word_type const&;
 
   static constexpr T    limit         = OffsetLimit;
   static constexpr T    null          = std::numeric_limits<size_type>::max();
@@ -105,8 +106,9 @@ public:
 
   [[nodiscard]] auto contains(T idx) const noexcept -> bool
   {
-    auto const local = local_word(idx);
-    return local != null && static_cast<std::size_t>(local) < data_.words_.size();
+    auto const local         = local_word(idx);
+    auto const storage_local = static_cast<storage_size_type>(local);
+    return local != null && static_cast<T>(storage_local) == local && storage_local < data_.words_.size();
   }
 
   void clear() noexcept
@@ -136,7 +138,7 @@ public:
 
     if constexpr (OffsetLimit > 0)
     {
-      std::size_t leading = 0;
+      storage_size_type leading = 0;
       while (leading < data_.words_.size() && data_.words_[leading] == 0)
       {
         ++leading;
@@ -173,7 +175,7 @@ public:
     return static_cast<T>(data_.words_.size()) * bits_per_word;
   }
 
-  [[nodiscard]] auto storage_size() const noexcept -> std::size_t
+  [[nodiscard]] auto storage_size() const noexcept -> storage_size_type
   {
     return data_.words_.size();
   }
@@ -288,11 +290,11 @@ private:
   template <typename Fn>
   void for_each_scalar(Fn&& fn) const
   {
-    for_each_word_range(0, data_.words_.size(), std::forward<Fn>(fn));
+    for_each_word_range(storage_size_type{0}, data_.words_.size(), std::forward<Fn>(fn));
   }
 
   template <typename Fn>
-  void for_each_word_range(std::size_t first, std::size_t last, Fn&& fn) const
+  void for_each_word_range(storage_size_type first, storage_size_type last, Fn&& fn) const
   {
     auto const base_word = storage_base_word();
     for (auto word_offset = first; word_offset < last; ++word_offset)
@@ -328,8 +330,8 @@ private:
       auto const* words          = data_.words_.data();
       auto const  count          = data_.words_.size();
       auto const  base_word      = storage_base_word();
-      auto const  words_per_load = 16U / sizeof(word_type);
-      auto        word_offset    = std::size_t{0};
+      auto const  words_per_load = static_cast<storage_size_type>(16U / sizeof(word_type));
+      auto        word_offset    = storage_size_type{0};
 
       for (; word_offset + words_per_load <= count; word_offset += words_per_load)
       {
@@ -343,7 +345,7 @@ private:
           continue;
         }
 
-        for (std::size_t lane = 0; lane < words_per_load; ++lane)
+        for (storage_size_type lane = 0; lane < words_per_load; ++lane)
         {
           visit_word(words[word_offset + lane], static_cast<T>(base_word + static_cast<T>(word_offset + lane)),
                      std::forward<Fn>(fn));
@@ -368,8 +370,8 @@ private:
       auto const* words          = data_.words_.data();
       auto const  count          = data_.words_.size();
       auto const  base_word      = storage_base_word();
-      auto const  words_per_load = 32U / sizeof(word_type);
-      auto        word_offset    = std::size_t{0};
+      auto const  words_per_load = static_cast<storage_size_type>(32U / sizeof(word_type));
+      auto        word_offset    = storage_size_type{0};
 
       for (; word_offset + words_per_load <= count; word_offset += words_per_load)
       {
@@ -381,7 +383,7 @@ private:
           continue;
         }
 
-        for (std::size_t lane = 0; lane < words_per_load; ++lane)
+        for (storage_size_type lane = 0; lane < words_per_load; ++lane)
         {
           visit_word(words[word_offset + lane], static_cast<T>(base_word + static_cast<T>(word_offset + lane)),
                      std::forward<Fn>(fn));
@@ -416,22 +418,24 @@ private:
 
   auto word_if(T idx) noexcept -> word_type*
   {
-    auto const local = local_word(idx);
-    if (local == null || static_cast<std::size_t>(local) >= data_.words_.size())
+    auto const local         = local_word(idx);
+    auto const storage_local = static_cast<storage_size_type>(local);
+    if (local == null || static_cast<T>(storage_local) != local || storage_local >= data_.words_.size())
     {
       return nullptr;
     }
-    return &data_.words_[local];
+    return &data_.words_[storage_local];
   }
 
   [[nodiscard]] auto word_if(T idx) const noexcept -> word_type const*
   {
-    auto const local = local_word(idx);
-    if (local == null || static_cast<std::size_t>(local) >= data_.words_.size())
+    auto const local         = local_word(idx);
+    auto const storage_local = static_cast<storage_size_type>(local);
+    if (local == null || static_cast<T>(storage_local) != local || storage_local >= data_.words_.size())
     {
       return nullptr;
     }
-    return &data_.words_[local];
+    return &data_.words_[storage_local];
   }
 
   auto word_at(T idx) -> word_type&
@@ -456,20 +460,21 @@ private:
         }
       }
 
-      auto const local = static_cast<T>(word - data_.base_word_);
-      if (static_cast<std::size_t>(local) >= data_.words_.size())
+      auto const local = static_cast<storage_size_type>(word - data_.base_word_);
+      if (local >= data_.words_.size())
       {
-        data_.words_.resize(static_cast<std::size_t>(local) + 1U, 0);
+        data_.words_.resize(static_cast<storage_size_type>(local + storage_size_type{1}), 0);
       }
       return data_.words_[local];
     }
     else
     {
-      if (static_cast<std::size_t>(word) >= data_.words_.size())
+      auto const storage_word = static_cast<storage_size_type>(word);
+      if (storage_word >= data_.words_.size())
       {
-        data_.words_.resize(static_cast<std::size_t>(word) + 1U, 0);
+        data_.words_.resize(static_cast<storage_size_type>(storage_word + storage_size_type{1}), 0);
       }
-      return data_.words_[word];
+      return data_.words_[storage_word];
     }
   }
 
@@ -477,9 +482,9 @@ private:
   {
     if constexpr (OffsetLimit > 0)
     {
-      auto const amount   = static_cast<std::size_t>(data_.base_word_ - base_word);
+      auto const amount   = static_cast<storage_size_type>(data_.base_word_ - base_word);
       auto const cur_size = data_.words_.size();
-      data_.words_.resize(cur_size + amount, 0);
+      data_.words_.resize(static_cast<storage_size_type>(cur_size + amount), 0);
       if (cur_size != 0)
       {
         auto begin = data_.words_.begin();
