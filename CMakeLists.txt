@@ -8,6 +8,7 @@ option(
     "Build the unit tests when BUILD_TESTING is enabled."
     OFF
 )
+option(OULY_BUILD_BENCHMARKS "Build benchmark test targets." OFF)
 option(ASAN_ENABLED "Build this target with AddressSanitizer" OFF)
 option(OULY_REC_STATS "No stats for allocator" OFF)
 option(OULY_TEST_COVERAGE "Build test coverage." OFF)

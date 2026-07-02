@@ -27,6 +27,10 @@ void visit(Class& obj, Visitor& visitor)
   {
     return ouly::detail::visit_runtime_type(obj, visitor);
   }
+  else if constexpr (ouly::detail::AnyLike<type>)
+  {
+    return ouly::detail::visit_any(obj, visitor);
+  }
   else if constexpr ((std::same_as<serializer_tag, reader_tag> &&
                       ouly::detail::InputSerializableClass<type, serializer_type>) ||
                      (std::same_as<serializer_tag, writer_tag> &&

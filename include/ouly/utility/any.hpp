@@ -12,6 +12,7 @@
  * with a stable per-type key so that get_if<T>() can validate the access.
  */
 
+#include "ouly/reflection/type_name.hpp"
 #include "ouly/utility/user_config.hpp"
 
 #include <cstddef>
@@ -54,7 +55,8 @@ class basic_any
     destroy,
     move,
     copy,
-    type
+    type,
+    type_hash
   };
 
   using manager_fn = auto (*)(op, basic_any*, basic_any*) -> void const*;
@@ -102,6 +104,11 @@ class basic_any
       }
       case op::type:
         return type_key<T>();
+      case op::type_hash:
+      {
+        static constexpr auto hash = ouly::type_hash<T>();
+        return &hash;
+      }
       }
     }
     else
@@ -131,6 +138,11 @@ class basic_any
       }
       case op::type:
         return type_key<T>();
+      case op::type_hash:
+      {
+        static constexpr auto hash = ouly::type_hash<T>();
+        return &hash;
+      }
       }
     }
     return nullptr;
@@ -158,6 +170,8 @@ class basic_any
   manager_fn manager_ = nullptr;
 
 public:
+  using is_any = void;
+
   basic_any() noexcept : heap_(nullptr) {}
 
   basic_any(basic_any const& other) : heap_(nullptr)
@@ -255,6 +269,17 @@ public:
   [[nodiscard]] auto has_value() const noexcept -> bool
   {
     return manager_ != nullptr;
+  }
+
+  [[nodiscard]] auto type_hash() const noexcept -> std::uint32_t
+  {
+    if (manager_ == nullptr)
+    {
+      return 0;
+    }
+    auto const* hash =
+     static_cast<std::uint32_t const*>(manager_(op::type_hash, const_cast<basic_any*>(this), nullptr));
+    return *hash;
   }
 
   void reset() noexcept

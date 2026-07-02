@@ -10,6 +10,7 @@
 #include "ouly/utility/from_chars.hpp"
 #include <charconv>
 #include <cstddef>
+#include <cstdint>
 #include <string>
 #include <type_traits>
 
@@ -727,10 +728,10 @@ public:
     }
     else
     {
-      auto mapping        = parser->template create<in_context_impl<int, Config>>();
+      auto mapping        = parser->template create<in_context_impl<std::uint32_t, Config>>();
       mapping->post_init_ = [](in_context_base* mapping_base, parser_state* /* parser_ptr */) -> void
       {
-        auto object           = static_cast<in_context_impl<int, Config>*>(mapping_base);
+        auto object           = static_cast<in_context_impl<std::uint32_t, Config>*>(mapping_base);
         auto parent           = static_cast<in_context_impl<Class, Config>*>(object->parent_);
         parent->get().id_.id_ = object->get();
       };

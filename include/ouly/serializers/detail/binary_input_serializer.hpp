@@ -13,6 +13,7 @@
 #include "ouly/reflection/visitor_impl.hpp"
 #include "ouly/serializers/byteswap.hpp"
 #include "ouly/serializers/config.hpp"
+#include "ouly/serializers/detail/runtime_type_dispatch.hpp"
 
 #include "ouly/utility/user_config.hpp"
 #include <bit>
@@ -38,10 +39,11 @@ private:
     field
   };
 
-  Stream*  serializer_    = nullptr;
-  uint32_t object_id_     = 0;
-  type     type_          = type::object;
-  bool     may_fast_path_ = false;
+  Stream*                         serializer_    = nullptr;
+  binary_any_reader_base<Endian>* any_reader_    = nullptr;
+  uint32_t                        object_id_     = 0;
+  type                            type_          = type::object;
+  bool                            may_fast_path_ = false;
 
   static constexpr bool has_fast_path = (Endian == std::endian::native);
 
@@ -62,25 +64,29 @@ public:
 
   binary_input_serializer(ouly::detail::field_visitor_tag /*unused*/, binary_input_serializer& ser,
                           [[maybe_unused]] std::string_view key)
-      : serializer_{ser.serializer_}, object_id_(ser.object_id_), type_{type::field}, may_fast_path_(ser.may_fast_path_)
+      : serializer_{ser.serializer_}, any_reader_{ser.any_reader_}, object_id_(ser.object_id_), type_{type::field},
+        may_fast_path_(ser.may_fast_path_)
   {
     // No-op
   }
 
   binary_input_serializer(ouly::detail::field_visitor_tag /*unused*/, binary_input_serializer& ser, size_t /*index*/)
-      : serializer_{ser.serializer_}, object_id_(ser.object_id_), type_{type::field}, may_fast_path_(ser.may_fast_path_)
+      : serializer_{ser.serializer_}, any_reader_{ser.any_reader_}, object_id_(ser.object_id_), type_{type::field},
+        may_fast_path_(ser.may_fast_path_)
   {
     // No-op
   }
 
   binary_input_serializer(ouly::detail::object_visitor_tag /*unused*/, binary_input_serializer& ser)
-      : serializer_{ser.serializer_}, type_{type::object}, may_fast_path_(ser.may_fast_path_)
+      : serializer_{ser.serializer_}, any_reader_{ser.any_reader_}, type_{type::object},
+        may_fast_path_(ser.may_fast_path_)
   {
     // No-op
   }
 
   binary_input_serializer(ouly::detail::array_visitor_tag /*unused*/, binary_input_serializer& ser)
-      : serializer_{ser.serializer_}, object_id_(ser.object_id_), type_{type::array}, may_fast_path_(ser.may_fast_path_)
+      : serializer_{ser.serializer_}, any_reader_{ser.any_reader_}, object_id_(ser.object_id_), type_{type::array},
+        may_fast_path_(ser.may_fast_path_)
   {
     // No-op
   }
@@ -186,6 +192,88 @@ public:
       throw visitor_error(visitor_error::invalid_null_sentinel);
     }
     return false;
+  }
+
+  void set_any_reader(binary_any_reader_base<Endian>* reader) noexcept
+  {
+    any_reader_ = reader;
+  }
+
+  template <typename Class>
+    requires(ouly::detail::AnyLike<Class>)
+  void read_any(Class& obj)
+  {
+    std::uint32_t type_id = 0;
+    visit(type_id);
+    if (type_id == 0)
+    {
+      obj.reset();
+      return;
+    }
+    if (any_reader_ == nullptr)
+    {
+      throw visitor_error(visitor_error::unknown_runtime_type);
+    }
+
+    struct input_adapter final : erased_binary_input
+    {
+      Stream* stream_ = nullptr;
+
+      explicit input_adapter(Stream& stream) : stream_(&stream) {}
+
+      void read(std::byte* data, std::size_t size) override
+      {
+        stream_->read(data, size);
+      }
+
+      void skip(std::size_t size) override
+      {
+        stream_->skip(size);
+      }
+    };
+
+    input_adapter                      adapter{get()};
+    erased_binary_input_stream<Endian> erased_stream{adapter};
+    any_reader_->read_value(type_id, obj, erased_stream);
+  }
+
+  template <typename Class>
+    requires(ouly::detail::RuntimeTypeLike<Class>)
+  void read_runtime_type(Class& obj)
+  {
+    std::uint32_t type_id = 0;
+    visit(type_id);
+    obj.id_.id_ = type_id;
+    if (type_id == 0)
+    {
+      obj.value_.reset();
+      return;
+    }
+    if (any_reader_ == nullptr)
+    {
+      throw visitor_error(visitor_error::unknown_runtime_type);
+    }
+
+    struct input_adapter final : erased_binary_input
+    {
+      Stream* stream_ = nullptr;
+
+      explicit input_adapter(Stream& stream) : stream_(&stream) {}
+
+      void read(std::byte* data, std::size_t size) override
+      {
+        stream_->read(data, size);
+      }
+
+      void skip(std::size_t size) override
+      {
+        stream_->skip(size);
+      }
+    };
+
+    input_adapter                      adapter{get()};
+    erased_binary_input_stream<Endian> erased_stream{adapter};
+    any_reader_->read_value(type_id, obj.value_, erased_stream);
   }
 
 private:

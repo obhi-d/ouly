@@ -413,10 +413,31 @@ void visit_runtime_type(Class& obj, Visitor& visitor)
   {
     visitor.write_runtime_type(obj);
   }
+  else if constexpr (requires { visitor.read_runtime_type(obj); })
+  {
+    visitor.read_runtime_type(obj);
+  }
   else
   {
     static_assert(ouly::always_false<Class>,
-                  "ouly::runtime_type is only supported via ouly::yml::from_string/to_string with a registry");
+                  "ouly::runtime_type is only supported by serializers with a runtime type registry");
+  }
+}
+
+template <typename Class, typename Visitor>
+void visit_any(Class& obj, Visitor& visitor)
+{
+  if constexpr (requires { visitor.write_any(obj); })
+  {
+    visitor.write_any(obj);
+  }
+  else if constexpr (requires { visitor.read_any(obj); })
+  {
+    visitor.read_any(obj);
+  }
+  else
+  {
+    static_assert(ouly::always_false<Class>, "ouly::any is only supported by serializers with a runtime any registry");
   }
 }
 
