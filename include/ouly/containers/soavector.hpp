@@ -13,6 +13,7 @@
 #include <cstring>
 #include <limits>
 #include <memory>
+#include <span>
 #include <utility>
 
 namespace ouly
@@ -80,7 +81,7 @@ public:
     {
       [&]<std::size_t... I>(std::index_sequence<I...>) -> void
       {
-        ((std::get<I>(vw_pointer_) = get_ref<I>(value)), ...);
+        ((*std::get<I>(vw_pointer_) = get_ref<I>(value)), ...);
       }(std::make_index_sequence<field_count>());
       return *this;
     }
@@ -242,6 +243,92 @@ public:
   using const_pointer          = ouly::detail::tuple_of_cptrs<tuple_type>;
   using reverse_iterator       = std::reverse_iterator<iterator>;
   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+
+  template <bool const IsConst>
+  class span_view
+  {
+  public:
+    using pointer =
+     std::conditional_t<IsConst, ouly::detail::tuple_of_cptrs<tuple_type>, ouly::detail::tuple_of_ptrs<tuple_type>>;
+    using reference = std::conditional_t<IsConst, soavector::const_reference, soavector::reference>;
+
+    template <std::size_t I>
+    using element_type = std::conditional_t<IsConst, ivalue_type<I> const, ivalue_type<I>>;
+    template <std::size_t I>
+    using span_type = std::span<element_type<I>>;
+
+    span_view() = default;
+    span_view(pointer data, size_type offset, size_type size) : data_(data), offset_(offset), size_(size) {}
+
+    [[nodiscard]] auto size() const -> size_type
+    {
+      return size_;
+    }
+
+    [[nodiscard]] auto empty() const -> bool
+    {
+      return size_ == 0;
+    }
+
+    [[nodiscard]] auto offset() const -> size_type
+    {
+      return offset_;
+    }
+
+    [[nodiscard]] auto begin() const
+    {
+      return base_iterator<IsConst>(data_);
+    }
+
+    [[nodiscard]] auto end() const
+    {
+      return begin() + static_cast<difference_type>(size_);
+    }
+
+    auto operator[](size_type n) const -> reference
+    {
+      return get<reference>(index_seq, n);
+    }
+
+    auto at(size_type n) const -> reference
+    {
+      OULY_ASSERT(n < size_);
+      return (*this)[n];
+    }
+
+    template <std::size_t I>
+    auto data() const -> element_type<I>*
+    {
+      return std::get<I>(data_);
+    }
+
+    template <std::size_t I>
+    auto span() const -> span_type<I>
+    {
+      return span_type<I>(data<I>(), size_);
+    }
+
+    template <std::size_t I>
+    auto at(size_type n) const -> auto&
+    {
+      OULY_ASSERT(n < size_);
+      return std::get<I>(data_)[n];
+    }
+
+  private:
+    template <typename Reftype, std::size_t... I>
+    auto get(std::index_sequence<I...> /*unused*/, size_type i) const -> Reftype
+    {
+      return Reftype((std::get<I>(data_) + i)...);
+    }
+
+    pointer   data_{};
+    size_type offset_ = 0;
+    size_type size_   = 0;
+  };
+
+  using readwrite_span = span_view<false>;
+  using readonly_span  = span_view<true>;
 
   explicit soavector(allocator_type const& alloc = allocator_type()) : allocator_type(alloc), size_(0), capacity_(0) {};
 
@@ -668,6 +755,25 @@ public:
   auto data() const -> const auto*
   {
     return std::get<I>(data_);
+  }
+
+  auto span(size_type offset, size_type count) -> readwrite_span
+  {
+    OULY_ASSERT(offset <= size_);
+    OULY_ASSERT(count <= size_ - offset);
+    return get_span<readwrite_span>(index_seq, offset, count);
+  }
+
+  auto span(size_type offset, size_type count) const -> readonly_span
+  {
+    OULY_ASSERT(offset <= size_);
+    OULY_ASSERT(count <= size_ - offset);
+    return get_span<readonly_span>(index_seq, offset, count);
+  }
+
+  auto cspan(size_type offset, size_type count) const -> readonly_span
+  {
+    return span(offset, count);
   }
 
   // modifiers:
@@ -1371,6 +1477,12 @@ private:
   auto get(std::index_sequence<I...> /*unused*/, size_type i) const -> Reftype
   {
     return Reftype((std::get<I>(data_) + i)...);
+  }
+
+  template <typename Spantype, std::size_t... I>
+  auto get_span(std::index_sequence<I...> /*unused*/, size_type offset, size_type count) const -> Spantype
+  {
+    return Spantype(typename Spantype::pointer((std::get<I>(data_) + offset)...), offset, count);
   }
 
   template <typename InputIterator>
