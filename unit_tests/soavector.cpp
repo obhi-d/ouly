@@ -2,6 +2,7 @@
 #include "catch2/catch_all.hpp"
 #include "test_common.hpp"
 #include <string>
+#include <type_traits>
 
 // NOLINTBEGIN
 TEST_CASE("soavector: Validate soavector emplace", "[soavector][emplace]")
@@ -326,6 +327,68 @@ TEST_CASE("soavector: Comparison operators", "[soavector]")
   REQUIRE(vec2 > vec1);
   REQUIRE(vec1 <= vec2);
   REQUIRE(vec2 >= vec1);
+}
+
+TEST_CASE("soavector: Span views", "[soavector][span]")
+{
+  ouly::soavector<TestStruct> vec;
+  vec.push_back({1, 1.0f, "one"});
+  vec.push_back({2, 2.0f, "two"});
+  vec.push_back({3, 3.0f, "three"});
+  vec.push_back({4, 4.0f, "four"});
+
+  SECTION("Readwrite span exposes field spans and aggregate access")
+  {
+    auto view = vec.span(1, 2);
+
+    REQUIRE(view.size() == 2);
+    REQUIRE(view.offset() == 1);
+    REQUIRE_FALSE(view.empty());
+
+    static_assert(std::is_same_v<decltype(view.data<0>()), int*>);
+    static_assert(std::is_same_v<decltype(view.span<0>()), std::span<int>>);
+
+    REQUIRE(view.data<0>() == vec.data<0>() + 1);
+    REQUIRE(view.span<0>().size() == 2);
+    REQUIRE(view.span<0>()[0] == 2);
+    REQUIRE(view.at<1>(1) == 3.0f);
+    REQUIRE(view[0].get().s == "two");
+
+    view.at<0>(0)     = 20;
+    view.span<1>()[1] = 30.0f;
+    view[1]           = TestStruct{40, 40.0f, "forty"};
+
+    REQUIRE(vec.at<0>(1) == 20);
+    REQUIRE(vec.at<1>(2) == 40.0f);
+    REQUIRE(vec.at<2>(2) == "forty");
+
+    auto it = view.begin();
+    REQUIRE(std::get<0>(*it) == 20);
+    ++it;
+    REQUIRE(std::get<0>(*it) == 40);
+    REQUIRE(view.end() - view.begin() == 2);
+  }
+
+  SECTION("Readonly span exposes const field spans and aggregate access")
+  {
+    auto const& cvec = vec;
+    auto        view = cvec.span(1, 3);
+
+    REQUIRE(view.size() == 3);
+    REQUIRE(view.offset() == 1);
+
+    static_assert(std::is_same_v<decltype(view.data<0>()), int const*>);
+    static_assert(std::is_same_v<decltype(view.span<0>()), std::span<int const>>);
+
+    REQUIRE(view.data<2>() == vec.data<2>() + 1);
+    REQUIRE(view.span<2>()[0] == "two");
+    REQUIRE(view.at<0>(2) == 4);
+    REQUIRE(view[1].get().s == "three");
+
+    auto cview = vec.cspan(0, vec.size());
+    REQUIRE(cview.size() == vec.size());
+    REQUIRE(cview.span<0>()[3] == 4);
+  }
 }
 
 // NOLINTEND
