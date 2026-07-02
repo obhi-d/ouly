@@ -8,6 +8,7 @@
 #include "ouly/reflection/reflection.hpp"
 #include "ouly/serializers/byteswap.hpp"
 #include "ouly/serializers/config.hpp"
+#include "ouly/serializers/detail/runtime_type_dispatch.hpp"
 #include "ouly/utility/config.hpp"
 #include "ouly/utility/convert.hpp"
 #include "ouly/utility/type_traits.hpp"
@@ -28,10 +29,11 @@ private:
     field
   };
 
-  Stream* serializer_    = nullptr;
-  type    type_          = type::object;
-  bool    may_fast_path_ = false;
-  bool    id_written_    = false;
+  Stream*                         serializer_    = nullptr;
+  binary_any_writer_base<Endian>* any_writer_    = nullptr;
+  type                            type_          = type::object;
+  bool                            may_fast_path_ = false;
+  bool                            id_written_    = false;
 
   static constexpr bool has_fast_path = (Endian == std::endian::native);
 
@@ -53,28 +55,29 @@ public:
 
   binary_output_serializer(ouly::detail::field_visitor_tag /*unused*/, binary_output_serializer& ser,
                            std::string_view /*key*/)
-      : serializer_{ser.serializer_}, type_{type::field}, may_fast_path_(ser.may_fast_path_),
-        id_written_(ser.id_written_)
+      : serializer_{ser.serializer_}, any_writer_{ser.any_writer_}, type_{type::field},
+        may_fast_path_(ser.may_fast_path_), id_written_(ser.id_written_)
   {
     // No-op
   }
 
   binary_output_serializer(ouly::detail::field_visitor_tag /*unused*/, binary_output_serializer& ser, size_t /*index*/)
-      : serializer_{ser.serializer_}, type_{type::field}, may_fast_path_(ser.may_fast_path_),
-        id_written_(ser.id_written_)
+      : serializer_{ser.serializer_}, any_writer_{ser.any_writer_}, type_{type::field},
+        may_fast_path_(ser.may_fast_path_), id_written_(ser.id_written_)
   {
     // No-op
   }
 
   binary_output_serializer(ouly::detail::object_visitor_tag /*unused*/, binary_output_serializer& ser)
-      : serializer_{ser.serializer_}, type_{type::object}, may_fast_path_(ser.may_fast_path_)
+      : serializer_{ser.serializer_}, any_writer_{ser.any_writer_}, type_{type::object},
+        may_fast_path_(ser.may_fast_path_)
   {
     // No-op
   }
 
   binary_output_serializer(ouly::detail::array_visitor_tag /*unused*/, binary_output_serializer& ser)
-      : serializer_{ser.serializer_}, type_{type::array}, may_fast_path_(ser.may_fast_path_),
-        id_written_(ser.id_written_)
+      : serializer_{ser.serializer_}, any_writer_{ser.any_writer_}, type_{type::array},
+        may_fast_path_(ser.may_fast_path_), id_written_(ser.id_written_)
   {
     // No-op
   }
@@ -172,6 +175,79 @@ public:
   void set_not_null()
   {
     visit(cfg::not_null_sentinel);
+  }
+
+  void set_any_writer(binary_any_writer_base<Endian>* writer) noexcept
+  {
+    any_writer_ = writer;
+  }
+
+  template <typename Class>
+    requires(ouly::detail::AnyLike<Class>)
+  void write_any(Class const& obj)
+  {
+    auto type_id = obj.type_hash();
+    visit(type_id);
+    if (type_id == 0)
+    {
+      return;
+    }
+    if (any_writer_ == nullptr)
+    {
+      throw visitor_error(visitor_error::unknown_runtime_type);
+    }
+
+    struct output_adapter final : erased_binary_output
+    {
+      Stream* stream_ = nullptr;
+
+      explicit output_adapter(Stream& stream) : stream_(&stream) {}
+
+      void write(std::byte const* data, std::size_t size) override
+      {
+        stream_->write(data, size);
+      }
+    };
+
+    output_adapter                      adapter{get()};
+    erased_binary_output_stream<Endian> erased_stream{adapter};
+    any_writer_->write_value(type_id, obj, erased_stream);
+  }
+
+  template <typename Class>
+    requires(ouly::detail::RuntimeTypeLike<Class>)
+  void write_runtime_type(Class const& obj)
+  {
+    auto type_id = obj.id_.id_;
+    if (type_id == 0)
+    {
+      type_id = obj.value_.type_hash();
+    }
+    visit(type_id);
+    if (type_id == 0)
+    {
+      return;
+    }
+    if (any_writer_ == nullptr)
+    {
+      throw visitor_error(visitor_error::unknown_runtime_type);
+    }
+
+    struct output_adapter final : erased_binary_output
+    {
+      Stream* stream_ = nullptr;
+
+      explicit output_adapter(Stream& stream) : stream_(&stream) {}
+
+      void write(std::byte const* data, std::size_t size) override
+      {
+        stream_->write(data, size);
+      }
+    };
+
+    output_adapter                      adapter{get()};
+    erased_binary_output_stream<Endian> erased_stream{adapter};
+    any_writer_->write_value(type_id, obj.value_, erased_stream);
   }
 
 private:

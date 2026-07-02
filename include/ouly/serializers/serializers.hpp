@@ -125,10 +125,28 @@ void read(auto& stream, auto&& obj)
 }
 
 template <std::endian Endian = std::endian::little>
+void read(auto& stream, auto&& obj, detail::binary_any_reader_base<Endian>& registry)
+  requires BinaryInputStream<decltype(stream)>
+{
+  auto state = detail::binary_input_serializer<std::decay_t<decltype(stream)>, Endian>(stream);
+  state.set_any_reader(&registry);
+  visit(obj, state);
+}
+
+template <std::endian Endian = std::endian::little>
 void write(auto& stream, auto&& obj)
   requires BinaryOutputStream<decltype(stream)>
 {
   auto state = detail::binary_output_serializer<std::decay_t<decltype(stream)>, Endian>(stream);
+  visit(obj, state);
+}
+
+template <std::endian Endian = std::endian::little>
+void write(auto& stream, auto&& obj, detail::binary_any_writer_base<Endian>& registry)
+  requires BinaryOutputStream<decltype(stream)>
+{
+  auto state = detail::binary_output_serializer<std::decay_t<decltype(stream)>, Endian>(stream);
+  state.set_any_writer(&registry);
   visit(obj, state);
 }
 

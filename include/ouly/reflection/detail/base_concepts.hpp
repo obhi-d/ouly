@@ -214,6 +214,11 @@ concept VariantLike = is_specialization_of<std::variant, Class>::value;
 template <typename Class>
 concept RuntimeTypeLike = requires { typename std::decay_t<Class>::is_runtime_type; };
 
+// Type-erased value (ouly::basic_any): the concrete type is resolved at
+// (de)serialization time via a registry/context.
+template <typename Class>
+concept AnyLike = requires { typename std::decay_t<Class>::is_any; };
+
 template <typename T>
 concept DeclBase = requires {
   typename T::ClassTy;

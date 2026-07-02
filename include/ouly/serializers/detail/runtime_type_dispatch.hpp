@@ -7,7 +7,7 @@
  *
  * The yml parser (parser_state) and the output serializer hold pointers to these
  * abstract bases so they remain decoupled from the concrete, user-populated
- * registry (ouly::yml::runtime_type_registry<Config>), which derives from them.
+ * registry (ouly::stream_type_registry<Config>), which derives from them.
  *
  * Only forward declarations of the serializer/parser types are needed here because
  * the bases reference them solely through pointers/references in their declarations.
@@ -15,6 +15,9 @@
 
 #include "ouly/utility/runtime_type.hpp"
 
+#include <bit>
+#include <cstddef>
+#include <cstdint>
 #include <string_view>
 
 namespace ouly::detail
@@ -26,6 +29,91 @@ template <typename Stream, typename Config>
 class structured_output_serializer;
 
 class writer_state;
+
+struct erased_binary_output
+{
+  virtual void write(std::byte const* data, std::size_t size) = 0;
+
+  erased_binary_output()                                               = default;
+  erased_binary_output(const erased_binary_output&)                    = default;
+  erased_binary_output(erased_binary_output&&)                         = default;
+  auto operator=(const erased_binary_output&) -> erased_binary_output& = default;
+  auto operator=(erased_binary_output&&) -> erased_binary_output&      = default;
+  virtual ~erased_binary_output()                                      = default;
+};
+
+struct erased_binary_input
+{
+  virtual void read(std::byte* data, std::size_t size) = 0;
+  virtual void skip(std::size_t size)                  = 0;
+
+  erased_binary_input()                                              = default;
+  erased_binary_input(const erased_binary_input&)                    = default;
+  erased_binary_input(erased_binary_input&&)                         = default;
+  auto operator=(const erased_binary_input&) -> erased_binary_input& = default;
+  auto operator=(erased_binary_input&&) -> erased_binary_input&      = default;
+  virtual ~erased_binary_input()                                     = default;
+};
+
+template <std::endian Endian>
+class erased_binary_output_stream
+{
+  erased_binary_output* stream_ = nullptr;
+
+public:
+  explicit erased_binary_output_stream(erased_binary_output& stream) : stream_(&stream) {}
+
+  void write(std::byte const* data, std::size_t size)
+  {
+    stream_->write(data, size);
+  }
+};
+
+template <std::endian Endian>
+class erased_binary_input_stream
+{
+  erased_binary_input* stream_ = nullptr;
+
+public:
+  explicit erased_binary_input_stream(erased_binary_input& stream) : stream_(&stream) {}
+
+  void read(std::byte* data, std::size_t size)
+  {
+    stream_->read(data, size);
+  }
+
+  void skip(std::size_t size)
+  {
+    stream_->skip(size);
+  }
+};
+
+template <std::endian Endian>
+struct binary_any_reader_base
+{
+  virtual void read_value(std::uint32_t type, ouly::any& storage, erased_binary_input_stream<Endian>& stream) = 0;
+
+  binary_any_reader_base()                                                 = default;
+  binary_any_reader_base(const binary_any_reader_base&)                    = default;
+  binary_any_reader_base(binary_any_reader_base&&)                         = default;
+  auto operator=(const binary_any_reader_base&) -> binary_any_reader_base& = default;
+  auto operator=(binary_any_reader_base&&) -> binary_any_reader_base&      = default;
+  virtual ~binary_any_reader_base()                                        = default;
+};
+
+template <std::endian Endian>
+struct binary_any_writer_base
+{
+  virtual void write_value(std::uint32_t type, ouly::any const& storage,
+                           erased_binary_output_stream<Endian>& stream) = 0;
+
+  binary_any_writer_base()                                                 = default;
+  binary_any_writer_base(const binary_any_writer_base&)                    = default;
+  binary_any_writer_base(binary_any_writer_base&&)                         = default;
+  auto operator=(const binary_any_writer_base&) -> binary_any_writer_base& = default;
+  auto operator=(binary_any_writer_base&&) -> binary_any_writer_base&      = default;
+  virtual ~binary_any_writer_base()                                        = default;
+};
 
 /**
  * @brief Read-side boundary: given a type_id, construct the bound type into the

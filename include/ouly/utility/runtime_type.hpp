@@ -7,15 +7,17 @@
  *
  * A runtime_type pairs a runtime type_id with a type-erased value (ouly::any).
  * The mapping from type_id to a concrete C++ type is supplied at (de)serialization
- * time by a registry/context (see ouly::yml::runtime_type_registry), rather than
+ * time by a registry/context (see ouly::stream_type_registry), rather than
  * being fixed at compile time as with std::variant.
  *
  * Like std::variant it is serialized as a { type, value } object. The "type" and
  * "value" key names follow the serialization Config's string transform, so they can
- * be customized exactly as variant's keys are (see ouly::yml::runtime_type_registry).
+ * be customized exactly as variant's keys are (see ouly::stream_type_registry).
  */
 
 #include "ouly/utility/any.hpp"
+
+#include <cstdint>
 
 namespace ouly
 {
@@ -25,7 +27,7 @@ namespace ouly
  */
 struct type_id
 {
-  int id_ = 0;
+  std::uint32_t id_ = 0;
 };
 
 /**
