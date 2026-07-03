@@ -227,14 +227,14 @@ TEST_CASE("soavector: Basic operations", "[soavector]")
     vec.push_back({2, 2.0f, "two"});
 
     auto it = vec.begin();
-    REQUIRE(std::get<0>((*it)) == 1);
+    REQUIRE((*it).get<0>() == 1);
     ++it;
-    REQUIRE(std::get<0>((*it)) == 2);
+    REQUIRE((*it).get<0>() == 2);
 
     int sum = 0;
     for (const auto& v : vec)
     {
-      sum += std::get<0>(v);
+      sum += v.get<0>();
     }
     REQUIRE(sum == 3);
   }
@@ -481,7 +481,6 @@ TEST_CASE("soavector: Span views", "[soavector][span]")
     auto view = vec.span(1, 2);
 
     REQUIRE(view.size() == 2);
-    REQUIRE(view.offset() == 1);
     REQUIRE_FALSE(view.empty());
 
     static_assert(std::is_same_v<decltype(view.data<0>()), int*>);
@@ -502,9 +501,9 @@ TEST_CASE("soavector: Span views", "[soavector][span]")
     REQUIRE(vec.at<2>(2) == "forty");
 
     auto it = view.begin();
-    REQUIRE(std::get<0>(*it) == 20);
+    REQUIRE((*it).get<0>() == 20);
     ++it;
-    REQUIRE(std::get<0>(*it) == 40);
+    REQUIRE((*it).get<0>() == 40);
     REQUIRE(view.end() - view.begin() == 2);
   }
 
@@ -514,7 +513,6 @@ TEST_CASE("soavector: Span views", "[soavector][span]")
     auto        view = cvec.span(1, 3);
 
     REQUIRE(view.size() == 3);
-    REQUIRE(view.offset() == 1);
 
     static_assert(std::is_same_v<decltype(view.data<0>()), int const*>);
     static_assert(std::is_same_v<decltype(view.span<0>()), std::span<int const>>);

@@ -360,6 +360,32 @@ TEMPLATE_TEST_CASE("stream: SoaVector aggregates", "[stream][soavector]", big_en
   REQUIRE_THROWS(ouly::read<TestType::value>(stream, read));
 }
 
+struct ComplexTypeWithSoa
+{
+  ouly::soavector<SoaSerializationPack> data;
+  std::vector<int>                      ints;
+  auto                                  operator<=>(ComplexTypeWithSoa const&) const = default;
+};
+
+TEMPLATE_TEST_CASE("stream: Complex type with SOA", "[stream][soavector]", big_endian, little_endian)
+{
+  FileData data;
+  auto     stream = Stream(data);
+
+  using type = ComplexTypeWithSoa;
+  type write{
+   .data = {{101, 1.5f, "first"}, {202, 2.5f, "second"}, {303, 3.5f, "another"}},
+   .ints = {1, 2, 3, 4, 5}
+  };
+  type read;
+
+  ouly::write<TestType::value>(stream, write);
+  ouly::read<TestType::value>(stream, read);
+
+  REQUIRE(read == write);
+  REQUIRE_THROWS(ouly::read<TestType::value>(stream, read));
+}
+
 TEMPLATE_TEST_CASE("stream: VariantLike", "[stream][variant]", big_endian, little_endian)
 {
   FileData data;

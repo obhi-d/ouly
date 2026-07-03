@@ -7,7 +7,7 @@
 #include "ouly/reflection/detail/field_helpers.hpp"
 #include "ouly/utility/type_traits.hpp"
 #include "ouly/utility/user_config.hpp"
-#include "ouly/utility/utils.hpp"
+#include "ouly/containers/detail/soa_value_wrapper.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -15,6 +15,9 @@
 #include <memory>
 #include <span>
 #include <utility>
+#include <compare>
+#include <concepts>
+#include <iterator>
 
 namespace ouly
 {
@@ -64,125 +67,113 @@ public:
   using ireverse_iterator = std::reverse_iterator<iiterator<I>>;
   template <std::size_t I>
   using iconst_reverse_iterator = std::reverse_iterator<iconst_iterator<I>>;
+  template <bool IsConst>
+  using value_wrapper = ouly::detail::soavector_value_wrapper<value_type, tuple_type, IsConst>;
 
   static auto constexpr index_seq = std::make_index_sequence<field_count>();
-
-  template <bool const IsConst>
-  class value_wrapper
-  {
-  public:
-    using pointer =
-     std::conditional_t<IsConst, ouly::detail::tuple_of_cptrs<tuple_type>, ouly::detail::tuple_of_ptrs<tuple_type>>;
-    using const_reference = ouly::detail::tuple_of_crefs<tuple_type>;
-
-    value_wrapper(auto... args) : vw_pointer_{args...} {}
-    value_wrapper(pointer vw_pointer_) : vw_pointer_(vw_pointer_) {}
-
-    auto operator=(value_type const& value) -> value_wrapper&
-    {
-      [&]<std::size_t... I>(std::index_sequence<I...>) -> void
-      {
-        ((*std::get<I>(vw_pointer_) = get_ref<I>(value)), ...);
-      }(std::make_index_sequence<field_count>());
-      return *this;
-    }
-
-    operator value_type() const
-    {
-      return std::apply(
-       [&](auto... arg) -> value_type
-       {
-         return value_type{*arg...};
-       },
-       vw_pointer_);
-    }
-
-    auto get() const -> value_type
-    {
-      return static_cast<value_type>(*this);
-    }
-
-  private:
-    pointer vw_pointer_ = {};
-  };
 
   template <bool const IsConst>
   class base_iterator
   {
   public:
+    using iterator_concept  = std::random_access_iterator_tag;
+    using iterator_category = std::random_access_iterator_tag;
+
+    using value_type      = Agg;
     using difference_type = std::make_signed_t<size_type>;
+
     using pointer =
      std::conditional_t<IsConst, ouly::detail::tuple_of_cptrs<tuple_type>, ouly::detail::tuple_of_ptrs<tuple_type>>;
-    using reference =
+
+    // Important: iterator reference must be readable as Agg.
+    using reference = value_wrapper<IsConst>;
+
+    using raw_reference =
      std::conditional_t<IsConst, ouly::detail::tuple_of_crefs<tuple_type>, ouly::detail::tuple_of_refs<tuple_type>>;
-    using const_reference = ouly::detail::tuple_of_crefs<tuple_type>;
+
+    using const_reference = value_wrapper<true>;
+
+    base_iterator() = default;
+
+    explicit base_iterator(pointer init) : pointers_(init) {}
 
     base_iterator(base_iterator const&)     = default;
     base_iterator(base_iterator&&) noexcept = default;
-    base_iterator()                         = default;
-    base_iterator(pointer init) : pointers_(init) {}
-    ~base_iterator() noexcept = default;
 
     auto operator=(base_iterator const&) -> base_iterator&     = default;
     auto operator=(base_iterator&&) noexcept -> base_iterator& = default;
-    auto operator<=>(base_iterator const&) const               = default;
+
+    ~base_iterator() noexcept = default;
 
     auto operator*() const -> reference
     {
-      return get(index_seq);
+      return reference(pointers_);
     }
 
+    // Optional. This is not required for iterator concepts.
+    // Returning tuple_of_ptrs is not a real C++ pointer-like arrow target,
+    // but leaving it here preserves your existing explicit operator->() usage.
     auto operator->() const -> pointer
     {
       return pointers_;
     }
 
-    auto operator++() -> auto&
+    auto operator++() -> base_iterator&
     {
       advance(index_seq);
       return *this;
     }
 
-    auto operator++(int)
+    auto operator++(int) -> base_iterator
     {
-      auto v = *this;
-      advance(index_seq);
-      return v;
+      auto old = *this;
+      ++(*this);
+      return old;
     }
 
-    auto operator--() -> auto&
+    auto operator--() -> base_iterator&
     {
       retreat(index_seq);
       return *this;
     }
 
-    auto operator--(int)
+    auto operator--(int) -> base_iterator
     {
-      auto v = *this;
-      retreat(index_seq);
-      return v;
+      auto old = *this;
+      --(*this);
+      return old;
     }
 
     auto operator+(difference_type n) const -> base_iterator
     {
-      return add(index_seq, n);
+      return base_iterator(add(index_seq, n));
+    }
+
+    friend auto operator+(difference_type n, base_iterator it) -> base_iterator
+    {
+      return it + n;
     }
 
     auto operator-(difference_type n) const -> base_iterator
     {
-      return add(index_seq, -n);
+      return base_iterator(add(index_seq, -n));
     }
 
-    auto operator+=(difference_type n) const -> base_iterator&
+    auto operator+=(difference_type n) -> base_iterator&
     {
-      *this = base_iterator<IsConst>(add(index_seq, n));
+      pointers_ = add(index_seq, n);
       return *this;
     }
 
-    auto operator-=(difference_type n) const -> base_iterator&
+    auto operator-=(difference_type n) -> base_iterator&
     {
-      *this = base_iterator<IsConst>(add(index_seq, -n));
+      pointers_ = add(index_seq, -n);
       return *this;
+    }
+
+    auto operator[](difference_type n) const -> reference
+    {
+      return *(*this + n);
     }
 
     template <std::size_t I>
@@ -191,46 +182,42 @@ public:
       return *std::get<I>(pointers_);
     }
 
-    friend auto operator-(base_iterator const& first, base_iterator const& second) -> difference_type
+    inline auto operator<=>(base_iterator const&) const noexcept = default;
+
+    friend auto operator-(base_iterator const& lhs, base_iterator const& rhs) -> difference_type
     {
-      return static_cast<difference_type>(std::distance(std::get<0>(second.pointers_), std::get<0>(first.pointers_)));
+      if constexpr (field_count > 0)
+      {
+        return static_cast<difference_type>(std::get<0>(lhs.pointers_) - std::get<0>(rhs.pointers_));
+      }
+      else
+      {
+        return 0;
+      }
+    }
+
+    friend auto iter_move(base_iterator const& it) noexcept(noexcept(static_cast<value_type>(*it))) -> value_type
+    {
+      return static_cast<value_type>(*it);
     }
 
   private:
     template <std::size_t... I>
-    auto get(std::index_sequence<I...> /*unused*/) const -> reference
-    {
-      return reference(*std::get<I>(pointers_)...);
-    }
-
-    template <std::size_t... I>
-    auto add(std::index_sequence<I...> /*unused*/, difference_type n) const
+    auto add(std::index_sequence<I...>, difference_type n) const -> pointer
     {
       return pointer((std::get<I>(pointers_) + n)...);
     }
 
     template <std::size_t... I>
-    void advance(std::index_sequence<I...> /*unused*/)
+    void advance(std::index_sequence<I...>)
     {
-      (std::get<I>(pointers_)++, ...);
+      (++std::get<I>(pointers_), ...);
     }
 
     template <std::size_t... I>
-    void retreat(std::index_sequence<I...> /*unused*/)
+    void retreat(std::index_sequence<I...>)
     {
-      (std::get<I>(pointers_)--, ...);
-    }
-
-    template <std::size_t... I>
-    auto next(std::index_sequence<I...> /*unused*/) const -> reference
-    {
-      return reference((*std::get<I>(pointers_) + 1)...);
-    }
-
-    template <std::size_t... I>
-    auto prev(std::index_sequence<I...> /*unused*/) const -> reference
-    {
-      return reference((*std::get<I>(pointers_) - 1)...);
+      (--std::get<I>(pointers_), ...);
     }
 
     pointer pointers_ = {};
@@ -244,6 +231,7 @@ public:
   using const_pointer          = ouly::detail::tuple_of_cptrs<tuple_type>;
   using reverse_iterator       = std::reverse_iterator<iterator>;
   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+
 
   template <bool const IsConst>
   class span_view
@@ -259,7 +247,7 @@ public:
     using span_type = std::span<element_type<I>>;
 
     span_view() = default;
-    span_view(pointer data, size_type offset, size_type size) : data_(data), offset_(offset), size_(size) {}
+    span_view(pointer data, size_type size) : data_(data), size_(size) {}
 
     [[nodiscard]] auto size() const -> size_type
     {
@@ -269,11 +257,6 @@ public:
     [[nodiscard]] auto empty() const -> bool
     {
       return size_ == 0;
-    }
-
-    [[nodiscard]] auto offset() const -> size_type
-    {
-      return offset_;
     }
 
     [[nodiscard]] auto begin() const
@@ -316,6 +299,14 @@ public:
       return std::get<I>(data_)[n];
     }
 
+    inline auto operator[](size_type n) -> reference
+    {
+      return get<reference>(index_seq, n);
+    }
+
+
+    inline auto operator<=>(span_view const&) const noexcept = default;
+
   private:
     template <typename Reftype, std::size_t... I>
     auto get(std::index_sequence<I...> /*unused*/, size_type i) const -> Reftype
@@ -324,14 +315,15 @@ public:
     }
 
     pointer   data_{};
-    size_type offset_ = 0;
     size_type size_   = 0;
   };
 
   using readwrite_span = span_view<false>;
   using readonly_span  = span_view<true>;
 
-  explicit soavector(allocator_type const& alloc = allocator_type()) : allocator_type(alloc), size_(0), capacity_(0) {};
+  soavector() : soavector(allocator_type()) {}
+
+  explicit soavector(allocator_type const& alloc) : allocator_type(alloc), size_(0), capacity_(0) {};
 
   explicit soavector(size_type n) : data_(allocate(n)), size_(n), capacity_(n)
   {
@@ -404,7 +396,7 @@ public:
     return *this;
   }
 
-  template <class InputIterator>
+  template <typename InputIterator>
   void assign(InputIterator first, InputIterator last)
   {
     auto n = distance(first, last);
@@ -421,11 +413,9 @@ public:
     else
     {
       auto copied = std::min(n, size_);
-      auto middle = first;
-      for (size_type i = 0; i < copied; ++i)
-      {
-        ++middle;
-      }
+      auto middle =
+       std::next(first, static_cast<typename std::iterator_traits<InputIterator>::difference_type>(copied));
+
       copy_range(first, middle, data_, 0, index_seq);
       if (n < size_)
       {
@@ -862,28 +852,27 @@ public:
   {
     OULY_ASSERT(first <= last);
     OULY_ASSERT(last <= size());
+
     if (first == last)
     {
       return;
     }
 
+    auto const tail_count = size_ - last;
+    auto*      dst        = data + first;
+    auto*      src        = data + last;
+
     if constexpr (std::is_trivially_copyable_v<Ty>)
     {
-      std::memmove(data + first, data + last, (size_ - last) * sizeof(Ty));
+      std::memmove(dst, src, tail_count * sizeof(Ty));
     }
     else
     {
-      while (last < size_)
-      {
-        data[first++] = std::move(data[last++]);
-      }
+      auto* new_end = std::move(src, data + size_, dst);
 
       if constexpr (!std::is_trivially_destructible_v<Ty>)
       {
-        for (; first < size_; ++first)
-        {
-          std::destroy_at(&data[first]);
-        }
+        std::destroy(new_end, data + size_);
       }
     }
   }
@@ -954,21 +943,23 @@ private:
       return std::get<I>(std::forward<T>(tup));
     }
   }
-
   template <std::size_t I, typename T>
-  static auto get_from_iter(T& tup) -> auto&
+  static auto get_from_iter(T& it) -> decltype(auto)
   {
-    if constexpr (requires { tup.template get<I>(); })
+    auto&& ref = *it;
+
+    if constexpr (requires { ref.template get<I>(); })
     {
-      return tup.template get<I>();
+      return ref.template get<I>();
     }
-    else if constexpr (requires { ouly::detail::get_field_ref<I>(*tup); })
+    else if constexpr (requires { ouly::detail::get_field_ref<I>(ref); })
     {
-      return ouly::detail::get_field_ref<I>(*tup);
+      return ouly::detail::get_field_ref<I>(ref);
     }
     else
     {
-      return std::get<I>(tup);
+      using std::get;
+      return get<I>(ref);
     }
   }
 
@@ -1556,7 +1547,7 @@ private:
   template <typename Spantype, std::size_t... I>
   auto get_span(std::index_sequence<I...> /*unused*/, size_type offset, size_type count) const -> Spantype
   {
-    return Spantype(typename Spantype::pointer((std::get<I>(data_) + offset)...), offset, count);
+    return Spantype(typename Spantype::pointer((std::get<I>(data_) + offset)...), count);
   }
 
   template <typename InputIterator>
