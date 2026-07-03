@@ -46,6 +46,10 @@ void visit(Class& obj, Visitor& visitor)
   {
     return ouly::detail::visit_tuple(obj, visitor);
   }
+  else if constexpr (ouly::detail::SoaVectorLike<type>)
+  {
+    return ouly::detail::visit_soavector(obj, visitor);
+  }
   else if constexpr (ouly::detail::ContainerLike<type>)
   {
     return ouly::detail::visit_container(obj, visitor);

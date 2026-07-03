@@ -2,6 +2,7 @@
 #include "catch2/catch_all.hpp"
 #include "catch2/catch_test_macros.hpp"
 #include "ouly/containers/array_types.hpp"
+#include "ouly/containers/soavector.hpp"
 #include "ouly/reflection/detail/base_concepts.hpp"
 #include "ouly/reflection/reflection.hpp"
 #include "ouly/serializers/binary_stream.hpp"
@@ -324,6 +325,38 @@ TEMPLATE_TEST_CASE("stream: ArrayLike with Fastpath", "[stream][array]", big_end
   ouly::read<TestType::value>(stream, read);
 
   REQUIRE(read == write);
+  REQUIRE_THROWS(ouly::read<TestType::value>(stream, read));
+}
+
+struct SoaSerializationPack
+{
+  int         id     = 0;
+  float       weight = 0.0f;
+  std::string name;
+
+  auto operator<=>(SoaSerializationPack const&) const = default;
+};
+
+TEMPLATE_TEST_CASE("stream: SoaVector aggregates", "[stream][soavector]", big_endian, little_endian)
+{
+  FileData data;
+  auto     stream = Stream(data);
+
+  using type = ouly::soavector<SoaSerializationPack>;
+  type write{
+   {101, 1.5f,   "first"},
+   {202, 2.5f,  "second"},
+   {303, 3.5f, "another"}
+  };
+  type read;
+
+  ouly::write<TestType::value>(stream, write);
+  ouly::read<TestType::value>(stream, read);
+
+  REQUIRE(read == write);
+  REQUIRE(read.at<0>(0) == 101);
+  REQUIRE(read.at<1>(1) == 2.5f);
+  REQUIRE(read.at<2>(2) == "another");
   REQUIRE_THROWS(ouly::read<TestType::value>(stream, read));
 }
 

@@ -201,6 +201,12 @@ concept ContainerLike = (ContainerCanAppendValue<Class> || ContainerHasArrayValu
 template <typename Class>
 concept ArrayLike = ContainerLike<Class> && (!MapLike<Class>);
 
+template <typename Class>
+concept SoaVectorLike = requires {
+  typename std::decay_t<Class>::is_soavector;
+  typename std::decay_t<Class>::value_type;
+};
+
 // Tuple
 template <typename Class>
 concept TupleLike = is_specialization_of<std::tuple, Class>::value || is_specialization_of<std::pair, Class>::value;
