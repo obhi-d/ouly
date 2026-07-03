@@ -3,6 +3,7 @@
 
 #include "ouly/allocators/linear_arena_allocator.hpp"
 #include "ouly/dsl/lite_yml.hpp"
+#include "ouly/reflection/detail/base_concepts.hpp"
 #include "ouly/reflection/visitor.hpp"
 #include "ouly/serializers/config.hpp"
 #include "ouly/serializers/detail/runtime_type_dispatch.hpp"
@@ -781,7 +782,25 @@ public:
   }
 
   auto push_container_item(parser_state* parser)
-    requires(ContainerHasEmplaceBack<class_type>)
+    requires(SoaVectorLike<class_type>)
+  {
+    using type      = typename class_type::value_type;
+    auto ret        = parser->template create<in_context_impl<type, Config>>();
+    ret->post_init_ = [](in_context_base* mapping, parser_state* /*parser_ptr*/) -> void
+    {
+      auto object = static_cast<in_context_impl<type, Config>*>(mapping);
+      auto parent = static_cast<in_context_impl<Class, Config>*>(object->parent_);
+      if (object->has_value_)
+      {
+        parent->has_value_ = true;
+        parent->get().push_back(std::move(object->get()));
+      }
+    };
+    return ret;
+  }
+
+  auto push_container_item(parser_state* parser)
+    requires(ContainerHasEmplaceBack<class_type> && !SoaVectorLike<class_type>)
   {
     using type      = array_value_type<class_type>;
     auto ret        = parser->template create<in_context_impl<type, Config>>();
@@ -799,7 +818,7 @@ public:
   }
 
   auto push_container_item(parser_state* parser)
-    requires(ContainerHasEmplace<class_type> && !MapLike<class_type>)
+    requires(ContainerHasEmplace<class_type> && !MapLike<class_type> && !SoaVectorLike<class_type>)
   {
     using type      = typename class_type::value_type;
     auto ret        = parser->template create<in_context_impl<type, Config>>();

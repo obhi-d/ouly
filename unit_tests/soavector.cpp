@@ -1,8 +1,10 @@
 #include "ouly/containers/soavector.hpp"
 #include "catch2/catch_all.hpp"
 #include "test_common.hpp"
+#include <array>
 #include <string>
 #include <type_traits>
+#include <vector>
 
 // NOLINTBEGIN
 TEST_CASE("soavector: Validate soavector emplace", "[soavector][emplace]")
@@ -132,6 +134,49 @@ struct TestStruct
   float       y;
   std::string s;
   auto        operator<=>(const TestStruct&) const = default;
+};
+
+struct TrackedSoaField
+{
+  inline static int alive = 0;
+
+  int value = 0;
+
+  TrackedSoaField()
+  {
+    ++alive;
+  }
+
+  TrackedSoaField(int v) : value(v)
+  {
+    ++alive;
+  }
+
+  TrackedSoaField(TrackedSoaField const& rhs) : value(rhs.value)
+  {
+    ++alive;
+  }
+
+  TrackedSoaField(TrackedSoaField&& rhs) noexcept : value(rhs.value)
+  {
+    ++alive;
+  }
+
+  auto operator=(TrackedSoaField const&) -> TrackedSoaField&     = default;
+  auto operator=(TrackedSoaField&&) noexcept -> TrackedSoaField& = default;
+
+  ~TrackedSoaField()
+  {
+    --alive;
+  }
+
+  auto operator<=>(TrackedSoaField const&) const = default;
+};
+
+struct TrackedSoaPack
+{
+  TrackedSoaField value;
+  std::string     label;
 };
 
 TEST_CASE("soavector: Basic operations", "[soavector]")
@@ -311,6 +356,91 @@ TEST_CASE("soavector: Modifiers", "[soavector]")
   }
 }
 
+TEST_CASE("soavector: Insert range preserves tail with spare capacity", "[soavector][insert]")
+{
+  ouly::soavector<TestStruct> vec;
+  vec.reserve(8);
+  vec.push_back({1, 1.0f, "one"});
+  vec.push_back({4, 4.0f, "four"});
+  vec.push_back({5, 5.0f, "five"});
+
+  std::array<TestStruct, 2> values = {
+   {{2, 2.0f, "two"}, {3, 3.0f, "three"}}
+  };
+  vec.insert(1, values.begin(), values.end());
+
+  REQUIRE(vec.size() == 5);
+  REQUIRE(vec[0].get() == (TestStruct{1, 1.0f, "one"}));
+  REQUIRE(vec[1].get() == (TestStruct{2, 2.0f, "two"}));
+  REQUIRE(vec[2].get() == (TestStruct{3, 3.0f, "three"}));
+  REQUIRE(vec[3].get() == (TestStruct{4, 4.0f, "four"}));
+  REQUIRE(vec[4].get() == (TestStruct{5, 5.0f, "five"}));
+}
+
+TEST_CASE("soavector: Erase supports ranges ending at size", "[soavector][erase]")
+{
+  ouly::soavector<TestStruct> vec{
+   {1, 1.0f,   "one"},
+   {2, 2.0f,   "two"},
+   {3, 3.0f, "three"},
+   {4, 4.0f,  "four"}
+  };
+
+  vec.erase(2, vec.size());
+
+  REQUIRE(vec.size() == 2);
+  REQUIRE(vec[0].get() == (TestStruct{1, 1.0f, "one"}));
+  REQUIRE(vec[1].get() == (TestStruct{2, 2.0f, "two"}));
+
+  vec.erase(vec.size() - 1);
+
+  REQUIRE(vec.size() == 1);
+  REQUIRE(vec[0].get() == (TestStruct{1, 1.0f, "one"}));
+}
+
+TEST_CASE("soavector: Assign reuses capacity for different range sizes", "[soavector][assign]")
+{
+  ouly::soavector<TestStruct> vec;
+  vec.reserve(8);
+
+  std::array<TestStruct, 3> first = {
+   {{1, 1.0f, "one"}, {2, 2.0f, "two"}, {3, 3.0f, "three"}}
+  };
+  vec.assign(first.begin(), first.end());
+  REQUIRE(vec.size() == 3);
+
+  std::array<TestStruct, 1> second = {{{7, 7.0f, "seven"}}};
+  vec.assign(second.begin(), second.end());
+  REQUIRE(vec.size() == 1);
+  REQUIRE(vec[0].get() == (TestStruct{7, 7.0f, "seven"}));
+
+  std::array<TestStruct, 4> third = {
+   {{4, 4.0f, "four"}, {5, 5.0f, "five"}, {6, 6.0f, "six"}, {8, 8.0f, "eight"}}
+  };
+  vec.assign(third.begin(), third.end());
+  REQUIRE(vec.size() == 4);
+  REQUIRE(vec[0].get() == (TestStruct{4, 4.0f, "four"}));
+  REQUIRE(vec[3].get() == (TestStruct{8, 8.0f, "eight"}));
+}
+
+TEST_CASE("soavector: Clear destroys stored fields", "[soavector][clear]")
+{
+  TrackedSoaField::alive = 0;
+  {
+    ouly::soavector<TrackedSoaPack> vec;
+    vec.emplace_back(TrackedSoaField{1}, "one");
+    vec.emplace_back(TrackedSoaField{2}, "two");
+
+    REQUIRE(TrackedSoaField::alive == 2);
+
+    vec.clear();
+
+    REQUIRE(TrackedSoaField::alive == 0);
+  }
+
+  REQUIRE(TrackedSoaField::alive == 0);
+}
+
 TEST_CASE("soavector: Comparison operators", "[soavector]")
 {
   ouly::soavector<TestStruct> vec1;
@@ -327,6 +457,15 @@ TEST_CASE("soavector: Comparison operators", "[soavector]")
   REQUIRE(vec2 > vec1);
   REQUIRE(vec1 <= vec2);
   REQUIRE(vec2 >= vec1);
+
+  ouly::soavector<TestStruct> lexicographic_lhs{
+   {1, 9.0f, "z"}
+  };
+  ouly::soavector<TestStruct> lexicographic_rhs{
+   {2, 0.0f, "a"}
+  };
+  REQUIRE(lexicographic_lhs < lexicographic_rhs);
+  REQUIRE_FALSE(lexicographic_rhs < lexicographic_lhs);
 }
 
 TEST_CASE("soavector: Span views", "[soavector][span]")

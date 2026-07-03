@@ -24,7 +24,8 @@ class soavector : public ouly::detail::custom_allocator_t<Config>
 {
 
 public:
-  using value_type = Agg;
+  using value_type   = Agg;
+  using is_soavector = std::true_type;
 
   using allocator_type = ouly::detail::custom_allocator_t<Config>;
   using tuple_type     = ouly::detail::field_types<Agg>;
@@ -419,14 +420,20 @@ public:
     }
     else
     {
-      copy_range(first, first + size_, data_, 0, index_seq);
+      auto copied = std::min(n, size_);
+      auto middle = first;
+      for (size_type i = 0; i < copied; ++i)
+      {
+        ++middle;
+      }
+      copy_range(first, middle, data_, 0, index_seq);
       if (n < size_)
       {
         destroy_all(n, size_ - n, index_seq);
       }
       else
       {
-        uninitialized_fill_n(data_, size_, n - size_, value_type{}, index_seq);
+        uninitialized_copy_range(middle, last, data_, size_, index_seq);
       }
     }
     size_ = n;
@@ -798,6 +805,16 @@ public:
     construct_tuple_at(size_++, index_seq, x);
   }
 
+  void push_back(value_type&& x)
+  {
+    if (capacity_ < size_ + 1)
+    {
+      unchecked_reserve(size_ + std::max<size_type>(size_ >> 1, 1));
+    }
+
+    construct_tuple_at(size_++, index_seq, std::move(x));
+  }
+
   void pop_back()
   {
     OULY_ASSERT(size_);
@@ -843,7 +860,13 @@ public:
   template <typename Ty>
   void erase_at(Ty* data, size_type first, size_type last)
   {
-    OULY_ASSERT(last < size());
+    OULY_ASSERT(first <= last);
+    OULY_ASSERT(last <= size());
+    if (first == last)
+    {
+      return;
+    }
+
     if constexpr (std::is_trivially_copyable_v<Ty>)
     {
       std::memmove(data + first, data + last, (size_ - last) * sizeof(Ty));
@@ -859,7 +882,7 @@ public:
       {
         for (; first < size_; ++first)
         {
-          std::destroy_at(&data[first++]);
+          std::destroy_at(&data[first]);
         }
       }
     }
@@ -887,7 +910,8 @@ public:
 
   auto erase(size_type first, size_type last) -> size_type
   {
-    OULY_ASSERT(last < size());
+    OULY_ASSERT(first <= last);
+    OULY_ASSERT(last <= size());
     erase_at(first, last, index_seq);
     size_ -= (last - first);
     return first;
@@ -900,6 +924,7 @@ public:
 
   void clear()
   {
+    destroy_all(0, size_, index_seq);
     size_ = 0;
   }
 
@@ -1185,8 +1210,45 @@ private:
     (memmove(std::get<I>(data_) + to, std::get<I>(data_) + from, n), ...);
   }
 
+  template <typename Ty>
+  void move_right(Ty* data, size_type position, size_type by, size_type count)
+  {
+    if (count == 0)
+    {
+      return;
+    }
+
+    if constexpr (std::is_trivially_copyable_v<Ty>)
+    {
+      std::memmove(data + position + by, data + position, count * sizeof(Ty));
+    }
+    else
+    {
+      for (size_type i = count; i > 0; --i)
+      {
+        auto const from = position + i - 1;
+        auto const to   = from + by;
+        if (to >= size_)
+        {
+          std::construct_at(data + to, std::move(data[from]));
+        }
+        else
+        {
+          data[to] = std::move(data[from]);
+        }
+      }
+    }
+  }
+
+  template <std::size_t... I>
+  void move_right(size_type position, size_type by, size_type count, std::index_sequence<I...> /*unused*/)
+  {
+    (move_right(std::get<I>(data_), position, by, count), ...);
+  }
+
   auto insert_hole(size_type p, size_type n = 1) -> size_type
   {
+    OULY_ASSERT(p <= size_);
     size_type nsz = size_ + n;
     if (capacity_ < nsz)
     {
@@ -1194,8 +1256,8 @@ private:
     }
     else
     {
-      memmove(p + n, p, n, index_seq);
-      destroy_all(p, n, index_seq);
+      move_right(p, n, size_ - p, index_seq);
+      destroy_all(p, std::min(n, size_ - p), index_seq);
     }
     size_ = nsz;
     return p;
@@ -1223,7 +1285,7 @@ private:
     if (allocator_is_always_equal::value ||
         static_cast<const allocator_type&>(x) == static_cast<const allocator_type&>(*this))
     {
-      assign(x, std::false_type());
+      assign_copy(x, std::false_type());
     }
     else
     {
@@ -1262,7 +1324,7 @@ private:
     data_       = x.data_;
     size_       = x.size_;
     capacity_   = x.capacity_;
-    x.data_     = nullptr;
+    x.data_     = {};
     x.capacity_ = x.size_ = 0;
     return *this;
   }
@@ -1341,7 +1403,7 @@ private:
     std::swap(capacity_, x.capacity_);
     std::swap(size_, x.size_);
     std::swap(data_, x.data_);
-    std::swap<allocator_type>(this, x);
+    std::swap(static_cast<allocator_type&>(*this), static_cast<allocator_type&>(x));
   }
 
   friend void swap(soavector& lhs, soavector& rhs) noexcept
@@ -1419,13 +1481,25 @@ private:
   friend auto operator<(soavector const& x, soavector const& y) -> bool
   {
     auto n = std::min(x.size(), y.size());
-    return (less(x.data_, y.data_, n, index_seq) | (x.size_ < y.size_));
+    for (size_type i = 0; i < n; ++i)
+    {
+      auto xv = x[i].get();
+      auto yv = y[i].get();
+      if (xv < yv)
+      {
+        return true;
+      }
+      if (yv < xv)
+      {
+        return false;
+      }
+    }
+    return x.size_ < y.size_;
   }
 
   friend auto operator<=(soavector const& x, soavector const& y) -> bool
   {
-    auto n = std::min(x.size(), y.size());
-    return (lesseq(x.data_, y.data_, n, index_seq) | (x.size_ <= y.size_));
+    return !(y < x);
   }
 
   friend auto operator!=(soavector const& x, soavector const& y) -> bool
@@ -1440,7 +1514,7 @@ private:
 
   friend auto operator>=(soavector const& x, soavector const& y) -> bool
   {
-    return y <= x;
+    return !(x < y);
   }
 
   template <class InputIterator>

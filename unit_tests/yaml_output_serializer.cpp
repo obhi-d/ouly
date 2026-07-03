@@ -1,4 +1,5 @@
 #include "catch2/catch_all.hpp"
+#include "ouly/containers/soavector.hpp"
 #include "ouly/reflection/detail/base_concepts.hpp"
 #include "ouly/serializers/lite_yml.hpp"
 #include "ouly/utility/to_chars.hpp"
@@ -170,5 +171,32 @@ TEST_CASE("yaml_output: Test write empty array")
   ArrayTest at;
   auto      yml = ouly::yml::to_string(at);
   REQUIRE(yml.find("- ") != std::string::npos);
+}
+
+TEST_CASE("yaml_output: Roundtrip soavector aggregates")
+{
+  struct Item
+  {
+    int         id = 0;
+    std::string label;
+    bool        active = false;
+
+    auto operator<=>(Item const&) const = default;
+  };
+
+  ouly::soavector<Item> write{
+   {10, "alpha",  true},
+   {20,  "beta", false},
+   {30, "gamma",  true}
+  };
+  ouly::soavector<Item> read;
+
+  auto yml = ouly::yml::to_string(write);
+  ouly::yml::from_string(read, yml);
+
+  REQUIRE(read == write);
+  REQUIRE(read.at<0>(0) == 10);
+  REQUIRE(read.at<1>(1) == "beta");
+  REQUIRE(read.at<2>(2));
 }
 // NOLINTEND

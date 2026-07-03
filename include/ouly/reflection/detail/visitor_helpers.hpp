@@ -284,6 +284,108 @@ void visit_container(Class const& obj, Visitor& visitor)
                                });
 }
 
+template <ouly::detail::SoaVectorLike Class>
+class soavector_value_view
+{
+public:
+  using value_type = typename Class::value_type;
+  using size_type  = typename Class::size_type;
+
+  class const_iterator
+  {
+  public:
+    using difference_type = typename Class::difference_type;
+    using value_type      = typename Class::value_type;
+
+    const_iterator(Class const& values, size_type index) : values_(&values), index_(index) {}
+
+    auto operator*() const -> value_type
+    {
+      return (*values_)[index_].get();
+    }
+
+    auto operator++() -> const_iterator&
+    {
+      ++index_;
+      return *this;
+    }
+
+    auto operator!=(const_iterator const& rhs) const -> bool
+    {
+      return index_ != rhs.index_;
+    }
+
+  private:
+    Class const* values_ = nullptr;
+    size_type    index_  = 0;
+  };
+
+  explicit soavector_value_view(Class const& values) : values_(&values) {}
+
+  [[nodiscard]] auto size() const -> size_type
+  {
+    return values_->size();
+  }
+
+  [[nodiscard]] auto begin() const -> const_iterator
+  {
+    return const_iterator(*values_, 0);
+  }
+
+  [[nodiscard]] auto end() const -> const_iterator
+  {
+    return const_iterator(*values_, values_->size());
+  }
+
+private:
+  Class const* values_ = nullptr;
+};
+
+template <ouly::detail::SoaVectorLike Class, typename Visitor>
+  requires(is_reader<Visitor>)
+void visit_soavector(Class& obj, Visitor& visitor)
+{
+  using value_type = std::decay_t<typename Class::value_type>;
+
+  Visitor array_visitor{array_visitor_tag{}, visitor};
+
+  if (!array_visitor.can_visit(obj))
+  {
+    throw visitor_error(visitor_error::invalid_container);
+  }
+
+  array_visitor.for_each_entry(obj,
+                               [&](auto& field_visitor) -> auto
+                               {
+                                 value_type stream_val;
+
+                                 visit(stream_val, field_visitor);
+
+                                 obj.push_back(std::move(stream_val));
+                               });
+}
+
+template <ouly::detail::SoaVectorLike Class, typename Visitor>
+  requires(is_writer<Visitor>)
+void visit_soavector(Class const& obj, Visitor& visitor)
+{
+  using value_type = std::decay_t<typename Class::value_type>;
+
+  Visitor array_visitor{array_visitor_tag{}, visitor};
+
+  if (!array_visitor.can_visit(obj))
+  {
+    throw visitor_error(visitor_error::invalid_container);
+  }
+
+  soavector_value_view<Class> values(obj);
+  array_visitor.for_each_entry(values,
+                               [&](value_type const& stream_val, auto& field_visitor) -> auto
+                               {
+                                 visit(stream_val, field_visitor);
+                               });
+}
+
 template <typename Class, typename Visitor>
   requires(is_reader<Visitor>)
 void visit_variant(Class& obj, Visitor& visitor)
