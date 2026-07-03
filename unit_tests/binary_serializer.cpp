@@ -364,7 +364,7 @@ struct ComplexTypeWithSoa
 {
   ouly::soavector<SoaSerializationPack> data;
   std::vector<int>                      ints;
-  auto                                  operator<=>(ComplexTypeWithSoa const&) const = default;
+  bool                                  operator==(ComplexTypeWithSoa const&) const = default;
 };
 
 TEMPLATE_TEST_CASE("stream: Complex type with SOA", "[stream][soavector]", big_endian, little_endian)
@@ -375,7 +375,7 @@ TEMPLATE_TEST_CASE("stream: Complex type with SOA", "[stream][soavector]", big_e
   using type = ComplexTypeWithSoa;
   type write{
    .data = {{101, 1.5f, "first"}, {202, 2.5f, "second"}, {303, 3.5f, "another"}},
-   .ints = {1, 2, 3, 4, 5}
+     .ints = {1, 2, 3, 4, 5}
   };
   type read;
 

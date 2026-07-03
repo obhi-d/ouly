@@ -3,21 +3,21 @@
 #include "ouly/allocators/allocator.hpp"
 #include "ouly/allocators/default_allocator.hpp"
 #include "ouly/allocators/detail/custom_allocator.hpp"
+#include "ouly/containers/detail/soa_value_wrapper.hpp"
 #include "ouly/reflection/detail/base_concepts.hpp"
 #include "ouly/reflection/detail/field_helpers.hpp"
 #include "ouly/utility/type_traits.hpp"
 #include "ouly/utility/user_config.hpp"
-#include "ouly/containers/detail/soa_value_wrapper.hpp"
+#include <compare>
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <iterator>
 #include <limits>
 #include <memory>
 #include <span>
 #include <utility>
-#include <compare>
-#include <concepts>
-#include <iterator>
 
 namespace ouly
 {
@@ -182,7 +182,7 @@ public:
       return *std::get<I>(pointers_);
     }
 
-    inline auto operator<=>(base_iterator const&) const noexcept = default;
+    auto operator<=>(base_iterator const&) const noexcept = default;
 
     friend auto operator-(base_iterator const& lhs, base_iterator const& rhs) -> difference_type
     {
@@ -203,19 +203,19 @@ public:
 
   private:
     template <std::size_t... I>
-    auto add(std::index_sequence<I...>, difference_type n) const -> pointer
+    auto add(std::index_sequence<I...> /*seq*/, difference_type n) const -> pointer
     {
       return pointer((std::get<I>(pointers_) + n)...);
     }
 
     template <std::size_t... I>
-    void advance(std::index_sequence<I...>)
+    void advance(std::index_sequence<I...> /*seq*/)
     {
       (++std::get<I>(pointers_), ...);
     }
 
     template <std::size_t... I>
-    void retreat(std::index_sequence<I...>)
+    void retreat(std::index_sequence<I...> /*seq*/)
     {
       (--std::get<I>(pointers_), ...);
     }
@@ -231,7 +231,6 @@ public:
   using const_pointer          = ouly::detail::tuple_of_cptrs<tuple_type>;
   using reverse_iterator       = std::reverse_iterator<iterator>;
   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
-
 
   template <bool const IsConst>
   class span_view
@@ -299,13 +298,12 @@ public:
       return std::get<I>(data_)[n];
     }
 
-    inline auto operator[](size_type n) -> reference
+    auto operator[](size_type n) -> reference
     {
       return get<reference>(index_seq, n);
     }
 
-
-    inline auto operator<=>(span_view const&) const noexcept = default;
+    auto operator<=>(span_view const&) const noexcept = default;
 
   private:
     template <typename Reftype, std::size_t... I>
@@ -315,7 +313,7 @@ public:
     }
 
     pointer   data_{};
-    size_type size_   = 0;
+    size_type size_ = 0;
   };
 
   using readwrite_span = span_view<false>;
