@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 #include "ouly/containers/small_vector.hpp"
+#include "ouly/utility/user_config.hpp"
 #include <algorithm>
 #include <bit>
 #include <cstddef>
@@ -71,14 +72,14 @@ public:
 
   void set(T idx, bool value = true)
   {
+    OULY_ASSERT(contains(idx));
     if (!value)
     {
       reset(idx);
       return;
     }
 
-    auto& word = word_at(idx);
-    word |= mask(idx);
+    word_unchecked(idx) |= mask(idx);
   }
 
   void reset(T idx)
@@ -95,8 +96,8 @@ public:
 
   [[nodiscard]] auto test(T idx) const noexcept -> bool
   {
-    auto const* word = word_if(idx);
-    return word != nullptr && ((*word & mask(idx)) != 0);
+    OULY_ASSERT(contains(idx));
+    return (word_unchecked(idx) & mask(idx)) != 0;
   }
 
   [[nodiscard]] auto operator[](T idx) const noexcept -> bool
@@ -106,9 +107,8 @@ public:
 
   [[nodiscard]] auto contains(T idx) const noexcept -> bool
   {
-    auto const local         = local_word(idx);
-    auto const storage_local = static_cast<storage_size_type>(local);
-    return local != null && static_cast<T>(storage_local) == local && storage_local < data_.words_.size();
+    auto const local = local_word(idx);
+    return std::cmp_less(local, data_.words_.size());
   }
 
   void clear() noexcept
@@ -118,6 +118,44 @@ public:
       data_.base_word_ = null;
     }
     data_.words_.clear();
+  }
+
+  void resize(T max_bit)
+  {
+    auto const word = word_index(max_bit);
+    if constexpr (OffsetLimit > 0)
+    {
+      if (data_.base_word_ > word)
+      {
+        if (data_.words_.empty())
+        {
+          data_.base_word_ = word;
+        }
+        else
+        {
+          T to_base_word = 0;
+          if (data_.words_.size() < limit)
+          {
+            to_base_word = word;
+          }
+          data_.base_word_ = shift(to_base_word);
+        }
+      }
+
+      auto const local = static_cast<storage_size_type>(word - data_.base_word_);
+      if (local >= data_.words_.size())
+      {
+        data_.words_.resize(static_cast<storage_size_type>(local + storage_size_type{1}), 0);
+      }
+    }
+    else
+    {
+      auto const storage_word = static_cast<storage_size_type>(word);
+      if (storage_word >= data_.words_.size())
+      {
+        data_.words_.resize(static_cast<storage_size_type>(storage_word + storage_size_type{1}), 0);
+      }
+    }
   }
 
   void trim()
@@ -418,24 +456,34 @@ private:
 
   auto word_if(T idx) noexcept -> word_type*
   {
-    auto const local         = local_word(idx);
-    auto const storage_local = static_cast<storage_size_type>(local);
-    if (local == null || static_cast<T>(storage_local) != local || storage_local >= data_.words_.size())
+    auto const local = local_word(idx);
+    if (!std::cmp_less(local, data_.words_.size()))
     {
       return nullptr;
     }
-    return &data_.words_[storage_local];
+    return data_.words_.data() + static_cast<storage_size_type>(local);
   }
 
   [[nodiscard]] auto word_if(T idx) const noexcept -> word_type const*
   {
-    auto const local         = local_word(idx);
-    auto const storage_local = static_cast<storage_size_type>(local);
-    if (local == null || static_cast<T>(storage_local) != local || storage_local >= data_.words_.size())
+    auto const local = local_word(idx);
+    if (!std::cmp_less(local, data_.words_.size()))
     {
       return nullptr;
     }
-    return &data_.words_[storage_local];
+    return data_.words_.data() + static_cast<storage_size_type>(local);
+  }
+
+  [[nodiscard]] auto word_unchecked(T idx) noexcept -> word_type&
+  {
+    auto const local = static_cast<storage_size_type>(local_word(idx));
+    return data_.words_[local];
+  }
+
+  [[nodiscard]] auto word_unchecked(T idx) const noexcept -> word_type const&
+  {
+    auto const local = static_cast<storage_size_type>(local_word(idx));
+    return data_.words_[local];
   }
 
   auto word_at(T idx) -> word_type&

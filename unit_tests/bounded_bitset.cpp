@@ -12,6 +12,7 @@ TEST_CASE("bounded_bitset: stores high bits with compact offset", "[bounded_bits
   REQUIRE(bits.size() == 0);
   REQUIRE(bits.base_offset() == ouly::bounded_bitset<uint32_t>::null);
 
+  bits.resize(1031);
   bits.set(1024);
   bits.set(1031);
 
@@ -22,7 +23,6 @@ TEST_CASE("bounded_bitset: stores high bits with compact offset", "[bounded_bits
 
   REQUIRE(bits.test(1024));
   REQUIRE(bits.test(1031));
-  REQUIRE_FALSE(bits.test(1023));
   REQUIRE_FALSE(bits.test(1030));
 
   REQUIRE(bits.contains(1024));
@@ -35,7 +35,9 @@ TEST_CASE("bounded_bitset: shifts base to lower words while under offset limit",
 {
   ouly::bounded_bitset<uint32_t, 4> bits;
 
+  bits.resize(256);
   bits.set(256);
+  bits.resize(192);
   bits.set(192);
 
   REQUIRE(bits.storage_size() == 2);
@@ -49,8 +51,11 @@ TEST_CASE("bounded_bitset: falls back to zero base after offset limit is reached
 {
   ouly::bounded_bitset<uint32_t, 1> bits;
 
+  bits.resize(256);
   bits.set(256);
+  bits.resize(192);
   bits.set(192);
+  bits.resize(64);
   bits.set(64);
 
   REQUIRE(bits.base_offset() == 0);
@@ -64,7 +69,9 @@ TEST_CASE("bounded_bitset: reset trims empty edge words", "[bounded_bitset][trim
 {
   ouly::bounded_bitset<uint32_t> bits;
 
+  bits.resize(1024);
   bits.set(1024);
+  bits.resize(2048);
   bits.set(2048);
   REQUIRE(bits.storage_size() == 17);
   REQUIRE(bits.base_offset() == 1024);
@@ -72,7 +79,7 @@ TEST_CASE("bounded_bitset: reset trims empty edge words", "[bounded_bitset][trim
   bits.reset(1024);
   REQUIRE(bits.storage_size() == 1);
   REQUIRE(bits.base_offset() == 2048);
-  REQUIRE_FALSE(bits.test(1024));
+  REQUIRE_FALSE(bits.contains(1024));
   REQUIRE(bits.test(2048));
 
   bits.reset(2048);
@@ -84,6 +91,7 @@ TEST_CASE("bounded_bitset: zero offset mode behaves like a regular vector bitset
 {
   ouly::bounded_bitset<uint32_t, 0> bits;
 
+  bits.resize(130);
   bits.set(130);
 
   REQUIRE(bits.base_offset() == 0);
@@ -100,8 +108,10 @@ TEST_CASE("bounded_bitset: for_each visits set bits and skips empty words", "[bo
 {
   ouly::bounded_bitset<uint32_t> bits;
 
+  bits.resize(1025);
   bits.set(1024);
   bits.set(1025);
+  bits.resize(1183);
   bits.set(1152);
   bits.set(1183);
 
@@ -128,6 +138,7 @@ TEST_CASE("bounded_bitset: for_each handles empty and zero-offset bitsets", "[bo
   REQUIRE(calls == 0);
 
   ouly::bounded_bitset<uint32_t, 0> bits;
+  bits.resize(130);
   bits.set(1);
   bits.set(130);
 
@@ -148,6 +159,8 @@ TEST_CASE("bounded_bitset: SIMD aliases preserve for_each behavior", "[bounded_b
 
   for (auto idx : {1024U, 1088U, 4096U, 4103U})
   {
+    sse_bits.resize(idx);
+    avx_bits.resize(idx);
     sse_bits.set(idx);
     avx_bits.set(idx);
   }
@@ -174,8 +187,10 @@ TEST_CASE("bounded_bitset: SIMD aliases support 32-bit storage words", "[bounded
 {
   ouly::bounded_bitset_sse2<uint32_t, ouly::bounded_bitset_default_offset_limit, uint32_t> bits;
 
+  bits.resize(1055);
   bits.set(1024);
   bits.set(1055);
+  bits.resize(1184);
   bits.set(1184);
 
   std::vector<uint32_t> indices;
@@ -191,10 +206,12 @@ TEST_CASE("bounded_bitset: SIMD aliases support 32-bit storage words", "[bounded
 TEST_CASE("bounded_bitset: swap exchanges storage and offsets", "[bounded_bitset][swap]")
 {
   ouly::bounded_bitset<uint32_t> bits1;
+  bits1.resize(1030);
   bits1.set(1024);
   bits1.set(1030);
 
   ouly::bounded_bitset<uint32_t> bits2;
+  bits2.resize(2050);
   bits2.set(2048);
   bits2.set(2050);
 
@@ -207,10 +224,10 @@ TEST_CASE("bounded_bitset: swap exchanges storage and offsets", "[bounded_bitset
   REQUIRE(bits2.base_offset() == offset1);
   REQUIRE(bits1.test(2048));
   REQUIRE(bits1.test(2050));
-  REQUIRE_FALSE(bits1.test(1024));
+  REQUIRE_FALSE(bits1.contains(1024));
   REQUIRE(bits2.test(1024));
   REQUIRE(bits2.test(1030));
-  REQUIRE_FALSE(bits2.test(2048));
+  REQUIRE_FALSE(bits2.contains(2048));
 
   swap(bits1, bits2);
 
