@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 
-#include "ouly/utility/config.hpp"
 #include "ouly/reflection/detail/base_concepts.hpp"
+#include "ouly/utility/config.hpp"
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
