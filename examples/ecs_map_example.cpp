@@ -143,9 +143,7 @@ int main()
 
   // Remove enemy1 using the convenient automatic method
   std::cout << "  Before removal: " << entity_map.size() << " entities\n";
-  entity_map.erase_and_swap_values(enemy1, positions);
-  entity_map.erase_and_swap_values(enemy1, velocities);
-  entity_map.erase_and_swap_values(enemy1, names);
+  entity_map.erase_and_swap_values(enemy1, positions, velocities, names);
   std::cout << "  After removal: " << entity_map.size() << " entities\n";
 
   std::cout << "  Enemy1 still exists in map: " << (entity_map.contains(enemy1) ? "true" : "false") << "\n";

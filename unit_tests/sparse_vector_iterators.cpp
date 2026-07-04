@@ -25,9 +25,6 @@ TEST_CASE("sparse_vector: range-based iteration skips holes", "[sparse_vector][i
   {
     seen.push_back(x.a);
   }
-  REQUIRE(seen.size() == 33);
-  REQUIRE(seen[1] == 10);
-  REQUIRE(seen[5] == 50);
-  REQUIRE(seen[32] == 320);
+  REQUIRE(seen == std::vector<int>{10, 50, 320});
 }
 // NOLINTEND
