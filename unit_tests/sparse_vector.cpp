@@ -13,6 +13,14 @@ struct ouly::default_config<pod>
   static constexpr bool          assume_pod_v = true;
 };
 
+struct zero_tracked_int_cfg
+{
+  static constexpr std::uint32_t pool_size_v       = 4;
+  static constexpr int           null_v            = 0;
+  static constexpr bool          zero_out_memory_v = true;
+  static constexpr bool          assume_pod_v      = true;
+};
+
 TEST_CASE("sparse_vector: Validate sparse_vector emplace", "[sparse_vector][emplace]")
 {
   ouly::sparse_vector<pod> v1;
@@ -81,6 +89,21 @@ TEST_CASE("sparse_vector: Erase sparse_vector element", "[sparse_vector][erase]"
   auto index = v1.index(2);
   REQUIRE(v1.view().contains(index) == true);
   REQUIRE(v1.view()[index].a == 1);
+}
+
+TEST_CASE("sparse_vector: zero-filled overwrite does not inflate pool occupancy", "[sparse_vector][erase]")
+{
+  ouly::sparse_vector<int, zero_tracked_int_cfg> v;
+
+  v.emplace_at(0, 10);
+  v.emplace_at(1, 11);
+  v.emplace_at(1, 12);
+
+  v.erase(0);
+  v.erase(1);
+
+  REQUIRE(v.get_if(0) == nullptr);
+  REQUIRE(v.get_if(1) == nullptr);
 }
 
 TEST_CASE("sparse_vector: Copy sparse_vector to another", "[sparse_vector][copy]")

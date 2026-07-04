@@ -124,6 +124,22 @@ TEST_CASE("ecs::map: Basic operations", "[ecs][map]")
   }
 }
 
+TEST_CASE("ecs::map: Revision mismatch is not contained", "[ecs][map]")
+{
+  using E = ouly::ecs::rxentity<>;
+
+  ouly::ecs::map<E> map;
+  E                 old_entity{7, 1};
+  E                 new_revision{7, 2};
+  auto              tombstone = std::numeric_limits<decltype(map)::size_type>::max();
+
+  map.emplace(old_entity);
+
+  REQUIRE(map.contains(old_entity));
+  REQUIRE_FALSE(map.contains(new_revision));
+  REQUIRE(map.key(new_revision) == tombstone);
+}
+
 TEST_CASE("ecs::map: Entity value access", "[ecs][map]")
 {
   ouly::ecs::map<>    map;

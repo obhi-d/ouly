@@ -5,6 +5,7 @@
 #include "ouly/ecs/entity.hpp"
 #include "ouly/utility/detail/vector_abstraction.hpp"
 #include "ouly/utility/optional_ref.hpp"
+#include <type_traits>
 
 namespace ouly::ecs
 {
@@ -280,7 +281,12 @@ public:
    */
   auto key(entity_type point) const noexcept -> size_type
   {
-    return keys_.get_if(point.get());
+    auto dense_index = keys_.get_if(point.get());
+    if (dense_index == tombstone || dense_index >= self_.size())
+    {
+      return tombstone;
+    }
+    return self_.get(dense_index) == point.value() ? dense_index : tombstone;
   }
 
   /**
@@ -363,13 +369,7 @@ public:
 
   auto contains(entity_type l) const noexcept -> bool
   {
-    auto idx = l.get();
-    if (keys_.contains(idx))
-    {
-      auto val = keys_.get(idx);
-      return self_.get_if(val) == l.value();
-    }
-    return false;
+    return key(l) != tombstone;
   }
 
   /**
@@ -444,7 +444,15 @@ private:
     }
     if (swap_idx + 1 < values.size())
     {
-      values[swap_idx] = std::move(values.back());
+      using reference = decltype(values[swap_idx]);
+      if constexpr (std::is_reference_v<reference>)
+      {
+        values[swap_idx] = std::move(values.back());
+      }
+      else
+      {
+        values[swap_idx] = static_cast<typename ValueContainer::value_type>(values.back());
+      }
     }
     values.pop_back();
   }

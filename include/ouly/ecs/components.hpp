@@ -67,8 +67,7 @@ public:
   using entity_type     = EntityTy;
   using config          = Config;
   using value_type      = Ty;
-  using vector_type     = std::conditional_t<ouly::detail::HasUseSparseAttrib<config>, sparse_vector<Ty, config>,
-                                             vector<Ty, ouly::detail::custom_allocator_t<config>>>;
+  using vector_type     = typename ouly::detail::custom_vector_type<config, Ty>::type;
   using reference       = typename vector_type::reference;
   using const_reference = typename vector_type::const_reference;
   using pointer         = typename vector_type::pointer;
@@ -546,7 +545,21 @@ public:
     {
       auto  ent_idx = point.get();
       auto& k       = keys_.ensure_at(ent_idx);
-      k             = static_cast<size_type>(values_.size());
+      if (k != tombstone)
+      {
+        reference ref = values_[k];
+        ref           = value_type{std::forward<Args>(args)...};
+        if constexpr (has_self_index)
+        {
+          self_.get(ref) = point.value();
+        }
+        else
+        {
+          self_.get(k) = point.value();
+        }
+        return ref;
+      }
+      k = static_cast<size_type>(values_.size());
 
       values_.emplace_back(std::forward<Args>(args)...);
       if constexpr (has_self_index)
@@ -570,7 +583,12 @@ public:
   auto key(entity_type point) const noexcept -> size_type
     requires(!has_direct_mapping)
   {
-    return keys_.get_if(point.get());
+    auto item_id = keys_.get_if(point.get());
+    if (item_id == tombstone || item_id >= static_cast<size_type>(values_.size()))
+    {
+      return tombstone;
+    }
+    return get_ref_at_idx(item_id) == point.value() ? item_id : tombstone;
   }
 
   /**
@@ -611,8 +629,8 @@ public:
       {
         return emplace_at(point, std::forward<value_type>(args));
       }
-      auto& val = values_[k];
-      val       = std::move(args);
+      reference val = values_[k];
+      val           = std::move(args);
       if constexpr (has_self_index)
       {
         self_.get(val) = point.value();
@@ -649,6 +667,20 @@ public:
       if (k == tombstone)
       {
         return emplace_at(point);
+      }
+      if (get_ref_at_idx(k) != point.value())
+      {
+        reference ref = values_[k];
+        ref           = value_type{};
+        if constexpr (has_self_index)
+        {
+          self_.get(ref) = point.value();
+        }
+        else
+        {
+          self_.get(k) = point.value();
+        }
+        return ref;
       }
 
       return values_[k];
@@ -769,15 +801,14 @@ public:
 
   auto contains(entity_type l) const noexcept -> bool
   {
-    auto idx = l.get();
     if constexpr (has_direct_mapping)
     {
+      auto idx = l.get();
       return test_present(idx);
     }
     else
     {
-      // The key map is the single source of truth for indirect storage
-      return keys_.get_if(idx) != tombstone;
+      return key(l) != tombstone;
     }
   }
 
@@ -878,7 +909,7 @@ private:
     }
     else
     {
-      auto k = cont.keys_.get_if(lnk.get());
+      auto k = cont.key(lnk);
       if (k == tombstone)
       {
         return nullptr;
@@ -901,7 +932,7 @@ private:
     }
     else
     {
-      auto k = cont.keys_.get_if(lnk.get());
+      auto k = cont.key(lnk);
       if (k == tombstone)
       {
         return def;
@@ -943,6 +974,28 @@ private:
     return values_[item_id];
   }
 
+  static void move_value(reference dst, reference src) noexcept
+  {
+    if constexpr (ouly::detail::is_tuple<value_type>::value)
+    {
+      [&]<std::size_t... I>(std::index_sequence<I...>)
+      {
+        (ouly::detail::move(std::get<I>(dst), std::get<I>(src)), ...);
+      }(std::make_index_sequence<std::tuple_size_v<value_type>>());
+    }
+    else
+    {
+      if constexpr (std::is_reference_v<reference>)
+      {
+        dst = std::move(src);
+      }
+      else
+      {
+        dst = static_cast<value_type>(src);
+      }
+    }
+  }
+
   // Direct-mapped erase
   void erase_at(entity_type l) noexcept
     requires(has_direct_mapping)
@@ -970,25 +1023,13 @@ private:
     size_type item_id = keys_.get(lnk);
     keys_.get(lnk)    = tombstone;
 
-    reference lb   = values_[item_id];
-    reference back = values_.back();
-    if (&back != &lb)
+    auto last_id = static_cast<size_type>(values_.size() - 1);
+    if (item_id != last_id)
     {
+      reference back = values_.back();
       // Update key of moved-back element using self index on value
       keys_.get(entity_type(self_.get(back)).get()) = item_id;
-
-      if constexpr (ouly::detail::is_tuple<value_type>::value)
-      {
-        // move each tuple element reference
-        [&]<std::size_t... I>(std::index_sequence<I...>)
-        {
-          (ouly::detail::move(std::get<I>(lb), std::get<I>(back)), ...);
-        }(std::make_index_sequence<std::tuple_size_v<value_type>>());
-      }
-      else
-      {
-        lb = std::move(back);
-      }
+      move_value(values_[item_id], back);
     }
 
     values_.pop_back();
@@ -1002,25 +1043,12 @@ private:
     size_type item_id = keys_.get(lnk);
     keys_.get(lnk)    = tombstone;
 
-    reference lb   = values_[item_id];
-    reference back = values_.back();
-    if (&back != &lb)
+    auto last_id = static_cast<size_type>(values_.size() - 1);
+    if (item_id != last_id)
     {
       // best_erase returns the original entity id stored at item_id (before erase)
       keys_.get(entity_type(self_.best_erase(item_id)).get()) = item_id;
-
-      if constexpr (ouly::detail::is_tuple<value_type>::value)
-      {
-        // move each tuple element reference
-        [&]<std::size_t... I>(std::index_sequence<I...>)
-        {
-          (ouly::detail::move(std::get<I>(lb), std::get<I>(back)), ...);
-        }(std::make_index_sequence<std::tuple_size_v<value_type>>());
-      }
-      else
-      {
-        lb = std::move(back);
-      }
+      move_value(values_[item_id], values_[last_id]);
     }
     else
     {

@@ -1,4 +1,5 @@
 #include "catch2/catch_all.hpp"
+#include "ouly/containers/soavector.hpp"
 #include "ouly/ecs/collection.hpp"
 #include "ouly/ecs/components.hpp"
 #include "ouly/ecs/registry.hpp"
@@ -251,6 +252,61 @@ TEST_CASE("components: validate named objects", "[rlink_object_table][nontrivial
     REQUIRE(lookup.at(entity8) == "Entity9");
     REQUIRE(lookup[entity8] == "Entity9");
   }(names);
+}
+
+TEST_CASE("components: revision mismatch is not contained", "[components][revision]")
+{
+  using E = ouly::ecs::rxentity<>;
+
+  ouly::ecs::components<std::string, E> names;
+  E                                     old_entity{9, 1};
+  E                                     new_revision{9, 2};
+
+  names.emplace_at(old_entity, "old");
+
+  REQUIRE(names.contains(old_entity));
+  REQUIRE_FALSE(names.contains(new_revision));
+  REQUIRE_FALSE(names.find(new_revision).has_value());
+
+  auto& fresh = names.get_ref(new_revision);
+  REQUIRE(fresh.empty());
+  fresh = "new";
+
+  REQUIRE_FALSE(names.contains(old_entity));
+  REQUIRE(names.contains(new_revision));
+  REQUIRE(names.at(new_revision) == "new");
+}
+
+TEST_CASE("components: custom soavector storage erases by packed index", "[components][soavector]")
+{
+  struct pack
+  {
+    int         id;
+    bool        active;
+    std::string name;
+  };
+
+  using E          = ouly::ecs::rxentity<>;
+  using storage    = ouly::soavector<pack>;
+  using components = ouly::ecs::components<pack, E, ouly::config<ouly::cfg::custom_vector<storage>>>;
+
+  components values;
+  E          e1{1, 1};
+  E          e2{2, 1};
+  E          e3{3, 1};
+
+  values.emplace_at(e1, 1, true, "one");
+  values.emplace_at(e2, 2, false, "two");
+  values.emplace_at(e3, 3, true, "three");
+
+  values.erase(e2);
+
+  REQUIRE(values.size() == 2);
+  REQUIRE(values.contains(e1));
+  REQUIRE_FALSE(values.contains(e2));
+  REQUIRE(values.contains(e3));
+  REQUIRE(values.at(e1).get().name == "one");
+  REQUIRE(values.at(e3).get().name == "three");
 }
 
 TEST_CASE("rlink_object_table: fuzz", "[rlink_object_table][nontrivial]")

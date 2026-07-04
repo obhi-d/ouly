@@ -164,7 +164,10 @@ public:
     using value_type        = Ty; // standard associated type
 
     iterator_base() noexcept = default;
-    iterator_base(parent_type* p, size_type idx) noexcept : p_(p), idx_(idx) {}
+    iterator_base(parent_type* p, size_type idx) noexcept : p_(p), idx_(idx)
+    {
+      satisfy();
+    }
 
     auto operator*() const noexcept -> auto&
     {
@@ -178,6 +181,7 @@ public:
     auto operator++() noexcept -> iterator_base&
     {
       ++idx_;
+      satisfy();
       return *this;
     }
     auto operator++(int) noexcept -> iterator_base
@@ -197,6 +201,18 @@ public:
     }
 
   private:
+    void satisfy() noexcept
+    {
+      if (p_ == nullptr)
+      {
+        return;
+      }
+      while (idx_ < p_->length_ && !p_->contains(idx_))
+      {
+        ++idx_;
+      }
+    }
+
     parent_type* p_   = nullptr;
     size_type    idx_ = 0;
   };
@@ -1149,7 +1165,7 @@ private:
       // Overwriting an occupied slot must not inflate the occupancy count, otherwise
       // the block can never be reclaimed. Detectable only when null semantics exist
       // and slots are initialized.
-      if constexpr ((has_null_value || has_null_method) && !has_no_fill && !has_zero_memory)
+      if constexpr ((has_null_value || has_null_method) && !has_no_fill)
       {
         if (is_null(dst))
         {
