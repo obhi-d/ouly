@@ -2,6 +2,7 @@
 #pragma once
 
 #include "ouly/utility/config.hpp"
+#include "ouly/reflection/detail/base_concepts.hpp"
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -211,14 +212,14 @@ public:
 
   template <std::size_t I>
   auto data() noexcept -> decltype(auto)
-    requires requires(vector_type& values) { values.template data<I>(); }
+    requires detail::SoaVectorLike<vector_type>
   {
     return values_.template data<I>();
   }
 
   template <std::size_t I>
   auto data() const noexcept -> decltype(auto)
-    requires requires(vector_type const& values) { values.template data<I>(); }
+    requires detail::SoaVectorLike<vector_type>
   {
     return values_.template data<I>();
   }
