@@ -88,7 +88,7 @@ void ts_shared_linear_allocator::reset() noexcept
   while (page != nullptr)
   {
     arena_t* next = page->next_;
-    ::operator delete(page, std::align_val_t{alignof(std::max_align_t)});
+    ::operator delete(page, std::align_val_t{alignof(arena_t)});
     page = next;
   }
   pages_to_free_ = nullptr;
@@ -104,7 +104,7 @@ void ts_shared_linear_allocator::release() noexcept
   while (page != nullptr)
   {
     arena_t* next = page->next_;
-    ::operator delete(page, std::align_val_t{alignof(std::max_align_t)});
+    ::operator delete(page, std::align_val_t{alignof(arena_t)});
     page = next;
   }
   available_pages_ = nullptr;
@@ -180,7 +180,7 @@ auto ts_shared_linear_allocator::allocate_slow_path(std::size_t size) noexcept -
     else
     {
       arena =
-       static_cast<arena_t*>(::operator new(sizeof(arena_t) + page_size, std::align_val_t{alignof(std::max_align_t)}));
+       static_cast<arena_t*>(::operator new(sizeof(arena_t) + page_size, std::align_val_t{alignof(arena_t)}));
       arena->size_ = page_size;
       arena->offset_.store(0, std::memory_order_relaxed);
     }
@@ -197,7 +197,7 @@ auto ts_shared_linear_allocator::allocate_slow_path(std::size_t size) noexcept -
   {
     // This is a single large page, not reused
     arena =
-     static_cast<arena_t*>(::operator new(sizeof(arena_t) + page_size, std::align_val_t{alignof(std::max_align_t)}));
+     static_cast<arena_t*>(::operator new(sizeof(arena_t) + page_size, std::align_val_t{alignof(arena_t)}));
     arena->size_ = page_size;
     arena->offset_.store(0, std::memory_order_relaxed);
     arena->next_   = pages_to_free_;
