@@ -50,8 +50,9 @@ public:
   /** @brief Default page size for new arenas (1 MiB) */
   static constexpr uint32_t default_page_size = 1024 * 1024; // 1 MiB
 
-  /** @brief All allocations are aligned to this boundary */
-  static constexpr std::size_t alignment = alignof(std::max_align_t);
+  /** @brief All allocations are aligned to this boundary (at least 16 so SIMD types are safe
+   *  on platforms where max_align_t is only 8, e.g. Apple arm64) */
+  static constexpr std::size_t alignment = alignof(std::max_align_t) > 16 ? alignof(std::max_align_t) : 16;
 
   /**
    * @brief Default constructor
@@ -163,7 +164,7 @@ private:
     std::size_t        size_;   ///< Total bytes available in data_[]
     arena_t*           next_;   ///< Intrusive list pointer
 
-    alignas(std::max_align_t) std::byte data_[1]; ///< Flexible array member for allocations
+    alignas(alignment) std::byte data_[1]; ///< Flexible array member for allocations
   };
 
   /**
