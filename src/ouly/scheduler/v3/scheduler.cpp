@@ -433,7 +433,8 @@ void ouly::v3::task_context::cooperative_wait(std::binary_semaphore& event) cons
   auto&    sched      = *owner_;
   uint32_t idle_spins = 0;
 
-  constexpr uint32_t spin_limit = 64;
+  constexpr uint32_t spin_limit   = 64;
+  constexpr auto     wait_timeout = 100us;
 
   while (!event.try_acquire())
   {
@@ -451,7 +452,7 @@ void ouly::v3::task_context::cooperative_wait(std::binary_semaphore& event) cons
 
     // No work and the event is not signaled: block with a short timeout instead of
     // spinning. The timeout bounds added latency for work that arrives while blocked.
-    if (event.try_acquire_for(100us))
+    if (event.try_acquire_for(wait_timeout))
     {
       return;
     }

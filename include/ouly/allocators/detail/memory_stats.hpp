@@ -156,8 +156,16 @@ struct statistics_impl<TagArg, Base, ouly::cfg::memory_stat_type::e_compute_atom
     {
       return;
     }
-    OULY_PRINT_DEBUG(print());
-    stats_printed_ = true;
+    try
+    {
+      OULY_PRINT_DEBUG(print());
+      stats_printed_ = true;
+    }
+    catch (...)
+    {
+      // Statistics are best-effort during destruction; formatting failure must not terminate the process.
+      stats_printed_ = true;
+    }
   }
 
   auto print() -> std::string
@@ -250,8 +258,16 @@ struct statistics_impl<TagArg, Base, ouly::cfg::memory_stat_type::e_compute> : p
     {
       return;
     }
-    OULY_PRINT_DEBUG(print());
-    stats_printed_ = true;
+    try
+    {
+      OULY_PRINT_DEBUG(print());
+      stats_printed_ = true;
+    }
+    catch (...)
+    {
+      // Statistics are best-effort during destruction; formatting failure must not terminate the process.
+      stats_printed_ = true;
+    }
   }
 
   auto print() -> std::string
