@@ -36,7 +36,7 @@ inline void pause_exec() noexcept
 #endif
 
 #elif defined(__aarch64__) || defined(__arm__) || defined(_M_ARM) || defined(_M_ARM64) // Arm & AArch64
-#if defined(_MSC_VER)
+#ifdef _MSC_VER
   __yield(); // MSVC intrinsic
 #else
   __builtin_arm_yield(); // ACLE 8.4 intrinsic

@@ -6,7 +6,7 @@ include(FetchContent)
 FetchContent_Declare(
     Catch2
     GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-    GIT_TAG v3.8.0
+    GIT_TAG v3.15.0
 )
 
 FetchContent_Declare(
@@ -26,6 +26,10 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/g-truc/glm.git
     GIT_TAG 1.0.1
 )
+
+# Use Catch2's standard line-number fallback so strict builds do not rely on
+# the non-standard __COUNTER__ extension.
+set(CATCH_CONFIG_NO_COUNTER ON)
 
 if(OULY_BUILD_BENCHMARKS)
     set(TBB_TEST OFF CACHE BOOL "oneTBB: do not build unit tests" FORCE)
