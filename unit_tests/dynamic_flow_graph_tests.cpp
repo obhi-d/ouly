@@ -30,6 +30,53 @@ public:
 
 CATCH_REGISTER_LISTENER(dynamic_flow_graph_progress_listener)
 
+TEST_CASE("dynamic_flow_graph can pass the launching node id to tasks", "[dynamic_flow_graph][scheduler][node_id]")
+{
+  using SchedulerType = ouly::v2::scheduler;
+  using Graph         = dynamic_flow_graph<SchedulerType, default_chunk_size, default_edge_chunk_size,
+                                           ouly::config<ouly::cfg::flow_graph_node_id>>;
+  using node_id       = typename Graph::node_id;
+
+  Graph         graph;
+  SchedulerType scheduler;
+  scheduler.create_group(default_workgroup_id, 0, 2);
+  scheduler.begin_execution();
+
+  std::atomic<uint32_t> first_seen{node_id::null};
+  std::atomic<uint32_t> second_seen{node_id::null};
+  std::atomic<int>      context_only_count{0};
+
+  auto first  = graph.create_node();
+  auto second = graph.create_main_thread_node();
+  graph.connect(first, second);
+
+  graph.add(first,
+            [&](auto const&, node_id launching_node)
+            {
+              first_seen.store(launching_node.value());
+            });
+  graph.add(first,
+            [&](auto const&)
+            {
+              context_only_count.fetch_add(1);
+            });
+  graph.add(second,
+            [&](auto const&, node_id launching_node)
+            {
+              second_seen.store(launching_node.value());
+            });
+
+  auto ctx = SchedulerType::context_type::this_context::get();
+  graph.signal(first, ctx);
+  graph.cooperative_wait(ctx);
+
+  REQUIRE(first_seen.load() == first.value());
+  REQUIRE(second_seen.load() == second.value());
+  REQUIRE(context_only_count.load() == 1);
+
+  scheduler.end_execution();
+}
+
 TEST_CASE("dynamic_flow_graph linear one-shot ordering", "[dynamic_flow_graph][scheduler]")
 {
   using SchedulerType = ouly::v2::scheduler;

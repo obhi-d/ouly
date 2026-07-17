@@ -3,7 +3,9 @@
 #pragma once
 
 #include "ouly/containers/small_vector.hpp"
+#include "ouly/scheduler/flow_graph_config.hpp"
 #include "ouly/scheduler/worker_structs.hpp"
+#include "ouly/utility/config.hpp"
 #include "ouly/utility/tagged_int.hpp"
 #include "ouly/utility/user_config.hpp"
 #include <atomic>
@@ -41,6 +43,9 @@ namespace ouly
  *
  * @tparam SchedulerType The scheduler type (v1::scheduler, v2::scheduler or v3::scheduler) that will execute tasks
  * @tparam AvgNodeCount Expected average number of nodes for optimization (default: 4)
+ * @tparam AvgDepCount Expected average number of dependencies per node (default: 4)
+ * @tparam Config Optional graph configuration. Add cfg::flow_graph_node_id to allow tasks with
+ *                the `(context, node_id)` signature.
  *
  * ## Key Features:
  *
@@ -134,7 +139,7 @@ namespace ouly
  * - Empty nodes (nodes without tasks) are supported and will trigger their successors
  */
 
-template <typename SchedulerType, size_t AvgNodeCount = 4, size_t AvgDepCount = 4>
+template <typename SchedulerType, size_t AvgNodeCount = 4, size_t AvgDepCount = 4, typename Config = ouly::config<>>
 class flow_graph
 {
 public:
@@ -146,7 +151,12 @@ public:
   using task_id       = ouly::tagged_int<task_tag, uint32_t, std::numeric_limits<uint32_t>::max()>;
   using delegate_type = typename SchedulerType::delegate_type; ///< Task delegate type from scheduler
   using context_type  = typename SchedulerType::context_type;  ///< Scheduler context type
+  using config        = Config;
 
+private:
+  using task_delegate_type = ouly::detail::flow_graph_delegate_t<config, delegate_type, context_type, node_id>;
+
+public:
   /**
    * @brief Create a new node in the flow graph
    *
@@ -193,6 +203,8 @@ public:
    *
    * @note Tasks can be added dynamically up until start() is called
    * @note This operation is not thread-safe during graph construction
+   * @note With cfg::flow_graph_node_id configured, tasks may accept either `(context)` or
+   *       `(context, node_id)`.
    */
   template <typename Func>
   auto add(node_id id, Func&& exec_delegate) -> task_id
@@ -200,7 +212,27 @@ public:
     OULY_ASSERT(id.value() < nodes_.size() && !started_.load(std::memory_order_acquire));
     if (id.value() < nodes_.size())
     {
-      return nodes_[id.value()].add(delegate_type::bind(std::forward<Func>(exec_delegate)));
+      if constexpr (ouly::detail::flow_graph_node_id_v<config>)
+      {
+        if constexpr (std::is_invocable_r_v<void, Func, context_type const&, node_id>)
+        {
+          return nodes_[id.value()].add(task_delegate_type::bind(std::forward<Func>(exec_delegate)));
+        }
+        else
+        {
+          static_assert(std::is_invocable_r_v<void, Func, context_type const&>,
+                        "Flow graph tasks must accept (context) or (context, node_id)");
+          return nodes_[id.value()].add(task_delegate_type::bind(
+           [task = std::forward<Func>(exec_delegate)](context_type const& ctx, node_id /*id*/) mutable
+           {
+             task(ctx);
+           }));
+        }
+      }
+      else
+      {
+        return nodes_[id.value()].add(task_delegate_type::bind(std::forward<Func>(exec_delegate)));
+      }
     }
 
     return task_id{};
@@ -430,7 +462,7 @@ private:
     auto operator=(const task_node&) -> task_node& = delete;
 
     /// Add a task delegate to this node
-    auto add(delegate_type&& task) -> task_id
+    auto add(task_delegate_type&& task) -> task_id
     {
       valid_task_count_++;
       for (auto& t : tasks_)
@@ -453,7 +485,7 @@ private:
         if (tasks_[index])
         {
           valid_task_count_--;
-          tasks_[index] = delegate_type(); // Clear the task
+          tasks_[index] = task_delegate_type(); // Clear the task
         }
       }
     }
@@ -503,7 +535,7 @@ private:
     }
 
     /// Get all tasks in this node
-    [[nodiscard]] auto get_tasks() const noexcept -> std::span<const delegate_type>
+    [[nodiscard]] auto get_tasks() const noexcept -> std::span<const task_delegate_type>
     {
       return {tasks_.data(), tasks_.size()};
     }
@@ -533,9 +565,16 @@ private:
     }
 
     /// Execute a specific task by index and return completion status
-    auto execute_task(uint32_t index, context_type const& ctx) noexcept -> bool
+    auto execute_task(uint32_t node_index, uint32_t task_index, context_type const& ctx) noexcept -> bool
     {
-      tasks_[index](ctx);
+      if constexpr (ouly::detail::flow_graph_node_id_v<config>)
+      {
+        tasks_[task_index](ctx, node_id{node_index});
+      }
+      else
+      {
+        tasks_[task_index](ctx);
+      }
       // Check if this is the last task in this node to complete
       auto completed_count = run_count_.fetch_add(1, std::memory_order_acq_rel) + 1;
       return (completed_count == valid_task_count_);
@@ -556,7 +595,7 @@ private:
   private:
     workgroup_id                              workgroup_{default_workgroup_id}; ///< Workgroup for task execution
     uint32_t                                  valid_task_count_ = 0;
-    std::vector<delegate_type>                tasks_;                   ///< Tasks to execute in this node
+    std::vector<task_delegate_type>           tasks_;                   ///< Tasks to execute in this node
     ouly::small_vector<uint32_t, AvgDepCount> next_nodes_;              ///< Successor node IDs
     std::atomic<uint32_t>                     pending_dependencies_{0}; ///< Number of unfinished dependencies
     std::atomic_uint32_t                      run_count_{0};            ///< Completed task count in this node
@@ -603,7 +642,7 @@ private:
                                  [graph_ptr, node_index, i](context_type const& task_ctx) mutable
                                  {
                                    // Execute the actual task
-                                   if (graph_ptr->nodes_[node_index].execute_task(i, task_ctx))
+                                   if (graph_ptr->nodes_[node_index].execute_task(node_index, i, task_ctx))
                                    {
                                      // Last task in this node, notify successors
                                      graph_ptr->notify_successors(node_index, task_ctx);
@@ -640,7 +679,7 @@ private:
         continue;
       }
       // Execute sequentially
-      bool is_last = node.execute_task(i, ctx);
+      bool is_last = node.execute_task(node_index, i, ctx);
       if (remaining_tasks_.fetch_sub(1, std::memory_order_acq_rel) == 1)
       {
         signal_done();
