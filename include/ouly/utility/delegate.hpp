@@ -105,6 +105,9 @@ class basic_delegate<SmallSize, Ret(Args...)>
 public:
   using function_type = fnptr;
 
+  template <typename Signature>
+  using rebind = basic_delegate<SmallSize, Signature>;
+
   struct noinit_t
   {};
   static constexpr noinit_t noinit{};

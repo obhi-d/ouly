@@ -3,8 +3,10 @@
 #pragma once
 
 #include "ouly/containers/small_vector.hpp"
+#include "ouly/scheduler/flow_graph_config.hpp"
 #include "ouly/scheduler/spin_lock.hpp"
 #include "ouly/scheduler/worker_structs.hpp"
+#include "ouly/utility/config.hpp"
 #include "ouly/utility/tagged_int.hpp"
 #include "ouly/utility/user_config.hpp"
 #include <algorithm>
@@ -87,11 +89,13 @@ namespace ouly
  * @tparam SchedulerType  The scheduler type (v1::scheduler, v2::scheduler or v3::scheduler) that executes tasks.
  * @tparam NodeChunkSize  Number of nodes per stable storage chunk (default 32).
  * @tparam EdgeChunkSize  Number of edges per stable storage chunk (default 256).
+ * @tparam Config Optional graph configuration. Add cfg::flow_graph_node_id to allow tasks with
+ *                the `(context, node_id)` signature.
  */
 constexpr uint32_t default_chunk_size      = 32;
 constexpr uint32_t default_edge_chunk_size = 256;
 template <typename SchedulerType, uint32_t NodeChunkSize = default_chunk_size,
-          uint32_t EdgeChunkSize = default_edge_chunk_size>
+          uint32_t EdgeChunkSize = default_edge_chunk_size, typename Config = ouly::config<>>
 class dynamic_flow_graph
 {
 public:
@@ -103,7 +107,12 @@ public:
   using task_id       = ouly::tagged_int<task_tag, uint32_t, std::numeric_limits<uint32_t>::max()>;
   using delegate_type = typename SchedulerType::delegate_type; ///< Task delegate type from scheduler
   using context_type  = typename SchedulerType::context_type;  ///< Scheduler context type
+  using config        = Config;
 
+private:
+  using task_delegate_type = ouly::detail::flow_graph_delegate_t<config, delegate_type, context_type, node_id>;
+
+public:
   static constexpr uint32_t nil = std::numeric_limits<uint32_t>::max();
 
   dynamic_flow_graph() noexcept                                    = default;
@@ -153,6 +162,8 @@ public:
    *
    * @return The task's identifier (used by remove()).
    * @note Thread-safe.
+   * @note With cfg::flow_graph_node_id configured, tasks may accept either `(context)` or
+   *       `(context, node_id)`.
    */
   template <typename Func>
   auto add(node_id id, Func&& exec_delegate) -> task_id
@@ -160,7 +171,27 @@ public:
     OULY_ASSERT(id.value() < nodes_.size());
     auto&                      node = nodes_[id.value()];
     std::lock_guard<spin_lock> lk(node.task_lock_);
-    return node.add(delegate_type::bind(std::forward<Func>(exec_delegate)));
+    if constexpr (ouly::detail::flow_graph_node_id_v<config>)
+    {
+      if constexpr (std::is_invocable_r_v<void, Func, context_type const&, node_id>)
+      {
+        return node.add(task_delegate_type::bind(std::forward<Func>(exec_delegate)));
+      }
+      else
+      {
+        static_assert(std::is_invocable_r_v<void, Func, context_type const&>,
+                      "Dynamic flow graph tasks must accept (context) or (context, node_id)");
+        return node.add(task_delegate_type::bind(
+         [task = std::forward<Func>(exec_delegate)](context_type const& ctx, node_id /*id*/) mutable
+         {
+           task(ctx);
+         }));
+      }
+    }
+    else
+    {
+      return node.add(task_delegate_type::bind(std::forward<Func>(exec_delegate)));
+    }
   }
 
   /**
@@ -380,7 +411,7 @@ private:
     task_node() noexcept = default;
 
     /// Add a task, reusing a freed slot if available.
-    auto add(delegate_type&& task) -> task_id
+    auto add(task_delegate_type&& task) -> task_id
     {
       valid_task_count_++;
       for (auto& t : tasks_)
@@ -401,7 +432,7 @@ private:
       if (index < tasks_.size() && tasks_[index])
       {
         valid_task_count_--;
-        tasks_[index] = delegate_type();
+        tasks_[index] = task_delegate_type();
       }
     }
 
@@ -415,9 +446,9 @@ private:
     std::atomic<uint32_t> arrived_{0}; ///< Triggers accumulated toward the next firing.
 
     // Task storage (guarded by task_lock_):
-    spin_lock                  task_lock_;
-    std::vector<delegate_type> tasks_; ///< Source task list (slots reused).
-    uint32_t                   valid_task_count_{0};
+    spin_lock                       task_lock_;
+    std::vector<task_delegate_type> tasks_; ///< Source task list (slots reused).
+    uint32_t                        valid_task_count_{0};
   };
 
   /**
@@ -430,10 +461,10 @@ private:
    */
   struct fire_batch
   {
-    std::atomic<uint32_t>      remaining_{0};       ///< Tasks left to complete in this firing.
-    uint32_t                   node_idx_{nil};      ///< Owning node.
-    fire_batch*                pool_next_{nullptr}; ///< Freelist link.
-    std::vector<delegate_type> tasks_;              ///< Snapshot of the node's valid tasks.
+    std::atomic<uint32_t>           remaining_{0};       ///< Tasks left to complete in this firing.
+    uint32_t                        node_idx_{nil};      ///< Owning node.
+    fire_batch*                     pool_next_{nullptr}; ///< Freelist link.
+    std::vector<task_delegate_type> tasks_;              ///< Snapshot of the node's valid tasks.
   };
 
   /// Obtain a batch from the freelist, or allocate a new one.
@@ -521,7 +552,14 @@ private:
       ctx.get_scheduler().submit(ctx, node.workgroup_,
                                  [graph, fb, i](context_type const& task_ctx) -> void
                                  {
-                                   fb->tasks_[i](task_ctx);
+                                   if constexpr (ouly::detail::flow_graph_node_id_v<config>)
+                                   {
+                                     fb->tasks_[i](task_ctx, node_id{fb->node_idx_});
+                                   }
+                                   else
+                                   {
+                                     fb->tasks_[i](task_ctx);
+                                   }
                                    if (fb->remaining_.fetch_sub(1, std::memory_order_acq_rel) == 1)
                                    {
                                      graph->finish_fire(fb, task_ctx);
@@ -535,7 +573,14 @@ private:
   {
     for (auto& task : fb->tasks_)
     {
-      task(ctx);
+      if constexpr (ouly::detail::flow_graph_node_id_v<config>)
+      {
+        task(ctx, node_id{fb->node_idx_});
+      }
+      else
+      {
+        task(ctx);
+      }
     }
     finish_fire(fb, ctx);
   }
