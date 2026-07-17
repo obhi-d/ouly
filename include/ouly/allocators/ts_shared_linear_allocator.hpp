@@ -163,7 +163,7 @@ private:
     std::atomic_size_t offset_; ///< Current allocation offset (thread-safe)
     std::size_t        size_;   ///< Total bytes available in data_[]
     arena_t*           next_;   ///< Intrusive list pointer
-
+    std::size_t        padding_;
     alignas(alignment) std::byte data_[std::max<std::size_t>(alignment, 1)]; ///< Flexible array member for allocations
   };
 
