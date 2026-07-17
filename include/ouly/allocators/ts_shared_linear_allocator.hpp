@@ -53,6 +53,9 @@ public:
   /** @brief All allocations are aligned to this boundary (at least 16 so SIMD types are safe
    *  on platforms where max_align_t is only 8, e.g. Apple arm64) */
   static constexpr std::size_t alignment = alignof(std::max_align_t) > 16 ? alignof(std::max_align_t) : 16;
+  /** @brief All allocations are aligned to this boundary (at least 16 so SIMD types are safe
+   *  on platforms where max_align_t is only 8, e.g. Apple arm64) */
+  static constexpr std::size_t alignment = alignof(std::max_align_t) > 16 ? alignof(std::max_align_t) : 16;
 
   /**
    * @brief Default constructor
@@ -164,7 +167,7 @@ private:
     std::size_t        size_;   ///< Total bytes available in data_[]
     arena_t*           next_;   ///< Intrusive list pointer
 
-    alignas(alignment) std::byte data_[1]; ///< Flexible array member for allocations
+    alignas(alignment) std::byte data_[std::max<std::size_t>(alignment, 1)]; ///< Flexible array member for allocations
   };
 
   /**
