@@ -13,7 +13,8 @@ namespace ouly
 {
 
 /**
- * @brief `coalescing_arena_allocator` extended with alignment support and defragmentation.
+ * @brief Best-fit arena allocator (`coalescing_arena_allocator`) extended with alignment support
+ * and defragmentation.
  *
  * Allocation and deallocation use the base allocator's best-fit-by-size machinery. Alignment is
  * handled the way `arena_allocator` does it: the block is over-allocated by `alignment - 1` bytes and
@@ -28,7 +29,7 @@ namespace ouly
  * per-allocation alignment is recorded for defragmentation.
  * @note This class is meant for virtual allocations, for example GPU memory management.
  */
-class coalescing_arena_defrag_allocator : public coalescing_arena_allocator
+class best_fit_defrag_allocator : public coalescing_arena_allocator
 {
 public:
   using size_type = allocation_size_type;
@@ -36,23 +37,13 @@ public:
   using coalescing_arena_allocator::coalescing_arena_allocator;
 
   /** @brief Given an allocation_id return the aligned offset of the allocation within its arena */
-  [[nodiscard]] auto get_adjusted_offset(allocation_id id) const noexcept -> size_type
-  {
-    auto const mask = mask_of(id.get());
-    return (get_offset(id) + mask) & ~mask;
-  }
+  [[nodiscard]] OULY_API auto get_adjusted_offset(allocation_id id) const noexcept -> size_type;
 
   /** @brief Given an allocation_id return the usable size (block size minus alignment slack) */
-  [[nodiscard]] auto get_adjusted_size(allocation_id id) const noexcept -> size_type
-  {
-    return get_size(id) - mask_of(id.get());
-  }
+  [[nodiscard]] OULY_API auto get_adjusted_size(allocation_id id) const noexcept -> size_type;
 
   /** @brief Given an allocation_id return its alignment in bytes */
-  [[nodiscard]] auto get_alignment(allocation_id id) const noexcept -> size_type
-  {
-    return mask_of(id.get()) + 1;
-  }
+  [[nodiscard]] OULY_API auto get_alignment(allocation_id id) const noexcept -> size_type;
 
   /**
    * @brief Allocate `size` bytes with optional alignment. The returned offset is aligned; the
@@ -94,7 +85,7 @@ public:
    * remaining allocations stay in place and `completed_` is false in the result.
    */
   template <typename M>
-    requires(CoalescingDefragMemoryManager<M, coalescing_arena_defrag_allocator>)
+    requires(CoalescingDefragMemoryManager<M, best_fit_defrag_allocator>)
   auto defragment(M& manager, size_type max_bytes_to_move = std::numeric_limits<size_type>::max())
    -> coalescing_defrag_result
   {
@@ -209,123 +200,24 @@ private:
   };
 
   /** Earliest already-processed arena with room at the pack cursor, falling back to the own arena. */
-  [[nodiscard]] auto find_placement(std::vector<uint16_t> const& order, uint32_t pos,
-                                    std::vector<size_type> const& cursor, size_type raw_size) const
-   -> std::pair<uint16_t, size_type>
-  {
-    for (uint32_t k = 0; k < pos; ++k)
-    {
-      auto const cand = order[k];
-      if (cursor[cand] + raw_size <= ouly::detail::vector_access(arena_entries().entries_, cand).size_)
-      {
-        return {cand, cursor[cand]};
-      }
-    }
-    // the source arena always has room at its own cursor
-    return {order[pos], cursor[order[pos]]};
-  }
+  [[nodiscard]] OULY_API auto find_placement(std::vector<uint16_t> const& order, uint32_t pos,
+                                             std::vector<size_type> const& cursor, size_type raw_size) const
+   -> std::pair<uint16_t, size_type>;
 
   /** Rebuild per-arena block lists and the size-sorted free list from the placement plan. */
-  void rebuild_lists(std::vector<uint16_t> const& order, std::vector<placement>& plan)
-  {
-    std::ranges::sort(plan,
-                      [](placement const& a, placement const& b) -> bool
-                      {
-                        return a.dst_ != b.dst_ ? a.dst_ < b.dst_ : a.to_ < b.to_;
-                      });
-    for (auto arena_idx : order)
-    {
-      auto& arena      = ouly::detail::vector_access(arena_entries().entries_, arena_idx);
-      arena.blocks_    = {};
-      arena.free_size_ = arena.size_;
-    }
-
-    std::vector<std::pair<size_type, uint32_t>> new_free;
-    for (size_t i = 0; i < plan.size();)
-    {
-      auto const dst   = plan[i].dst_;
-      auto&      arena = ouly::detail::vector_access(arena_entries().entries_, dst);
-      size_type  pos   = 0;
-      for (; i < plan.size() && plan[i].dst_ == dst; ++i)
-      {
-        if (plan[i].to_ > pos)
-        {
-          auto gap = block_entries().push(pos, plan[i].to_ - pos, dst, true);
-          arena.blocks_.push_back(block_entries(), gap);
-          new_free.emplace_back(plan[i].to_ - pos, gap);
-        }
-        auto const block                                              = plan[i].block_;
-        ouly::detail::vector_access(block_entries().ordering_, block) = {};
-        arena.blocks_.push_back(block_entries(), block);
-        arena.free_size_ -= plan[i].size_;
-        pos = plan[i].to_ + plan[i].size_;
-      }
-      if (pos < arena.size_)
-      {
-        auto tail = block_entries().push(pos, arena.size_ - pos, dst, true);
-        arena.blocks_.push_back(block_entries(), tail);
-        new_free.emplace_back(arena.size_ - pos, tail);
-      }
-    }
-
-    std::ranges::sort(new_free);
-    free_sizes().clear();
-    free_ordering().clear();
-    free_sizes().reserve(new_free.size());
-    free_ordering().reserve(new_free.size());
-    for (auto const& [size, block] : new_free)
-    {
-      free_sizes().push_back(size);
-      free_ordering().push_back(block);
-    }
-  }
+  OULY_API void rebuild_lists(std::vector<uint16_t> const& order, std::vector<placement>& plan);
 
   /** Unlink arenas that no longer host any block and recycle their entries. */
-  auto drop_empty_arenas(std::vector<uint16_t> const& order) -> std::vector<uint16_t>
-  {
-    std::vector<uint16_t> removed;
-    for (auto arena_idx : order)
-    {
-      auto& arena = ouly::detail::vector_access(arena_entries().entries_, arena_idx);
-      if (arena.blocks_.front() == 0)
-      {
-        arena.size_      = 0;
-        arena.free_size_ = 0;
-        arena_list().erase(arena_entries(), arena_idx);
-        removed.push_back(arena_idx);
-      }
-    }
-    return removed;
-  }
+  OULY_API auto drop_empty_arenas(std::vector<uint16_t> const& order) -> std::vector<uint16_t>;
 
-  static void push_move(std::vector<defrag_move>& moves, defrag_move value)
-  {
-    if (!moves.empty())
-    {
-      auto& back = moves.back();
-      if (back.src_ == value.src_ && back.dst_ == value.dst_ && back.from_ + back.size_ == value.from_ &&
-          back.to_ + back.size_ == value.to_)
-      {
-        back.size_ += value.size_;
-        return;
-      }
-    }
-    moves.push_back(value);
-  }
+  static OULY_API void push_move(std::vector<defrag_move>& moves, defrag_move value);
 
   // high bit of an alignments_ entry marks a pinned (dedicated) allocation
   static constexpr uint8_t dedicated_bit = 0x80;
 
-  [[nodiscard]] auto mask_of(uint32_t block) const noexcept -> size_type
-  {
-    auto const pow2 = block < alignments_.size() ? alignments_[block] & ~dedicated_bit : 0;
-    return (size_type{1} << pow2) - 1;
-  }
+  [[nodiscard]] OULY_API auto mask_of(uint32_t block) const noexcept -> size_type;
 
-  [[nodiscard]] auto is_dedicated(uint32_t block) const noexcept -> bool
-  {
-    return block < alignments_.size() && (alignments_[block] & dedicated_bit) != 0;
-  }
+  [[nodiscard]] OULY_API auto is_dedicated(uint32_t block) const noexcept -> bool;
 
   // log2(alignment) per allocated block id (high bit: pinned); free-list split blocks are never read
   std::vector<uint8_t> alignments_;

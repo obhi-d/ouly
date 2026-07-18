@@ -1,8 +1,8 @@
-#include "ouly/allocators/coalescing_defrag_allocator.hpp"
 #include "catch2/catch_all.hpp"
 #include "ouly/allocators/arena_allocator.hpp"
+#include "ouly/allocators/best_fit_defrag_allocator.hpp"
 #include "ouly/allocators/coalescing_allocator.hpp"
-#include "ouly/allocators/coalescing_arena_defrag_allocator.hpp"
+#include "ouly/allocators/first_fit_defrag_allocator.hpp"
 #include "ouly/allocators/linear_allocator.hpp"
 #include <cstring>
 #include <iostream>
@@ -118,8 +118,8 @@ struct defrag_mem_manager
 
 } // namespace
 
-TEMPLATE_TEST_CASE("coalescing defrag allocators: randomized alloc/free/defragment", "[coalescing_defrag][default]",
-                   ouly::coalescing_defrag_allocator, ouly::coalescing_arena_defrag_allocator)
+TEMPLATE_TEST_CASE("defrag allocators: randomized alloc/free/defragment", "[defrag_allocator][default]",
+                   ouly::first_fit_defrag_allocator, ouly::best_fit_defrag_allocator)
 {
   uint32_t seed = Catch::getSeed();
   std::cout << " Seed : " << seed << std::endl;
@@ -174,8 +174,8 @@ TEMPLATE_TEST_CASE("coalescing defrag allocators: randomized alloc/free/defragme
   REQUIRE(mgr.arena_count_ == 0);
 }
 
-TEMPLATE_TEST_CASE("coalescing defrag allocators: consolidates sparse arenas", "[coalescing_defrag][default]",
-                   ouly::coalescing_defrag_allocator, ouly::coalescing_arena_defrag_allocator)
+TEMPLATE_TEST_CASE("defrag allocators: consolidates sparse arenas", "[defrag_allocator][default]",
+                   ouly::first_fit_defrag_allocator, ouly::best_fit_defrag_allocator)
 {
   constexpr uint32_t           page_size = 1024;
   defrag_mem_manager<TestType> mgr;
@@ -219,8 +219,8 @@ TEMPLATE_TEST_CASE("coalescing defrag allocators: consolidates sparse arenas", "
   REQUIRE(mgr.arena_count_ == 0);
 }
 
-TEMPLATE_TEST_CASE("coalescing defrag allocators: budget makes defragment incremental", "[coalescing_defrag][default]",
-                   ouly::coalescing_defrag_allocator, ouly::coalescing_arena_defrag_allocator)
+TEMPLATE_TEST_CASE("defrag allocators: budget makes defragment incremental", "[defrag_allocator][default]",
+                   ouly::first_fit_defrag_allocator, ouly::best_fit_defrag_allocator)
 {
   constexpr uint32_t           page_size = 1024;
   defrag_mem_manager<TestType> mgr;
@@ -257,8 +257,8 @@ TEMPLATE_TEST_CASE("coalescing defrag allocators: budget makes defragment increm
   allocator.validate_integrity();
 }
 
-TEMPLATE_TEST_CASE("coalescing defrag allocators: dedicated allocations are pinned", "[coalescing_defrag][default]",
-                   ouly::coalescing_defrag_allocator, ouly::coalescing_arena_defrag_allocator)
+TEMPLATE_TEST_CASE("defrag allocators: dedicated allocations are pinned", "[defrag_allocator][default]",
+                   ouly::first_fit_defrag_allocator, ouly::best_fit_defrag_allocator)
 {
   constexpr uint32_t           page_size = 1024;
   defrag_mem_manager<TestType> mgr;
