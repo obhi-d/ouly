@@ -306,15 +306,24 @@ The arena variant, `ouly::coalescing_arena_allocator`, manages multiple arenas a
 add/remove events to a user-provided memory manager satisfying the `CoalescingMemoryManager`
 concept. See unit_tests/coalescing_allocator.cpp for a complete example with a manager.
 
+`ouly::compacting_allocator` (unit_tests/compacting_allocator.cpp) is the single-arena
+`coalescing_allocator` with stable `allocation_id` handles and a `compact` pass that slides live
+allocations towards offset zero, reporting each range to move through a memmove-like callback;
+query `get_offset` for an allocation's current placement.
+
 #### Defragmenting Allocators
-`ouly::coalescing_arena_defrag_allocator` and `ouly::coalescing_defrag_allocator`
-(unit_tests/coalescing_defrag_allocator.cpp) extend the coalescing allocators with compaction
-passes for long-lived heaps such as GPU memory:
+`ouly::best_fit_defrag_allocator` and `ouly::first_fit_defrag_allocator`
+(unit_tests/defrag_allocator.cpp) extend the coalescing arena allocators with defragmentation
+passes for long-lived heaps such as GPU memory. The best-fit variant builds on
+`coalescing_arena_allocator` (best-fit by size, alignment via over-allocation); the first-fit
+variant uses offset-ordered free lists with exact-fit alignment, so no bytes are wasted on
+alignment padding. Both share:
 
 - Allocations keep stable `allocation_id` handles across defragmentation
 - A defragmentation pass emits `move_memory` callbacks to the user's memory manager in a
   memmove-safe order, followed by `rebind_alloc` notifications with each allocation's new placement
 - Dedicated (pinned) allocations bypass compaction entirely
+- An optional byte budget makes defragmentation incremental (e.g. bounded GPU copies per frame)
 
 #### Pool Allocators
 Fixed-size blocks with optional STL interop (unit_tests/pool_allocator.cpp):
