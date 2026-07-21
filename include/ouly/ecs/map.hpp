@@ -3,8 +3,6 @@
 
 #include "ouly/containers/detail/indirection.hpp"
 #include "ouly/ecs/entity.hpp"
-#include "ouly/utility/detail/vector_abstraction.hpp"
-#include "ouly/utility/optional_ref.hpp"
 #include <type_traits>
 
 namespace ouly::ecs
@@ -141,8 +139,6 @@ private:
 
 public:
   map() noexcept = default;
-  map(allocator_type&& alloc) noexcept : allocator_type(std::move<allocator_type>(alloc)) {}
-  map(allocator_type const& alloc) noexcept : allocator_type(alloc) {}
   map(map&& other) noexcept
   {
     *this = std::move(other);

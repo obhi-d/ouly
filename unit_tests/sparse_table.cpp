@@ -260,4 +260,15 @@ TEST_CASE("sparse_table: Test swap functionality", "[sparse_table][swap]")
   REQUIRE(values2.count(val40) == 1);
   REQUIRE(values2.count(val50) == 1);
 }
+
+TEST_CASE("sparse_table: construct with allocator", "[sparse_table][alloc]")
+{
+  ouly::default_allocator<> alloc;
+  ouly::sparse_table<int>   t1{alloc};
+  ouly::sparse_table<int>   t2{ouly::default_allocator<>{}};
+  auto                      e1 = t1.emplace(11);
+  auto                      e2 = t2.emplace(22);
+  REQUIRE(t1.at(e1) == 11);
+  REQUIRE(t2.at(e2) == 22);
+}
 // NOLINTEND

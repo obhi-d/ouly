@@ -72,7 +72,7 @@ private:
 
 public:
   sparse_table() noexcept = default;
-  sparse_table(allocator_type&& alloc) noexcept : allocator_type(std::move<allocator_type>(alloc)) {}
+  sparse_table(allocator_type&& alloc) noexcept : allocator_type(std::move(alloc)) {}
   sparse_table(allocator_type const& alloc) noexcept : allocator_type(alloc) {}
   sparse_table(sparse_table&& other) noexcept
   {
