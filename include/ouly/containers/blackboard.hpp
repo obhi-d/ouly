@@ -57,7 +57,7 @@ public:
   void clear()
   {
     std::for_each(lookup_.begin(), lookup_.end(),
-                  [](auto& el)
+                  [](auto& el) -> void
                   {
                     if (el.second.destructor_)
                     {
