@@ -43,7 +43,7 @@ public:
   static constexpr bool is_type_indexed = std::is_same_v<key_type, std::type_index>;
 
   blackboard() noexcept = default;
-  blackboard(allocator&& alloc) noexcept : base_type(std::move<allocator>(alloc)) {}
+  blackboard(allocator&& alloc) noexcept : base_type(std::move(alloc)) {}
   blackboard(allocator const& alloc) noexcept : base_type(alloc) {}
   blackboard(blackboard&& other) noexcept                         = default;
   blackboard(blackboard const& other) noexcept                    = delete;
@@ -57,7 +57,7 @@ public:
   void clear()
   {
     std::for_each(lookup_.begin(), lookup_.end(),
-                  [](auto& el)
+                  [](auto& el) -> void
                   {
                     if (el.second.destructor_)
                     {

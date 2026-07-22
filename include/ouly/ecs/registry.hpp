@@ -230,7 +230,7 @@ public:
     {
       auto copy = free_;
       std::ranges::sort(copy,
-                        [](size_type first, size_type second)
+                        [](size_type first, size_type second) -> bool
                         {
                           return type(first).get() < type(second).get();
                         });
@@ -279,7 +279,7 @@ public:
   void sort_free()
   {
     std::ranges::sort(free_,
-                      [](size_type first, size_type second)
+                      [](size_type first, size_type second) -> bool
                       {
                         return type(first).get() < type(second).get();
                       });
@@ -291,7 +291,8 @@ public:
    */
   void shrink() noexcept
   {
-    free_.resize(free_slot_.load());
+    // free_slot_ goes negative when emplace() drains the free list; clamp before resizing
+    free_.resize(static_cast<size_t>(std::max<ssize_type>(0, free_slot_.load())));
   }
 
 private:

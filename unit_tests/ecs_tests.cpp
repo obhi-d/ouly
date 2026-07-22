@@ -407,4 +407,77 @@ TEST_CASE("collection: validate collection", "[packed_table][emplace]")
   REQUIRE(collection.contains(e20) == false);
   REQUIRE(collection.contains(e30) == true);
 }
+
+TEST_CASE("collection: construct with allocator", "[collection][alloc]")
+{
+  using col_t = ouly::ecs::collection<ouly::ecs::entity<>>;
+  col_t::allocator_type alloc;
+  col_t                 a{alloc};
+  col_t                 b{std::move(alloc)};
+
+  ouly::ecs::registry<> reg;
+  auto                  e = reg.emplace();
+  a.emplace(e);
+  b = std::move(a); // adopts allocator along with pages
+  REQUIRE(b.contains(e));
+  REQUIRE(a.empty());
+}
+
+static_assert(std::forward_iterator<ouly::ecs::components<int>::iterator>);
+static_assert(std::forward_iterator<ouly::ecs::components<int>::const_iterator>);
+
+TEST_CASE("components: for_each with entity, index and value", "[components][for_each]")
+{
+  ouly::ecs::registry<> registry;
+
+  auto e1 = registry.emplace();
+  auto e2 = registry.emplace();
+  auto e3 = registry.emplace();
+
+  SECTION("packed storage")
+  {
+    ouly::ecs::components<int> table;
+    table.emplace_at(e1, 10);
+    table.emplace_at(e2, 20);
+    table.emplace_at(e3, 30);
+
+    int sum = 0;
+    table.for_each(
+     [&](ouly::ecs::entity<> e, uint32_t idx, int& v)
+     {
+       REQUIRE(table.at(e) == v);
+       REQUIRE(&table.data()[idx] == &v);
+       sum += v;
+     });
+    REQUIRE(sum == 60);
+  }
+
+  SECTION("direct mapping")
+  {
+    ouly::ecs::components<int, ouly::ecs::entity<>, ouly::cfg::use_direct_mapping> table;
+    table.emplace_at(e1, 10);
+    table.emplace_at(e3, 30);
+
+    int sum = 0;
+    table.for_each(
+     [&](ouly::ecs::entity<> e, uint32_t idx, int& v)
+     {
+       REQUIRE(e.get() == idx);
+       REQUIRE(table.at(e) == v);
+       sum += v;
+     });
+    REQUIRE(sum == 40);
+    REQUIRE(table.size() == 2);
+
+    table.erase(e1);
+    sum = 0;
+    table.for_each(
+     [&](ouly::ecs::entity<>, uint32_t, int& v)
+     {
+       sum += v;
+     });
+    REQUIRE(sum == 30);
+    REQUIRE(table.size() == 1);
+  }
+}
 // NOLINTEND

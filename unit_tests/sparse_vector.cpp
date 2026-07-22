@@ -21,6 +21,18 @@ struct zero_tracked_int_cfg
   static constexpr bool          assume_pod_v      = true;
 };
 
+TEST_CASE("sparse_vector: construct with allocator", "[sparse_vector][alloc]")
+{
+  using vec_t = ouly::sparse_vector<pod>;
+  vec_t::allocator_type alloc;
+  vec_t                 v1{alloc};
+  vec_t                 v2{std::move(alloc)};
+  v1.emplace_at(3, 1, 2);
+  v2.emplace_at(5, 3, 4);
+  REQUIRE(v1[3].a == 1);
+  REQUIRE(v2[5].b == 4);
+}
+
 TEST_CASE("sparse_vector: Validate sparse_vector emplace", "[sparse_vector][emplace]")
 {
   ouly::sparse_vector<pod> v1;

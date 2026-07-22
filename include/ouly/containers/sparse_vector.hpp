@@ -132,7 +132,7 @@ private:
 
 public:
   sparse_vector() noexcept = default;
-  sparse_vector(allocator_type&& alloc) noexcept : base_type(std::move<allocator_type>(alloc)) {}
+  sparse_vector(allocator_type&& alloc) noexcept : base_type(std::move(alloc)) {}
   sparse_vector(allocator_type const& alloc) noexcept : base_type(alloc) {}
   sparse_vector(sparse_vector&& other) noexcept
   {

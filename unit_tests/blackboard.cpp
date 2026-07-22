@@ -145,4 +145,15 @@ TEST_CASE("blackboard: Test swap functionality", "[blackboard][swap]")
   REQUIRE(board2.get<std::string>("param4") == "world");
   REQUIRE(board2.get<double>("param5") == 3.14);
 }
+
+TEST_CASE("blackboard: construct with allocator", "[blackboard][alloc]")
+{
+  ouly::default_allocator<> alloc;
+  ouly::blackboard          b1{alloc};
+  ouly::blackboard          b2{ouly::default_allocator<>{}};
+  b1.emplace<int>("v1", 1);
+  b2.emplace<int>("v2", 2);
+  REQUIRE(b1.get<int>("v1") == 1);
+  REQUIRE(b2.get<int>("v2") == 2);
+}
 // NOLINTEND

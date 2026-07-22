@@ -84,10 +84,11 @@ private:
 
 public:
   collection() noexcept = default;
-  collection(allocator_type&& alloc) noexcept : base_type(std::move<allocator_type>(alloc)) {}
+  collection(allocator_type&& alloc) noexcept : base_type(std::move(alloc)) {}
   collection(allocator_type const& alloc) noexcept : base_type(alloc) {}
   collection(collection&& other) noexcept
-      : items_(std::move(other.items_)), length_(other.length_), max_lnk_(other.max_lnk_)
+      : base_type(std::move(static_cast<base_type&>(other))), items_(std::move(other.items_)), length_(other.length_),
+        max_lnk_(other.max_lnk_)
   {
     other.items_.clear();
     other.length_  = 0;
@@ -110,9 +111,11 @@ public:
       return *this;
     }
     release_pages();
-    items_   = std::move(other.items_);
-    length_  = other.length_;
-    max_lnk_ = other.max_lnk_;
+    // Adopt other's allocator along with its pages so they are freed with the allocator that made them
+    static_cast<base_type&>(*this) = std::move(static_cast<base_type&>(other));
+    items_                         = std::move(other.items_);
+    length_                        = other.length_;
+    max_lnk_                       = other.max_lnk_;
     other.items_.clear();
     other.length_  = 0;
     other.max_lnk_ = 0;
@@ -249,10 +252,9 @@ public:
   {
     auto idx = l.get();
     // Only insert if not already present
-    if (!is_bit_set(idx))
+    if (set_bit(idx))
     {
       max_lnk_ = std::max(idx, max_lnk_);
-      set_bit(idx);
       if constexpr (has_revision)
       {
         set_hazard(idx, static_cast<uint8_t>(l.revision()));
@@ -278,13 +280,12 @@ public:
   void erase(entity_type l) noexcept
   {
     auto idx = l.get();
-    if (is_bit_set(idx))
+    if (unset_bit(idx))
     {
       if constexpr (has_revision)
       {
         validate_hazard(idx, static_cast<uint8_t>(l.revision()));
       }
-      unset_bit(idx);
       length_--;
     }
   }
@@ -455,17 +456,27 @@ private:
     return (words[word_index] & (storage{1} << bit_offset)) != 0;
   }
 
-  void unset_bit(size_type nb) noexcept
+  /** @brief Clear the bit; returns true if it was previously set. Safe for out-of-range indices. */
+  auto unset_bit(size_type nb) noexcept -> bool
   {
-    auto  block      = bit_page(nb >> pool_mul);
-    auto  index      = nb & pool_mod;
-    auto  word_index = static_cast<size_type>(index >> word_shift);
-    auto  bit_offset = static_cast<size_type>(index & word_mask);
-    auto* words      = static_cast<storage*>(items_[block]);
-    words[word_index] &= ~(storage{1} << bit_offset);
+    auto block = bit_page(nb >> pool_mul);
+    if (block >= items_.size() || items_[block] == nullptr)
+    {
+      return false;
+    }
+    auto       index      = nb & pool_mod;
+    auto       word_index = static_cast<size_type>(index >> word_shift);
+    auto       bit_offset = static_cast<size_type>(index & word_mask);
+    auto*      words      = static_cast<storage*>(items_[block]);
+    auto&      word       = words[word_index];
+    auto const mask       = storage{1} << bit_offset;
+    bool const was_set    = (word & mask) != 0;
+    word &= ~mask;
+    return was_set;
   }
 
-  void set_bit(size_type nb) noexcept
+  /** @brief Set the bit, allocating the page on demand; returns true if it was newly set. */
+  auto set_bit(size_type nb) noexcept -> bool
   {
     auto block = bit_page(nb >> pool_mul);
     auto index = nb & pool_mod;
@@ -487,10 +498,14 @@ private:
       }
     }
 
-    auto  word_index = static_cast<size_type>(index >> word_shift);
-    auto  bit_offset = static_cast<size_type>(index & word_mask);
-    auto* words      = static_cast<storage*>(items_[block]);
-    words[word_index] |= (storage{1} << bit_offset);
+    auto       word_index = static_cast<size_type>(index >> word_shift);
+    auto       bit_offset = static_cast<size_type>(index & word_mask);
+    auto*      words      = static_cast<storage*>(items_[block]);
+    auto&      word       = words[word_index];
+    auto const mask       = storage{1} << bit_offset;
+    bool const was_set    = (word & mask) != 0;
+    word |= mask;
+    return !was_set;
   }
 
   void set_hazard(size_type nb, std::uint8_t hz) noexcept

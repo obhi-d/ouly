@@ -6,7 +6,9 @@
 #include "ouly/utility/detail/vector_abstraction.hpp"
 #include "ouly/utility/optional_ref.hpp"
 #include <bit>
+#include <cstdint>
 #include <iterator>
+#include <vector>
 
 namespace ouly::ecs
 {
@@ -139,8 +141,6 @@ private:
 
 public:
   components() noexcept = default;
-  components(allocator_type&& alloc) noexcept : allocator_type(std::move<allocator_type>(alloc)) {}
-  components(allocator_type const& alloc) noexcept : allocator_type(alloc) {}
   components(components&& other) noexcept
   {
     *this = std::move(other);
@@ -165,16 +165,12 @@ public:
     clear();
     shrink_to_fit();
 
-    values_        = std::move(other.values_);
-    keys_          = std::move(other.keys_);
-    self_          = std::move(other.self_);
-    count_present_ = other.count_present_;
-    max_index_     = other.max_index_;
-    present_       = std::move(other.present_);
+    values_  = std::move(other.values_);
+    keys_    = std::move(other.keys_);
+    self_    = std::move(other.self_);
+    present_ = std::move(other.present_);
     // leave other in valid empty state
-    other.count_present_ = 0;
-    other.max_index_     = 0;
-    other.present_.clear();
+    other.present_ = {};
     return *this;
   }
 
@@ -186,12 +182,10 @@ public:
     clear();
     shrink_to_fit();
 
-    values_        = other.values_;
-    keys_          = other.keys_;
-    self_          = other.self_;
-    count_present_ = other.count_present_;
-    max_index_     = other.max_index_;
-    present_       = other.present_;
+    values_  = other.values_;
+    keys_    = other.keys_;
+    self_    = other.self_;
+    present_ = other.present_;
     return *this;
   }
 
@@ -244,7 +238,7 @@ public:
     if constexpr (has_direct_mapping)
     {
       // Effective element count when using direct mapping
-      return count_present_;
+      return present_.count_;
     }
     else
     {
@@ -275,7 +269,7 @@ public:
   {
     if constexpr (has_direct_mapping)
     {
-      return test_present(idx);
+      return present_.test(idx);
     }
     else
     {
@@ -283,6 +277,12 @@ public:
       // so presence-by-index is equivalent to bound check on packed storage.
       return idx < static_cast<size_type>(values_.size());
     }
+  }
+
+  // Helper: first present index at or after idx, clamped to range() (used by iterators)
+  auto next_present_index(size_type idx) const noexcept -> size_type
+  {
+    return present_.next_present(idx, range());
   }
 
   // Helper: map packed index to entity
@@ -305,11 +305,11 @@ public:
   // Helper: access value at packed index
   auto value_at_index(size_type idx) noexcept -> reference
   {
-    return values_.at(idx);
+    return values_[idx];
   }
   auto value_at_index(size_type idx) const noexcept -> const_reference
   {
-    return values_.at(idx);
+    return values_[idx];
   }
 
   // -------- Iterators over component values (skipping holes for direct mapping) --------
@@ -320,8 +320,11 @@ public:
     using parent_type       = std::conditional_t<IsConst, const components, components>;
     using difference_type   = std::ptrdiff_t;
     using iterator_category = std::forward_iterator_tag;
-    using reference_t       = std::conditional_t<IsConst, const_reference, reference>;
-    using pointer_t         = std::conditional_t<IsConst, const_pointer, pointer>;
+    using value_type        = Ty;
+    using reference_t       = std::conditional_t<IsConst, const_reference, typename components::reference>;
+    using pointer_t         = std::conditional_t<IsConst, const_pointer, typename components::pointer>;
+    using reference         = reference_t;
+    using pointer           = pointer_t;
 
     value_iterator_base() noexcept = default;
     value_iterator_base(parent_type* p, size_type idx) noexcept : p_(p), idx_(idx)
@@ -371,14 +374,9 @@ public:
       // Packed storage has no holes; only direct mapping needs to skip absent slots
       if constexpr (has_direct_mapping)
       {
-        if (p_ == nullptr)
+        if (p_ != nullptr)
         {
-          return;
-        }
-        auto const len = p_->range();
-        while (idx_ < len && !p_->is_present_at_index(idx_))
-        {
-          ++idx_;
+          idx_ = p_->next_present_index(idx_);
         }
       }
     }
@@ -423,13 +421,18 @@ public:
     using parent_type       = std::conditional_t<IsConst, const components, components>;
     using difference_type   = std::ptrdiff_t;
     using iterator_category = std::forward_iterator_tag;
-    using ref_t             = std::conditional_t<IsConst, const_reference, reference>;
+    using ref_t             = std::conditional_t<IsConst, const_reference, typename components::reference>;
 
     struct pair_proxy
     {
       entity_type e_;
       ref_t       v_;
     };
+
+    // Proxy iterator: dereference yields a value, not a reference
+    using value_type = pair_proxy;
+    using reference  = pair_proxy;
+    using pointer    = void;
 
     entity_iterator_base() noexcept = default;
     entity_iterator_base(parent_type* p, size_type idx) noexcept : p_(p), idx_(idx)
@@ -478,14 +481,9 @@ public:
       // Packed storage has no holes; only direct mapping needs to skip absent slots
       if constexpr (has_direct_mapping)
       {
-        if (p_ == nullptr)
+        if (p_ != nullptr)
         {
-          return;
-        }
-        auto const len = p_->range();
-        while (idx_ < len && !p_->is_present_at_index(idx_))
-        {
-          ++idx_;
+          idx_ = p_->next_present_index(idx_);
         }
       }
     }
@@ -523,22 +521,16 @@ public:
   }
 
   /**
-   * @brief Construct an item in a given location, assuming the location was empty
+   * @brief Construct an item in a given location; if the location is occupied, the item is replaced
    */
   template <typename... Args>
   auto emplace_at(entity_type point, Args&&... args) noexcept -> reference
   {
     if constexpr (has_direct_mapping)
     {
-      auto  idx         = point.get();
-      bool  was_present = test_present(idx);
-      auto& ref         = ouly::detail::emplace_at(values_, idx, std::forward<Args>(args)...);
-      set_present(idx);
-      if (!was_present)
-      {
-        count_present_++;
-        max_index_ = std::max(max_index_, idx);
-      }
+      auto  idx = point.get();
+      auto& ref = ouly::detail::emplace_at(values_, idx, std::forward<Args>(args)...);
+      present_.mark(idx);
       return ref;
     }
     else
@@ -610,15 +602,9 @@ public:
   {
     if constexpr (has_direct_mapping)
     {
-      auto  idx         = point.get();
-      bool  was_present = test_present(idx);
-      auto& ref         = ouly::detail::replace_at(values_, idx, std::move(args));
-      set_present(idx);
-      if (!was_present)
-      {
-        count_present_++;
-        max_index_ = std::max(max_index_, idx);
-      }
+      auto  idx = point.get();
+      auto& ref = ouly::detail::replace_at(values_, idx, std::move(args));
+      present_.mark(idx);
       return ref;
     }
     else
@@ -627,7 +613,7 @@ public:
       auto k   = keys_.get_if(idx);
       if (k == tombstone)
       {
-        return emplace_at(point, std::forward<value_type>(args));
+        return emplace_at(point, std::move(args));
       }
       reference val = values_[k];
       val           = std::move(args);
@@ -649,15 +635,9 @@ public:
   {
     if constexpr (has_direct_mapping)
     {
-      auto  idx         = point.get();
-      bool  was_present = test_present(idx);
-      auto& ref         = ouly::detail::ensure_at(values_, idx);
-      set_present(idx);
-      if (!was_present)
-      {
-        count_present_++;
-        max_index_ = std::max(max_index_, idx);
-      }
+      auto  idx = point.get();
+      auto& ref = ouly::detail::ensure_at(values_, idx);
+      present_.mark(idx);
       return ref;
     }
     else
@@ -745,13 +725,15 @@ public:
   void shrink_to_fit() noexcept
   {
     values_.shrink_to_fit();
-    if constexpr (!has_direct_mapping)
+    if constexpr (has_direct_mapping)
+    {
+      present_.shrink_to_fit();
+    }
+    else
     {
       keys_.shrink_to_fit();
       self_.shrink_to_fit();
     }
-    // Always trim presence bitfield
-    present_.shrink_to_fit();
   }
 
   /**
@@ -760,11 +742,11 @@ public:
   void clear() noexcept
   {
     values_.clear();
-    // Reset presence tracking and bookkeeping
-    count_present_ = 0;
-    max_index_     = 0;
-    present_.clear();
-    if constexpr (!has_direct_mapping)
+    if constexpr (has_direct_mapping)
+    {
+      present_.clear();
+    }
+    else
     {
       keys_.clear();
       self_.clear();
@@ -803,8 +785,7 @@ public:
   {
     if constexpr (has_direct_mapping)
     {
-      auto idx = l.get();
-      return test_present(idx);
+      return present_.test(l.get());
     }
     else
     {
@@ -816,7 +797,7 @@ public:
   {
     if constexpr (has_direct_mapping)
     {
-      return count_present_ == 0;
+      return present_.count_ == 0;
     }
     else
     {
@@ -851,7 +832,7 @@ public:
   {
     if constexpr (has_direct_mapping)
     {
-      return values_.at(l);
+      return values_[l];
     }
     else
     {
@@ -863,7 +844,7 @@ public:
   {
     if constexpr (has_direct_mapping)
     {
-      return values_.at(l);
+      return values_[l];
     }
     else
     {
@@ -887,8 +868,7 @@ public:
       if (size)
       {
         ouly::detail::ensure_at(values_, size - 1);
-        max_index_ = std::max<size_type>(max_index_, size ? size - 1 : 0);
-        ensure_bit_capacity(size - 1);
+        present_.ensure_capacity(size - 1);
       }
     }
   }
@@ -901,7 +881,7 @@ private:
     if constexpr (has_direct_mapping)
     {
       auto idx = lnk.get();
-      if (!cont.test_present(idx))
+      if (!cont.present_.test(idx))
       {
         return nullptr;
       }
@@ -924,7 +904,7 @@ private:
     if constexpr (has_direct_mapping)
     {
       auto idx = lnk.get();
-      if (!cont.test_present(idx))
+      if (!cont.present_.test(idx))
       {
         return def;
       }
@@ -978,7 +958,7 @@ private:
   {
     if constexpr (ouly::detail::is_tuple<value_type>::value)
     {
-      [&]<std::size_t... I>(std::index_sequence<I...>)
+      [&]<std::size_t... I>(std::index_sequence<I...>) -> void
       {
         (ouly::detail::move(std::get<I>(dst), std::get<I>(src)), ...);
       }(std::make_index_sequence<std::tuple_size_v<value_type>>());
@@ -996,22 +976,16 @@ private:
     }
   }
 
-  // Direct-mapped erase
+  // Direct-mapped erase; storage is not shrunk, only the presence bit is cleared
   void erase_at(entity_type l) noexcept
     requires(has_direct_mapping)
   {
     auto idx = l.get();
-    if (test_present(idx))
+    if (present_.test(idx))
     {
       // Reset underlying storage to a default/null value for determinism
       values_[idx] = value_type();
-      clear_present(idx);
-      // Do not shrink container for direct mapping, only adjust count
-      if (count_present_ > 0)
-      {
-        count_present_--;
-      }
-      // max_index_ is not decreased here to keep range monotonic; optional optimization could scan backwards
+      present_.unmark(idx);
     }
   }
 
@@ -1090,14 +1064,149 @@ private:
   }
 
   template <typename Lambda, typename Self>
+    requires(function_traits<Lambda>::arity == 3)
+  static void invoke(Self& self, Lambda& lambda, size_type base)
+  {
+    lambda(entity_type(self.get_ref_at_idx(base)), base, self.values_[base]);
+  }
+
+  template <typename Lambda, typename Self>
+    requires(function_traits<Lambda>::arity == 2)
+  static void invoke(Self& self, Lambda& lambda, size_type base)
+  {
+    lambda(entity_type(self.get_ref_at_idx(base)), self.values_[base]);
+  }
+
+  template <typename Lambda, typename Self>
+    requires(function_traits<Lambda>::arity == 1)
+  static void invoke(Self& self, Lambda& lambda, size_type base)
+  {
+    lambda(self.values_[base]);
+  }
+
+  template <typename Lambda, typename Self>
   static void for_each_impl(Self& self, size_type first, size_type last, Lambda& lambda) noexcept
   {
-    constexpr auto arity = function_traits<Lambda>::arity;
     if constexpr (has_direct_mapping)
     {
-      // Word-skip scan of the presence bitfield: empty 64-bit words are skipped wholesale
-      // and countr_zero jumps between set bits within a word.
-      auto const nwords = static_cast<size_type>(self.present_.size());
+      self.present_.for_each_set(first, last,
+                                 [&](size_type base) -> void
+                                 {
+                                   invoke(self, lambda, base);
+                                 });
+    }
+    else
+    {
+      for (; first != last; ++first)
+      {
+        invoke(self, lambda, first);
+      }
+    }
+  }
+
+  // Lambda is deliberately invoked as an lvalue (possibly many times), never forwarded onward
+  template <typename Lambda>
+  void for_each_l(size_type first, size_type last,
+                  Lambda&& lambda) noexcept // NOLINT(cppcoreguidelines-missing-std-forward)
+  {
+    for_each_impl(*this, first, last, lambda);
+  }
+
+  template <typename Lambda>
+  void for_each_l(size_type first, size_type last,
+                  Lambda&& lambda) const noexcept // NOLINT(cppcoreguidelines-missing-std-forward)
+  {
+    for_each_impl(*this, first, last, lambda);
+  }
+
+  /**
+   * @brief Presence bitfield for direct-mapping storage; tracks which slots hold a live value
+   * and how many are set. Only instantiated when `has_direct_mapping` (std::monostate otherwise).
+   */
+  struct presence_bits
+  {
+    static constexpr size_type word_mask  = 63;
+    static constexpr size_type word_shift = 6;
+
+    static constexpr auto word_index(size_type bit) noexcept -> size_type
+    {
+      return bit >> word_shift;
+    }
+
+    static constexpr auto bit_mask(size_type bit) noexcept -> std::uint64_t
+    {
+      return std::uint64_t{1} << (bit & word_mask);
+    }
+
+    void ensure_capacity(size_type bit)
+    {
+      auto need = static_cast<size_type>(word_index(bit) + 1);
+      if (words_.size() < need)
+      {
+        words_.resize(need, 0);
+      }
+    }
+
+    /** @brief Set the bit and maintain the count of set bits */
+    void mark(size_type bit)
+    {
+      ensure_capacity(bit);
+      auto&      word = words_[word_index(bit)];
+      auto const mask = bit_mask(bit);
+      count_ += static_cast<size_type>((word & mask) == 0);
+      word |= mask;
+    }
+
+    /** @brief Clear the bit and maintain the count of set bits */
+    void unmark(size_type bit) noexcept
+    {
+      auto wi = word_index(bit);
+      if (wi < words_.size())
+      {
+        auto&      word = words_[wi];
+        auto const mask = bit_mask(bit);
+        count_ -= static_cast<size_type>((word & mask) != 0);
+        word &= ~mask;
+      }
+    }
+
+    auto test(size_type bit) const noexcept -> bool
+    {
+      auto wi = word_index(bit);
+      return wi < words_.size() && ((words_[wi] & bit_mask(bit)) != 0);
+    }
+
+    /** @brief First set bit at or after `bit`, or `bound` if there is none below it */
+    auto next_present(size_type bit, size_type bound) const noexcept -> size_type
+    {
+      auto const nwords = static_cast<size_type>(words_.size());
+      auto       wi     = word_index(bit);
+      if (wi >= nwords)
+      {
+        return bound;
+      }
+      auto word = words_[wi] >> (bit & word_mask);
+      while (word == 0)
+      {
+        if (++wi >= nwords)
+        {
+          return bound;
+        }
+        word = words_[wi];
+        bit  = static_cast<size_type>(wi << word_shift);
+      }
+      bit += static_cast<size_type>(std::countr_zero(word));
+      return bit < bound ? bit : bound;
+    }
+
+    /**
+     * @brief Invoke `fn(index)` for every set bit in [first, last). Empty 64-bit words are
+     * skipped wholesale and countr_zero jumps between set bits within a word.
+     */
+    template <typename Fn>
+    void for_each_set(size_type first, size_type last, Fn fn) const noexcept
+    {
+      auto const nwords = static_cast<size_type>(words_.size());
       while (first < last)
       {
         auto const wi = word_index(first);
@@ -1105,7 +1214,7 @@ private:
         {
           break;
         }
-        auto word = self.present_[wi] >> (first & word_mask);
+        auto word = words_[wi] >> (first & word_mask);
         auto base = first;
         first     = (first | word_mask) + 1;
         while (word != 0)
@@ -1116,98 +1225,34 @@ private:
           {
             return;
           }
-          if constexpr (arity == 2)
-          {
-            lambda(entity_type(self.get_ref_at_idx(base)), self.values_[base]);
-          }
-          else
-          {
-            lambda(self.values_[base]);
-          }
+          fn(base);
           word >>= skip;
           word >>= 1U;
           base += 1;
         }
       }
     }
-    else
+
+    void clear() noexcept
     {
-      for (; first != last; ++first)
-      {
-        if constexpr (arity == 2)
-        {
-          lambda(entity_type(self.get_ref_at_idx(first)), self.values_[first]);
-        }
-        else
-        {
-          lambda(self.values_[first]);
-        }
-      }
+      words_.clear();
+      count_ = 0;
     }
-  }
 
-  template <typename Lambda>
-  void for_each_l(size_type first, size_type last, Lambda lambda) noexcept
-  {
-    for_each_impl(*this, first, last, lambda);
-  }
+    void shrink_to_fit() noexcept
+    {
+      words_.shrink_to_fit();
+    }
 
-  template <typename Lambda>
-  void for_each_l(size_type first, size_type last, Lambda lambda) const noexcept
-  {
-    for_each_impl(*this, first, last, lambda);
-  }
+    std::vector<std::uint64_t> words_;
+    size_type                  count_ = 0;
+  };
 
   vector_type values_;
   key_index   keys_;
   self_index  self_;
-  // Tracking for direct mapping mode
-  size_type count_present_ = 0; // number of valid entries when using direct mapping
-  size_type max_index_     = 0; // highest seen index when using direct mapping
-  // Presence bitfield for direct mapping storage (used for both sparse and normal vectors)
-  std::vector<std::uint64_t> present_;
-
-  // --- bitfield helpers (only meaningful for has_direct_mapping) ---
-  static constexpr size_type word_mask  = 63;
-  static constexpr size_type word_shift = 6;
-
-  static constexpr auto word_index(size_type bit) noexcept -> size_type
-  {
-    return bit >> word_shift;
-  }
-
-  static constexpr auto bit_mask(size_type bit) noexcept -> std::uint64_t
-  {
-    return std::uint64_t{1} << (bit & word_mask);
-  }
-
-  void ensure_bit_capacity(size_type bit)
-  {
-    auto need = static_cast<size_type>(word_index(bit) + 1);
-    if (present_.size() < need)
-    {
-      present_.resize(need, 0);
-    }
-  }
-
-  void set_present(size_type bit)
-  {
-    ensure_bit_capacity(bit);
-    present_[word_index(bit)] |= bit_mask(bit);
-  }
-  void clear_present(size_type bit) noexcept
-  {
-    auto wi = word_index(bit);
-    if (wi < present_.size())
-    {
-      present_[wi] &= ~bit_mask(bit);
-    }
-  }
-  auto test_present(size_type bit) const noexcept -> bool
-  {
-    auto wi = word_index(bit);
-    return wi < present_.size() && ((present_[wi] & bit_mask(bit)) != 0);
-  }
+  // Presence tracking, only used for direct mapping (empty placeholder otherwise)
+  std::conditional_t<has_direct_mapping, presence_bits, std::monostate> present_;
 };
 
 } // namespace ouly::ecs
