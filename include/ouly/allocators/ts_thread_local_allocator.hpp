@@ -129,6 +129,18 @@ public:
   OULY_API auto deallocate(void* ptr, std::size_t size) const -> bool;
 
   /**
+   * @brief Resize an existing allocation, growing it in place whenever possible
+   * @param ptr Pointer to the block to resize
+   * @param old_size Size the block was allocated with
+   * @param new_size Requested new size
+   * @return Pointer to the resized block, which may differ from @p ptr
+   * @note The block is resized in place only when it is the most recent allocation on the calling
+   *       thread's arena, otherwise a new block is allocated and the contents are copied over
+   * @note Must be called from the thread that allocated @p ptr
+   */
+  OULY_API auto realloc(void* ptr, std::size_t old_size, std::size_t new_size) -> void*;
+
+  /**
    * @brief Reset all arenas for reuse (end-of-frame cleanup)
    * @warning Must be called from a single thread with no concurrent allocate() calls
    * @warning All previously allocated memory becomes invalid after this call

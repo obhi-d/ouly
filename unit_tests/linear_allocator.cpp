@@ -135,4 +135,106 @@ TEST_CASE("Validate linear_stack_allocator with alignment", "[linear_stack_alloc
   auto a1 = ouly::allocate<std::uint8_t>(allocator, 32, 0);
   CHECK(a1 == first);
 }
+
+namespace
+{
+void fill_pattern(std::uint8_t* data, std::uint32_t size)
+{
+  for (std::uint32_t index = 0; index < size; ++index)
+  {
+    data[index] = static_cast<std::uint8_t>((index * 7 + 1) & 0xff);
+  }
+}
+
+auto has_pattern(std::uint8_t const* data, std::uint32_t size) -> bool
+{
+  for (std::uint32_t index = 0; index < size; ++index)
+  {
+    if (data[index] != static_cast<std::uint8_t>((index * 7 + 1) & 0xff))
+    {
+      return false;
+    }
+  }
+  return true;
+}
+} // namespace
+
+TEST_CASE("Validate linear_allocator realloc", "[linear_allocator]")
+{
+  using allocator_t                    = ouly::linear_allocator<>;
+  constexpr std::uint32_t k_arena_size = 1000;
+
+  allocator_t allocator(k_arena_size);
+  auto*       block = ouly::allocate<std::uint8_t>(allocator, 40);
+  fill_pattern(block, 40);
+
+  // The block is at the head of the arena, so it simply grows in place
+  auto* grown = static_cast<std::uint8_t*>(allocator.realloc(block, 40, 100));
+  CHECK(grown == block);
+  CHECK(has_pattern(grown, 40));
+  CHECK(allocator.get_free_size() == k_arena_size - 100);
+
+  // Shrinking the head hands the tail back to the arena
+  auto* shrunk = static_cast<std::uint8_t*>(allocator.realloc(grown, 100, 60));
+  CHECK(shrunk == block);
+  CHECK(has_pattern(shrunk, 40));
+  CHECK(allocator.get_free_size() == k_arena_size - 60);
+
+  // Once another allocation sits on top the block has to move
+  auto* top   = ouly::allocate<std::uint8_t>(allocator, 20);
+  auto* moved = static_cast<std::uint8_t*>(allocator.realloc(shrunk, 60, 120));
+  CHECK(moved == top + 20);
+  CHECK(has_pattern(moved, 40));
+  CHECK(allocator.get_free_size() == k_arena_size - 200);
+}
+
+TEST_CASE("Validate linear_arena_allocator realloc", "[linear_arena_allocator]")
+{
+  using allocator_t                    = ouly::linear_arena_allocator<>;
+  constexpr std::uint32_t k_arena_size = 1000;
+
+  allocator_t allocator(k_arena_size);
+  auto*       block = ouly::allocate<std::uint8_t>(allocator, 800);
+  fill_pattern(block, 800);
+
+  auto* grown = static_cast<std::uint8_t*>(allocator.realloc(block, 800, 900));
+  CHECK(grown == block);
+  CHECK(allocator.get_arena_count() == 1);
+
+  // A block that no longer fits its arena moves to a fresh one, contents intact
+  auto* moved = static_cast<std::uint8_t*>(allocator.realloc(grown, 900, 1200));
+  CHECK(moved != grown);
+  CHECK(has_pattern(moved, 800));
+  CHECK(allocator.get_arena_count() == 2);
+
+  // The vacated block was released, so the first arena can serve it again
+  auto* reused = ouly::allocate<std::uint8_t>(allocator, 900);
+  CHECK(reused == block);
+  CHECK(allocator.get_arena_count() == 2);
+}
+
+TEST_CASE("Validate linear_stack_allocator realloc", "[linear_stack_allocator]")
+{
+  using allocator_t = ouly::linear_stack_allocator<>;
+
+  allocator_t allocator(256);
+  auto*       block = ouly::allocate<std::uint8_t>(allocator, 32);
+  fill_pattern(block, 32);
+
+  auto* grown = static_cast<std::uint8_t*>(allocator.realloc(block, 32, 64));
+  CHECK(grown == block);
+  CHECK(has_pattern(grown, 32));
+  CHECK(allocator.get_arena_count() == 1);
+
+  auto* top   = ouly::allocate<std::uint8_t>(allocator, 16);
+  auto* moved = static_cast<std::uint8_t*>(allocator.realloc(grown, 64, 96));
+  CHECK(moved == top + 16);
+  CHECK(has_pattern(moved, 32));
+  CHECK(allocator.get_arena_count() == 1);
+
+  // Growing past the arena capacity takes a new arena
+  auto* large = static_cast<std::uint8_t*>(allocator.realloc(moved, 96, 512));
+  CHECK(has_pattern(large, 32));
+  CHECK(allocator.get_arena_count() == 2);
+}
 // NOLINTEND

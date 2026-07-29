@@ -136,6 +136,18 @@ public:
   OULY_API auto deallocate(void* ptr, std::size_t size) noexcept -> bool;
 
   /**
+   * @brief Resize an existing allocation, growing it in place whenever possible
+   * @param ptr Pointer to the block to resize
+   * @param old_size Size the block was allocated with
+   * @param new_size Requested new size
+   * @return Pointer to the resized block, which may differ from @p ptr
+   * @note The block is resized in place only when it is the most recent allocation of the current
+   *       arena, otherwise a new block is allocated and the contents are copied over
+   * @note Returns nullptr on allocation failure
+   */
+  OULY_API auto realloc(void* ptr, std::size_t old_size, std::size_t new_size) noexcept -> void*;
+
+  /**
    * @brief Reset all arenas for reuse
    * @warning Must be called from a single thread with no concurrent allocate() calls
    * @warning All previously allocated memory becomes invalid after this call
@@ -175,6 +187,16 @@ private:
   static constexpr auto align_up(std::size_t value) noexcept -> std::size_t
   {
     return (value + alignment - 1U) & ~(alignment - 1U);
+  }
+
+  /**
+   * @brief Number of bytes an allocation of `size` bytes actually consumes in an arena
+   * @param size Requested size
+   * @return Size after the rounding `allocate` applies
+   */
+  static constexpr auto reserved_size(std::size_t size) noexcept -> std::size_t
+  {
+    return is_aligned(size) ? size : align_up(size);
   }
 
   /**

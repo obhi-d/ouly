@@ -36,6 +36,7 @@ set(OULY_SOURCES
     "src/ouly/allocators/coalescing_arena_allocator.cpp"
     "src/ouly/allocators/compacting_allocator.cpp"
     "src/ouly/allocators/first_fit_defrag_allocator.cpp"
+    "src/ouly/allocators/gpu_allocator.cpp"
     "src/ouly/allocators/platform_memory.cpp"
     "src/ouly/allocators/ts_shared_linear_allocator.cpp"
     "src/ouly/allocators/ts_thread_local_allocator.cpp"

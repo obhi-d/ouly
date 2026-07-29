@@ -42,8 +42,8 @@ class first_fit_defrag_allocator
 public:
   using size_type = allocation_size_type;
 
-  OULY_API first_fit_defrag_allocator() noexcept;
-  OULY_API explicit first_fit_defrag_allocator(size_type arena_sz) noexcept;
+  OULY_API first_fit_defrag_allocator();
+  OULY_API explicit first_fit_defrag_allocator(size_type arena_sz);
 
   /** @brief Arena size can be changed any time with this method, but it can only increase in size. */
   OULY_API void set_arena_size(size_type s) noexcept;

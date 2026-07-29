@@ -11,6 +11,10 @@ namespace ouly::cfg
 inline static constexpr bool coalescing_allocator_large_size = false;
 inline static constexpr bool prefetch_next_allocation        = false; // TODO make it a config per allocator
 
+inline static constexpr uint32_t default_gpu_block_to_scan = 64;
+/** @brief Page size of the scratch allocator gpu defragmentation falls back to */
+inline static constexpr uint32_t default_gpu_scratch_size = 16 * 1024;
+
 struct track_memory
 {
   static constexpr bool track_memory_v = true;

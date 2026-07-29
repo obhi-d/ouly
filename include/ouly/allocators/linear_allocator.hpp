@@ -4,6 +4,8 @@
 #include "ouly/allocators/default_allocator.hpp"
 #include "ouly/allocators/detail/custom_allocator.hpp"
 #include "ouly/utility/common.hpp"
+#include <algorithm>
+#include <cstring>
 
 namespace ouly
 {
@@ -44,8 +46,8 @@ public:
   using tag                  = linear_allocator_tag;
   using statistics           = ouly::detail::statistics<linear_allocator_tag, Config>;
   using underlying_allocator = ouly::detail::underlying_allocator_t<Config>;
-  using size_type            = typename underlying_allocator::size_type;
-  using address              = typename underlying_allocator::address;
+  using size_type            = underlying_allocator::size_type;
+  using address              = underlying_allocator::address;
 
   template <typename... Args>
   linear_allocator(size_type i_arena_size, [[maybe_unused]] Args... args) noexcept
@@ -131,6 +133,40 @@ public:
     return z;
   }
 
+  /**
+   * @brief Resize an existing allocation, growing it in place whenever possible
+   *
+   * When @p i_data is the most recent allocation of the arena the block is grown or shrunk by moving
+   * the arena head, and the same address is returned. Otherwise a fresh block is allocated and the
+   * contents are copied over.
+   *
+   * @param i_data      Address returned by a previous `allocate` call
+   * @param i_old_size  Size the block was allocated with
+   * @param i_new_size  Requested new size
+   * @param i_alignment Alignment the block was allocated with
+   * @return Address of the resized block, which may differ from @p i_data
+   */
+  template <typename Alignment = alignment<>>
+  [[nodiscard]] auto realloc(address i_data, size_type i_old_size, size_type i_new_size, Alignment i_alignment = {})
+   -> address
+  {
+    if (i_data == nullptr || i_old_size == 0)
+    {
+      return allocate(i_new_size, i_alignment);
+    }
+
+    if (resize_in_place(i_data, i_old_size, i_new_size))
+    {
+      return i_data;
+    }
+
+    // No deallocate: the only block this allocator can reclaim is the one at the head, and that case
+    // was already handled above
+    auto moved = allocate(i_new_size, i_alignment);
+    std::memcpy(moved, i_data, std::min(i_old_size, i_new_size));
+    return moved;
+  }
+
   template <typename Alignment = alignment<>>
   void deallocate(address i_data, size_type i_size, Alignment i_alignment = {})
   {
@@ -148,7 +184,7 @@ public:
     {
       if constexpr (i_alignment)
       {
-        i_size += (std::size_t)i_alignment;
+        i_size += static_cast<size_type>(static_cast<std::size_t>(i_alignment));
 
         new_left_over = left_over_ + i_size;
         offset        = (k_arena_size_ - new_left_over);
@@ -172,6 +208,36 @@ public:
   auto operator<=>(linear_allocator const&) const = default;
 
 private:
+  /** @brief Move the arena head when @p i_data is the block sitting at the top of the arena */
+  auto resize_in_place(address i_data, size_type i_old_size, size_type i_new_size) -> bool
+  {
+    // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+    auto* head = static_cast<std::uint8_t*>(buffer_) + (k_arena_size_ - left_over_);
+    auto* end  = static_cast<std::uint8_t*>(i_data) + i_old_size;
+    // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+    if (end != head)
+    {
+      return false;
+    }
+
+    if (i_new_size <= i_old_size)
+    {
+      [[maybe_unused]] auto measure = statistics::report_deallocate(i_old_size - i_new_size);
+      left_over_ += i_old_size - i_new_size;
+      return true;
+    }
+
+    auto const extra = i_new_size - i_old_size;
+    if (extra > left_over_)
+    {
+      return false;
+    }
+
+    [[maybe_unused]] auto measure = statistics::report_allocate(extra);
+    left_over_ -= extra;
+    return true;
+  }
+
   address   buffer_;
   size_type left_over_;
   size_type k_arena_size_;

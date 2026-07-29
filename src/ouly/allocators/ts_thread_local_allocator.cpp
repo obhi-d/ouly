@@ -2,8 +2,10 @@
 #include "ouly/allocators/ts_thread_local_allocator.hpp"
 #include "ouly/allocators/config.hpp"
 #include "ouly/utility/common.hpp"
+#include <algorithm>
 #include <atomic>
 #include <cstdint>
+#include <cstring>
 #include <limits>
 #include <mutex>
 
@@ -89,6 +91,39 @@ auto ts_thread_local_allocator::deallocate(void* ptr, std::size_t size) const ->
     return true;
   }
   return false;
+}
+
+auto ts_thread_local_allocator::realloc(void* ptr, std::size_t old_size, std::size_t new_size) -> void*
+{
+  if (ptr == nullptr || old_size == 0)
+  {
+    return allocate(new_size);
+  }
+
+  auto const reserved_old = is_aligned(old_size) ? old_size : align_up(old_size);
+  auto const reserved_new = is_aligned(new_size) ? new_size : align_up(new_size);
+
+  arena_t* page = local_page.page_;
+  if (page != nullptr && local_page.generation_ == generation_)
+  {
+    auto* byte_ptr = static_cast<std::byte*>(ptr);
+    if (byte_ptr + reserved_old == &page->data_[0] + page->used_)
+    {
+      std::size_t const base = page->used_ - reserved_old;
+      if (base + reserved_new <= page->size_)
+      {
+        page->used_ = base + reserved_new;
+        return ptr;
+      }
+    }
+  }
+
+  void* moved = allocate(new_size);
+  if (moved != nullptr) [[likely]]
+  {
+    std::memcpy(moved, ptr, std::min(old_size, new_size));
+  }
+  return moved;
 }
 
 void ts_thread_local_allocator::reset() noexcept

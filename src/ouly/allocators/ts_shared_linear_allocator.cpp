@@ -2,6 +2,8 @@
 #include "ouly/allocators/ts_shared_linear_allocator.hpp"
 #include "ouly/allocators/config.hpp"
 #include "ouly/utility/common.hpp"
+#include <algorithm>
+#include <cstring>
 #include <mutex>
 
 namespace ouly
@@ -63,6 +65,55 @@ auto ts_shared_linear_allocator::deallocate(void* ptr, std::size_t size) noexcep
     // CAS failed - another thread modified the offset, retry
   }
 }
+auto ts_shared_linear_allocator::realloc(void* ptr, std::size_t old_size, std::size_t new_size) noexcept -> void*
+{
+  if (ptr == nullptr || old_size == 0)
+  {
+    return allocate(new_size);
+  }
+
+  auto const reserved_old = reserved_size(old_size);
+  auto const reserved_new = reserved_size(new_size);
+
+  arena_t* arena = current_page_.load(std::memory_order_acquire);
+  if (arena != nullptr) [[likely]]
+  {
+    auto* byte_ptr   = static_cast<std::byte*>(ptr);
+    auto* arena_data = &arena->data_[0];
+
+    // Roll the arena head back and forth when this is still the most recent allocation
+    for (;;)
+    {
+      std::size_t current_offset = arena->offset_.load(std::memory_order_relaxed);
+      if (byte_ptr + reserved_old != arena_data + current_offset)
+      {
+        break; // Not the most recent allocation, fall through to allocate and copy
+      }
+
+      std::size_t const base       = current_offset - reserved_old;
+      std::size_t const new_offset = base + reserved_new;
+      if (new_offset > arena->size_)
+      {
+        break; // arena_t exhausted
+      }
+
+      if (arena->offset_.compare_exchange_weak(current_offset, new_offset, std::memory_order_acq_rel,
+                                               std::memory_order_relaxed)) [[likely]]
+      {
+        return ptr;
+      }
+      // CAS failed - another thread modified the offset, retry
+    }
+  }
+
+  void* moved = allocate(new_size);
+  if (moved != nullptr) [[likely]]
+  {
+    std::memcpy(moved, ptr, std::min(old_size, new_size));
+  }
+  return moved;
+}
+
 void ts_shared_linear_allocator::reset() noexcept
 {
   std::unique_lock<std::shared_mutex> lg{page_mutex_};
@@ -179,8 +230,7 @@ auto ts_shared_linear_allocator::allocate_slow_path(std::size_t size) noexcept -
     }
     else
     {
-      arena =
-       static_cast<arena_t*>(::operator new(sizeof(arena_t) + page_size, std::align_val_t{alignof(arena_t)}));
+      arena = static_cast<arena_t*>(::operator new(sizeof(arena_t) + page_size, std::align_val_t{alignof(arena_t)}));
       arena->size_ = page_size;
       arena->offset_.store(0, std::memory_order_relaxed);
     }
@@ -196,8 +246,7 @@ auto ts_shared_linear_allocator::allocate_slow_path(std::size_t size) noexcept -
   else
   {
     // This is a single large page, not reused
-    arena =
-     static_cast<arena_t*>(::operator new(sizeof(arena_t) + page_size, std::align_val_t{alignof(arena_t)}));
+    arena = static_cast<arena_t*>(::operator new(sizeof(arena_t) + page_size, std::align_val_t{alignof(arena_t)}));
     arena->size_ = page_size;
     arena->offset_.store(0, std::memory_order_relaxed);
     arena->next_   = pages_to_free_;

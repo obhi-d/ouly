@@ -214,6 +214,7 @@ add_unit_test(NAME thread_safe_allocators FILES "thread_safe_allocators.cpp" SAN
 add_unit_test(NAME memory_mapped_allocators FILES "memory_mapped_allocators.cpp" SANITIZE)
 add_unit_test(NAME coalescing_allocator FILES "coalescing_allocator.cpp" SANITIZE)
 add_unit_test(NAME defrag_allocator FILES "defrag_allocator.cpp" SANITIZE)
+add_unit_test(NAME gpu_allocator FILES "gpu_allocator.cpp" SANITIZE)
 add_unit_test(NAME compacting_allocator FILES "compacting_allocator.cpp" SANITIZE)
 add_unit_test(NAME spmc_ring FILES "spmc_ring.cpp" SANITIZE)
 add_unit_test(NAME scheduler FILES "scheduler_tests.cpp" LINK_LIBS glm::glm SANITIZE)
