@@ -366,4 +366,54 @@ TEST_CASE("coalescing_allocator: exhaustion empties the free list", "[coalescing
   REQUIRE(allocator.allocate(0x80) == 0x180);
   REQUIRE(allocator.allocate(1) == kMax);
 }
+
+TEST_CASE("first_fit_defrag_allocator: defragment draws temporaries from a caller scratch",
+          "[defrag_allocator][default]")
+{
+  uint32_t seed = Catch::getSeed();
+
+  constexpr uint32_t                                     page_size = 4096;
+  defrag_mem_manager<ouly::first_fit_defrag_allocator>    mgr;
+  ouly::first_fit_defrag_allocator                       allocator{page_size};
+  ouly::linear_stack_allocator<>                         scratch{1024};
+  std::vector<uint32_t>                                  live;
+
+  for (uint32_t iter = 0; iter < 500; ++iter)
+  {
+    auto const action = xorshift(seed) % 100;
+    if (action < 55 || live.empty())
+    {
+      auto const size    = (xorshift(seed) % (page_size / 2)) + 1;
+      bool const aligned = (xorshift(seed) & 1) != 0;
+      auto const al = aligned ? allocator.allocate(size, mgr, ouly::alignment<256>()) : allocator.allocate(size, mgr);
+      mgr.track(al, size);
+      live.push_back(al.get_allocation_id().get());
+    }
+    else if (action < 90)
+    {
+      auto const idx = xorshift(seed) % live.size();
+      auto const id  = live[idx];
+      allocator.deallocate(ouly::allocation_id{id}, mgr);
+      mgr.allocs_.erase(id);
+      live[idx] = live.back();
+      live.pop_back();
+    }
+    else
+    {
+      auto const budget = std::numeric_limits<uint32_t>::max();
+      auto const result = allocator.defragment(mgr, budget, scratch);
+      REQUIRE(result.completed_);
+      scratch.rewind();
+    }
+    allocator.validate_integrity();
+  }
+
+  mgr.verify_all();
+  for (auto id : live)
+  {
+    allocator.deallocate(ouly::allocation_id{id}, mgr);
+    mgr.allocs_.erase(id);
+  }
+  REQUIRE(mgr.arena_count_ == 0);
+}
 // NOLINTEND

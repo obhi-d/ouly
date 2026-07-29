@@ -3,7 +3,9 @@
 #pragma once
 
 #include "ouly/allocators/coalescing_arena_allocator.hpp"
-#include <algorithm>
+#include "ouly/allocators/config.hpp"
+#include "ouly/allocators/linear_stack_allocator.hpp"
+#include "ouly/allocators/scratch_allocator.hpp"
 #include <bit>
 #include <cstdint>
 #include <limits>
@@ -24,8 +26,13 @@ namespace ouly
  * instead of best-fit by size, and alignment is exact-fit — no bytes are over-allocated, so
  * `get_offset` directly returns the aligned offset.
  *
- * @note This class is meant for virtual allocations, for example GPU memory management. No actual
- * memory is touched by the allocator; the manager owns the backing arenas.
+ * @note No actual memory is touched by the allocator; the manager owns the backing arenas.
+ * @note Defragmentation is synchronous. The manager must complete every `move_memory` call before
+ * returning from it, with memmove semantics — same-arena calls can self-overlap — and allocation ids
+ * are rebound while `defragment` runs. That makes this class a fit for host-visible or virtually
+ * backed memory with a synchronous manager. For asynchronous GPU device-memory defragmentation,
+ * where the copy is only queued and overlapping regions of the same buffer are illegal, use
+ * `ouly::gpu_allocator` instead.
  *
  * Key features:
  * - Exact-fit alignment support: alignment padding stays in the free list instead of being
@@ -34,13 +41,16 @@ namespace ouly
  * - Arenas that become empty are returned to the manager.
  * - `defragment` compacts allocations towards the front of earlier arenas, drops emptied arenas and
  *   reports moves/rebinds through the manager. Allocation ids remain stable across defragmentation.
- * - An optional byte budget makes defragmentation incremental, which is useful to bound GPU copy
+ * - An optional byte budget makes defragmentation incremental, which is useful to bound copy
  *   bandwidth per frame.
  */
 class first_fit_defrag_allocator
 {
 public:
   using size_type = allocation_size_type;
+
+  /** @brief Scratch allocator `defragment` falls back to when the caller supplies none. */
+  using defrag_scratch = ouly::linear_stack_allocator<>;
 
   OULY_API first_fit_defrag_allocator();
   OULY_API explicit first_fit_defrag_allocator(size_type arena_sz);
@@ -131,28 +141,54 @@ public:
    * Allocations are processed in (arena, offset) order and moved to the lowest position they fit;
    * because of this ordering, same-arena moves always shift data towards lower offsets and the emitted
    * `move_memory` sequence never overwrites data that has not been moved yet (individual calls can
-   * still self-overlap and must behave like memmove). Allocation ids remain valid; the manager is told
-   * about relocations through `rebind_alloc`.
+   * still self-overlap and must behave like memmove). Every move must be complete when `move_memory`
+   * returns; ids are rebound during this call, so a manager that merely queues an asynchronous copy is
+   * not supported — use `ouly::gpu_allocator` for that. Allocation ids remain valid; the manager is
+   * told about relocations through `rebind_alloc`.
    *
    * @param max_bytes_to_move Optional budget; once moving another allocation would exceed it, all
    * remaining allocations stay in place and `completed_` is false in the result.
+   *
+   * @note Planning needs temporary storage proportional to the number of live allocations. It is
+   * taken from a call-local `defrag_scratch`; use the overload taking a `ScratchAllocator` to draw it
+   * from a frame allocator instead.
    */
   template <typename M>
     requires(CoalescingDefragMemoryManager<M, first_fit_defrag_allocator>)
   auto defragment(M& manager, size_type max_bytes_to_move = std::numeric_limits<size_type>::max())
    -> coalescing_defrag_result
   {
+    defrag_scratch scratch{ouly::cfg::default_gpu_scratch_size};
+    return defragment(manager, max_bytes_to_move, scratch);
+  }
+
+  /**
+   * @brief Compact allocations towards the front of earlier arenas and drop emptied arenas.
+   *
+   * @param scratch Allocator the planner takes its temporary buffers from. Every buffer is dead by
+   * the time the call returns, so a linear allocator that is rewound per frame is the expected
+   * choice.
+   */
+  template <typename M, ScratchAllocator S>
+    requires(CoalescingDefragMemoryManager<M, first_fit_defrag_allocator>)
+  auto defragment(M& manager, size_type max_bytes_to_move, S& scratch) -> coalescing_defrag_result
+  {
+    scratch_allocator_ref source{scratch};
+
     manager.begin_defragment(*this);
     coalescing_defrag_result result;
 
-    auto items = snapshot_allocations();
+    auto items = snapshot_allocations(source);
 
-    std::vector<placement> plan;
-    plan.reserve(items.size());
-    std::vector<defrag_move> moves;
-    std::vector<uint32_t>    rebinds;
-    std::vector<size_type>   cursor(arena_pool_.size(), 0);
-    bool                     budget_left = true;
+    ouly::scratch_vector<placement>   plan{source, items.size()};
+    ouly::scratch_vector<defrag_move> moves{source, items.size()};
+    ouly::scratch_vector<uint32_t>    rebinds{source, items.size()};
+    ouly::scratch_vector<size_type>   cursor{source, arena_pool_.size()};
+    for (size_t i = 0, count = arena_pool_.size(); i < count; ++i)
+    {
+      cursor.push_back(0);
+    }
+    bool budget_left = true;
 
     for (auto const& it : items)
     {
@@ -186,7 +222,7 @@ public:
     result.moves_ = static_cast<uint32_t>(moves.size());
 
     apply_plan(plan);
-    auto removed           = drop_empty_arenas();
+    auto removed           = drop_empty_arenas(source);
     result.arenas_removed_ = static_cast<uint32_t>(removed.size());
 
     for (auto const& m : moves)
@@ -244,21 +280,23 @@ private:
   };
 
   /** Live allocations ordered by (arena position, offset) — the defragmentation processing order. */
-  [[nodiscard]] OULY_API auto snapshot_allocations() const -> std::vector<defrag_item>;
+  [[nodiscard]] OULY_API auto snapshot_allocations(scratch_allocator_ref scratch) const
+   -> ouly::scratch_vector<defrag_item>;
 
   /** Earliest arena (up to and including the source) where the allocation fits at the pack cursor. */
-  [[nodiscard]] OULY_API auto find_placement(defrag_item const& it, std::vector<size_type> const& cursor) const
+  [[nodiscard]] OULY_API auto find_placement(defrag_item const&                     it,
+                                             ouly::scratch_vector<size_type> const& cursor) const
    -> std::pair<uint16_t, size_type>;
 
   /** Rebuild every arena's free list and allocation count from the placement plan. */
-  OULY_API void apply_plan(std::vector<placement>& plan);
+  OULY_API void apply_plan(ouly::scratch_vector<placement>& plan);
 
   /** Unlink arenas that no longer host any allocation and recycle their slots. */
-  OULY_API auto drop_empty_arenas() -> std::vector<uint16_t>;
+  OULY_API auto drop_empty_arenas(scratch_allocator_ref scratch) -> ouly::scratch_vector<uint16_t>;
 
   OULY_API void validate_arena(arena_state const& ar, std::vector<uint32_t>& allocs) const;
 
-  static OULY_API void push_move(std::vector<defrag_move>& moves, defrag_move value);
+  static OULY_API void push_move(ouly::scratch_vector<defrag_move>& moves, defrag_move value);
 
   OULY_API auto try_allocate(uint16_t arena, arena_state& ar, size_type size, size_type mask) -> ca_allocation;
 

@@ -3,6 +3,7 @@
 #include "ouly/utility/user_config.hpp"
 
 #include "ouly/allocators/first_fit_defrag_allocator.hpp"
+#include <algorithm>
 
 namespace ouly
 {
@@ -69,15 +70,19 @@ void first_fit_defrag_allocator::validate_integrity() const
   }
 }
 
-auto first_fit_defrag_allocator::snapshot_allocations() const -> std::vector<defrag_item>
+auto first_fit_defrag_allocator::snapshot_allocations(scratch_allocator_ref scratch) const
+ -> ouly::scratch_vector<defrag_item>
 {
-  std::vector<uint32_t> arena_pos(arena_pool_.size(), 0);
+  ouly::scratch_vector<uint32_t> arena_pos{scratch, arena_pool_.size()};
+  for (size_t i = 0, count = arena_pool_.size(); i < count; ++i)
+  {
+    arena_pos.push_back(0);
+  }
   for (uint32_t i = 0; i < static_cast<uint32_t>(arena_order_.size()); ++i)
   {
     arena_pos[ouly::detail::vector_access(arena_order_, i)] = i;
   }
-  std::vector<defrag_item> items;
-  items.reserve(entry_offsets_.size());
+  ouly::scratch_vector<defrag_item> items{scratch, entry_offsets_.size()};
   for (uint32_t id = 1; id < static_cast<uint32_t>(entry_offsets_.size()); ++id)
   {
     if (ouly::detail::vector_access(entry_live_, id))
@@ -95,27 +100,35 @@ auto first_fit_defrag_allocator::snapshot_allocations() const -> std::vector<def
   return items;
 }
 
-auto first_fit_defrag_allocator::find_placement(defrag_item const& it, std::vector<size_type> const& cursor) const
+auto first_fit_defrag_allocator::find_placement(defrag_item const&                     it,
+                                                ouly::scratch_vector<size_type> const& cursor) const
  -> std::pair<uint16_t, size_type>
 {
-  auto const src  = ouly::detail::vector_access(entry_arenas_, it.id_);
-  auto const size = ouly::detail::vector_access(entry_sizes_, it.id_);
-  auto const mask = (size_type{1} << ouly::detail::vector_access(entry_alignments_, it.id_)) - 1;
+  auto const src       = ouly::detail::vector_access(entry_arenas_, it.id_);
+  auto const size      = ouly::detail::vector_access(entry_sizes_, it.id_);
+  auto const alignment = size_type{1} << ouly::detail::vector_access(entry_alignments_, it.id_);
   for (uint32_t k = 0; k <= it.pos_; ++k)
   {
     auto const cand    = ouly::detail::vector_access(arena_order_, k);
-    auto const aligned = (cursor[cand] + mask) & ~mask;
-    // the source arena always has room at its own cursor
-    if (cand == src || aligned + size <= ouly::detail::vector_access(arena_pool_, cand).size_)
+    auto const aligned = ouly::detail::align_offset(ouly::detail::vector_access(cursor, cand), alignment);
+    if (!aligned)
     {
-      return {cand, aligned};
+      // the source cursor never exceeds the already aligned offset of the item, so it cannot wrap
+      OULY_ASSERT(cand != src);
+      continue;
+    }
+    auto const capacity = ouly::detail::vector_access(arena_pool_, cand).size_;
+    // the source arena always has room at its own cursor
+    if (cand == src || (size <= capacity && *aligned <= capacity - size))
+    {
+      return {cand, *aligned};
     }
   }
   OULY_ASSERT(false && "unreachable: the source arena always fits");
   return {src, ouly::detail::vector_access(entry_offsets_, it.id_)};
 }
 
-void first_fit_defrag_allocator::apply_plan(std::vector<placement>& plan)
+void first_fit_defrag_allocator::apply_plan(ouly::scratch_vector<placement>& plan)
 {
   std::ranges::sort(plan,
                     [](placement const& a, placement const& b) -> bool
@@ -154,9 +167,9 @@ void first_fit_defrag_allocator::apply_plan(std::vector<placement>& plan)
   }
 }
 
-auto first_fit_defrag_allocator::drop_empty_arenas() -> std::vector<uint16_t>
+auto first_fit_defrag_allocator::drop_empty_arenas(scratch_allocator_ref scratch) -> ouly::scratch_vector<uint16_t>
 {
-  std::vector<uint16_t> removed;
+  ouly::scratch_vector<uint16_t> removed{scratch, arena_order_.size()};
   std::erase_if(arena_order_,
                 [&](uint16_t arena) -> bool
                 {
@@ -219,11 +232,11 @@ void first_fit_defrag_allocator::validate_arena(arena_state const& ar, std::vect
   OULY_ASSERT(free_total == ar.free_);
 }
 
-void first_fit_defrag_allocator::push_move(std::vector<defrag_move>& moves, defrag_move value)
+void first_fit_defrag_allocator::push_move(ouly::scratch_vector<defrag_move>& moves, defrag_move value)
 {
   if (!moves.empty())
   {
-    auto& back = moves.back();
+    auto& back = ouly::detail::vector_access(moves, moves.size() - 1);
     if (back.src_ == value.src_ && back.dst_ == value.dst_ && back.from_ + back.size_ == value.from_ &&
         back.to_ + back.size_ == value.to_)
     {

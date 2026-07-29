@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 #include <cstdint>
+#include <limits>
 #include <new>
+#include <optional>
+#include <type_traits>
 
 namespace ouly
 {
@@ -44,6 +47,26 @@ struct alignment
 /** @brief constexpr value of alignment for a given type using alignof */
 template <typename T>
 constexpr auto alignarg = alignment<alignof(T)>();
+
+namespace detail
+{
+/**
+ * @brief Round `offset` up to the given power-of-two `alignment`.
+ *
+ * @return The aligned offset, or `std::nullopt` when rounding up would wrap around the value range.
+ */
+template <typename T>
+  requires(std::is_unsigned_v<T>)
+constexpr auto align_offset(T offset, T alignment) noexcept -> std::optional<T>
+{
+  auto const mask = static_cast<T>(alignment - 1);
+  if (offset > static_cast<T>(std::numeric_limits<T>::max() - mask))
+  {
+    return std::nullopt;
+  }
+  return static_cast<T>((offset + mask) & ~mask);
+}
+} // namespace detail
 
 /** @brief Align a pointer up to the given power-of-two alignment. */
 inline auto align(void* ptr, std::size_t alignment) -> void*

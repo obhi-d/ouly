@@ -10,15 +10,7 @@ namespace ouly
 namespace
 {
 
-auto align_offset(allocation_size_type offset, allocation_size_type alignment) -> std::optional<allocation_size_type>
-{
-  auto const mask = alignment - 1;
-  if (offset > std::numeric_limits<allocation_size_type>::max() - mask)
-  {
-    return std::nullopt;
-  }
-  return (offset + mask) & ~mask;
-}
+using ouly::detail::align_offset;
 
 /**
  * @brief Assert that the occupied and free ranges of an arena tile it exactly once

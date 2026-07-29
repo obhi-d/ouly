@@ -27,7 +27,12 @@ namespace ouly
  *
  * @note Always allocate through this class (not through a base class reference) so that
  * per-allocation alignment is recorded for defragmentation.
- * @note This class is meant for virtual allocations, for example GPU memory management.
+ * @note Defragmentation is synchronous. The manager must complete every `move_memory` call before
+ * returning from it, with memmove semantics — same-arena calls can self-overlap — and allocation ids
+ * are rebound while `defragment` runs. That makes this class a fit for host-visible or virtually
+ * backed memory with a synchronous manager. For asynchronous GPU device-memory defragmentation,
+ * where the copy is only queued and overlapping regions of the same buffer are illegal, use
+ * `ouly::gpu_allocator` instead.
  */
 class best_fit_defrag_allocator : public coalescing_arena_allocator
 {
