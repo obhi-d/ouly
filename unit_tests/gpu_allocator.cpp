@@ -47,8 +47,8 @@ struct gpu_executor
   ouly::gpu_timeline_value          next_timeline_ = 1;
   bool                              fail_schedule_ = false;
   bool                              fail_switch_   = false;
-  std::vector<ouly::gpu_relocation> copies_;
-  std::vector<ouly::gpu_relocation> switches_;
+  std::vector<ouly::gpu_relocation> copies_        = {};
+  std::vector<ouly::gpu_relocation> switches_      = {};
 
   auto schedule_copy(ouly::gpu_relocation const& relocation) -> std::optional<ouly::gpu_timeline_value>
   {
@@ -152,7 +152,7 @@ TEST_CASE("gpu_allocator: evacuation is budgeted, persistent, and retired asynch
   constexpr uint32_t alloc_size = 256;
 
   gpu_memory                        memory;
-  gpu_executor                      executor{.memory_ = &memory};
+  gpu_executor                      executor{.memory_ = &memory, .copies_ = {}};
   ouly::gpu_allocator               allocator{block_size};
   std::vector<ouly::gpu_allocation> allocations;
 
