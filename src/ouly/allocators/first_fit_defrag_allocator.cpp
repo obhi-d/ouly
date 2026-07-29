@@ -175,6 +175,7 @@ auto first_fit_defrag_allocator::drop_empty_arenas() -> std::vector<uint16_t>
   return removed;
 }
 
+// NOLINTNEXTLINE
 void first_fit_defrag_allocator::validate_arena(arena_state const& ar, std::vector<uint32_t>& allocs) const
 {
   std::ranges::sort(allocs,
