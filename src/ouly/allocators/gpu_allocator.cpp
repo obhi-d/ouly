@@ -735,6 +735,7 @@ auto gpu_allocator::statistics() const noexcept -> gpu_defrag_statistics
   return result;
 }
 
+// NOLINTNEXTLINE
 void gpu_allocator::validate_integrity() const
 {
   struct occupied_range
