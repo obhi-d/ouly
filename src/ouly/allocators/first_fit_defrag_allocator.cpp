@@ -7,9 +7,9 @@
 namespace ouly
 {
 
-first_fit_defrag_allocator::first_fit_defrag_allocator() noexcept = default;
+first_fit_defrag_allocator::first_fit_defrag_allocator() = default;
 
-first_fit_defrag_allocator::first_fit_defrag_allocator(size_type arena_sz) noexcept : arena_size_(arena_sz) {}
+first_fit_defrag_allocator::first_fit_defrag_allocator(size_type arena_sz) : arena_size_(arena_sz) {}
 
 void first_fit_defrag_allocator::set_arena_size(size_type s) noexcept
 {

@@ -357,4 +357,83 @@ TEST_CASE("Thread-safe allocators move semantics test", "[allocator]")
     REQUIRE(ptr3 != nullptr);
   }
 }
+
+TEST_CASE("Thread-safe allocators realloc test", "[allocator]")
+{
+  auto fill = [](void* data, std::size_t size)
+  {
+    auto* bytes = static_cast<std::uint8_t*>(data);
+    for (std::size_t index = 0; index < size; ++index)
+    {
+      bytes[index] = static_cast<std::uint8_t>((index * 7 + 1) & 0xff);
+    }
+  };
+  auto matches = [](void const* data, std::size_t size)
+  {
+    auto const* bytes = static_cast<std::uint8_t const*>(data);
+    for (std::size_t index = 0; index < size; ++index)
+    {
+      if (bytes[index] != static_cast<std::uint8_t>((index * 7 + 1) & 0xff))
+      {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  SECTION("ts_thread_local_allocator realloc")
+  {
+    ouly::ts_thread_local_allocator allocator;
+
+    void* block = allocator.allocate(64);
+    REQUIRE(block != nullptr);
+    fill(block, 64);
+
+    // The most recent allocation grows in place
+    void* grown = allocator.realloc(block, 64, 128);
+    REQUIRE(grown == block);
+    REQUIRE(matches(grown, 64));
+
+    // Shrinking hands the tail back, so the next allocation reuses it
+    void* shrunk = allocator.realloc(grown, 128, 64);
+    REQUIRE(shrunk == block);
+    void* next = allocator.allocate(32);
+    REQUIRE(next == static_cast<std::uint8_t*>(block) + 64);
+
+    // A block that is no longer the most recent allocation is copied
+    void* moved = allocator.realloc(shrunk, 64, 96);
+    REQUIRE(moved != shrunk);
+    REQUIRE(matches(moved, 64));
+
+    allocator.release();
+  }
+
+  SECTION("ts_shared_linear_allocator realloc")
+  {
+    ouly::ts_shared_linear_allocator allocator;
+
+    void* block = allocator.allocate(64);
+    REQUIRE(block != nullptr);
+    fill(block, 64);
+
+    void* grown = allocator.realloc(block, 64, 256);
+    REQUIRE(grown == block);
+    REQUIRE(matches(grown, 64));
+
+    void* shrunk = allocator.realloc(grown, 256, 64);
+    REQUIRE(shrunk == block);
+    void* next = allocator.allocate(32);
+    REQUIRE(next == static_cast<std::uint8_t*>(block) + 64);
+
+    void* moved = allocator.realloc(shrunk, 64, 96);
+    REQUIRE(moved != shrunk);
+    REQUIRE(matches(moved, 64));
+
+    // A null or empty block is a plain allocation
+    void* fresh = allocator.realloc(nullptr, 0, 48);
+    REQUIRE(fresh != nullptr);
+
+    allocator.release();
+  }
+}
 // NOLINTEND

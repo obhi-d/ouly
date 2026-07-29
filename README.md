@@ -272,6 +272,18 @@ allocator.rewind();      // reset offsets in all arenas
 allocator.smart_rewind(); // may release unused arenas
 ```
 
+Every linear allocator (including `ts_shared_linear_allocator` and `ts_thread_local_allocator`)
+also supports `realloc`. A block that is still the most recent allocation of its arena is grown or
+shrunk by moving the arena head, so growing buffers cost nothing; any other block is reallocated and
+copied:
+
+```cpp
+ouly::linear_arena_allocator<> allocator(1024);
+
+auto* block = ouly::allocate<std::uint8_t>(allocator, 64);
+block       = static_cast<std::uint8_t*>(allocator.realloc(block, 64, 256)); // grows in place
+```
+
 #### Thread-Safe Allocators
 Frame-oriented allocators for multi-threaded producers (unit_tests/thread_safe_allocators.cpp):
 
@@ -324,6 +336,46 @@ alignment padding. Both share:
   memmove-safe order, followed by `rebind_alloc` notifications with each allocation's new placement
 - Dedicated (pinned) allocations bypass compaction entirely
 - An optional byte budget makes defragmentation incremental (e.g. bounded GPU copies per frame)
+
+For asynchronous GPU heaps, `ouly::gpu_allocator` adds persistent whole-arena evacuation and
+timeline-based retirement without virtual interfaces. A manager satisfying `GpuMemoryManager` owns
+the backing heaps, while a `GpuRelocationExecutor` schedules API-specific copies, switches references
+for the stable `allocation_id`, and reports timeline completion. Before an arena is frozen, the
+allocator simulates its complete evacuation with alignment-aware best-fit placement and reserves all
+destinations. `gpu_defrag_budget` limits both copied bytes and move count per call.
+
+```cpp
+ouly::gpu_allocator allocator{64U * 1024U * 1024U};
+auto allocation = allocator.allocate(
+    size, memory_manager,
+    ouly::gpu_allocation_options{
+        .alignment_ = alignment,
+        .memory_class_ = memory_type,
+        .resource_class_ = resource_type,
+    });
+
+allocator.defragment(
+    memory_manager, relocation_executor,
+    ouly::gpu_defrag_budget{
+        .max_copy_bytes_ = 8U * 1024U * 1024U,
+        .max_move_count_ = 32,
+    });
+```
+
+The executor returns one timeline value for copy completion and another from reference switching for
+safe source retirement. Dedicated allocations, device-address resources, or other non-relocatable
+objects should be created with `.movable_ = false`.
+
+Planning an evacuation needs temporary buffers. `defragment` takes them from a call-local linear
+allocator by default, or from any allocator satisfying `ouly::ScratchAllocator` (that is, any of the
+linear allocators above) when one is passed as the last argument:
+
+```cpp
+ouly::linear_stack_allocator<> frame_scratch; // rewound once per frame
+
+allocator.defragment(memory_manager, relocation_executor, budget, frame_scratch);
+frame_scratch.rewind();
+```
 
 #### Pool Allocators
 Fixed-size blocks with optional STL interop (unit_tests/pool_allocator.cpp):
