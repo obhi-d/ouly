@@ -40,7 +40,7 @@ void validate_arena_layout(Ranges ranges, State const& state)
                       return lhs.offset_ < rhs.offset_;
                     });
 
-  allocation_size_type cursor = 0;
+  [[maybe_unused]] allocation_size_type cursor = 0;
   for (auto const& range : ranges)
   {
     OULY_ASSERT(range.size_ != 0);
@@ -48,7 +48,7 @@ void validate_arena_layout(Ranges ranges, State const& state)
     cursor += range.size_;
   }
 
-  allocation_size_type free = 0;
+  [[maybe_unused]] allocation_size_type free = 0;
   for (auto const& free_range : state.free_ranges_)
   {
     free += free_range.size_;
@@ -134,7 +134,7 @@ void gpu_allocator::set_movable(allocation_id id, bool movable)
 {
   OULY_ASSERT(ouly::detail::vector_access(entry_live_, id.get()));
   OULY_ASSERT(!is_relocating(id));
-  auto const arena = ouly::detail::vector_access(entry_arenas_, id.get());
+  [[maybe_unused]] auto const arena = ouly::detail::vector_access(entry_arenas_, id.get());
   OULY_ASSERT(!ouly::detail::vector_access(arena_pool_, arena).dedicated_ || !movable);
   ouly::detail::vector_access(entry_movable_, id.get()) = movable;
 }
@@ -171,7 +171,7 @@ auto gpu_allocator::try_allocate_in_arena(uint16_t arena, size_type size, gpu_al
       continue;
     }
 
-    bool const reserved = reserve_range(arena, *aligned, size);
+    [[maybe_unused]] bool const reserved = reserve_range(arena, *aligned, size);
     OULY_ASSERT(reserved);
     --state.reservations_;
     ++state.allocations_;
@@ -604,12 +604,16 @@ void gpu_allocator::cancel_move(planned_move& move)
 void gpu_allocator::abort_evacuation()
 {
   OULY_ASSERT(target_);
-  target_->aborted_ = true;
-  for (auto& move : target_->moves_)
+  if (target_)
   {
-    if (move.state_ == move_state::reserved)
+    target_->aborted_ = true;
+
+    for (auto& move : target_->moves_)
     {
-      cancel_move(move);
+      if (move.state_ == move_state::reserved)
+      {
+        cancel_move(move);
+      }
     }
   }
 }
@@ -780,8 +784,8 @@ void gpu_allocator::validate_integrity() const
   std::vector<bool> active(arena_pool_.size(), false);
   for (auto arena : arena_order_)
   {
-    active[arena]     = true;
-    auto const& state = ouly::detail::vector_access(arena_pool_, arena);
+    active[arena]                      = true;
+    [[maybe_unused]] auto const& state = ouly::detail::vector_access(arena_pool_, arena);
     OULY_ASSERT(state.active_);
     OULY_ASSERT(state.allocations_ == allocations[arena]);
     OULY_ASSERT(state.reservations_ == reservations[arena]);
