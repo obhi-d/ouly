@@ -41,6 +41,7 @@ auto first_fit_defrag_allocator::get_alignment(allocation_id id) const noexcept 
   return size_type{1} << ouly::detail::vector_access(entry_alignments_, id.get());
 }
 
+// NOLINTNEXTLINE
 void first_fit_defrag_allocator::validate_integrity() const
 {
   std::vector<std::vector<uint32_t>> per_arena(arena_pool_.size());
