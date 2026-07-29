@@ -289,6 +289,7 @@ void coalescing_arena_allocator::reinsert_right(size_t of, size_type size, std::
   }
 }
 
+// NOLINTNEXTLINE
 void coalescing_arena_allocator::validate_integrity() const
 {
   [[maybe_unused]] uint32_t counted_free_nodes = 0;
