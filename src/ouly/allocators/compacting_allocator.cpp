@@ -79,6 +79,7 @@ auto compacting_allocator::get_size(allocation_id id) const noexcept -> size_typ
   return ouly::detail::vector_access(entry_sizes_, id.get());
 }
 
+// NOLINTNEXTLINE
 void compacting_allocator::validate_integrity() const
 {
   std::vector<uint32_t> allocs;
