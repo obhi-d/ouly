@@ -18,6 +18,17 @@ void visit(Class& obj, Visitor& visitor)
   using visitor_type    = std::decay_t<Visitor>;
   using serializer_tag  = typename visitor_type::serializer_tag;
   using serializer_type = typename visitor_type::serializer_type;
+  constexpr bool binary_visitor = []()
+  {
+    if constexpr (requires { typename visitor_type::binary; })
+    {
+      return visitor_type::binary::value;
+    }
+    else
+    {
+      return false;
+    }
+  }();
 
   if constexpr (ouly::detail::ExplicitlyReflected<type>)
   {
@@ -37,6 +48,10 @@ void visit(Class& obj, Visitor& visitor)
                       ouly::detail::OutputSerializableClass<type, serializer_type>))
   {
     return ouly::detail::visit_serializable(obj, visitor);
+  }
+  else if constexpr (binary_visitor && ouly::detail::EnumLike<type>)
+  {
+    return ouly::detail::visit_enum(obj, visitor);
   }
   else if constexpr (ouly::detail::Convertible<type>)
   {
