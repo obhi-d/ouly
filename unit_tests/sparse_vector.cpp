@@ -128,7 +128,7 @@ TEST_CASE("sparse_vector: Copy sparse_vector to another", "[sparse_vector][copy]
 
   for (std::uint32_t i = 0; i < stop; ++i)
   {
-    pod data = {range_rand(0, 100), range_rand(0, 100)};
+    pod data = {range_rand(1, 101), range_rand(0, 100)};
 
     if (range_rand(0, 4) > 2)
     {
@@ -180,7 +180,7 @@ TEST_CASE("sparse_vector: Move sparse_vector to another", "[sparse_vector][move]
 
   for (std::uint32_t i = 0; i < stop; ++i)
   {
-    pod data = {range_rand(0, 100), range_rand(0, 100)};
+    pod data = {range_rand(1, 101), range_rand(0, 100)};
 
     if (range_rand(0, 4) > 2)
     {
