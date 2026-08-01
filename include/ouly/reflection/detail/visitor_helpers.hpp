@@ -135,7 +135,7 @@ void visit_convertible(Class& obj, Visitor& visitor)
   }
   else
   {
-    ouly::detail::convertible_to_type<class_type> value;
+    ouly::detail::convertible_to_type<class_type> value{};
     visit(value, visitor);
     ouly::convert<class_type>::from_type(obj, value);
   }
