@@ -88,9 +88,10 @@ public:
 private:
   enum class token_type : uint8_t
   {
-    indent,   // Whitespace at start of line
-    key,      // Key followed by colon
-    value,    // Simple scalar value
+    indent,      // Whitespace at start of line
+    key,         // Key followed by colon
+    value,       // Simple scalar value
+    empty_value, // An explicitly quoted empty scalar ("")
     dash,     // Array item marker
     pipe,     // | for literal block scalar
     gt,       // > for folded block scalar

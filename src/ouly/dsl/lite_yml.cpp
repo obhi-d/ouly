@@ -199,9 +199,12 @@ auto lite_stream::next_token() -> lite_stream::token
       }
       current_pos_++;
     }
+    auto const count = static_cast<uint32_t>(current_pos_ - start - 2);
+    // `""` is a value, not an absent one: it has to be told apart from a key that introduces a
+    // nested block, or the block that follows is read as this key's value.
     return token{
-     .type_    = token_type::value,
-     .content_ = {.start_ = start + 1, .count_ = static_cast<uint32_t>(current_pos_ - start - 2)}
+     .type_    = count == 0 ? token_type::empty_value : token_type::value,
+     .content_ = {.start_ = start + 1, .count_ = count}
     };
   }
   default:
@@ -277,6 +280,11 @@ void lite_stream::process_token(token tok)
 
   case token_type::value:
     handle_value(tok.content_);
+    break;
+
+  case token_type::empty_value:
+    ctx_->set_value(std::string_view());
+    state_ = parse_state::none;
     break;
 
   case token_type::dash:

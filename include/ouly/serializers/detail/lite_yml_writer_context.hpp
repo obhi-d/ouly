@@ -71,6 +71,15 @@ public:
 
   void as_string(std::string_view slice)
   {
+    if (slice.empty())
+    {
+      // An empty scalar written bare leaves `key:` with nothing after it, and the parser then reads
+      // whatever follows -- the next list entry -- as this key's value. Quoting keeps an empty
+      // string an empty string on the way back in.
+      stream_.append("\"\"");
+      skip_indent_ = false;
+      return;
+    }
     stream_.append(slice);
     skip_indent_ = false;
   }
