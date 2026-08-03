@@ -87,6 +87,8 @@ private:
   static constexpr bool      has_direct_mapping = ouly::detail::HasDirectMapping<config>;
   static constexpr bool      has_sparse_storage = ouly::detail::HasUseSparseAttrib<config>;
   static constexpr size_type tombstone          = std::numeric_limits<size_type>::max();
+  // Entities without revision bits cannot go stale, so lookups need no back-reference validation
+  static constexpr bool has_revision = entity_type::nb_revision_bits > 0;
 
   using this_type     = components<value_type, entity_type, config>;
   using optional_val  = ouly::optional_ref<reference>;
@@ -576,11 +578,64 @@ public:
     requires(!has_direct_mapping)
   {
     auto item_id = keys_.get_if(point.get());
-    if (item_id == tombstone || item_id >= static_cast<size_type>(values_.size()))
+    if constexpr (!has_revision)
     {
-      return tombstone;
+      // No revision bits: the key slot is the whole truth, an occupied slot can only belong to the
+      // one entity that owns that index. Skip the back-reference load entirely.
+      return item_id;
     }
-    return get_ref_at_idx(item_id) == point.value() ? item_id : tombstone;
+    else
+    {
+      if (item_id == tombstone)
+      {
+        return tombstone;
+      }
+      // keys_ never outlives values_: erase_at() retargets or tombstones every affected slot.
+      OULY_ASSERT(item_id < static_cast<size_type>(values_.size()));
+      return get_ref_at_idx(item_id) == point.value() ? item_id : tombstone;
+    }
+  }
+
+  /**
+   * @brief Fetch a component by entity index, i.e. an index with the revision bits already stripped
+   * (`entity_type::get()`), not a raw entity value.
+   *
+   * This is the fast lookup path: a single indirection load plus a tombstone test, with no
+   * revision validation and no back-reference chase. It is still safe in that an index that
+   * carries no component - including an out of range one - yields `nullptr`.
+   *
+   * @param index Entity index, as returned by `entity_type::get()`
+   * @return Pointer to the component, or `nullptr` when the index holds none
+   * @warning Because revisions are not checked, a stale entity whose index has since been recycled
+   * resolves to the component of the *current* occupant. Use `find()` when that matters.
+   */
+  auto find_by_index(size_type index) noexcept -> value_type*
+  {
+    return sfind_by_index(*this, index);
+  }
+
+  /**
+   * @copydoc find_by_index
+   */
+  auto find_by_index(size_type index) const noexcept -> value_type const*
+  {
+    return sfind_by_index(*this, index);
+  }
+
+  /**
+   * @brief Whether an entity index currently holds a component; revision bits are not considered
+   * @param index Entity index, as returned by `entity_type::get()`
+   */
+  auto contains_index(size_type index) const noexcept -> bool
+  {
+    if constexpr (has_direct_mapping)
+    {
+      return present_.test(index);
+    }
+    else
+    {
+      return keys_.get_if(index) != tombstone;
+    }
   }
 
   /**
@@ -895,6 +950,32 @@ private:
         return nullptr;
       }
       return &cont.values_[k];
+    }
+  }
+
+  template <typename T>
+  static auto sfind_by_index(T& cont, size_type index) noexcept
+   -> std::conditional_t<std::is_const_v<T>, value_type const*, value_type*>
+  {
+    // Guards against an entity *value* being passed where an index was expected
+    OULY_ASSERT(index <= entity_type::index_mask_v);
+    if constexpr (has_direct_mapping)
+    {
+      if (!cont.present_.test(index))
+      {
+        return nullptr;
+      }
+      return ouly::detail::get_if(cont.values_, index);
+    }
+    else
+    {
+      auto k = cont.keys_.get_if(index);
+      if (k == tombstone)
+      {
+        return nullptr;
+      }
+      OULY_ASSERT(k < static_cast<size_type>(cont.values_.size()));
+      return std::addressof(cont.values_[k]);
     }
   }
 

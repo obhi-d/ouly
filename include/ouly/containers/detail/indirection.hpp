@@ -166,7 +166,9 @@ public:
 
   auto get_if(size_type i) const noexcept -> size_type
   {
-    return i < links_.size() ? links_[i] : Traits::null_v;
+    // get_value() returns null_v for both an out of range index and a never-materialized page;
+    // links_[i] would dereference the null page for the latter.
+    return links_.get_value(i);
   }
 
   auto contains_valid(size_type i) const -> bool

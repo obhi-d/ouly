@@ -480,4 +480,77 @@ TEST_CASE("components: for_each with entity, index and value", "[components][for
     REQUIRE(table.size() == 1);
   }
 }
+
+struct sparse_keys_traits
+{
+  static constexpr uint32_t keys_index_pool_size_v  = 2;
+  static constexpr bool     keys_use_sparse_index_v = true;
+};
+
+TEMPLATE_TEST_CASE("components: find_by_index", "[components][find_by_index]", ouly::cfg::use_direct_mapping,
+                   sparse_keys_traits, link_traits_1, link_traits_2)
+{
+  ouly::ecs::registry<>                                     registry;
+  ouly::ecs::components<int, ouly::ecs::entity<>, TestType> table;
+
+  auto e1 = registry.emplace();
+  auto e2 = registry.emplace();
+  auto e3 = registry.emplace();
+  table.set_max(registry.max_size());
+
+  table.emplace_at(e1, 10);
+  table.emplace_at(e3, 30);
+
+  auto const& ctable = table;
+
+  REQUIRE(table.find_by_index(e1.get()) != nullptr);
+  REQUIRE(*table.find_by_index(e1.get()) == 10);
+  REQUIRE(*ctable.find_by_index(e3.get()) == 30);
+  REQUIRE(table.contains_index(e1.get()));
+
+  // Hole between live entries
+  REQUIRE(table.find_by_index(e2.get()) == nullptr);
+  REQUIRE(ctable.find_by_index(e2.get()) == nullptr);
+  REQUIRE(!table.contains_index(e2.get()));
+
+  // Well past anything the container ever touched, including a page that was never materialized
+  REQUIRE(table.find_by_index(1000) == nullptr);
+  REQUIRE(ctable.find_by_index(1000) == nullptr);
+  REQUIRE(!ctable.contains_index(1000));
+
+  // Writing through the returned pointer hits the stored component
+  *table.find_by_index(e1.get()) = 11;
+  REQUIRE(table.at(e1) == 11);
+
+  table.erase(e1);
+  REQUIRE(table.find_by_index(e1.get()) == nullptr);
+  REQUIRE(!table.contains_index(e1.get()));
+  REQUIRE(*table.find_by_index(e3.get()) == 30);
+}
+
+TEST_CASE("components: find_by_index ignores revisions", "[components][find_by_index]")
+{
+  using entity_type = ouly::ecs::rxentity<>;
+
+  ouly::ecs::rxregistry<>                 registry;
+  ouly::ecs::components<int, entity_type> table;
+
+  auto e1 = registry.emplace();
+  table.set_max(registry.max_size());
+  table.emplace_at(e1, 10);
+
+  // Recycle the index under a new revision and hand the slot to the new occupant
+  registry.erase(e1);
+  auto e2 = registry.emplace();
+  REQUIRE(e2.get() == e1.get());
+  REQUIRE(e2.value() != e1.value());
+  table.replace(e2, 20);
+
+  // find() rejects the stale handle on the revision; find_by_index() deliberately cannot
+  REQUIRE(!table.find(e1));
+  REQUIRE(*table.find(e2) == 20);
+  REQUIRE(table.find_by_index(e1.get()) != nullptr);
+  REQUIRE(*table.find_by_index(e1.get()) == 20);
+  REQUIRE(table.contains_index(e1.get()));
+}
 // NOLINTEND

@@ -470,4 +470,60 @@ TEST_CASE("ecs::map: Performance characteristics", "[ecs][map]")
     }
   }
 }
+
+struct map_sparse_keys_traits
+{
+  static constexpr uint32_t keys_index_pool_size_v  = 2;
+  static constexpr bool     keys_use_sparse_index_v = true;
+};
+
+TEMPLATE_TEST_CASE("ecs::map: key_by_index", "[ecs][map][key_by_index]", ouly::default_config<ouly::ecs::entity<>>,
+                   map_sparse_keys_traits)
+{
+  using E = ouly::ecs::entity<>;
+
+  ouly::ecs::map<E, TestType> map;
+  auto const                  tombstone = std::numeric_limits<typename decltype(map)::size_type>::max();
+
+  E e1{42};
+  E e2{100};
+
+  auto idx1 = map.emplace(e1);
+  auto idx2 = map.emplace(e2);
+
+  REQUIRE(map.key_by_index(e1.get()) == idx1);
+  REQUIRE(map.key_by_index(e2.get()) == idx2);
+  REQUIRE(map.contains_index(e1.get()));
+
+  // Never mapped, and well past anything the container touched (a page that was never materialized)
+  REQUIRE(map.key_by_index(7) == tombstone);
+  REQUIRE(map.key_by_index(100000) == tombstone);
+  REQUIRE_FALSE(map.contains_index(7));
+  REQUIRE_FALSE(map.contains_index(100000));
+
+  // Erasing e1 swaps e2 into its dense slot
+  map.erase_and_get_swap_index(e1);
+  REQUIRE(map.key_by_index(e1.get()) == tombstone);
+  REQUIRE_FALSE(map.contains_index(e1.get()));
+  REQUIRE(map.key_by_index(e2.get()) == idx1);
+  map.validate_integrity();
+}
+
+TEST_CASE("ecs::map: key_by_index ignores revisions", "[ecs][map][key_by_index]")
+{
+  using E = ouly::ecs::rxentity<>;
+
+  ouly::ecs::map<E> map;
+  E                 old_entity{7, 1};
+  E                 new_revision{7, 2};
+  auto const        tombstone = std::numeric_limits<decltype(map)::size_type>::max();
+
+  map.emplace(old_entity);
+
+  // key() rejects the stale handle on the revision; key_by_index() deliberately cannot
+  REQUIRE(map.key(old_entity) == 0);
+  REQUIRE(map.key(new_revision) == tombstone);
+  REQUIRE(map.key_by_index(new_revision.get()) == 0);
+  REQUIRE(map.contains_index(new_revision.get()));
+}
 // NOLINTEND

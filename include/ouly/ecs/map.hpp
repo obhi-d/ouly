@@ -99,6 +99,8 @@ public:
 
 private:
   static constexpr size_type tombstone = std::numeric_limits<size_type>::max();
+  // Entities without revision bits cannot go stale, so lookups need no back-reference validation
+  static constexpr bool has_revision = entity_type::nb_revision_bits > 0;
 
   using this_type = map<entity_type, config>;
 
@@ -278,11 +280,53 @@ public:
   auto key(entity_type point) const noexcept -> size_type
   {
     auto dense_index = keys_.get_if(point.get());
-    if (dense_index == tombstone || dense_index >= self_.size())
+    if constexpr (!has_revision)
     {
-      return tombstone;
+      // No revision bits: the key slot is the whole truth, an occupied slot can only belong to the
+      // one entity that owns that index. Skip the back-reference load entirely.
+      return dense_index;
     }
-    return self_.get(dense_index) == point.value() ? dense_index : tombstone;
+    else
+    {
+      if (dense_index == tombstone)
+      {
+        return tombstone;
+      }
+      // keys_ never outlives self_: erase_at() retargets or tombstones every affected slot.
+      OULY_ASSERT(dense_index < self_.size());
+      return self_.get(dense_index) == point.value() ? dense_index : tombstone;
+    }
+  }
+
+  /**
+   * @brief Look up the dense index by entity index, i.e. an index with the revision bits already
+   * stripped (`entity_type::get()`), not a raw entity value.
+   *
+   * This is the fast lookup path: a single indirection load plus a tombstone test, with no
+   * revision validation and no back-reference chase. It is still safe in that an index that is
+   * not mapped - including an out of range one - yields `tombstone`.
+   *
+   * @param index Entity index, as returned by `entity_type::get()`
+   * @return The dense index, or `tombstone` when the entity index is not mapped
+   * @warning Because revisions are not checked, a stale entity whose index has since been recycled
+   * resolves to the dense slot of the *current* occupant. Use `key()` when that matters.
+   */
+  auto key_by_index(size_type index) const noexcept -> size_type
+  {
+    // Guards against an entity *value* being passed where an index was expected
+    OULY_ASSERT(index <= entity_type::index_mask_v);
+    auto dense_index = keys_.get_if(index);
+    OULY_ASSERT(dense_index == tombstone || dense_index < self_.size());
+    return dense_index;
+  }
+
+  /**
+   * @brief Whether an entity index is currently mapped; revision bits are not considered
+   * @param index Entity index, as returned by `entity_type::get()`
+   */
+  auto contains_index(size_type index) const noexcept -> bool
+  {
+    return key_by_index(index) != tombstone;
   }
 
   /**
