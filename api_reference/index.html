@@ -3360,6 +3360,55 @@ This class provides a efficient storage and management system for components in 
 </dd></dl>
 
 <dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly3ecs10components13find_by_indexE9size_type">
+<span id="_CPPv3N4ouly3ecs10components13find_by_indexE9size_type"></span><span id="_CPPv2N4ouly3ecs10components13find_by_indexE9size_type"></span><span id="ouly::ecs::components::find_by_index__size_type"></span><span class="target" id="classouly_1_1ecs_1_1components_1a06e063c306352c929676021e787d8da3"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">find_by_index</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N4ouly3ecs10components9size_typeE" title="ouly::ecs::components::size_type"><span class="n"><span class="pre">size_type</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">index</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N4ouly3ecs10components10value_typeE" title="ouly::ecs::components::value_type"><span class="n"><span class="pre">value_type</span></span></a><span class="p"><span class="pre">*</span></span><a class="headerlink" href="#_CPPv4N4ouly3ecs10components13find_by_indexE9size_type" title="Link to this definition"></a><br /></dt>
+<dd><p>Fetch a component by entity index, i.e. an index with the revision bits already stripped (<code class="docutils literal notranslate"><span class="pre">entity_type::get()</span></code>), not a raw entity value. </p>
+<p>This is the fast lookup path: a single indirection load plus a tombstone test, with no revision validation and no back-reference chase. It is still safe in that an index that carries no component - including an out of range one - yields <code class="docutils literal notranslate"><span class="pre">nullptr</span></code>.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Because revisions are not checked, a stale entity whose index has since been recycled resolves to the component of the <em>current</em> occupant. Use <code class="docutils literal notranslate"><span class="pre">find()</span></code> when that matters. </p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>index</strong> – Entity index, as returned by <code class="docutils literal notranslate"><span class="pre">entity_type::get()</span></code></p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Pointer to the component, or <code class="docutils literal notranslate"><span class="pre">nullptr</span></code> when the index holds none </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK4ouly3ecs10components13find_by_indexE9size_type">
+<span id="_CPPv3NK4ouly3ecs10components13find_by_indexE9size_type"></span><span id="_CPPv2NK4ouly3ecs10components13find_by_indexE9size_type"></span><span id="ouly::ecs::components::find_by_index__size_typeC"></span><span class="target" id="classouly_1_1ecs_1_1components_1a22dcdc5693d0316188f19455b50cf8c4"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">find_by_index</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N4ouly3ecs10components9size_typeE" title="ouly::ecs::components::size_type"><span class="n"><span class="pre">size_type</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">index</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N4ouly3ecs10components10value_typeE" title="ouly::ecs::components::value_type"><span class="n"><span class="pre">value_type</span></span></a><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="p"><span class="pre">*</span></span><a class="headerlink" href="#_CPPv4NK4ouly3ecs10components13find_by_indexE9size_type" title="Link to this definition"></a><br /></dt>
+<dd><p>Fetch a component by entity index, i.e. an index with the revision bits already stripped (<code class="docutils literal notranslate"><span class="pre">entity_type::get()</span></code>), not a raw entity value.   </p>
+<p>This is the fast lookup path: a single indirection load plus a tombstone test, with no revision validation and no back-reference chase. It is still safe in that an index that carries no component - including an out of range one - yields <code class="docutils literal notranslate"><span class="pre">nullptr</span></code>.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Because revisions are not checked, a stale entity whose index has since been recycled resolves to the component of the <em>current</em> occupant. Use <code class="docutils literal notranslate"><span class="pre">find()</span></code> when that matters.   </p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>index</strong> – Entity index, as returned by <code class="docutils literal notranslate"><span class="pre">entity_type::get()</span></code></p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Pointer to the component, or <code class="docutils literal notranslate"><span class="pre">nullptr</span></code> when the index holds none </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK4ouly3ecs10components14contains_indexE9size_type">
+<span id="_CPPv3NK4ouly3ecs10components14contains_indexE9size_type"></span><span id="_CPPv2NK4ouly3ecs10components14contains_indexE9size_type"></span><span id="ouly::ecs::components::contains_index__size_typeC"></span><span class="target" id="classouly_1_1ecs_1_1components_1a0815cbf12777f97f6091c0f1cfd440df"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">contains_index</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N4ouly3ecs10components9size_typeE" title="ouly::ecs::components::size_type"><span class="n"><span class="pre">size_type</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">index</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><span class="kt"><span class="pre">bool</span></span><a class="headerlink" href="#_CPPv4NK4ouly3ecs10components14contains_indexE9size_type" title="Link to this definition"></a><br /></dt>
+<dd><p>Whether an entity index currently holds a component; revision bits are not considered. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>index</strong> – Entity index, as returned by <code class="docutils literal notranslate"><span class="pre">entity_type::get()</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4IQnt18has_direct_mappingENK4ouly3ecs10components4keysEv">
 <span class="target" id="classouly_1_1ecs_1_1components_1a917d7fdb369704306acff4525b27fab3"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">keys</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="p"><span class="pre">&amp;</span></span><a class="headerlink" href="#_CPPv4IQnt18has_direct_mappingENK4ouly3ecs10components4keysEv" title="Link to this definition"></a><br /><span class="k"><span class="pre">requires</span></span><span class="w"> </span><span class="p"><span class="pre">(</span></span><span class="o"><span class="pre">!</span></span><span class="n"><span class="pre">has_direct_mapping</span></span><span class="p"><span class="pre">)</span></span><br /></dt>
 <dd><p>Returns a const reference to the internal keys container. </p>
@@ -3887,6 +3936,36 @@ This convenience function handles the common pattern of removing an entity and u
 </dd></dl>
 
 <dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK4ouly3ecs3map12key_by_indexE9size_type">
+<span id="_CPPv3NK4ouly3ecs3map12key_by_indexE9size_type"></span><span id="_CPPv2NK4ouly3ecs3map12key_by_indexE9size_type"></span><span id="ouly::ecs::map::key_by_index__size_typeC"></span><span class="target" id="classouly_1_1ecs_1_1map_1ae5ce4311efa8cfc0c08e750b53268115"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">key_by_index</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N4ouly3ecs3map9size_typeE" title="ouly::ecs::map::size_type"><span class="n"><span class="pre">size_type</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">index</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N4ouly3ecs3map9size_typeE" title="ouly::ecs::map::size_type"><span class="n"><span class="pre">size_type</span></span></a><a class="headerlink" href="#_CPPv4NK4ouly3ecs3map12key_by_indexE9size_type" title="Link to this definition"></a><br /></dt>
+<dd><p>Look up the dense index by entity index, i.e. an index with the revision bits already stripped (<code class="docutils literal notranslate"><span class="pre">entity_type::get()</span></code>), not a raw entity value. </p>
+<p>This is the fast lookup path: a single indirection load plus a tombstone test, with no revision validation and no back-reference chase. It is still safe in that an index that is not mapped - including an out of range one - yields <code class="docutils literal notranslate"><span class="pre">tombstone</span></code>.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Because revisions are not checked, a stale entity whose index has since been recycled resolves to the dense slot of the <em>current</em> occupant. Use <code class="docutils literal notranslate"><a class="reference internal" href="#classouly_1_1ecs_1_1map_1a5c199b698e85385f44e6029375f96ae8"><span class="std std-ref"><span class="pre">key()</span></span></a></code> when that matters. </p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>index</strong> – Entity index, as returned by <code class="docutils literal notranslate"><span class="pre">entity_type::get()</span></code></p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The dense index, or <code class="docutils literal notranslate"><span class="pre">tombstone</span></code> when the entity index is not mapped </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK4ouly3ecs3map14contains_indexE9size_type">
+<span id="_CPPv3NK4ouly3ecs3map14contains_indexE9size_type"></span><span id="_CPPv2NK4ouly3ecs3map14contains_indexE9size_type"></span><span id="ouly::ecs::map::contains_index__size_typeC"></span><span class="target" id="classouly_1_1ecs_1_1map_1a92fe0af0951e549babd1c7140e0f1da2"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">contains_index</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N4ouly3ecs3map9size_typeE" title="ouly::ecs::map::size_type"><span class="n"><span class="pre">size_type</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">index</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><span class="kt"><span class="pre">bool</span></span><a class="headerlink" href="#_CPPv4NK4ouly3ecs3map14contains_indexE9size_type" title="Link to this definition"></a><br /></dt>
+<dd><p>Whether an entity index is currently mapped; revision bits are not considered. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>index</strong> – Entity index, as returned by <code class="docutils literal notranslate"><span class="pre">entity_type::get()</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4NK4ouly3ecs3map13get_entity_atE9size_type">
 <span id="_CPPv3NK4ouly3ecs3map13get_entity_atE9size_type"></span><span id="_CPPv2NK4ouly3ecs3map13get_entity_atE9size_type"></span><span id="ouly::ecs::map::get_entity_at__size_typeC"></span><span class="target" id="classouly_1_1ecs_1_1map_1a09f3b3d807b0a81afcb08c9fc473654e"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">get_entity_at</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N4ouly3ecs3map9size_typeE" title="ouly::ecs::map::size_type"><span class="n"><span class="pre">size_type</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">dense_index</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N4ouly3ecs3map11entity_typeE" title="ouly::ecs::map::entity_type"><span class="n"><span class="pre">entity_type</span></span></a><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">size_type</span></span><a class="headerlink" href="#_CPPv4NK4ouly3ecs3map13get_entity_atE9size_type" title="Link to this definition"></a><br /></dt>
 <dd><p>Gets the entity value stored at a specific dense index. </p>
@@ -4370,6 +4449,55 @@ This class provides a efficient storage and management system for components in 
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>The key associated with the entity or <code class="docutils literal notranslate"><span class="pre">tombstone</span></code> if not found (which is std::numeric_limits&lt;uint32_t&gt;::max()) </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp">
+<span class="target" id="classouly_1_1ecs_1_1components_1a06e063c306352c929676021e787d8da3"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">find_by_index</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N4ouly3ecs10components9size_typeE" title="ouly::ecs::components::size_type"><span class="n"><span class="pre">size_type</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">index</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N4ouly3ecs10components10value_typeE" title="ouly::ecs::components::value_type"><span class="n"><span class="pre">value_type</span></span></a><span class="p"><span class="pre">*</span></span><br /></dt>
+<dd><p>Fetch a component by entity index, i.e. an index with the revision bits already stripped (<code class="docutils literal notranslate"><span class="pre">entity_type::get()</span></code>), not a raw entity value. </p>
+<p>This is the fast lookup path: a single indirection load plus a tombstone test, with no revision validation and no back-reference chase. It is still safe in that an index that carries no component - including an out of range one - yields <code class="docutils literal notranslate"><span class="pre">nullptr</span></code>.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Because revisions are not checked, a stale entity whose index has since been recycled resolves to the component of the <em>current</em> occupant. Use <code class="docutils literal notranslate"><span class="pre">find()</span></code> when that matters. </p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>index</strong> – Entity index, as returned by <code class="docutils literal notranslate"><span class="pre">entity_type::get()</span></code></p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Pointer to the component, or <code class="docutils literal notranslate"><span class="pre">nullptr</span></code> when the index holds none </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp">
+<span class="target" id="classouly_1_1ecs_1_1components_1a22dcdc5693d0316188f19455b50cf8c4"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">find_by_index</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N4ouly3ecs10components9size_typeE" title="ouly::ecs::components::size_type"><span class="n"><span class="pre">size_type</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">index</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N4ouly3ecs10components10value_typeE" title="ouly::ecs::components::value_type"><span class="n"><span class="pre">value_type</span></span></a><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="p"><span class="pre">*</span></span><br /></dt>
+<dd><p>Fetch a component by entity index, i.e. an index with the revision bits already stripped (<code class="docutils literal notranslate"><span class="pre">entity_type::get()</span></code>), not a raw entity value.   </p>
+<p>This is the fast lookup path: a single indirection load plus a tombstone test, with no revision validation and no back-reference chase. It is still safe in that an index that carries no component - including an out of range one - yields <code class="docutils literal notranslate"><span class="pre">nullptr</span></code>.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Because revisions are not checked, a stale entity whose index has since been recycled resolves to the component of the <em>current</em> occupant. Use <code class="docutils literal notranslate"><span class="pre">find()</span></code> when that matters.   </p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>index</strong> – Entity index, as returned by <code class="docutils literal notranslate"><span class="pre">entity_type::get()</span></code></p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Pointer to the component, or <code class="docutils literal notranslate"><span class="pre">nullptr</span></code> when the index holds none </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp">
+<span class="target" id="classouly_1_1ecs_1_1components_1a0815cbf12777f97f6091c0f1cfd440df"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">contains_index</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N4ouly3ecs10components9size_typeE" title="ouly::ecs::components::size_type"><span class="n"><span class="pre">size_type</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">index</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><span class="kt"><span class="pre">bool</span></span><br /></dt>
+<dd><p>Whether an entity index currently holds a component; revision bits are not considered. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>index</strong> – Entity index, as returned by <code class="docutils literal notranslate"><span class="pre">entity_type::get()</span></code></p>
 </dd>
 </dl>
 </dd></dl>
