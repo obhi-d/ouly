@@ -66,7 +66,7 @@ void process_field(Class& obj, Visitor& visitor, Decl const& decl)
 
   if constexpr (is_reader<Visitor>)
   {
-    value_t load;
+    value_t load = {};
     visit(load, field_visitor);
     decl.value(obj, std::move(load));
   }
@@ -668,7 +668,7 @@ void process_field(Class& obj, Ref& ref, Visitor& visitor, std::string_view name
 
   if constexpr (is_reader<Visitor>)
   {
-    value_t load;
+    value_t load = {};
     visit(load, field_visitor);
     ref = std::move(load);
   }
