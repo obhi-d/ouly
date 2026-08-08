@@ -54,7 +54,7 @@ public:
   }
 
   template <typename... Args>
-  static void operator delete(void* ptr, std::size_t /*size*/, Args&&... /*args*/) noexcept
+  static void operator delete(void* ptr, std::size_t /*size*/, Args&&... /*args*/) noexcept // NOLINT
   {
     scheduler_allocator::deallocate_bytes(ptr);
   }
