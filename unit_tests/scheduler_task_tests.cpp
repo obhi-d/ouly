@@ -475,8 +475,7 @@ private:
 
 struct alignas(128) over_aligned_payload
 {
-  std::uint64_t value_   = 0;
-  std::uint64_t padding_ = {};
+  std::uint64_t value_ = 0;
 };
 } // namespace
 

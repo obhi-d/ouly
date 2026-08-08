@@ -87,6 +87,10 @@ function(add_unit_test)
         FastFloat::fast_float
         ${unit_test_LINK_LIBS}
     )
+    target_compile_options(
+        ${target_name}
+        PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/wd4324>
+    )
     target_compile_definitions(
         ${target_name}
         PUBLIC -DOULY_REC_STATS -DOULY_THROW_ON_ERROR ${unit_test_DEFINES}
