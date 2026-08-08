@@ -59,10 +59,13 @@ public:
       throw std::bad_alloc();
     }
 
+    // NOLINTNEXTLINE
     auto const begin   = reinterpret_cast<std::uintptr_t>(base + sizeof(allocation_header));
     auto const aligned = (begin + alignment - 1U) & ~(static_cast<std::uintptr_t>(alignment) - 1U);
-    auto*      result  = reinterpret_cast<void*>(aligned);
-    auto*      header  = reinterpret_cast<allocation_header*>(aligned - sizeof(allocation_header));
+    // NOLINTNEXTLINE
+    auto* result = reinterpret_cast<void*>(aligned);
+    // NOLINTNEXTLINE
+    auto* header = reinterpret_cast<allocation_header*>(aligned - sizeof(allocation_header));
     std::construct_at(
      header, allocation_header{.instance_ = instance_, .deallocate_ = deallocate_, .base_ = base, .size_ = total});
     return result;
@@ -75,7 +78,9 @@ public:
       return;
     }
 
-    auto const address    = reinterpret_cast<std::uintptr_t>(ptr);
+    // NOLINTNEXTLINE
+    auto const address = reinterpret_cast<std::uintptr_t>(ptr);
+    // NOLINTNEXTLINE
     auto*      header     = reinterpret_cast<allocation_header*>(address - sizeof(allocation_header));
     auto*      instance   = header->instance_;
     auto       deallocate = header->deallocate_;

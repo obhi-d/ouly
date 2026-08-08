@@ -1122,10 +1122,10 @@ public:
       }
 
       auto const allocator = allocator_;
-      state                = allocator.make<detail::task_state<result_type, WC>>(allocator);
+      state                = allocator.template make<detail::task_state<result_type, WC>>(allocator);
       try
       {
-        node = allocator.make<node_type>(state, this, &complete_one, group, std::forward<F>(function));
+        node = allocator.template make<node_type>(state, this, &complete_one, group, std::forward<F>(function));
       }
       catch (...)
       {
