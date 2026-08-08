@@ -99,9 +99,18 @@ inline void prefetch_for_read(void* addr) noexcept
  * @return Aligned size (multiple of alignment)
  */
 template <std::size_t Alignment = alignof(std::max_align_t)>
-static constexpr auto align_up(std::size_t value) noexcept -> std::size_t
+constexpr auto align_up(std::size_t value) noexcept -> std::size_t
 {
   return (value + Alignment - 1U) & ~(Alignment - 1U);
+}
+/**
+ * @brief Align a size value up to the allocator's alignment boundary
+ * @param value Size to align
+ * @return Aligned size (multiple of alignment)
+ */
+constexpr auto align_up(std::size_t value, std::size_t alignment) noexcept -> std::size_t
+{
+  return (value + alignment - 1U) & ~(alignment - 1U);
 }
 
 /**
@@ -110,7 +119,7 @@ static constexpr auto align_up(std::size_t value) noexcept -> std::size_t
  * @return true if already aligned, false otherwise
  */
 template <std::size_t Alignment = alignof(std::max_align_t)>
-static constexpr auto is_aligned(std::size_t value) noexcept -> bool
+constexpr auto is_aligned(std::size_t value) noexcept -> bool
 {
   return (value & (Alignment - 1U)) == 0;
 }
