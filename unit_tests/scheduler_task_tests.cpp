@@ -14,6 +14,7 @@
 #include <stdexcept>
 #include <vector>
 
+// NOLINTBEGIN
 namespace
 {
 
@@ -123,7 +124,7 @@ TEST_CASE("when_all completes after heterogeneous tasks and propagates exception
                                   {
                                    return 1;
                                  });
-  auto second = ouly::submit_task(ctx, []() {});
+  auto second = ouly::submit_task(ctx, []() -> void {});
   auto all    = ouly::when_all(ctx, first, second);
   all.get(ctx);
 
@@ -401,7 +402,7 @@ namespace
 class recording_allocator
 {
 public:
-  static constexpr std::size_t alignment = alignof(std::max_align_t);
+  [[maybe_unused]] static constexpr std::size_t alignment = alignof(std::max_align_t);
 
   auto allocate(std::size_t size) -> void*
   {
@@ -474,7 +475,8 @@ private:
 
 struct alignas(128) over_aligned_payload
 {
-  std::uint64_t value_ = 0;
+  std::uint64_t value_   = 0;
+  std::uint64_t padding_ = {};
 };
 } // namespace
 
@@ -554,3 +556,5 @@ TEST_CASE("scheduler tasks run against an alignment-aware allocator", "[schedule
   scheduler.end_execution();
   allocator.release();
 }
+
+// NOLINTEND

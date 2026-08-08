@@ -29,8 +29,8 @@ jobs:
               name: "Ubuntu GCC",
               os: ubuntu-latest,
               generator: "Ninja",
-              cc: "gcc-14",
-              cxx: "g++-14",
+              cc: "gcc-16",
+              cxx: "g++-16",
             }
           - {
               name: "Ubuntu Clang",
@@ -60,8 +60,8 @@ jobs:
         shell: bash
         run: |
           sudo apt-get update
-          if [[ "${{ matrix.config.cxx }}" == "g++-14" ]]; then
-            sudo apt-get install -y gcc-14 g++-14 lcov doxygen graphviz
+          if [[ "${{ matrix.config.cxx }}" == "g++-16" ]]; then
+            sudo apt-get install -y gcc-16 g++-16 lcov doxygen graphviz
           elif [[ "${{ matrix.config.cxx }}" == "clang++-18" ]]; then
             wget https://apt.llvm.org/llvm.sh
             chmod +x llvm.sh
