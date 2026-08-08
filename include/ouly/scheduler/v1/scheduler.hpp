@@ -139,11 +139,8 @@ public:
     else
     {
       submit_internal(src.get_worker(), group,
-                      ouly::v1::task_delegate::bind(
-                       [address = task_obj.address()](ouly::v1::task_context const&) -> void
-                       {
-                         std::coroutine_handle<>::from_address(address).resume();
-                       }));
+                      ouly::v1::task_delegate::bind(ouly::detail::co_borrowed_executor<std::remove_reference_t<C>>(
+                       task_obj)));
     }
   }
 

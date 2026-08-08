@@ -119,4 +119,23 @@ TEST_CASE("v3: parallel_for via ouly::scheduler alias", "[scheduler][version][v3
     REQUIRE(data[i] == i * 2);
   }
 }
+
+TEST_CASE("v3: task continuations and scopes", "[scheduler][version][v3][task]")
+{
+  ouly::scheduler scheduler;
+  scheduler.create_group(ouly::workgroup_id(0), 0, 2);
+  scheduler.begin_execution();
+  auto const& ctx = ouly::task_context::this_context::get();
+
+  auto value = ouly::submit_task(ctx, []() -> uint32_t { return 40; })
+                .then(ctx, [](uint32_t input) -> uint32_t { return input + 2; });
+  REQUIRE(value.get(ctx) == 42);
+
+  std::atomic<uint32_t> count{0};
+  ouly::task_scope      scope;
+  scope.run(ctx, [&count]() { count.fetch_add(1, std::memory_order_relaxed); });
+  scope.join(ctx);
+  REQUIRE(count.load(std::memory_order_relaxed) == 1);
+  scheduler.end_execution();
+}
 // NOLINTEND

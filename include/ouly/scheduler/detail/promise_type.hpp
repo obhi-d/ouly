@@ -2,18 +2,63 @@
 
 #pragma once
 
+#include "ouly/scheduler/config.hpp"
 #include "ouly/scheduler/detail/get_awaiter.hpp"
+#include "ouly/scheduler/detail/allocation.hpp"
 #include <array>
 #include <concepts>
 #include <cstddef>
+#include <exception>
 #include <semaphore>
 
 namespace ouly::detail
 {
 
+inline auto coroutine_allocator_from() noexcept -> scheduler_allocator
+{
+  return {};
+}
+
+template <typename First, typename... Rest>
+auto coroutine_allocator_from(First&& first, Rest&&... rest) noexcept -> scheduler_allocator
+{
+  if constexpr (std::is_same_v<std::remove_cvref_t<First>, scheduler_allocator>)
+  {
+    return first;
+  }
+  else
+  {
+    return coroutine_allocator_from(std::forward<Rest>(rest)...);
+  }
+}
+
 class base_promise : public ouly::detail::coro_state
 {
 public:
+  using context_type = ouly::task_context;
+
+  static auto operator new(std::size_t size) -> void*
+  {
+    return scheduler_allocator{}.allocate_bytes(size);
+  }
+
+  template <typename... Args>
+  static auto operator new(std::size_t size, Args&&... args) -> void*
+  {
+    return coroutine_allocator_from(std::forward<Args>(args)...).allocate_bytes(size);
+  }
+
+  static void operator delete(void* ptr, std::size_t /*size*/) noexcept
+  {
+    scheduler_allocator::deallocate_bytes(ptr);
+  }
+
+  template <typename... Args>
+  static void operator delete(void* ptr, std::size_t /*size*/, Args&&... /*args*/) noexcept
+  {
+    scheduler_allocator::deallocate_bytes(ptr);
+  }
+
   static auto initial_suspend() noexcept
   {
     return std::suspend_always();
@@ -24,10 +69,21 @@ public:
     return final_awaiter{};
   }
 
-  static void unhandled_exception() noexcept
+  void unhandled_exception() noexcept
   {
-    OULY_ASSERT(0 && "Coroutine throwing! Terminate!");
+    exception_ = std::current_exception();
   }
+
+  void rethrow_if_exception() const
+  {
+    if (exception_)
+    {
+      std::rethrow_exception(exception_);
+    }
+  }
+
+private:
+  std::exception_ptr exception_;
 };
 
 template <template <typename R> class TaskClass, typename Ty>
@@ -43,9 +99,10 @@ public:
 
   ~promise_type() noexcept
   {
-    if (!std::is_trivially_destructible_v<Ty>)
+    if (has_value_ && !std::is_trivially_destructible_v<Ty>)
     {
-      result().~Ty();
+      // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+      reinterpret_cast<Ty*>(data_)->~Ty();
     }
   }
 
@@ -53,16 +110,21 @@ public:
   void return_value(V&& value) noexcept(std::is_nothrow_constructible_v<Ty, V&&>)
   {
     ::new (data_) Ty(std::forward<V>(value));
+    has_value_ = true;
   }
 
-  auto result() & noexcept -> Ty&
+  auto result() & -> Ty&
   {
+    this->rethrow_if_exception();
+    OULY_ASSERT(has_value_);
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     return *reinterpret_cast<Ty*>(data_);
   }
 
   auto result() && -> rvalue_type
   {
+    this->rethrow_if_exception();
+    OULY_ASSERT(has_value_);
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     return std::move(*reinterpret_cast<Ty*>(data_));
   }
@@ -74,6 +136,7 @@ public:
 
 private:
   alignas(alignof(Ty)) std::byte data_[sizeof(Ty)]{};
+  bool                          has_value_ = false;
 };
 
 template <template <typename R> class TaskClass, typename Ty>
@@ -93,8 +156,10 @@ public:
     data_ = &value;
   }
 
-  auto result() noexcept -> Ty&
+  auto result() -> Ty&
   {
+    this->rethrow_if_exception();
+    OULY_ASSERT(data_ != nullptr);
     return *data_;
   }
 
@@ -119,7 +184,10 @@ public:
 
   ~promise_type() noexcept = default;
 
-  void result() & noexcept {}
+  void result() &
+  {
+    this->rethrow_if_exception();
+  }
   void return_void() noexcept {}
 
   auto get_return_object() noexcept -> TaskClass<void>
@@ -172,7 +240,12 @@ struct sync_waiter
 template <typename EventType, typename Awaiter>
 auto wait(EventType* event, Awaiter* task) -> sync_waiter
 {
-  co_await *task;
+  try
+  {
+    co_await *task;
+  }
+  catch (...)
+  {}
   event->release();
   co_return;
 }

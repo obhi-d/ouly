@@ -3,11 +3,12 @@
 #pragma once
 
 #include "ouly/scheduler/detail/parallel_executer.hpp"
+#include "ouly/scheduler/task.hpp"
 #include "ouly/scheduler/worker_structs.hpp"
 #include "ouly/utility/subrange.hpp"
 #include "ouly/utility/type_traits.hpp"
+#include <exception>
 #include <functional>
-#include <latch>
 #include <type_traits>
 
 namespace ouly
@@ -49,7 +50,7 @@ namespace ouly
  * The implementation automatically:
  * - Determines optimal batch sizes based on task traits
  * - Handles task distribution across available workers
- * - Manages synchronization using std::latch
+ * - Manages synchronization through a structured task scope
  * - Falls back to sequential execution for small ranges
  *
  * @note The parallel execution is only triggered if the task count exceeds
@@ -63,13 +64,10 @@ namespace ouly
 template <typename Iterator, typename L>
 struct parallel_for_data
 {
-  parallel_for_data(L lambda, Iterator f, uint32_t task_count) noexcept
-      : first_(f), counter_(static_cast<ptrdiff_t>(task_count)), lambda_instance_(std::move(lambda))
-  {}
+  parallel_for_data(L lambda, Iterator f) noexcept : first_(f), lambda_instance_(std::move(lambda)) {}
 
-  Iterator   first_;
-  std::latch counter_;
-  L          lambda_instance_;
+  Iterator first_;
+  L        lambda_instance_;
 };
 
 template <typename L, TaskContext WC>
@@ -77,9 +75,6 @@ void execute_sequential(L& lambda, auto&& range, WC const& this_context);
 
 template <TaskContext WC, typename L>
 void execute_remaining_work(L& lambda, auto&& range, uint32_t current_pos, uint32_t count, WC const& this_context);
-
-template <TaskContext WC>
-inline void cooperative_wait(std::latch& counter, WC const& this_context);
 
 template <typename L, TaskContext WC>
 void launch_parallel_tasks(L& lambda, auto&& range, uint32_t work_count, uint32_t /*fixed_batch_size*/, uint32_t count,
@@ -101,16 +96,37 @@ void launch_parallel_tasks(L& lambda, auto&& range, uint32_t work_count, uint32_
     return;
   }
 
-  parallel_for_data<iterator_t, L> pfor_instance(lambda, std::begin(range), parallel_tasks);
+  parallel_for_data<iterator_t, L> pfor_instance(lambda, std::begin(range));
+  basic_task_scope<WC>             scope;
 
   // Better work distribution: ensure each task gets roughly equal work
-  uint32_t current_pos = submit_parallel_tasks(pfor_instance, effective_work_count, count, this_context);
+  uint32_t current_pos = submit_parallel_tasks(pfor_instance, scope, effective_work_count, count, this_context);
 
   // Current thread processes the remaining work
-  execute_remaining_work(lambda, std::forward<decltype(range)>(range), current_pos, count, this_context);
-
-  // Cooperative wait: instead of blocking, yield to process other work
-  cooperative_wait(pfor_instance.counter_, this_context);
+  std::exception_ptr exception;
+  try
+  {
+    execute_remaining_work(lambda, std::forward<decltype(range)>(range), current_pos, count, this_context);
+  }
+  catch (...)
+  {
+    exception = std::current_exception();
+  }
+  try
+  {
+    scope.join(this_context);
+  }
+  catch (...)
+  {
+    if (!exception)
+    {
+      exception = std::current_exception();
+    }
+  }
+  if (exception)
+  {
+    std::rethrow_exception(exception);
+  }
 }
 
 template <typename L, TaskContext WC>
@@ -140,10 +156,9 @@ void execute_sequential(L& lambda, auto&& range, WC const& this_context)
 }
 
 template <typename L, typename Iterator, TaskContext WC>
-auto submit_parallel_tasks(parallel_for_data<Iterator, L>& pfor_instance, uint32_t effective_work_count, uint32_t count,
-                           WC const& this_context) -> uint32_t
+auto submit_parallel_tasks(parallel_for_data<Iterator, L>& pfor_instance, basic_task_scope<WC>& scope,
+                           uint32_t effective_work_count, uint32_t count, WC const& this_context) -> uint32_t
 {
-  auto&          scheduler          = this_context.get_scheduler();
   const uint32_t parallel_tasks     = effective_work_count - 1;
   const uint32_t base_work_per_task = count / effective_work_count;
   const uint32_t extra_work         = count % effective_work_count;
@@ -155,7 +170,7 @@ auto submit_parallel_tasks(parallel_for_data<Iterator, L>& pfor_instance, uint32
     const uint32_t current_task_work = base_work_per_task + (i < extra_work ? 1 : 0);
     const uint32_t task_end          = current_pos + current_task_work;
 
-    scheduler.submit(this_context, create_task_lambda<WC>(pfor_instance, current_pos, task_end));
+    scope.run(this_context, create_task_lambda<WC>(pfor_instance, current_pos, task_end));
     current_pos = task_end;
   }
   return current_pos;
@@ -185,7 +200,6 @@ auto create_task_lambda(parallel_for_data<Iterator, L>& pfor_instance, uint32_t 
         }
       }
     }
-    instance->counter_.count_down();
   };
 }
 
@@ -216,17 +230,6 @@ void execute_remaining_work(L& lambda, auto&& range, uint32_t current_pos, uint3
         }
       }
     }
-  }
-}
-
-template <TaskContext WC>
-inline void cooperative_wait(std::latch& counter, WC const& this_context)
-{
-  auto& scheduler = this_context.get_scheduler();
-  while (!counter.try_wait())
-  {
-    // Try to do other work while waiting for parallel tasks to complete
-    scheduler.busy_work(this_context);
   }
 }
 

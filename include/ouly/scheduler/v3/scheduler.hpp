@@ -111,10 +111,7 @@ public:
     {
       submit_internal(src, group,
                       delegate_type::bind(
-                       [address = task_obj.address()](task_context const&) -> void
-                       {
-                         std::coroutine_handle<>::from_address(address).resume();
-                       }));
+                       ouly::detail::co_borrowed_executor<std::remove_reference_t<C>>(task_obj)));
     }
   }
 

@@ -5,6 +5,7 @@
 #include "ouly/scheduler/detail/get_awaiter.hpp"
 #include "ouly/scheduler/detail/promise_type.hpp"
 #include "ouly/scheduler/worker_structs.hpp"
+#include <concepts>
 #include <semaphore>
 
 namespace ouly::detail
@@ -63,9 +64,13 @@ public:
     return coro_.address();
   }
 
-  auto result() noexcept -> R
+  auto result() -> R
   {
-    if constexpr (!std::is_same_v<R, void>)
+    if constexpr (std::is_same_v<R, void>)
+    {
+      coro_.promise().result();
+    }
+    else
     {
       return coro_.promise().result();
     }
@@ -79,12 +84,16 @@ public:
   /**
    * @brief Returns result after waiting for the task to finish, blocks the current thread until work is done
    */
-  auto wait() noexcept -> R
+  auto wait() -> R
   {
     std::binary_semaphore event{0};
     ouly::detail::wait(&event, this);
     event.acquire();
-    if constexpr (!std::is_same_v<R, void>)
+    if constexpr (std::is_same_v<R, void>)
+    {
+      coro_.promise().result();
+    }
+    else
     {
       return coro_.promise().result();
     }
@@ -95,12 +104,18 @@ public:
    * this coro is not available
    */
   template <TaskContext WC>
-  auto cooperative_wait(WC const& ctx) noexcept -> R
+    requires std::same_as<WC, typename promise_type::context_type>
+  auto cooperative_wait(WC const& ctx) -> R
   {
     std::binary_semaphore event{0};
+    ouly::detail::coroutine_context_guard<WC> guard(ctx);
     ouly::detail::wait(&event, this);
     ctx.cooperative_wait(event);
-    if constexpr (!std::is_same_v<R, void>)
+    if constexpr (std::is_same_v<R, void>)
+    {
+      coro_.promise().result();
+    }
+    else
     {
       return coro_.promise().result();
     }
@@ -129,10 +144,58 @@ struct co_lambda_executor
   co_lambda_executor(C&& c) : coro_(c.release()) {}
 
   template <typename TC>
-  void operator()([[maybe_unused]] TC const& ctx)
+  void operator()(TC const& ctx)
   {
-    auto assume_coro = C(coro_);
-    assume_coro.resume();
+    auto& promise = coro_.promise();
+    promise.detached_     = true;
+    promise.resume_group_ = ctx.get_workgroup();
+    auto const was_started = promise.started_.exchange(true, std::memory_order_acq_rel);
+    OULY_ASSERT(!was_started && "A coroutine task can only be submitted once");
+    if (!was_started)
+    {
+      if constexpr (std::is_same_v<TC, typename C::promise_type::context_type>)
+      {
+        ouly::detail::resume_coroutine(coro_, ctx);
+      }
+      else
+      {
+        coro_.resume();
+        if (coro_.done())
+        {
+          coro_.destroy();
+        }
+      }
+    }
+  }
+
+  handle_type coro_ = {};
+};
+
+template <typename C>
+struct co_borrowed_executor
+{
+  using handle_type = typename C::handle;
+
+  explicit co_borrowed_executor(C const& coroutine)
+      : coro_(handle_type::from_address(coroutine.address()))
+  {}
+
+  template <typename TC>
+  void operator()(TC const& ctx)
+  {
+    auto& promise         = coro_.promise();
+    promise.resume_group_ = ctx.get_workgroup();
+    if (!promise.started_.exchange(true, std::memory_order_acq_rel))
+    {
+      if constexpr (std::is_same_v<TC, typename C::promise_type::context_type>)
+      {
+        ouly::detail::resume_coroutine(coro_, ctx);
+      }
+      else
+      {
+        coro_.resume();
+      }
+    }
   }
 
   handle_type coro_ = {};

@@ -23,6 +23,7 @@ struct co_task : public ouly::detail::co_task<R, ouly::detail::promise_type<co_t
 {
   using super = ouly::detail::co_task<R, ouly::detail::promise_type<co_task, R>>;
   using typename super::handle;
+  using context_type = ouly::task_context;
 
   co_task() noexcept      = default;
   co_task(const co_task&) = delete;
@@ -49,6 +50,7 @@ struct co_sequence : public ouly::detail::co_task<R, ouly::detail::sequence_prom
 {
   using super = ouly::detail::co_task<R, ouly::detail::sequence_promise<co_sequence, R>>;
   using typename super::handle;
+  using context_type = ouly::task_context;
 
   co_sequence() noexcept          = default;
   co_sequence(const co_sequence&) = delete;

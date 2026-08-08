@@ -12,8 +12,15 @@
 #include "ouly/scheduler/v3/scheduler.hpp"
 #include "ouly/scheduler/v3/task_context.hpp"
 
+#include "ouly/scheduler/task.hpp"
+
 namespace ouly
 {
+template <typename T>
+using task = basic_task<T, task_context>;
+
+using task_scope = basic_task_scope<task_context>;
+
 /**
  * @brief Asynchronously submits a task to the scheduler
  *

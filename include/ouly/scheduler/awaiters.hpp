@@ -4,8 +4,63 @@
 
 #include "ouly/scheduler/detail/coro_state.hpp"
 
+#include <exception>
+
 namespace ouly
 {
+
+namespace detail
+{
+
+template <typename Promise>
+void resume_coroutine(std::coroutine_handle<Promise> coroutine,
+                      typename Promise::context_type const& ctx) noexcept
+{
+  using context_type = typename Promise::context_type;
+  coroutine_context_guard<context_type> guard(ctx);
+  coroutine.resume();
+  if (coroutine.done() && coroutine.promise().detached_)
+  {
+    coroutine.destroy();
+  }
+}
+
+template <typename Promise>
+auto dispatch_coroutine(std::coroutine_handle<> coroutine) noexcept -> std::coroutine_handle<>
+{
+  using context_type = typename Promise::context_type;
+  auto* ctx = coroutine_context_slot<context_type>::current_;
+  if (ctx == nullptr)
+  {
+    return coroutine;
+  }
+
+  auto typed = std::coroutine_handle<Promise>::from_address(coroutine.address());
+  auto group = typed.promise().resume_group_;
+  if (!group)
+  {
+    group = ctx->get_workgroup();
+  }
+  ctx->get_scheduler().submit(*ctx, group,
+                              [typed](context_type const& run_ctx) noexcept
+                              {
+                                resume_coroutine(typed, run_ctx);
+                              });
+  return std::noop_coroutine();
+}
+
+template <typename Promise>
+auto start_coroutine(std::coroutine_handle<Promise> coroutine) noexcept -> std::coroutine_handle<>
+{
+  auto& state = coroutine.promise();
+  if (state.started_.exchange(true, std::memory_order_acq_rel))
+  {
+    return std::noop_coroutine();
+  }
+  return dispatch_coroutine<Promise>(coroutine);
+}
+
+} // namespace detail
 
 class final_awaiter
 {
@@ -23,10 +78,12 @@ public:
     std::coroutine_handle<> prev =
      state.continuation_.exchange(ouly::detail::completed_sentinel(), std::memory_order_acq_rel);
 
-    // If a continuation was installed, *symmetrically transfer* into it.
+    // Scheduler-bound continuations are enqueued as fresh work. A coroutine resumed manually
+    // outside a scheduler falls back to symmetric transfer so it still makes progress.
     if (prev && prev != ouly::detail::completed_sentinel())
     {
-      return prev; // tail-call jump to continuation
+      auto dispatch = state.continuation_dispatch_.load(std::memory_order_acquire);
+      return dispatch != nullptr ? dispatch(prev) : prev;
     }
 
     // No continuation yet: return noop; the runtime will “resume” it (no-op)
@@ -49,34 +106,50 @@ public:
     return state.continuation_.load(std::memory_order_acquire) == ouly::detail::completed_sentinel();
   }
 
-  auto await_suspend(std::coroutine_handle<> awaiting_coro) noexcept -> bool
+  template <typename AwaitingPromise>
+  auto await_suspend(std::coroutine_handle<AwaitingPromise> awaiting_coro) noexcept -> std::coroutine_handle<>
   {
     OULY_ASSERT(awaiting_coro);
     ouly::detail::coro_state& state = coro_.promise();
+    if constexpr (requires { typename AwaitingPromise::context_type; })
+    {
+      state.continuation_dispatch_.store(&ouly::detail::dispatch_coroutine<AwaitingPromise>,
+                                         std::memory_order_release);
+    }
+    else
+    {
+      state.continuation_dispatch_.store(nullptr, std::memory_order_release);
+    }
     // Try to install ourselves as the continuation.
     std::coroutine_handle<> expected = nullptr;
     if (state.continuation_.compare_exchange_strong(expected, awaiting_coro, std::memory_order_acq_rel,
                                                     std::memory_order_acquire))
     {
-      // Successfully installed continuation: suspend.
-      return true;
+      if (auto* ctx = ouly::detail::coroutine_context_slot<typename PromiseArg::context_type>::current_)
+      {
+        coro_.promise().resume_group_ = ctx->get_workgroup();
+      }
+      return ouly::detail::start_coroutine(coro_);
     }
 
     // Failed to install:
     // - If we observed "completed", run inline (do not suspend).
     // - If we observed some *other* non-null, that's a logic error
     //   (multiple awaiters for a single task).
-    OULY_ASSERT(expected == ouly::detail::completed_sentinel() && "Illegal state: multiple awaiters?");
-    (void)expected;
-    return false; // continue inline
+    if (expected != ouly::detail::completed_sentinel())
+    {
+      OULY_ASSERT(false && "A coroutine task supports only one awaiter");
+      std::terminate();
+    }
+    return awaiting_coro;
   }
 
-  auto await_resume() noexcept -> decltype(auto)
+  auto await_resume() -> decltype(auto)
   {
     if (!coro_)
     {
-      // .. terminate ?
       OULY_ASSERT(false && "Invalid state!");
+      std::terminate();
     }
     return coro_.promise().result();
   }

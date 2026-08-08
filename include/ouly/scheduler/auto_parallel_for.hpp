@@ -4,13 +4,14 @@
 
 #include "ouly/scheduler/detail/cache_optimized_data.hpp"
 #include "ouly/scheduler/detail/parallel_executer.hpp"
+#include "ouly/scheduler/task.hpp"
 #include "ouly/scheduler/worker_structs.hpp"
 #include "ouly/utility/subrange.hpp"
 
 #include <algorithm>
 #include <array>
-#include <atomic>
 #include <bit> // for std::bit_width
+#include <exception>
 #include <functional>
 #include <sys/types.h>
 #include <type_traits>
@@ -311,8 +312,6 @@ struct auto_range
     auto                                                range = range_type{start_, start_ + size_};
     range_pool<range_type, Traits::range_pool_capacity> pool(range);
 
-    auto& scheduler = this_context.get_scheduler();
-
     auto granularity = static_cast<uint64_t>(Traits::grain_size) << divisor_log2_;
     while (!pool.empty())
     {
@@ -331,16 +330,13 @@ struct auto_range
 
         uint8_t child_divisor = divisor_log2 > 0 ? static_cast<uint8_t>(divisor_log2 - 1) : 0;
 
-        state_->spawns_.fetch_add(1, std::memory_order_relaxed);
-        // state_->total_spawns_.fetch_add(1, std::memory_order_relaxed);
-        scheduler.submit(this_context,
-                         [new_range = auto_range{state_, work_range.begin(), static_cast<uint32_t>(work_range.size()),
-                                                 execution_index, work_depth, child_divisor}](WC const& wc) mutable
-                         {
-                           new_range.execute(wc);
-                           new_range.state_->spawns_.fetch_sub(1, std::memory_order_release);
-                           // new_range.state_->total_executed_.fetch_add(1, std::memory_order_release);
-                         });
+        state_->scope_->run(
+          this_context,
+          [new_range = auto_range{state_, work_range.begin(), static_cast<uint32_t>(work_range.size()), execution_index,
+                                  work_depth, child_divisor}](WC const& wc) mutable
+          {
+            new_range.execute(wc);
+          });
 
         // Continue to process remaining ranges in the pool
         continue;
@@ -360,21 +356,20 @@ struct auto_range
   }
 };
 
-template <typename FwIt, typename L, typename Traits = auto_partitioner_traits>
+template <typename FwIt, typename L, TaskContext WC>
 struct auto_parallel_for_state
 {
-  auto_parallel_for_state(L& lambda, FwIt f) noexcept : first_(f), lambda_instance_(lambda) {}
+  auto_parallel_for_state(L& lambda, FwIt f, basic_task_scope<WC>* scope) noexcept
+      : first_(f), lambda_instance_(lambda), scope_(scope)
+  {}
 
   using range_type  = ouly::subrange<uint32_t>;
   using iterator    = FwIt;
   using lambda_type = L;
 
-  alignas(ouly::detail::cache_line_size) std::atomic<int64_t> spawns_{0};
-  // std::atomic<int64_t>      total_spawns_{0};   // Total number of spawned tasks
-  // std::atomic<int64_t>      total_executed_{0}; // Total number of executed tasks
-  // std::atomic<uint64_t>     group_offset_mask_{0};
-  iterator                  first_;
-  std::reference_wrapper<L> lambda_instance_;
+  iterator                   first_;
+  std::reference_wrapper<L>  lambda_instance_;
+  basic_task_scope<WC>* scope_ = nullptr;
 };
 
 /**
@@ -414,13 +409,11 @@ void launch_auto_parallel_tasks(L lambda, FwIt&& range, uint32_t initial_divisor
                                 WC const& this_context)
 {
   using iterator_t   = decltype(std::begin(range));
-  using state_t      = auto_parallel_for_state<iterator_t, L>;
+  using state_t      = auto_parallel_for_state<iterator_t, L, WC>;
   using auto_range_t = auto_range<state_t, Traits>;
 
-  auto& scheduler = this_context.get_scheduler();
-
-  // Create shared state for tracking spawned tasks
-  state_t state(lambda, std::begin(std::forward<FwIt>(range)));
+  basic_task_scope<WC> scope;
+  state_t              state(lambda, std::begin(std::forward<FwIt>(range)), &scope);
 
   // Calculate initial chunk size
   const uint32_t chunk_size = count / initial_divisor;
@@ -438,34 +431,46 @@ void launch_auto_parallel_tasks(L lambda, FwIt&& range, uint32_t initial_divisor
 
     auto task_range = auto_range_t{&state, current_pos, current_chunk_size, worker_index, 0, initial_divisor_log2};
 
-    state.spawns_.fetch_add(1, std::memory_order_relaxed);
-    // state.total_spawns_.fetch_add(1, std::memory_order_relaxed);
-    scheduler.submit(this_context,
-                     [task_range](WC const& wc) mutable
-                     {
-                       task_range.execute(wc);
-                       task_range.state_->spawns_.fetch_sub(1, std::memory_order_release);
-                       // task_range.state_->total_executed_.fetch_add(1, std::memory_order_release);
-                     });
+    scope.run(this_context,
+              [task_range](WC const& wc) mutable
+              {
+                task_range.execute(wc);
+              });
 
     current_pos += current_chunk_size;
   }
 
-  // Execute remaining work in current thread
-  if (current_pos < count)
+  std::exception_ptr exception;
+  try
   {
-    const uint32_t remaining_size = count - current_pos;
-    const auto     worker_index   = static_cast<uint16_t>(this_context.get_worker().get_index());
+    if (current_pos < count)
+    {
+      const uint32_t remaining_size = count - current_pos;
+      const auto     worker_index   = static_cast<uint16_t>(this_context.get_worker().get_index());
 
-    auto current_range = auto_range_t{&state, current_pos, remaining_size, worker_index, 0, initial_divisor_log2};
+      auto current_range = auto_range_t{&state, current_pos, remaining_size, worker_index, 0, initial_divisor_log2};
 
-    current_range.execute(this_context);
+      current_range.execute(this_context);
+    }
   }
-
-  // Wait for any additional spawned tasks to complete
-  while (state.spawns_.load(std::memory_order_acquire) > 0)
+  catch (...)
   {
-    scheduler.busy_work(this_context);
+    exception = std::current_exception();
+  }
+  try
+  {
+    scope.join(this_context);
+  }
+  catch (...)
+  {
+    if (!exception)
+    {
+      exception = std::current_exception();
+    }
+  }
+  if (exception)
+  {
+    std::rethrow_exception(exception);
   }
 }
 
