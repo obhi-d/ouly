@@ -110,8 +110,7 @@ public:
     else
     {
       submit_internal(src, group,
-                      delegate_type::bind(
-                       ouly::detail::co_borrowed_executor<std::remove_reference_t<C>>(task_obj)));
+                      delegate_type::bind(ouly::detail::co_borrowed_executor<std::remove_reference_t<C>>(task_obj)));
     }
   }
 
@@ -228,11 +227,23 @@ public:
   OULY_API void wait_for_tasks();
 
   /**
-   * @brief Deprecated: idle v3 workers now park immediately when no work is available.
+   * @brief Number of poll attempts an idle worker makes before parking on the condition variable.
    *
-   * Kept for API compatibility. Must be called before begin_execution().
+   * Defaults to 0: workers park immediately, which is the right trade for latency-insensitive or
+   * power-sensitive workloads. Parking costs a mutex acquisition plus a condvar round trip, and
+   * every submit broadcasts, so bursty producers of short tasks can spend more time parking and
+   * waking than executing. Giving idle workers a small spin window (tens to a few hundred) lets
+   * them pick up the next burst without that round trip, at the cost of burning CPU while idle.
    */
-  void set_idle_spin_count(uint32_t /*spins*/) noexcept {}
+  void set_idle_spin_count(uint32_t spins) noexcept
+  {
+    idle_spin_count_.store(spins, std::memory_order_relaxed);
+  }
+
+  [[nodiscard]] auto get_idle_spin_count() const noexcept -> uint32_t
+  {
+    return idle_spin_count_.load(std::memory_order_relaxed);
+  }
 
 private:
   friend class task_context;
@@ -255,6 +266,9 @@ private:
   // lock-free; this mutex only serializes condition-variable wait/notify handoff.
   std::mutex              work_queue_mutex_;
   std::condition_variable work_available_;
+
+  // Poll attempts before an idle worker parks. See set_idle_spin_count().
+  std::atomic<uint32_t> idle_spin_count_{0};
 
   std::unique_ptr<detail::v3::worker[]>    workers_;
   std::unique_ptr<detail::v3::workgroup[]> workgroups_;

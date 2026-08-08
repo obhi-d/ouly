@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 
-#include "ouly/scheduler/detail/allocation.hpp"
-#include "ouly/scheduler/config.hpp"
 #include "ouly/scheduler/awaiters.hpp"
+#include "ouly/scheduler/config.hpp"
+#include "ouly/scheduler/detail/allocation.hpp"
 #include "ouly/scheduler/worker_structs.hpp"
 #include "ouly/utility/user_config.hpp"
 
@@ -43,8 +43,13 @@ class basic_task_awaiter;
 template <TaskContext WC>
 struct continuation_base
 {
-  virtual ~continuation_base() noexcept = default;
-  virtual void schedule(WC const& ctx) noexcept = 0;
+  continuation_base() noexcept                                      = default;
+  virtual ~continuation_base() noexcept                             = default;
+  continuation_base(continuation_base const&)                       = delete;
+  auto operator=(continuation_base const&) -> continuation_base&    = delete;
+  continuation_base(continuation_base&&)                            = delete;
+  auto         operator=(continuation_base&&) -> continuation_base& = delete;
+  virtual void schedule(WC const& ctx) noexcept                     = 0;
 
   continuation_base* next_ = nullptr;
 };
@@ -52,7 +57,7 @@ struct continuation_base
 template <TaskContext WC>
 struct task_execution_slot
 {
-  inline static thread_local task_state_base<WC>* current_ = nullptr;
+  inline static thread_local task_state_base<WC>* current = nullptr;
 };
 
 template <TaskContext WC>
@@ -60,15 +65,20 @@ class task_execution_guard
 {
 public:
   explicit task_execution_guard(task_state_base<WC>* state) noexcept
-      : previous_(std::exchange(task_execution_slot<WC>::current_, state))
+      : previous_(std::exchange(task_execution_slot<WC>::current, state))
   {
     state->executing_parent_ = previous_;
   }
 
   ~task_execution_guard() noexcept
   {
-    task_execution_slot<WC>::current_ = previous_;
+    task_execution_slot<WC>::current = previous_;
   }
+
+  task_execution_guard(task_execution_guard const&)                    = delete;
+  auto operator=(task_execution_guard const&) -> task_execution_guard& = delete;
+  task_execution_guard(task_execution_guard&&)                         = delete;
+  auto operator=(task_execution_guard&&) -> task_execution_guard&      = delete;
 
 private:
   task_state_base<WC>* previous_ = nullptr;
@@ -80,12 +90,13 @@ class task_state_base
 public:
   using destroy_fn = void (*)(task_state_base*) noexcept;
 
-  task_state_base(scheduler_allocator allocator, destroy_fn destroy) noexcept
-      : allocator_(allocator), destroy_(destroy), id_(next_id_.fetch_add(1, std::memory_order_relaxed))
+  task_state_base(scheduler_allocator allocator, destroy_fn destroy) noexcept : allocator_(allocator), destroy_(destroy)
   {}
 
   task_state_base(task_state_base const&)                    = delete;
   auto operator=(task_state_base const&) -> task_state_base& = delete;
+  task_state_base(task_state_base&&)                         = delete;
+  auto operator=(task_state_base&&) -> task_state_base&      = delete;
 
   void add_ref() noexcept
   {
@@ -102,52 +113,60 @@ public:
 
   [[nodiscard]] auto is_complete() const noexcept -> bool
   {
-    return complete_.load(std::memory_order_acquire);
+    return continuations_.load(std::memory_order_acquire) == finished();
   }
 
   void wait() const noexcept
   {
-    while (!complete_.load(std::memory_order_acquire))
+    auto* head = continuations_.load(std::memory_order_acquire);
+    while (head != finished())
     {
-      complete_.wait(false, std::memory_order_relaxed);
+      continuations_.wait(head, std::memory_order_relaxed);
+      head = continuations_.load(std::memory_order_acquire);
     }
   }
 
   void cooperative_wait(WC const& ctx) const noexcept
   {
     assert_not_waiting_on_ancestor();
-    while (!complete_.load(std::memory_order_acquire))
+    while (!is_complete())
     {
       ctx.get_scheduler().busy_work(ctx);
       std::this_thread::yield();
     }
   }
 
+  /**
+   * @brief Links `continuation` into the completion list, or schedules it immediately if the task
+   * has already finished.
+   *
+   * The list head doubles as the completion flag, so there is no window between observing
+   * "not complete" and publishing the link, and no lock is needed to close it.
+   */
   void add_continuation(continuation_base<WC>* continuation, WC const& ctx) noexcept
   {
-    bool schedule_now = false;
+    auto* head = continuations_.load(std::memory_order_acquire);
+    while (head != finished())
     {
-      std::scoped_lock lock(mutex_);
-      if (complete_.load(std::memory_order_relaxed))
+      continuation->next_ = head;
+      if (continuations_.compare_exchange_weak(head, continuation, std::memory_order_release,
+                                               std::memory_order_acquire))
       {
-        schedule_now = true;
-      }
-      else
-      {
-        continuation->next_ = continuations_;
-        continuations_       = continuation;
+        return;
       }
     }
-
-    if (schedule_now)
-    {
-      continuation->schedule(ctx);
-    }
+    continuation->next_ = nullptr;
+    continuation->schedule(ctx);
   }
 
   [[nodiscard]] auto get_exception() const noexcept -> std::exception_ptr
   {
-    std::scoped_lock lock(mutex_);
+    // finish() writes exception_ before its releasing exchange, so acquire-observing the
+    // completion tag is exactly what makes this read safe.
+    if (continuations_.load(std::memory_order_acquire) != finished())
+    {
+      return {};
+    }
     return exception_;
   }
 
@@ -156,32 +175,25 @@ public:
     return allocator_;
   }
 
-  [[nodiscard]] auto get_id() const noexcept -> uint64_t
-  {
-    return id_;
-  }
-
 protected:
   ~task_state_base() noexcept
   {
-    OULY_ASSERT(continuations_ == nullptr);
+    auto* head = continuations_.load(std::memory_order_relaxed);
+    OULY_ASSERT(head == nullptr || head == finished());
   }
 
   void finish(WC const& ctx, std::exception_ptr exception = {}) noexcept
   {
-    continuation_base<WC>* continuations = nullptr;
-    {
-      std::scoped_lock lock(mutex_);
-      OULY_ASSERT(!complete_.load(std::memory_order_relaxed));
-      exception_     = std::move(exception);
-      continuations  = std::exchange(continuations_, nullptr);
-      complete_.store(true, std::memory_order_release);
-    }
-    complete_.notify_all();
+    exception_ = std::move(exception);
+    // Release: publishes exception_ and the derived state's value to every thread that later
+    // acquire-observes the completion tag.
+    auto* continuations = continuations_.exchange(finished(), std::memory_order_acq_rel);
+    OULY_ASSERT(continuations != finished());
+    continuations_.notify_all();
 
     while (continuations != nullptr)
     {
-      auto* next = continuations->next_;
+      auto* next           = continuations->next_;
       continuations->next_ = nullptr;
       continuations->schedule(ctx);
       continuations = next;
@@ -189,9 +201,25 @@ protected:
   }
 
 private:
+  struct completion_tag final : continuation_base<WC>
+  {
+    void schedule(WC const& /*ctx*/) noexcept final {}
+  };
+
+  /**
+   * @brief Distinct non-null address parked in continuations_ once the task is done.
+   *
+   * A real object rather than a fabricated pointer keeps the comparison well defined; it is only
+   * ever compared against, never scheduled through.
+   */
+  static auto finished() noexcept -> continuation_base<WC>*
+  {
+    return &completed;
+  }
+
   void assert_not_waiting_on_ancestor() const noexcept
   {
-    auto* current = task_execution_slot<WC>::current_;
+    auto* current = task_execution_slot<WC>::current;
     while (current != nullptr)
     {
       if (current == this)
@@ -206,19 +234,14 @@ private:
   template <TaskContext>
   friend class task_execution_guard;
 
-  inline static std::atomic<uint64_t> next_id_{1};
+  inline static completion_tag completed{};
 
-  std::atomic<uint32_t> references_{1};
-  scheduler_allocator   allocator_;
-  destroy_fn            destroy_ = nullptr;
-
-  mutable std::mutex     mutex_;
-  continuation_base<WC>* continuations_ = nullptr;
-  std::exception_ptr     exception_;
-  std::atomic_bool       complete_{false};
-
-  task_state_base* executing_parent_ = nullptr;
-  uint64_t         id_               = 0;
+  std::atomic<uint32_t>               references_{1};
+  std::atomic<continuation_base<WC>*> continuations_{nullptr};
+  scheduler_allocator                 allocator_;
+  destroy_fn                          destroy_ = nullptr;
+  std::exception_ptr                  exception_;
+  task_state_base*                    executing_parent_ = nullptr;
 };
 
 template <typename T, TaskContext WC>
@@ -278,7 +301,7 @@ private:
 };
 
 template <typename F, TaskContext WC>
-decltype(auto) invoke_task(F& function, WC const& ctx)
+auto invoke_task(F& function, WC const& ctx) -> decltype(auto)
 {
   if constexpr (std::invocable<F&, WC const&>)
   {
@@ -291,7 +314,7 @@ decltype(auto) invoke_task(F& function, WC const& ctx)
 }
 
 template <typename F, typename T, TaskContext WC>
-decltype(auto) invoke_continuation(F& function, task_state<T, WC> const& predecessor, WC const& ctx)
+auto invoke_continuation(F& function, task_state<T, WC> const& predecessor, WC const& ctx) -> decltype(auto)
 {
   if constexpr (std::is_void_v<T>)
   {
@@ -326,9 +349,8 @@ template <typename F, TaskContext WC>
 using task_result_t = std::remove_cvref_t<decltype(invoke_task(std::declval<F&>(), std::declval<WC const&>()))>;
 
 template <typename F, typename T, TaskContext WC>
-using continuation_result_t =
-  std::remove_cvref_t<decltype(invoke_continuation(std::declval<F&>(), std::declval<task_state<T, WC> const&>(),
-                                                   std::declval<WC const&>()))>;
+using continuation_result_t = std::remove_cvref_t<decltype(invoke_continuation(
+ std::declval<F&>(), std::declval<task_state<T, WC> const&>(), std::declval<WC const&>()))>;
 
 template <typename F, typename R, TaskContext WC>
 class producer_node
@@ -382,7 +404,7 @@ public:
   void schedule(WC const& ctx) noexcept final
   {
     ctx.get_scheduler().submit(ctx, group_,
-                               [self = this](WC const& run_ctx) noexcept
+                               [self = this](WC const& run_ctx) noexcept -> void
                                {
                                  self->run(run_ctx);
                                });
@@ -450,20 +472,18 @@ public:
 
   void arrive(WC const& ctx, std::exception_ptr exception) noexcept
   {
-    if (exception)
+    // First failure wins. Claiming the slot makes writers exclusive without a mutex, and the
+    // releasing fetch_sub below publishes the write to whichever thread closes the group.
+    if (exception && !exception_claimed_.exchange(true, std::memory_order_relaxed))
     {
-      std::scoped_lock lock(mutex_);
-      if (!exception_)
-      {
-        exception_ = std::move(exception);
-      }
+      exception_ = std::move(exception);
     }
 
     if (remaining_.fetch_sub(1, std::memory_order_acq_rel) == 1)
     {
       if (exception_)
       {
-        result_->set_exception(ctx, exception_);
+        result_->set_exception(ctx, std::move(exception_));
       }
       else
       {
@@ -475,10 +495,10 @@ public:
   }
 
 private:
-  task_state<void, WC>*  result_ = nullptr;
-  std::atomic<uint32_t>  remaining_{0};
-  std::mutex             mutex_;
-  std::exception_ptr     exception_;
+  task_state<void, WC>* result_ = nullptr;
+  std::atomic<uint32_t> remaining_{0};
+  std::atomic_bool      exception_claimed_{false};
+  std::exception_ptr    exception_;
 };
 
 template <typename T, TaskContext WC>
@@ -494,7 +514,7 @@ public:
   void schedule(WC const& ctx) noexcept final
   {
     ctx.get_scheduler().submit(ctx, group_,
-                               [self = this](WC const& run_ctx) noexcept
+                               [self = this](WC const& run_ctx) noexcept -> void
                                {
                                  self->run(run_ctx);
                                });
@@ -509,7 +529,7 @@ private:
     scheduler_allocator::destroy(this);
   }
 
-  task_state<T, WC>*   predecessor_ = nullptr;
+  task_state<T, WC>*    predecessor_ = nullptr;
   when_all_control<WC>* control_     = nullptr;
   workgroup_id          group_;
 };
@@ -528,7 +548,7 @@ public:
   void schedule(WC const& ctx) noexcept final
   {
     ctx.get_scheduler().submit(ctx, group_,
-                               [self = this](WC const& run_ctx) noexcept
+                               [self = this](WC const& run_ctx) noexcept -> void
                                {
                                  self->run(run_ctx);
                                });
@@ -543,15 +563,15 @@ private:
     resume_coroutine(coroutine, ctx);
   }
 
-  task_state<T, WC>*          predecessor_ = nullptr;
+  task_state<T, WC>*             predecessor_ = nullptr;
   std::coroutine_handle<Promise> coroutine_;
-  workgroup_id                group_;
+  workgroup_id                   group_;
 };
 
 template <TaskContext WC>
 struct scope_execution_slot
 {
-  inline static thread_local basic_task_scope<WC>* current_ = nullptr;
+  inline static thread_local basic_task_scope<WC>* current = nullptr;
 };
 
 template <TaskContext WC>
@@ -586,9 +606,18 @@ public:
     return group_ == ctx.get_workgroup();
   }
 
-  scope_node_base* next_ = nullptr;
+  [[nodiscard]] auto next() const -> scope_node_base*
+  {
+    return next_;
+  }
+
+  void set_next(scope_node_base* next) noexcept
+  {
+    next_ = next;
+  }
 
 private:
+  scope_node_base*      next_ = nullptr;
   std::atomic<uint32_t> references_{2};
   std::atomic_bool      claimed_{false};
   workgroup_id          group_;
@@ -612,10 +641,9 @@ public:
 private:
   static void execute_node(scope_node_base<WC>* base, WC const& ctx) noexcept
   {
-    auto* self = static_cast<scope_node*>(base);
+    auto*                self = static_cast<scope_node*>(base);
     task_execution_guard task_guard(self->state_);
-    auto* previous = std::exchange(scope_execution_slot<WC>::current_,
-                                   static_cast<basic_task_scope<WC>*>(self->scope_));
+    auto* previous = std::exchange(scope_execution_slot<WC>::current, static_cast<basic_task_scope<WC>*>(self->scope_));
     std::exception_ptr exception;
     try
     {
@@ -634,7 +662,7 @@ private:
       exception = std::current_exception();
       self->state_->set_exception(ctx, exception);
     }
-    scope_execution_slot<WC>::current_ = previous;
+    scope_execution_slot<WC>::current = previous;
     self->state_->release();
     self->complete_(self->scope_, std::move(exception));
   }
@@ -647,7 +675,7 @@ private:
   task_state<R, WC>* state_    = nullptr;
   void*              scope_    = nullptr;
   complete_fn        complete_ = nullptr;
-  F                   function_;
+  F                  function_;
 };
 
 } // namespace detail
@@ -743,22 +771,21 @@ public:
   }
 
   template <typename F>
-  auto then(WC const& ctx, F&& function) const
-    -> basic_task<detail::continuation_result_t<std::decay_t<F>, T, WC>, WC>
+  auto then(WC const& ctx, F&& function) const -> basic_task<detail::continuation_result_t<std::decay_t<F>, T, WC>, WC>
   {
     return then(ctx, ctx.get_workgroup(), state_->get_allocator(), std::forward<F>(function));
   }
 
   template <typename F>
   auto then(WC const& ctx, workgroup_id group, F&& function) const
-    -> basic_task<detail::continuation_result_t<std::decay_t<F>, T, WC>, WC>
+   -> basic_task<detail::continuation_result_t<std::decay_t<F>, T, WC>, WC>
   {
     return then(ctx, group, state_->get_allocator(), std::forward<F>(function));
   }
 
   template <typename F>
   auto then(WC const& ctx, workgroup_id group, scheduler_allocator allocator, F&& function) const
-    -> basic_task<detail::continuation_result_t<std::decay_t<F>, T, WC>, WC>
+   -> basic_task<detail::continuation_result_t<std::decay_t<F>, T, WC>, WC>
   {
     OULY_ASSERT(state_ != nullptr);
     using function_type = std::decay_t<F>;
@@ -807,7 +834,7 @@ private:
 
   template <TaskContext Context, typename F>
   friend auto submit_task(Context const&, workgroup_id, scheduler_allocator, F&&)
-    -> basic_task<detail::task_result_t<std::decay_t<F>, Context>, Context>;
+   -> basic_task<detail::task_result_t<std::decay_t<F>, Context>, Context>;
 
   template <TaskContext Context, typename... Tasks>
   friend auto when_all(Context const&, workgroup_id, scheduler_allocator, Tasks const&...) -> basic_task<void, Context>;
@@ -848,8 +875,8 @@ public:
     {
       group = ctx->get_workgroup();
     }
-    auto allocator = state->get_allocator();
-    auto* node = allocator.make<coroutine_task_continuation_node<Promise, T, WC>>(state, coroutine, group);
+    auto  allocator = state->get_allocator();
+    auto* node = allocator.template make<coroutine_task_continuation_node<Promise, T, WC>>(state, coroutine, group);
     state->add_continuation(node, *ctx);
     return true;
   }
@@ -880,18 +907,18 @@ auto basic_task<T, WC>::operator co_await() const noexcept -> detail::basic_task
 
 template <TaskContext WC, typename F>
 auto submit_task(WC const& ctx, workgroup_id group, scheduler_allocator allocator, F&& function)
-  -> basic_task<detail::task_result_t<std::decay_t<F>, WC>, WC>
+ -> basic_task<detail::task_result_t<std::decay_t<F>, WC>, WC>
 {
   using function_type = std::decay_t<F>;
   using result_type   = detail::task_result_t<function_type, WC>;
   using node_type     = detail::producer_node<function_type, result_type, WC>;
 
-  auto* state = allocator.make<detail::task_state<result_type, WC>>(allocator);
+  auto* state = allocator.template make<detail::task_state<result_type, WC>>(allocator);
   try
   {
-    auto* node = allocator.make<node_type>(state, std::forward<F>(function));
+    auto* node = allocator.template make<node_type>(state, std::forward<F>(function));
     ctx.get_scheduler().submit(ctx, group,
-                               [node](WC const& run_ctx) noexcept
+                               [node](WC const& run_ctx) noexcept -> void
                                {
                                  node->run(run_ctx);
                                });
@@ -906,14 +933,14 @@ auto submit_task(WC const& ctx, workgroup_id group, scheduler_allocator allocato
 
 template <TaskContext WC, typename F>
 auto submit_task(WC const& ctx, scheduler_allocator allocator, F&& function)
-  -> basic_task<detail::task_result_t<std::decay_t<F>, WC>, WC>
+ -> basic_task<detail::task_result_t<std::decay_t<F>, WC>, WC>
 {
   return submit_task(ctx, ctx.get_workgroup(), allocator, std::forward<F>(function));
 }
 
 template <TaskContext WC, typename F>
 auto submit_task(WC const& ctx, workgroup_id group, F&& function)
-  -> basic_task<detail::task_result_t<std::decay_t<F>, WC>, WC>
+ -> basic_task<detail::task_result_t<std::decay_t<F>, WC>, WC>
 {
   return submit_task(ctx, group, scheduler_allocator{}, std::forward<F>(function));
 }
@@ -926,7 +953,7 @@ auto submit_task(WC const& ctx, F&& function) -> basic_task<detail::task_result_
 
 template <TaskContext WC, typename... Tasks>
 auto when_all(WC const& ctx, workgroup_id group, scheduler_allocator allocator, Tasks const&... tasks)
-  -> basic_task<void, WC>
+ -> basic_task<void, WC>
 {
   static_assert((std::is_same_v<typename Tasks::context_type, WC> && ...));
   constexpr auto count = static_cast<uint32_t>(sizeof...(Tasks));
@@ -952,7 +979,7 @@ auto when_all(WC const& ctx, workgroup_id group, scheduler_allocator allocator, 
     uint32_t attached = 0;
     try
     {
-      auto attach = [&]<typename T>(basic_task<T, WC> const& task)
+      auto attach = [&]<typename T>(basic_task<T, WC> const& task) -> auto
       {
         auto* state = detail::task_access::state(task);
         OULY_ASSERT(state != nullptr);
@@ -987,14 +1014,14 @@ template <TaskContext WC, std::ranges::sized_range Range>
     { detail::task_access::state(value) };
   }
 auto when_all(WC const& ctx, workgroup_id group, scheduler_allocator allocator, Range const& tasks)
-  -> basic_task<void, WC>
+ -> basic_task<void, WC>
 {
   using task_type  = std::ranges::range_value_t<Range>;
   using value_type = typename task_type::value_type;
 
   auto const size = std::ranges::size(tasks);
   OULY_ASSERT(size <= std::numeric_limits<uint32_t>::max());
-  auto const count = static_cast<uint32_t>(size);
+  auto const count  = static_cast<uint32_t>(size);
   auto*      result = allocator.make<detail::task_state<void, WC>>(allocator);
   if (count == 0)
   {
@@ -1052,8 +1079,10 @@ class basic_task_scope
 public:
   explicit basic_task_scope(scheduler_allocator allocator = {}) noexcept : allocator_(allocator) {}
 
-  basic_task_scope(basic_task_scope const&)                          = delete;
-  auto operator=(basic_task_scope const&) -> basic_task_scope&       = delete;
+  basic_task_scope(basic_task_scope const&)                        = delete;
+  auto operator=(basic_task_scope const&) -> basic_task_scope&     = delete;
+  basic_task_scope(basic_task_scope&&) noexcept                    = delete;
+  auto operator=(basic_task_scope&&) noexcept -> basic_task_scope& = delete;
 
   ~basic_task_scope() noexcept
   {
@@ -1067,48 +1096,65 @@ public:
   }
 
   template <typename F>
-  auto run(WC const& ctx, F&& function)
-    -> basic_task<detail::task_result_t<std::decay_t<F>, WC>, WC>
+  auto run(WC const& ctx, F&& function) -> basic_task<detail::task_result_t<std::decay_t<F>, WC>, WC>
   {
     return run(ctx, ctx.get_workgroup(), std::forward<F>(function));
   }
 
   template <typename F>
   auto run(WC const& ctx, workgroup_id group, F&& function)
-    -> basic_task<detail::task_result_t<std::decay_t<F>, WC>, WC>
+   -> basic_task<detail::task_result_t<std::decay_t<F>, WC>, WC>
   {
     using function_type = std::decay_t<F>;
     using result_type   = detail::task_result_t<function_type, WC>;
     using node_type     = detail::scope_node<function_type, result_type, WC>;
 
-    std::scoped_lock lock(mutex_);
-    auto const is_descendant = detail::scope_execution_slot<WC>::current_ == this;
-    OULY_ASSERT((!closed_ || is_descendant) && "Cannot submit external work after joining a task_scope");
-    if (closed_ && !is_descendant)
+    detail::task_state<result_type, WC>* state       = nullptr;
+    node_type*                           node        = nullptr;
+    bool                                 wake_joiner = false;
     {
-      std::terminate();
+      std::scoped_lock lock(mutex_);
+      auto const       is_descendant = detail::scope_execution_slot<WC>::current == this;
+      OULY_ASSERT((!closed_ || is_descendant) && "Cannot submit external work after joining a task_scope");
+      if (closed_ && !is_descendant)
+      {
+        std::terminate();
+      }
+
+      auto const allocator = allocator_;
+      state                = allocator.make<detail::task_state<result_type, WC>>(allocator);
+      try
+      {
+        node = allocator.make<node_type>(state, this, &complete_one, group, std::forward<F>(function));
+      }
+      catch (...)
+      {
+        state->release();
+        throw;
+      }
+      node->set_next(nodes_);
+      nodes_ = node;
+      outstanding_.fetch_add(1, std::memory_order_relaxed);
+      // Only a joiner parks on outstanding_, and only after setting closed_ under this same lock.
+      // Skipping the wake otherwise keeps the common submit path free of futex syscalls.
+      wake_joiner = closed_;
     }
 
-    auto* state = allocator_.make<detail::task_state<result_type, WC>>(allocator_);
-    try
+    // Both of these must stay outside `mutex_`. submit() is not a pure enqueue: when the target
+    // workgroup's mailbox is full it drains queued work inline on this thread, which can re-enter
+    // run() or complete_one() on this same scope and self-deadlock a non-recursive mutex.
+    // The node is already published and counted above, so a concurrent joiner may claim and run it
+    // before we get here; that is fine, the pending lambda still owns a reference to it.
+    if (wake_joiner)
     {
-      auto* node = allocator_.make<node_type>(state, this, &complete_one, group, std::forward<F>(function));
-      node->next_ = nodes_;
-      nodes_      = node;
-      outstanding_.fetch_add(1, std::memory_order_relaxed);
       outstanding_.notify_all();
-      ctx.get_scheduler().submit(ctx, group,
-                                 [node](WC const& run_ctx) noexcept
-                                 {
-                                   node->execute(run_ctx);
-                                   node->release();
-                                 });
     }
-    catch (...)
-    {
-      state->release();
-      throw;
-    }
+    ctx.get_scheduler().submit(ctx, group,
+                               [node](WC const& run_ctx) noexcept -> void
+                               {
+                                 node->execute(run_ctx);
+                                 node->release();
+                               });
     return detail::task_access::make(state);
   }
 
@@ -1121,9 +1167,9 @@ public:
     }
     while (true)
     {
-      auto* nodes = take_nodes();
+      auto*      nodes     = take_nodes();
       auto const had_nodes = nodes != nullptr;
-      for (auto* node = nodes; node != nullptr; node = node->next_)
+      for (auto* node = nodes; node != nullptr; node = node->next())
       {
         if (node->can_execute(ctx))
         {
@@ -1184,13 +1230,13 @@ public:
     allocator_ = allocator;
     std::scoped_lock lock(mutex_);
     exception_ = {};
-    closed_ = false;
+    closed_    = false;
   }
 
 private:
   void verify_not_current() const noexcept
   {
-    if (detail::scope_execution_slot<WC>::current_ == this)
+    if (detail::scope_execution_slot<WC>::current == this)
     {
       OULY_ASSERT(false && "A task cannot join its own scope");
       std::terminate();
@@ -1200,13 +1246,16 @@ private:
   static void complete_one(void* scope, std::exception_ptr exception) noexcept
   {
     auto* self = static_cast<basic_task_scope*>(scope);
-    if (exception)
+    // The decrement and the notify are both done under `mutex_` on purpose. A waiter that is
+    // parked on `outstanding_.wait(n)` returns as soon as the value differs from `n`, without
+    // needing the notify; without this lock it could therefore observe zero, leave join() and let
+    // the scope be destroyed while this thread is still about to touch `outstanding_`. Every path
+    // that may destroy the scope (join, reset, destructor) re-acquires `mutex_` after seeing the
+    // count reach zero, so taking it here orders that destruction after the notify below.
+    std::scoped_lock lock(self->mutex_);
+    if (exception && !self->exception_)
     {
-      std::scoped_lock lock(self->mutex_);
-      if (!self->exception_)
-      {
-        self->exception_ = std::move(exception);
-      }
+      self->exception_ = std::move(exception);
     }
     if (self->outstanding_.fetch_sub(1, std::memory_order_acq_rel) == 1)
     {
@@ -1237,15 +1286,15 @@ private:
   {
     while (nodes != nullptr)
     {
-      auto* next = nodes->next_;
+      auto* next = nodes->next();
       nodes->release();
       nodes = next;
     }
   }
 
-  scheduler_allocator         allocator_;
-  std::atomic<uint32_t>       outstanding_{0};
-  mutable std::mutex          mutex_;
+  scheduler_allocator          allocator_;
+  std::atomic<uint32_t>        outstanding_{0};
+  mutable std::mutex           mutex_;
   detail::scope_node_base<WC>* nodes_ = nullptr;
   std::exception_ptr           exception_;
   bool                         closed_ = false;

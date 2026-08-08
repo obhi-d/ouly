@@ -8,9 +8,9 @@
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <memory>
 #include <new>
-#include <limits>
 #include <type_traits>
 #include <utility>
 
@@ -38,8 +38,7 @@ public:
       : instance_(&allocator), allocate_(&allocate_from<Allocator>), deallocate_(&deallocate_from<Allocator>)
   {}
 
-  [[nodiscard]] auto allocate_bytes(std::size_t size, std::size_t alignment = alignof(std::max_align_t)) const
-    -> void*
+  [[nodiscard]] auto allocate_bytes(std::size_t size, std::size_t alignment = alignof(std::max_align_t)) const -> void*
   {
     OULY_ASSERT(std::has_single_bit(alignment));
     if (!std::has_single_bit(alignment))
@@ -64,7 +63,8 @@ public:
     auto const aligned = (begin + alignment - 1U) & ~(static_cast<std::uintptr_t>(alignment) - 1U);
     auto*      result  = reinterpret_cast<void*>(aligned);
     auto*      header  = reinterpret_cast<allocation_header*>(aligned - sizeof(allocation_header));
-    std::construct_at(header, allocation_header{instance_, allocate_, deallocate_, base, total});
+    std::construct_at(
+     header, allocation_header{.instance_ = instance_, .deallocate_ = deallocate_, .base_ = base, .size_ = total});
     return result;
   }
 
@@ -75,12 +75,12 @@ public:
       return;
     }
 
-    auto const address = reinterpret_cast<std::uintptr_t>(ptr);
-    auto*      header  = reinterpret_cast<allocation_header*>(address - sizeof(allocation_header));
-    auto*      instance = header->instance_;
+    auto const address    = reinterpret_cast<std::uintptr_t>(ptr);
+    auto*      header     = reinterpret_cast<allocation_header*>(address - sizeof(allocation_header));
+    auto*      instance   = header->instance_;
     auto       deallocate = header->deallocate_;
-    auto*      base    = header->base_;
-    auto const total   = header->size_;
+    auto*      base       = header->base_;
+    auto const total      = header->size_;
     std::destroy_at(header);
     if (deallocate != nullptr)
     {
@@ -122,10 +122,10 @@ private:
   using allocate_fn   = auto (*)(void*, std::size_t) -> void*;
   using deallocate_fn = void (*)(void*, void*, std::size_t) noexcept;
 
+  // Only what deallocate_bytes() needs: the allocation source and the raw block to hand back.
   struct allocation_header
   {
     void*         instance_   = nullptr;
-    allocate_fn   allocate_   = nullptr;
     deallocate_fn deallocate_ = nullptr;
     void*         base_       = nullptr;
     std::size_t   size_       = 0;
@@ -154,16 +154,6 @@ private:
       return allocate_(instance_, size);
     }
     return ::operator new(size);
-  }
-
-  void deallocate_raw(void* ptr, std::size_t size) const noexcept
-  {
-    if (deallocate_ != nullptr)
-    {
-      deallocate_(instance_, ptr, size);
-      return;
-    }
-    ::operator delete(ptr);
   }
 
   void*         instance_   = nullptr;

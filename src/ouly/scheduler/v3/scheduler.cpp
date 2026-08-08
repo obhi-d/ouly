@@ -157,6 +157,30 @@ void scheduler::run_worker(worker_id wid)
       continue;
     }
 
+    // Optional pre-park spin. Parking costs a mutex acquisition plus a condvar round trip, and
+    // every submit broadcasts to all workers, so for bursty producers it is often cheaper to poll
+    // briefly than to sleep. Disabled by default; see set_idle_spin_count().
+    auto spins   = idle_spin_count_.load(std::memory_order_relaxed);
+    bool resumed = false;
+    while (spins-- > 0)
+    {
+      ouly::detail::pause_exec();
+      if (try_execute_one(wid))
+      {
+        resumed = true;
+        break;
+      }
+      if (stop_.load(std::memory_order_relaxed))
+      {
+        break;
+      }
+    }
+    if (resumed)
+    {
+      continue;
+    }
+
+    // The predicate is re-checked under the lock, so spinning above cannot lose a wakeup.
     std::unique_lock<std::mutex> lock(work_queue_mutex_);
     work_available_.wait(lock,
                          [this, &wkr]() noexcept -> bool
