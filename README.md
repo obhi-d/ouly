@@ -20,7 +20,7 @@ OULY is a comprehensive C++20 library designed for high-performance applications
 
 | Module                       | Headers                                 | What it provides                                                                                                                                      |
 | ---------------------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Task Scheduling              | `ouly/scheduler/`                       | Work-stealing task schedulers (three implementations), `parallel_for`, adaptive `auto_parallel_for`, coroutine tasks, static and dynamic flow graphs  |
+| Task Scheduling              | `ouly/scheduler/`                       | Work-stealing task schedulers, value tasks and continuations, structured task scopes, `parallel_for`, coroutine tasks, and flow graphs                |
 | Memory Allocators            | `ouly/allocators/`                      | Linear/arena/pool allocators, thread-safe allocators, coalescing GPU-style suballocators with defragmentation, virtual memory and memory-mapped files |
 | Containers                   | `ouly/containers/`                      | Lock-free MPMC queue, SoA vector, small vector, sparse vector/table, intrusive list, blackboard                                                       |
 | Entity Component System      | `ouly/ecs/`                             | Registries with revision tracking, configurable component storage, collections, sparse-to-dense maps                                                  |
@@ -153,6 +153,44 @@ scheduler.submit(ctx, ouly::default_workgroup_id,
 scheduler.end_execution();
 ```
 
+#### Value Tasks and Structured Concurrency
+
+`submit_task` returns a reference-counted `task<T>`. Continuations are always queued through the
+scheduler, `when_all` accepts heterogeneous tasks or a sized range of homogeneous tasks, and task
+exceptions propagate through `get`, `then`, `when_all`, and `co_await`:
+
+```cpp
+auto loaded = ouly::submit_task(ctx, []() -> uint32_t { return 21; });
+auto staged = loaded.then(ctx, [](uint32_t value) -> uint32_t { return value * 2; });
+auto uploaded = ouly::submit_task(ctx, []() {});
+
+ouly::when_all(ctx, staged, uploaded).get(ctx);
+auto result = staged.get(ctx);
+```
+
+Use `task_scope` for fork/join work with lexical ownership. `join(ctx)` directly claims unstarted
+children from that scope and waits for already-running children; it does not execute unrelated
+scheduler work while waiting:
+
+```cpp
+ouly::task_scope scope;
+for (uint32_t index = 0; index < count; ++index) {
+    scope.run(ctx, [index]() { process(index); });
+}
+scope.join(ctx);
+```
+
+`scheduler_allocator` is a non-owning, type-erased adapter for task state, continuation nodes,
+scope nodes, and coroutine frames. The allocator must outlive those objects. Its
+`deallocate(void*, std::size_t)` operation is optional, which allows a linear allocator to reclaim
+all scheduler allocations in one reset:
+
+```cpp
+ouly::scheduler_allocator storage(frame_allocator);
+auto task = ouly::submit_task(ctx, storage, []() -> uint32_t { return 42; });
+ouly::task_scope scope(storage);
+```
+
 #### Parallel Algorithms
 
 Use the provided context, not a group id (unit_tests/scheduler_tests.cpp):
@@ -178,17 +216,22 @@ ouly::parallel_for(
 
 For irregular workloads, `ouly::auto_parallel_for` (in `ouly/scheduler/auto_parallel_for.hpp`)
 uses TBB-style adaptive partitioning that reacts to load imbalance and work-stealing patterns
-instead of splitting the range into fixed chunks (unit_tests/test_auto_parallel_for.cpp).
+instead of splitting the range into fixed chunks (unit_tests/test_auto_parallel_for.cpp). Both
+parallel algorithms use structured task scopes, so joining them cannot execute unrelated scheduler
+work.
 
 #### Coroutine Support
 
-Submit co_task<T> directly (unit_tests/scheduler_comparison_tests.cpp):
+`co_task<T>` is lazy and may be submitted by reference or moved into the scheduler. Awaited child
+coroutines and continuations resume as queued scheduler work, and uncaught exceptions propagate to
+the waiter. Pass a `scheduler_allocator` as a coroutine argument to allocate its frame from the
+chosen allocator:
 
 ```cpp
 #include <ouly/scheduler/co_task.hpp>
 
-ouly::co_task<void> my_task() {
-    co_return;
+ouly::co_task<uint32_t> load(ouly::scheduler_allocator allocator) {
+    co_return 42;
 }
 
 ouly::v2::scheduler scheduler;
@@ -196,9 +239,10 @@ scheduler.create_group(ouly::default_workgroup_id, 0, 2);
 scheduler.begin_execution();
 auto const& ctx = ouly::v2::task_context::this_context::get();
 
-auto task = my_task();
+ouly::scheduler_allocator storage(frame_allocator);
+auto task = load(storage);
 scheduler.submit(ctx, ouly::default_workgroup_id, task);
-task.wait();
+auto result = task.cooperative_wait(ctx);
 
 scheduler.end_execution();
 ```
