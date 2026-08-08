@@ -75,7 +75,13 @@ public:
 
   auto operator=(linear_allocator&& other) noexcept -> linear_allocator&
   {
+    if (this == &other)
+    {
+      return *this;
+    }
     OULY_ASSERT(k_arena_size_ == other.k_arena_size_);
+    // the arena we are holding on to would be leaked otherwise
+    underlying_allocator::deallocate(buffer_, k_arena_size_);
     buffer_          = other.buffer_;
     left_over_       = other.left_over_;
     other.buffer_    = nullptr;
@@ -88,48 +94,45 @@ public:
     return underlying_allocator::null();
   }
 
+  /**
+   * @brief Allocate `i_size` bytes aligned to `i_alignment`
+   *
+   * Only the padding the arena head actually needs is consumed: when the head already satisfies the
+   * requested alignment - which is always the case while the arena base is at least as aligned as
+   * the request and every previous allocation kept the head aligned - the allocation costs exactly
+   * `i_size` bytes.
+   *
+   * @return The aligned address, or `null()` when the arena cannot fit the request
+   */
   template <typename Alignment = alignment<>>
   [[nodiscard]] auto allocate(size_type i_size, Alignment i_alignment = {}) -> address
   {
     [[maybe_unused]] auto measure = statistics::report_allocate(i_size);
-    // assert
-    auto const fixup = i_alignment - 1;
-    // make sure you allocate enough space
-    // but keep alignment distance so that next allocations
-    // do not suffer from lost alignment
-    if (i_alignment)
-    {
-      i_size += i_alignment;
-    }
 
-    OULY_ASSERT(left_over_ >= i_size);
-    size_type offset = k_arena_size_ - left_over_;
-    left_over_ -= i_size;
-    if (i_alignment)
-    {
-      // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-      auto pointer = reinterpret_cast<std::uintptr_t>(buffer_) + static_cast<std::uintptr_t>(offset);
-      if ((pointer & fixup) == 0)
-      {
-        left_over_ += i_alignment;
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-        return reinterpret_cast<address>(reinterpret_cast<std::uint8_t*>(buffer_) + offset);
-      }
-
-      auto ret = (pointer + static_cast<std::uintptr_t>(fixup)) & ~static_cast<std::uintptr_t>(fixup);
-      // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-      return reinterpret_cast<address>(ret);
-    }
-
+    auto const align = ouly::detail::alignment_of(i_alignment);
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    return reinterpret_cast<address>(reinterpret_cast<std::uint8_t*>(buffer_) + offset);
+    auto const head    = reinterpret_cast<std::uintptr_t>(buffer_) + (k_arena_size_ - left_over_);
+    auto const padding = static_cast<size_type>(ouly::detail::align_padding(head, align));
+
+    OULY_ASSERT(left_over_ >= i_size && (left_over_ - i_size) >= padding);
+    if (left_over_ < i_size || (left_over_ - i_size) < padding)
+    {
+      return null();
+    }
+
+    left_over_ -= (padding + i_size);
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast, performance-no-int-to-ptr)
+    return reinterpret_cast<address>(head + padding);
   }
 
   template <typename Alignment = alignment<>>
   [[nodiscard]] auto zero_allocate(size_type i_size, Alignment i_alignment = {}) -> address
   {
     auto z = allocate(i_size, i_alignment);
-    std::memset(z, 0, i_size);
+    if (z != null())
+    {
+      std::memset(z, 0, i_size);
+    }
     return z;
   }
 
@@ -163,40 +166,32 @@ public:
     // No deallocate: the only block this allocator can reclaim is the one at the head, and that case
     // was already handled above
     auto moved = allocate(i_new_size, i_alignment);
-    std::memcpy(moved, i_data, std::min(i_old_size, i_new_size));
+    if (moved != null())
+    {
+      std::memcpy(moved, i_data, std::min(i_old_size, i_new_size));
+    }
     return moved;
   }
 
+  /**
+   * @brief Give a block back to the arena
+   *
+   * Only the block sitting at the head of the arena is reclaimed; anything else is released when the
+   * allocator is destroyed. Padding inserted ahead of an aligned block is not reclaimed, since the
+   * position of the previous head is not recorded.
+   */
   template <typename Alignment = alignment<>>
-  void deallocate(address i_data, size_type i_size, Alignment i_alignment = {})
+  void deallocate(address i_data, size_type i_size, [[maybe_unused]] Alignment i_alignment = {})
   {
     [[maybe_unused]] auto measure = statistics::report_deallocate(i_size);
 
     // merge back?
     size_type new_left_over = left_over_ + i_size;
     size_type offset        = (k_arena_size_ - new_left_over);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    if (reinterpret_cast<std::uint8_t*>(buffer_) + offset == reinterpret_cast<std::uint8_t*>(i_data))
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+    if (static_cast<std::uint8_t*>(buffer_) + offset == static_cast<std::uint8_t*>(i_data))
     {
       left_over_ = new_left_over;
-    }
-    else
-    {
-      if constexpr (i_alignment)
-      {
-        i_size += static_cast<size_type>(static_cast<std::size_t>(i_alignment));
-
-        new_left_over = left_over_ + i_size;
-        offset        = (k_arena_size_ - new_left_over);
-
-        // This memory fixed up by alignment and is within range of alignment
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-        if ((reinterpret_cast<std::uintptr_t>(i_data) - (reinterpret_cast<std::uintptr_t>(buffer_) + offset)) <
-            i_alignment)
-        {
-          left_over_ = new_left_over;
-        }
-      }
     }
   }
 

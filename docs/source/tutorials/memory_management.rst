@@ -170,6 +170,33 @@ Available allocator configuration options:
 * ``ouly::cfg::debug_tracer<T>`` - Enable debug tracing with custom tracer
 * ``ouly::cfg::base_stats<T>`` - Set base statistics collection type
 
+Requesting an Alignment
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Every allocator takes the alignment as a trailing argument, spelled either as the compile time tag
+``ouly::alignment<N>`` or, when the value is only known at runtime, as a ``std::align_val_t``. The
+same alignment has to be handed back to ``deallocate``, exactly as with the aligned ``operator
+new``/``operator delete`` pair:
+
+.. code-block:: cpp
+
+   ouly::linear_allocator<> allocator(4096);
+
+   // Alignment known at compile time
+   void* simd = allocator.allocate(256, ouly::alignment<32>());
+
+   // Alignment known only at runtime
+   std::size_t const wanted = query_device_alignment();
+   void*             block  = allocator.allocate(1024, std::align_val_t{wanted});
+   allocator.deallocate(block, 1024, std::align_val_t{wanted});
+
+Alignment is only paid for when it is not already satisfied. Arena memory starts out aligned to
+whatever the underlying allocator guarantees - ``alignof(std::max_align_t)`` by default, or
+``ouly::cfg::min_alignment<N>`` when it is configured - and the linear allocators bump their head by
+exactly the padding the request needs. A request that is no stricter than the arena boundary, off a
+head that is already on it, therefore consumes exactly the bytes asked for. Only a request stricter
+than the underlying guarantee makes a fresh arena reserve room to align within.
+
 **Advanced Configuration Examples:**
 
 .. code-block:: cpp

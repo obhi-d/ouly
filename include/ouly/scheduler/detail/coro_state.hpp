@@ -22,14 +22,14 @@ struct coro_state
   std::atomic<std::coroutine_handle<>> continuation_{nullptr};
   std::atomic_bool                     started_{false};
   std::atomic<continuation_dispatch>   continuation_dispatch_{nullptr};
-  workgroup_id                        resume_group_;
-  bool                                detached_ = false;
+  workgroup_id                         resume_group_;
+  bool                                 detached_ = false;
 };
 
 template <TaskContext WC>
 struct coroutine_context_slot
 {
-  inline static thread_local WC const* current_ = nullptr;
+  inline static thread_local WC const* current = nullptr;
 };
 
 template <TaskContext WC>
@@ -37,12 +37,22 @@ class coroutine_context_guard
 {
 public:
   explicit coroutine_context_guard(WC const& ctx) noexcept
-      : previous_(std::exchange(coroutine_context_slot<WC>::current_, &ctx))
+      : previous_(std::exchange(coroutine_context_slot<WC>::current, &ctx))
   {}
+
+  coroutine_context_guard(coroutine_context_guard const&) = default;
+  coroutine_context_guard(coroutine_context_guard&& other) noexcept : previous_(std::exchange(other.previous_, nullptr))
+  {}
+  auto operator=(coroutine_context_guard const&) -> coroutine_context_guard& = default;
+  auto operator=(coroutine_context_guard&& other) noexcept -> coroutine_context_guard&
+
+  {
+    previous_ = std::exchange(other.previous_, nullptr);
+  }
 
   ~coroutine_context_guard() noexcept
   {
-    coroutine_context_slot<WC>::current_ = previous_;
+    coroutine_context_slot<WC>::current = previous_;
   }
 
 private:

@@ -110,65 +110,42 @@ public:
     return m;
   }
 
+  /**
+   * @brief Allocate `i_size` bytes aligned to `i_alignment`
+   *
+   * Arenas are probed with the padding their own head actually needs, so a head that already
+   * satisfies the requested alignment consumes exactly `i_size` bytes.
+   */
   template <typename Alignment = alignment<>>
   [[nodiscard]] auto allocate(size_type i_size, Alignment i_alignment = {}) -> address
   {
 
     [[maybe_unused]] auto measure = statistics::report_allocate(i_size);
-    // assert
-    auto fixup = i_alignment - 1;
-    // make sure you allocate enough space
-    // but keep alignment distance so that next allocations
-    // do not suffer from lost alignment
-    if (i_alignment)
-    {
-      i_size += i_alignment;
-    }
 
-    address ret_value = null();
+    auto const align = ouly::detail::alignment_of(i_alignment);
 
-    size_type index = current_arena_;
-    for (auto end = static_cast<size_type>(arenas_.size()); index < end; ++index)
+    for (auto end = static_cast<size_type>(arenas_.size()); current_arena_ < end; ++current_arena_)
     {
-      if (arenas_[index].left_over_ >= i_size)
+      if (auto ret_value = allocate_from(arenas_[current_arena_], i_size, align); ret_value != null())
       {
-        ret_value = allocate_from(index, i_size);
-        break;
-      }
-
-      current_arena_++;
-    }
-
-    if (ret_value == null())
-    {
-      size_type max_arena_size = std::max<size_type>(i_size, k_arena_size_);
-      ret_value                = allocate_from(index = allocate_new_arena(max_arena_size), i_size);
-    }
-
-    if (i_alignment)
-    {
-      // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-      auto pointer = reinterpret_cast<std::uintptr_t>(ret_value);
-      // already aligned
-      if ((pointer & fixup) == 0)
-      {
-        arenas_[index].left_over_ += i_alignment;
         return ret_value;
       }
-
-      auto ret = (pointer + static_cast<std::uintptr_t>(fixup)) & ~static_cast<std::uintptr_t>(fixup);
-      // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-      return reinterpret_cast<address>(ret);
     }
 
-    return ret_value;
+    // A fresh arena is only padded when the request is over-aligned with respect to the underlying
+    // allocator, so reserve for that case alone
+    size_type max_arena_size = std::max<size_type>(i_size + worst_case_padding(align), k_arena_size_);
+    return allocate_from(arenas_[allocate_new_arena(max_arena_size)], i_size, align);
   }
 
   template <typename Alignment = alignment<>>
   [[nodiscard]] auto zero_allocate(size_type i_size, Alignment i_alignment = {}) -> address
   {
     auto z = allocate(i_size, i_alignment);
-    std::memset(z, 0, i_size);
+    if (z != null())
+    {
+      std::memset(z, 0, i_size);
+    }
     return z;
   }
 
@@ -326,11 +303,27 @@ private:
     return index;
   }
 
-  auto allocate_from(size_type id, size_type size) -> address
+  /** @brief Padding a fresh arena may need, which is none unless the request is over-aligned */
+  static constexpr auto worst_case_padding(std::size_t align) -> size_type
   {
-    size_type offset = arenas_[id].arena_size_ - arenas_[id].left_over_;
-    arenas_[id].left_over_ -= size;
-    return static_cast<std::uint8_t*>(arenas_[id].buffer_) + offset;
+    constexpr auto guaranteed = ouly::detail::guaranteed_alignment_v<underlying_allocator>;
+    return align > guaranteed ? static_cast<size_type>(align - 1) : size_type{0};
+  }
+
+  /** @brief Bump the head of `item`, padding it only by what the alignment actually requires */
+  static auto allocate_from(arena& item, size_type size, std::size_t align) -> address
+  {
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    auto const head    = reinterpret_cast<std::uintptr_t>(item.buffer_) + (item.arena_size_ - item.left_over_);
+    auto const padding = static_cast<size_type>(ouly::detail::align_padding(head, align));
+    if (item.left_over_ < size || (item.left_over_ - size) < padding)
+    {
+      return null();
+    }
+
+    item.left_over_ -= (padding + size);
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast, performance-no-int-to-ptr)
+    return reinterpret_cast<address>(head + padding);
   }
 
   std::vector<arena> arenas_;

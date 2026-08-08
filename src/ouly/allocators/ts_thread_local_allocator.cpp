@@ -72,7 +72,46 @@ auto ts_thread_local_allocator::allocate(std::size_t size) -> void*
     }
   }
 
-  return allocate_slow_path(size);
+  return allocate_slow_path(size, 1);
+}
+
+auto ts_thread_local_allocator::allocate(std::size_t size, std::align_val_t align_val) -> void*
+{
+  auto const align = static_cast<std::size_t>(align_val);
+  OULY_ASSERT(align == 0 || ouly::is_power_of_two(align));
+
+  // Every offset handed out is a multiple of `alignment`, and arena data starts on that boundary,
+  // so any request up to it is already satisfied without reserving a single extra byte
+  if (align <= alignment)
+  {
+    return allocate(size);
+  }
+
+  size = is_aligned(size) ? size : align_up(size);
+
+  arena_t* page = (local_page.generation_ == generation_) ? local_page.page_ : nullptr;
+  if (page != nullptr)
+  {
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    auto const data    = reinterpret_cast<std::uintptr_t>(&page->data_[0]);
+    auto const padding = ouly::detail::align_padding(data + page->used_, align);
+    if (page->used_ + padding + size <= page->size_) [[likely]]
+    {
+      // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+      void* result = &page->data_[0] + page->used_ + padding;
+      page->used_ += padding + size;
+      return result;
+    }
+  }
+
+  return allocate_slow_path(size, align);
+}
+
+auto ts_thread_local_allocator::deallocate(void* ptr, std::size_t size, std::align_val_t /*align_val*/) const -> bool
+{
+  // Padding inserted ahead of the block stays consumed: the head it was measured from is not
+  // recorded, so only the block itself can be rolled back
+  return deallocate(ptr, size);
 }
 
 auto ts_thread_local_allocator::deallocate(void* ptr, std::size_t size) const -> bool
@@ -119,6 +158,48 @@ auto ts_thread_local_allocator::realloc(void* ptr, std::size_t old_size, std::si
   }
 
   void* moved = allocate(new_size);
+  if (moved != nullptr) [[likely]]
+  {
+    std::memcpy(moved, ptr, std::min(old_size, new_size));
+  }
+  return moved;
+}
+
+auto ts_thread_local_allocator::realloc(void* ptr, std::size_t old_size, std::size_t new_size,
+                                        std::align_val_t align_val) -> void*
+{
+  auto const align = static_cast<std::size_t>(align_val);
+  if (align <= alignment)
+  {
+    return realloc(ptr, old_size, new_size);
+  }
+
+  if (ptr == nullptr || old_size == 0)
+  {
+    return allocate(new_size, align_val);
+  }
+
+  auto const reserved_old = is_aligned(old_size) ? old_size : align_up(old_size);
+  auto const reserved_new = is_aligned(new_size) ? new_size : align_up(new_size);
+
+  arena_t* page = local_page.page_;
+  if (page != nullptr && local_page.generation_ == generation_)
+  {
+    auto* byte_ptr = static_cast<std::byte*>(ptr);
+    // Growing the block in place keeps its address, and with it the alignment it already has
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+    if (byte_ptr + reserved_old == &page->data_[0] + page->used_)
+    {
+      std::size_t const base = page->used_ - reserved_old;
+      if (base + reserved_new <= page->size_)
+      {
+        page->used_ = base + reserved_new;
+        return ptr;
+      }
+    }
+  }
+
+  void* moved = allocate(new_size, align_val);
   if (moved != nullptr) [[likely]]
   {
     std::memcpy(moved, ptr, std::min(old_size, new_size));
@@ -182,13 +263,19 @@ auto ts_thread_local_allocator::pop_free_list(std::size_t min_payload) -> arena_
   {
     auto* arena      = available_pages_;
     available_pages_ = arena->next_;
+    // A recycled page still carries the bump offset it had when it was handed back; without this
+    // the memory reset() was supposed to reclaim would stay unavailable
+    arena->used_ = 0;
     return arena;
   }
   return nullptr;
 }
-auto ts_thread_local_allocator::allocate_slow_path(std::size_t size) -> void*
+auto ts_thread_local_allocator::allocate_slow_path(std::size_t size, std::size_t align) -> void*
 {
-  std::size_t payload = std::max(default_page_size_, size);
+  // A fresh page is only padded when the request is over-aligned with respect to the page data
+  // boundary, so reserve for that case alone
+  std::size_t const reserved = size + (align > alignment ? align - 1 : 0);
+  std::size_t       payload  = std::max(default_page_size_, reserved);
 
   if (payload > default_page_size_)
   {
@@ -197,13 +284,17 @@ auto ts_thread_local_allocator::allocate_slow_path(std::size_t size) -> void*
     auto* arena =
      static_cast<arena_t*>(::operator new(sizeof(arena_t) + payload, std::align_val_t{alignof(std::max_align_t)}));
     arena->size_ = payload;
-    arena->used_ = size; // Only mark the requested size as used, not the entire payload
+
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    auto const padding = ouly::detail::align_padding(reinterpret_cast<std::uintptr_t>(&arena->data_[0]), align);
+    arena->used_       = padding + size; // Only mark what this request needs, not the entire payload
 
     std::unique_lock<std::shared_mutex> lg{page_mutex_};
 
     arena->next_   = pages_to_free_;
     pages_to_free_ = arena; // Add to the free list for reset
-    return &arena->data_[0];
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+    return &arena->data_[0] + padding;
   }
 
   std::unique_lock<std::shared_mutex> lg{page_mutex_};
@@ -233,8 +324,12 @@ auto ts_thread_local_allocator::allocate_slow_path(std::size_t size) -> void*
 
   local_page.page_ = page;
 
-  std::size_t offset = page->used_;
-  page->used_ += size;
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+  auto const  data    = reinterpret_cast<std::uintptr_t>(&page->data_[0]);
+  auto const  padding = ouly::detail::align_padding(data + page->used_, align);
+  std::size_t offset  = page->used_ + padding;
+  page->used_         = offset + size;
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
   return &page->data_[0] + offset;
 }
 

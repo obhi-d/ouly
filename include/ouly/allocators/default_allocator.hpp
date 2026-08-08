@@ -47,16 +47,27 @@ struct OULY_EMPTY_BASES default_allocator
 
   static constexpr auto align = ouly::detail::min_alignment_v<Config>;
 
+  /**
+   * @brief Allocate `size` bytes aligned to `alignment`
+   *
+   * The alignment may be an `ouly::alignment<N>` tag or, when it is only known at runtime, a
+   * `std::align_val_t`. A trivial alignment (0 or 1) goes through the plain operator new, which
+   * already guarantees `alignof(std::max_align_t)`.
+   */
   template <typename Alignment = alignment<align>>
   [[nodiscard]] static auto allocate(size_type size, Alignment alignment = {}) -> address
   {
-    if constexpr (alignment)
+    if constexpr (ouly::detail::is_trivial_alignment_v<Alignment>)
     {
-      return tracker::when_allocate(::operator new(size, std::align_val_t{static_cast<std::size_t>(alignment)}), size);
+      return tracker::when_allocate(::operator new(size), size);
     }
     else
     {
-      return tracker::when_allocate(::operator new(size), size);
+      if (ouly::detail::alignment_of(alignment) <= 1)
+      {
+        return tracker::when_allocate(::operator new(size), size);
+      }
+      return tracker::when_allocate(::operator new(size, ouly::detail::align_val_of(alignment)), size);
     }
   }
 
@@ -68,17 +79,25 @@ struct OULY_EMPTY_BASES default_allocator
     return ptr;
   }
 
+  /** @brief Release a block; the alignment must match the one it was allocated with */
   template <typename Alignment = alignment<align>>
   static void deallocate(address addr, size_type size, Alignment alignment = {})
   {
     void* fixup = tracker::when_deallocate(addr, size);
-    if constexpr (alignment)
+    if constexpr (ouly::detail::is_trivial_alignment_v<Alignment>)
     {
-      ::operator delete(fixup, std::align_val_t{static_cast<std::size_t>(alignment)});
+      ::operator delete(fixup);
     }
     else
     {
-      ::operator delete(fixup);
+      if (ouly::detail::alignment_of(alignment) <= 1)
+      {
+        ::operator delete(fixup);
+      }
+      else
+      {
+        ::operator delete(fixup, ouly::detail::align_val_of(alignment));
+      }
     }
   }
 

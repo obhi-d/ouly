@@ -4,10 +4,12 @@
  */
 #pragma once
 
+#include "ouly/allocators/alignment.hpp"
 #include "ouly/utility/common.hpp"
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <new>
 #include <shared_mutex>
 #include <utility>
 
@@ -125,6 +127,17 @@ public:
   OULY_API auto allocate(std::size_t size) noexcept -> void*;
 
   /**
+   * @brief Thread-safe allocation honouring an alignment known only at runtime
+   * @param size Number of bytes to allocate
+   * @param align_val Requested alignment, which must be a power of two
+   * @return Pointer to allocated memory aligned to @p align_val
+   * @note An alignment up to `alignment` costs nothing extra: every offset handed out is a multiple
+   *       of it, so the arena head already satisfies the request
+   * @note Returns nullptr on allocation failure
+   */
+  OULY_API auto allocate(std::size_t size, std::align_val_t align_val) noexcept -> void*;
+
+  /**
    * @brief Optional stack-style deallocation for the most recent allocation
    * @param ptr Pointer to memory to deallocate
    * @param size Size of the allocation in bytes
@@ -134,6 +147,16 @@ public:
    * @note Thread-safe but not guaranteed to succeed
    */
   OULY_API auto deallocate(void* ptr, std::size_t size) noexcept -> bool;
+
+  /**
+   * @brief Optional stack-style deallocation of a block allocated with an explicit alignment
+   * @param ptr Pointer to memory to deallocate
+   * @param size Size of the allocation in bytes
+   * @param align_val Alignment the block was allocated with
+   * @return true if deallocation succeeded, false otherwise
+   * @note Padding that was inserted ahead of the block is not reclaimed
+   */
+  OULY_API auto deallocate(void* ptr, std::size_t size, std::align_val_t align_val) noexcept -> bool;
 
   /**
    * @brief Resize an existing allocation, growing it in place whenever possible
@@ -146,6 +169,17 @@ public:
    * @note Returns nullptr on allocation failure
    */
   OULY_API auto realloc(void* ptr, std::size_t old_size, std::size_t new_size) noexcept -> void*;
+
+  /**
+   * @brief Resize a block that was allocated with an explicit alignment
+   * @param ptr Pointer to the block to resize
+   * @param old_size Size the block was allocated with
+   * @param new_size Requested new size
+   * @param align_val Alignment the block was allocated with
+   * @return Pointer to the resized block, which may differ from @p ptr but keeps the alignment
+   */
+  OULY_API auto realloc(void* ptr, std::size_t old_size, std::size_t new_size, std::align_val_t align_val) noexcept
+   -> void*;
 
   /**
    * @brief Reset all arenas for reuse
@@ -209,12 +243,22 @@ private:
   static auto try_allocate_from_page(arena_t* arena, std::size_t size) noexcept -> void*;
 
   /**
+   * @brief Attempt to allocate from an existing arena, padding the head up to @p align
+   * @param arena Arena to allocate from
+   * @param size Aligned size to allocate
+   * @param align Requested alignment, greater than `alignment`
+   * @return Pointer to allocated memory or nullptr if arena is full
+   */
+  static auto try_allocate_aligned_from_page(arena_t* arena, std::size_t size, std::size_t align) noexcept -> void*;
+
+  /**
    * @brief Slow path allocation when fast path fails
    * @param size Aligned size to allocate
+   * @param align Requested alignment, 1 when the request has no alignment of its own
    * @return Pointer to allocated memory
    * @note Creates new arenas or reuses available ones
    */
-  auto allocate_slow_path(std::size_t size) noexcept -> void*;
+  auto allocate_slow_path(std::size_t size, std::size_t align) noexcept -> void*;
 
   /* ---------- Data members -------------------------------------------- */
 

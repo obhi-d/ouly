@@ -41,6 +41,34 @@ template <typename T>
 concept HasUnderlyingAllocator = requires { typename T::underlying_allocator_t; };
 
 template <typename T>
+concept HasAlignConstant = requires {
+  { T::align } -> std::convertible_to<std::size_t>;
+};
+
+/**
+ * @brief Alignment every block handed out by `Allocator` is guaranteed to have
+ *
+ * Allocators advertise it through a static `align` member; anything else is assumed to allocate with
+ * the alignment of `std::max_align_t`, which is what the global operator new guarantees.
+ */
+template <typename Allocator>
+struct guaranteed_alignment
+{
+  static constexpr std::size_t value = alignof(std::max_align_t);
+};
+
+template <HasAlignConstant Allocator>
+struct guaranteed_alignment<Allocator>
+{
+  static constexpr std::size_t value = static_cast<std::size_t>(Allocator::align) > 1U
+                                        ? static_cast<std::size_t>(Allocator::align)
+                                        : 1U;
+};
+
+template <typename Allocator>
+constexpr std::size_t guaranteed_alignment_v = guaranteed_alignment<Allocator>::value;
+
+template <typename T>
 concept HasProtection = requires { typename T::protection_t; };
 
 template <typename T>

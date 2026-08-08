@@ -66,7 +66,66 @@ constexpr auto align_offset(T offset, T alignment) noexcept -> std::optional<T>
   }
   return static_cast<T>((offset + mask) & ~mask);
 }
+
+/**
+ * @brief Normalize an alignment argument to a plain value.
+ *
+ * Allocators accept the alignment as an `ouly::alignment<N>` tag, which carries the value in the
+ * type, as a `std::align_val_t` when it is only known at runtime, or as any integral value. All
+ * three spellings convert to `std::size_t`, and a value of 0 or 1 means "no alignment requirement".
+ */
+template <typename Alignment>
+constexpr auto alignment_of(Alignment i_alignment) noexcept -> std::size_t
+{
+  return static_cast<std::size_t>(i_alignment);
+}
+
+/** @brief Restate any alignment argument as the type the standard uses for over-aligned new/delete */
+template <typename Alignment>
+constexpr auto align_val_of(Alignment i_alignment) noexcept -> std::align_val_t
+{
+  return std::align_val_t{alignment_of(i_alignment)};
+}
+
+/** @brief True when the alignment argument is known at compile time to be trivial (0 or 1) */
+template <typename Alignment>
+constexpr bool is_trivial_alignment_v = false;
+
+template <std::size_t Value>
+constexpr bool is_trivial_alignment_v<alignment<Value>> = (Value <= 1);
+
+/**
+ * @brief Number of padding bytes needed to bring `address` up to `i_alignment`
+ *
+ * Returns 0 when the address already satisfies the alignment, which is the common case for arenas
+ * whose page boundary is at least as aligned as the request; no extra bytes are then consumed.
+ */
+constexpr auto align_padding(std::uintptr_t address, std::size_t i_alignment) noexcept -> std::size_t
+{
+  if (i_alignment <= 1)
+  {
+    return 0;
+  }
+  return static_cast<std::size_t>((~address + 1U) & static_cast<std::uintptr_t>(i_alignment - 1));
+}
+
+/** @brief Round `value` up to a multiple of the power-of-two `i_alignment` */
+constexpr auto align_size(std::size_t value, std::size_t i_alignment) noexcept -> std::size_t
+{
+  if (i_alignment <= 1)
+  {
+    return value;
+  }
+  auto const mask = i_alignment - 1U;
+  return (value + mask) & ~mask;
+}
 } // namespace detail
+
+/** @brief True when `value` is a non-zero power of two */
+constexpr auto is_power_of_two(std::size_t value) noexcept -> bool
+{
+  return value != 0U && (value & (value - 1U)) == 0U;
+}
 
 /** @brief Align a pointer up to the given power-of-two alignment. */
 inline auto align(void* ptr, std::size_t alignment) -> void*

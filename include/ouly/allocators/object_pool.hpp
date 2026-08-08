@@ -123,8 +123,15 @@ private:
     constexpr size_type object_stride    = (sizeof(T) + object_alignment - 1) & ~(object_alignment - 1);
     constexpr size_type page_data_size   = objects_per_page * object_stride;
 
-    // Calculate total page size with extra space for alignment padding
-    constexpr size_type total_page_size = header_size + object_alignment + page_data_size;
+    // The page starts out aligned to whatever the underlying allocator guarantees, so the first
+    // object already sits on its boundary unless the header pushes it off or the objects are more
+    // aligned than the page itself; only then does padding have to be paid for
+    constexpr bool objects_already_aligned =
+     object_alignment <= ouly::detail::guaranteed_alignment_v<underlying_allocator> &&
+     (header_size % object_alignment) == 0;
+    constexpr size_type alignment_reserve = objects_already_aligned ? size_type{0} : object_alignment - 1;
+
+    constexpr size_type total_page_size = header_size + alignment_reserve + page_data_size;
 
     // Allocate page with proper alignment for the entire page
     auto* raw_page = static_cast<std::uint8_t*>(underlying_allocator::allocate(total_page_size));

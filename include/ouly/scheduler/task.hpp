@@ -178,8 +178,8 @@ public:
 protected:
   ~task_state_base() noexcept
   {
-    auto* head = continuations_.load(std::memory_order_relaxed);
-    OULY_ASSERT(head == nullptr || head == finished());
+    OULY_ASSERT(continuations_.load(std::memory_order_relaxed) == nullptr ||
+                continuations_.load(std::memory_order_relaxed) == finished());
   }
 
   void finish(WC const& ctx, std::exception_ptr exception = {}) noexcept
@@ -860,7 +860,7 @@ public:
     requires std::is_same_v<typename Promise::context_type, WC>
   auto await_suspend(std::coroutine_handle<Promise> coroutine) -> bool
   {
-    auto* ctx = coroutine_context_slot<WC>::current_;
+    auto* ctx = coroutine_context_slot<WC>::current;
     OULY_ASSERT(ctx != nullptr && "co_await task<T> requires a scheduler-resumed coroutine");
     if (ctx == nullptr)
     {

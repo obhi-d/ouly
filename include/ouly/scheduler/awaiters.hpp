@@ -13,13 +13,16 @@ namespace detail
 {
 
 template <typename Promise>
-void resume_coroutine(std::coroutine_handle<Promise> coroutine,
-                      typename Promise::context_type const& ctx) noexcept
+void resume_coroutine(std::coroutine_handle<Promise> coroutine, typename Promise::context_type const& ctx) noexcept
 {
-  using context_type = typename Promise::context_type;
+  using context_type = Promise::context_type;
   coroutine_context_guard<context_type> guard(ctx);
+  // Whether the frame is ours has to be read before resuming: a borrowed coroutine can be waited
+  // on and destroyed by its owner the moment it completes, so the handle may already be dangling
+  // by the time resume() returns
+  bool const owns_frame = coroutine.promise().detached_;
   coroutine.resume();
-  if (coroutine.done() && coroutine.promise().detached_)
+  if (owns_frame && coroutine.done())
   {
     coroutine.destroy();
   }
@@ -28,8 +31,8 @@ void resume_coroutine(std::coroutine_handle<Promise> coroutine,
 template <typename Promise>
 auto dispatch_coroutine(std::coroutine_handle<> coroutine) noexcept -> std::coroutine_handle<>
 {
-  using context_type = typename Promise::context_type;
-  auto* ctx = coroutine_context_slot<context_type>::current_;
+  using context_type = Promise::context_type;
+  auto* ctx          = coroutine_context_slot<context_type>::current;
   if (ctx == nullptr)
   {
     return coroutine;
@@ -42,7 +45,7 @@ auto dispatch_coroutine(std::coroutine_handle<> coroutine) noexcept -> std::coro
     group = ctx->get_workgroup();
   }
   ctx->get_scheduler().submit(*ctx, group,
-                              [typed](context_type const& run_ctx) noexcept
+                              [typed](context_type const& run_ctx) noexcept -> void
                               {
                                 resume_coroutine(typed, run_ctx);
                               });
@@ -113,8 +116,7 @@ public:
     ouly::detail::coro_state& state = coro_.promise();
     if constexpr (requires { typename AwaitingPromise::context_type; })
     {
-      state.continuation_dispatch_.store(&ouly::detail::dispatch_coroutine<AwaitingPromise>,
-                                         std::memory_order_release);
+      state.continuation_dispatch_.store(&ouly::detail::dispatch_coroutine<AwaitingPromise>, std::memory_order_release);
     }
     else
     {
@@ -125,7 +127,7 @@ public:
     if (state.continuation_.compare_exchange_strong(expected, awaiting_coro, std::memory_order_acq_rel,
                                                     std::memory_order_acquire))
     {
-      if (auto* ctx = ouly::detail::coroutine_context_slot<typename PromiseArg::context_type>::current_)
+      if (auto* ctx = ouly::detail::coroutine_context_slot<typename PromiseArg::context_type>::current)
       {
         coro_.promise().resume_group_ = ctx->get_workgroup();
       }

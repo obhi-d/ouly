@@ -436,4 +436,97 @@ TEST_CASE("Thread-safe allocators realloc test", "[allocator]")
     allocator.release();
   }
 }
+
+TEST_CASE("Thread-safe allocators honour an explicit alignment", "[allocator]")
+{
+  SECTION("thread local")
+  {
+    ouly::ts_thread_local_allocator allocator;
+
+    // Up to the allocator's own alignment nothing extra is reserved
+    void* natural = allocator.allocate(64, std::align_val_t{ouly::ts_thread_local_allocator::alignment});
+    REQUIRE(natural != nullptr);
+    REQUIRE(reinterpret_cast<std::uintptr_t>(natural) % ouly::ts_thread_local_allocator::alignment == 0);
+
+    for (std::size_t align : {std::size_t{64}, std::size_t{256}, std::size_t{4096}})
+    {
+      void* ptr = allocator.allocate(48, std::align_val_t{align});
+      REQUIRE(ptr != nullptr);
+      REQUIRE(reinterpret_cast<std::uintptr_t>(ptr) % align == 0);
+      std::memset(ptr, 0xAB, 48);
+    }
+
+    // An over-aligned block larger than a page comes from a dedicated page
+    void* huge = allocator.allocate(2 * 1024 * 1024, std::align_val_t{4096});
+    REQUIRE(huge != nullptr);
+    REQUIRE(reinterpret_cast<std::uintptr_t>(huge) % 4096 == 0);
+
+    allocator.release();
+  }
+
+  SECTION("shared linear")
+  {
+    ouly::ts_shared_linear_allocator allocator;
+
+    void* natural = allocator.allocate(64, std::align_val_t{ouly::ts_shared_linear_allocator::alignment});
+    REQUIRE(natural != nullptr);
+    REQUIRE(reinterpret_cast<std::uintptr_t>(natural) % ouly::ts_shared_linear_allocator::alignment == 0);
+
+    for (std::size_t align : {std::size_t{64}, std::size_t{256}, std::size_t{4096}})
+    {
+      void* ptr = allocator.allocate(48, std::align_val_t{align});
+      REQUIRE(ptr != nullptr);
+      REQUIRE(reinterpret_cast<std::uintptr_t>(ptr) % align == 0);
+      std::memset(ptr, 0xAB, 48);
+    }
+
+    void* huge = allocator.allocate(2 * 1024 * 1024, std::align_val_t{4096});
+    REQUIRE(huge != nullptr);
+    REQUIRE(reinterpret_cast<std::uintptr_t>(huge) % 4096 == 0);
+
+    allocator.release();
+  }
+}
+
+TEST_CASE("Thread-safe allocators hand recycled pages back empty", "[allocator]")
+{
+  // A page that is recycled by reset() still carries its old bump offset unless it is cleared, in
+  // which case the memory reset() is supposed to reclaim would never come back
+  constexpr std::size_t page_size  = 4096;
+  constexpr std::size_t block_size = 512;
+
+  SECTION("thread local")
+  {
+    ouly::ts_thread_local_allocator allocator(page_size);
+
+    void* first = allocator.allocate(block_size);
+    REQUIRE(first != nullptr);
+
+    for (int frame = 0; frame < 8; ++frame)
+    {
+      allocator.reset();
+      void* again = allocator.allocate(block_size);
+      REQUIRE(again == first); // the same page, rewound to the start
+    }
+
+    allocator.release();
+  }
+
+  SECTION("shared linear")
+  {
+    ouly::ts_shared_linear_allocator allocator(page_size);
+
+    void* first = allocator.allocate(block_size);
+    REQUIRE(first != nullptr);
+
+    for (int frame = 0; frame < 8; ++frame)
+    {
+      allocator.reset();
+      void* again = allocator.allocate(block_size);
+      REQUIRE(again == first);
+    }
+
+    allocator.release();
+  }
+}
 // NOLINTEND

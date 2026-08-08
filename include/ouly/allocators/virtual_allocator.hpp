@@ -127,12 +127,16 @@ public:
    * @return Pointer to allocated memory or nullptr on failure
    */
   template <typename Alignment = alignment<align>>
-  [[nodiscard]] auto allocate(size_type size, Alignment /* alignment_hint */ = {}) noexcept -> address
+  [[nodiscard]] auto allocate(size_type size, [[maybe_unused]] Alignment alignment_hint = {}) noexcept -> address
   {
     if (size == 0)
     {
       return nullptr;
     }
+
+    // Reservations come back page aligned, which satisfies any request up to a page; nothing beyond
+    // that can be honoured here
+    OULY_ASSERT(ouly::detail::alignment_of(alignment_hint) <= page_size_);
 
     // Round up to page size for virtual memory allocation
     size_type aligned_size = round_up_to_page_size(size);

@@ -237,4 +237,79 @@ TEST_CASE("Validate linear_stack_allocator realloc", "[linear_stack_allocator]")
   CHECK(has_pattern(large, 32));
   CHECK(allocator.get_arena_count() == 2);
 }
+
+TEST_CASE("linear_allocator does not pay for alignment it already has", "[linear_allocator]")
+{
+  using allocator_t                    = ouly::linear_allocator<>;
+  constexpr std::uint32_t k_arena_size = 1024;
+
+  allocator_t allocator(k_arena_size);
+
+  // The arena base is max_align_t aligned, so an aligned request off a matching head costs nothing
+  auto* first = static_cast<std::uint8_t*>(allocator.allocate(64, ouly::alignment<16>()));
+  CHECK(reinterpret_cast<std::uintptr_t>(first) % 16 == 0);
+  CHECK(allocator.get_free_size() == k_arena_size - 64);
+
+  auto* second = static_cast<std::uint8_t*>(allocator.allocate(32, ouly::alignment<16>()));
+  CHECK(second == first + 64);
+  CHECK(allocator.get_free_size() == k_arena_size - 96);
+
+  // A head that is off the boundary is padded by exactly what it takes to reach it
+  auto* odd = static_cast<std::uint8_t*>(allocator.allocate(8));
+  CHECK(odd == second + 32);
+  CHECK(allocator.get_free_size() == k_arena_size - 104);
+
+  // 8 bytes of padding to get from 104 back onto the 16 byte boundary, and not one more
+  auto* realigned = static_cast<std::uint8_t*>(allocator.allocate(16, ouly::alignment<16>()));
+  CHECK(realigned == odd + 16);
+  CHECK(allocator.get_free_size() == k_arena_size - 128);
+
+  auto* over = static_cast<std::uint8_t*>(allocator.allocate(16, ouly::alignment<64>()));
+  CHECK(reinterpret_cast<std::uintptr_t>(over) % 64 == 0);
+  CHECK(over >= realigned + 16);
+}
+
+TEST_CASE("linear allocators take an alignment known only at runtime", "[linear_allocator]")
+{
+  constexpr std::uint32_t k_arena_size = 4096;
+
+  SECTION("linear_allocator")
+  {
+    ouly::linear_allocator<> allocator(k_arena_size);
+    auto*                    block = static_cast<std::uint8_t*>(allocator.allocate(100, std::align_val_t{64}));
+    CHECK(reinterpret_cast<std::uintptr_t>(block) % 64 == 0);
+    CHECK(allocator.get_free_size() == k_arena_size - 100);
+    allocator.deallocate(block, 100, std::align_val_t{64});
+    CHECK(allocator.get_free_size() == k_arena_size);
+  }
+
+  SECTION("linear_arena_allocator")
+  {
+    ouly::linear_arena_allocator<> allocator(k_arena_size);
+    auto*                          block = static_cast<std::uint8_t*>(allocator.allocate(100, std::align_val_t{256}));
+    CHECK(reinterpret_cast<std::uintptr_t>(block) % 256 == 0);
+    allocator.deallocate(block, 100, std::align_val_t{256});
+    CHECK(allocator.get_arena_count() == 1);
+  }
+
+  SECTION("linear_stack_allocator")
+  {
+    ouly::linear_stack_allocator<> allocator(k_arena_size);
+    auto*                          block = static_cast<std::uint8_t*>(allocator.allocate(100, std::align_val_t{128}));
+    CHECK(reinterpret_cast<std::uintptr_t>(block) % 128 == 0);
+    auto* next = static_cast<std::uint8_t*>(allocator.allocate(64, std::align_val_t{128}));
+    CHECK(reinterpret_cast<std::uintptr_t>(next) % 128 == 0);
+    CHECK(next == block + 128);
+  }
+}
+
+TEST_CASE("linear_arena_allocator serves over-aligned requests from a fresh arena", "[linear_arena_allocator]")
+{
+  // An arena small enough that the request has to open a new one
+  ouly::linear_arena_allocator<> allocator(64);
+
+  auto* block = static_cast<std::uint8_t*>(allocator.allocate(4096, ouly::alignment<4096>()));
+  CHECK(block != nullptr);
+  CHECK(reinterpret_cast<std::uintptr_t>(block) % 4096 == 0);
+}
 // NOLINTEND

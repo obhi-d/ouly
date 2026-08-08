@@ -63,32 +63,34 @@ public:
     return underlying_allocator::null();
   }
 
+  /**
+   * @brief Allocate `size_value` bytes aligned to `alignment`
+   *
+   * Atoms are already aligned when the atom size is a multiple of the request and the arena base is
+   * at least as aligned; the allocation then costs no extra atoms. Otherwise the block is padded and
+   * the distance back to the atom boundary is recorded in the word ahead of the returned pointer.
+   */
   template <typename Alignment = alignment<>>
   [[nodiscard]] auto allocate(size_type size_value, Alignment alignment = {}) -> address
   {
-    constexpr auto alignment_value = (size_t)alignment;
-    constexpr auto fixup           = alignment_value - 1;
-    if constexpr (alignment_value)
+    auto const align  = ouly::detail::alignment_of(alignment);
+    auto const fixup  = align > 1 ? align - 1 : std::size_t{0};
+    bool const padded = needs_alignment_fixup(align);
+    if (padded)
     {
-      if ((k_atom_size_ < alignment_value) || (k_atom_size_ & fixup))
-      {
-        size_value += alignment_value + 4;
-      }
+      size_value += static_cast<size_type>(align + k_offset_size);
     }
 
     size_type i_count = (size_value + k_atom_size_ - 1) / k_atom_size_;
 
     if constexpr (ouly::detail::HasComputeStats<Config>)
     {
-      if constexpr (alignment_value)
+      if (padded)
       {
-        if ((k_atom_size_ < alignment_value) || (k_atom_size_ & fixup))
-        {
-          // Account for the missing atoms
-          auto      real_size = size_value - alignment_value - 4;
-          size_type count     = (real_size + k_atom_size_ - 1) / k_atom_size_;
-          this->statistics::pad_atoms(static_cast<std::uint32_t>(i_count - count));
-        }
+        // Account for the missing atoms
+        auto      real_size = size_value - static_cast<size_type>(align + k_offset_size);
+        size_type count     = (real_size + k_atom_size_ - 1) / k_atom_size_;
+        this->statistics::pad_atoms(static_cast<std::uint32_t>(i_count - count));
       }
     }
 
@@ -109,44 +111,39 @@ public:
       ret_value = consume(i_count);
     }
 
-    if constexpr (alignment_value)
+    if (padded)
     {
-      if ((k_atom_size_ < alignment_value) || (k_atom_size_ & fixup))
-      {
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-        auto pointer = reinterpret_cast<std::uintptr_t>(ret_value);
-        auto ret     = ((pointer + 4 + static_cast<std::uintptr_t>(fixup)) & ~static_cast<std::uintptr_t>(fixup));
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast, performance-no-int-to-ptr)
-        *(reinterpret_cast<std::uint32_t*>(ret) - 1) = static_cast<std::uint32_t>(ret - pointer);
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-        return reinterpret_cast<address>(ret);
-      }
+      // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+      auto pointer = reinterpret_cast<std::uintptr_t>(ret_value);
+      auto ret = ((pointer + k_offset_size + static_cast<std::uintptr_t>(fixup)) & ~static_cast<std::uintptr_t>(fixup));
+      // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast, performance-no-int-to-ptr)
+      *(reinterpret_cast<std::uint32_t*>(ret) - 1) = static_cast<std::uint32_t>(ret - pointer);
+      // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast, performance-no-int-to-ptr)
+      return reinterpret_cast<address>(ret);
     }
     return ret_value;
   }
 
+  /** @brief Release a block; the alignment must match the one it was allocated with */
   template <typename Alignment = alignment<>>
   void deallocate(address i_ptr, size_type size_value, Alignment alignment = {})
   {
-    constexpr auto alignment_value = (size_t)alignment;
-    constexpr auto fixup           = alignment_value - 1;
-    address        orig_ptr        = i_ptr;
-    if constexpr (alignment_value)
+    auto const align    = ouly::detail::alignment_of(alignment);
+    address    orig_ptr = i_ptr;
+    bool const padded   = needs_alignment_fixup(align);
+    if (padded)
     {
-      if ((k_atom_size_ < alignment_value) || (k_atom_size_ & fixup))
-      {
-        size_value += alignment_value + 4;
-      }
+      size_value += static_cast<size_type>(align + k_offset_size);
     }
 
     size_type i_count = (size_value + k_atom_size_ - 1) / k_atom_size_;
 
-    if constexpr (ouly::detail::HasComputeStats<Config> && alignment_value)
+    if constexpr (ouly::detail::HasComputeStats<Config>)
     {
-      if ((k_atom_size_ < alignment_value) || (k_atom_size_ & fixup))
+      if (padded)
       {
         // Account for the missing atoms
-        auto      real_size = size_value - alignment_value - 4;
+        auto      real_size = size_value - static_cast<size_type>(align + k_offset_size);
         size_type count     = (real_size + k_atom_size_ - 1) / k_atom_size_;
         this->statistics::unpad_atoms(static_cast<std::uint32_t>(i_count - count));
       }
@@ -160,15 +157,12 @@ public:
     }
     else
     {
-      if constexpr (alignment_value)
+      if (padded)
       {
-        if ((k_atom_size_ < alignment_value) || (k_atom_size_ & fixup))
-        {
-          // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-          std::uint32_t off_by = *(reinterpret_cast<std::uint32_t*>(i_ptr) - 1);
-          // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-          i_ptr = reinterpret_cast<address>(reinterpret_cast<std::uint8_t*>(i_ptr) - off_by);
-        }
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+        std::uint32_t off_by = *(reinterpret_cast<std::uint32_t*>(i_ptr) - 1);
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast, cppcoreguidelines-pro-bounds-pointer-arithmetic)
+        i_ptr = reinterpret_cast<address>(static_cast<std::uint8_t*>(i_ptr) - off_by);
       }
       [[maybe_unused]] auto measure = statistics::report_deallocate(size_value);
       if (i_count == 1)
@@ -183,6 +177,29 @@ public:
   }
 
 private:
+  /** @brief Bytes reserved ahead of a padded block to record the distance back to the atom */
+  static constexpr std::size_t k_offset_size = sizeof(std::uint32_t);
+
+  /**
+   * @brief Whether a request needs to be padded to reach the alignment
+   *
+   * Atoms sit at `k_atom_size_` multiples from an arena base that is aligned to whatever the
+   * underlying allocator guarantees. When both already cover the request every atom boundary is
+   * aligned, so no padding is needed at all.
+   */
+  [[nodiscard]] auto needs_alignment_fixup(std::size_t align) const -> bool
+  {
+    if (align <= 1)
+    {
+      return false;
+    }
+    if (align > ouly::detail::guaranteed_alignment_v<underlying_allocator>)
+    {
+      return true;
+    }
+    return (k_atom_size_ < align) || ((k_atom_size_ & (align - 1)) != 0);
+  }
+
   struct array_arena
   {
 

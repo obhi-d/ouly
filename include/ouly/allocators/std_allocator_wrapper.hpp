@@ -130,14 +130,14 @@ public:
    */
   [[nodiscard]] auto do_allocate(std::size_t bytes, std::size_t alignment) -> void* override
   {
-    return impl_->allocate(bytes, alignment);
+    return impl_->allocate(bytes, std::align_val_t{alignment});
   }
   /**
    * \thread_safe
    */
   void do_deallocate(void* ptr, std::size_t bytes, std::size_t alignment) override
   {
-    return impl_->deallocate(ptr, bytes, alignment);
+    return impl_->deallocate(ptr, bytes, std::align_val_t{alignment});
   }
   /**
    * \thread_safe
@@ -175,14 +175,14 @@ public:
    */
   [[nodiscard]] auto do_allocate(std::size_t bytes, std::size_t alignment) -> void* override
   {
-    return impl_.allocate(bytes, alignment);
+    return impl_.allocate(bytes, std::align_val_t{alignment});
   }
   /**
    * \thread_safe
    */
   void do_deallocate(void* ptr, std::size_t bytes, std::size_t alignment) override
   {
-    return impl_.deallocate(ptr, bytes, alignment);
+    return impl_.deallocate(ptr, bytes, std::align_val_t{alignment});
   }
   /**
    * \thread_safe

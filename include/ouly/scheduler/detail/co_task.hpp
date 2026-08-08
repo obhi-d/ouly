@@ -107,7 +107,7 @@ public:
     requires std::same_as<WC, typename promise_type::context_type>
   auto cooperative_wait(WC const& ctx) -> R
   {
-    std::binary_semaphore event{0};
+    std::binary_semaphore                     event{0};
     ouly::detail::coroutine_context_guard<WC> guard(ctx);
     ouly::detail::wait(&event, this);
     ctx.cooperative_wait(event);
@@ -146,9 +146,9 @@ struct co_lambda_executor
   template <typename TC>
   void operator()(TC const& ctx)
   {
-    auto& promise = coro_.promise();
-    promise.detached_     = true;
-    promise.resume_group_ = ctx.get_workgroup();
+    auto& promise          = coro_.promise();
+    promise.detached_      = true;
+    promise.resume_group_  = ctx.get_workgroup();
     auto const was_started = promise.started_.exchange(true, std::memory_order_acq_rel);
     OULY_ASSERT(!was_started && "A coroutine task can only be submitted once");
     if (!was_started)
@@ -174,31 +174,39 @@ struct co_lambda_executor
 template <typename C>
 struct co_borrowed_executor
 {
-  using handle_type = typename C::handle;
+  using handle_type = C::handle;
 
+  // The start is claimed here, on the thread that submits and still owns the coroutine, rather than
+  // when this delegate finally runs. Anyone awaiting the task then has to leave the resume to us: if
+  // the awaiter could win that race and drive the task to completion, its owner would be free to
+  // destroy the frame while this delegate is still sitting in the queue.
   explicit co_borrowed_executor(C const& coroutine)
-      : coro_(handle_type::from_address(coroutine.address()))
+      : coro_(handle_type::from_address(coroutine.address())),
+        claimed_(!coro_.promise().started_.exchange(true, std::memory_order_acq_rel))
   {}
 
   template <typename TC>
   void operator()(TC const& ctx)
   {
+    if (!claimed_)
+    {
+      return; // somebody else got to it first, and owns the frame from here on
+    }
+
     auto& promise         = coro_.promise();
     promise.resume_group_ = ctx.get_workgroup();
-    if (!promise.started_.exchange(true, std::memory_order_acq_rel))
+    if constexpr (std::is_same_v<TC, typename C::promise_type::context_type>)
     {
-      if constexpr (std::is_same_v<TC, typename C::promise_type::context_type>)
-      {
-        ouly::detail::resume_coroutine(coro_, ctx);
-      }
-      else
-      {
-        coro_.resume();
-      }
+      ouly::detail::resume_coroutine(coro_, ctx);
+    }
+    else
+    {
+      coro_.resume();
     }
   }
 
-  handle_type coro_ = {};
+  handle_type coro_    = {};
+  bool        claimed_ = false;
 };
 
 } // namespace ouly::detail

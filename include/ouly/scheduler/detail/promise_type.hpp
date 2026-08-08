@@ -3,8 +3,8 @@
 #pragma once
 
 #include "ouly/scheduler/config.hpp"
-#include "ouly/scheduler/detail/get_awaiter.hpp"
 #include "ouly/scheduler/detail/allocation.hpp"
+#include "ouly/scheduler/detail/get_awaiter.hpp"
 #include <array>
 #include <concepts>
 #include <cstddef>
@@ -20,7 +20,7 @@ inline auto coroutine_allocator_from() noexcept -> scheduler_allocator
 }
 
 template <typename First, typename... Rest>
-auto coroutine_allocator_from(First&& first, Rest&&... rest) noexcept -> scheduler_allocator
+auto coroutine_allocator_from([[maybe_unused]] First&& first, Rest&&... rest) noexcept -> scheduler_allocator
 {
   if constexpr (std::is_same_v<std::remove_cvref_t<First>, scheduler_allocator>)
   {
@@ -136,7 +136,7 @@ public:
 
 private:
   alignas(alignof(Ty)) std::byte data_[sizeof(Ty)]{};
-  bool                          has_value_ = false;
+  bool has_value_ = false;
 };
 
 template <template <typename R> class TaskClass, typename Ty>
@@ -240,13 +240,20 @@ struct sync_waiter
 template <typename EventType, typename Awaiter>
 auto wait(EventType* event, Awaiter* task) -> sync_waiter
 {
+  std::exception_ptr exception;
   try
   {
     co_await *task;
   }
   catch (...)
-  {}
+  {
+    exception = std::current_exception();
+  }
   event->release();
+  if (exception)
+  {
+    std::rethrow_exception(exception);
+  }
   co_return;
 }
 
