@@ -245,15 +245,10 @@ auto wait(EventType* event, Awaiter* task) -> sync_waiter
   {
     co_await *task;
   }
-  catch (...)
-  {
-    exception = std::current_exception();
-  }
+  catch (...) // NOLINT
+  {}
   event->release();
-  if (exception)
-  {
-    std::rethrow_exception(exception);
-  }
+
   co_return;
 }
 
