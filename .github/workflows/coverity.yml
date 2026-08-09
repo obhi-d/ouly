@@ -1,194 +1,238 @@
 name: Coverity Scan
 
 on:
+  # Run manually whenever desired.
   workflow_dispatch:
-    # Allow manual triggering
+
+  # Also run once per week so Coverity doesn't get forgotten.
+  # Scheduled workflows run from the repository's default branch.
+  schedule:
+    - cron: "17 5 * * 0"
+
+permissions:
+  contents: read
 
 env:
-  # Coverity project settings
   COVERITY_PROJECT_NAME: "obhi-d/ouly"
   BUILD_TYPE: Release
 
+concurrency:
+  group: coverity-${{ github.repository }}
+  cancel-in-progress: false
+
 jobs:
-  # Job to check if we should skip Coverity due to frequency limits
-  check-frequency:
-    name: Check Scan Frequency
-    runs-on: ubuntu-latest
-    outputs:
-      should-scan: ${{ steps.check.outputs.should-scan }}
-    
+  coverity:
+    name: Coverity Scan
+    if: github.repository == 'obhi-d/ouly'
+    runs-on: ubuntu-24.04
+
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 50  # Get recent commits to check frequency
+      # -----------------------------------------------------------------------
+      # Checkout
+      # -----------------------------------------------------------------------
 
-    - name: Check last Coverity scan
-      id: check
-      shell: bash
-      run: |
-        # For manual runs or scheduled runs, always scan
-        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]] || [[ "${{ github.event_name }}" == "schedule" ]]; then
-          echo "should-scan=true" >> $GITHUB_OUTPUT
-          echo "Manual or scheduled run - proceeding with scan"
-          exit 0
-        fi
-        
-        # For push events, check if we've scanned recently
-        # Look for commits in the last 24 hours that might have triggered Coverity
-        recent_commits=$(git log --since="24 hours ago" --oneline | wc -l)
-        
-        if [[ $recent_commits -gt 5 ]]; then
-          echo "should-scan=false" >> $GITHUB_OUTPUT
-          echo "Too many recent commits ($recent_commits), skipping to avoid Coverity rate limits"
-        else
-          echo "should-scan=true" >> $GITHUB_OUTPUT
-          echo "Recent commits: $recent_commits - proceeding with scan"
-        fi
+      - name: Checkout
+        uses: actions/checkout@v6
 
-  coverity-scan:
-    name: Coverity Scan Analysis
-    runs-on: ubuntu-latest
-    needs: check-frequency
-    if: github.repository == 'obhi-d/ouly' && needs.check-frequency.outputs.should-scan == 'true'
-    
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+      # -----------------------------------------------------------------------
+      # Compiler
+      #
+      # Coverity does not need to use the newest compiler from the normal CI
+      # matrix. GCC 14 is a stable choice for analysis as long as OULY builds
+      # with it.
+      # -----------------------------------------------------------------------
 
-    - name: Setup CMake and Ninja
-      uses: lukka/get-cmake@latest
+      - name: Install GCC
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-14 g++-14
 
-    - name: Install dependencies
-      shell: bash
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y gcc-14 g++-14
+      # -----------------------------------------------------------------------
+      # Coverity tool
+      #
+      # Coverity Scan periodically replaces its supported analysis package.
+      # Cache it for one month so normal scans don't repeatedly download the
+      # fairly large tool, while still refreshing periodically.
+      # -----------------------------------------------------------------------
 
-    - name: Cache Coverity Build Tool
-      id: cache-coverity
-      uses: actions/cache@v4
-      with:
-        path: coverity-linux64
-        key: coverity-linux64-2024.6.0
-        restore-keys: |
-          coverity-linux64-
+      - name: Generate Coverity cache key
+        id: coverity-cache-key
+        shell: bash
+        run: |
+          echo "month=$(date -u +%Y-%m)" >> "$GITHUB_OUTPUT"
 
-    - name: Download Coverity Build Tool
-      if: steps.cache-coverity.outputs.cache-hit != 'true'
-      shell: bash
-      run: |
-        echo "Downloading Coverity Build Tool..."
-        curl -d "token=${{ secrets.COVERITY_SCAN_TOKEN }}&project=${{ env.COVERITY_PROJECT_NAME }}" \
-             -o coverity_tool.tgz \
-             https://scan.coverity.com/download/linux64
-        
-        tar -xzf coverity_tool.tgz
-        mv cov-analysis-linux64-* coverity-linux64
+      - name: Cache Coverity tool
+        id: cache-coverity
+        uses: actions/cache@v4
+        with:
+          path: coverity-linux64
+          key: coverity-linux64-${{ steps.coverity-cache-key.outputs.month }}
 
-    - name: Configure CMake
-      shell: bash
-      run: |
-        cmake -B build \
-          -G "Ninja" \
-          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
-          -DCMAKE_C_COMPILER=gcc-14 \
-          -DCMAKE_CXX_COMPILER=g++-14 \
-          -DOULY_BUILD_TESTS=ON \
-          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-      env:
-        CC: gcc-14
-        CXX: g++-14
+      - name: Download Coverity tool
+        if: steps.cache-coverity.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          echo "Downloading current Coverity Scan build tool..."
 
-    - name: Build with Coverity
-      shell: bash
-      run: |
-        export PATH=$PWD/coverity-linux64/bin:$PATH
-        
-        # Clean any previous build
-        cmake --build build --target clean || true
-        
-        # Build with Coverity wrapper
-        cov-build --dir cov-int cmake --build build --config ${{ env.BUILD_TYPE }} --parallel
-        
-        echo "Coverity build completed. Contents of cov-int:"
-        ls -la cov-int/
+          curl \
+            --fail-with-body \
+            --show-error \
+            --location \
+            --data-urlencode "token=${{ secrets.COVERITY_SCAN_TOKEN }}" \
+            --data-urlencode "project=${{ env.COVERITY_PROJECT_NAME }}" \
+            --output coverity_tool.tgz \
+            https://scan.coverity.com/download/linux64
 
-    - name: Prune captured files (exclude deps/tests)
-      shell: bash
-      run: |
-        export PATH=$PWD/coverity-linux64/bin:$PATH
-        # Remove third-party deps and tests by primary file
-        cov-manage-emit --dir cov-int --tu-pattern "file('.*/_deps/.*') || file('.*/(unit_tests|tests)/.*')" delete
-        # Also drop TUs that include libstdc++ charconv to avoid analyzing std headers
-        cov-manage-emit --dir cov-int --tu-pattern 'header(".*/c\+\+/.*")' delete
+          tar -xzf coverity_tool.tgz
 
-    - name: Submit to Coverity Scan
-      shell: bash
-      run: |
-        # Create archive for submission
-        tar -czf ouly-coverity.tgz cov-int
-        
-        # Get commit info for submission
-        COMMIT_SHA=$(git rev-parse HEAD)
-        COMMIT_MSG=$(git log -1 --pretty=format:"%s" | head -c 100)
-        
-        echo "Submitting to Coverity Scan..."
-        echo "Project: ${{ env.COVERITY_PROJECT_NAME }}"
-        echo "Commit: $COMMIT_SHA"
-        echo "Description: $COMMIT_MSG"
-        
-        curl \
-          --form token="${{ secrets.COVERITY_SCAN_TOKEN }}" \
-          --form email="${{ secrets.COVERITY_SCAN_EMAIL }}" \
-          --form file=@ouly-coverity.tgz \
-          --form version="$COMMIT_SHA" \
-          --form description="$COMMIT_MSG" \
-          https://scan.coverity.com/builds?project=${{ env.COVERITY_PROJECT_NAME }}
+          COVERITY_DIR=$(find . \
+            -maxdepth 1 \
+            -type d \
+            -name 'cov-analysis-linux64-*' \
+            -print \
+            -quit)
 
-    - name: Upload Coverity intermediate files
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: coverity-intermediate-files
-        path: |
-          cov-int/
-          build/CMakeFiles/
-        retention-days: 7
+          if [[ -z "$COVERITY_DIR" ]]; then
+            echo "::error::Unable to find extracted Coverity directory"
+            exit 1
+          fi
 
-    - name: Scan Status
-      shell: bash
-      run: |
-        echo "::notice::Coverity Scan completed successfully"
-        echo "Results will be available on the Coverity Scan dashboard in a few minutes"
-        echo "Visit: https://scan.coverity.com/projects/${{ env.COVERITY_PROJECT_NAME }}"
+          mv "$COVERITY_DIR" coverity-linux64
+          rm coverity_tool.tgz
 
-  # Summary job
-  coverity-summary:
-    name: Coverity Summary
-    needs: [check-frequency, coverity-scan]
-    runs-on: ubuntu-latest
-    if: always()
-    
-    steps:
-    - name: Summary
-      shell: bash
-      run: |
-        echo "## 🔍 Coverity Scan Summary"
-        echo ""
-        
-        if [[ "${{ needs.check-frequency.outputs.should-scan }}" == "false" ]]; then
-          echo "⏭️ **Scan Skipped**: Too many recent scans to avoid rate limits"
-        elif [[ "${{ needs.coverity-scan.result }}" == "success" ]]; then
-          echo "✅ **Coverity Scan**: COMPLETED"
-          echo "   - Static analysis completed successfully"
-          echo "   - Results will be available on Coverity dashboard shortly"
-        elif [[ "${{ needs.coverity-scan.result }}" == "failure" ]]; then
-          echo "❌ **Coverity Scan**: FAILED"
-          echo "   - Check the logs for details"
-        else
-          echo "❓ **Coverity Scan**: ${{ needs.coverity-scan.result }}"
-        fi
-        
-        echo ""
-        echo "**Dashboard**: https://scan.coverity.com/projects/${{ env.COVERITY_PROJECT_NAME }}"
+      # -----------------------------------------------------------------------
+      # Configure
+      # -----------------------------------------------------------------------
+
+      - name: Configure CMake
+        shell: bash
+        run: |
+          cmake \
+            -S . \
+            -B build \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+            -DCMAKE_C_COMPILER=gcc-14 \
+            -DCMAKE_CXX_COMPILER=g++-14 \
+            -DOULY_BUILD_TESTS=ON
+
+      # -----------------------------------------------------------------------
+      # Capture
+      #
+      # Keep tests enabled. For a template-heavy/header-heavy C++ library,
+      # test translation units are useful because they instantiate and compile
+      # library code that Coverity otherwise might never see.
+      # -----------------------------------------------------------------------
+
+      - name: Capture build
+        shell: bash
+        run: |
+          export PATH="$PWD/coverity-linux64/bin:$PATH"
+
+          cov-build \
+            --dir cov-int \
+            cmake --build build --parallel
+
+      # -----------------------------------------------------------------------
+      # Validate capture
+      # -----------------------------------------------------------------------
+
+      - name: Verify Coverity capture
+        shell: bash
+        run: |
+          export PATH="$PWD/coverity-linux64/bin:$PATH"
+
+          echo "Captured translation units:"
+          cov-manage-emit --dir cov-int list
+
+          if [[ ! -d cov-int ]]; then
+            echo "::error::Coverity did not produce cov-int"
+            exit 1
+          fi
+
+      # -----------------------------------------------------------------------
+      # Remove third-party translation units.
+      #
+      # Do NOT remove a TU merely because it includes a libstdc++ header.
+      # Nearly every C++ TU does that.
+      #
+      # Also keep OULY's test TUs because they may instantiate templates from
+      # the library. Test paths can instead be ignored/configured separately
+      # in Coverity's component configuration if desired.
+      # -----------------------------------------------------------------------
+
+      - name: Remove third-party translation units
+        shell: bash
+        run: |
+          export PATH="$PWD/coverity-linux64/bin:$PATH"
+
+          cov-manage-emit \
+            --dir cov-int \
+            --tu-pattern "file('.*/_deps/.*')" \
+            delete
+
+      # -----------------------------------------------------------------------
+      # Package and upload
+      # -----------------------------------------------------------------------
+
+      - name: Package Coverity capture
+        shell: bash
+        run: |
+          tar -czf ouly-coverity.tgz cov-int
+
+          echo "Archive size:"
+          du -h ouly-coverity.tgz
+
+      - name: Submit to Coverity Scan
+        shell: bash
+        run: |
+          COMMIT_SHA=$(git rev-parse HEAD)
+          COMMIT_MSG=$(git log -1 --pretty=format:"%s" | head -c 100)
+
+          echo "Submitting Coverity scan"
+          echo "Project: ${{ env.COVERITY_PROJECT_NAME }}"
+          echo "Commit:  $COMMIT_SHA"
+
+          curl \
+            --fail-with-body \
+            --show-error \
+            --form "token=${{ secrets.COVERITY_SCAN_TOKEN }}" \
+            --form "email=${{ secrets.COVERITY_SCAN_EMAIL }}" \
+            --form "file=@ouly-coverity.tgz" \
+            --form "version=$COMMIT_SHA" \
+            --form "description=$COMMIT_MSG" \
+            "https://scan.coverity.com/builds?project=${{ env.COVERITY_PROJECT_NAME }}"
+
+      # -----------------------------------------------------------------------
+      # Diagnostics on failure
+      # -----------------------------------------------------------------------
+
+      - name: Upload Coverity diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: coverity-diagnostics-${{ github.run_id }}
+          path: |
+            cov-int/
+            build/CMakeFiles/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      # -----------------------------------------------------------------------
+      # GitHub summary
+      # -----------------------------------------------------------------------
+
+      - name: Summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Coverity Scan"
+            echo ""
+            echo "**Commit:** \`${GITHUB_SHA}\`"
+            echo ""
+            echo "**Status:** ${{ job.status }}"
+            echo ""
+            echo "Results: https://scan.coverity.com/projects/${{ env.COVERITY_PROJECT_NAME }}"
+          } >> "$GITHUB_STEP_SUMMARY"

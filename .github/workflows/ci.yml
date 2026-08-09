@@ -5,187 +5,234 @@ on:
     branches: ["main", "develop"]
   pull_request:
     branches: ["main", "develop"]
+  workflow_dispatch:
+
+# If another commit is pushed to the same branch, don't waste CI time
+# finishing the obsolete commit.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 env:
-  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Debug
+  SCCACHE_GHA_ENABLED: "true"
 
 jobs:
+  # ---------------------------------------------------------------------------
+  # Build + tests
+  # ---------------------------------------------------------------------------
+
   build-and-test:
-    name: ${{ matrix.config.name }}
-    runs-on: ${{ matrix.config.os }}
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+
     strategy:
       fail-fast: false
       matrix:
-        config:
-          - {
-              name: "Windows MSVC",
-              os: windows-latest,
-              generator: "Ninja",
-              cc: "cl",
-              cxx: "cl",
-            }
-          - {
-              name: "Ubuntu GCC",
-              os: ubuntu-latest,
-              generator: "Ninja",
-              cc: "gcc-15",
-              cxx: "g++-15",
-            }
-          - {
-              name: "Ubuntu Clang",
-              os: ubuntu-latest,
-              generator: "Ninja",
-              cc: "clang-18",
-              cxx: "clang++-18",
-            }
-          - {
-              name: "macOS Clang",
-              os: macos-latest,
-              generator: "Ninja",
-              cc: "clang",
-              cxx: "clang++",
-              min_clang_version: "17",
-            }
+        include:
+          - name: Windows MSVC
+            os: windows-latest
+            cc: cl
+            cxx: cl
+
+          - name: Ubuntu GCC 16
+            os: ubuntu-26.04
+            cc: gcc-16
+            cxx: g++-16
+
+          - name: Ubuntu Clang 18
+            os: ubuntu-24.04
+            cc: clang-18
+            cxx: clang++-18
+
+          - name: macOS Clang
+            os: macos-latest
+            cc: clang
+            cxx: clang++
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
-      - name: Setup CMake and Ninja
-        uses: lukka/get-cmake@latest
-
-      - name: Install Linux dependencies
-        if: runner.os == 'Linux'
+      # ubuntu-26.04 currently doesn't have GCC 16 preinstalled,
+      # but GCC 16 is available from its package repositories.
+      - name: Install GCC 16
+        if: matrix.cxx == 'g++-16'
         shell: bash
         run: |
           sudo apt-get update
-          if [[ "${{ matrix.config.cxx }}" == "g++-15" ]]; then
-            sudo apt-get install -y gcc-15 g++-15 lcov doxygen graphviz
-          elif [[ "${{ matrix.config.cxx }}" == "clang++-18" ]]; then
-            wget https://apt.llvm.org/llvm.sh
-            chmod +x llvm.sh
-            sudo ./llvm.sh 18
-            sudo apt-get install -y clang-18 clang++-18
-          fi
-
-      - name: Check macOS Clang version
-        if: runner.os == 'macOS'
-        id: clang_check
-        shell: bash
-        run: |
-          # Check current Clang version
-          clang_version=$(clang --version | head -n1 | grep -o '[0-9]\+\.[0-9]\+' | head -n1 | cut -d. -f1)
-          echo "Current Clang version: $clang_version"
-          echo "clang_version=$clang_version" >> $GITHUB_OUTPUT
-
-          # Verify compilers exist
-          echo "Checking compiler availability:"
-          which clang || echo "clang not found"
-          which clang++ || echo "clang++ not found"
-          clang --version || echo "clang version check failed"
-          clang++ --version || echo "clang++ version check failed"
-
-          if [[ "${{ matrix.config.min_clang_version }}" != "" ]] && [[ $clang_version -lt ${{ matrix.config.min_clang_version }} ]]; then
-            echo "Clang version $clang_version is less than required ${{ matrix.config.min_clang_version }}"
-            echo "Skipping this build as it's not compatible with older Clang versions"
-            echo "skip_build=true" >> $GITHUB_OUTPUT
-          else
-            echo "skip_build=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Skip build notification
-        if: runner.os == 'macOS' && steps.clang_check.outputs.skip_build == 'true'
-        shell: bash
-        run: |
-          echo "::notice::Skipping macOS build due to incompatible Clang version (${{ steps.clang_check.outputs.clang_version }} < ${{ matrix.config.min_clang_version }})"
+          sudo apt-get install -y gcc-16 g++-16
 
       - name: Setup MSVC
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
 
-      - name: Configure CMake
-        if: steps.clang_check.outputs.skip_build != 'true'
+      # Compiler output is cached between workflow runs.
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.11
+
+      - name: Configure
         shell: bash
         run: |
-          echo "Debug: Matrix config CC=${{ matrix.config.cc }}, CXX=${{ matrix.config.cxx }}"
-          echo "Debug: Environment CC=$CC, CXX=$CXX"
-          echo "Debug: OS=${{ runner.os }}"
-
-          # For macOS, use absolute paths to ensure we get the right compiler
-          if [[ "${{ runner.os }}" == "macOS" ]]; then
-            CC_PATH=$(which ${{ matrix.config.cc }})
-            CXX_PATH=$(which ${{ matrix.config.cxx }})
-            echo "Debug: macOS CC_PATH=$CC_PATH, CXX_PATH=$CXX_PATH"
-            cmake -B build -G "${{ matrix.config.generator }}" -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DCMAKE_C_COMPILER="$CC_PATH" -DCMAKE_CXX_COMPILER="$CXX_PATH" -DOULY_BUILD_TESTS=ON 
-          elif [[ "${{ runner.os }}" == "Linux" ]]; then
-             cmake -B build -G "${{ matrix.config.generator }}" -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DCMAKE_C_COMPILER=${{ matrix.config.cc }} -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }} -DOULY_BUILD_TESTS=ON -DOULY_TEST_COVERAGE=ON
-          else
-            cmake -B build -G "${{ matrix.config.generator }}" -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DCMAKE_C_COMPILER=${{ matrix.config.cc }} -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }} -DOULY_BUILD_TESTS=ON 
-          fi
-        working-directory: ${{ github.workspace }}
-        env:
-          CC: ${{ matrix.config.cc }}
-          CXX: ${{ matrix.config.cxx }}
+          cmake \
+            -S . \
+            -B build \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+            -DCMAKE_C_COMPILER=${{ matrix.cc }} \
+            -DCMAKE_CXX_COMPILER=${{ matrix.cxx }} \
+            -DCMAKE_C_COMPILER_LAUNCHER=sccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
+            -DOULY_BUILD_TESTS=ON
 
       - name: Build
-        if: steps.clang_check.outputs.skip_build != 'true'
-        working-directory: build
-        run: cmake --build . --config ${{ env.BUILD_TYPE }} --parallel
+        run: cmake --build build --parallel
 
       - name: Test
-        if: steps.clang_check.outputs.skip_build != 'true'
-        working-directory: build
-        run: ctest -C ${{ env.BUILD_TYPE }} --output-on-failure --parallel
+        run: >
+          ctest
+          --test-dir build
+          -C ${{ env.BUILD_TYPE }}
+          --output-on-failure
+          --parallel
+
+      - name: Show sccache statistics
+        if: always()
+        shell: bash
+        run: sccache --show-stats
+
+  # ---------------------------------------------------------------------------
+  # Coverage
+  #
+  # Run coverage on pushes, not on every PR build. The normal GCC job above
+  # already verifies that PRs compile and pass tests.
+  # ---------------------------------------------------------------------------
+
+  coverage:
+    name: Coverage
+    if: github.event_name == 'push'
+    runs-on: ubuntu-26.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            gcc-16 \
+            g++-16 \
+            lcov
+
+      - name: Configure
+        shell: bash
+        run: |
+          cmake \
+            -S . \
+            -B build \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_C_COMPILER=gcc-16 \
+            -DCMAKE_CXX_COMPILER=g++-16 \
+            -DOULY_BUILD_TESTS=ON \
+            -DOULY_TEST_COVERAGE=ON
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Test
+        run: >
+          ctest
+          --test-dir build
+          -C Debug
+          --output-on-failure
+          --parallel
 
       - name: Generate coverage report
-        working-directory: ${{ github.workspace }}/build
         shell: bash
-        if: runner.os == 'Linux' && matrix.config.cxx == 'g++-14'
         run: |
-          lcov --gcov-tool gcov-14 --capture --directory . --base-directory ${{ github.workspace }} --output-file coverage.info --no-external --ignore-errors mismatch
-          lcov --remove coverage.info '/usr/*' '*/_deps/*' '*/catch2-src/*' --output-file coverage.info --ignore-errors unused
+          lcov \
+            --gcov-tool gcov-16 \
+            --capture \
+            --directory build \
+            --base-directory "${{ github.workspace }}" \
+            --output-file coverage.info \
+            --no-external \
+            --ignore-errors mismatch
+
+          lcov \
+            --remove coverage.info \
+            '/usr/*' \
+            '*/_deps/*' \
+            '*/catch2-src/*' \
+            --output-file coverage.info \
+            --ignore-errors unused
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        if: runner.os == 'Linux' && matrix.config.cxx == 'g++-14'
+        uses: codecov/codecov-action@v5
         with:
-          file: ${{ github.workspace }}/build/coverage.info
+          files: ./coverage.info
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
 
-      - name: Setup Python
-        if: runner.os == 'Linux' && matrix.config.cxx == 'g++-14'
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.x"
+  # ---------------------------------------------------------------------------
+  # Documentation
+  #
+  # Documentation only needs to be generated/deployed when main changes.
+  # ---------------------------------------------------------------------------
 
-      - name: Install Python dependencies
-        if: runner.os == 'Linux' && matrix.config.cxx == 'g++-14'
-        working-directory: docs
+  docs:
+    name: Documentation
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install system dependencies
         shell: bash
         run: |
-          python -m venv venv
-          source venv/bin/activate
+          sudo apt-get update
+          sudo apt-get install -y doxygen graphviz
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: docs/requirements.txt
+
+      - name: Install Python dependencies
+        shell: bash
+        run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          python -m pip install -r docs/requirements.txt
 
       - name: Generate Doxygen XML
-        if: runner.os == 'Linux' && matrix.config.cxx == 'g++-14'
         shell: bash
         run: doxygen Doxyfile
 
       - name: Build documentation
-        if: runner.os == 'Linux' && matrix.config.cxx == 'g++-14'
-        working-directory: docs
         shell: bash
         run: |
-          source venv/bin/activate
-          sphinx-build -b html source build/html -E -a
+          sphinx-build \
+            -b html \
+            docs/source \
+            docs/build/html \
+            -E \
+            -a
 
       - name: Deploy to GitHub Pages
-        if: github.ref == 'refs/heads/main' && runner.os == 'Linux' && matrix.config.cxx == 'g++-14'
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./docs/build/html
