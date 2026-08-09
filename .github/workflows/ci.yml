@@ -180,7 +180,7 @@ jobs:
           --no-external \
           --include "${{ github.workspace }}/include/ouly/*" \
           --include "${{ github.workspace }}/src/ouly/*" \
-          --ignore-errors mismatch,inconsistent
+          --ignore-errors mismatch,inconsistent,version
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5

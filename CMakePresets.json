@@ -235,6 +235,30 @@
           ]
         }
       }
+    },
+    {
+      "name": "linux-clang-tidy",
+      "displayName": "Linux Clang-Tidy",
+      "description": "Debug build with Clang and clang-tidy enabled.",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
+        "OULY_BUILD_TESTS": "ON",
+        "OULY_ENABLE_CLANG_TIDY": "ON",
+        "OULY_EXPORT_CC_TO_SRC_DIR": "OFF",
+        "ASAN_ENABLED": "OFF"
+      },
+      "vendor": {
+        "microsoft.com/VisualStudioSettings/CMake/1.0": {
+          "hostOS": [
+            "Linux"
+          ]
+        }
+      }
     }
   ],
   "buildPresets": [
@@ -277,6 +301,19 @@
     {
       "name": "macos-release",
       "configurePreset": "macos-release"
+    },
+    {
+      "name": "linux-clang-tidy",
+      "configurePreset": "linux-clang-tidy"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "linux-clang-tidy",
+      "configurePreset": "linux-clang-tidy",
+      "output": {
+        "outputOnFailure": true
+      }
     }
   ]
 }

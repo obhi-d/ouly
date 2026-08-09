@@ -354,8 +354,8 @@ private:
   /** @brief Bump the head of `item`, reserving rollback metadata when configured */
   static auto allocate_from(arena& item, size_type size, std::size_t align) -> address
   {
+    auto const bump = item.arena_size_ - item.left_over_;
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    auto const bump    = item.arena_size_ - item.left_over_;
     auto const head    = reinterpret_cast<std::uintptr_t>(item.buffer_) + bump;
     auto const padding = ouly::detail::linear_allocation_padding<Config, size_type>(head, align);
     if (item.left_over_ < size || (item.left_over_ - size) < padding)

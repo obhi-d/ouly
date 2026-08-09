@@ -18,22 +18,19 @@ concept HasDisableRollback = Config::disable_rollback_v;
 template <typename Config>
 inline constexpr bool linear_rollback_enabled_v = !HasDisableRollback<Config>;
 
-/** @brief Fit the previous bump offset into alignment padding, extending it only when necessary */
+/** @brief Reserve room for the previous bump offset immediately before an aligned allocation */
 template <typename Config, typename SizeType>
 constexpr auto linear_allocation_padding(std::uintptr_t head, std::size_t align) -> SizeType
 {
-  auto padding = ouly::detail::align_padding(head, align);
   if constexpr (linear_rollback_enabled_v<Config>)
   {
-    if (align > 1 && padding < sizeof(SizeType))
+    if (align > 1)
     {
-      // Keep the returned pointer aligned while making the padding large enough for the header.
-      // Existing padding is used first; another boundary is crossed only for the shortfall.
-      auto const shortfall = sizeof(SizeType) - padding;
-      padding += ((shortfall + align - 1) / align) * align;
+      constexpr auto header_size = sizeof(SizeType);
+      return static_cast<SizeType>(header_size + ouly::detail::align_padding(head + header_size, align));
     }
   }
-  return static_cast<SizeType>(padding);
+  return static_cast<SizeType>(ouly::detail::align_padding(head, align));
 }
 
 template <typename SizeType, typename Address>
@@ -144,9 +141,8 @@ public:
    * @brief Allocate `i_size` bytes aligned to `i_alignment`
    *
    * With rollback enabled (the default), aligned allocations keep the previous bump offset in a
-   * small header immediately before the returned address. The header uses the alignment padding
-   * already needed by the allocation whenever it fits there. `cfg::disable_rollback` removes the
-   * metadata entirely.
+   * small header immediately before the returned address. `cfg::disable_rollback` removes this
+   * metadata and its associated padding.
    *
    * @return The aligned address, or `null()` when the arena cannot fit the request
    */
@@ -156,8 +152,8 @@ public:
     [[maybe_unused]] auto measure = statistics::report_allocate(i_size);
 
     auto const align = ouly::detail::alignment_of(i_alignment);
+    auto const bump  = k_arena_size_ - left_over_;
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    auto const bump    = k_arena_size_ - left_over_;
     auto const head    = reinterpret_cast<std::uintptr_t>(buffer_) + bump;
     auto const padding = ouly::detail::linear_allocation_padding<Config, size_type>(head, align);
 
