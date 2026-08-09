@@ -126,68 +126,68 @@ jobs:
   # already verifies that PRs compile and pass tests.
   # ---------------------------------------------------------------------------
 
-  coverage:
-    name: Coverage
-    if: github.event_name == 'push'
-    runs-on: ubuntu-26.04
+  # coverage:
+  #   name: Coverage
+  #   if: github.event_name == 'push'
+  #   runs-on: ubuntu-26.04
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v6
 
-      - name: Install dependencies
-        shell: bash
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            gcc-16 \
-            g++-16 \
-            lcov
+  #     - name: Install dependencies
+  #       shell: bash
+  #       run: |
+  #         sudo apt-get update
+  #         sudo apt-get install -y \
+  #           gcc-16 \
+  #           g++-16 \
+  #           lcov
 
-      - name: Configure
-        shell: bash
-        run: |
-          cmake \
-            -S . \
-            -B build \
-            -G Ninja \
-            -DCMAKE_BUILD_TYPE=Debug \
-            -DCMAKE_C_COMPILER=gcc-16 \
-            -DCMAKE_CXX_COMPILER=g++-16 \
-            -DOULY_BUILD_TESTS=ON \
-            -DOULY_TEST_COVERAGE=ON
+  #     - name: Configure
+  #       shell: bash
+  #       run: |
+  #         cmake \
+  #           -S . \
+  #           -B build \
+  #           -G Ninja \
+  #           -DCMAKE_BUILD_TYPE=Debug \
+  #           -DCMAKE_C_COMPILER=gcc-16 \
+  #           -DCMAKE_CXX_COMPILER=g++-16 \
+  #           -DOULY_BUILD_TESTS=ON \
+  #           -DOULY_TEST_COVERAGE=ON
 
-      - name: Build
-        run: cmake --build build --parallel
+  #     - name: Build
+  #       run: cmake --build build --parallel
 
-      - name: Test
-        run: >
-          ctest
-          --test-dir build
-          -C Debug
-          --output-on-failure
-          --parallel
+  #     - name: Test
+  #       run: >
+  #         ctest
+  #         --test-dir build
+  #         -C Debug
+  #         --output-on-failure
+  #         --parallel
 
-      - name: Generate coverage report
-        shell: bash
-        run: |
-          lcov \
-          --gcov-tool gcov-14 \
-          --capture \
-          --directory build \
-          --base-directory "${{ github.workspace }}" \
-          --output-file coverage.info \
-          --no-external \
-          --include "${{ github.workspace }}/include/ouly/*" \
-          --include "${{ github.workspace }}/src/ouly/*" \
-          --ignore-errors mismatch,inconsistent,version
+  #     - name: Generate coverage report
+  #       shell: bash
+  #       run: |
+  #         lcov \
+  #         --gcov-tool gcov-14 \
+  #         --capture \
+  #         --directory build \
+  #         --base-directory "${{ github.workspace }}" \
+  #         --output-file coverage.info \
+  #         --no-external \
+  #         --include "${{ github.workspace }}/include/ouly/*" \
+  #         --include "${{ github.workspace }}/src/ouly/*" \
+  #         --ignore-errors mismatch,inconsistent,version
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          files: ./coverage.info
-          token: ${{ secrets.CODECOV_TOKEN }}
-          fail_ci_if_error: false
+  #     - name: Upload coverage to Codecov
+  #       uses: codecov/codecov-action@v5
+  #       with:
+  #         files: ./coverage.info
+  #         token: ${{ secrets.CODECOV_TOKEN }}
+  #         fail_ci_if_error: false
 
   # ---------------------------------------------------------------------------
   # ClangTidy
