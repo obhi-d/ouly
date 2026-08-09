@@ -68,19 +68,19 @@ TEST_CASE("Validate linear_arena_allocator with alignment", "[linear_arena_alloc
     void*         data;
     std::uint32_t size;
   };
-  constexpr std::uint32_t k_arena_size = 1152;
+  constexpr std::uint32_t k_arena_size = 1536;
   allocator_t             allocator(k_arena_size);
   auto                    start  = ouly::allocate<std::uint8_t>(allocator, 256, 128);
   auto                    first  = start;
   auto                    off100 = ouly::allocate<std::uint8_t>(allocator, 512, 128);
-  CHECK(start + 256 == off100);
+  CHECK(off100 >= start + 256);
   allocator.deallocate(off100, 512);
   off100 = ouly::allocate<std::uint8_t>(allocator, 512, 128);
-  CHECK(start + 256 == off100);
+  CHECK(off100 >= start + 256);
   auto new_arena = ouly::allocate<std::uint8_t>(allocator, 1024, 128);
   CHECK(2 == allocator.get_arena_count());
   auto from_old = ouly::allocate<std::uint8_t>(allocator, 256);
-  CHECK(off100 + 512 == from_old);
+  CHECK(from_old >= off100 + 512);
   allocator.deallocate(new_arena, 1024);
   new_arena = ouly::allocate<std::uint8_t>(allocator, 1024, 128);
   CHECK(2 == allocator.get_arena_count());
@@ -238,9 +238,10 @@ TEST_CASE("Validate linear_stack_allocator realloc", "[linear_stack_allocator]")
   CHECK(allocator.get_arena_count() == 2);
 }
 
-TEST_CASE("linear_allocator does not pay for alignment it already has", "[linear_allocator]")
+TEST_CASE("linear allocators can disable rollback metadata", "[linear_allocator]")
 {
-  using allocator_t                    = ouly::linear_allocator<>;
+  using config_t                       = ouly::config<ouly::cfg::disable_rollback>;
+  using allocator_t                    = ouly::linear_allocator<config_t>;
   constexpr std::uint32_t k_arena_size = 1024;
 
   allocator_t allocator(k_arena_size);
@@ -267,6 +268,72 @@ TEST_CASE("linear_allocator does not pay for alignment it already has", "[linear
   auto* over = static_cast<std::uint8_t*>(allocator.allocate(16, ouly::alignment<64>()));
   CHECK(reinterpret_cast<std::uintptr_t>(over) % 64 == 0);
   CHECK(over >= realigned + 16);
+
+  auto const free_size = allocator.get_free_size();
+  allocator.deallocate(over, 16, ouly::alignment<64>());
+  CHECK(allocator.get_free_size() == free_size);
+
+  SECTION("linear_arena_allocator")
+  {
+    ouly::linear_arena_allocator<config_t> arena_allocator(k_arena_size);
+    auto*                                  block = arena_allocator.allocate(16, ouly::alignment<64>());
+    arena_allocator.deallocate(block, 16, ouly::alignment<64>());
+    CHECK(arena_allocator.allocate(16, ouly::alignment<64>()) != block);
+  }
+
+  SECTION("linear_stack_allocator")
+  {
+    ouly::linear_stack_allocator<config_t> stack_allocator(k_arena_size);
+    auto*                                  block = stack_allocator.allocate(16, ouly::alignment<64>());
+    stack_allocator.deallocate(block, 16, ouly::alignment<64>());
+    CHECK(stack_allocator.allocate(16, ouly::alignment<64>()) != block);
+  }
+}
+
+TEST_CASE("linear allocators roll alignment padding back exactly", "[linear_allocator][rollback]")
+{
+  SECTION("linear_allocator")
+  {
+    ouly::linear_allocator<> allocator(1024);
+    auto*                    first       = static_cast<std::uint8_t*>(allocator.allocate(1));
+    auto const               free_before = allocator.get_free_size();
+    auto const natural_padding           = ouly::detail::align_padding(reinterpret_cast<std::uintptr_t>(first + 1), 64);
+    REQUIRE(natural_padding >= sizeof(std::size_t));
+    auto* block = allocator.allocate(31, ouly::alignment<64>());
+
+    REQUIRE(block != nullptr);
+    REQUIRE(reinterpret_cast<std::uintptr_t>(block) % 64 == 0);
+    CHECK(block == first + 1 + natural_padding);
+    CHECK(allocator.get_free_size() == free_before - natural_padding - 31);
+
+    allocator.deallocate(block, 31, ouly::alignment<64>());
+    CHECK(allocator.get_free_size() == free_before);
+    CHECK(allocator.allocate(31, ouly::alignment<64>()) == block);
+  }
+
+  SECTION("linear_arena_allocator")
+  {
+    ouly::linear_arena_allocator<> allocator(1024);
+    static_cast<void>(allocator.allocate(1));
+    auto* block = allocator.allocate(31, ouly::alignment<64>());
+
+    REQUIRE(block != nullptr);
+    REQUIRE(reinterpret_cast<std::uintptr_t>(block) % 64 == 0);
+    allocator.deallocate(block, 31, ouly::alignment<64>());
+    CHECK(allocator.allocate(31, ouly::alignment<64>()) == block);
+  }
+
+  SECTION("linear_stack_allocator")
+  {
+    ouly::linear_stack_allocator<> allocator(1024);
+    static_cast<void>(allocator.allocate(1));
+    auto* block = allocator.allocate(31, ouly::alignment<64>());
+
+    REQUIRE(block != nullptr);
+    REQUIRE(reinterpret_cast<std::uintptr_t>(block) % 64 == 0);
+    allocator.deallocate(block, 31, ouly::alignment<64>());
+    CHECK(allocator.allocate(31, ouly::alignment<64>()) == block);
+  }
 }
 
 TEST_CASE("linear allocators take an alignment known only at runtime", "[linear_allocator]")
@@ -278,7 +345,7 @@ TEST_CASE("linear allocators take an alignment known only at runtime", "[linear_
     ouly::linear_allocator<> allocator(k_arena_size);
     auto*                    block = static_cast<std::uint8_t*>(allocator.allocate(100, std::align_val_t{64}));
     CHECK(reinterpret_cast<std::uintptr_t>(block) % 64 == 0);
-    CHECK(allocator.get_free_size() == k_arena_size - 100);
+    CHECK(allocator.get_free_size() <= k_arena_size - 100);
     allocator.deallocate(block, 100, std::align_val_t{64});
     CHECK(allocator.get_free_size() == k_arena_size);
   }

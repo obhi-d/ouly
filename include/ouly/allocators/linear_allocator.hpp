@@ -10,6 +10,52 @@
 namespace ouly
 {
 
+namespace detail
+{
+template <typename Config>
+concept HasDisableRollback = Config::disable_rollback_v;
+
+template <typename Config>
+inline constexpr bool linear_rollback_enabled_v = !HasDisableRollback<Config>;
+
+/** @brief Fit the previous bump offset into alignment padding, extending it only when necessary */
+template <typename Config, typename SizeType>
+constexpr auto linear_allocation_padding(std::uintptr_t head, std::size_t align) -> SizeType
+{
+  auto padding = ouly::detail::align_padding(head, align);
+  if constexpr (linear_rollback_enabled_v<Config>)
+  {
+    if (align > 1 && padding < sizeof(SizeType))
+    {
+      // Keep the returned pointer aligned while making the padding large enough for the header.
+      // Existing padding is used first; another boundary is crossed only for the shortfall.
+      auto const shortfall = sizeof(SizeType) - padding;
+      padding += ((shortfall + align - 1) / align) * align;
+    }
+  }
+  return static_cast<SizeType>(padding);
+}
+
+template <typename SizeType, typename Address>
+void store_linear_bump(Address data, SizeType bump)
+{
+  // The header may not have SizeType alignment, so access it byte-wise.
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+  auto* header = static_cast<std::uint8_t*>(data) - sizeof(SizeType);
+  std::memcpy(header, &bump, sizeof(bump));
+}
+
+template <typename SizeType, typename Address>
+auto load_linear_bump(Address data) -> SizeType
+{
+  SizeType bump{};
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+  auto const* header = static_cast<std::uint8_t const*>(data) - sizeof(SizeType);
+  std::memcpy(&bump, header, sizeof(bump));
+  return bump;
+}
+} // namespace detail
+
 /**
  * @brief A linear (arena) allocator that allocates memory in a sequential manner
  *
@@ -97,10 +143,10 @@ public:
   /**
    * @brief Allocate `i_size` bytes aligned to `i_alignment`
    *
-   * Only the padding the arena head actually needs is consumed: when the head already satisfies the
-   * requested alignment - which is always the case while the arena base is at least as aligned as
-   * the request and every previous allocation kept the head aligned - the allocation costs exactly
-   * `i_size` bytes.
+   * With rollback enabled (the default), aligned allocations keep the previous bump offset in a
+   * small header immediately before the returned address. The header uses the alignment padding
+   * already needed by the allocation whenever it fits there. `cfg::disable_rollback` removes the
+   * metadata entirely.
    *
    * @return The aligned address, or `null()` when the arena cannot fit the request
    */
@@ -111,8 +157,9 @@ public:
 
     auto const align = ouly::detail::alignment_of(i_alignment);
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    auto const head    = reinterpret_cast<std::uintptr_t>(buffer_) + (k_arena_size_ - left_over_);
-    auto const padding = static_cast<size_type>(ouly::detail::align_padding(head, align));
+    auto const bump    = k_arena_size_ - left_over_;
+    auto const head    = reinterpret_cast<std::uintptr_t>(buffer_) + bump;
+    auto const padding = ouly::detail::linear_allocation_padding<Config, size_type>(head, align);
 
     OULY_ASSERT(left_over_ >= i_size && (left_over_ - i_size) >= padding);
     if (left_over_ < i_size || (left_over_ - i_size) < padding)
@@ -122,7 +169,15 @@ public:
 
     left_over_ -= (padding + i_size);
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast, performance-no-int-to-ptr)
-    return reinterpret_cast<address>(head + padding);
+    auto result = reinterpret_cast<address>(head + padding);
+    if constexpr (ouly::detail::linear_rollback_enabled_v<Config>)
+    {
+      if (align > 1)
+      {
+        ouly::detail::store_linear_bump(result, bump);
+      }
+    }
+    return result;
   }
 
   template <typename Alignment = alignment<>>
@@ -177,21 +232,37 @@ public:
    * @brief Give a block back to the arena
    *
    * Only the block sitting at the head of the arena is reclaimed; anything else is released when the
-   * allocator is destroyed. Padding inserted ahead of an aligned block is not reclaimed, since the
-   * position of the previous head is not recorded.
+   * allocator is destroyed. The rollback header restores alignment padding as well as the payload.
+   * When `cfg::disable_rollback` is configured this operation is a no-op.
    */
   template <typename Alignment = alignment<>>
-  void deallocate(address i_data, size_type i_size, [[maybe_unused]] Alignment i_alignment = {})
+  void deallocate([[maybe_unused]] address i_data, [[maybe_unused]] size_type i_size,
+                  [[maybe_unused]] Alignment i_alignment = {})
   {
-    [[maybe_unused]] auto measure = statistics::report_deallocate(i_size);
-
-    // merge back?
-    size_type new_left_over = left_over_ + i_size;
-    size_type offset        = (k_arena_size_ - new_left_over);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-    if (static_cast<std::uint8_t*>(buffer_) + offset == static_cast<std::uint8_t*>(i_data))
+    if constexpr (ouly::detail::linear_rollback_enabled_v<Config>)
     {
-      left_over_ = new_left_over;
+      [[maybe_unused]] auto measure = statistics::report_deallocate(i_size);
+
+      // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+      auto* head = static_cast<std::uint8_t*>(buffer_) + (k_arena_size_ - left_over_);
+      auto* end  = static_cast<std::uint8_t*>(i_data) + i_size;
+      // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+      if (end != head)
+      {
+        return;
+      }
+
+      auto const align = ouly::detail::alignment_of(i_alignment);
+      if (align > 1)
+      {
+        auto const bump = ouly::detail::load_linear_bump<size_type>(i_data);
+        OULY_ASSERT(bump <= k_arena_size_);
+        left_over_ = k_arena_size_ - bump;
+      }
+      else
+      {
+        left_over_ += i_size;
+      }
     }
   }
 

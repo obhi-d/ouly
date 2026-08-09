@@ -71,29 +71,55 @@ public:
     return {};
   }
 
-  auto as_double() const noexcept
+  auto as_double() const noexcept -> std::optional<double>
   {
-    return ouly::optional_ref(value.get().get_ptr<json::number_float_t const*>());
+    auto const& v = value.get();
+    if (v.is_number_float())
+    {
+      return std::optional<double>(v.get<json::number_float_t>());
+    }
+    return {};
   }
 
-  auto as_uint64() const noexcept
+  auto as_uint64() const noexcept -> std::optional<uint64_t>
   {
-    return ouly::optional_ref(value.get().get_ptr<json::number_unsigned_t const*>());
+    auto const& v = value.get();
+    if (v.is_number_unsigned())
+    {
+      return std::optional<uint64_t>(static_cast<uint64_t>(v.get<json::number_integer_t>()));
+    }
+    return {};
   }
 
-  auto as_int64() const noexcept
+  auto as_int64() const noexcept -> std::optional<int64_t>
   {
-    return ouly::optional_ref(value.get().get_ptr<json::number_integer_t const*>());
+    auto const& v = value.get();
+    if (v.is_number_integer() || v.is_number_unsigned())
+    {
+      return std::optional<int64_t>(v.get<json::number_integer_t>());
+    }
+    return {};
   }
 
-  auto as_bool() const noexcept
+  auto as_bool() const noexcept -> std::optional<bool>
   {
-    return ouly::optional_ref(value.get().get_ptr<json::boolean_t const*>());
+    auto const& v = value.get();
+    if (v.is_boolean())
+    {
+      return std::optional<bool>(v.get<json::boolean_t>());
+    }
+    return {};
   }
 
-  auto as_string() const noexcept
+  auto as_string() const noexcept -> std::optional<std::string>
   {
-    return ouly::optional_ref(value.get().get_ptr<json::string_t const*>());
+
+    auto const& v = value.get();
+    if (v.is_string())
+    {
+      return std::optional<std::string>(v.get<json::string_t>());
+    }
+    return {};
   }
 
 private:

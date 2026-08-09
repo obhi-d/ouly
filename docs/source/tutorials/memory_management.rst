@@ -152,6 +152,7 @@ Available allocator configuration options:
 
 * ``ouly::cfg::min_alignment<N>`` - Set minimum memory alignment requirements
 * ``ouly::cfg::track_memory`` - Enable memory usage tracking
+* ``ouly::cfg::disable_rollback`` - Remove linear-allocation rollback metadata; ``deallocate`` becomes a no-op
 * ``ouly::cfg::compute_stats`` - Collect basic allocation statistics  
 * ``ouly::cfg::compute_atomic_stats`` - Collect thread-safe allocation statistics
 * ``ouly::cfg::underlying_allocator<T>`` - Specify custom underlying allocator
@@ -190,12 +191,13 @@ new``/``operator delete`` pair:
    void*             block  = allocator.allocate(1024, std::align_val_t{wanted});
    allocator.deallocate(block, 1024, std::align_val_t{wanted});
 
-Alignment is only paid for when it is not already satisfied. Arena memory starts out aligned to
-whatever the underlying allocator guarantees - ``alignof(std::max_align_t)`` by default, or
-``ouly::cfg::min_alignment<N>`` when it is configured - and the linear allocators bump their head by
-exactly the padding the request needs. A request that is no stricter than the arena boundary, off a
-head that is already on it, therefore consumes exactly the bytes asked for. Only a request stricter
-than the underlying guarantee makes a fresh arena reserve room to align within.
+The non-threaded linear allocators store a small header before aligned allocations. It first uses
+the alignment padding the allocation already needs, crossing another alignment boundary only when
+that gap is too small. The header records the previous bump offset so LIFO ``deallocate`` restores
+both the payload and every byte of padding. Configure ``ouly::cfg::disable_rollback`` for workloads
+that only rewind in bulk; this removes the header and makes ``deallocate`` a no-op. The lock-free
+threaded allocators retain their metadata-free allocation path and may leave alignment padding
+consumed after deallocation.
 
 **Advanced Configuration Examples:**
 

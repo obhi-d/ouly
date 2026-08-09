@@ -20,6 +20,12 @@ struct track_memory
   static constexpr bool track_memory_v = true;
 };
 
+/** @brief Disable per-allocation metadata and LIFO rollback in linear allocators */
+struct disable_rollback
+{
+  static constexpr bool disable_rollback_v = true;
+};
+
 template <typename T>
 struct debug_tracer
 {

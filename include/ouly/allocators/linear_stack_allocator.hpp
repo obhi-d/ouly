@@ -113,8 +113,9 @@ public:
   /**
    * @brief Allocate `i_size` bytes aligned to `i_alignment`
    *
-   * Arenas are probed with the padding their own head actually needs, so a head that already
-   * satisfies the requested alignment consumes exactly `i_size` bytes.
+   * Aligned allocations reserve a small rollback header by default, using their natural alignment
+   * padding whenever possible. Configure `cfg::disable_rollback` to remove it when only bulk
+   * rewinds are needed.
    */
   template <typename Alignment = alignment<>>
   [[nodiscard]] auto allocate(size_type i_size, Alignment i_alignment = {}) -> address
@@ -132,8 +133,7 @@ public:
       }
     }
 
-    // A fresh arena is only padded when the request is over-aligned with respect to the underlying
-    // allocator, so reserve for that case alone
+    // A fresh arena also needs room for rollback metadata when it is enabled.
     size_type max_arena_size = std::max<size_type>(i_size + worst_case_padding(align), k_arena_size_);
     return allocate_from(arenas_[allocate_new_arena(max_arena_size)], i_size, align);
   }
@@ -182,9 +182,43 @@ public:
   }
 
   template <typename Alignment = alignment<>>
-  void deallocate(address /*i_data*/, size_type /*i_size*/, Alignment /*i_alignment*/ = {})
+  void deallocate([[maybe_unused]] address i_data, [[maybe_unused]] size_type i_size,
+                  [[maybe_unused]] Alignment i_alignment = {})
   {
-    // does not support deallocate, only rewinds are supported
+    if constexpr (ouly::detail::linear_rollback_enabled_v<Config>)
+    {
+      [[maybe_unused]] auto measure = statistics::report_deallocate(i_size);
+
+      for (auto id = static_cast<size_type>(arenas_.size()); id > current_arena_;)
+      {
+        --id;
+        if (!in_range(arenas_[id], i_data))
+        {
+          continue;
+        }
+
+        auto& item = arenas_[id];
+        // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+        auto* head = static_cast<std::uint8_t*>(item.buffer_) + (item.arena_size_ - item.left_over_);
+        auto* end  = static_cast<std::uint8_t*>(i_data) + i_size;
+        // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+        if (end == head)
+        {
+          auto const align = ouly::detail::alignment_of(i_alignment);
+          if (align > 1)
+          {
+            auto const bump = ouly::detail::load_linear_bump<size_type>(i_data);
+            OULY_ASSERT(bump <= item.arena_size_);
+            item.left_over_ = item.arena_size_ - bump;
+          }
+          else
+          {
+            item.left_over_ += i_size;
+          }
+        }
+        break;
+      }
+    }
   }
 
   void smart_rewind()
@@ -303,19 +337,27 @@ private:
     return index;
   }
 
-  /** @brief Padding a fresh arena may need, which is none unless the request is over-aligned */
+  /** @brief Worst-case rollback metadata and alignment padding needed in a fresh arena */
   static constexpr auto worst_case_padding(std::size_t align) -> size_type
   {
-    constexpr auto guaranteed = ouly::detail::guaranteed_alignment_v<underlying_allocator>;
-    return align > guaranteed ? static_cast<size_type>(align - 1) : size_type{0};
+    if constexpr (ouly::detail::linear_rollback_enabled_v<Config>)
+    {
+      return align > 1 ? static_cast<size_type>(sizeof(size_type) + align - 1) : size_type{0};
+    }
+    else
+    {
+      constexpr auto guaranteed = ouly::detail::guaranteed_alignment_v<underlying_allocator>;
+      return align > guaranteed ? static_cast<size_type>(align - 1) : size_type{0};
+    }
   }
 
-  /** @brief Bump the head of `item`, padding it only by what the alignment actually requires */
+  /** @brief Bump the head of `item`, reserving rollback metadata when configured */
   static auto allocate_from(arena& item, size_type size, std::size_t align) -> address
   {
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    auto const head    = reinterpret_cast<std::uintptr_t>(item.buffer_) + (item.arena_size_ - item.left_over_);
-    auto const padding = static_cast<size_type>(ouly::detail::align_padding(head, align));
+    auto const bump    = item.arena_size_ - item.left_over_;
+    auto const head    = reinterpret_cast<std::uintptr_t>(item.buffer_) + bump;
+    auto const padding = ouly::detail::linear_allocation_padding<Config, size_type>(head, align);
     if (item.left_over_ < size || (item.left_over_ - size) < padding)
     {
       return null();
@@ -323,7 +365,15 @@ private:
 
     item.left_over_ -= (padding + size);
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast, performance-no-int-to-ptr)
-    return reinterpret_cast<address>(head + padding);
+    auto result = reinterpret_cast<address>(head + padding);
+    if constexpr (ouly::detail::linear_rollback_enabled_v<Config>)
+    {
+      if (align > 1)
+      {
+        ouly::detail::store_linear_bump(result, bump);
+      }
+    }
+    return result;
   }
 
   std::vector<arena> arenas_;

@@ -13,8 +13,7 @@ option(ASAN_ENABLED "Build this target with AddressSanitizer" OFF)
 option(OULY_REC_STATS "No stats for allocator" OFF)
 option(OULY_TEST_COVERAGE "Build test coverage." OFF)
 
-set(OULY_BISON_EXE "bison" CACHE STRING "Bison execuatable")
-set(OULY_FLEX_EXE "flex" CACHE STRING "Flex executable")
+option(OULY_ENABLE_CLANG_TIDY "Run clang-tidy while compiling OULY." OFF)
 
 ##
 ## CONFIGURATION
@@ -111,16 +110,13 @@ message(
     "Using ${CMAKE_CXX_COMPILER} version ${CMAKE_CXX_COMPILER_VERSION}"
 )
 # Check if Windows, skip clang-tidy in which case
-if(NOT MSVC)
-    find_program(CLANG_TIDY_EXE NAMES "clang-tidy")
-    # setup clang-tidy command from executable + options
-    if(CLANG_TIDY_EXE)
-        set(CLANG_TIDY_COMMAND "${CLANG_TIDY_EXE}")
-        set_target_properties(
-            ${OULY_TARGET_NAME}
-            PROPERTIES CXX_CLANG_TIDY "${CLANG_TIDY_COMMAND}"
-        )
-    endif()
+if(OULY_ENABLE_CLANG_TIDY)
+    find_program(CLANG_TIDY_EXE NAMES clang-tidy REQUIRED)
+
+    set_target_properties(
+        ${OULY_TARGET_NAME}
+        PROPERTIES CXX_CLANG_TIDY "${CLANG_TIDY_EXE};--extra-arg=-std=c++20"
+    )
 endif()
 
 add_library(${PROJECT_NAME}::${OULY_TARGET_NAME} ALIAS ${OULY_TARGET_NAME})

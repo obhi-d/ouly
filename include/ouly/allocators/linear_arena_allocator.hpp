@@ -90,9 +90,9 @@ public:
   /**
    * @brief Allocate `i_size` bytes aligned to `i_alignment`
    *
-   * Each arena is probed with the padding its own head actually needs, so an arena whose head
-   * already satisfies the request - the common case, since arenas come from an underlying allocator
-   * that is at least `max_align_t` aligned - consumes exactly `i_size` bytes.
+   * Each aligned allocation reserves a small rollback header by default, using its natural
+   * alignment padding whenever that gap is large enough. Configure `cfg::disable_rollback` to use a
+   * metadata-free bump path when individual deallocation is not needed.
    */
   template <typename Alignment = alignment<>>
   [[nodiscard]] auto allocate(size_type i_size, Alignment i_alignment = {}) -> address
@@ -116,8 +116,7 @@ public:
       }
     }
 
-    // A fresh arena is only padded when the request is over-aligned with respect to the underlying
-    // allocator, so reserve for that case alone
+    // A fresh arena also needs room for rollback metadata when it is enabled.
     size_type max_arena_size = std::max<size_type>(i_size + worst_case_padding(align), k_arena_size_);
     return allocate_from(arenas_[allocate_new_arena(max_arena_size)], i_size, align);
   }
@@ -173,30 +172,46 @@ public:
   /**
    * @brief Give a block back to the arena it came from
    *
-   * Only the block sitting at the head of its arena is reclaimed. Padding inserted ahead of an
-   * aligned block is not reclaimed, since the position of the previous head is not recorded.
+   * Only the block sitting at the head of its arena is reclaimed. Its rollback header restores the
+   * exact previous bump offset, including alignment padding. With `cfg::disable_rollback` this is a
+   * no-op.
    */
   template <typename Alignment = alignment<>>
-  void deallocate(address i_data, size_type i_size, [[maybe_unused]] Alignment i_alignment = {})
+  void deallocate([[maybe_unused]] address i_data, [[maybe_unused]] size_type i_size,
+                  [[maybe_unused]] Alignment i_alignment = {})
   {
-    [[maybe_unused]] auto measure = statistics::report_deallocate(i_size);
-
-    // iterate downwards without underflowing the unsigned index when current_arena_ is 0
-    for (auto id = static_cast<size_type>(arenas_.size()); id > current_arena_;)
+    if constexpr (ouly::detail::linear_rollback_enabled_v<Config>)
     {
-      --id;
-      if (in_range(arenas_[id], i_data))
-      {
-        // merge back?
-        size_type new_left_over = arenas_[id].left_over_ + i_size;
-        size_type offset        = (arenas_[id].arena_size_ - new_left_over);
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-        if (static_cast<std::uint8_t*>(arenas_[id].buffer_) + offset == static_cast<std::uint8_t*>(i_data))
-        {
-          arenas_[id].left_over_ = new_left_over;
-        }
+      [[maybe_unused]] auto measure = statistics::report_deallocate(i_size);
 
-        break;
+      // iterate downwards without underflowing the unsigned index when current_arena_ is 0
+      for (auto id = static_cast<size_type>(arenas_.size()); id > current_arena_;)
+      {
+        --id;
+        if (in_range(arenas_[id], i_data))
+        {
+          auto& item = arenas_[id];
+          // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+          auto* head = static_cast<std::uint8_t*>(item.buffer_) + (item.arena_size_ - item.left_over_);
+          auto* end  = static_cast<std::uint8_t*>(i_data) + i_size;
+          // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+          if (end == head)
+          {
+            auto const align = ouly::detail::alignment_of(i_alignment);
+            if (align > 1)
+            {
+              auto const bump = ouly::detail::load_linear_bump<size_type>(i_data);
+              OULY_ASSERT(bump <= item.arena_size_);
+              item.left_over_ = item.arena_size_ - bump;
+            }
+            else
+            {
+              item.left_over_ += i_size;
+            }
+          }
+
+          break;
+        }
       }
     }
   }
@@ -303,19 +318,27 @@ private:
     return index;
   }
 
-  /** @brief Padding a fresh arena may need, which is none unless the request is over-aligned */
+  /** @brief Worst-case rollback metadata and alignment padding needed in a fresh arena */
   static constexpr auto worst_case_padding(std::size_t align) -> size_type
   {
-    constexpr auto guaranteed = ouly::detail::guaranteed_alignment_v<underlying_allocator>;
-    return align > guaranteed ? static_cast<size_type>(align - 1) : size_type{0};
+    if constexpr (ouly::detail::linear_rollback_enabled_v<Config>)
+    {
+      return align > 1 ? static_cast<size_type>(sizeof(size_type) + align - 1) : size_type{0};
+    }
+    else
+    {
+      constexpr auto guaranteed = ouly::detail::guaranteed_alignment_v<underlying_allocator>;
+      return align > guaranteed ? static_cast<size_type>(align - 1) : size_type{0};
+    }
   }
 
-  /** @brief Bump the head of `item`, padding it only by what the alignment actually requires */
+  /** @brief Bump the head of `item`, reserving rollback metadata when configured */
   static auto allocate_from(arena& item, size_type size, std::size_t align) -> address
   {
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    auto const head    = reinterpret_cast<std::uintptr_t>(item.buffer_) + (item.arena_size_ - item.left_over_);
-    auto const padding = static_cast<size_type>(ouly::detail::align_padding(head, align));
+    auto const bump    = item.arena_size_ - item.left_over_;
+    auto const head    = reinterpret_cast<std::uintptr_t>(item.buffer_) + bump;
+    auto const padding = ouly::detail::linear_allocation_padding<Config, size_type>(head, align);
     if (item.left_over_ < size || (item.left_over_ - size) < padding)
     {
       return null();
@@ -323,7 +346,15 @@ private:
 
     item.left_over_ -= (padding + size);
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast, performance-no-int-to-ptr)
-    return reinterpret_cast<address>(head + padding);
+    auto result = reinterpret_cast<address>(head + padding);
+    if constexpr (ouly::detail::linear_rollback_enabled_v<Config>)
+    {
+      if (align > 1)
+      {
+        ouly::detail::store_linear_bump(result, bump);
+      }
+    }
+    return result;
   }
 
   ouly::vector<arena> arenas_;

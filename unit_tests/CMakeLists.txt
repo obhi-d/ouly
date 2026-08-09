@@ -6,25 +6,25 @@ include(FetchContent)
 FetchContent_Declare(
     Catch2
     GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-    GIT_TAG v3.15.0
+    GIT_TAG v3.15.3
 )
 
 FetchContent_Declare(
     nlohmann_json
     GIT_REPOSITORY https://github.com/nlohmann/json.git
-    GIT_TAG v3.11.3
+    GIT_TAG v3.12.0
 )
 
 FetchContent_Declare(
     fast_float
     GIT_REPOSITORY https://github.com/fastfloat/fast_float.git
-    GIT_TAG v8.0.0
+    GIT_TAG v8.2.10
 )
 
 FetchContent_Declare(
     glm
     GIT_REPOSITORY https://github.com/g-truc/glm.git
-    GIT_TAG 1.0.1
+    GIT_TAG 1.0.3
 )
 
 # Use Catch2's standard line-number fallback so strict builds do not rely on

@@ -127,9 +127,6 @@
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
-        "OULY_BISON_EXE": "C:\\repos\\winflexbison\\win_bison.exe",
-        "OULY_FLEX_EXE": "C:\\repos\\winflexbison\\win_flex.exe",
-        "OULY_GENERATE_YAML_PARSER": "ON",
         "ASAN_ENABLED": "ON",
         "OULY_BUILD_TESTS": "ON"
       },
@@ -181,10 +178,7 @@
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
         "ASAN_ENABLED": "ON",
-        "OULY_BUILD_TESTS": "ON",
-        "OULY_GENERATE_SCLI_PARSER": "ON",
-        "OULY_BISON_EXE": "C:\\repos\\winflexbison\\win_bison.exe",
-        "OULY_FLEX_EXE": "C:\\repos\\winflexbison\\win_flex.exe"
+        "OULY_BUILD_TESTS": "ON"
       },
       "vendor": {
         "microsoft.com/VisualStudioSettings/CMake/1.0": {
