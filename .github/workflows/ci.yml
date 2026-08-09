@@ -172,21 +172,15 @@ jobs:
         shell: bash
         run: |
           lcov \
-            --gcov-tool gcov-16 \
-            --capture \
-            --directory build \
-            --base-directory "${{ github.workspace }}" \
-            --output-file coverage.info \
-            --no-external \
-            --ignore-errors mismatch,inconsistent
-
-          lcov \
-            --remove coverage.info \
-            '/usr/*' \
-            '*/_deps/*' \
-            '*/catch2-src/*' \
-            --output-file coverage.info \
-            --ignore-errors unused
+          --gcov-tool gcov-14 \
+          --capture \
+          --directory build \
+          --base-directory "${{ github.workspace }}" \
+          --output-file coverage.info \
+          --no-external \
+          --include "${{ github.workspace }}/include/ouly/*" \
+          --include "${{ github.workspace }}/src/ouly/*" \
+          --ignore-errors mismatch,inconsistent
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
@@ -194,6 +188,34 @@ jobs:
           files: ./coverage.info
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
+
+  # ---------------------------------------------------------------------------
+  # ClangTidy
+  #
+  # Check if clang tidy build passes
+  # ---------------------------------------------------------------------------
+  clang-tidy:
+    name: Clang-Tidy
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Configure
+        shell: bash
+        run: |
+          cmake \
+            -S . \
+            -B build \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_COMPILER=clang++-18 \
+            -DOULY_BUILD_TESTS=ON \
+            -DOULY_ENABLE_CLANG_TIDY=ON
+
+      - name: Build
+        run: cmake --build build --parallel
 
   # ---------------------------------------------------------------------------
   # Documentation
