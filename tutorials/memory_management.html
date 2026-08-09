@@ -53,7 +53,10 @@
 <li class="toctree-l3"><a class="reference internal" href="#linear-allocator">Linear Allocator</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#linear-arena-allocator">Linear Arena Allocator</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pool-allocator">Pool Allocator</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#configuration-system">Configuration System</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#configuration-system">Configuration System</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#requesting-an-alignment">Requesting an Alignment</a></li>
+</ul>
+</li>
 <li class="toctree-l3"><a class="reference internal" href="#thread-safe-allocators">Thread-Safe Allocators</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#address-space-allocators">Address Space Allocators</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#best-practices">Best Practices</a></li>
@@ -243,6 +246,7 @@
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::min_alignment&lt;N&gt;</span></code> - Set minimum memory alignment requirements</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::track_memory</span></code> - Enable memory usage tracking</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::disable_rollback</span></code> - Remove linear-allocation rollback metadata; <code class="docutils literal notranslate"><span class="pre">deallocate</span></code> becomes a no-op</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::compute_stats</span></code> - Collect basic allocation statistics</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::compute_atomic_stats</span></code> - Collect thread-safe allocation statistics</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::underlying_allocator&lt;T&gt;</span></code> - Specify custom underlying allocator</p></li>
@@ -261,6 +265,30 @@
 <li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::debug_tracer&lt;T&gt;</span></code> - Enable debug tracing with custom tracer</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::base_stats&lt;T&gt;</span></code> - Set base statistics collection type</p></li>
 </ul>
+<section id="requesting-an-alignment">
+<h3>Requesting an Alignment<a class="headerlink" href="#requesting-an-alignment" title="Link to this heading"></a></h3>
+<p>Every allocator takes the alignment as a trailing argument, spelled either as the compile time tag
+<code class="docutils literal notranslate"><span class="pre">ouly::alignment&lt;N&gt;</span></code> or, when the value is only known at runtime, as a <code class="docutils literal notranslate"><span class="pre">std::align_val_t</span></code>. The
+same alignment has to be handed back to <code class="docutils literal notranslate"><span class="pre">deallocate</span></code>, exactly as with the aligned <code class="docutils literal notranslate"><span class="pre">operator</span>
+<span class="pre">new</span></code>/<code class="docutils literal notranslate"><span class="pre">operator</span> <span class="pre">delete</span></code> pair:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">ouly</span><span class="o">::</span><span class="n">linear_allocator</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">allocator</span><span class="p">(</span><span class="mi">4096</span><span class="p">);</span>
+
+<span class="c1">// Alignment known at compile time</span>
+<span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">simd</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">allocator</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="mi">256</span><span class="p">,</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">alignment</span><span class="o">&lt;</span><span class="mi">32</span><span class="o">&gt;</span><span class="p">());</span>
+
+<span class="c1">// Alignment known only at runtime</span>
+<span class="n">std</span><span class="o">::</span><span class="kt">size_t</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">wanted</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">query_device_alignment</span><span class="p">();</span>
+<span class="kt">void</span><span class="o">*</span><span class="w">             </span><span class="n">block</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="n">allocator</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="mi">1024</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">align_val_t</span><span class="p">{</span><span class="n">wanted</span><span class="p">});</span>
+<span class="n">allocator</span><span class="p">.</span><span class="n">deallocate</span><span class="p">(</span><span class="n">block</span><span class="p">,</span><span class="w"> </span><span class="mi">1024</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">align_val_t</span><span class="p">{</span><span class="n">wanted</span><span class="p">});</span>
+</pre></div>
+</div>
+<p>The non-threaded linear allocators store a small header before aligned allocations. It first uses
+the alignment padding the allocation already needs, crossing another alignment boundary only when
+that gap is too small. The header records the previous bump offset so LIFO <code class="docutils literal notranslate"><span class="pre">deallocate</span></code> restores
+both the payload and every byte of padding. Configure <code class="docutils literal notranslate"><span class="pre">ouly::cfg::disable_rollback</span></code> for workloads
+that only rewind in bulk; this removes the header and makes <code class="docutils literal notranslate"><span class="pre">deallocate</span></code> a no-op. The lock-free
+threaded allocators retain their metadata-free allocation path and may leave alignment padding
+consumed after deallocation.</p>
 <p><strong>Advanced Configuration Examples:</strong></p>
 <div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// High-performance arena with custom strategy</span>
 <span class="k">using</span><span class="w"> </span><span class="n">PerformanceConfig</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">config</span><span class="o">&lt;</span>
@@ -290,6 +318,7 @@
 <span class="n">ouly</span><span class="o">::</span><span class="n">pool_allocator</span><span class="o">&lt;</span><span class="n">PoolConfig</span><span class="o">&gt;</span><span class="w"> </span><span class="n">pool</span><span class="p">;</span>
 </pre></div>
 </div>
+</section>
 </section>
 <section id="thread-safe-allocators">
 <h2>Thread-Safe Allocators<a class="headerlink" href="#thread-safe-allocators" title="Link to this heading"></a></h2>

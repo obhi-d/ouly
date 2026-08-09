@@ -152,6 +152,7 @@ Available allocator configuration options:
 
 * ``ouly::cfg::min_alignment<N>`` - Set minimum memory alignment requirements
 * ``ouly::cfg::track_memory`` - Enable memory usage tracking
+* ``ouly::cfg::disable_rollback`` - Remove linear-allocation rollback metadata; ``deallocate`` becomes a no-op
 * ``ouly::cfg::compute_stats`` - Collect basic allocation statistics  
 * ``ouly::cfg::compute_atomic_stats`` - Collect thread-safe allocation statistics
 * ``ouly::cfg::underlying_allocator<T>`` - Specify custom underlying allocator
@@ -169,6 +170,34 @@ Available allocator configuration options:
 * ``ouly::cfg::manager<T>`` - Set memory manager implementation
 * ``ouly::cfg::debug_tracer<T>`` - Enable debug tracing with custom tracer
 * ``ouly::cfg::base_stats<T>`` - Set base statistics collection type
+
+Requesting an Alignment
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Every allocator takes the alignment as a trailing argument, spelled either as the compile time tag
+``ouly::alignment<N>`` or, when the value is only known at runtime, as a ``std::align_val_t``. The
+same alignment has to be handed back to ``deallocate``, exactly as with the aligned ``operator
+new``/``operator delete`` pair:
+
+.. code-block:: cpp
+
+   ouly::linear_allocator<> allocator(4096);
+
+   // Alignment known at compile time
+   void* simd = allocator.allocate(256, ouly::alignment<32>());
+
+   // Alignment known only at runtime
+   std::size_t const wanted = query_device_alignment();
+   void*             block  = allocator.allocate(1024, std::align_val_t{wanted});
+   allocator.deallocate(block, 1024, std::align_val_t{wanted});
+
+The non-threaded linear allocators store a small header before aligned allocations. It first uses
+the alignment padding the allocation already needs, crossing another alignment boundary only when
+that gap is too small. The header records the previous bump offset so LIFO ``deallocate`` restores
+both the payload and every byte of padding. Configure ``ouly::cfg::disable_rollback`` for workloads
+that only rewind in bulk; this removes the header and makes ``deallocate`` a no-op. The lock-free
+threaded allocators retain their metadata-free allocation path and may leave alignment padding
+consumed after deallocation.
 
 **Advanced Configuration Examples:**
 
