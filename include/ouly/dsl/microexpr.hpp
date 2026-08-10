@@ -10,6 +10,7 @@
 #include <ostream>
 #include <string>
 #include <string_view>
+#include "ouly/utility/common.hpp"
 
 namespace ouly
 {
@@ -31,7 +32,7 @@ public:
 
   microexpr(macro_context&& ctx) noexcept : ctx_(std::move(ctx)) {}
 
-  [[nodiscard]] auto evaluate(std::string_view expr) const -> bool;
+  OULY_API [[nodiscard]] auto evaluate(std::string_view expr) const -> bool;
 
 private:
   macro_context ctx_;

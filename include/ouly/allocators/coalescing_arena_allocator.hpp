@@ -204,7 +204,7 @@ public:
     }
   }
 
-  void validate_integrity() const;
+  OULY_API void validate_integrity() const;
 
   [[nodiscard]] auto get_offsets() const noexcept -> std::span<allocation_size_type const>
   {

@@ -456,6 +456,6 @@ auto is_number(const StringType& s) -> bool
                                     }) == s.end();
 }
 
-auto format_snake_case(const std::string& str) -> std::string;
-auto format_camel_case(const std::string& str) -> std::string;
+OULY_API auto format_snake_case(const std::string& str) -> std::string;
+OULY_API auto format_camel_case(const std::string& str) -> std::string;
 } // namespace ouly
