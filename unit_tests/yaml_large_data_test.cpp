@@ -19,7 +19,7 @@ struct BehaviorNodeData
   std::string_view name;
   std::string_view type;
   std::string_view method;
-  uint32_t         duration = 0;
+  float            duration = 0.0F;
 
   std::vector<BehaviorNodeData> children;
 };
@@ -36,6 +36,7 @@ TEST_CASE("yaml_object: Test read")
   ouly::yml::from_string(entries, large_yml);
 
   REQUIRE(entries.empty() == false);
+  REQUIRE(entries.front().root.children.at(1).children.at(1).duration == Catch::Approx(1.8F));
 }
 
 TEST_CASE("yaml_object: Test read with null characters")
