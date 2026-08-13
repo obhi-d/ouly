@@ -55,7 +55,7 @@ void from_chars(std::string_view sv, T& value)
     {
       // Use fast_float for floating point types if available.
       auto result = fast_float::from_chars(begin, end, value);
-      if (result.ec != std::errc{})
+      if (result.ec != std::errc{} || result.ptr != end)
       {
         throw std::runtime_error("fast_float conversion error");
       }
@@ -63,7 +63,7 @@ void from_chars(std::string_view sv, T& value)
     else
     {
       auto result = std::from_chars(begin, end, value);
-      if (result.ec != std::errc{})
+      if (result.ec != std::errc{} || result.ptr != end)
       {
         throw std::runtime_error("std::from_chars conversion error");
       }
@@ -99,7 +99,7 @@ void from_chars(std::string_view sv, T& value)
   {
     // Use fast_float for integral types if available.
     auto result = fast_float::from_chars(begin, end, value, base);
-    if (result.ec != std::errc{})
+    if (result.ec != std::errc{} || result.ptr != end)
     {
       throw std::runtime_error("fast_float conversion error");
     }
@@ -107,7 +107,7 @@ void from_chars(std::string_view sv, T& value)
   else
   {
     auto result = std::from_chars(begin, end, value, base);
-    if (result.ec != std::errc{})
+    if (result.ec != std::errc{} || result.ptr != end)
     {
       throw std::runtime_error("std::from_chars conversion error");
     }

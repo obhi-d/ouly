@@ -14,12 +14,13 @@ struct arg_formatter
 
 TEST_CASE("Validate program args creation and destruction", "[program_args][basic]")
 {
-  char                 buffer[] = "arg=1";
-  std::array<char*, 1> args     = {buffer};
+  char                 buffer[]  = "arg=1";
+  char                 program[] = "program";
+  std::array<char*, 2> args      = {program, buffer};
 
   ouly::program_args<> pgargs;
   arg_formatter        argfmt;
-  pgargs.parse_args(1, args.data());
+  pgargs.parse_args(2, args.data());
 
   REQUIRE(pgargs.decl<int>("arg").doc("help_int").value() == 1);
   pgargs.doc(std::ref(argfmt));
@@ -28,11 +29,11 @@ TEST_CASE("Validate program args creation and destruction", "[program_args][basi
 
 TEST_CASE("Validate program args switches", "[program_args][switches]")
 {
-  const char* arg_set[] = {"--help", "--one=foo", "-2=bar"};
+  const char* arg_set[] = {"program", "--help", "--one=foo", "-2=bar"};
 
   ouly::program_args pgargs;
   arg_formatter      argfmt;
-  pgargs.parse_args(3, arg_set);
+  pgargs.parse_args(4, arg_set);
 
   pgargs.doc("settings");
   auto one = pgargs.decl("one").doc("first_arg").value();
@@ -52,10 +53,10 @@ TEST_CASE("Validate program args switches", "[program_args][switches]")
 
 TEST_CASE("Validate program args sink", "[program_args][sink]")
 {
-  const char* arg_set[] = {"--help", "--one=foo", "-2=100"};
+  const char* arg_set[] = {"program", "--help", "--one=foo", "-2=100"};
 
   ouly::program_args pgargs;
-  pgargs.parse_args(3, arg_set);
+  pgargs.parse_args(4, arg_set);
   struct sink
   {
     std::string_view one;
@@ -99,11 +100,11 @@ TEST_CASE("Validate program args sink", "[program_args][sink]")
 
 TEST_CASE("Validate program args vector access", "[program_args][sink]")
 {
-  const char* arg_set[] = {"--help", "--one=foo", "-2=100", "--result=result"};
+  const char* arg_set[] = {"program", "--help", "--one=foo", "-2=100", "--result=result"};
 
   std::string        result;
   ouly::program_args pgargs;
-  pgargs.parse_args(4, arg_set);
+  pgargs.parse_args(5, arg_set);
   struct sink
   {
     std::string_view one;
@@ -125,10 +126,11 @@ TEST_CASE("Validate program args vector access", "[program_args][sink]")
 
 TEST_CASE("Validate program args vector", "[program_args][vector]")
 {
-  const char* arg_set[] = {"--help", "--flag", "--one=[foo, bar, 2]", "-2=[100, 20, 30]", "-c=[3.4, 4.1, 6.1]"};
+  const char* arg_set[] = {"program",           "--help", "--flag", "--one=[foo, bar, 2]", "-2=[100, 20, 30]",
+                           "-c=[3.4, 4.1, 6.1]"};
 
   ouly::program_args pgargs;
-  pgargs.parse_args(5, arg_set);
+  pgargs.parse_args(6, arg_set);
 
   bool                          help   = false;
   bool                          flag   = false;
@@ -154,10 +156,10 @@ TEST_CASE("Validate program args vector", "[program_args][vector]")
 
 TEST_CASE("Validate program args parse failure", "[program_args][failure]")
 {
-  const char* arg_set[] = {"--help", "--flag", "--one=foo", "-2=[100, 20, 30", "-c=3.4, 4.1, 6.1]"};
+  const char* arg_set[] = {"program", "--help", "--flag", "--one=foo", "-2=[100, 20, 30", "-c=3.4, 4.1, 6.1]"};
 
   ouly::program_args pgargs;
-  pgargs.parse_args(5, arg_set);
+  pgargs.parse_args(6, arg_set);
 
   bool                          help   = false;
   bool                          flag   = false;
@@ -172,5 +174,95 @@ TEST_CASE("Validate program args parse failure", "[program_args][failure]")
   REQUIRE(pgargs.sink(one, "one", "a") == false);
   REQUIRE(pgargs.sink(two, "two", "2") == false);
   REQUIRE(pgargs.sink(three, "three", "c") == false);
+}
+
+TEST_CASE("Validate conventional command line syntax", "[program_args][linux]")
+{
+  const char* arg_set[] = {"tool=ignored", "--output",  "result.txt", "-j8",       "-abc", "--threshold",
+                           "-1.5",         "input.txt", "--",         "--literal", "tail"};
+
+  ouly::program_args args;
+  args.parse_args(static_cast<int>(std::size(arg_set)), arg_set);
+
+  std::string_view output;
+  uint64_t         jobs      = 0;
+  double           threshold = 0;
+  bool             alpha     = false;
+  bool             beta      = false;
+  bool             gamma     = false;
+
+  REQUIRE(args.sink(output, "output"));
+  REQUIRE(args.sink(jobs, "jobs", "j"));
+  REQUIRE(args.sink(threshold, "threshold"));
+  REQUIRE(args.sink(alpha, "alpha", "a"));
+  REQUIRE(args.sink(beta, "beta", "b"));
+  REQUIRE(args.sink(gamma, "gamma", "c"));
+
+  REQUIRE(output == "result.txt");
+  REQUIRE(jobs == 8);
+  REQUIRE(threshold == -1.5);
+  REQUIRE(alpha);
+  REQUIRE(beta);
+  REQUIRE(gamma);
+  REQUIRE(args.get_positional_args() == std::vector<std::string_view>{"input.txt", "--literal", "tail"});
+}
+
+TEST_CASE("Keep values after boolean switches positional", "[program_args][linux]")
+{
+  const char* arg_set[] = {"program", "--verbose", "input.txt", "--color=false", "--feature=YES"};
+
+  ouly::program_args args;
+  args.parse_args(static_cast<int>(std::size(arg_set)), arg_set);
+
+  bool verbose = false;
+  bool color   = true;
+  bool feature = false;
+  REQUIRE(args.sink(verbose, "verbose"));
+  REQUIRE(args.sink(color, "color"));
+  REQUIRE(args.sink(feature, "feature"));
+  REQUIRE(verbose);
+  REQUIRE_FALSE(color);
+  REQUIRE(feature);
+  REQUIRE(args.get_positional_args() == std::vector<std::string_view>{"input.txt"});
+}
+
+TEST_CASE("Reject partially converted scalar arguments", "[program_args][failure]")
+{
+  const char* arg_set[] = {"program", "--count=12oops", "--enabled=perhaps"};
+
+  ouly::program_args args;
+  args.parse_args(static_cast<int>(std::size(arg_set)), arg_set);
+
+  int  count   = 0;
+  bool enabled = false;
+  REQUIRE_FALSE(args.sink(count, "count"));
+  REQUIRE_FALSE(args.sink(enabled, "enabled"));
+}
+
+TEST_CASE("Parse individual normalized arguments", "[program_args][basic]")
+{
+  ouly::program_args args;
+  args.parse_arg("flag");
+  args.parse_arg("count=4");
+
+  bool flag  = false;
+  int  count = 0;
+  REQUIRE(args.sink(flag, "flag"));
+  REQUIRE(args.sink(count, "count"));
+  REQUIRE(flag);
+  REQUIRE(count == 4);
+}
+
+TEST_CASE("Last repeated option wins without leaking earlier values", "[program_args][linux]")
+{
+  const char* arg_set[] = {"program", "--output", "old.txt", "--output", "new.txt", "input.txt"};
+
+  ouly::program_args args;
+  args.parse_args(static_cast<int>(std::size(arg_set)), arg_set);
+
+  std::string_view output;
+  REQUIRE(args.sink(output, "output"));
+  REQUIRE(output == "new.txt");
+  REQUIRE(args.get_positional_args() == std::vector<std::string_view>{"input.txt"});
 }
 // NOLINTEND

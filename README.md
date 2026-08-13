@@ -727,14 +727,15 @@ Sink-style parsing (unit_tests/program_args.cpp):
 ```cpp
 #include <ouly/utility/program_args.hpp>
 
-const char* argv[] = {"--flag", "--name=ouly", "-n=[1,2,3]"};
+const char* argv[] = {"example", "--flag", "--name", "ouly", "-n=[1,2,3]", "input.txt"};
 ouly::program_args args;
-args.parse_args(3, argv);
+args.parse_args(6, argv); // argv[0] is the executable name
 
 bool flag = false; std::string_view name; std::vector<int> ns;
 args.sink(flag, "flag");
 args.sink(name, "name");
 args.sink(ns,   "numbers", "n");
+auto positional = args.get_positional_args(); // {"input.txt"}
 ```
 
 #### Type-Safe Function Delegates
