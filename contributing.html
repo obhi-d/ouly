@@ -139,7 +139,7 @@ cmake<span class="w"> </span>--build<span class="w"> </span>build/linux-default
 </dd>
 <dt><strong>Code Formatting</strong></dt><dd><p>Use the provided <code class="docutils literal notranslate"><span class="pre">.clang-format</span></code> configuration:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Format all code</span>
-find<span class="w"> </span>include<span class="w"> </span>src<span class="w"> </span>unit_tests<span class="w"> </span>-name<span class="w"> </span><span class="s2">&quot;*.hpp&quot;</span><span class="w"> </span>-o<span class="w"> </span>-name<span class="w"> </span><span class="s2">&quot;*.cpp&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>xargs<span class="w"> </span>clang-format<span class="w"> </span>-i
+find<span class="w"> </span>include<span class="w"> </span>src<span class="w"> </span>unit_tests<span class="w"> </span>-name<span class="w"> </span><span class="s2">"*.hpp"</span><span class="w"> </span>-o<span class="w"> </span>-name<span class="w"> </span><span class="s2">"*.cpp"</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>xargs<span class="w"> </span>clang-format<span class="w"> </span>-i
 </pre></div>
 </div>
 </dd>
@@ -241,13 +241,13 @@ make<span class="w"> </span>html<span class="w"> </span><span class="m">2</span>
 <li><p><strong>Commit Changes</strong></p>
 <p>Use clear, descriptive commit messages:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>add<span class="w"> </span>.
-git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat(allocators): add coalescing arena allocator</span>
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">"feat(allocators): add coalescing arena allocator</span>
 
 <span class="s2">- Implements block coalescing for reduced fragmentation</span>
 <span class="s2">- Adds configurable coalescing strategies</span>
 <span class="s2">- Includes comprehensive unit tests</span>
 
-<span class="s2">Fixes #123&quot;</span>
+<span class="s2">Fixes #123"</span>
 </pre></div>
 </div>
 </li>
@@ -288,16 +288,16 @@ git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </sp
 <div><div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;catch2/catch_test_macros.hpp&gt;</span>
 <span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/allocators/linear_allocator.hpp&gt;</span>
 
-<span class="n">TEST_CASE</span><span class="p">(</span><span class="s">&quot;linear_allocator basic allocation&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;[allocators]&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="n">TEST_CASE</span><span class="p">(</span><span class="s">"linear_allocator basic allocation"</span><span class="p">,</span><span class="w"> </span><span class="s">"[allocators]"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">linear_allocator</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">allocator</span><span class="p">(</span><span class="mi">1024</span><span class="p">);</span>
 
-<span class="w">    </span><span class="n">SECTION</span><span class="p">(</span><span class="s">&quot;successful allocation&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">SECTION</span><span class="p">(</span><span class="s">"successful allocation"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">ptr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">allocator</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="mi">256</span><span class="p">);</span>
 <span class="w">        </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">ptr</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="nb">nullptr</span><span class="p">);</span>
 <span class="w">        </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">allocator</span><span class="p">.</span><span class="n">used</span><span class="p">()</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">256</span><span class="p">);</span>
 <span class="w">    </span><span class="p">}</span>
 
-<span class="w">    </span><span class="n">SECTION</span><span class="p">(</span><span class="s">&quot;alignment requirements&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">SECTION</span><span class="p">(</span><span class="s">"alignment requirements"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">ptr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">allocator</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">alignment</span><span class="o">&lt;</span><span class="mi">16</span><span class="o">&gt;</span><span class="p">{});</span>
 <span class="w">        </span><span class="n">REQUIRE</span><span class="p">(</span><span class="k">reinterpret_cast</span><span class="o">&lt;</span><span class="kt">uintptr_t</span><span class="o">&gt;</span><span class="p">(</span><span class="n">ptr</span><span class="p">)</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="mi">16</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
 <span class="w">    </span><span class="p">}</span>

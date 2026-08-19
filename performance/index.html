@@ -177,7 +177,7 @@
 <p><strong>Compilation Optimization</strong></p>
 <p>Enable compiler optimizations for maximum performance:</p>
 <div class="highlight-cmake notranslate"><div class="highlight"><pre><span></span><span class="c"># CMake optimization flags</span>
-<span class="nb">set</span><span class="p">(</span><span class="s">CMAKE_CXX_FLAGS_RELEASE</span><span class="w"> </span><span class="s2">&quot;-O3 -DNDEBUG -march=native -flto&quot;</span><span class="p">)</span>
+<span class="nb">set</span><span class="p">(</span><span class="s">CMAKE_CXX_FLAGS_RELEASE</span><span class="w"> </span><span class="s2">"-O3 -DNDEBUG -march=native -flto"</span><span class="p">)</span>
 
 <span class="c"># Enable link-time optimization</span>
 <span class="nb">set_property</span><span class="p">(</span><span class="s">TARGET</span><span class="w"> </span><span class="s">your_target</span><span class="w"> </span><span class="s">PROPERTY</span><span class="w"> </span><span class="s">INTERPROCEDURAL_OPTIMIZATION</span><span class="w"> </span><span class="s">TRUE</span><span class="p">)</span>
@@ -227,7 +227,7 @@ perf<span class="w"> </span>mem<span class="w"> </span>report<span class="w"> </
 <p><strong>x86_64 Optimizations</strong></p>
 <div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// Enable AVX/AVX2 for vectorized operations</span>
 <span class="cp">#ifdef __AVX2__</span>
-<span class="c1">// Use OULY&#39;s SIMD-optimized containers</span>
+<span class="c1">// Use OULY's SIMD-optimized containers</span>
 <span class="k">struct</span><span class="w"> </span><span class="nc">Position</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">,</span><span class="w"> </span><span class="n">z</span><span class="p">;</span><span class="w"> </span><span class="p">};</span>
 <span class="n">ouly</span><span class="o">::</span><span class="n">soavector</span><span class="o">&lt;</span><span class="n">Position</span><span class="o">&gt;</span><span class="w"> </span><span class="n">positions</span><span class="p">;</span>
 <span class="cp">#endif</span>
@@ -285,7 +285,7 @@ perf<span class="w"> </span>mem<span class="w"> </span>report<span class="w"> </
 <div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// OULY scheduler does not have built-in NUMA support</span>
 <span class="c1">// For NUMA optimization, manually configure:</span>
 
-<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;numa.h&gt;</span><span class="c1">  // Linux NUMA API</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;numa.h&gt;</span><span class="w">  </span><span class="c1">// Linux NUMA API</span>
 
 <span class="kt">void</span><span class="w"> </span><span class="nf">setup_numa_optimization</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="c1">// 1. Set thread affinity manually</span>

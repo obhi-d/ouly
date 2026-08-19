@@ -186,13 +186,13 @@ ctest<span class="w"> </span>-R<span class="w"> </span>ecs<span class="w">      
 <div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;catch2/catch_test_macros.hpp&gt;</span>
 <span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/component/header.hpp&gt;</span>
 
-<span class="n">TEST_CASE</span><span class="p">(</span><span class="s">&quot;component basic usage&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;[component]&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="n">TEST_CASE</span><span class="p">(</span><span class="s">"component basic usage"</span><span class="p">,</span><span class="w"> </span><span class="s">"[component]"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="c1">// Setup</span>
 <span class="w">    </span><span class="c1">// Usage demonstration</span>
 <span class="w">    </span><span class="c1">// Verification</span>
 <span class="p">}</span>
 
-<span class="n">TEST_CASE</span><span class="p">(</span><span class="s">&quot;component advanced features&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;[component]&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="n">TEST_CASE</span><span class="p">(</span><span class="s">"component advanced features"</span><span class="p">,</span><span class="w"> </span><span class="s">"[component]"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="c1">// Advanced usage patterns</span>
 <span class="p">}</span>
 </pre></div>
@@ -216,16 +216,16 @@ ctest<span class="w"> </span>-R<span class="w"> </span>ecs<span class="w">      
 <li><p><strong>Include Edge Cases</strong> - Demonstrate error handling and boundary conditions</p></li>
 </ol>
 <p>Example Template:</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">TEST_CASE</span><span class="p">(</span><span class="s">&quot;descriptive test name&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;[category]&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">SECTION</span><span class="p">(</span><span class="s">&quot;basic usage&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">TEST_CASE</span><span class="p">(</span><span class="s">"descriptive test name"</span><span class="p">,</span><span class="w"> </span><span class="s">"[category]"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">SECTION</span><span class="p">(</span><span class="s">"basic usage"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="c1">// Demonstrate basic functionality</span>
 <span class="w">    </span><span class="p">}</span>
 
-<span class="w">    </span><span class="n">SECTION</span><span class="p">(</span><span class="s">&quot;advanced usage&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">SECTION</span><span class="p">(</span><span class="s">"advanced usage"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="c1">// Show advanced patterns</span>
 <span class="w">    </span><span class="p">}</span>
 
-<span class="w">    </span><span class="n">SECTION</span><span class="p">(</span><span class="s">&quot;error handling&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">SECTION</span><span class="p">(</span><span class="s">"error handling"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="c1">// Demonstrate proper error handling</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="p">}</span>

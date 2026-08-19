@@ -106,7 +106,7 @@
 <p><strong>Linear Allocator Usage</strong></p>
 <p>The linear allocator tests demonstrate sequential allocation patterns:</p>
 <div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// From unit_tests/allocators/test_linear_allocator.cpp</span>
-<span class="n">TEST_CASE</span><span class="p">(</span><span class="s">&quot;linear_allocator basic usage&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;[allocators]&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="n">TEST_CASE</span><span class="p">(</span><span class="s">"linear_allocator basic usage"</span><span class="p">,</span><span class="w"> </span><span class="s">"[allocators]"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">linear_allocator</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">allocator</span><span class="p">(</span><span class="mi">1024</span><span class="p">);</span>
 
 <span class="w">    </span><span class="c1">// Sequential allocations</span>
@@ -126,7 +126,7 @@
 </div>
 <p><strong>Pool Allocator Examples</strong></p>
 <p>Pool allocators for fixed-size object allocation:</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">TEST_CASE</span><span class="p">(</span><span class="s">&quot;pool_allocator object management&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;[allocators]&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">TEST_CASE</span><span class="p">(</span><span class="s">"pool_allocator object management"</span><span class="p">,</span><span class="w"> </span><span class="s">"[allocators]"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">TestObject</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">value</span><span class="p">;</span>
 <span class="w">        </span><span class="kt">float</span><span class="w"> </span><span class="n">data</span><span class="p">;</span>
@@ -159,7 +159,7 @@
 <p><strong>Small Vector Usage</strong></p>
 <p>Stack-optimized vector examples:</p>
 <div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// From unit_tests/containers/test_small_vector.cpp</span>
-<span class="n">TEST_CASE</span><span class="p">(</span><span class="s">&quot;small_vector stack optimization&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;[containers]&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="n">TEST_CASE</span><span class="p">(</span><span class="s">"small_vector stack optimization"</span><span class="p">,</span><span class="w"> </span><span class="s">"[containers]"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">small_vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span><span class="w"> </span><span class="mi">8</span><span class="o">&gt;</span><span class="w"> </span><span class="n">vec</span><span class="p">;</span>
 
 <span class="w">    </span><span class="c1">// These use stack storage</span>
@@ -176,7 +176,7 @@
 </div>
 <p><strong>SoA Vector Examples</strong></p>
 <p>Structure of Arrays container usage:</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">TEST_CASE</span><span class="p">(</span><span class="s">&quot;soavector aggregate expansion&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;[containers]&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">TEST_CASE</span><span class="p">(</span><span class="s">"soavector aggregate expansion"</span><span class="p">,</span><span class="w"> </span><span class="s">"[containers]"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">Particle</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="kt">float</span><span class="w"> </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">,</span><span class="w"> </span><span class="n">z</span><span class="p">;</span>
 <span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">life</span><span class="p">;</span>
@@ -206,7 +206,7 @@
 <h2>ECS Examples<a class="headerlink" href="#ecs-examples" title="Link to this heading"></a></h2>
 <p><strong>Entity and Component Management</strong></p>
 <div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// From unit_tests/ecs/test_registry.cpp</span>
-<span class="n">TEST_CASE</span><span class="p">(</span><span class="s">&quot;ecs basic entity management&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;[ecs]&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="n">TEST_CASE</span><span class="p">(</span><span class="s">"ecs basic entity management"</span><span class="p">,</span><span class="w"> </span><span class="s">"[ecs]"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">registry</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">registry</span><span class="p">;</span>
 <span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="n">Position</span><span class="o">&gt;</span><span class="w"> </span><span class="n">positions</span><span class="p">;</span>
 <span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="n">Velocity</span><span class="o">&gt;</span><span class="w"> </span><span class="n">velocities</span><span class="p">;</span>
@@ -232,7 +232,7 @@
 </pre></div>
 </div>
 <p><strong>Component Storage Configuration</strong></p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">TEST_CASE</span><span class="p">(</span><span class="s">&quot;ecs storage strategies&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;[ecs]&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">TEST_CASE</span><span class="p">(</span><span class="s">"ecs storage strategies"</span><span class="p">,</span><span class="w"> </span><span class="s">"[ecs]"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="c1">// Dense storage (default)</span>
 <span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="n">Position</span><span class="o">&gt;</span><span class="w"> </span><span class="n">dense_positions</span><span class="p">;</span>
 
@@ -251,7 +251,7 @@
 <h2>Scheduler Examples<a class="headerlink" href="#scheduler-examples" title="Link to this heading"></a></h2>
 <p><strong>Basic Task Execution</strong></p>
 <div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// From unit_tests/scheduler/test_scheduler.cpp</span>
-<span class="n">TEST_CASE</span><span class="p">(</span><span class="s">&quot;scheduler basic task execution&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;[scheduler]&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="n">TEST_CASE</span><span class="p">(</span><span class="s">"scheduler basic task execution"</span><span class="p">,</span><span class="w"> </span><span class="s">"[scheduler]"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">scheduler</span><span class="w"> </span><span class="nf">scheduler</span><span class="p">(</span><span class="mi">2</span><span class="p">);</span>
 
 <span class="w">    </span><span class="c1">// Create workgroup BEFORE begin_execution</span>
@@ -275,7 +275,7 @@
 </pre></div>
 </div>
 <p><strong>Parallel Algorithms</strong></p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">TEST_CASE</span><span class="p">(</span><span class="s">&quot;scheduler parallel processing&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;[scheduler]&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">TEST_CASE</span><span class="p">(</span><span class="s">"scheduler parallel processing"</span><span class="p">,</span><span class="w"> </span><span class="s">"[scheduler]"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">scheduler</span><span class="w"> </span><span class="nf">scheduler</span><span class="p">(</span><span class="mi">4</span><span class="p">);</span>
 <span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">workgroup</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">create_workgroup</span><span class="p">();</span>
 
@@ -319,14 +319,14 @@
 <h2>Serialization Examples<a class="headerlink" href="#serialization-examples" title="Link to this heading"></a></h2>
 <p><strong>Binary Serialization</strong></p>
 <div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// From unit_tests/serializers/test_binary_serializer.cpp</span>
-<span class="n">TEST_CASE</span><span class="p">(</span><span class="s">&quot;binary serialization basic types&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;[serializers]&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="n">TEST_CASE</span><span class="p">(</span><span class="s">"binary serialization basic types"</span><span class="p">,</span><span class="w"> </span><span class="s">"[serializers]"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">TestData</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">id</span><span class="p">;</span>
 <span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">name</span><span class="p">;</span>
 <span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span><span class="w"> </span><span class="n">values</span><span class="p">;</span>
 <span class="w">    </span><span class="p">};</span>
 
-<span class="w">    </span><span class="n">TestData</span><span class="w"> </span><span class="n">original</span><span class="p">{</span><span class="mi">42</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;test&quot;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="mf">1.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">3.0f</span><span class="p">}};</span>
+<span class="w">    </span><span class="n">TestData</span><span class="w"> </span><span class="n">original</span><span class="p">{</span><span class="mi">42</span><span class="p">,</span><span class="w"> </span><span class="s">"test"</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="mf">1.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">3.0f</span><span class="p">}};</span>
 
 <span class="w">    </span><span class="c1">// Serialize</span>
 <span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">binary_stream</span><span class="w"> </span><span class="n">stream</span><span class="p">;</span>
@@ -345,7 +345,7 @@
 </pre></div>
 </div>
 <p><strong>YAML Serialization</strong></p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">TEST_CASE</span><span class="p">(</span><span class="s">&quot;yaml serialization configuration&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;[serializers]&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">TEST_CASE</span><span class="p">(</span><span class="s">"yaml serialization configuration"</span><span class="p">,</span><span class="w"> </span><span class="s">"[serializers]"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">Config</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">app_name</span><span class="p">;</span>
 <span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">version</span><span class="p">;</span>
@@ -354,11 +354,11 @@
 <span class="w">    </span><span class="p">};</span>
 
 <span class="w">    </span><span class="n">Config</span><span class="w"> </span><span class="n">original</span><span class="p">;</span>
-<span class="w">    </span><span class="n">original</span><span class="p">.</span><span class="n">app_name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;TestApp&quot;</span><span class="p">;</span>
+<span class="w">    </span><span class="n">original</span><span class="p">.</span><span class="n">app_name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"TestApp"</span><span class="p">;</span>
 <span class="w">    </span><span class="n">original</span><span class="p">.</span><span class="n">version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
-<span class="w">    </span><span class="n">original</span><span class="p">.</span><span class="n">modules</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="s">&quot;core&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;graphics&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;audio&quot;</span><span class="p">};</span>
-<span class="w">    </span><span class="n">original</span><span class="p">.</span><span class="n">settings</span><span class="p">[</span><span class="s">&quot;max_fps&quot;</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">60</span><span class="p">;</span>
-<span class="w">    </span><span class="n">original</span><span class="p">.</span><span class="n">settings</span><span class="p">[</span><span class="s">&quot;resolution_x&quot;</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1920</span><span class="p">;</span>
+<span class="w">    </span><span class="n">original</span><span class="p">.</span><span class="n">modules</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="s">"core"</span><span class="p">,</span><span class="w"> </span><span class="s">"graphics"</span><span class="p">,</span><span class="w"> </span><span class="s">"audio"</span><span class="p">};</span>
+<span class="w">    </span><span class="n">original</span><span class="p">.</span><span class="n">settings</span><span class="p">[</span><span class="s">"max_fps"</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">60</span><span class="p">;</span>
+<span class="w">    </span><span class="n">original</span><span class="p">.</span><span class="n">settings</span><span class="p">[</span><span class="s">"resolution_x"</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1920</span><span class="p">;</span>
 
 <span class="w">    </span><span class="c1">// Serialize to YAML</span>
 <span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">yaml</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">yml</span><span class="o">::</span><span class="n">to_string</span><span class="p">(</span><span class="n">original</span><span class="p">);</span>
