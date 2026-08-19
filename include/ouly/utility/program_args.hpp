@@ -120,6 +120,11 @@ public:
   public:
     auto doc(StringType h) noexcept -> auto&
     {
+      if (std::empty(h))
+      {
+        return *this;
+      }
+
       args()[arg_].doc_ = h;
       return *this;
     }
@@ -409,6 +414,26 @@ public:
   {
     // Resolve arg
     return decl<T>(name, flag).doc(docu).sink(value);
+  }
+
+  auto get(StringType name, StringType flag = StringType(), StringType docu = StringType()) -> bool
+  {
+    // Resolve arg
+    bool value  = false;
+    bool result = decl<bool>(name, flag).doc(docu).sink(value);
+    return result && value;
+  }
+
+  template <typename T>
+  auto as(StringType name, StringType flag = StringType(), StringType docu = StringType()) -> std::optional<T>
+  {
+    // Resolve arg
+    T value = {};
+    if (decl<bool>(name, flag).doc(docu).sink(value))
+    {
+      return std::optional<T>{value};
+    }
+    return std::nullopt;
   }
 
   template <ProgramDocFormatter Formatter>
