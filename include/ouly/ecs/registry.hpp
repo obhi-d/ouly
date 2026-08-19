@@ -203,10 +203,11 @@ public:
   template <typename Lambda>
   void for_each_index(Lambda&& l)
   {
-    if (!sorted_)
-    {
-      sort_free();
-    }
+    // emplace() hands slots back out by decrementing free_slot_ without shrinking free_, so the tail
+    // of free_ can name live entities. Trimming first is what keeps those from being skipped -- and
+    // has to happen before the sort, which would otherwise mix live entries into the free prefix.
+    shrink();
+    sort_free();
     internal_for_each(std::forward<Lambda>(l), free_, max_size_.load());
   }
 
@@ -222,20 +223,16 @@ public:
   template <typename Lambda>
   void for_each_index(Lambda&& l) const
   {
-    if (sorted_)
-    {
-      internal_for_each(std::forward<Lambda>(l), free_, max_size_.load());
-    }
-    else
-    {
-      auto copy = free_;
-      std::ranges::sort(copy,
-                        [](size_type first, size_type second) -> bool
-                        {
-                          return type(first).get() < type(second).get();
-                        });
-      internal_for_each(std::forward<Lambda>(l), copy, max_size_.load());
-    }
+    // The live free slots are the prefix [0, free_slot_); everything past it has been handed back
+    // out by emplace(). Const, so the trim is a copy rather than a shrink.
+    auto const live = static_cast<size_t>(std::max<ssize_type>(0, free_slot_.load()));
+    auto       copy = std::vector<size_type>(free_.begin(), free_.begin() + static_cast<ssize_type>(live));
+    std::ranges::sort(copy,
+                      [](size_type first, size_type second) -> bool
+                      {
+                        return type(first).get() < type(second).get();
+                      });
+    internal_for_each(std::forward<Lambda>(l), copy, max_size_.load());
   }
 
   /**
