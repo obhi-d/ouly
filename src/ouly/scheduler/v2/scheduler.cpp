@@ -397,15 +397,15 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
   {
   }
 
-  auto start_counter = std::make_shared<std::latch>(worker_count_);
+  std::latch start_counter{worker_count_};
 
-  entry_fn_ = [cust_entry = std::move(entry), start_counter](ouly::worker_id worker) -> void
+  entry_fn_ = [cust_entry = std::move(entry), &start_counter](ouly::worker_id worker) -> void
   {
     if (cust_entry)
     {
       cust_entry(worker);
     }
-    start_counter->count_down();
+    start_counter.count_down();
   };
 
   // Create worker threads
@@ -424,7 +424,7 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
   g_worker_id = worker_id(0);
 
   entry_fn_(worker_id(0));
-  start_counter->wait();
+  start_counter.wait();
   entry_fn_ = {}; // Clear entry function after execution starts
 
   initializer_ = nullptr;
