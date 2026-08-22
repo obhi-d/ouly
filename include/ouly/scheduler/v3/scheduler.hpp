@@ -250,7 +250,7 @@ private:
 
   OULY_API void submit_internal(task_context const& current, workgroup_id dst, detail::v3::work_item const& work);
 
-  void run_worker(worker_id wid);
+  void run_worker(worker_id wid, scheduler_worker_entry entry);
 
   auto try_execute_one(worker_id wid) noexcept -> bool;
   void execute_work(detail::v3::worker& wkr, uint32_t group_index, detail::v3::work_item& work) noexcept;

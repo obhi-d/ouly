@@ -103,7 +103,7 @@ auto scheduler::busy_work(worker_id thread) noexcept -> bool
   return false;
 }
 
-void scheduler::run_worker(worker_id thread)
+void scheduler::run_worker(worker_id thread, scheduler_worker_entry entry)
 {
   g_worker    = &ouly::detail::vector_access(workers_, thread.get_index()).get();
   g_worker_id = thread;
@@ -113,7 +113,8 @@ void scheduler::run_worker(worker_id thread)
   // Random seed for randomized stealing - use thread index and a simple counter for variety
   g_random_seed = thread.get_index() ^ initial_seed_mask;
 
-  entry_fn_(worker_id(thread.get_index()));
+  entry(worker_id(thread.get_index()));
+  entry = {};
 
   while (!stop_.load(std::memory_order_acquire))
   {
@@ -385,20 +386,20 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
 
   stop_ = false;
   finished_.store(0, std::memory_order_relaxed);
-  auto start_counter = std::latch(worker_count_);
+  auto start_counter = std::make_shared<std::latch>(worker_count_);
 
-  entry_fn_ = [cust_entry = std::move(entry), &start_counter](ouly::worker_id worker) -> void
+  entry_fn_ = [cust_entry = std::move(entry), start_counter](ouly::worker_id worker) -> void
   {
     if (cust_entry)
     {
       cust_entry(worker);
     }
-    start_counter.count_down();
+    start_counter->count_down();
   };
 
   for (uint32_t thread = 1; thread < worker_count_; ++thread)
   {
-    threads_.emplace_back(&scheduler::run_worker, this, worker_id(thread));
+    threads_.emplace_back(&scheduler::run_worker, this, worker_id(thread), entry_fn_);
   }
 
   auto& main_worker            = ouly::detail::vector_access(workers_, 0).get();
@@ -408,7 +409,7 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
 
   entry_fn_(worker_id(0));
 
-  start_counter.wait();
+  start_counter->wait();
   entry_fn_ = {};
 }
 

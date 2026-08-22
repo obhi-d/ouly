@@ -274,7 +274,7 @@ private:
   /**
    * @brief Run worker thread main loop
    */
-  void run_worker(worker_id wid);
+  void run_worker(worker_id wid, scheduler_worker_entry entry);
 
   /**
    * @brief Find work for a specific worker

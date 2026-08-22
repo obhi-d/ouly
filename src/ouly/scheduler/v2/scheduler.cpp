@@ -148,17 +148,18 @@ void scheduler::wake_up_workers(uint32_t count) noexcept
   }
 }
 
-void scheduler::run_worker(worker_id wid)
+void scheduler::run_worker(worker_id wid, scheduler_worker_entry entry)
 {
   // Set thread-local storage for this worker
   g_worker_id = wid;
   g_worker    = &ouly::detail::vector_access(workers_, wid.get_index());
 
   // Execute the entry function if provided
-  if (entry_fn_)
+  if (entry)
   {
-    entry_fn_(wid);
+    entry(wid);
   }
+  entry = {};
 
   // Main worker loop
   while (!stop_.load(std::memory_order_relaxed))
@@ -396,15 +397,15 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
   {
   }
 
-  auto start_counter = std::latch(worker_count_);
+  auto start_counter = std::make_shared<std::latch>(worker_count_);
 
-  entry_fn_ = [cust_entry = std::move(entry), &start_counter](ouly::worker_id worker) -> void
+  entry_fn_ = [cust_entry = std::move(entry), start_counter](ouly::worker_id worker) -> void
   {
     if (cust_entry)
     {
       cust_entry(worker);
     }
-    start_counter.count_down();
+    start_counter->count_down();
   };
 
   // Create worker threads
@@ -413,7 +414,7 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
   for (uint32_t thread = 1; thread < worker_count_; ++thread)
   {
     ouly::detail::vector_access(workers_, thread).current_context_.init(*this, user_context, 0, worker_id(thread));
-    threads_.emplace_back(&scheduler::run_worker, this, worker_id(thread));
+    threads_.emplace_back(&scheduler::run_worker, this, worker_id(thread), entry_fn_);
   }
 
   ouly::detail::vector_access(workers_, 0).current_context_.init(*this, user_context, 0, worker_id(0));
@@ -423,7 +424,7 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
   g_worker_id = worker_id(0);
 
   entry_fn_(worker_id(0));
-  start_counter.wait();
+  start_counter->wait();
   entry_fn_ = {}; // Clear entry function after execution starts
 
   initializer_ = nullptr;

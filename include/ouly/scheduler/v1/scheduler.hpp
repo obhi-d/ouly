@@ -309,7 +309,7 @@ private:
   void        finish_pending_tasks();
   inline void do_work(workgroup_id id, worker_id /*thread*/, ouly::v1::task_delegate& /*work*/) noexcept;
   void        wake_up(worker_id /*thread*/) noexcept;
-  void        run_worker(worker_id /*thread*/);
+  void        run_worker(worker_id /*thread*/, scheduler_worker_entry entry);
   auto        get_work(worker_id thread, ouly::v1::task_delegate& work) noexcept -> workgroup_id;
 
   auto work(worker_id /*thread*/) noexcept -> bool;

@@ -138,17 +138,18 @@ auto scheduler::has_queued_work(worker_type const& wkr) const noexcept -> bool
   return false;
 }
 
-void scheduler::run_worker(worker_id wid)
+void scheduler::run_worker(worker_id wid, scheduler_worker_entry entry)
 {
   auto& wkr   = ouly::detail::vector_access(workers_, wid.get_index());
   g_worker    = &wkr;
   g_worker_id = wid;
   g_random_seed ^= wid.get_index() * lcg_multiplier;
 
-  if (entry_fn_)
+  if (entry)
   {
-    entry_fn_(wid);
+    entry(wid);
   }
+  entry = {};
 
   while (!stop_.load(std::memory_order_relaxed))
   {
@@ -336,28 +337,28 @@ void scheduler::begin_execution(scheduler_worker_entry&& entry, void* user_conte
   stop_.store(false, std::memory_order_relaxed);
   pending_.get().store(0, std::memory_order_relaxed);
 
-  auto start_counter = std::latch(worker_count_);
+  auto start_counter = std::make_shared<std::latch>(worker_count_);
 
-  entry_fn_ = [cust_entry = std::move(entry), &start_counter](ouly::worker_id worker) -> void
+  entry_fn_ = [cust_entry = std::move(entry), start_counter](ouly::worker_id worker) -> void
   {
     if (cust_entry)
     {
       cust_entry(worker);
     }
-    start_counter.count_down();
+    start_counter->count_down();
   };
 
   threads_.reserve(worker_count_ - 1);
   for (uint32_t thread = 1; thread < worker_count_; ++thread)
   {
-    threads_.emplace_back(&scheduler::run_worker, this, worker_id(thread));
+    threads_.emplace_back(&scheduler::run_worker, this, worker_id(thread), entry_fn_);
   }
 
   g_worker    = &ouly::detail::vector_access(workers_, 0);
   g_worker_id = worker_id(0);
 
   entry_fn_(worker_id(0));
-  start_counter.wait();
+  start_counter->wait();
   entry_fn_ = {};
 }
 
