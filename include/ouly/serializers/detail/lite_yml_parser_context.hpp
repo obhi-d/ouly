@@ -82,6 +82,8 @@ struct in_context_base
    */
   virtual auto add_item(parser_state* parser) -> in_context_base* = 0;
 
+  [[nodiscard]] virtual auto accepts_array_items() const noexcept -> bool = 0;
+
   /**
    * @brief Virtual destructor for proper cleanup
    */
@@ -280,6 +282,10 @@ public:
    */
   void begin_new_array_item() final
   {
+    while (!context_->accepts_array_items() && context_->parent_ != nullptr)
+    {
+      pop();
+    }
     context_ = context_->add_item(this);
   }
 
@@ -430,6 +436,11 @@ public:
     {
       throw visitor_error(visitor_error::type_is_not_an_array);
     }
+  }
+
+  [[nodiscard]] auto accepts_array_items() const noexcept -> bool final
+  {
+    return ContainerLike<class_type> || TupleLike<class_type> || Convertible<class_type>;
   }
 
   auto read_convertible_container(parser_state* parser) -> in_context_base*

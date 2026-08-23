@@ -124,6 +124,42 @@ numbers:
   REQUIRE(ts.numbers[2] == 3);
 }
 
+TEST_CASE("yaml_object: Test read aggregate array items containing arrays")
+{
+  struct Item
+  {
+    int              index = 0;
+    std::vector<int> values;
+    int              count = 0;
+  };
+  struct Document
+  {
+    std::vector<Item> items;
+  };
+  std::string yml = R"(
+items:
+  - index: 0
+    values:
+      - 1
+      - 2
+    count: 2
+  - index: 1
+    values: []
+    count: 0
+)";
+
+  Document document;
+  ouly::yml::from_string(document, yml);
+
+  REQUIRE(document.items.size() == 2);
+  REQUIRE(document.items[0].index == 0);
+  REQUIRE(document.items[0].values == std::vector{1, 2});
+  REQUIRE(document.items[0].count == 2);
+  REQUIRE(document.items[1].index == 1);
+  REQUIRE(document.items[1].values.empty());
+  REQUIRE(document.items[1].count == 0);
+}
+
 TEST_CASE("yaml_object: Test read optional")
 {
   std::string yaml_present = R"(
