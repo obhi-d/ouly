@@ -44,6 +44,11 @@ public:
     return allocations_.load(std::memory_order_relaxed) == deallocations_.load(std::memory_order_relaxed);
   }
 
+  [[nodiscard]] auto allocations() const noexcept -> uint32_t
+  {
+    return allocations_.load(std::memory_order_relaxed);
+  }
+
 private:
   std::atomic<uint32_t> allocations_{0};
   std::atomic<uint32_t> deallocations_{0};
@@ -222,6 +227,28 @@ TEST_CASE("task_scope cooperative join executes only its own children", "[schedu
   scheduler.end_execution();
 }
 
+TEST_CASE("task_scope queued nodes outlive its allocator", "[scheduler][task][scope][allocator]")
+{
+  ouly::scheduler scheduler;
+  scheduler.create_group(ouly::workgroup_id(0), 0, 1);
+  scheduler.begin_execution();
+  auto const& ctx = ouly::task_context::this_context::get();
+
+  counting_allocator allocator;
+  {
+    ouly::task_scope scope{ouly::scheduler_allocator{allocator}};
+    scope.run(ctx, []() noexcept {});
+    scope.join(ctx);
+
+    // join() executed the node, but its delegate is intentionally still in the scheduler queue.
+    // Only the completed task state may still depend on the scope's allocator at this point.
+    CHECK(allocator.balanced());
+  }
+
+  scheduler.wait_for_tasks();
+  scheduler.end_execution();
+}
+
 TEST_CASE("task_scope joins descendants submitted while joining", "[scheduler][task][scope][nested]")
 {
   ouly::scheduler scheduler;
@@ -280,7 +307,8 @@ TEST_CASE("auto_parallel_for joins only its structured children", "[scheduler][t
   scheduler.end_execution();
 }
 
-TEST_CASE("task state and continuations use a custom allocator", "[scheduler][task][allocator]")
+TEST_CASE("task states use a custom allocator while internal nodes use the scheduler pool",
+          "[scheduler][task][allocator]")
 {
   ouly::scheduler scheduler;
   scheduler.create_group(ouly::workgroup_id(0), 0, 2);
@@ -299,7 +327,10 @@ TEST_CASE("task state and continuations use a custom allocator", "[scheduler][ta
                             {
                              return value + 2;
                            });
+    auto all   = ouly::when_all(ctx, ctx.get_workgroup(), ouly::scheduler_allocator(allocator), first, last);
+    all.get(ctx);
     REQUIRE(last.get(ctx) == 42);
+    CHECK(allocator.allocations() == 3); // first, last, and when_all result states only
   }
 
   scheduler.wait_for_tasks();
@@ -374,17 +405,24 @@ TEST_CASE("coroutines await scheduler tasks", "[scheduler][coroutine][task]")
   scheduler.begin_execution();
   auto const& ctx = ouly::task_context::this_context::get();
 
+  counting_allocator    allocator;
   std::atomic<int>      result{0};
   std::binary_semaphore task_done{0};
-  auto                  input   = ouly::submit_task(ctx,
-                                                    []() -> int
-                                                    {
-                                   return 84;
-                                 });
-  auto                  awaiter = coroutine_await_task(input, result, task_done);
-  scheduler.submit(ctx, std::move(awaiter));
-  ctx.cooperative_wait(task_done);
-  REQUIRE(result.load(std::memory_order_acquire) == 84);
+  {
+    auto input   = ouly::submit_task(ctx, ouly::scheduler_allocator{allocator},
+                                     []() -> int
+                                     {
+                                     return 84;
+                                   });
+    auto awaiter = coroutine_await_task(input, result, task_done);
+    scheduler.submit(ctx, std::move(awaiter));
+    ctx.cooperative_wait(task_done);
+    REQUIRE(result.load(std::memory_order_acquire) == 84);
+  }
+  scheduler.wait_for_tasks();
+  // The input state is the only custom allocation; the producer and coroutine continuation are pooled.
+  CHECK(allocator.allocations() == 1);
+  CHECK(allocator.balanced());
 
   auto direct_input = ouly::submit_task(ctx,
                                         []() -> int

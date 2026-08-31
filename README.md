@@ -180,16 +180,24 @@ for (uint32_t index = 0; index < count; ++index) {
 scope.join(ctx);
 ```
 
-`scheduler_allocator` is a non-owning, type-erased adapter for task state, continuation nodes,
-scope nodes, and coroutine frames. The allocator must outlive those objects. Its
-`deallocate(void*, std::size_t)` operation is optional, which allows a linear allocator to reclaim
-all scheduler allocations in one reset:
+`scheduler_allocator` is a non-owning, type-erased adapter for task states and coroutine frames.
+The allocator must outlive those objects. Internal producer, continuation, `when_all`, and
+task-scope nodes are owned by the scheduler allocation path because their lifetime is governed by
+scheduler work and queues. The allocator's `deallocate(void*, std::size_t)` operation is optional,
+allowing a linear allocator to reclaim all caller-owned scheduler allocations in one reset:
 
 ```cpp
 ouly::scheduler_allocator storage(frame_allocator);
 auto task = ouly::submit_task(ctx, storage, []() -> uint32_t { return 42; });
 ouly::task_scope scope(storage);
 ```
+
+Scheduler-internal nodes use ordinary aligned `new`/`delete` by default, allowing an overridden
+global allocator such as mimalloc to provide its own thread caches. Configure with
+`-DOULY_SCHEDULER_PMR_INTERNAL_ALLOCATOR=ON`, or define `OULY_SCHEDULER_PMR_INTERNAL_ALLOCATOR`
+consistently for all translation units, to use the scheduler-owned synchronized PMR cache instead.
+The PMR cache grows lazily and reuses returned blocks; task-local caching is not used because nodes
+may be queued on and returned by different workers.
 
 #### Parallel Algorithms
 

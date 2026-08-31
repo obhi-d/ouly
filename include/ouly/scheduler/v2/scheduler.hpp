@@ -4,6 +4,7 @@
 #include "ouly/scheduler/co_task.hpp"
 
 #include "ouly/scheduler/config.hpp"
+#include "ouly/scheduler/detail/allocation.hpp"
 #include "ouly/scheduler/detail/mpmc_ring.hpp"
 #include "ouly/scheduler/detail/v2/worker.hpp"
 #include "ouly/scheduler/detail/v2/workgroup.hpp"
@@ -118,9 +119,9 @@ public:
     }
     else
     {
-      submit_internal(src, group,
-                      ouly::v2::task_delegate::bind(ouly::detail::co_borrowed_executor<std::remove_reference_t<C>>(
-                       task_obj)));
+      submit_internal(
+       src, group,
+       ouly::v2::task_delegate::bind(ouly::detail::co_borrowed_executor<std::remove_reference_t<C>>(task_obj)));
     }
   }
 
@@ -214,6 +215,11 @@ public:
   [[nodiscard]] auto get_worker_count() const noexcept -> uint32_t
   {
     return worker_count_;
+  }
+
+  [[nodiscard]] auto get_node_pool() noexcept -> ouly::detail::scheduler_node_pool&
+  {
+    return node_pool_;
   }
 
   /**
@@ -321,7 +327,8 @@ private:
   std::vector<std::thread>        threads_;
 
   // Scheduler state and configuration (cold data)
-  scheduler_worker_entry entry_fn_;
+  [[no_unique_address]] ouly::detail::scheduler_node_pool node_pool_;
+  scheduler_worker_entry                                  entry_fn_;
 
   uint32_t worker_count_    = 0;
   uint32_t workgroup_count_ = 0;

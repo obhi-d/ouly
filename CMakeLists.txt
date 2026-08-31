@@ -14,6 +14,11 @@ option(OULY_REC_STATS "No stats for allocator" OFF)
 option(OULY_TEST_COVERAGE "Build test coverage." OFF)
 
 option(OULY_ENABLE_CLANG_TIDY "Run clang-tidy while compiling OULY." OFF)
+option(
+    OULY_SCHEDULER_PMR_INTERNAL_ALLOCATOR
+    "Use a synchronized PMR pool for scheduler-internal task nodes."
+    OFF
+)
 
 ##
 ## CONFIGURATION
@@ -138,6 +143,13 @@ target_include_directories(
 
 if(OULY_REC_STATS)
     target_compile_definitions(${OULY_TARGET_NAME} PUBLIC -DOULY_REC_STATS)
+endif()
+
+if(OULY_SCHEDULER_PMR_INTERNAL_ALLOCATOR)
+    target_compile_definitions(
+        ${OULY_TARGET_NAME}
+        PUBLIC OULY_SCHEDULER_PMR_INTERNAL_ALLOCATOR
+    )
 endif()
 
 ##

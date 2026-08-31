@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 #include "ouly/scheduler/co_task.hpp"
+#include "ouly/scheduler/detail/allocation.hpp"
 #include "ouly/scheduler/detail/cache_optimized_data.hpp"
 #include "ouly/scheduler/detail/v3/worker.hpp"
 #include "ouly/scheduler/detail/v3/workgroup.hpp"
@@ -175,6 +176,11 @@ public:
     return worker_count_;
   }
 
+  [[nodiscard]] auto get_node_pool() noexcept -> ouly::detail::scheduler_node_pool&
+  {
+    return node_pool_;
+  }
+
   /**
    * @brief Ensure a work-group by id
    */
@@ -277,6 +283,8 @@ private:
   std::array<detail::v3::workgroup_desc, detail::v3::max_workgroup> workgroup_descs_{};
 
   scheduler_worker_entry entry_fn_;
+
+  [[no_unique_address]] ouly::detail::scheduler_node_pool node_pool_;
 
   uint32_t worker_count_    = 0;
   uint32_t workgroup_count_ = 0;

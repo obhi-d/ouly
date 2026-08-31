@@ -41,9 +41,9 @@ template <typename T, TaskContext WC>
 class basic_task_awaiter;
 
 template <TaskContext WC>
-struct continuation_base
+struct continuation_base : scheduler_node_owner
 {
-  continuation_base() noexcept                                      = default;
+  explicit continuation_base(scheduler_node_pool& pool) noexcept : scheduler_node_owner(pool) {}
   virtual ~continuation_base() noexcept                             = default;
   continuation_base(continuation_base const&)                       = delete;
   auto operator=(continuation_base const&) -> continuation_base&    = delete;
@@ -52,6 +52,9 @@ struct continuation_base
   virtual void schedule(WC const& ctx) noexcept                     = 0;
 
   continuation_base* next_ = nullptr;
+
+protected:
+  continuation_base() noexcept = default;
 };
 
 template <TaskContext WC>
@@ -353,10 +356,11 @@ using continuation_result_t = std::remove_cvref_t<decltype(invoke_continuation(
  std::declval<F&>(), std::declval<task_state<T, WC> const&>(), std::declval<WC const&>()))>;
 
 template <typename F, typename R, TaskContext WC>
-class producer_node
+class producer_node : private scheduler_node_owner
 {
 public:
-  producer_node(task_state<R, WC>* state, F function) : state_(state), function_(std::move(function))
+  producer_node(scheduler_node_pool& pool, task_state<R, WC>* state, F function)
+      : scheduler_node_owner(pool), state_(state), function_(std::move(function))
   {
     state_->add_ref();
   }
@@ -382,7 +386,7 @@ public:
     }
 
     state_->release();
-    scheduler_allocator::destroy(this);
+    release_node(this);
   }
 
 private:
@@ -394,8 +398,10 @@ template <typename F, typename T, typename R, TaskContext WC>
 class continuation_node final : public continuation_base<WC>
 {
 public:
-  continuation_node(task_state<T, WC>* predecessor, task_state<R, WC>* result, workgroup_id group, F function)
-      : predecessor_(predecessor), result_(result), group_(group), function_(std::move(function))
+  continuation_node(scheduler_node_pool& pool, task_state<T, WC>* predecessor, task_state<R, WC>* result,
+                    workgroup_id group, F function)
+      : continuation_base<WC>(pool), predecessor_(predecessor), result_(result), group_(group),
+        function_(std::move(function))
   {
     predecessor_->add_ref();
     result_->add_ref();
@@ -437,7 +443,7 @@ private:
 
     predecessor_->release();
     result_->release();
-    scheduler_allocator::destroy(this);
+    this->release_node(this);
   }
 
   task_state<T, WC>* predecessor_ = nullptr;
@@ -462,10 +468,11 @@ struct task_access
 };
 
 template <TaskContext WC>
-class when_all_control
+class when_all_control : private scheduler_node_owner
 {
 public:
-  when_all_control(task_state<void, WC>* result, uint32_t count) noexcept : result_(result), remaining_(count)
+  when_all_control(scheduler_node_pool& pool, task_state<void, WC>* result, uint32_t count) noexcept
+      : scheduler_node_owner(pool), result_(result), remaining_(count)
   {
     result_->add_ref();
   }
@@ -490,7 +497,7 @@ public:
         result_->set_value(ctx);
       }
       result_->release();
-      scheduler_allocator::destroy(this);
+      release_node(this);
     }
   }
 
@@ -505,8 +512,9 @@ template <typename T, TaskContext WC>
 class when_all_node final : public continuation_base<WC>
 {
 public:
-  when_all_node(task_state<T, WC>* predecessor, when_all_control<WC>* control, workgroup_id group) noexcept
-      : predecessor_(predecessor), control_(control), group_(group)
+  when_all_node(scheduler_node_pool& pool, task_state<T, WC>* predecessor, when_all_control<WC>* control,
+                workgroup_id group) noexcept
+      : continuation_base<WC>(pool), predecessor_(predecessor), control_(control), group_(group)
   {
     predecessor_->add_ref();
   }
@@ -526,7 +534,7 @@ private:
     auto exception = predecessor_->get_exception();
     predecessor_->release();
     control_->arrive(ctx, std::move(exception));
-    scheduler_allocator::destroy(this);
+    this->release_node(this);
   }
 
   task_state<T, WC>*    predecessor_ = nullptr;
@@ -538,9 +546,9 @@ template <typename Promise, typename T, TaskContext WC>
 class coroutine_task_continuation_node final : public continuation_base<WC>
 {
 public:
-  coroutine_task_continuation_node(task_state<T, WC>* predecessor, std::coroutine_handle<Promise> coroutine,
-                                   workgroup_id group) noexcept
-      : predecessor_(predecessor), coroutine_(coroutine), group_(group)
+  coroutine_task_continuation_node(scheduler_node_pool& pool, task_state<T, WC>* predecessor,
+                                   std::coroutine_handle<Promise> coroutine, workgroup_id group) noexcept
+      : continuation_base<WC>(pool), predecessor_(predecessor), coroutine_(coroutine), group_(group)
   {
     predecessor_->add_ref();
   }
@@ -559,7 +567,7 @@ private:
   {
     auto coroutine = coroutine_;
     predecessor_->release();
-    scheduler_allocator::destroy(this);
+    this->release_node(this);
     resume_coroutine(coroutine, ctx);
   }
 
@@ -575,14 +583,14 @@ struct scope_execution_slot
 };
 
 template <TaskContext WC>
-class scope_node_base
+class scope_node_base : protected scheduler_node_owner
 {
 public:
   using execute_fn = void (*)(scope_node_base*, WC const&) noexcept;
   using destroy_fn = void (*)(scope_node_base*) noexcept;
 
-  scope_node_base(workgroup_id group, execute_fn execute, destroy_fn destroy) noexcept
-      : group_(group), execute_(execute), destroy_(destroy)
+  scope_node_base(scheduler_node_pool& pool, workgroup_id group, execute_fn execute, destroy_fn destroy) noexcept
+      : scheduler_node_owner(pool), group_(group), execute_(execute), destroy_(destroy)
   {}
 
   void execute(WC const& ctx) noexcept
@@ -631,9 +639,10 @@ class scope_node final : public scope_node_base<WC>
 public:
   using complete_fn = void (*)(void*, std::exception_ptr) noexcept;
 
-  scope_node(task_state<R, WC>* state, void* scope, complete_fn complete, workgroup_id group, F function)
-      : scope_node_base<WC>(group, &execute_node, &destroy_node), state_(state), scope_(scope), complete_(complete),
-        function_(std::move(function))
+  scope_node(scheduler_node_pool& pool, task_state<R, WC>* state, void* scope, complete_fn complete, workgroup_id group,
+             F function)
+      : scope_node_base<WC>(pool, group, &execute_node, &destroy_node), state_(state), scope_(scope),
+        complete_(complete), function_(std::move(function))
   {
     state_->add_ref();
   }
@@ -669,7 +678,8 @@ private:
 
   static void destroy_node(scope_node_base<WC>* base) noexcept
   {
-    scheduler_allocator::destroy(static_cast<scope_node*>(base));
+    auto* self = static_cast<scope_node*>(base);
+    self->release_node(self);
   }
 
   task_state<R, WC>* state_    = nullptr;
@@ -795,7 +805,8 @@ public:
     auto* result = allocator.make<detail::task_state<result_type, WC>>(allocator);
     try
     {
-      auto* node = allocator.make<node_type>(state_, result, group, std::forward<F>(function));
+      auto& node_pool = ctx.get_scheduler().get_node_pool();
+      auto* node      = node_pool.template make<node_type>(node_pool, state_, result, group, std::forward<F>(function));
       state_->add_continuation(node, ctx);
     }
     catch (...)
@@ -875,8 +886,9 @@ public:
     {
       group = ctx->get_workgroup();
     }
-    auto  allocator = state->get_allocator();
-    auto* node = allocator.template make<coroutine_task_continuation_node<Promise, T, WC>>(state, coroutine, group);
+    auto& node_pool = ctx->get_scheduler().get_node_pool();
+    auto* node =
+     node_pool.template make<coroutine_task_continuation_node<Promise, T, WC>>(node_pool, state, coroutine, group);
     state->add_continuation(node, *ctx);
     return true;
   }
@@ -916,7 +928,8 @@ auto submit_task(WC const& ctx, workgroup_id group, scheduler_allocator allocato
   auto* state = allocator.template make<detail::task_state<result_type, WC>>(allocator);
   try
   {
-    auto* node = allocator.template make<node_type>(state, std::forward<F>(function));
+    auto& node_pool = ctx.get_scheduler().get_node_pool();
+    auto* node      = node_pool.template make<node_type>(node_pool, state, std::forward<F>(function));
     ctx.get_scheduler().submit(ctx, group,
                                [node](WC const& run_ctx) noexcept -> void
                                {
@@ -969,7 +982,8 @@ auto when_all(WC const& ctx, workgroup_id group, scheduler_allocator allocator, 
     detail::when_all_control<WC>* control = nullptr;
     try
     {
-      control = allocator.make<detail::when_all_control<WC>>(result, count);
+      auto& node_pool = ctx.get_scheduler().get_node_pool();
+      control         = node_pool.template make<detail::when_all_control<WC>>(node_pool, result, count);
     }
     catch (...)
     {
@@ -983,7 +997,8 @@ auto when_all(WC const& ctx, workgroup_id group, scheduler_allocator allocator, 
       {
         auto* state = detail::task_access::state(task);
         OULY_ASSERT(state != nullptr);
-        auto* node = allocator.make<detail::when_all_node<T, WC>>(state, control, group);
+        auto& node_pool = ctx.get_scheduler().get_node_pool();
+        auto* node      = node_pool.template make<detail::when_all_node<T, WC>>(node_pool, state, control, group);
         state->add_continuation(node, ctx);
         ++attached;
       };
@@ -1032,7 +1047,8 @@ auto when_all(WC const& ctx, workgroup_id group, scheduler_allocator allocator, 
   detail::when_all_control<WC>* control = nullptr;
   try
   {
-    control = allocator.make<detail::when_all_control<WC>>(result, count);
+    auto& node_pool = ctx.get_scheduler().get_node_pool();
+    control         = node_pool.template make<detail::when_all_control<WC>>(node_pool, result, count);
   }
   catch (...)
   {
@@ -1046,7 +1062,8 @@ auto when_all(WC const& ctx, workgroup_id group, scheduler_allocator allocator, 
     {
       auto* state = detail::task_access::state(task);
       OULY_ASSERT(state != nullptr);
-      auto* node = allocator.make<detail::when_all_node<value_type, WC>>(state, control, group);
+      auto& node_pool = ctx.get_scheduler().get_node_pool();
+      auto* node = node_pool.template make<detail::when_all_node<value_type, WC>>(node_pool, state, control, group);
       state->add_continuation(node, ctx);
       ++attached;
     }
@@ -1125,7 +1142,9 @@ public:
       state                = allocator.template make<detail::task_state<result_type, WC>>(allocator);
       try
       {
-        node = allocator.template make<node_type>(state, this, &complete_one, group, std::forward<F>(function));
+        auto& node_pool = ctx.get_scheduler().get_node_pool();
+        node =
+         node_pool.template make<node_type>(node_pool, state, this, &complete_one, group, std::forward<F>(function));
       }
       catch (...)
       {
