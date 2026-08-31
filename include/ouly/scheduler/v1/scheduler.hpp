@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 #pragma once
+#include "ouly/scheduler/detail/allocation.hpp"
 #include "ouly/scheduler/detail/v1/worker.hpp"
 #include "ouly/scheduler/v1/task_context.hpp"
 #include "ouly/scheduler/worker_structs.hpp"
@@ -138,9 +139,9 @@ public:
     }
     else
     {
-      submit_internal(src.get_worker(), group,
-                      ouly::v1::task_delegate::bind(ouly::detail::co_borrowed_executor<std::remove_reference_t<C>>(
-                       task_obj)));
+      submit_internal(
+       src.get_worker(), group,
+       ouly::v1::task_delegate::bind(ouly::detail::co_borrowed_executor<std::remove_reference_t<C>>(task_obj)));
     }
   }
 
@@ -234,6 +235,11 @@ public:
   [[nodiscard]] auto get_worker_count() const noexcept -> uint32_t
   {
     return worker_count_;
+  }
+
+  [[nodiscard]] auto get_node_pool() noexcept -> ouly::detail::scheduler_node_pool&
+  {
+    return node_pool_;
   }
 
   /**
@@ -349,7 +355,8 @@ private:
   std::vector<std::thread> threads_;
 
   // Scheduler state and configuration (cold data)
-  scheduler_worker_entry entry_fn_;
+  [[no_unique_address]] ouly::detail::scheduler_node_pool node_pool_;
+  scheduler_worker_entry                                  entry_fn_;
 };
 
 } // namespace ouly::v1

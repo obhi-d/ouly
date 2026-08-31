@@ -11,12 +11,144 @@
 #include <cstdint>
 #include <limits>
 #include <memory>
+#ifdef OULY_SCHEDULER_PMR_INTERNAL_ALLOCATOR
+#include <memory_resource>
+#endif
 #include <new>
 #include <type_traits>
 #include <utility>
 
 namespace ouly
 {
+
+namespace detail
+{
+
+/**
+ * @brief Scheduler-owned allocation policy for internal task and continuation nodes.
+ *
+ * Internal execution nodes have lifetimes governed by scheduler queues rather than user-visible
+ * task handles. Keeping their blocks in the scheduler makes that lifetime explicit. It also keeps
+ * a cooperative task-scope join safe when an already-claimed node remains referenced by a queued
+ * delegate. The default policy uses new/delete; the optional synchronized PMR policy provides
+ * size-segregated reuse for differently sized lambda captures and permits nodes to be returned by
+ * any worker.
+ */
+class scheduler_node_pool
+{
+public:
+  scheduler_node_pool() noexcept                                     = default;
+  scheduler_node_pool(scheduler_node_pool const&)                    = delete;
+  auto operator=(scheduler_node_pool const&) -> scheduler_node_pool& = delete;
+  scheduler_node_pool(scheduler_node_pool&&)                         = delete;
+  auto operator=(scheduler_node_pool&&) -> scheduler_node_pool&      = delete;
+  ~scheduler_node_pool() noexcept                                    = default;
+
+  template <typename T, typename... Args>
+  [[nodiscard]] auto make(Args&&... args) -> T*
+  {
+#ifdef OULY_SCHEDULER_PMR_INTERNAL_ALLOCATOR
+    auto* memory = resource_.allocate(sizeof(T), alignof(T));
+    try
+    {
+      return std::construct_at(static_cast<T*>(memory), std::forward<Args>(args)...);
+    }
+    catch (...)
+    {
+      resource_.deallocate(memory, sizeof(T), alignof(T));
+      throw;
+    }
+#else
+    void* memory = allocate_global<T>();
+    try
+    {
+      return std::construct_at(static_cast<T*>(memory), std::forward<Args>(args)...);
+    }
+    catch (...)
+    {
+      deallocate_global<T>(memory);
+      throw;
+    }
+#endif
+  }
+
+  template <typename T>
+#ifdef OULY_SCHEDULER_PMR_INTERNAL_ALLOCATOR
+  void destroy(T* object) noexcept
+  {
+    std::destroy_at(object);
+    resource_.deallocate(object, sizeof(T), alignof(T));
+  }
+#else
+  static void destroy(T* object) noexcept
+  {
+    std::destroy_at(object);
+    deallocate_global<T>(object);
+  }
+#endif
+
+private:
+#ifdef OULY_SCHEDULER_PMR_INTERNAL_ALLOCATOR
+  std::pmr::synchronized_pool_resource resource_;
+#else
+  template <typename T>
+  [[nodiscard]] static auto allocate_global() -> void*
+  {
+    if constexpr (alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
+    {
+      return ::operator new(sizeof(T), std::align_val_t{alignof(T)});
+    }
+    else
+    {
+      return ::operator new(sizeof(T));
+    }
+  }
+
+  template <typename T>
+  static void deallocate_global(void* memory) noexcept
+  {
+    if constexpr (alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
+    {
+      ::operator delete(memory, std::align_val_t{alignof(T)});
+    }
+    else
+    {
+      ::operator delete(memory);
+    }
+  }
+#endif
+};
+
+/** @brief Remembers pooled storage ownership only when the PMR node allocator is enabled. */
+class scheduler_node_owner
+{
+protected:
+  scheduler_node_owner() noexcept = default;
+
+#ifdef OULY_SCHEDULER_PMR_INTERNAL_ALLOCATOR
+  explicit scheduler_node_owner(scheduler_node_pool& pool) noexcept : pool_(&pool) {}
+
+  template <typename T>
+  void release_node(T* object) noexcept
+  {
+    OULY_ASSERT(pool_ != nullptr);
+    pool_->destroy(object);
+  }
+
+private:
+  scheduler_node_pool* pool_ = nullptr;
+#else
+  explicit scheduler_node_owner([[maybe_unused]] scheduler_node_pool& pool) noexcept {}
+
+  template <typename T>
+  static void release_node(T* object) noexcept
+  {
+    scheduler_node_pool::destroy(object);
+  }
+#endif
+};
+
+} // namespace detail
 
 /**
  * @brief An allocator that can honour an alignment that is only known at runtime
