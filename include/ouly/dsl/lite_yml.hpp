@@ -137,6 +137,7 @@ private:
   auto next_token() -> token;
   auto next_line_start_token() -> token;
   auto quoted_token() -> token;
+  auto plain_token() -> token;
   void process_token(token tok);
   // Context management
   void handle_indent(uint16_t new_indent);
@@ -145,10 +146,13 @@ private:
   void handle_dash(uint16_t new_indent, bool compact);
   void handle_block_scalar(token_type type);
   void collect_block_scalar();
+  void gather_block_scalar_lines();
   void close_context(uint16_t new_indent);
   void close_until(uint16_t new_indent, container_type type);
 
   // Utility functions
+  [[nodiscard]] auto join_block_scalar_lines() const -> std::string;
+
   [[nodiscard]] auto get_view(string_slice slice) const -> std::string_view
   {
     return content_.substr(slice.start_, slice.count_);
