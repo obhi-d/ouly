@@ -5,6 +5,13 @@
 
 namespace ouly::yml
 {
+namespace
+{
+auto is_space(char value) -> bool
+{
+  return value == ' ' || value == '\t' || value == '\r' || value == '\n';
+}
+} // namespace
 
 // Example YAML:
 //
@@ -48,13 +55,32 @@ namespace ouly::yml
 //
 void lite_stream::parse()
 {
-  state_        = parse_state::none;
-  indent_level_ = 0;
-  current_pos_  = 0;
+  state_           = parse_state::none;
+  indent_level_    = 0;
+  current_pos_     = 0;
+  line_start_      = 0;
+  at_line_start_   = true;
+  can_be_sequence_ = false;
+  value_finished_  = false;
+  indent_stack_.clear();
+  block_lines_.clear();
 
   while (auto nxt_tok = next_token())
   {
     process_token(nxt_tok);
+  }
+
+  if (state_ == parse_state::in_block_scalar)
+  {
+    collect_block_scalar();
+  }
+
+  for (auto const& entry : indent_stack_)
+  {
+    if (entry.type_ == container_type::compact_array)
+    {
+      throw_error({.content_ = {.start_ = current_pos_}}, "Unterminated array, ']' expected");
+    }
   }
 
   // Close any open structures
@@ -66,7 +92,8 @@ void lite_stream::parse()
 
 auto lite_stream::next_line_start_token() -> lite_stream::token
 {
-  can_be_sequence_ = true;
+  line_start_      = current_pos_;
+  can_be_sequence_ = !is_scope_of_type(container_type::compact_array);
   auto indent      = count_indent();
   if (peek(0) == '\r' || peek(0) == '\n')
   {
@@ -90,13 +117,12 @@ auto lite_stream::next_line_start_token() -> lite_stream::token
   }
 
   at_line_start_ = false;
-  if (peek(0) == '-')
+  if (can_be_sequence_ && peek(0) == '-' && (is_space(peek(1)) || peek(1) == '\0'))
   {
     current_pos_++;
-    auto after_dash_indent = count_indent();
+    count_indent();
     return token{
-     .type_    = token_type::dash,
-     .content_ = {.start_ = indent.start_, .count_ = indent.count_ + 1 + after_dash_indent.count_}
+     .type_ = token_type::dash, .content_ = {.start_ = indent.start_, .count_ = indent.count_ + 1}
     };
   }
   return token{.type_ = token_type::indent, .content_ = indent};
@@ -120,19 +146,31 @@ auto lite_stream::next_token() -> lite_stream::token
   }
 
   char c = ouly::detail::vector_access(content_, current_pos_);
+  if (value_finished_ && c != ',' && c != ']' && c != '\n' && c != '#')
+  {
+    throw_error(
+     {
+      .content_ = {.start_ = current_pos_, .count_ = 1}
+    },
+     "Unexpected content after value");
+  }
   switch (c)
   {
   case '-':
-    if (can_be_sequence_ && (std::isspace(peek(1)) != 0))
+    if (can_be_sequence_ && (is_space(peek(1)) || peek(1) == '\0'))
     {
-      current_pos_++;
-      auto indent = count_indent();
-      auto tok    = token{
-          .type_ = token_type::dash, .content_ = {.start_ = current_pos_ - 1, .count_ = 1 + indent.count_}
+      auto start = current_pos_++;
+      count_indent();
+      auto tok = token{
+       .type_ = token_type::dash, .content_ = {.start_ = start, .count_ = start - line_start_ + 1}
       };
       return tok;
     }
     break;
+  case '#':
+    skip_to_line_end();
+    at_line_start_ = true;
+    return {.type_ = token_type::newline, .content_ = {}};
   case '|':
   {
     current_pos_++;
@@ -185,28 +223,8 @@ auto lite_stream::next_token() -> lite_stream::token
     };
   }
   case '"':
-  {
-    // Quoted string
-    auto start = current_pos_;
-    current_pos_++;
-    while (current_pos_ < content_.length())
-    {
-      c = ouly::detail::vector_access(content_, current_pos_);
-      if (c == '"')
-      {
-        current_pos_++;
-        break;
-      }
-      current_pos_++;
-    }
-    auto const count = static_cast<uint32_t>(current_pos_ - start - 2);
-    // `""` is a value, not an absent one: it has to be told apart from a key that introduces a
-    // nested block, or the block that follows is read as this key's value.
-    return token{
-     .type_    = count == 0 ? token_type::empty_value : token_type::value,
-     .content_ = {.start_ = start + 1, .count_ = count}
-    };
-  }
+  case '\'':
+    return quoted_token();
   default:
     break;
   }
@@ -217,24 +235,134 @@ auto lite_stream::next_token() -> lite_stream::token
   while (current_pos_ < content_.length())
   {
     c = ouly::detail::vector_access(content_, current_pos_);
-    if (c == ':' && (std::isspace(peek(1)) != 0))
+    if (c == ':' && (is_space(peek(1)) || peek(1) == '\0'))
     {
-      auto slice = string_slice{.start_ = start, .count_ = (current_pos_ - start)};
+      auto end = current_pos_;
+      while (end > start && is_space(ouly::detail::vector_access(content_, end - 1)))
+      {
+        --end;
+      }
+      auto slice = string_slice{.start_ = start, .count_ = end - start};
       current_pos_++;
       return token{.type_ = token_type::key, .content_ = slice};
     }
-    if (((c == ',' || (std::isspace(c) != 0 || c == ']')) && is_scope_of_type(container_type::compact_array)) ||
-        c == '\n' || c == '\r' || c == '[')
+    if (((c == ',' || c == ']') && is_scope_of_type(container_type::compact_array)) || c == '\n' || c == '\r' ||
+        (c == '#' && (current_pos_ == start || is_space(ouly::detail::vector_access(content_, current_pos_ - 1)))))
     {
       break;
     }
     current_pos_++;
   }
 
-  // If we got here, it's a value
+  // Whitespace separating a scalar from a comment or line ending is not part of its value.
+  auto end = current_pos_;
+  while (end > start && is_space(ouly::detail::vector_access(content_, end - 1)))
+  {
+    --end;
+  }
   return token{
-   .type_ = token_type::value, .content_ = string_slice{.start_ = start, .count_ = (current_pos_ - start)}
+   .type_ = token_type::value, .content_ = string_slice{.start_ = start, .count_ = end - start}
   };
+}
+
+auto lite_stream::quoted_token() -> lite_stream::token
+{
+  auto const start = current_pos_++;
+  auto const quote = ouly::detail::vector_access(content_, start);
+  decoded_.clear();
+  bool escaped = false;
+  while (current_pos_ < content_.size())
+  {
+    auto c = ouly::detail::vector_access(content_, current_pos_++);
+    if (c == quote)
+    {
+      if (quote == '\'' && peek(0) == '\'')
+      {
+        ++current_pos_;
+        decoded_ += '\'';
+        escaped = true;
+        continue;
+      }
+      token result{
+       .type_    = token_type::value,
+       .content_ = {.start_ = start + 1, .count_ = current_pos_ - start - 2},
+       .decoded_ = escaped
+      };
+      skip_whitespace();
+      if (peek(0) == ':' && (is_space(peek(1)) || peek(1) == '\0'))
+      {
+        ++current_pos_;
+        result.type_ = token_type::key;
+      }
+      can_be_sequence_ = false;
+      return result;
+    }
+    if (c == '\n' || c == '\r')
+    {
+      throw_error(
+       {
+        .content_ = {.start_ = start, .count_ = current_pos_ - start}
+      },
+       "Multiline quoted scalars are not supported");
+    }
+    if (quote == '"' && c == '\\')
+    {
+      escaped = true;
+      c       = peek(0);
+      if (current_pos_ < content_.size())
+      {
+        ++current_pos_;
+      }
+      switch (c)
+      {
+      case '0':
+        c = '\0';
+        break;
+      case 'a':
+        c = '\a';
+        break;
+      case 'b':
+        c = '\b';
+        break;
+      case 't':
+        c = '\t';
+        break;
+      case 'n':
+        c = '\n';
+        break;
+      case 'v':
+        c = '\v';
+        break;
+      case 'f':
+        c = '\f';
+        break;
+      case 'r':
+        c = '\r';
+        break;
+      case 'e':
+        c = '\x1b';
+        break;
+      case ' ':
+      case '/':
+      case '\\':
+      case '"':
+        break;
+      default:
+        throw_error(
+         {
+          .content_ = {.start_ = start, .count_ = current_pos_ - start}
+        },
+         "Unsupported quoted scalar escape");
+      }
+    }
+    decoded_ += c;
+  }
+  throw_error(
+   {
+    .content_ = {.start_ = start, .count_ = current_pos_ - start}
+  },
+   "Unterminated quoted scalar");
+  return {};
 }
 
 void lite_stream::process_token(token tok)
@@ -255,7 +383,13 @@ void lite_stream::process_token(token tok)
     {
       throw_error(tok, "Unexpected ','");
     }
+    if (!value_finished_)
+    {
+      throw_error(tok, "Expected an array value before ','");
+    }
     ctx_->begin_new_array_item();
+    value_finished_ = false;
+    state_          = parse_state::in_new_context;
     break;
 
   case token_type::rbracket:
@@ -264,10 +398,15 @@ void lite_stream::process_token(token tok)
       throw_error(tok, "Unexpected ']'");
     }
     close_last_context();
+    state_          = parse_state::none;
+    value_finished_ = true;
     break;
 
   case token_type::indent:
-    handle_indent(static_cast<uint16_t>(tok.content_.count_));
+    if (!is_scope_of_type(container_type::compact_array))
+    {
+      handle_indent(static_cast<uint16_t>(tok.content_.count_));
+    }
     break;
 
   case token_type::key:
@@ -275,20 +414,16 @@ void lite_stream::process_token(token tok)
     {
       throw_error(tok, "Unexpected key, ']' expected");
     }
-    handle_key(tok.content_);
+    handle_key(tok.decoded_ ? std::string_view(decoded_) : get_view(tok.content_));
     break;
 
   case token_type::value:
-    handle_value(tok.content_);
-    break;
-
-  case token_type::empty_value:
-    ctx_->set_value(std::string_view());
-    state_ = parse_state::none;
+    handle_value(tok.decoded_ ? std::string_view(decoded_) : get_view(tok.content_));
     break;
 
   case token_type::dash:
     handle_dash(static_cast<uint16_t>(tok.content_.count_), false);
+    indent_level_ = static_cast<uint16_t>(current_pos_ - line_start_);
     break;
 
   case token_type::pipe:
@@ -300,6 +435,10 @@ void lite_stream::process_token(token tok)
     if (state_ == parse_state::in_block_scalar)
     {
       collect_block_scalar();
+    }
+    if (!is_scope_of_type(container_type::compact_array))
+    {
+      value_finished_ = false;
     }
     break;
   case token_type::eof:
@@ -322,34 +461,23 @@ void lite_stream::handle_indent(uint16_t new_indent)
   indent_level_ = new_indent;
 }
 
-void lite_stream::handle_key(string_slice key)
+void lite_stream::handle_key(std::string_view key)
 {
   if (state_ == parse_state::in_new_context)
   {
     ctx_->begin_object();
     indent_stack_.emplace_back(indent_level_, container_type::object);
   }
-  ctx_->set_key(get_view(key));
+  ctx_->set_key(key);
   state_ = parse_state::in_key;
 }
 
-void lite_stream::handle_value(string_slice value)
+void lite_stream::handle_value(std::string_view value)
 {
-  if (value.count_ == 0U)
-  {
-    return;
-  }
-
-  ctx_->set_value(get_view(value));
-  state_ = parse_state::none;
+  ctx_->set_value(value);
+  state_          = parse_state::none;
+  value_finished_ = true;
 }
-
-//
-//  arr:
-//    - key: x
-//         - g: a
-//    - key: a
-//         - g: a
 
 void lite_stream::handle_dash(uint16_t new_indent, bool compact)
 {
@@ -364,40 +492,94 @@ void lite_stream::handle_dash(uint16_t new_indent, bool compact)
     close_until(indent_level_, container_type::array);
   }
   ctx_->begin_new_array_item();
-  state_ = parse_state::in_new_context;
+  state_          = parse_state::in_new_context;
+  value_finished_ = false;
 }
 
 void lite_stream::handle_block_scalar(token_type type)
 {
-  state_       = parse_state::in_block_scalar;
-  block_style_ = type;
+  if (is_scope_of_type(container_type::compact_array))
+  {
+    throw_error(
+     {
+      .content_ = {.start_ = current_pos_ - 1, .count_ = 1}
+    },
+     "Block scalars are not allowed in flow arrays");
+  }
+  block_parent_indent_ = indent_level_;
+  if (state_ == parse_state::in_new_context && is_scope_of_type(container_type::array))
+  {
+    block_parent_indent_ = static_cast<uint16_t>(indent_stack_.back().indent_ - 1);
+  }
+  state_          = parse_state::in_block_scalar;
+  block_style_    = type;
+  value_finished_ = true;
   block_lines_.clear();
 }
 
 void lite_stream::collect_block_scalar()
 {
-  auto indent = count_indent();
-  auto line   = get_current_line();
-  if ((line.count_ != 0U) && line.count_ > indent.count_)
+  // Read the whole block here; leave the first dedented line for the tokenizer.
+  uint32_t block_indent = 0;
+  while (current_pos_ < content_.size())
   {
-    block_lines_.push_back(line);
-  }
-  else
-  {
-    // End of block scalar
-    std::string result;
-    for (uint32_t i = 0; i < block_lines_.size(); ++i)
+    auto const start  = current_pos_;
+    auto const indent = count_indent();
+    auto       line   = get_current_line();
+    if (line.count_ != 0 && ouly::detail::vector_access(content_, current_pos_ - 1) == '\r')
     {
-      if (i > 0)
-      {
-        result += (block_style_ == token_type::pipe) ? '\n' : ' ';
-      }
-      result += get_view(ouly::detail::vector_access(block_lines_, i));
+      --line.count_;
     }
-    ctx_->set_value(result);
-    block_lines_.clear();
-    state_ = parse_state::none;
+    if (line.count_ != 0)
+    {
+      if (indent.count_ <= block_parent_indent_ || (block_indent != 0 && indent.count_ < block_indent))
+      {
+        current_pos_ = start;
+        break;
+      }
+      if (block_indent == 0)
+      {
+        block_indent = indent.count_;
+      }
+      // Preserve indentation beyond the block's base indentation.
+      line.start_ = start + block_indent;
+      line.count_ += indent.count_ - block_indent;
+    }
+    block_lines_.push_back(line);
+    if (peek(0) == '\n')
+    {
+      ++current_pos_;
+    }
   }
+
+  // Keep lite_yml's existing convention of stripping trailing block newlines.
+  while (!block_lines_.empty() && block_lines_.back().count_ == 0)
+  {
+    block_lines_.pop_back();
+  }
+  std::string result;
+  for (uint32_t i = 0; i < block_lines_.size(); ++i)
+  {
+    auto line = get_view(ouly::detail::vector_access(block_lines_, i));
+    if (i > 0)
+    {
+      auto previous = get_view(ouly::detail::vector_access(block_lines_, i - 1));
+      if (block_style_ == token_type::pipe || line.empty() || (!line.empty() && is_space(line.front())) ||
+          (!previous.empty() && is_space(previous.front())))
+      {
+        result += '\n';
+      }
+      else if (!previous.empty())
+      {
+        result += ' ';
+      }
+    }
+    result += line;
+  }
+  ctx_->set_value(result);
+  block_lines_.clear();
+  state_         = parse_state::none;
+  at_line_start_ = true;
 }
 
 void lite_stream::close_until(uint16_t new_indent, container_type type)

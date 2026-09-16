@@ -26,6 +26,259 @@ struct TestStruct
   }
 };
 
+TEST_CASE("yaml parser: inline comments and scalar whitespace", "[yaml][regression]")
+{
+  struct Document
+  {
+    std::string text;
+    int         number = 0;
+    std::string hash;
+  };
+  for (auto const* text : {"hello", "\"hello\"", "'hello'"})
+  {
+    Document doc;
+    auto     yaml = std::string("text : ") + text + "   # comment\r\nnumber: 42   # number\r\nhash: hello#world   \r\n";
+    CAPTURE(yaml);
+    ouly::yml::from_string(doc, yaml);
+    REQUIRE(doc.text == "hello");
+    REQUIRE(doc.number == 42);
+    REQUIRE(doc.hash == "hello#world");
+  }
+
+  Document doc;
+  ouly::yml::from_string(doc, "text: hello   \nnumber : 42   \nhash: '# literal' # trailing comment");
+  REQUIRE(doc.text == "hello");
+  REQUIRE(doc.number == 42);
+  REQUIRE(doc.hash == "# literal");
+}
+
+TEST_CASE("yaml parser: quoted keys and values", "[yaml][regression]")
+{
+  struct Document
+  {
+    std::string text;
+    std::string other;
+  };
+  Document doc;
+  ouly::yml::from_string(doc, R"("text" : "say \"hi\"" # comment
+'other': 'it''s fine'
+)");
+  REQUIRE(doc.text == "say \"hi\"");
+  REQUIRE(doc.other == "it's fine");
+
+  ouly::yml::from_string(doc, R"(text: "line\nnext\tcolumn\\path"
+other: 'literal\nvalue'
+)");
+  REQUIRE(doc.text == "line\nnext\tcolumn\\path");
+  REQUIRE(doc.other == "literal\\nvalue");
+
+  ouly::yml::from_string(doc, "text: '' # empty\nother: \"\" # empty");
+  REQUIRE(doc.text.empty());
+  REQUIRE(doc.other.empty());
+}
+
+TEST_CASE("yaml parser: flow strings and comments", "[yaml][regression]")
+{
+  struct Document
+  {
+    std::vector<std::string> values;
+    int                      after = 0;
+  };
+  Document doc;
+  ouly::yml::from_string(doc,
+                         "values: [hello world, # first\n  goodbye moon, 'a,b', \"x]y\", '', hello#world]\nafter: 7\n");
+  REQUIRE(doc.values == std::vector<std::string>{"hello world", "goodbye moon", "a,b", "x]y", "", "hello#world"});
+  REQUIRE(doc.after == 7);
+}
+
+TEST_CASE("yaml parser: dash spacing does not change sequence nesting", "[yaml][regression]")
+{
+  struct Document
+  {
+    std::vector<std::string> values;
+    int                      after = 0;
+  };
+  Document doc;
+  ouly::yml::from_string(doc, "values:\n  - one\n  -   two\n  - three\nafter: 7\n");
+  REQUIRE(doc.values == std::vector<std::string>{"one", "two", "three"});
+  REQUIRE(doc.after == 7);
+
+  std::vector<int> root;
+  ouly::yml::from_string(root, "- -1\n-   -2\n- -3");
+  REQUIRE(root == std::vector<int>{-1, -2, -3});
+}
+
+TEST_CASE("yaml parser: nested sequence forms", "[yaml][regression]")
+{
+  struct Document
+  {
+    std::vector<std::vector<int>> values;
+    int                           after = 0;
+  };
+  for (auto const* yaml :
+       {"values:\n  - - 1\n    - 2\n  - - 3\n    - 4\nafter: 7\n",
+        "values:\n  -\n    - 1\n    - 2\n  -\n    - 3\n    - 4\nafter: 7\n", "values: [[1, 2], [3, 4]]\nafter: 7\n"})
+  {
+    CAPTURE(yaml);
+    Document doc;
+    ouly::yml::from_string(doc, yaml);
+    REQUIRE(doc.values == std::vector<std::vector<int>>{
+                           {1, 2},
+                           {3, 4}
+    });
+    REQUIRE(doc.after == 7);
+  }
+}
+
+TEST_CASE("yaml parser: sequence object fields align with content", "[yaml][regression]")
+{
+  struct Item
+  {
+    std::string name;
+    int         value = 0;
+  };
+  std::vector<Item> items;
+  ouly::yml::from_string(items, "- name: one\n  value: 1\n-   name: two\n    value: 2\n- name: three\n  value: 3\n");
+  REQUIRE(items.size() == 3);
+  REQUIRE(items[0].name == "one");
+  REQUIRE(items[0].value == 1);
+  REQUIRE(items[1].name == "two");
+  REQUIRE(items[1].value == 2);
+  REQUIRE(items[2].name == "three");
+  REQUIRE(items[2].value == 3);
+}
+
+TEST_CASE("yaml parser: block scalars stop at dedentation", "[yaml][regression]")
+{
+  struct Document
+  {
+    std::string text;
+    int         after = 0;
+  };
+  for (auto const* yaml :
+       {"text: |\n  hello\nafter: 7\n", "text: > # folded\n  hello\nafter: 7\n", "text: |\r\n  hello\r\nafter: 7\r\n"})
+  {
+    CAPTURE(yaml);
+    Document doc;
+    ouly::yml::from_string(doc, yaml);
+    REQUIRE(doc.text == "hello");
+    REQUIRE(doc.after == 7);
+  }
+  Document doc;
+  ouly::yml::from_string(doc, "text: |\n  x\n  y\n\nafter: 7\n");
+  REQUIRE(doc.text == "x\ny");
+  REQUIRE(doc.after == 7);
+}
+
+TEST_CASE("yaml parser: block scalars retain content at EOF", "[yaml][regression]")
+{
+  struct Document
+  {
+    std::string text;
+  };
+  for (auto const* yaml : {"text: |\n  hello", "text: |\n  hello\n", "text: >\n  hello", "text: >\n  hello\n"})
+  {
+    CAPTURE(yaml);
+    Document doc;
+    ouly::yml::from_string(doc, yaml);
+    REQUIRE(doc.text == "hello");
+  }
+  for (auto const* yaml : {"text: |", "text: > # empty", "text: |\n\n"})
+  {
+    CAPTURE(yaml);
+    Document doc{"original"};
+    ouly::yml::from_string(doc, yaml);
+    REQUIRE(doc.text.empty());
+  }
+}
+
+TEST_CASE("yaml parser: block scalar blank lines and extra indentation", "[yaml][regression]")
+{
+  struct Document
+  {
+    std::string text;
+    int         after = 0;
+  };
+  Document doc;
+  ouly::yml::from_string(doc, "text: |\n  first\n\n    indented\n  # literal\nafter: 7\n");
+  REQUIRE(doc.text == "first\n\n  indented\n# literal");
+  REQUIRE(doc.after == 7);
+  ouly::yml::from_string(doc, "text: >\n  first\n  second\n\n  paragraph\nafter: 8\n");
+  REQUIRE(doc.text == "first second\nparagraph");
+  REQUIRE(doc.after == 8);
+}
+
+TEST_CASE("yaml parser: block scalars inside sequences", "[yaml][regression]")
+{
+  struct Document
+  {
+    std::vector<std::string> values;
+    int                      after = 0;
+  };
+  Document doc;
+  ouly::yml::from_string(doc,
+                         "values:\n  - |\n    first\n    second\n  - >\n    third\n    fourth\n  - last\nafter: 7\n");
+  REQUIRE(doc.values == std::vector<std::string>{"first\nsecond", "third fourth", "last"});
+  REQUIRE(doc.after == 7);
+}
+
+TEST_CASE("yaml parser: nested empty sequences are values", "[yaml][regression]")
+{
+  struct Document
+  {
+    std::vector<std::vector<int>> values;
+    int                           after = 0;
+  };
+  for (auto const* yaml : {"values: [[], [1], []]\nafter: 7\n", "values:\n  - []\n  - [1]\n  - []\nafter: 7\n"})
+  {
+    CAPTURE(yaml);
+    Document doc;
+    ouly::yml::from_string(doc, yaml);
+    REQUIRE(doc.values == std::vector<std::vector<int>>{{}, {1}, {}});
+    REQUIRE(doc.after == 7);
+  }
+}
+
+TEST_CASE("yaml parser: extra content after a root scalar is rejected", "[yaml][regression]")
+{
+  for (auto const* yaml : {"'hello'\nother: value\n", "'hello'\n'world'\n", "'hello'\n- item\n", "'hello'\n[]\n"})
+  {
+    CAPTURE(yaml);
+    std::string value;
+    REQUIRE_THROWS_AS(ouly::yml::from_string(value, yaml), std::runtime_error);
+  }
+}
+
+TEST_CASE("yaml parser: truncated quoted scalars are rejected", "[yaml][regression]")
+{
+  struct Document
+  {
+    std::string text;
+  };
+  for (auto const* yaml : {"text: \"hello", "text: 'hello", "text: \"", "text: '\n", "text: \"hello\\",
+                           "text: \"hello\\q\"", "text: \"hello\" garbage", "text: | trailing\n  hello\n"})
+  {
+    CAPTURE(yaml);
+    Document doc;
+    REQUIRE_THROWS_AS(ouly::yml::from_string(doc, yaml), std::runtime_error);
+  }
+}
+
+TEST_CASE("yaml parser: incomplete and malformed flow sequences are rejected", "[yaml][regression]")
+{
+  struct Document
+  {
+    std::vector<std::vector<int>> values;
+  };
+  for (auto const* yaml : {"values: [", "values: [[1, 2]", "values: [[1, 2", "values: [[1],\n", "values: [[1] [2]]",
+                           "values: [,]", "values: [[1],, [2]]"})
+  {
+    CAPTURE(yaml);
+    Document doc;
+    REQUIRE_THROWS_AS(ouly::yml::from_string(doc, yaml), std::runtime_error);
+  }
+}
+
 TEST_CASE("yaml_object: Test read")
 {
   std::string yml = R"(
