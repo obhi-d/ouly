@@ -229,9 +229,15 @@ auto lite_stream::next_token() -> lite_stream::token
     break;
   }
 
+  return plain_token();
+}
+
+auto lite_stream::plain_token() -> lite_stream::token
+{
   can_be_sequence_ = false;
   // Handle key or value
   auto start = current_pos_;
+  char c     = 0;
   while (current_pos_ < content_.length())
   {
     c = ouly::detail::vector_access(content_, current_pos_);
@@ -517,7 +523,7 @@ void lite_stream::handle_block_scalar(token_type type)
   block_lines_.clear();
 }
 
-void lite_stream::collect_block_scalar()
+void lite_stream::gather_block_scalar_lines()
 {
   // Read the whole block here; leave the first dedented line for the tokenizer.
   uint32_t block_indent = 0;
@@ -557,6 +563,10 @@ void lite_stream::collect_block_scalar()
   {
     block_lines_.pop_back();
   }
+}
+
+auto lite_stream::join_block_scalar_lines() const -> std::string
+{
   std::string result;
   for (uint32_t i = 0; i < block_lines_.size(); ++i)
   {
@@ -576,7 +586,13 @@ void lite_stream::collect_block_scalar()
     }
     result += line;
   }
-  ctx_->set_value(result);
+  return result;
+}
+
+void lite_stream::collect_block_scalar()
+{
+  gather_block_scalar_lines();
+  ctx_->set_value(join_block_scalar_lines());
   block_lines_.clear();
   state_         = parse_state::none;
   at_line_start_ = true;
