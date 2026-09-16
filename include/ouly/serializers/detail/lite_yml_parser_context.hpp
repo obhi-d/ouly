@@ -232,7 +232,15 @@ public:
   /**
    * @brief Called when a new array begins in the YAML document
    */
-  void begin_array() final {}
+  void begin_array() final
+  {
+    if (context_ == nullptr)
+    {
+      throw std::runtime_error("Unexpected array after the document value");
+    }
+    // An explicitly empty sequence is still a value, including when it is an array item.
+    context_->has_value_ = true;
+  }
 
   /**
    * @brief Called when an array ends in the YAML document
@@ -282,6 +290,10 @@ public:
    */
   void begin_new_array_item() final
   {
+    if (context_ == nullptr)
+    {
+      throw std::runtime_error("Unexpected array item after the document value");
+    }
     while (!context_->accepts_array_items() && context_->parent_ != nullptr)
     {
       pop();
@@ -296,6 +308,10 @@ public:
    */
   void set_key(std::string_view ikey) final
   {
+    if (context_ == nullptr)
+    {
+      throw std::runtime_error("Unexpected key after the document value");
+    }
     context_ = context_->set_key(this, ikey);
   }
 
@@ -306,6 +322,10 @@ public:
    */
   void set_value(std::string_view slice) final
   {
+    if (context_ == nullptr)
+    {
+      throw std::runtime_error("Unexpected scalar after the document value");
+    }
     context_->has_value_ = true;
     context_->set_value(this, slice);
     pop();

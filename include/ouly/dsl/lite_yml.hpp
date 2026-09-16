@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <format>
 #include <stdexcept>
+#include <string>
 #include <string_view>
 
 namespace ouly::yml
@@ -66,6 +67,7 @@ public:
    * @brief Called when a key is encountered in a mapping
    *
    * @param slice The key as a string view
+   * The view is valid during this callback; copy it if it must be retained.
    */
   virtual void set_key(std::string_view slice) = 0;
 
@@ -73,6 +75,7 @@ public:
    * @brief Called when a scalar value is encountered
    *
    * @param slice The value as a string view
+   * The view is valid during this callback; copy it if it must be retained.
    */
   virtual void set_value(std::string_view slice) = 0;
 };
@@ -88,10 +91,9 @@ public:
 private:
   enum class token_type : uint8_t
   {
-    indent,      // Whitespace at start of line
-    key,         // Key followed by colon
-    value,       // Simple scalar value
-    empty_value, // An explicitly quoted empty scalar ("")
+    indent,   // Whitespace at start of line
+    key,      // Key followed by colon
+    value,    // Simple scalar value
     dash,     // Array item marker
     pipe,     // | for literal block scalar
     gt,       // > for folded block scalar
@@ -123,6 +125,7 @@ private:
   {
     token_type   type_ = token_type::eof;
     string_slice content_;
+    bool         decoded_ = false;
 
     operator bool() const noexcept
     {
@@ -133,11 +136,12 @@ private:
   // Token processing
   auto next_token() -> token;
   auto next_line_start_token() -> token;
+  auto quoted_token() -> token;
   void process_token(token tok);
   // Context management
   void handle_indent(uint16_t new_indent);
-  void handle_key(string_slice key);
-  void handle_value(string_slice value);
+  void handle_key(std::string_view key);
+  void handle_value(std::string_view value);
   void handle_dash(uint16_t new_indent, bool compact);
   void handle_block_scalar(token_type type);
   void collect_block_scalar();
@@ -252,13 +256,17 @@ private:
 
   small_vector<indent_entry, small_buffer_size> indent_stack_;
   small_vector<string_slice, small_buffer_size> block_lines_;
+  std::string                                   decoded_;
 
   context*    ctx_                 = nullptr;
   parse_state state_               = parse_state::in_new_context;
   uint32_t    current_pos_         = 0;
+  uint32_t    line_start_          = 0;
   uint16_t    indent_level_        = 0;
+  uint16_t    block_parent_indent_ = 0;
   token_type  block_style_         = token_type::eof;
   bool        at_line_start_ : 1   = true;
   bool        can_be_sequence_ : 1 = false;
+  bool        value_finished_ : 1  = false;
 };
 } // namespace ouly::yml
