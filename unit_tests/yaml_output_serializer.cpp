@@ -199,4 +199,27 @@ TEST_CASE("yaml_output: Roundtrip soavector aggregates")
   REQUIRE(read.at<1>(1) == "beta");
   REQUIRE(read.at<2>(2));
 }
+TEST_CASE("yaml_output: Roundtrip strings that need quoting")
+{
+  struct Quoted
+  {
+    std::vector<std::string> values;
+    std::string              tail;
+  };
+
+  Quoted write{
+   {"#0", "", " lead", "trail ", "a: b", "x #y", "[z", "- d", "-", "q\"uote", "back\\slash", "line\nbreak", "c,d",
+    "plain-text"},
+   "after"
+  };
+  Quoted read;
+
+  auto yml = ouly::yml::to_string(write);
+  REQUIRE(yml.find("plain-text") != std::string::npos);
+  REQUIRE(yml.find("\"plain-text\"") == std::string::npos);
+  ouly::yml::from_string(read, yml);
+
+  REQUIRE(read.values == write.values);
+  REQUIRE(read.tail == write.tail);
+}
 // NOLINTEND

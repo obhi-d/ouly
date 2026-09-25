@@ -11,6 +11,9 @@
 #include "ouly/reflection/reflection.hpp"
 #include "ouly/utility/to_chars.hpp"
 #include "ouly/utility/type_traits.hpp"
+#include <algorithm>
+#include <string>
+#include <string_view>
 
 namespace ouly::detail
 {
@@ -63,7 +66,14 @@ public:
 
   void key(std::string_view slice)
   {
-    stream_.append(slice);
+    if (needs_quotes(slice))
+    {
+      append_quoted(slice);
+    }
+    else
+    {
+      stream_.append(slice);
+    }
     stream_.push_back(':');
     stream_.push_back(' ');
     skip_indent_ = false;
@@ -71,16 +81,18 @@ public:
 
   void as_string(std::string_view slice)
   {
-    if (slice.empty())
+    // An empty scalar written bare leaves `key:` with nothing after it, and the parser then reads
+    // whatever follows -- the next list entry -- as this key's value. A scalar opening with `#` reads
+    // back as a comment, and one opening with a quote, bracket or block indicator changes token
+    // type. Quoting keeps every such string the same string on the way back in.
+    if (needs_quotes(slice))
     {
-      // An empty scalar written bare leaves `key:` with nothing after it, and the parser then reads
-      // whatever follows -- the next list entry -- as this key's value. Quoting keeps an empty
-      // string an empty string on the way back in.
-      stream_.append("\"\"");
-      skip_indent_ = false;
-      return;
+      append_quoted(slice);
     }
-    stream_.append(slice);
+    else
+    {
+      stream_.append(slice);
+    }
     skip_indent_ = false;
   }
 
@@ -128,6 +140,102 @@ public:
   }
 
 private:
+  static auto needs_quotes(std::string_view slice) noexcept -> bool
+  {
+    if (slice.empty() || slice.front() == ' ' || slice.back() == ' ' || slice.back() == ':')
+    {
+      return true;
+    }
+
+    switch (slice.front())
+    {
+    case '#':
+    case '"':
+    case '\'':
+    case '[':
+    case ']':
+    case '{':
+    case '}':
+    case '|':
+    case '>':
+    case ',':
+    case '&':
+    case '*':
+    case '!':
+    case '%':
+    case '@':
+    case '`':
+      return true;
+    case '-':
+      if (slice.size() == 1 || slice[1] == ' ')
+      {
+        return true;
+      }
+      break;
+    default:
+      break;
+    }
+
+    if (slice.find(": ") != std::string_view::npos || slice.find(" #") != std::string_view::npos)
+    {
+      return true;
+    }
+
+    return std::ranges::any_of(slice,
+                               [](char c) -> bool
+                               {
+                                 return static_cast<unsigned char>(c) < static_cast<unsigned char>(' ') || c == ',' ||
+                                        c == ']';
+                               });
+  }
+
+  void append_quoted(std::string_view slice)
+  {
+    stream_.push_back('"');
+    for (char c : slice)
+    {
+      switch (c)
+      {
+      case '"':
+      case '\\':
+        stream_.push_back('\\');
+        stream_.push_back(c);
+        break;
+      case '\0':
+        stream_.append("\\0");
+        break;
+      case '\a':
+        stream_.append("\\a");
+        break;
+      case '\b':
+        stream_.append("\\b");
+        break;
+      case '\t':
+        stream_.append("\\t");
+        break;
+      case '\n':
+        stream_.append("\\n");
+        break;
+      case '\v':
+        stream_.append("\\v");
+        break;
+      case '\f':
+        stream_.append("\\f");
+        break;
+      case '\r':
+        stream_.append("\\r");
+        break;
+      case '\x1b':
+        stream_.append("\\e");
+        break;
+      default:
+        stream_.push_back(c);
+        break;
+      }
+    }
+    stream_.push_back('"');
+  }
+
   template <typename V>
   void append_chars(V value)
   {
