@@ -638,7 +638,7 @@ public:
 
   constexpr auto erase(const_iterator first, const_iterator last) -> iterator
   {
-    OULY_ASSERT(last < end());
+    OULY_ASSERT(first <= last && last <= end());
     auto dist      = static_cast<std::uint32_t>(std::distance(first, last));
     auto first_pos = const_cast<iterator>(first); // NOLINT
     auto last_pos  = const_cast<iterator>(last);  // NOLINT

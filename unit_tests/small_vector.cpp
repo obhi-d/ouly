@@ -409,6 +409,22 @@ TEST_CASE("small_vector: erase", "[small_vector][erase]")
   REQUIRE(v1.at(3) == destroy_tracker(d));
   REQUIRE(v1.size() == 4);
   REQUIRE(v1.is_inlined());
+
+  // A range that runs through end() is a valid erase.
+  v1.erase(v1.begin() + 1, v1.end());
+  REQUIRE(v1.size() == 1);
+  REQUIRE(v1.at(0) == destroy_tracker(e));
+  REQUIRE(f.tracking == 0);
+  REQUIRE(c.tracking == 0);
+  REQUIRE(d.tracking == 0);
+
+  v1.erase(v1.begin(), v1.end());
+  REQUIRE(v1.empty());
+  REQUIRE(e.tracking == 0);
+
+  v1.push_back(destroy_tracker(a));
+  v1.erase(v1.end(), v1.end());
+  REQUIRE(v1.size() == 1);
 }
 
 TEST_CASE("small_vector: capacity full self insertion", "[small_vector][default]")
