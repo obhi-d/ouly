@@ -11,9 +11,9 @@ namespace ouly::cfg
 inline static constexpr bool coalescing_allocator_large_size = false;
 inline static constexpr bool prefetch_next_allocation        = false; // TODO make it a config per allocator
 
-inline static constexpr uint32_t default_gpu_block_to_scan = 64;
-/** @brief Page size of the scratch allocator gpu defragmentation falls back to */
-inline static constexpr uint32_t default_gpu_scratch_size = 16 * 1024;
+inline static constexpr uint32_t default_ca_arenas_to_scan = 64;
+/** @brief Page size of the scratch allocator `coalescing_arena_allocator::defragment` falls back to */
+inline static constexpr uint32_t default_ca_scratch_size = 16 * 1024;
 
 struct track_memory
 {
@@ -98,24 +98,6 @@ struct fixed_max_per_slot
   static constexpr std::size_t fixed_max_per_slot_v = Value;
 };
 
-template <typename T>
-struct extension
-{
-  using extension_t = T;
-};
-
-template <typename T>
-struct manager
-{
-  using manager_t = T;
-};
-
-template <typename T>
-struct strategy
-{
-  using strategy_t = T;
-};
-
 /**
  * @brief Advise the kernel about memory usage patterns
  * @param ptr Pointer to memory region
@@ -165,19 +147,6 @@ struct compute_stats
 struct compute_atomic_stats
 {
   static constexpr ouly::cfg::memory_stat_type compute_stats_v = ouly::cfg::memory_stat_type::e_compute_atomic;
-};
-
-struct bsearch_min0
-{
-  static constexpr int bsearch_algo = 0;
-};
-struct bsearch_min1
-{
-  static constexpr int bsearch_algo = 1;
-};
-struct bsearch_min2
-{
-  static constexpr int bsearch_algo = 2;
 };
 
 } // namespace ouly::cfg

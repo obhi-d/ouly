@@ -202,7 +202,6 @@ add_unit_test(NAME sparse_table FILES "sparse_table.cpp" SANITIZE)
 add_unit_test(NAME index_map FILES "index_map.cpp" SANITIZE)
 add_unit_test(NAME bounded_bitset FILES "bounded_bitset.cpp" SANITIZE)
 add_unit_test(NAME dynamic_array FILES "dynamic_array.cpp" SANITIZE)
-add_unit_test(NAME arena_allocator FILES "arena_allocator.cpp" SANITIZE)
 add_unit_test(NAME input_serializer FILES "input_serializer.cpp" LINK_LIBS "nlohmann_json::nlohmann_json" SANITIZE)
 add_unit_test(NAME output_serializer FILES "output_serializer.cpp" LINK_LIBS "nlohmann_json::nlohmann_json" SANITIZE)
 add_unit_test(NAME binary_serializer FILES "binary_serializer.cpp" "binary_stream.cpp" SANITIZE)
@@ -218,8 +217,7 @@ add_unit_test(NAME thread_safe_allocators FILES "thread_safe_allocators.cpp" SAN
 add_unit_test(NAME memory_mapped_allocators FILES "memory_mapped_allocators.cpp" SANITIZE)
 add_unit_test(NAME coalescing_allocator FILES "coalescing_allocator.cpp" SANITIZE)
 add_unit_test(NAME defrag_allocator FILES "defrag_allocator.cpp" SANITIZE)
-add_unit_test(NAME gpu_allocator FILES "gpu_allocator.cpp" SANITIZE)
-add_unit_test(NAME compacting_allocator FILES "compacting_allocator.cpp" SANITIZE)
+add_unit_test(NAME coalescing_arena_allocator FILES "coalescing_arena_allocator.cpp" SANITIZE)
 add_unit_test(NAME spmc_ring FILES "spmc_ring.cpp" SANITIZE)
 add_unit_test(NAME scheduler FILES "scheduler_tests.cpp" LINK_LIBS glm::glm SANITIZE)
 add_unit_test(NAME scheduler_tasks FILES "scheduler_task_tests.cpp" SANITIZE)
@@ -240,17 +238,13 @@ add_executable(print_deduced_name "print_deduced_name.cpp")
 
 target_link_libraries(print_deduced_name ouly::ouly)
 if(OULY_BUILD_BENCHMARKS)
-    add_executable(
-        bench_arena_allocator
-        "bench_arena_allocator.cpp"
-        "bench_main.cpp"
-    )
     add_executable(bench_performance "bench_performance.cpp")
     add_executable(bench_scheduler_comparison "bench_scheduler_comparison.cpp")
     add_executable(bench_coroutine_comparison "bench_coroutine_comparison.cpp")
 
-    target_link_libraries(bench_arena_allocator ouly::ouly nanobench::nanobench)
-    target_compile_features(bench_arena_allocator PRIVATE cxx_std_20)
+    add_executable(bench_offset_allocators "bench_offset_allocators.cpp")
+    target_link_libraries(bench_offset_allocators ouly::ouly)
+    target_compile_features(bench_offset_allocators PRIVATE cxx_std_20)
 
     target_link_libraries(
         bench_performance

@@ -34,7 +34,6 @@ The unit tests are organized by component and provide comprehensive coverage:
    ├── allocators/
    │   ├── test_linear_allocator.cpp
    │   ├── test_pool_allocator.cpp
-   │   ├── test_arena_allocator.cpp
    │   └── ...
    ├── containers/
    │   ├── test_small_vector.cpp

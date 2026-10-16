@@ -1,144 +1,105 @@
 // SPDX-License-Identifier: MIT
 
-#include "ouly/utility/user_config.hpp"
-
 #include "ouly/allocators/coalescing_allocator.hpp"
+
+#include <bit>
 
 namespace ouly
 {
-#define OULY_BINARY_SEARCH_STEP2                                                                                       \
-  {                                                                                                                    \
-    const auto* const middle = it + (size >> 1);                                                                       \
-    size                     = (size + 1) >> 1;                                                                        \
-    it                       = *middle < key ? middle : it;                                                            \
-  }
 
-static inline auto mini2(auto const* it, size_t size, auto key) noexcept
+coalescing_allocator::coalescing_allocator() : coalescing_allocator(std::numeric_limits<size_type>::max()) {}
+
+coalescing_allocator::coalescing_allocator(size_type capacity) : capacity_(capacity)
 {
-  while (true)
+  blocks_.push_back({.offset_ = 0, .size_ = 0, .gap_ = capacity});
+  if (capacity != 0)
   {
-    OULY_BINARY_SEARCH_STEP2;
-    OULY_BINARY_SEARCH_STEP2;
-    if (size <= 2)
-    {
-      break;
-    }
+    bins_.push(blocks_, head_index, capacity);
   }
-
-  it += size > 1 && (*it < key);
-  it += size > 0 && (*it < key);
-  return it;
 }
 
-#define OULY_BINARY_SEARCH_STEP_INDIRECT                                                                               \
-  {                                                                                                                    \
-    const auto* const middle = it + (size >> 1);                                                                       \
-    size                     = (size + 1) >> 1;                                                                        \
-    it                       = data[*middle] < key ? middle : it;                                                      \
-  }
-
-static inline auto mini2(auto const* it, auto const* data, size_t size, auto key) noexcept
+auto coalescing_allocator::allocate(size_type size, size_type alignment) -> allocation_id
 {
-  while (true)
+  OULY_ASSERT(size != 0);
+  OULY_ASSERT(std::has_single_bit(alignment));
+  auto const fit = ouly::detail::find_gap(blocks_, bins_, size, alignment);
+  if (fit.block_ == null_index)
   {
-    OULY_BINARY_SEARCH_STEP_INDIRECT;
-    OULY_BINARY_SEARCH_STEP_INDIRECT;
-    if (size <= 2)
-    {
-      break;
-    }
+    return {};
   }
-  it += size > 1 && (data[*it] < key);
-  it += size > 0 && (data[*it] < key);
-  return it;
+  auto const index = make_block();
+  ouly::detail::split_gap(blocks_, &bins_, fit.block_, index, fit.offset_, size);
+  ouly::detail::vector_access(blocks_, index).live_ = true;
+  return allocation_id{index};
 }
 
-auto coalescing_allocator::allocate(size_type size) -> coalescing_allocator::size_type
+void coalescing_allocator::deallocate(allocation_id id)
 {
-  // first fit
-  for (uint32_t i = 0, end = static_cast<uint32_t>(sizes_.size()); i < end; ++i)
-  {
-    if (size <= ouly::detail::vector_access(sizes_, i))
-    {
-      auto ret = ouly::detail::vector_access(offsets_, i);
-      ouly::detail::vector_access(sizes_, i) -= size;
-      ouly::detail::vector_access(offsets_, i) += size;
-      if (ouly::detail::vector_access(sizes_, i) == 0U)
-      {
-        offsets_.erase(i + offsets_.begin());
-        sizes_.erase(i + sizes_.begin());
-      }
-      return ret;
-    }
-  }
-
-  return std::numeric_limits<size_type>::max();
+  OULY_ASSERT(id.get() != head_index && ouly::detail::vector_access(blocks_, id.get()).live_);
+  ouly::detail::merge_into_prev(blocks_, &bins_, id.get());
+  auto& block = ouly::detail::vector_access(blocks_, id.get());
+  block       = {};
+  block.next_ = free_block_;
+  free_block_ = id.get();
 }
 
-void coalescing_allocator::deallocate(size_type offset, size_type size)
+auto coalescing_allocator::make_block() -> uint32_t
 {
-  if (offsets_.empty())
+  if (free_block_ != null_index)
   {
-    // free list can be empty when the entire range was allocated
-    offsets_.emplace_back(offset);
-    sizes_.emplace_back(size);
-    return;
+    auto const index = free_block_;
+    auto&      block = ouly::detail::vector_access(blocks_, index);
+    free_block_      = block.next_;
+    block            = {};
+    return index;
   }
+  OULY_ASSERT(blocks_.size() < null_index);
+  blocks_.emplace_back();
+  return static_cast<uint32_t>(blocks_.size() - 1);
+}
 
-  const auto* it = mini2(offsets_.data(), offsets_.size(), offset);
+void coalescing_allocator::rebuild_gaps()
+{
+  bins_ = {};
+  for (auto index = head_index; index != null_index; index = ouly::detail::vector_access(blocks_, index).next_)
+  {
+    auto&      block = ouly::detail::vector_access(blocks_, index);
+    auto const end = block.next_ == null_index ? capacity_ : ouly::detail::vector_access(blocks_, block.next_).offset_;
+    block.gap_     = end - block.offset_ - block.size_;
+    block.bin_     = bins_type::unbinned;
+    if (block.gap_ != 0)
+    {
+      bins_.push(blocks_, index, block.gap_);
+    }
+  }
+}
 
-  if (it == offsets_.data())
+// NOLINTNEXTLINE
+void coalescing_allocator::validate_integrity() const
+{
+  size_type                 cursor    = 0;
+  uint32_t                  prev      = null_index;
+  [[maybe_unused]] uint32_t reachable = 0;
+  for (auto index = head_index; index != null_index; index = ouly::detail::vector_access(blocks_, index).next_)
   {
-    if (offset + size == offsets_.front())
-    {
-      offsets_.front() = offset;
-      sizes_.front() += size;
-    }
-    else
-    {
-      offsets_.insert(offsets_.begin(), offset);
-      sizes_.insert(sizes_.begin(), size);
-    }
+    auto const& block = ouly::detail::vector_access(blocks_, index);
+    OULY_ASSERT(block.prev_ == prev);
+    OULY_ASSERT(block.offset_ == cursor);
+    OULY_ASSERT(index == head_index ? !block.live_ && block.size_ == 0 : block.live_ && block.size_ != 0);
+    OULY_ASSERT((block.bin_ != bins_type::unbinned) == (block.gap_ != 0));
+    OULY_ASSERT(block.bin_ == bins_type::unbinned || block.bin_ == bins_type::bin_down(block.gap_));
+    cursor = block.offset_ + block.size_ + block.gap_;
+    prev   = index;
+    reachable += block.live_ ? 1U : 0U;
   }
-  else if (it == offsets_.data() + offsets_.size())
-  {
-    if (offsets_.back() + sizes_.back() == offset)
-    {
-      sizes_.back() += size;
-    }
-    // no merge, push at end
-    else
-    {
-      offsets_.emplace_back(offset);
-      sizes_.emplace_back(size);
-    }
-  }
-  else
-  {
-    auto idx = static_cast<size_type>(std::distance(static_cast<size_type const*>(offsets_.data()), it));
-    if (ouly::detail::vector_access(offsets_, idx - 1) + ouly::detail::vector_access(sizes_, idx - 1) == offset)
-    {
-      ouly::detail::vector_access(sizes_, idx - 1) += size;
+  OULY_ASSERT(cursor == capacity_);
 
-      if (ouly::detail::vector_access(offsets_, idx) ==
-          ouly::detail::vector_access(offsets_, idx - 1) + ouly::detail::vector_access(sizes_, idx - 1))
-      {
-        ouly::detail::vector_access(sizes_, idx - 1) += ouly::detail::vector_access(sizes_, idx);
-        offsets_.erase(offsets_.begin() + idx);
-        sizes_.erase(sizes_.begin() + idx);
-      }
-    }
-    else if (ouly::detail::vector_access(offsets_, idx) == offset + size)
-    {
-      ouly::detail::vector_access(offsets_, idx) -= size;
-      ouly::detail::vector_access(sizes_, idx) += size;
-    }
-    else
-    {
-      offsets_.insert(offsets_.begin() + idx, offset);
-      sizes_.insert(sizes_.begin() + idx, size);
-    }
+  [[maybe_unused]] uint32_t live = 0;
+  for (auto const& block : blocks_)
+  {
+    live += block.live_ ? 1U : 0U;
   }
+  OULY_ASSERT(live == reachable);
 }
 
 } // namespace ouly

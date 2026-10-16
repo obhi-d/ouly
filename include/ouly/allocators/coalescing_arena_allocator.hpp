@@ -2,62 +2,56 @@
 
 #pragma once
 
+#include "ouly/allocators/alignment.hpp"
 #include "ouly/allocators/allocation_id.hpp"
-#include "ouly/allocators/allocator.hpp"
-#include "ouly/allocators/detail/ca_structs.hpp"
-#include "ouly/allocators/detail/memory_stats.hpp"
-#include "ouly/containers/detail/vlist.hpp"
-#include "ouly/utility/config.hpp"
+#include "ouly/allocators/detail/tlsf_bins.hpp"
+#include "ouly/allocators/linear_stack_allocator.hpp"
+#include "ouly/allocators/scratch_allocator.hpp"
+#include "ouly/utility/user_config.hpp"
+#include <algorithm>
+#include <bit>
+#include <compare>
+#include <concepts>
 #include <cstdint>
-#include <span>
+#include <limits>
+#include <optional>
+#include <type_traits>
 #include <vector>
 
 namespace ouly
 {
 
-template <typename T>
-concept CoalescingMemoryManager = requires(T m) {
-  /**
-   * Drop Arena
-   */
-  { m.remove(arena_id()) } -> std::same_as<void>;
-  /**
-   * Add an arena
-   */
-  { m.add(arena_id(), allocation_size_type()) } -> std::same_as<void>;
-};
-
 /**
- * @brief Memory manager concept for coalescing allocators that additionally supports defragmentation.
+ * @brief Identifier for a relocation operation.
  *
- * On top of the arena add/remove interface, the manager must implement:
- * - begin_defragment/end_defragment: bracket a defragmentation pass
- * - move_memory: copy `size` bytes from (src_arena, from) to (dst_arena, to). Calls are emitted in a
- *   safe sequence (a destination region is always either free or already vacated by a previous call),
- *   but a single call's source and destination ranges may overlap when src and dst arena are the same;
- *   the implementation must behave like memmove (stage through a temporary if the backend cannot copy
- *   overlapping ranges directly, e.g. GPU buffer-to-buffer copies).
- * - rebind_alloc: an allocation kept its allocation_id but now lives at a new arena/offset.
+ * Like `allocation_id`, relocation ids are 32-bit table/stream identifiers with the maximum value
+ * reserved as the null value.
  */
-template <typename T, typename A>
-concept CoalescingDefragMemoryManager = CoalescingMemoryManager<T> && requires(T m, A& allocator) {
-  m.begin_defragment(allocator);
-  m.end_defragment(allocator);
-  m.move_memory(arena_id(), arena_id(), allocation_size_type(), allocation_size_type(), allocation_size_type());
-  m.rebind_alloc(allocation_id(), arena_id(), allocation_size_type());
-};
-
-/** @brief Outcome of a defragmentation pass. */
-struct coalescing_defrag_result
+struct ca_move_id
 {
-  allocation_size_type bytes_moved_       = 0;
-  uint32_t             moves_             = 0;
-  uint32_t             allocations_moved_ = 0;
-  uint32_t             arenas_removed_    = 0;
-  /** false when the pass stopped early because the move budget was exhausted */
-  bool completed_ = true;
+  uint32_t id_ = std::numeric_limits<uint32_t>::max();
+
+  [[nodiscard]] auto get() const noexcept -> uint32_t
+  {
+    return id_;
+  }
+
+  auto operator<=>(ca_move_id const&) const noexcept = default;
 };
 
+using ca_timeline_value = uint64_t;
+
+/** @brief Runtime properties of a suballocation. */
+struct ca_allocation_options
+{
+  allocation_size_type alignment_      = 1;
+  uint32_t             memory_class_   = 0;
+  uint32_t             resource_class_ = 0;
+  bool                 movable_        = true;
+  bool                 dedicated_      = false;
+};
+
+/** @brief Result returned by `coalescing_arena_allocator::allocate`. */
 struct ca_allocation
 {
   allocation_size_type offset_ = 0;
@@ -82,308 +76,552 @@ struct ca_allocation
   }
 };
 
-#ifdef OULY_DEBUG
-using coalescing_arena_allocator_base =
- ouly::detail::statistics<ouly::detail::ca_allocator_tag, ouly::config<cfg::compute_stats>>;
-#else
-using coalescing_arena_allocator_base = ouly::detail::statistics<ouly::detail::ca_allocator_tag, ouly::config<>>;
-#endif
+/** @brief A relocation handed to the executor: copy `size_` bytes between two placements. */
+struct ca_relocation
+{
+  ca_move_id           move_;
+  allocation_id        allocation_;
+  arena_id             source_arena_;
+  arena_id             destination_arena_;
+  allocation_size_type source_offset_      = 0;
+  allocation_size_type destination_offset_ = 0;
+  allocation_size_type size_               = 0;
+  uint32_t             memory_class_       = 0;
+  uint32_t             resource_class_     = 0;
+};
+
+/** @brief Per-call limits for incremental defragmentation. */
+struct ca_defrag_budget
+{
+  allocation_size_type max_copy_bytes_     = std::numeric_limits<allocation_size_type>::max();
+  uint32_t             max_move_count_     = std::numeric_limits<uint32_t>::max();
+  uint32_t             max_blocks_scanned_ = ouly::cfg::default_ca_arenas_to_scan;
+};
+
+/** @brief Work performed by one defragmentation/completion-processing call. */
+struct ca_defrag_result
+{
+  allocation_size_type bytes_scheduled_   = 0;
+  allocation_size_type bytes_copied_      = 0;
+  allocation_size_type bytes_released_    = 0;
+  uint32_t             moves_scheduled_   = 0;
+  uint32_t             moves_completed_   = 0;
+  uint32_t             arenas_removed_    = 0;
+  bool                 budget_exhausted_  = false;
+  bool                 evacuation_active_ = false;
+  bool                 completed_         = true;
+};
+
+/** @brief Lifetime totals reported by `coalescing_arena_allocator::statistics`. */
+struct ca_defrag_statistics
+{
+  uint64_t bytes_scheduled_           = 0;
+  uint64_t bytes_copied_              = 0;
+  uint64_t bytes_released_            = 0;
+  uint64_t blocks_released_           = 0;
+  uint64_t moves_scheduled_           = 0;
+  uint64_t moves_completed_           = 0;
+  uint32_t moves_pending_             = 0;
+  uint32_t active_evacuation_targets_ = 0;
+};
+
+template <typename T>
+concept CoalescingMemoryManagerWithClass = requires(T manager) {
+  { manager.add(arena_id(), allocation_size_type(), uint32_t()) } -> std::same_as<void>;
+};
+
+template <typename T>
+concept CoalescingMemoryManagerWithoutClass = requires(T manager) {
+  { manager.add(arena_id(), allocation_size_type()) } -> std::same_as<void>;
+};
 
 /**
- * @brief A coalescing arena allocator that manages memory blocks within arenas
+ * @brief Backing-memory owner used by `coalescing_arena_allocator`.
  *
- * This allocator maintains a collection of memory arenas and manages allocations within them.
- * It supports coalescing of free blocks to reduce fragmentation. The allocator tracks block
- * sizes, offsets and arena assignments.
- *
- * @note This class is meant for doing virtual allocations, for example when doing GPU memory
- * management. It is not meant to be used as a general purpose allocator.
- *
- * Key features:
- * - Supports variable sized allocations
- * - Coalesces adjacent free blocks
- * - Tracks arena assignments for blocks
- * - Allows arena size adjustments
- * - Supports dedicated allocations
- * - Maintains allocation metadata
- *
- * The allocator uses an arena-based approach where memory is allocated in chunks (arenas)
- * and then sub-allocated into smaller blocks. When blocks are freed, adjacent free blocks
- * are merged to reduce fragmentation.
- *
- * @note This allocator inherits from coalescing_arena_allocator_base
- * @note Arena size can only be increased, not decreased
- * @note Allocation information can be retrieved using allocation IDs
- * @note Dedicated allocations bypass block coalescing
- * @note Arena and allocation IDs are consecutive integers, and can be used as indexes.
+ * `add` creates the backing memory (a heap, buffer or mapping) for an arena. Managers that distinguish memory classes
+ * accept the three-argument form; simple managers may use the two-argument form. `remove` destroys it.
  */
-class coalescing_arena_allocator : coalescing_arena_allocator_base
+template <typename T>
+concept CoalescingMemoryManager =
+ (CoalescingMemoryManagerWithClass<T> || CoalescingMemoryManagerWithoutClass<T>) && requires(T manager) {
+   { manager.remove(arena_id()) } -> std::same_as<void>;
+ };
+
+/**
+ * @brief Relocation executor used by `coalescing_arena_allocator::defragment`.
+ *
+ * Copies may be asynchronous, as on a GPU queue, or immediate: an executor that copies inside
+ * `schedule_copy` and reports every timeline value as complete makes defragmentation synchronous.
+ * `schedule_copy` returns the timeline value at which the destination contains the copied bytes.
+ * `switch_references` runs after that point, updates future users of the stable allocation id, and
+ * returns the timeline value after which old source users can no longer access the source.
+ */
+template <typename T>
+concept CoalescingRelocationExecutor = requires(T executor, ca_relocation const& relocation, ca_timeline_value value) {
+  { executor.schedule_copy(relocation) } -> std::same_as<std::optional<ca_timeline_value>>;
+  { executor.switch_references(relocation) } -> std::same_as<std::optional<ca_timeline_value>>;
+  { executor.is_complete(value) } -> std::convertible_to<bool>;
+};
+
+/**
+ * @brief Scratch allocator `defragment` falls back to when the caller supplies none.
+ *
+ * Arenas are created lazily, so a call that schedules no new evacuation does not allocate at all.
+ */
+using ca_defrag_scratch = ouly::linear_stack_allocator<>;
+
+/**
+ * @brief Multi-arena offset suballocator with O(1) placement and budgeted whole-arena evacuation.
+ *
+ * Meant for GPU heaps, mapped files and other memory addressed by (arena, offset). The allocator
+ * manages virtual placements only. A `CoalescingMemoryManager` owns the backing memory of each
+ * arena, and a `CoalescingRelocationExecutor` records copies, rebinds stable allocation handles, and supplies
+ * timeline completion information. Both are used through concepts: there are no virtual interfaces
+ * or type-erased callbacks on the allocation path. Evacuation planning needs temporary storage, and
+ * the caller can hand any `ScratchAllocator` (a frame allocator, for instance) to `defragment` to
+ * keep that storage out of the heap.
+ *
+ * Placement is O(1): only occupied blocks are stored, each owning the free gap behind it, and the
+ * gaps of every arena of a memory class share one set of TLSF size bins. Freeing coalesces by adding
+ * the block and its gap to its predecessor's gap.
+ *
+ * Defragmentation deliberately evacuates one releasable arena at a time. Before an arena is frozen,
+ * a destination is reserved for every allocation it holds (largest and most aligned first); if any of
+ * them does not fit, the reservations are rolled back and the next candidate is tried. Copies may then
+ * be submitted across many calls under byte and move-count budgets without risking a partially
+ * evacuated arena that cannot be completed.
+ *
+ * Dedicated and explicitly non-movable allocations are pinned. New allocations never enter an active
+ * evacuation source. The public `allocation_id` remains stable while its arena and offset change only
+ * after `switch_references` succeeds.
+ *
+ * @note The class is not internally synchronized. Allocation, completion processing, and
+ * defragmentation must be externally serialized.
+ */
+class coalescing_arena_allocator
 {
 public:
   using size_type = allocation_size_type;
 
-  coalescing_arena_allocator() noexcept                                            = default;
-  auto operator=(const coalescing_arena_allocator&) -> coalescing_arena_allocator& = delete;
-  auto operator=(coalescing_arena_allocator&&) -> coalescing_arena_allocator&      = delete;
-  coalescing_arena_allocator(coalescing_arena_allocator const&) noexcept           = delete;
-  coalescing_arena_allocator(coalescing_arena_allocator&&) noexcept                = delete;
-  coalescing_arena_allocator(size_type arena_sz) : arena_size_(arena_sz) {}
-  ~coalescing_arena_allocator() noexcept = default;
+  OULY_API coalescing_arena_allocator();
+  OULY_API explicit coalescing_arena_allocator(size_type arena_size);
 
-  /** @brief Arena size can be changed any time with this method, but it can only increase in size. */
-  void set_arena_size(size_type s) noexcept
-  {
-    arena_size_ = std::max(arena_size_, s);
-  }
+  OULY_API void set_arena_size(size_type size) noexcept;
 
-  /** @return Arena size currently in use. */
-  [[nodiscard]] auto get_arena_size() const noexcept -> size_type
-  {
-    return arena_size_;
-  }
+  [[nodiscard]] OULY_API auto get_arena_size() const noexcept -> size_type;
+  [[nodiscard]] OULY_API auto get_offset(allocation_id id) const noexcept -> size_type;
+  [[nodiscard]] OULY_API auto get_size(allocation_id id) const noexcept -> size_type;
+  [[nodiscard]] OULY_API auto get_alignment(allocation_id id) const noexcept -> size_type;
+  [[nodiscard]] OULY_API auto get_arena(allocation_id id) const noexcept -> arena_id;
+  [[nodiscard]] OULY_API auto get_memory_class(allocation_id id) const noexcept -> uint32_t;
+  [[nodiscard]] OULY_API auto get_resource_class(allocation_id id) const noexcept -> uint32_t;
+  [[nodiscard]] OULY_API auto is_movable(allocation_id id) const noexcept -> bool;
+  [[nodiscard]] OULY_API auto is_relocating(allocation_id id) const noexcept -> bool;
 
-  /** @brief Given an allocation_id return the offset in the arena it belongs to */
-  [[nodiscard]] auto get_size(allocation_id id) const noexcept -> size_type
-  {
-    return ouly::detail::vector_access(block_entries_.sizes_, id.get());
-  }
-
-  /** @brief Given an allocation_id return the offset in the arena it belongs to */
-  [[nodiscard]] auto get_offset(allocation_id id) const noexcept -> size_type
-  {
-    return ouly::detail::vector_access(block_entries_.offsets_, id.get());
-  }
-
-  /** @brief Given an allocation_id return the arena it belongs to */
-  [[nodiscard]] auto get_arena(allocation_id id) const noexcept -> arena_id
-  {
-    return arena_id{ouly::detail::vector_access(block_entries_.arenas_, id.get())};
-  }
-  /** @brief The method `allocate` returns an allocation desc, with extra information about the allocation offset and
-   * the arena the allocation belongs to. The information need not be stored, as the alllocation_id can be used to fetch
-   * this information.
-   * @note When an alignment is requested, the block is over-allocated by `alignment - 1` bytes and the
-   * returned offset is rounded up to the alignment; `get_offset`/`get_size` report the raw block. */
-  template <CoalescingMemoryManager M, typename Alignment = ouly::alignment<>, typename Dedicated = std::false_type>
-  auto allocate(size_type size, M& manager, Alignment alignment = {}, Dedicated /*unused*/ = {}) -> ca_allocation
-  {
-    [[maybe_unused]] auto measure = statistics::report_allocate(size);
-
-    auto const align_value  = static_cast<size_type>(alignment);
-    auto const mask         = align_value > 1 ? align_value - 1 : size_type{0};
-    auto const vsize        = size + mask;
-    bool const is_dedicated = Dedicated::value || vsize >= arena_size_;
-
-    if (is_dedicated)
-    {
-      // a dedicated allocation starts at offset 0, which is aligned for any power of two
-      auto [arena, block] = add_arena_filled(size, manager);
-      return ca_allocation{.offset_ = 0, .id_ = block, .arena_ = arena};
-    }
-
-    ca_allocation al = try_allocate(vsize);
-
-    if (al.get_allocation_id() == allocation_id())
-    {
-      add_arena(vsize, manager);
-      al = try_allocate(vsize);
-    }
-
-    al.offset_ = (al.offset_ + mask) & ~mask;
-    return al;
-  }
-
-  /** @brief Dellocate an allocation. The manager must be provided for removal of arenas_. */
-  template <CoalescingMemoryManager M>
-  void deallocate(allocation_id id, M& manager)
-  {
-    auto aa = deallocate(id);
-    if (aa != arena_id())
-    {
-      manager.remove(aa);
-    }
-  }
-
-  OULY_API void validate_integrity() const;
-
-  [[nodiscard]] auto get_offsets() const noexcept -> std::span<allocation_size_type const>
-  {
-    return block_entries_.offsets_;
-  }
-
-  [[nodiscard]] auto get_sizes() const noexcept -> std::span<allocation_size_type const>
-  {
-    return block_entries_.sizes_;
-  }
-
-  [[nodiscard]] auto get_arena_indices() const noexcept -> std::span<uint16_t const>
-  {
-    return block_entries_.arenas_;
-  }
-
-protected:
-  OULY_API auto add_arena(size_type size, bool empty) -> std::pair<arena_id, allocation_id>;
+  OULY_API void set_movable(allocation_id id, bool movable);
 
   template <CoalescingMemoryManager M>
-  auto add_arena_filled(size_type size, M& manager) -> std::pair<arena_id, allocation_id>
+  auto allocate(size_type size, M& manager, ca_allocation_options options) -> ca_allocation
   {
-    statistics::report_new_arena();
-    auto ret = add_arena(size, false);
-    manager.add(ret.first, size);
-    return ret;
-  }
+    OULY_ASSERT(size != 0);
+    options.alignment_ = std::max<size_type>(options.alignment_, 1);
+    OULY_ASSERT(std::has_single_bit(options.alignment_));
 
-  template <CoalescingMemoryManager M>
-  void add_arena(size_type size, M& manager)
-  {
-    size            = std::max(size, arena_size_);
-    auto [arena, _] = add_arena(size, true);
-    manager.add(arena, size);
-  }
-
-  void add_free_arena(uint32_t block)
-  {
-    sizes_.push_back(ouly::detail::vector_access(block_entries_.sizes_, block));
-    free_ordering_.push_back(block);
-  }
-
-  OULY_API void grow_free_node(uint32_t /*block*/, size_type size);
-  OULY_API void replace_and_grow(uint32_t right, uint32_t node, size_type new_size);
-  OULY_API void add_free(uint32_t node);
-  OULY_API void erase(uint32_t node);
-  OULY_API auto deallocate(allocation_id id) -> arena_id;
-
-  static auto mini2(size_type const* it, size_t size, size_type key) noexcept
-  {
-    while (true)
+    bool const dedicated = options.dedicated_ || size >= arena_size_;
+    if (!dedicated)
     {
+      if (auto allocation = try_allocate(size, options); allocation.id_ != allocation_id())
       {
-        const size_type* const middle = it + (size >> 1);
-        size                          = (size + 1) >> 1;
-        it                            = *middle < key ? middle : it;
-      };
-      {
-        const size_type* const middle = it + (size >> 1);
-        size                          = (size + 1) >> 1;
-        it                            = *middle < key ? middle : it;
-      };
-      if (size <= 2)
-      {
-        break;
+        return allocation;
       }
     }
 
-    it += static_cast<size_type>(size > 1 && (*it < key));
-    it += static_cast<size_type>(size > 0 && (*it < key));
-    return it;
+    auto const capacity = dedicated ? size : arena_size_;
+    OULY_ASSERT(capacity != 0);
+    auto const arena = create_arena(capacity, options.memory_class_, dedicated);
+    notify_add(manager, arena, capacity, options.memory_class_);
+
+    options.dedicated_ = dedicated;
+    options.movable_   = options.movable_ && !dedicated;
+    auto allocation    = allocate_in_new_arena(arena.get(), size, options);
+    OULY_ASSERT(allocation.id_ != allocation_id());
+    return allocation;
   }
 
-  static auto mini2_it(size_type const* it, size_t s, size_type key) noexcept
+  template <CoalescingMemoryManager M, typename Alignment = ouly::alignment<>, typename Dedicated = std::false_type>
+    requires requires(Alignment value) {
+      { static_cast<size_type>(value) } -> std::same_as<size_type>;
+      { Dedicated::value } -> std::convertible_to<bool>;
+    }
+  auto allocate(size_type size, M& manager, Alignment alignment = {}, Dedicated /*unused*/ = {}) -> ca_allocation
   {
-    return std::distance(it, mini2(it, s, key));
+    return allocate(size, manager,
+                    ca_allocation_options{.alignment_ = static_cast<size_type>(alignment),
+                                          .dedicated_ = static_cast<bool>(Dedicated::value)});
   }
 
-  [[nodiscard]] auto find_free(size_type size) const noexcept
+  /**
+   * @brief Release an allocation.
+   *
+   * A copy-scheduled allocation cannot be released until its completion has been processed because
+   * the executor still owns its source/destination transition. `try_deallocate` reports this case;
+   * `deallocate` asserts that it is safe.
+   */
+  template <CoalescingMemoryManager M>
+  auto try_deallocate(allocation_id id, M& manager) -> bool
   {
-    return mini2(sizes_.data(), sizes_.size(), size);
-  }
-
-  [[nodiscard]] auto total_free_nodes() const noexcept -> uint32_t
-  {
-    return static_cast<std::uint32_t>(free_ordering_.size());
-  }
-
-  [[nodiscard]] auto total_free_size() const noexcept -> size_type
-  {
-    size_type sz = 0;
-    for (auto fn : sizes_)
+    if (!prepare_deallocate(id))
     {
-      sz += fn;
+      return false;
+    }
+    auto const arena = release_allocation(id);
+    try_release_arena(manager, arena);
+    finish_target_if_possible(manager);
+    return true;
+  }
+
+  template <CoalescingMemoryManager M>
+  void deallocate(allocation_id id, M& manager)
+  {
+    [[maybe_unused]] bool const released = try_deallocate(id, manager);
+    OULY_ASSERT(released && "cannot deallocate while a relocation copy is pending");
+  }
+
+  /**
+   * @brief Process completed copies/retirements and schedule more evacuation work under `budget`.
+   *
+   * Planning an evacuation needs temporary storage proportional to the number of arenas. It is taken
+   * from a call-local `ca_defrag_scratch`; use the overload taking a `ScratchAllocator` to draw it
+   * from a frame allocator instead.
+   */
+  template <CoalescingMemoryManager M, CoalescingRelocationExecutor E>
+  auto defragment(M& manager, E& executor, ca_defrag_budget budget = {}) -> ca_defrag_result
+  {
+    ca_defrag_scratch scratch{ouly::cfg::default_ca_scratch_size};
+    return defragment(manager, executor, budget, scratch);
+  }
+
+  /**
+   * @brief Process completed copies/retirements and schedule more evacuation work under `budget`.
+   *
+   * @param scratch Allocator the evacuation planner takes its temporary buffers from. Nothing is
+   * allocated from it unless a new evacuation is planned, and every buffer is dead by the time the
+   * call returns, so a linear allocator that is rewound per frame is the expected choice.
+   */
+  template <CoalescingMemoryManager M, CoalescingRelocationExecutor E, ScratchAllocator S>
+  auto defragment(M& manager, E& executor, ca_defrag_budget budget, S& scratch) -> ca_defrag_result
+  {
+    auto result = process_completions(manager, executor);
+
+    if (!target_ && budget.max_copy_bytes_ != 0 && budget.max_move_count_ != 0)
+    {
+      begin_evacuation(budget.max_blocks_scanned_, scratch_allocator_ref{scratch});
     }
 
-    return sz;
-  }
+    auto remaining_bytes = budget.max_copy_bytes_;
+    auto remaining_moves = budget.max_move_count_;
 
-  auto try_allocate(size_type size) -> ca_allocation
-  {
-    if (sizes_.empty() || sizes_.back() < size)
+    while (target_ && remaining_bytes != 0 && remaining_moves != 0)
     {
-      return {};
+      auto* move = find_schedulable_move(remaining_bytes);
+      if (move == nullptr)
+      {
+        break;
+      }
+
+      auto const command  = make_relocation(*move);
+      auto const timeline = executor.schedule_copy(command);
+      if (!timeline)
+      {
+        cancel_move(*move);
+        abort_evacuation();
+        break;
+      }
+
+      move->copy_completion_ = *timeline;
+      move->state_           = move_state::copy_scheduled;
+      --target_->reserved_moves_;
+      remaining_bytes -= move->size_;
+      --remaining_moves;
+
+      result.bytes_scheduled_ += move->size_;
+      ++result.moves_scheduled_;
+      statistics_.bytes_scheduled_ += move->size_;
+      ++statistics_.moves_scheduled_;
     }
-    const auto* it = find_free(size);
-    auto        id = commit(size, it);
-    return ca_allocation{.offset_ = ouly::detail::vector_access(block_entries_.offsets_, id),
-                         .id_     = {.id_ = id},
-                         .arena_  = {.id_ = ouly::detail::vector_access(block_entries_.arenas_, id)}};
+
+    if (target_ && has_reserved_moves())
+    {
+      result.budget_exhausted_ =
+       remaining_bytes == 0 || remaining_moves == 0 || find_schedulable_move(remaining_bytes) == nullptr;
+    }
+    finish_target_if_possible(manager, &result);
+    set_result_state(result);
+    return result;
   }
 
-  OULY_API void reinsert_left(size_t of, size_type size, std::uint32_t node);
-  OULY_API void reinsert_right(size_t of, size_type size, std::uint32_t node);
-  OULY_API auto commit(size_type size, size_type const* found) -> uint32_t;
-
-  // Accessors for derived allocators (e.g. defragmentation support)
-  [[nodiscard]] auto arena_entries() noexcept -> ouly::detail::ca_arena_entries&
+  /** @brief Advance copies and source retirement without scheduling new work. */
+  template <CoalescingMemoryManager M, CoalescingRelocationExecutor E>
+  auto process_completions(M& manager, E& executor) -> ca_defrag_result
   {
-    return arena_entries_;
+    ca_defrag_result result;
+    if (!target_)
+    {
+      return result;
+    }
+
+    for (auto& move : target_->moves_)
+    {
+      if (move.state_ == move_state::copy_scheduled && executor.is_complete(move.copy_completion_))
+      {
+        result.bytes_copied_ += move.size_;
+        statistics_.bytes_copied_ += move.size_;
+
+        auto const command    = make_relocation(move);
+        auto const retirement = executor.switch_references(command);
+        if (!retirement)
+        {
+          cancel_move(move);
+          abort_evacuation();
+          continue;
+        }
+
+        switch_allocation(move);
+        move.source_retirement_ = *retirement;
+        move.state_             = move_state::references_switched;
+      }
+
+      if (move.state_ == move_state::references_switched && executor.is_complete(move.source_retirement_))
+      {
+        retire_source(move);
+        ++result.moves_completed_;
+        ++statistics_.moves_completed_;
+      }
+    }
+
+    finish_target_if_possible(manager, &result);
+    set_result_state(result);
+    return result;
   }
 
-  [[nodiscard]] auto arena_entries() const noexcept -> ouly::detail::ca_arena_entries const&
-  {
-    return arena_entries_;
-  }
+  [[nodiscard]] OULY_API auto statistics() const noexcept -> ca_defrag_statistics;
 
-  [[nodiscard]] auto block_entries() noexcept -> ouly::detail::ca_block_entries&
-  {
-    return block_entries_;
-  }
-
-  [[nodiscard]] auto block_entries() const noexcept -> ouly::detail::ca_block_entries const&
-  {
-    return block_entries_;
-  }
-
-  [[nodiscard]] auto arena_list() noexcept -> ouly::detail::ca_arena_list&
-  {
-    return arenas_;
-  }
-
-  [[nodiscard]] auto arena_list() const noexcept -> ouly::detail::ca_arena_list const&
-  {
-    return arenas_;
-  }
-
-  /** Free block sizes, ascending; parallel to `free_ordering()` */
-  [[nodiscard]] auto free_sizes() noexcept -> std::vector<size_type>&
-  {
-    return sizes_;
-  }
-
-  [[nodiscard]] auto free_sizes() const noexcept -> std::vector<size_type> const&
-  {
-    return sizes_;
-  }
-
-  /** Free block ids, ordered by block size; parallel to `free_sizes()` */
-  [[nodiscard]] auto free_ordering() noexcept -> std::vector<uint32_t>&
-  {
-    return free_ordering_;
-  }
-
-  [[nodiscard]] auto free_ordering() const noexcept -> std::vector<uint32_t> const&
-  {
-    return free_ordering_;
-  }
+  OULY_API void validate_integrity() const;
 
 private:
-  // Free blocks
-  ouly::detail::ca_arena_entries arena_entries_{};
-  ouly::detail::ca_block_entries block_entries_{};
-  ouly::detail::ca_arena_list    arenas_{};
+  static constexpr uint32_t null_index = std::numeric_limits<uint32_t>::max();
 
-  std::vector<size_type> sizes_;
-  std::vector<uint32_t>  free_ordering_;
+  enum class arena_role : uint8_t
+  {
+    normal,
+    evacuation_source
+  };
 
-  size_type arena_size_ = 0;
+  enum class move_state : uint8_t
+  {
+    reserved,
+    copy_scheduled,
+    references_switched,
+    source_retired,
+    cancelled
+  };
+
+  enum class block_kind : uint8_t
+  {
+    unused,
+    head,
+    allocation,
+    reservation,
+    retiring
+  };
+
+  /**
+   * @brief An occupied range of an arena, followed by the free gap it owns.
+   *
+   * Blocks double as the allocation table: an `allocation_id` is the index of its block. Each arena
+   * starts with a zero-sized head block that owns the leading gap. Reservations (evacuation
+   * destinations) and retiring sources are blocks too, so the free space of an arena is exactly the
+   * sum of its gaps.
+   */
+  struct block
+  {
+    size_type  offset_         = 0;
+    size_type  size_           = 0;
+    size_type  gap_            = 0;
+    uint32_t   prev_           = null_index;
+    uint32_t   next_           = null_index;
+    uint32_t   bin_prev_       = null_index;
+    uint32_t   bin_next_       = null_index;
+    uint32_t   move_           = null_index;
+    uint32_t   resource_class_ = 0;
+    uint16_t   arena_          = 0;
+    uint16_t   bin_            = std::numeric_limits<uint16_t>::max();
+    uint8_t    alignment_      = 0;
+    block_kind kind_           = block_kind::unused;
+    bool       movable_        = false;
+  };
+
+  using bins_type = ouly::detail::tlsf_bins<block>;
+
+  struct arena_state
+  {
+    size_type  capacity_     = 0;
+    size_type  free_         = 0;
+    size_type  live_         = 0;
+    uint32_t   head_         = null_index;
+    uint32_t   allocations_  = 0;
+    uint32_t   reservations_ = 0;
+    uint32_t   retiring_     = 0;
+    uint32_t   pinned_       = 0;
+    uint32_t   memory_class_ = 0;
+    uint32_t   bins_         = 0;
+    arena_role role_         = arena_role::normal;
+    bool       active_       = false;
+    bool       dedicated_    = false;
+  };
+
+  struct planned_move
+  {
+    ca_move_id        move_;
+    allocation_id     allocation_;
+    uint32_t          reservation_        = null_index;
+    uint16_t          source_arena_       = 0;
+    uint16_t          destination_arena_  = 0;
+    size_type         source_offset_      = 0;
+    size_type         destination_offset_ = 0;
+    size_type         size_               = 0;
+    move_state        state_              = move_state::reserved;
+    ca_timeline_value copy_completion_    = 0;
+    ca_timeline_value source_retirement_  = 0;
+  };
+
+  struct evacuation_target
+  {
+    uint16_t                  source_arena_ = 0;
+    std::vector<planned_move> moves_;
+    uint32_t                  open_moves_     = 0;
+    uint32_t                  reserved_moves_ = 0;
+    uint32_t                  next_reserved_  = 0;
+    bool                      aborted_        = false;
+  };
+
+  /** @brief An arena that may be evacuated, ranked by how much it would recover */
+  struct evacuation_candidate
+  {
+    uint16_t  arena_    = 0;
+    size_type capacity_ = 0;
+    size_type live_     = 0;
+    uint32_t  count_    = 0;
+  };
+
+  template <CoalescingMemoryManager M>
+  static void notify_add(M& manager, arena_id arena, size_type size, uint32_t memory_class)
+  {
+    if constexpr (CoalescingMemoryManagerWithClass<M>)
+    {
+      manager.add(arena, size, memory_class);
+    }
+    else
+    {
+      manager.add(arena, size);
+    }
+  }
+
+  template <CoalescingMemoryManager M>
+  void try_release_arena(M& manager, uint16_t arena)
+  {
+    if (can_release_arena(arena))
+    {
+      drop_arena(arena);
+      manager.remove(arena_id{arena});
+    }
+  }
+
+  template <CoalescingMemoryManager M>
+  void finish_target_if_possible(M& manager, ca_defrag_result* result = nullptr)
+  {
+    // cancelled reservations can leave a destination arena empty
+    for (auto arena : emptied_)
+    {
+      try_release_arena(manager, arena);
+    }
+    emptied_.clear();
+
+    if (!target_ || !target_finished())
+    {
+      return;
+    }
+
+    auto const source = target_->source_arena_;
+    target_.reset();
+    open_arena(source);
+
+    if (can_release_arena(source))
+    {
+      auto const released = drop_arena(source);
+      manager.remove(arena_id{source});
+      statistics_.bytes_released_ += released;
+      ++statistics_.blocks_released_;
+      if (result != nullptr)
+      {
+        result->bytes_released_ += released;
+        ++result->arenas_removed_;
+      }
+    }
+  }
+
+  OULY_API auto try_allocate(size_type size, ca_allocation_options const& options) -> ca_allocation;
+  OULY_API auto allocate_in_new_arena(uint16_t arena, size_type size, ca_allocation_options const& options)
+   -> ca_allocation;
+  OULY_API auto create_arena(size_type capacity, uint32_t memory_class, bool dedicated) -> arena_id;
+  OULY_API auto place_allocation(uint32_t pred, size_type offset, size_type size, ca_allocation_options const& options)
+   -> ca_allocation;
+  OULY_API auto release_allocation(allocation_id id) -> uint16_t;
+  OULY_API auto prepare_deallocate(allocation_id id) -> bool;
+
+  [[nodiscard]] OULY_API auto        find_bins(uint32_t memory_class) const -> uint32_t;
+  OULY_API auto                      bins_for_class(uint32_t memory_class) -> uint32_t;
+  [[nodiscard]] OULY_API auto        arena_bins(uint16_t arena) -> bins_type*;
+  OULY_API void                      open_arena(uint16_t arena);
+  OULY_API void                      close_arena(uint16_t arena);
+  OULY_API auto                      make_block() -> uint32_t;
+  OULY_API void                      free_block(uint32_t index);
+  OULY_API void                      swap_positions(uint32_t lhs, uint32_t rhs);
+  [[nodiscard]] OULY_API auto        can_evacuate(uint16_t arena) const -> bool;
+  [[nodiscard]] OULY_API static auto recovers_more(evacuation_candidate const& lhs, evacuation_candidate const& rhs)
+   -> bool;
+  OULY_API void               begin_evacuation(uint32_t max_blocks_scanned, scratch_allocator_ref scratch);
+  OULY_API auto               plan_evacuation(uint16_t source) -> bool;
+  OULY_API void               release_reservation(planned_move const& move);
+  OULY_API void               close_move(planned_move& move, move_state state);
+  OULY_API void               cancel_move(planned_move& move);
+  OULY_API void               abort_evacuation();
+  [[nodiscard]] OULY_API auto find_schedulable_move(size_type remaining_bytes) -> planned_move*;
+  [[nodiscard]] OULY_API auto has_reserved_moves() const -> bool;
+  [[nodiscard]] OULY_API auto target_finished() const -> bool;
+  [[nodiscard]] OULY_API auto make_relocation(planned_move const& move) const -> ca_relocation;
+  OULY_API void               switch_allocation(planned_move& move);
+  OULY_API void               retire_source(planned_move& move);
+
+  [[nodiscard]] OULY_API auto can_release_arena(uint16_t arena) const -> bool;
+  OULY_API auto               drop_arena(uint16_t arena) -> size_type;
+  OULY_API void               set_result_state(ca_defrag_result& result) const;
+  [[nodiscard]] OULY_API auto allocate_move_id() -> ca_move_id;
+
+  std::vector<arena_state> arena_pool_ = {arena_state{}};
+  std::vector<uint16_t>    arena_order_;
+  std::vector<uint16_t>    free_arenas_;
+  std::vector<uint16_t>    emptied_;
+
+  std::vector<block>     blocks_;
+  std::vector<bins_type> bins_;
+  std::vector<uint32_t>  bin_classes_;
+  uint32_t               free_block_ = null_index;
+
+  std::optional<evacuation_target> target_;
+  ca_defrag_statistics             statistics_;
+  size_type                        arena_size_   = 0;
+  uint32_t                         next_move_id_ = 0;
 };
 
 } // namespace ouly

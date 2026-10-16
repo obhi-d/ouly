@@ -1,4 +1,4 @@
-#include "ouly/allocators/gpu_allocator.hpp"
+#include "ouly/allocators/coalescing_arena_allocator.hpp"
 #include "catch2/catch_all.hpp"
 #include "ouly/allocators/linear_arena_allocator.hpp"
 #include "ouly/allocators/ts_thread_local_allocator.hpp"
@@ -14,7 +14,7 @@
 namespace
 {
 
-struct gpu_memory
+struct arena_memory
 {
   std::vector<std::vector<uint8_t>> arenas_;
   std::vector<uint32_t>             memory_classes_;
@@ -40,17 +40,17 @@ struct gpu_memory
   }
 };
 
-struct gpu_executor
+struct test_executor
 {
-  gpu_memory*                       memory_        = nullptr;
-  ouly::gpu_timeline_value          completed_     = 0;
-  ouly::gpu_timeline_value          next_timeline_ = 1;
-  bool                              fail_schedule_ = false;
-  bool                              fail_switch_   = false;
-  std::vector<ouly::gpu_relocation> copies_        = {};
-  std::vector<ouly::gpu_relocation> switches_      = {};
+  arena_memory*                    memory_        = nullptr;
+  ouly::ca_timeline_value          completed_     = 0;
+  ouly::ca_timeline_value          next_timeline_ = 1;
+  bool                             fail_schedule_ = false;
+  bool                             fail_switch_   = false;
+  std::vector<ouly::ca_relocation> copies_        = {};
+  std::vector<ouly::ca_relocation> switches_      = {};
 
-  auto schedule_copy(ouly::gpu_relocation const& relocation) -> std::optional<ouly::gpu_timeline_value>
+  auto schedule_copy(ouly::ca_relocation const& relocation) -> std::optional<ouly::ca_timeline_value>
   {
     if (fail_schedule_)
     {
@@ -67,7 +67,7 @@ struct gpu_executor
     return next_timeline_++;
   }
 
-  auto switch_references(ouly::gpu_relocation const& relocation) -> std::optional<ouly::gpu_timeline_value>
+  auto switch_references(ouly::ca_relocation const& relocation) -> std::optional<ouly::ca_timeline_value>
   {
     if (fail_switch_)
     {
@@ -77,7 +77,7 @@ struct gpu_executor
     return next_timeline_++;
   }
 
-  [[nodiscard]] auto is_complete(ouly::gpu_timeline_value value) const -> bool
+  [[nodiscard]] auto is_complete(ouly::ca_timeline_value value) const -> bool
   {
     return value <= completed_;
   }
@@ -88,7 +88,7 @@ auto pattern(uint32_t id, uint32_t index) -> uint8_t
   return static_cast<uint8_t>((id * 37U + index * 11U + 3U) & 0xffU);
 }
 
-void fill(gpu_memory& memory, ouly::gpu_allocation const& allocation, uint32_t size)
+void fill(arena_memory& memory, ouly::ca_allocation const& allocation, uint32_t size)
 {
   auto& data = memory.arenas_[allocation.get_arena_id().get()];
   for (uint32_t index = 0; index < size; ++index)
@@ -97,7 +97,7 @@ void fill(gpu_memory& memory, ouly::gpu_allocation const& allocation, uint32_t s
   }
 }
 
-void verify(gpu_memory const& memory, ouly::gpu_allocator const& allocator, ouly::allocation_id id)
+void verify(arena_memory const& memory, ouly::coalescing_arena_allocator const& allocator, ouly::allocation_id id)
 {
   auto const arena  = allocator.get_arena(id).get();
   auto const offset = allocator.get_offset(id);
@@ -110,23 +110,24 @@ void verify(gpu_memory const& memory, ouly::gpu_allocator const& allocator, ouly
 }
 
 static_assert(sizeof(ouly::allocation_id) == sizeof(uint32_t));
-static_assert(sizeof(ouly::gpu_move_id) == sizeof(ouly::allocation_id));
+static_assert(sizeof(ouly::ca_move_id) == sizeof(ouly::allocation_id));
 static_assert(sizeof(ouly::arena_id) == sizeof(uint16_t));
-static_assert(std::same_as<ouly::gpu_allocator::size_type, ouly::allocation_size_type>);
-static_assert(ouly::GpuMemoryManager<gpu_memory>);
-static_assert(ouly::GpuRelocationExecutor<gpu_executor>);
+static_assert(std::same_as<ouly::coalescing_arena_allocator::size_type, ouly::allocation_size_type>);
+static_assert(ouly::CoalescingMemoryManager<arena_memory>);
+static_assert(ouly::CoalescingRelocationExecutor<test_executor>);
 
 } // namespace
 
-TEST_CASE("gpu_allocator: allocation follows ouly id, alignment, and class conventions", "[gpu_allocator][default]")
+TEST_CASE("coalescing_arena_allocator: allocation follows ouly id, alignment, and class conventions",
+          "[coalescing_arena_allocator][default]")
 {
-  gpu_memory          memory;
-  ouly::gpu_allocator allocator{1024};
+  arena_memory                     memory;
+  ouly::coalescing_arena_allocator allocator{1024};
 
   auto odd     = allocator.allocate(13, memory);
   auto aligned = allocator.allocate(
-   100, memory, ouly::gpu_allocation_options{.alignment_ = 256, .memory_class_ = 7, .resource_class_ = 9});
-  auto same_class = allocator.allocate(64, memory, ouly::gpu_allocation_options{.memory_class_ = 7});
+   100, memory, ouly::ca_allocation_options{.alignment_ = 256, .memory_class_ = 7, .resource_class_ = 9});
+  auto same_class = allocator.allocate(64, memory, ouly::ca_allocation_options{.memory_class_ = 7});
   auto dedicated  = allocator.allocate(1024, memory);
 
   REQUIRE(odd.get_allocation_id() != ouly::allocation_id());
@@ -146,15 +147,16 @@ TEST_CASE("gpu_allocator: allocation follows ouly id, alignment, and class conve
   REQUIRE(memory.active_ == 0);
 }
 
-TEST_CASE("gpu_allocator: evacuation is budgeted, persistent, and retired asynchronously", "[gpu_allocator][default]")
+TEST_CASE("coalescing_arena_allocator: evacuation is budgeted, persistent, and retired asynchronously",
+          "[coalescing_arena_allocator][default]")
 {
   constexpr uint32_t block_size = 1024;
   constexpr uint32_t alloc_size = 256;
 
-  gpu_memory                        memory;
-  gpu_executor                      executor{.memory_ = &memory, .copies_ = {}};
-  ouly::gpu_allocator               allocator{block_size};
-  std::vector<ouly::gpu_allocation> allocations;
+  arena_memory                     memory;
+  test_executor                    executor{.memory_ = &memory, .copies_ = {}};
+  ouly::coalescing_arena_allocator allocator{block_size};
+  std::vector<ouly::ca_allocation> allocations;
 
   for (uint32_t index = 0; index < 8; ++index)
   {
@@ -169,7 +171,7 @@ TEST_CASE("gpu_allocator: evacuation is budgeted, persistent, and retired asynch
   }
 
   auto first =
-   allocator.defragment(memory, executor, ouly::gpu_defrag_budget{.max_copy_bytes_ = alloc_size, .max_move_count_ = 1});
+   allocator.defragment(memory, executor, ouly::ca_defrag_budget{.max_copy_bytes_ = alloc_size, .max_move_count_ = 1});
   REQUIRE(first.bytes_scheduled_ == alloc_size);
   REQUIRE(first.moves_scheduled_ == 1);
   REQUIRE(first.budget_exhausted_);
@@ -202,7 +204,7 @@ TEST_CASE("gpu_allocator: evacuation is budgeted, persistent, and retired asynch
   REQUIRE(retired.arenas_removed_ == 0);
 
   auto second =
-   allocator.defragment(memory, executor, ouly::gpu_defrag_budget{.max_copy_bytes_ = alloc_size, .max_move_count_ = 1});
+   allocator.defragment(memory, executor, ouly::ca_defrag_budget{.max_copy_bytes_ = alloc_size, .max_move_count_ = 1});
   REQUIRE(second.moves_scheduled_ == 1);
   REQUIRE(executor.copies_.size() == 2);
 
@@ -239,16 +241,17 @@ TEST_CASE("gpu_allocator: evacuation is budgeted, persistent, and retired asynch
   REQUIRE(memory.active_ == 0);
 }
 
-TEST_CASE("gpu_allocator: pinned allocations and memory classes prevent unsafe evacuation", "[gpu_allocator][default]")
+TEST_CASE("coalescing_arena_allocator: pinned allocations and memory classes prevent unsafe evacuation",
+          "[coalescing_arena_allocator][default]")
 {
-  gpu_memory          memory;
-  gpu_executor        executor{.memory_ = &memory};
-  ouly::gpu_allocator allocator{512};
+  arena_memory                     memory;
+  test_executor                    executor{.memory_ = &memory};
+  ouly::coalescing_arena_allocator allocator{512};
 
   auto class0_a = allocator.allocate(256, memory);
-  auto class0_b = allocator.allocate(256, memory, ouly::gpu_allocation_options{.movable_ = false});
-  auto class1_a = allocator.allocate(256, memory, ouly::gpu_allocation_options{.memory_class_ = 1});
-  auto class1_b = allocator.allocate(256, memory, ouly::gpu_allocation_options{.memory_class_ = 1});
+  auto class0_b = allocator.allocate(256, memory, ouly::ca_allocation_options{.movable_ = false});
+  auto class1_a = allocator.allocate(256, memory, ouly::ca_allocation_options{.memory_class_ = 1});
+  auto class1_b = allocator.allocate(256, memory, ouly::ca_allocation_options{.memory_class_ = 1});
 
   allocator.deallocate(class0_a.get_allocation_id(), memory);
   allocator.deallocate(class1_a.get_allocation_id(), memory);
@@ -265,12 +268,13 @@ TEST_CASE("gpu_allocator: pinned allocations and memory classes prevent unsafe e
   REQUIRE(memory.active_ == 0);
 }
 
-TEST_CASE("gpu_allocator: failed scheduling cancels reservations and unfreezes the source", "[gpu_allocator][default]")
+TEST_CASE("coalescing_arena_allocator: failed scheduling cancels reservations and unfreezes the source",
+          "[coalescing_arena_allocator][default]")
 {
-  gpu_memory                        memory;
-  gpu_executor                      executor{.memory_ = &memory, .fail_schedule_ = true};
-  ouly::gpu_allocator               allocator{512};
-  std::vector<ouly::gpu_allocation> allocations;
+  arena_memory                     memory;
+  test_executor                    executor{.memory_ = &memory, .fail_schedule_ = true};
+  ouly::coalescing_arena_allocator allocator{512};
+  std::vector<ouly::ca_allocation> allocations;
 
   for (uint32_t index = 0; index < 4; ++index)
   {
@@ -296,12 +300,13 @@ TEST_CASE("gpu_allocator: failed scheduling cancels reservations and unfreezes t
   REQUIRE(memory.active_ == 0);
 }
 
-TEST_CASE("gpu_allocator: failed rebinding preserves sources and cancels the evacuation", "[gpu_allocator][default]")
+TEST_CASE("coalescing_arena_allocator: failed rebinding preserves sources and cancels the evacuation",
+          "[coalescing_arena_allocator][default]")
 {
-  gpu_memory                        memory;
-  gpu_executor                      executor{.memory_ = &memory, .fail_switch_ = true};
-  ouly::gpu_allocator               allocator{512};
-  std::vector<ouly::gpu_allocation> allocations;
+  arena_memory                     memory;
+  test_executor                    executor{.memory_ = &memory, .fail_switch_ = true};
+  ouly::coalescing_arena_allocator allocator{512};
+  std::vector<ouly::ca_allocation> allocations;
 
   for (uint32_t index = 0; index < 4; ++index)
   {
@@ -312,7 +317,7 @@ TEST_CASE("gpu_allocator: failed rebinding preserves sources and cancels the eva
   allocator.deallocate(allocations[2].get_allocation_id(), memory);
 
   auto scheduled =
-   allocator.defragment(memory, executor, ouly::gpu_defrag_budget{.max_copy_bytes_ = 256, .max_move_count_ = 1});
+   allocator.defragment(memory, executor, ouly::ca_defrag_budget{.max_copy_bytes_ = 256, .max_move_count_ = 1});
   REQUIRE(scheduled.moves_scheduled_ == 1);
   auto const moving_id    = executor.copies_.front().allocation_;
   auto const source_arena = executor.copies_.front().source_arena_;
@@ -364,16 +369,17 @@ static_assert(ouly::ScratchAllocator<ouly::linear_arena_allocator<>>);
 static_assert(ouly::ScratchAllocator<ouly::ts_thread_local_allocator>);
 } // namespace
 
-TEST_CASE("gpu_allocator: defragmentation plans from a caller supplied scratch allocator", "[gpu_allocator][default]")
+TEST_CASE("coalescing_arena_allocator: defragmentation plans from a caller supplied scratch allocator",
+          "[coalescing_arena_allocator][default]")
 {
   constexpr uint32_t block_size = 1024;
   constexpr uint32_t alloc_size = 256;
 
-  gpu_memory                        memory;
-  gpu_executor                      executor{.memory_ = &memory};
-  ouly::gpu_allocator               allocator{block_size};
-  counting_scratch                  scratch;
-  std::vector<ouly::gpu_allocation> allocations;
+  arena_memory                     memory;
+  test_executor                    executor{.memory_ = &memory};
+  ouly::coalescing_arena_allocator allocator{block_size};
+  counting_scratch                 scratch;
+  std::vector<ouly::ca_allocation> allocations;
 
   for (uint32_t index = 0; index < 8; ++index)
   {
@@ -386,11 +392,11 @@ TEST_CASE("gpu_allocator: defragmentation plans from a caller supplied scratch a
   }
 
   // Nothing to plan yet is nothing to allocate
-  ouly::gpu_defrag_budget const idle{.max_copy_bytes_ = 0, .max_move_count_ = 0};
+  ouly::ca_defrag_budget const idle{.max_copy_bytes_ = 0, .max_move_count_ = 0};
   REQUIRE(allocator.defragment(memory, executor, idle, scratch).moves_scheduled_ == 0);
   REQUIRE(scratch.allocations_ == 0);
 
-  auto scheduled = allocator.defragment(memory, executor, ouly::gpu_defrag_budget{}, scratch);
+  auto scheduled = allocator.defragment(memory, executor, ouly::ca_defrag_budget{}, scratch);
   REQUIRE(scheduled.moves_scheduled_ == 2);
   REQUIRE(scratch.allocations_ > 0);
 
@@ -408,6 +414,127 @@ TEST_CASE("gpu_allocator: defragmentation plans from a caller supplied scratch a
     verify(memory, allocator, allocations[index].get_allocation_id());
     allocator.deallocate(allocations[index].get_allocation_id(), memory);
   }
+  REQUIRE(memory.active_ == 0);
+}
+
+TEST_CASE("coalescing_arena_allocator: randomized allocation, evacuation and failure injection",
+          "[coalescing_arena_allocator][default]")
+{
+  uint32_t seed = Catch::getSeed() | 1U;
+  auto     next = [&seed]() -> uint32_t
+  {
+    seed ^= seed << 13;
+    seed ^= seed >> 17;
+    seed ^= seed << 5;
+    return seed;
+  };
+
+  constexpr uint32_t block_size = 64 * 1024;
+
+  arena_memory                     memory;
+  test_executor                    executor{.memory_ = &memory};
+  ouly::coalescing_arena_allocator allocator{block_size};
+
+  struct live_allocation
+  {
+    ouly::allocation_id id_;
+    uint32_t            size_;
+    uint32_t            alignment_;
+    uint32_t            memory_class_;
+  };
+  std::vector<live_allocation> live;
+
+  auto const check_all = [&](bool contents)
+  {
+    allocator.validate_integrity();
+    for (auto const& entry : live)
+    {
+      CHECK(allocator.get_size(entry.id_) == entry.size_);
+      CHECK(allocator.get_offset(entry.id_) % entry.alignment_ == 0);
+      CHECK(allocator.get_memory_class(entry.id_) == entry.memory_class_);
+      if (contents)
+      {
+        auto const& data = memory.arenas_[allocator.get_arena(entry.id_).get()];
+        auto const  base = data.data() + allocator.get_offset(entry.id_);
+        bool        same = true;
+        for (uint32_t index = 0; index < entry.size_; ++index)
+        {
+          same = same && base[index] == pattern(entry.id_.get(), index);
+        }
+        REQUIRE(same);
+      }
+    }
+  };
+
+  for (uint32_t step = 0; step < 3000; ++step)
+  {
+    auto const action = next() % 100;
+    if (action < 45 || live.empty())
+    {
+      uint32_t const alignments[] = {1, 16, 256, 4096};
+      auto const     alignment    = alignments[next() % 4];
+      auto const     size         = 1 + (next() % (next() % 8 == 0 ? block_size : block_size / 16));
+      auto const     options      = ouly::ca_allocation_options{.alignment_      = alignment,
+                                                                .memory_class_   = next() % 2,
+                                                                .resource_class_ = next() % 3,
+                                                                .movable_        = next() % 16 != 0,
+                                                                .dedicated_      = next() % 64 == 0};
+      auto const     allocation   = allocator.allocate(size, memory, options);
+      REQUIRE(allocation.get_offset() % alignment == 0);
+      fill(memory, allocation, size);
+      live.push_back({allocation.get_allocation_id(), size, alignment, options.memory_class_});
+    }
+    else if (action < 80)
+    {
+      auto const index = next() % live.size();
+      if (allocator.try_deallocate(live[index].id_, memory))
+      {
+        live[index] = live.back();
+        live.pop_back();
+      }
+      else
+      {
+        REQUIRE(allocator.is_relocating(live[index].id_));
+      }
+    }
+    else if (action < 90)
+    {
+      executor.fail_schedule_ = next() % 20 == 0;
+      executor.fail_switch_   = next() % 20 == 0;
+      allocator.defragment(
+       memory, executor,
+       ouly::ca_defrag_budget{.max_copy_bytes_ = next() % (4 * block_size), .max_move_count_ = 1 + (next() % 8)});
+    }
+    else
+    {
+      executor.fail_switch_ = next() % 20 == 0;
+      executor.completed_ += next() % 3;
+      allocator.process_completions(memory, executor);
+    }
+    check_all(step % 128 == 0);
+  }
+
+  executor.fail_schedule_ = false;
+  executor.fail_switch_   = false;
+  for (uint32_t round = 0; round < 64; ++round)
+  {
+    executor.completed_ = executor.next_timeline_;
+    allocator.defragment(memory, executor);
+  }
+  executor.completed_ = executor.next_timeline_;
+  allocator.process_completions(memory, executor);
+  executor.completed_ = executor.next_timeline_;
+  allocator.process_completions(memory, executor);
+  check_all(true);
+  REQUIRE(allocator.statistics().active_evacuation_targets_ == 0);
+  REQUIRE(allocator.statistics().moves_completed_ > 0);
+  REQUIRE(allocator.statistics().blocks_released_ > 0);
+
+  for (auto const& entry : live)
+  {
+    allocator.deallocate(entry.id_, memory);
+  }
+  allocator.validate_integrity();
   REQUIRE(memory.active_ == 0);
 }
 

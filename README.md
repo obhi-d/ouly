@@ -360,47 +360,40 @@ Offset-based allocators meant for GPU/memory range suballocation (unit_tests/coa
 ```cpp
 #include <ouly/allocators/coalescing_allocator.hpp>
 
-ouly::coalescing_allocator allocator;
-auto off1 = allocator.allocate(256); // returns an offset, not a pointer
-auto off2 = allocator.allocate(256);
-allocator.deallocate(off1, 256);     // adjacent free blocks are merged
+ouly::coalescing_allocator allocator;           // or allocator{capacity}
+auto id1 = allocator.allocate(256);             // stable allocation_id, null id on exhaustion
+auto id2 = allocator.allocate(256, 64);         // optional power-of-two alignment
+auto off = allocator.get_offset(id2);           // offsets, not pointers
+allocator.deallocate(id1);                      // adjacent free space merges for free
+
+// slide live allocations towards offset zero; ids stay valid
+allocator.compact([&](auto from, auto to, auto size) { std::memmove(buf + to, buf + from, size); });
 ```
 
-The arena variant, `ouly::coalescing_arena_allocator`, manages multiple arenas and reports arena
-add/remove events to a user-provided memory manager satisfying the `CoalescingMemoryManager`
-concept. See unit_tests/coalescing_allocator.cpp for a complete example with a manager.
+`allocate` and `deallocate` are O(1) regardless of how many allocations are live: only occupied
+blocks are stored, each owning the free gap after it, and the gaps are indexed by TLSF size bins.
+Freeing a block adds its bytes and gap to its predecessor's gap, so coalescing costs nothing.
 
-`ouly::compacting_allocator` (unit_tests/compacting_allocator.cpp) is the single-arena
-`coalescing_allocator` with stable `allocation_id` handles and a `compact` pass that slides live
-allocations towards offset zero, reporting each range to move through a memmove-like callback;
-query `get_offset` for an allocation's current placement.
+#### Coalescing Arena Allocator
+`ouly::coalescing_arena_allocator` (unit_tests/coalescing_arena_allocator.cpp) suballocates many
+arenas, such as GPU heaps or mapped files, addressed by (arena, offset). Allocation and deallocation
+are O(1), using the same gap-owning block list as `coalescing_allocator` with one set of TLSF bins
+per memory class shared by all of its arenas. Alignment is exact, `allocation_id` handles are stable,
+and arenas are returned to the manager as soon as they become empty.
 
-#### Defragmenting Allocators
-`ouly::best_fit_defrag_allocator` and `ouly::first_fit_defrag_allocator`
-(unit_tests/defrag_allocator.cpp) extend the coalescing arena allocators with defragmentation
-passes for long-lived heaps such as GPU memory. The best-fit variant builds on
-`coalescing_arena_allocator` (best-fit by size, alignment via over-allocation); the first-fit
-variant uses offset-ordered free lists with exact-fit alignment, so no bytes are wasted on
-alignment padding. Both share:
-
-- Allocations keep stable `allocation_id` handles across defragmentation
-- A defragmentation pass emits `move_memory` callbacks to the user's memory manager in a
-  memmove-safe order, followed by `rebind_alloc` notifications with each allocation's new placement
-- Dedicated (pinned) allocations bypass compaction entirely
-- An optional byte budget makes defragmentation incremental (e.g. bounded GPU copies per frame)
-
-For asynchronous GPU heaps, `ouly::gpu_allocator` adds persistent whole-arena evacuation and
-timeline-based retirement without virtual interfaces. A manager satisfying `GpuMemoryManager` owns
-the backing heaps, while a `GpuRelocationExecutor` schedules API-specific copies, switches references
-for the stable `allocation_id`, and reports timeline completion. Before an arena is frozen, the
-allocator simulates its complete evacuation with alignment-aware best-fit placement and reserves all
-destinations. `gpu_defrag_budget` limits both copied bytes and move count per call.
+A manager satisfying `CoalescingMemoryManager` owns the backing memory. Defragmentation evacuates
+whole arenas: a `CoalescingRelocationExecutor` schedules the copies, switches references for the
+stable `allocation_id`, and reports timeline completion, without virtual interfaces. Before an arena
+is frozen, the allocator reserves an alignment-aware destination for every allocation it holds, and
+rolls the reservations back if any of them does not fit. `ca_defrag_budget` limits both copied bytes
+and move count per call. For host-visible memory, an executor that copies inside `schedule_copy` and
+reports every timeline value as complete makes defragmentation synchronous.
 
 ```cpp
-ouly::gpu_allocator allocator{64U * 1024U * 1024U};
+ouly::coalescing_arena_allocator allocator{64U * 1024U * 1024U};
 auto allocation = allocator.allocate(
     size, memory_manager,
-    ouly::gpu_allocation_options{
+    ouly::ca_allocation_options{
         .alignment_ = alignment,
         .memory_class_ = memory_type,
         .resource_class_ = resource_type,
@@ -408,7 +401,7 @@ auto allocation = allocator.allocate(
 
 allocator.defragment(
     memory_manager, relocation_executor,
-    ouly::gpu_defrag_budget{
+    ouly::ca_defrag_budget{
         .max_copy_bytes_ = 8U * 1024U * 1024U,
         .max_move_count_ = 32,
     });
