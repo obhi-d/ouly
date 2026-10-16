@@ -163,11 +163,8 @@ Available allocator configuration options:
 * ``ouly::cfg::granularity<N>`` - Set allocation granularity
 * ``ouly::cfg::max_bucket<N>`` - Set maximum bucket size for bucket allocators
 * ``ouly::cfg::search_window<N>`` - Set search window size for allocation strategies
-* ``ouly::cfg::strategy<T>`` - Specify allocation strategy for complex allocators
 * ``ouly::cfg::fallback_start<T>`` - Set fallback strategy when primary fails
 * ``ouly::cfg::fixed_max_per_slot<N>`` - Maximum allocations per slot
-* ``ouly::cfg::extension<T>`` - Add extension functionality
-* ``ouly::cfg::manager<T>`` - Set memory manager implementation
 * ``ouly::cfg::debug_tracer<T>`` - Enable debug tracing with custom tracer
 * ``ouly::cfg::base_stats<T>`` - Set base statistics collection type
 
@@ -202,24 +199,6 @@ consumed after deallocation.
 **Advanced Configuration Examples:**
 
 .. code-block:: cpp
-
-   // High-performance arena with custom strategy
-   using PerformanceConfig = ouly::config<
-       ouly::cfg::strategy<ouly::strat::best_fit_v2>,
-       ouly::cfg::min_alignment<64>,
-       ouly::cfg::granularity<4096>
-   >;
-   
-   ouly::arena_allocator<PerformanceConfig> arena(16 * 1024 * 1024);
-
-   // Debug-enabled allocator with tracing
-   using DebugConfig = ouly::config<
-       ouly::cfg::track_memory,
-       ouly::cfg::compute_atomic_stats,
-       ouly::cfg::debug_tracer<MyCustomTracer>
-   >;
-   
-   ouly::coalescing_arena_allocator<DebugConfig> debug_arena(8 * 1024 * 1024);
 
    // Pool allocator with custom atom configuration
    using PoolConfig = ouly::config<
@@ -273,42 +252,28 @@ OULY provides specialized allocators that work with address spaces rather than d
 
 .. code-block:: cpp
 
-   #include <ouly/allocators/arena_allocator.hpp>
+   #include <ouly/allocators/coalescing_allocator.hpp>
    #include <ouly/allocators/coalescing_arena_allocator.hpp>
 
-   int main() {
-       // Arena allocator for managing address ranges
-       // Can be used with GPU memory pools or virtual address spaces
-       ouly::arena_allocator<> arena;
-       
-       // Coalescing arena allocator reduces fragmentation
-       // by merging adjacent free blocks
-       ouly::coalescing_arena_allocator<> coalescing_arena;
-       
-       // These allocators manage address ranges, not actual memory
-       // Useful for:
-       // - GPU memory allocation coordination
-       // - Virtual memory management
-       // - Address space partitioning
-       
-       // Example: GPU memory allocation wrapper
-       struct GPUMemoryAllocator {
-           ouly::arena_allocator<> address_allocator;
-           void* gpu_memory_pool;
-           
-           void* allocate_gpu_memory(size_t size) {
-               // Get address offset from arena allocator
-               auto offset = address_allocator.allocate(size);
-               if (offset == nullptr) return nullptr;
-               
-               // Convert offset to actual GPU memory address
-               return static_cast<char*>(gpu_memory_pool) + 
-                      reinterpret_cast<uintptr_t>(offset);
-           }
-       };
-       
-       return 0;
-   }
+   // One offset range, e.g. a single large GPU buffer. O(1) allocate/deallocate.
+   ouly::coalescing_allocator range{64 * 1024 * 1024};
+   auto id     = range.allocate(4096, 256);      // size, alignment
+   auto offset = range.get_offset(id);
+   range.deallocate(id);
+
+   // Many arenas created and destroyed on demand through a memory manager
+   struct heap_manager {
+       void add(ouly::arena_id arena, ouly::allocation_size_type size);   // create a heap
+       void remove(ouly::arena_id arena);                                 // destroy it
+   };
+
+   heap_manager                     manager;
+   ouly::coalescing_arena_allocator heaps{16 * 1024 * 1024};
+   auto allocation = heaps.allocate(4096, manager, ouly::alignment<256>{});
+   // allocation.get_arena_id(), allocation.get_offset()
+   heaps.deallocate(allocation.get_allocation_id(), manager);
+
+``coalescing_arena_allocator::defragment`` evacuates sparse arenas through a relocation executor; see the README.
 
 **Use Cases for Address Space Allocators:**
 

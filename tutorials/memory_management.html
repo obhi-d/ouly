@@ -257,11 +257,8 @@
 <li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::granularity&lt;N&gt;</span></code> - Set allocation granularity</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::max_bucket&lt;N&gt;</span></code> - Set maximum bucket size for bucket allocators</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::search_window&lt;N&gt;</span></code> - Set search window size for allocation strategies</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::strategy&lt;T&gt;</span></code> - Specify allocation strategy for complex allocators</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::fallback_start&lt;T&gt;</span></code> - Set fallback strategy when primary fails</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::fixed_max_per_slot&lt;N&gt;</span></code> - Maximum allocations per slot</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::extension&lt;T&gt;</span></code> - Add extension functionality</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::manager&lt;T&gt;</span></code> - Set memory manager implementation</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::debug_tracer&lt;T&gt;</span></code> - Enable debug tracing with custom tracer</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">ouly::cfg::base_stats&lt;T&gt;</span></code> - Set base statistics collection type</p></li>
 </ul>
@@ -290,25 +287,7 @@ that only rewind in bulk; this removes the header and makes <code class="docutil
 threaded allocators retain their metadata-free allocation path and may leave alignment padding
 consumed after deallocation.</p>
 <p><strong>Advanced Configuration Examples:</strong></p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// High-performance arena with custom strategy</span>
-<span class="k">using</span><span class="w"> </span><span class="n">PerformanceConfig</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">config</span><span class="o">&lt;</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">cfg</span><span class="o">::</span><span class="n">strategy</span><span class="o">&lt;</span><span class="n">ouly</span><span class="o">::</span><span class="n">strat</span><span class="o">::</span><span class="n">best_fit_v2</span><span class="o">&gt;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">cfg</span><span class="o">::</span><span class="n">min_alignment</span><span class="o">&lt;</span><span class="mi">64</span><span class="o">&gt;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">cfg</span><span class="o">::</span><span class="n">granularity</span><span class="o">&lt;</span><span class="mi">4096</span><span class="o">&gt;</span>
-<span class="o">&gt;</span><span class="p">;</span>
-
-<span class="n">ouly</span><span class="o">::</span><span class="n">arena_allocator</span><span class="o">&lt;</span><span class="n">PerformanceConfig</span><span class="o">&gt;</span><span class="w"> </span><span class="n">arena</span><span class="p">(</span><span class="mi">16</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="p">);</span>
-
-<span class="c1">// Debug-enabled allocator with tracing</span>
-<span class="k">using</span><span class="w"> </span><span class="n">DebugConfig</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">config</span><span class="o">&lt;</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">cfg</span><span class="o">::</span><span class="n">track_memory</span><span class="p">,</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">cfg</span><span class="o">::</span><span class="n">compute_atomic_stats</span><span class="p">,</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">cfg</span><span class="o">::</span><span class="n">debug_tracer</span><span class="o">&lt;</span><span class="n">MyCustomTracer</span><span class="o">&gt;</span>
-<span class="o">&gt;</span><span class="p">;</span>
-
-<span class="n">ouly</span><span class="o">::</span><span class="n">coalescing_arena_allocator</span><span class="o">&lt;</span><span class="n">DebugConfig</span><span class="o">&gt;</span><span class="w"> </span><span class="n">debug_arena</span><span class="p">(</span><span class="mi">8</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="p">);</span>
-
-<span class="c1">// Pool allocator with custom atom configuration</span>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// Pool allocator with custom atom configuration</span>
 <span class="k">using</span><span class="w"> </span><span class="n">PoolConfig</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">config</span><span class="o">&lt;</span>
 <span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">cfg</span><span class="o">::</span><span class="n">atom_size</span><span class="o">&lt;</span><span class="mi">256</span><span class="o">&gt;</span><span class="p">,</span><span class="w">      </span><span class="c1">// 256-byte atoms</span>
 <span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">cfg</span><span class="o">::</span><span class="n">atom_count</span><span class="o">&lt;</span><span class="mi">64</span><span class="o">&gt;</span><span class="p">,</span><span class="w">      </span><span class="c1">// 64 atoms per allocation</span>
@@ -357,44 +336,29 @@ consumed after deallocation.</p>
 <section id="address-space-allocators">
 <h2>Address Space Allocators<a class="headerlink" href="#address-space-allocators" title="Link to this heading"></a></h2>
 <p>OULY provides specialized allocators that work with address spaces rather than direct memory allocation. These are particularly useful for GPU memory management and virtual memory systems:</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/allocators/arena_allocator.hpp&gt;</span>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/allocators/coalescing_allocator.hpp&gt;</span>
 <span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/allocators/coalescing_arena_allocator.hpp&gt;</span>
 
-<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="c1">// Arena allocator for managing address ranges</span>
-<span class="w">    </span><span class="c1">// Can be used with GPU memory pools or virtual address spaces</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">arena_allocator</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">arena</span><span class="p">;</span>
+<span class="c1">// One offset range, e.g. a single large GPU buffer. O(1) allocate/deallocate.</span>
+<span class="n">ouly</span><span class="o">::</span><span class="n">coalescing_allocator</span><span class="w"> </span><span class="n">range</span><span class="p">{</span><span class="mi">64</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="p">};</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">id</span><span class="w">     </span><span class="o">=</span><span class="w"> </span><span class="n">range</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="mi">4096</span><span class="p">,</span><span class="w"> </span><span class="mi">256</span><span class="p">);</span><span class="w">      </span><span class="c1">// size, alignment</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">offset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">range</span><span class="p">.</span><span class="n">get_offset</span><span class="p">(</span><span class="n">id</span><span class="p">);</span>
+<span class="n">range</span><span class="p">.</span><span class="n">deallocate</span><span class="p">(</span><span class="n">id</span><span class="p">);</span>
 
-<span class="w">    </span><span class="c1">// Coalescing arena allocator reduces fragmentation</span>
-<span class="w">    </span><span class="c1">// by merging adjacent free blocks</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">coalescing_arena_allocator</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">coalescing_arena</span><span class="p">;</span>
+<span class="c1">// Many arenas created and destroyed on demand through a memory manager</span>
+<span class="k">struct</span><span class="w"> </span><span class="nc">heap_manager</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="nf">add</span><span class="p">(</span><span class="n">ouly</span><span class="o">::</span><span class="n">arena_id</span><span class="w"> </span><span class="n">arena</span><span class="p">,</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">allocation_size_type</span><span class="w"> </span><span class="n">size</span><span class="p">);</span><span class="w">   </span><span class="c1">// create a heap</span>
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="nf">remove</span><span class="p">(</span><span class="n">ouly</span><span class="o">::</span><span class="n">arena_id</span><span class="w"> </span><span class="n">arena</span><span class="p">);</span><span class="w">                                 </span><span class="c1">// destroy it</span>
+<span class="p">};</span>
 
-<span class="w">    </span><span class="c1">// These allocators manage address ranges, not actual memory</span>
-<span class="w">    </span><span class="c1">// Useful for:</span>
-<span class="w">    </span><span class="c1">// - GPU memory allocation coordination</span>
-<span class="w">    </span><span class="c1">// - Virtual memory management</span>
-<span class="w">    </span><span class="c1">// - Address space partitioning</span>
-
-<span class="w">    </span><span class="c1">// Example: GPU memory allocation wrapper</span>
-<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">GPUMemoryAllocator</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">ouly</span><span class="o">::</span><span class="n">arena_allocator</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">address_allocator</span><span class="p">;</span>
-<span class="w">        </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">gpu_memory_pool</span><span class="p">;</span>
-
-<span class="w">        </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">allocate_gpu_memory</span><span class="p">(</span><span class="kt">size_t</span><span class="w"> </span><span class="n">size</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="c1">// Get address offset from arena allocator</span>
-<span class="w">            </span><span class="k">auto</span><span class="w"> </span><span class="n">offset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">address_allocator</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="n">size</span><span class="p">);</span>
-<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">offset</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nb">nullptr</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="nb">nullptr</span><span class="p">;</span>
-
-<span class="w">            </span><span class="c1">// Convert offset to actual GPU memory address</span>
-<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">char</span><span class="o">*&gt;</span><span class="p">(</span><span class="n">gpu_memory_pool</span><span class="p">)</span><span class="w"> </span><span class="o">+</span>
-<span class="w">                   </span><span class="k">reinterpret_cast</span><span class="o">&lt;</span><span class="kt">uintptr_t</span><span class="o">&gt;</span><span class="p">(</span><span class="n">offset</span><span class="p">);</span>
-<span class="w">        </span><span class="p">}</span>
-<span class="w">    </span><span class="p">};</span>
-
-<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
-<span class="p">}</span>
+<span class="n">heap_manager</span><span class="w">                     </span><span class="n">manager</span><span class="p">;</span>
+<span class="n">ouly</span><span class="o">::</span><span class="n">coalescing_arena_allocator</span><span class="w"> </span><span class="n">heaps</span><span class="p">{</span><span class="mi">16</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="p">};</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">allocation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">heaps</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="mi">4096</span><span class="p">,</span><span class="w"> </span><span class="n">manager</span><span class="p">,</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">alignment</span><span class="o">&lt;</span><span class="mi">256</span><span class="o">&gt;</span><span class="p">{});</span>
+<span class="c1">// allocation.get_arena_id(), allocation.get_offset()</span>
+<span class="n">heaps</span><span class="p">.</span><span class="n">deallocate</span><span class="p">(</span><span class="n">allocation</span><span class="p">.</span><span class="n">get_allocation_id</span><span class="p">(),</span><span class="w"> </span><span class="n">manager</span><span class="p">);</span>
 </pre></div>
 </div>
+<p><code class="docutils literal notranslate"><span class="pre">coalescing_arena_allocator::defragment</span></code> evacuates sparse arenas through a relocation executor; see the README.</p>
 <p><strong>Use Cases for Address Space Allocators:</strong></p>
 <ul class="simple">
 <li><p><strong>GPU Memory Management</strong> - Coordinate address ranges in GPU memory pools</p></li>
