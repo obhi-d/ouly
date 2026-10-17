@@ -443,7 +443,7 @@ private:
    * destinations) and retiring sources are blocks too, so the free space of an arena is exactly the
    * sum of its gaps.
    */
-  struct block
+  struct block_node
   {
     size_type  offset_         = 0;
     size_type  size_           = 0;
@@ -461,7 +461,7 @@ private:
     bool       movable_        = false;
   };
 
-  using bins_type = ouly::detail::tlsf_bins<block>;
+  using bins_type = ouly::detail::tlsf_bins<block_node>;
 
   struct arena_state
   {
@@ -613,7 +613,7 @@ private:
   std::vector<uint16_t>    free_arenas_;
   std::vector<uint16_t>    emptied_;
 
-  std::vector<block>     blocks_;
+  std::vector<block_node>     blocks_;
   std::vector<bins_type> bins_;
   std::vector<uint32_t>  bin_classes_;
   uint32_t               free_block_ = null_index;

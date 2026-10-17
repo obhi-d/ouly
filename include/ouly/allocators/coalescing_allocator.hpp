@@ -141,7 +141,7 @@ private:
   static constexpr uint32_t head_index = 0;
 
   /** @brief An allocation followed by the free gap it owns; block 0 owns the leading gap */
-  struct block
+  struct block_node
   {
     size_type offset_   = 0;
     size_type size_     = 0;
@@ -154,9 +154,9 @@ private:
     bool      live_     = false;
   };
 
-  using bins_type = ouly::detail::tlsf_bins<block>;
+  using bins_type = ouly::detail::tlsf_bins<block_node>;
 
-  [[nodiscard]] auto head_block() const noexcept -> block const&
+  [[nodiscard]] auto head_block() const noexcept -> block_node const&
   {
     return ouly::detail::vector_access(blocks_, head_index);
   }
@@ -164,7 +164,7 @@ private:
   OULY_API auto make_block() -> uint32_t;
   OULY_API void rebuild_gaps();
 
-  std::vector<block> blocks_;
+  std::vector<block_node> blocks_;
   bins_type          bins_;
   size_type          capacity_   = 0;
   uint32_t           free_block_ = null_index;

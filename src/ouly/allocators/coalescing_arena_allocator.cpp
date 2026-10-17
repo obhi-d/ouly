@@ -415,7 +415,8 @@ auto coalescing_arena_allocator::plan_evacuation(uint16_t source) -> bool
   {
     auto const& block = ouly::detail::vector_access(blocks_, index);
     OULY_ASSERT(block.kind_ == block_kind::allocation);
-    plan.moves_.push_back({.allocation_    = allocation_id{index},
+    plan.moves_.push_back({.move_          = {},
+                           .allocation_    = allocation_id{index},
                            .source_arena_  = source,
                            .source_offset_ = block.offset_,
                            .size_          = block.size_});
