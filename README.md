@@ -378,8 +378,10 @@ Freeing a block adds its bytes and gap to its predecessor's gap, so coalescing c
 `ouly::coalescing_arena_allocator` (unit_tests/coalescing_arena_allocator.cpp) suballocates many
 arenas, such as GPU heaps or mapped files, addressed by (arena, offset). Allocation and deallocation
 are O(1), using the same gap-owning block list as `coalescing_allocator` with one set of TLSF bins
-per memory class shared by all of its arenas. Alignment is exact, `allocation_id` handles are stable,
-and arenas are returned to the manager as soon as they become empty.
+per memory class shared by all of its arenas. Alignment is exact and `allocation_id` handles are stable.
+Each memory class keeps one emptied arena for reuse (`set_retained_empty_arenas()`), so alloc/free
+cycles do not create and destroy backing memory; other empty arenas, dedicated ones, and evacuated
+sources go back to the manager immediately, and `trim()` releases the retained ones.
 
 A manager satisfying `CoalescingMemoryManager` owns the backing memory. Defragmentation evacuates
 whole arenas: a `CoalescingRelocationExecutor` schedules the copies, switches references for the
