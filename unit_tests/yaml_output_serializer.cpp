@@ -222,4 +222,72 @@ TEST_CASE("yaml_output: Roundtrip strings that need quoting")
   REQUIRE(read.values == write.values);
   REQUIRE(read.tail == write.tail);
 }
+namespace
+{
+class getset_widget;
+auto get_height(getset_widget const& w) noexcept -> int;
+void set_height(getset_widget& w, int h) noexcept;
+
+class getset_widget
+{
+public:
+  int height = 0;
+
+  [[nodiscard]] auto get_width() const -> int
+  {
+    return width_;
+  }
+  void set_width(int w)
+  {
+    width_ = w;
+  }
+  [[nodiscard]] auto get_name() const noexcept -> std::string const&
+  {
+    return name_;
+  }
+  void set_name(std::string n) noexcept
+  {
+    name_ = std::move(n);
+  }
+
+  static constexpr auto reflect() noexcept
+  {
+    return ouly::bind(ouly::bind<"width", &getset_widget::get_width, &getset_widget::set_width>(),
+                      ouly::bind<"name", &getset_widget::get_name, &getset_widget::set_name>(),
+                      ouly::bind<"height", &get_height, &set_height>());
+  }
+
+private:
+  int         width_ = 0;
+  std::string name_;
+};
+
+auto get_height(getset_widget const& w) noexcept -> int
+{
+  return w.height;
+}
+
+void set_height(getset_widget& w, int h) noexcept
+{
+  w.height = h;
+}
+} // namespace
+
+TEST_CASE("yaml_output_serializer: getter/setter properties round trip", "[yaml_output_serializer][getset]")
+{
+  getset_widget w;
+  w.set_width(640);
+  w.set_name("panel");
+  w.height = 480;
+
+  auto yml = ouly::yml::to_string(w);
+  REQUIRE(yml.find("width: 640") != std::string::npos);
+  REQUIRE(yml.find("name: panel") != std::string::npos);
+
+  getset_widget back;
+  ouly::yml::from_string(back, yml);
+  REQUIRE(back.get_width() == 640);
+  REQUIRE(back.get_name() == "panel");
+  REQUIRE(back.height == 480);
+}
 // NOLINTEND

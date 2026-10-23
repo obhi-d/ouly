@@ -72,7 +72,9 @@ void process_field(Class& obj, Visitor& visitor, Decl const& decl)
   }
   else if constexpr (is_writer<Visitor>)
   {
-    visit(decl.value(obj), field_visitor);
+    // Member pointers yield a reference, getters usually a value: name it so both can be visited
+    auto&& field = decl.value(obj);
+    visit(field, field_visitor);
   }
 }
 
