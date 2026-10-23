@@ -271,7 +271,8 @@ OULY provides specialized allocators that work with address spaces rather than d
    ouly::coalescing_arena_allocator heaps{16 * 1024 * 1024};
    auto allocation = heaps.allocate(4096, manager, ouly::alignment<256>{});
    // allocation.get_arena_id(), allocation.get_offset()
-   heaps.deallocate(allocation.get_allocation_id(), manager);
+   heaps.deallocate(allocation.get_allocation_id(), manager); // the emptied heap is kept for reuse
+   heaps.trim(manager);                                       // hand retained empty heaps back
 
 ``coalescing_arena_allocator::defragment`` evacuates sparse arenas through a relocation executor; see the README.
 
