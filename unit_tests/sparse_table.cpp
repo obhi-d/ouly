@@ -271,4 +271,14 @@ TEST_CASE("sparse_table: construct with allocator", "[sparse_table][alloc]")
   REQUIRE(t1.at(e1) == 11);
   REQUIRE(t2.at(e2) == 22);
 }
+TEST_CASE("sparse_table: const get_if", "[sparse_table][get_if]")
+{
+  ouly::sparse_table<int> table;
+  auto                    e1 = table.emplace(7);
+  auto const&             ct = table;
+  REQUIRE(ct.get_if(e1) != nullptr);
+  REQUIRE(*ct.get_if(e1) == 7);
+  table.erase(e1);
+  REQUIRE(ct.get_if(e1) == nullptr);
+}
 // NOLINTEND

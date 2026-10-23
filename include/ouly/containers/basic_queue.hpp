@@ -57,12 +57,11 @@ private:
   static constexpr auto pool_mod  = pool_size - 1;
   static constexpr bool has_pod   = ouly::detail::HasTrivialAttrib<Config>;
 
-  static constexpr size_t alignment = std::max(alignof(std::max_align_t), alignof(Ty));
-  using storage                     = ouly::detail::aligned_storage<sizeof(value_type), alignment>;
+  using storage = ouly::detail::aligned_storage<sizeof(value_type), alignof(value_type)>;
 
   struct deque_block
   {
-    alignas(alignment) std::array<storage, pool_size> data_;
+    std::array<storage, pool_size> data_;
     deque_block* next_ = nullptr;
   };
 
@@ -310,7 +309,7 @@ private:
     }
     else
     {
-      db        = ouly::allocate<deque_block>(static_cast<allocator_type&>(*this), sizeof(deque_block), alignarg<Ty>);
+      db        = ouly::allocate<deque_block>(static_cast<allocator_type&>(*this), sizeof(deque_block), alignarg<deque_block>);
       db->next_ = nullptr;
     }
 
@@ -345,7 +344,7 @@ private:
     while (start)
     {
       auto next = start->next_;
-      ouly::deallocate(static_cast<allocator_type&>(*this), start, sizeof(deque_block), alignarg<Ty>);
+      ouly::deallocate(static_cast<allocator_type&>(*this), start, sizeof(deque_block), alignarg<deque_block>);
       start = next;
     }
   }

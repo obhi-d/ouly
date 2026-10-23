@@ -13,9 +13,11 @@
 #include "ouly/utility/type_traits.hpp"
 #include "ouly/utility/user_config.hpp"
 #include "ouly/utility/utils.hpp"
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <cstring>
+#include <iterator>
 #include <memory>
 namespace ouly
 {
@@ -212,7 +214,7 @@ public:
     return *this;
   }
 
-  template <class InputIterator>
+  template <std::input_iterator InputIterator>
   constexpr void assign(InputIterator first, InputIterator last)
   {
     auto n = static_cast<size_type>(std::distance(first, last));
@@ -252,7 +254,6 @@ public:
       std::copy(first, last, ptr);
       resize(n);
     }
-    shrink_to_fit();
   }
 
   constexpr void assign(size_type n, const Ty& value)
@@ -293,7 +294,6 @@ public:
       std::fill_n(ptr, n, value);
       resize(n);
     }
-    shrink_to_fit();
   }
 
   constexpr void assign(std::initializer_list<Ty> other)
@@ -706,14 +706,35 @@ private:
       {
         transfer_to_ib(size, tail_type{size_});
       }
+      else
+      {
+        destroy_tail(size);
+      }
       return data_store_.ldata_.data()->template as<Ty>();
     }
 
     if (capacity() < size)
     {
-      unchecked_reserve_in_heap(size);
+      // grow geometrically so that repeated resize(size() + 1) stays amortized O(1)
+      auto const cap = capacity();
+      unchecked_reserve_in_heap(size_ == 0 ? size : std::max(size, static_cast<size_type>(cap + (cap >> 1U))));
+    }
+    else
+    {
+      destroy_tail(size);
     }
     return data_store_.hdata_.pdata_->template as<Ty>();
+  }
+
+  constexpr void destroy_tail(size_type new_size)
+  {
+    if constexpr (!has_trivial_dtor)
+    {
+      if (new_size < size_)
+      {
+        std::destroy_n(get_data() + new_size, size_ - new_size);
+      }
+    }
   }
 
   template <typename Tail = std::false_type>
@@ -842,11 +863,12 @@ private:
 
     if constexpr (!has_trivial_dtor)
     {
-      if constexpr (!Tail::value)
+      // [0, item_count) were moved from, [item_count, tail) are still live and are being dropped
+      if constexpr (!has_trivially_destroyed_on_move)
       {
-        std::destroy_n(data, size_);
+        std::destroy_n(data, item_count);
       }
-      else if constexpr (!has_trivially_destroyed_on_move)
+      if constexpr (Tail::value)
       {
         std::destroy_n(data + item_count, last_size.tail_ - item_count);
       }
@@ -996,6 +1018,7 @@ private:
         else
         {
           std::uninitialized_move(other.begin(), other.end(), begin());
+          other.destroy_moved_from();
         }
       }
       else
@@ -1038,6 +1061,7 @@ private:
       else
       {
         std::uninitialized_move(other.begin(), other.end(), begin());
+        other.destroy_moved_from();
       }
     }
     else
@@ -1047,6 +1071,14 @@ private:
     }
     other.size_ = 0;
     return *this;
+  }
+
+  constexpr void destroy_moved_from() noexcept
+  {
+    if constexpr (!has_trivial_dtor && !has_trivially_destroyed_on_move)
+    {
+      std::destroy_n(get_data(), size_);
+    }
   }
 
   template <typename InputIt>
@@ -1092,7 +1124,7 @@ private:
     {
       std::swap(other.data_store_.ldata_, data_store_.ldata_);
       std::swap(size_, other.size_);
-      std::swap<allocator_type>(this, other);
+      std::swap(static_cast<allocator_type&>(*this), static_cast<allocator_type&>(other));
     }
     else
     {
@@ -1107,7 +1139,7 @@ private:
         std::swap(other.data_store_.hdata_.pdata_, data_store_.hdata_.pdata_);
         std::swap(other.data_store_.hdata_.capacity_, data_store_.hdata_.capacity_);
         std::swap(size_, other.size_);
-        std::swap<allocator_type>(this, other);
+        std::swap(static_cast<allocator_type&>(*this), static_cast<allocator_type&>(other));
       }
     }
   }

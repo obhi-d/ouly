@@ -4,6 +4,7 @@
 #include "ouly/allocators/detail/custom_allocator.hpp"
 #include "ouly/utility/type_traits.hpp"
 #include "ouly/utility/utils.hpp"
+#include <algorithm>
 #include <cstring>
 #include <functional>
 #include <iterator>
@@ -207,8 +208,24 @@ public:
       {
         return;
       }
-      while (idx_ < p_->length_ && !p_->contains(idx_))
+      while (idx_ < p_->length_)
       {
+        auto const block = idx_ >> pool_mul;
+        if (block >= p_->items_.size())
+        {
+          idx_ = p_->length_;
+          break;
+        }
+        if (p_->items_[block].data_ == nullptr)
+        {
+          // skip the whole missing page instead of probing each index in it
+          idx_ = std::min(p_->length_, static_cast<size_type>((block + 1) << pool_mul));
+          continue;
+        }
+        if (p_->contains(idx_))
+        {
+          break;
+        }
         ++idx_;
       }
     }
@@ -258,6 +275,7 @@ public:
       return *this;
     }
     clear();
+    shrink_to_fit(); // release our pages before adopting other's
     static_cast<base_type&>(*this) = std::move(static_cast<base_type&>(other));
     items_                         = std::move(other.items_);
     length_                        = other.length_;
@@ -271,6 +289,7 @@ public:
      if (this != &other)
      {
        clear();
+       shrink_to_fit(); // release our pages, every page is reallocated below
        items_.resize(other.items_.size());
        for (size_type i = 0; i < items_.size(); ++i)
        {
@@ -278,6 +297,10 @@ public:
          if (src_pool)
          {
            items_[i].data_ = ouly::allocate<storage>(*this, allocate_bytes, alignarg<Ty>);
+           if constexpr (has_pool_tracking)
+           {
+             pool_occupation(i) = other.pool_occupation(i);
+           }
 
            if constexpr (std::is_trivially_copyable_v<Ty> || has_pod)
            {
@@ -285,10 +308,6 @@ public:
            }
            else
            {
-             if constexpr (has_pool_tracking)
-             {
-               pool_occupation(i) = other.pool_occupation(i);
-             }
              for (size_type e = 0; e < pool_size; ++e)
              {
                auto const& src = cast(src_pool[e]);

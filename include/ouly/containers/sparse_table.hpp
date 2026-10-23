@@ -373,7 +373,7 @@ public:
   auto get_if(link l) const noexcept -> value_type const*
   {
     // NOLINTNEXTLINE
-    return const_cast<this_type*>(this)->at(l);
+    return const_cast<this_type*>(this)->get_if(l);
   }
 
   auto operator[](link l) noexcept -> value_type&

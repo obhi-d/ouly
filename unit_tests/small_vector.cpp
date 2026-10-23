@@ -442,4 +442,106 @@ TEST_CASE("small_vector: capacity full self insertion", "[small_vector][default]
   REQUIRE(v1.back() == "failure");
   REQUIRE(v1.at(0) == "failure");
 }
+namespace
+{
+struct live_counter
+{
+  static inline int live = 0;
+  int               value = 0;
+  live_counter() noexcept
+  {
+    ++live;
+  }
+  explicit live_counter(int v) noexcept : value(v)
+  {
+    ++live;
+  }
+  live_counter(live_counter const& o) noexcept : value(o.value)
+  {
+    ++live;
+  }
+  live_counter(live_counter&& o) noexcept : value(o.value)
+  {
+    ++live;
+  }
+  auto operator=(live_counter const&) noexcept -> live_counter& = default;
+  auto operator=(live_counter&&) noexcept -> live_counter&      = default;
+  ~live_counter()
+  {
+    --live;
+  }
+};
+} // namespace
+
+TEST_CASE("small_vector: resize destroys truncated elements", "[small_vector][resize]")
+{
+  live_counter::live = 0;
+  {
+    ouly::small_vector<live_counter, 4> v;
+    v.resize(10);
+    REQUIRE(live_counter::live == 10);
+    v.resize(6); // heap -> heap
+    REQUIRE(live_counter::live == 6);
+    v.resize(3); // heap -> inline
+    REQUIRE(live_counter::live == 3);
+    v.resize(1); // inline -> inline
+    REQUIRE(live_counter::live == 1);
+    v.assign(8, live_counter(7));
+    REQUIRE(live_counter::live == 8);
+    v.assign(2, live_counter(3));
+    REQUIRE(live_counter::live == 2);
+  }
+  REQUIRE(live_counter::live == 0);
+}
+
+TEST_CASE("small_vector: pop_back and move do not leak", "[small_vector][move]")
+{
+  live_counter::live = 0;
+  {
+    ouly::small_vector<live_counter, 4> v;
+    for (int i = 0; i < 6; ++i)
+    {
+      v.emplace_back(i);
+    }
+    while (!v.empty())
+    {
+      v.pop_back();
+      REQUIRE(live_counter::live == static_cast<int>(v.size()));
+    }
+
+    ouly::small_vector<live_counter, 4> a;
+    a.emplace_back(1);
+    a.emplace_back(2);
+    ouly::small_vector<live_counter, 4> b = std::move(a);
+    REQUIRE(b.size() == 2);
+    REQUIRE(live_counter::live == 2);
+    ouly::small_vector<live_counter, 4> c;
+    c = std::move(b);
+    REQUIRE(c[1].value == 2);
+    REQUIRE(live_counter::live == 2);
+  }
+  REQUIRE(live_counter::live == 0);
+}
+
+TEST_CASE("small_vector: resize grows geometrically and assign keeps capacity", "[small_vector][capacity]")
+{
+  ouly::small_vector<int, 4> v;
+  uint32_t                   reallocations = 0;
+  auto                       last_cap      = v.capacity();
+  for (uint32_t i = 1; i <= 10000; ++i)
+  {
+    v.resize(i);
+    if (v.capacity() != last_cap)
+    {
+      ++reallocations;
+      last_cap = v.capacity();
+    }
+  }
+  REQUIRE(reallocations < 40);
+
+  auto cap = v.capacity();
+  v.assign(50, 1);
+  REQUIRE(v.capacity() == cap);
+  REQUIRE(v.size() == 50);
+}
 // NOLINTEND
