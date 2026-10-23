@@ -1,468 +1,346 @@
 Containers Tutorial
-==================
+===================
 
-OULY provides high-performance containers with STL-compatible interfaces and support for custom allocators. This tutorial covers the available containers and their optimal usage patterns.
+The containers in ``ouly/containers/`` fill gaps in the standard library: small-buffer and
+structure-of-arrays vectors, sparse storage with stable indices, intrusive and concurrent queues,
+and a heterogeneous blackboard. Most of them take their memory from a configurable allocator (see
+`Configuration`_). Every example on this page compiles against the current headers.
 
-Container Overview
-------------------
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
 
-OULY includes several specialized containers:
+   * - Container
+     - Use it for
+   * - ``small_vector<T, N>``
+     - A vector that keeps up to ``N`` elements inside the object
+   * - ``dynamic_array<T>``, ``fixed_array<T, N>``
+     - Heap arrays whose size only changes on request
+   * - ``soavector<T>``
+     - One contiguous array per member of an aggregate (structure of arrays)
+   * - ``sparse_vector<T>``
+     - Elements at sparse indices, stored in pages that exist only where indices do
+   * - ``sparse_table<T>``, ``table<T>``
+     - Insertion returns an index that stays valid until erased; erased slots are reused
+   * - ``block_vector<T, B>``
+     - A vector whose storage is a multiple of ``B`` elements, for SIMD tails
+   * - ``index_map``, ``bounded_bitset``
+     - Index remapping and bitsets that skip the unused low range
+   * - ``intrusive_list``
+     - Linked lists through a hook member, without allocation
+   * - ``basic_queue``, ``concurrent_queue``
+     - Single-threaded and multi-producer/multi-consumer FIFO queues
+   * - ``blackboard``
+     - Values of any type stored by name (or type) in pooled pages
 
-* **small_vector** - Stack-optimized vector for small collections
-* **dynamic_array** - High-performance resizable array
-* **sparse_vector** - Memory-efficient sparse storage  
-* **intrusive_list** - Zero-allocation linked list
-* **soavector** - Structure of Arrays container
-
-Each container is designed for specific use cases and performance characteristics.
-
-Small Vector
+Small vector
 ------------
 
-The small_vector stores small collections on the stack, avoiding heap allocations:
+``small_vector<T, N>`` stores up to ``N`` elements in the object itself and moves them to the heap
+when more are needed. Where the elements live is an explicit state, reported by ``is_inlined()``,
+and once the vector is on the heap it stays there like a ``std::vector`` would:
 
 .. code-block:: cpp
 
    #include <ouly/containers/small_vector.hpp>
-   #include <iostream>
 
-   int main() {
-       // Small vector with stack storage for up to 8 elements
-       ouly::small_vector<int, 8> numbers;
-       
-       // These additions use stack storage (no heap allocation)
-       for (int i = 0; i < 8; ++i) {
-           numbers.push_back(i);
-       }
-       
-       std::cout << "Capacity: " << numbers.capacity() << "\n";  // 8
-       std::cout << "Is on stack: " << !numbers.is_heap_allocated() << "\n";  // true
-       
-       // This triggers heap allocation
-       numbers.push_back(8);
-       std::cout << "After growth - on heap: " << numbers.is_heap_allocated() << "\n";  // true
-       
-       // STL-compatible interface
-       for (const auto& num : numbers) {
-           std::cout << num << " ";
-       }
-       std::cout << "\n";
-       
-       return 0;
-   }
+   ouly::small_vector<std::string, 4> names; // up to 4 strings stored in the object itself
+   names.emplace_back("a");
+   names.emplace_back("b");
+   assert(names.is_inlined());
 
-**Use Cases:**
-* Function parameters/return values with typically small sizes
-* Collections with known small upper bounds
-* Avoiding heap allocations for performance-critical paths
+   names.reserve(16); // moves to the heap now, even though only 2 elements are stored
+   assert(!names.is_inlined());
 
-Dynamic Array
--------------
+   names.clear(); // like std::vector: the heap buffer is kept for reuse
+   assert(!names.is_inlined() && names.capacity() >= 16);
 
-The dynamic_array provides optimized growth strategies and custom allocator support:
+   names.emplace_back("c");
+   names.shrink_to_fit(); // the only call that moves the elements back inline
+   assert(names.is_inlined());
+
+- ``clear()``, ``pop_back()``, ``erase()`` and a shrinking ``resize()`` keep the heap buffer.
+- ``reserve(n)`` allocates as soon as ``n`` exceeds the current capacity, even while the elements
+  are inline.
+- ``shrink_to_fit()`` is the only call that gives the heap buffer back. It moves the elements inline
+  when they fit, otherwise it shrinks the heap buffer to the size.
+- Growth (``push_back``, ``emplace_back``, ``insert`` and ``resize``) is geometric.
+
+The rest of the interface follows ``std::vector``:
 
 .. code-block:: cpp
 
-   #include <ouly/containers/dynamic_array.hpp>
-   #include <ouly/allocators/linear_arena_allocator.hpp>
+   ouly::small_vector<int, 8> values = {1, 2, 3};
+   values.insert(values.begin() + 1, 10);   // 1 10 2 3
+   values.erase(values.begin());            // 10 2 3
+   values.resize(32);                       // grows geometrically, like push_back
+   values.assign({4, 5});                   // keeps the capacity
+   auto inline_capacity = ouly::small_vector<int, 8>::get_inlined_capacity(); // at least 8
 
-   int main() {
-       // Using custom allocator
-       ouly::linear_arena_allocator<> arena(1024 * 1024);
-       
-       ouly::dynamic_array<float> positions;
-       positions.set_allocator(&arena);
-       
-       // Efficient bulk operations
-       positions.resize(1000);
-       positions.reserve(2000);  // Pre-allocate capacity
-       
-       // Fill with data
-       for (size_t i = 0; i < positions.size(); ++i) {
-           positions[i] = static_cast<float>(i) * 0.1f;
-       }
-       
-       std::cout << "Array size: " << positions.size() << "\n";
-       std::cout << "Array capacity: " << positions.capacity() << "\n";
-       
-       // Efficient range operations
-       auto subrange = positions.subrange(100, 200);
-       for (auto value : subrange) {
-           std::cout << value << " ";
-       }
-       
-       return 0;
-   }
+The inline capacity can be larger than ``N`` when ``N`` elements take less room than the heap
+pointer and capacity they share space with; ``get_inlined_capacity()`` reports it.
 
-Sparse Vector
--------------
-
-The sparse_vector efficiently stores data for sparse indices:
+Heap arrays
+-----------
 
 .. code-block:: cpp
 
-   #include <ouly/containers/sparse_vector.hpp>
-   #include <iostream>
+   #include <ouly/containers/array_types.hpp>
 
-   struct Component {
-       float x, y, z;
-       Component(float x, float y, float z) : x(x), y(y), z(z) {}
-   };
+   ouly::dynamic_array<float> weights(64U, 1.0F); // 64 elements, heap allocated, size fixed until resize()
+   weights.resize(128, 0.0F);
 
-   int main() {
-       ouly::sparse_vector<Component> components;
-       
-       // Insert at sparse indices
-       components.emplace(10, 1.0f, 2.0f, 3.0f);
-       components.emplace(100, 4.0f, 5.0f, 6.0f);
-       components.emplace(1000, 7.0f, 8.0f, 9.0f);
-       
-       std::cout << "Size: " << components.size() << "\n";  // 3 elements
-       std::cout << "Dense storage, sparse indices\n";
-       
-       // Check if indices exist
-       if (components.contains(100)) {
-           auto& comp = components[100];
-           std::cout << "Component at 100: (" << comp.x << ", " << comp.y << ", " << comp.z << ")\n";
-       }
-       
-       // Iterate over all elements (dense iteration)
-       for (auto& [index, component] : components) {
-           std::cout << "Index " << index << ": (" 
-                     << component.x << ", " << component.y << ", " << component.z << ")\n";
-       }
-       
-       return 0;
-   }
+   ouly::fixed_array<int, 16> slots(16U, 0); // 16 elements, heap allocated, size fixed at compile time
+   slots[0] = 1;
 
-**Use Cases:**
-* Entity-component systems with sparse entity IDs
-* Sparse matrices and mathematical computations
-* Cache-friendly storage for sparse data sets
+``dynamic_array`` has no ``push_back``: ``resize`` reallocates to exactly the requested size. Note
+that ``dynamic_array<int>(10, 0)`` picks the iterator-pair constructor; pass the count as
+``uint32_t`` (``10U``).
 
-Intrusive List
---------------
+Structure of arrays
+-------------------
 
-The intrusive_list provides zero-allocation linked list functionality:
-
-.. code-block:: cpp
-
-   #include <ouly/containers/intrusive_list.hpp>
-   #include <iostream>
-
-   struct Node : public ouly::intrusive_list_node<Node> {
-       int value;
-       Node(int v) : value(v) {}
-   };
-
-   int main() {
-       ouly::intrusive_list<Node> list;
-       
-       // Create nodes (can be allocated anywhere)
-       Node node1(10);
-       Node node2(20);
-       Node node3(30);
-       
-       // Insert into list (no heap allocation)
-       list.push_back(node1);
-       list.push_back(node2);
-       list.push_front(node3);
-       
-       std::cout << "List contents: ";
-       for (const auto& node : list) {
-           std::cout << node.value << " ";
-       }
-       std::cout << "\n";
-       
-       // Remove specific node
-       list.remove(node2);
-       
-       std::cout << "After removal: ";
-       for (const auto& node : list) {
-           std::cout << node.value << " ";
-       }
-       std::cout << "\n";
-       
-       return 0;
-   }
-
-**Use Cases:**
-* Memory pools where allocation is managed separately
-* Real-time systems requiring predictable performance
-* Embedded systems with strict memory constraints
-
-Structure of Arrays (SoA)
---------------------------
-
-The soavector stores aggregate types in Structure of Arrays format for better cache utilization and SIMD optimization:
+``soavector<T>`` takes an aggregate and stores each member in its own contiguous array, so a loop
+that touches one member streams through memory without loading the others:
 
 .. code-block:: cpp
 
    #include <ouly/containers/soavector.hpp>
-   #include <iostream>
 
-   // Define aggregate structure
-   struct Particle {
-       float x, y, z;    // position
-       float vx, vy, vz; // velocity
-       int life;         // lifetime
-       float mass;       // mass
+   struct particle
+   {
+     float x, y, z;
+     float life;
    };
 
-   int main() {
-       // soavector automatically expands Particle into separate arrays
-       ouly::soavector<Particle> particles;
-       
-       // Add particles - constructor arguments match struct members
-       for (int i = 0; i < 100; ++i) {
-           particles.emplace_back(
-               static_cast<float>(i),      // x
-               static_cast<float>(i * 2),  // y  
-               0.0f,                       // z
-               1.0f, 0.0f, 0.0f,          // velocity
-               100,                        // life
-               1.0f                        // mass
-           );
-       }
-       
-       // Access individual arrays for vectorization
-       auto& x_positions = particles.get<0>();  // Array of x coordinates
-       auto& y_positions = particles.get<1>();  // Array of y coordinates
-       auto& z_positions = particles.get<2>();  // Array of z coordinates
-       auto& x_velocities = particles.get<3>(); // Array of x velocities
-       auto& lifetimes = particles.get<6>();    // Array of lifetimes
-       
-       // SIMD-friendly operations on individual arrays
-       for (size_t i = 0; i < particles.size(); ++i) {
-           x_positions[i] += x_velocities[i];
-           y_positions[i] += particles.get<4>()[i]; // y velocity
-           z_positions[i] += particles.get<5>()[i]; // z velocity
-           lifetimes[i] -= 1;
-       }
-       
-       // Individual element access (reconstructs the aggregate)
-       auto particle = particles[0];
-       std::cout << "Particle 0: x=" << particle.x 
-                 << " y=" << particle.y 
-                 << " life=" << particle.life << "\n";
-       
-       // Iterate over all particles (less efficient than array access)
-       for (const auto& p : particles) {
-           if (p.life <= 0) {
-               // Handle dead particle
-           }
-       }
-       
-       return 0;
+.. code-block:: cpp
+
+   ouly::soavector<particle> particles;
+   particles.emplace_back(0.0F, 1.0F, 2.0F, 10.0F);
+   particles.push_back({3.0F, 4.0F, 5.0F, 20.0F});
+
+   // Each member is its own contiguous array
+   float* xs   = particles.data<0>();
+   float* life = particles.data<3>();
+   for (uint32_t i = 0; i < particles.size(); ++i)
+   {
+     xs[i] += 1.0F;
+     life[i] -= 1.0F;
    }
 
-**Use Cases:**
-* Game engines (particles, entities, physics)
-* Scientific computing with large datasets
-* Any application requiring SIMD optimizations
+   float last_life = particles.back<3>(); // 19
+   float second_x  = particles.at<0>(1);  // 4
 
-Container Algorithms
----------------------
+``data<I>()``, ``at<I>(n)``, ``front<I>()``, ``back<I>()`` and ``ibegin<I>()``/``iend<I>()``
+address member ``I``; ``operator[]``, ``at`` and the regular iterators yield all members of an
+element together. ``resize`` grows geometrically.
 
-OULY containers work with STL algorithms and provide additional utilities:
+Sparse storage
+--------------
 
 .. code-block:: cpp
 
-   #include <ouly/containers/dynamic_array.hpp>
-   #include <algorithm>
-   #include <numeric>
+   #include <ouly/containers/sparse_vector.hpp>
 
-   int main() {
-       ouly::dynamic_array<int> numbers = {5, 2, 8, 1, 9, 3};
-       
-       // STL algorithms work seamlessly
-       std::sort(numbers.begin(), numbers.end());
-       
-       auto sum = std::accumulate(numbers.begin(), numbers.end(), 0);
-       std::cout << "Sum: " << sum << "\n";
-       
-       // Find element
-       auto it = std::find(numbers.begin(), numbers.end(), 8);
-       if (it != numbers.end()) {
-           std::cout << "Found 8 at position: " << std::distance(numbers.begin(), it) << "\n";
-       }
-       
-       // Custom algorithms
-       numbers.for_each([](int& x) { x *= 2; });
-       
-       return 0;
-   }
+   ouly::sparse_vector<int> by_id; // storage is allocated page by page, only where indices exist
+   by_id.emplace_at(3, 30);
+   by_id.emplace_at(100000, 7);
 
-Custom Allocators
------------------
+   bool has = by_id.contains(3);
+   int  v   = by_id[3];
+   by_id.erase(3);
 
-All OULY containers support custom allocators:
+``sparse_table`` and ``table`` hand out the index instead of taking it:
 
 .. code-block:: cpp
 
-   #include <ouly/containers/dynamic_array.hpp>
-   #include <ouly/allocators/pool_allocator.hpp>
+   #include <ouly/containers/sparse_table.hpp>
+   #include <ouly/containers/table.hpp>
 
-   int main() {
-       // Pool allocator for fixed-size allocations
-       ouly::pool_allocator<> pool(1024, 100);  // 100 blocks of 1KB each
-       
-       // Container using custom allocator
-       ouly::dynamic_array<char> buffer;
-       buffer.set_allocator(&pool);
-       
-       // All allocations will use the pool
-       buffer.resize(1024);
-       buffer.resize(2048);  // Will allocate second block
-       
-       std::cout << "Pool utilization: " << pool.used_blocks() << "/" << pool.total_blocks() << "\n";
-       
-       return 0;
-   }
-
-You can also use OULY containers with STL allocator adaptors:
+   ouly::sparse_table<std::string> strings;
+   auto hello = strings.emplace("hello"); // a link (index) that stays valid until erased
+   auto world = strings.emplace("world");
+   strings.erase(hello);                  // the slot is reused by a later emplace
+   std::string const* found = strings.get_if(world);
 
 .. code-block:: cpp
 
-   #include <ouly/allocators/std_allocator_wrapper.hpp>
-   #include <vector>
+   ouly::table<std::string> names; // dense vector with a free list of erased slots
+   auto index = names.emplace("first");
+   names[index] += "!";
+   names.erase(index);
 
-   int main() {
-       ouly::linear_arena_allocator<> arena(1024);
-       
-       // Use OULY allocator with STL containers
-       using AllocType = ouly::std_allocator_wrapper<int, decltype(arena)>;
-       std::vector<int, AllocType> vec(AllocType(arena));
-       
-       vec.push_back(1);
-       vec.push_back(2);
-       vec.push_back(3);
-       
-       return 0;
+Both also iterate with ``for_each``, page by page.
+
+Blocks, index maps and bitsets
+------------------------------
+
+.. code-block:: cpp
+
+   #include <ouly/containers/block_vector.hpp>
+
+   // Storage is kept at a multiple of 8 elements so SIMD loops can process whole blocks
+   ouly::block_vector<float, 8> lanes;
+   lanes.push_back(1.0F);
+   lanes.push_back(2.0F);
+   auto size         = lanes.size();         // 2
+   auto storage_size = lanes.storage_size(); // 8
+
+.. code-block:: cpp
+
+   #include <ouly/containers/bounded_bitset.hpp>
+   #include <ouly/containers/index_map.hpp>
+
+   ouly::index_map<uint32_t> remap; // key -> value array that starts at the smallest key used
+   remap[1000] = 3;
+   bool mapped = remap.contains(1000);
+
+   ouly::bounded_bitset<uint32_t> visible; // bitset that does not store the words below its lowest bit
+   visible.resize(4096); // make room for bits up to 4096 first
+   visible.set(4096);
+   bool on = visible.test(4096);
+
+Intrusive list
+--------------
+
+The list links objects through a ``list_hook`` member, so pushing and removing never allocate and
+the objects stay where they are:
+
+.. code-block:: cpp
+
+   #include <ouly/containers/intrusive_list.hpp>
+
+   struct job
+   {
+     int             priority = 0;
+     ouly::list_hook hook{}; // the list links through this member
+   };
+
+   using job_list = ouly::intrusive_list<&job::hook>; // also caches size and tail by default
+
+.. code-block:: cpp
+
+   job a{.priority = 1}, b{.priority = 2}, c{.priority = 3};
+   job_list jobs;
+   jobs.push_back(a);
+   jobs.push_back(b);
+   jobs.push_front(c);
+   for (job& j : jobs)
+   {
+     j.priority *= 2;
+   }
+   jobs.clear(); // unlinks; the objects are owned elsewhere
+
+The template arguments after the hook pointer are ``CacheSize`` (maintain an element count) and
+``CacheTail`` (keep a tail pointer, which ``push_back`` needs); both default to ``true``. A
+``list_hook`` member makes the list doubly linked (``insert``, ``erase``, ``pop_back``); an
+``slist_hook`` makes it singly linked.
+
+Queues
+------
+
+.. code-block:: cpp
+
+   #include <ouly/containers/basic_queue.hpp>
+   #include <ouly/containers/concurrent_queue.hpp>
+
+   ouly::basic_queue<int> fifo; // single-threaded FIFO over linked blocks
+   fifo.emplace_back(1);
+   fifo.push_back(2);
+   int front = fifo.pop_front(); // 1
+
+   ouly::concurrent_queue<int> mpmc; // multi-producer, multi-consumer
+   std::thread producer([&mpmc] {
+     for (int i = 0; i < 100; ++i)
+     {
+       mpmc.emplace(i);
+     }
+   });
+   producer.join();
+
+   int value = 0;
+   int count = 0;
+   while (mpmc.try_dequeue(value))
+   {
+     ++count;
    }
 
-Container Configuration
------------------------
+``concurrent_queue`` is built from a chain of fixed-size buckets. Producers claim slots with an
+atomic increment and publish them through a per-slot commit flag; consumers claim committed slots
+with a compare-and-swap. Element operations run under a shared lock that costs two atomic
+operations when uncontended, and only bucket transitions (growing the tail, retiring the head) take
+it exclusively. With a single producer the dequeue order is the enqueue order.
 
-OULY containers can be customized using configuration templates in the ``ouly::cfg`` namespace:
+Configured with ``ouly::cfg::single_threaded_consumer_for_each``, the queue drops
+``try_dequeue`` and instead offers ``for_each`` and ``clear`` for single-threaded traversal after
+the producers are done, which suits collect-then-process patterns.
 
-**Blackboard Configuration**
-
-The blackboard container supports custom hash map implementations:
+Blackboard
+----------
 
 .. code-block:: cpp
 
    #include <ouly/containers/blackboard.hpp>
-   #include <unordered_map>
 
-   // Using custom hash map type
-   using CustomConfig = ouly::config<
-       ouly::cfg::map<std::unordered_map>
-   >;
-   
-   ouly::blackboard<CustomConfig> board;
+   ouly::blackboard board; // heterogeneous values by name, stored in pooled pages
+   board.emplace<float>("gravity", 9.81F);
+   board.emplace<std::string>("level", "intro");
 
-**Available Container Configuration Options:**
+   float gravity = board.get<float>("gravity");
+   if (auto* level = board.get_if<std::string>("level"))
+   {
+     *level = "boss";
+   }
+   board.erase("level");
 
-* ``ouly::cfg::map<T>`` - Specify custom hash map implementation for blackboard
-* ``ouly::cfg::name_map<T>`` - Custom key-to-offset mapping for blackboard  
-* ``ouly::cfg::name_val_map<T>`` - Complete custom blackboard hash map
-* ``ouly::cfg::pool_size<N>`` - Set pool size for internal allocations
-* ``ouly::cfg::index_pool_size<N>`` - Pool size for index management
-* ``ouly::cfg::use_sparse`` - Enable sparse storage strategy
-* ``ouly::cfg::use_direct_mapping`` - Enable direct mapping strategy
-* ``ouly::cfg::custom_vector<T>`` - Use custom vector implementation
+By default the keys are ``std::string``\ s. ``ouly::cfg::map<std::unordered_map>`` (or another
+map template) makes the blackboard keyed by type: ``emplace<T>(...)``, ``get<T>()`` and
+``get_if<T>()`` without a name. ``ouly::cfg::name_val_map<Map>`` supplies the complete lookup map.
 
-**Common Configuration Examples:**
+Configuration
+-------------
 
-.. code-block:: cpp
-
-   // Sparse container with custom pool size
-   using SparseConfig = ouly::config<
-       ouly::cfg::use_sparse,
-       ouly::cfg::pool_size<8192>
-   >;
-
-   // Direct mapping with large index pool  
-   using FastConfig = ouly::config<
-       ouly::cfg::use_direct_mapping,
-       ouly::cfg::index_pool_size<16384>
-   >;
-
-   // Custom vector backend
-   using VectorConfig = ouly::config<
-       ouly::cfg::custom_vector<std::vector<int>>
-   >;
-
-Performance Considerations
---------------------------
-
-**Container Selection**
-
-1. **small_vector** - Best for collections typically < N elements
-2. **dynamic_array** - General-purpose high-performance array
-3. **sparse_vector** - When indices are sparse but iteration should be dense
-4. **intrusive_list** - When you need stable references and zero allocation
-5. **soavector** - When you need SIMD optimization and cache efficiency
-
-**Performance Comparison: AoS vs SoA**
+Containers take an ``ouly::config<...>`` of options from the ``ouly::cfg`` namespace:
 
 .. code-block:: cpp
 
-   // Array of Structures (AoS) - poor cache utilization for partial access
-   struct Particle { float x, y, z; int life; };
-   std::vector<Particle> aos_particles;
+   // Containers get their memory from cfg::allocator_type (default_allocator<> otherwise)
+   using frame_vector_config = ouly::config<ouly::cfg::allocator_type<ouly::default_allocator<>>>;
+   ouly::small_vector<int, 4, frame_vector_config> ids;
 
-   // Structure of Arrays (SoA) - better cache utilization and SIMD-friendly
-   struct Particle { float x, y, z; int life; };
-   ouly::soavector<Particle> soa_particles;  // Automatically splits into separate arrays
+   // Pages of 256 elements instead of the default
+   ouly::sparse_vector<int, ouly::config<ouly::cfg::pool_size<256>>> sparse;
 
-   // When you only need to update positions:
-   // AoS loads entire Particle structs (16 bytes each)
-   // SoA loads only position arrays (4 bytes each)
+.. list-table::
+   :header-rows: 1
+   :widths: 40 60
 
-**Growth Strategies**
+   * - Option
+     - Effect
+   * - ``cfg::allocator_type<A>``
+     - Allocator the container uses (``default_allocator<>`` otherwise)
+   * - ``cfg::pool_size<N>``
+     - Elements per page of paged containers (``sparse_vector``, ``sparse_table``, ``basic_queue``,
+       ``concurrent_queue``, ``blackboard``)
+   * - ``cfg::basic_size_type<T>``
+     - Size type of the container
+   * - ``cfg::self_index_member<&T::member>``
+     - ``sparse_table`` and ECS components keep each element's own index in this member
+   * - ``cfg::assume_pod``, ``cfg::no_fill``, ``cfg::zero_out_memory``
+     - ``small_vector``, ``sparse_vector``, ``basic_queue``: treat elements as trivial, skip value
+       initialization on resize, or zero new memory
+   * - ``cfg::trivially_destroyed_on_move``
+     - ``small_vector``: moved-from elements need no destructor call
+   * - ``cfg::single_threaded_consumer_for_each``
+     - ``concurrent_queue`` traversal mode (see `Queues`_)
+   * - ``cfg::map<M>``, ``cfg::name_map<M>``, ``cfg::name_val_map<M>``
+     - ``blackboard`` key types and lookup maps
 
-.. code-block:: cpp
-
-   ouly::dynamic_array<int> numbers;
-   
-   // Pre-allocate if final size is known
-   numbers.reserve(1000);
-   
-   // Use bulk operations when possible
-   numbers.resize(1000);  // Better than 1000 push_back calls
-
-Best Practices
---------------
-
-1. **Choose the Right Container**
-   
-   * Analyze access patterns (random vs sequential)
-   * Consider element lifetime and stability requirements
-   * Profile different containers for your use case
-
-2. **Memory Management**
-   
-   * Use custom allocators for better control
-   * Pre-allocate capacity when size is predictable
-   * Consider memory alignment for SIMD operations
-
-3. **Performance Optimization**
-   
-   * Use SoA layout for vectorizable operations
-   * Prefer intrusive containers in memory-constrained environments
-   * Batch operations when possible
-
-4. **API Design**
-   
-   * Containers are designed to work with range-based for loops
-   * STL algorithms work seamlessly
-   * Custom iterators provide additional safety and features
+ECS-specific storage options (``use_sparse``, ``use_direct_mapping`` and the index pool sizes) are
+covered in :doc:`ecs_tutorial`.
 
 Next Steps
 ----------
 
-* Explore :doc:`ecs_tutorial` for advanced container usage patterns
-* Learn about :doc:`memory_management` for optimal allocator selection
-* Check :doc:`../performance/index` for container optimization tips
+* :doc:`ecs_tutorial` builds an entity component system from these pieces
+* :doc:`memory_management` for allocators to plug into ``cfg::allocator_type``

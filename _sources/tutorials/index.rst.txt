@@ -1,50 +1,32 @@
 Tutorials
 =========
 
-Step-by-step tutorials to learn OULY's core features through practical examples.
+One tutorial per module. Each one explains the concepts, shows the API through examples that
+compile against the current headers, and points out the behaviour that is easy to get wrong.
 
 .. toctree::
    :maxdepth: 2
 
+   scheduler_tutorial
    memory_management
    containers_tutorial
    ecs_tutorial
-   scheduler_tutorial
    serialization_tutorial
+   utilities_tutorial
 
 Overview
 --------
 
-These tutorials are designed to progressively introduce you to OULY's capabilities:
+1. :doc:`scheduler_tutorial`: workgroups and task contexts, the v1/v2/v3 scheduler generations,
+   value tasks, task scopes, parallel loops, coroutines and flow graphs.
+2. :doc:`memory_management`: linear, stack and pool allocators, thread-safe frame allocators,
+   memory-mapped files, and the coalescing offset allocators with defragmentation.
+3. :doc:`containers_tutorial`: ``small_vector``, ``soavector``, sparse storage, intrusive lists,
+   queues and the blackboard.
+4. :doc:`ecs_tutorial`: registries, component storages, collections and sparse-to-dense maps.
+5. :doc:`serialization_tutorial`: reflection, binary streams, YAML and custom formats.
+6. :doc:`utilities_tutorial`: program arguments, delegates, macro expressions, the YAML event
+   parser, views, pointers and hashing.
 
-1. **Memory Management** - Learn about custom allocators and memory strategies
-2. **Containers** - Explore high-performance container classes
-3. **Entity Component System** - Build data-oriented applications with ECS
-4. **Task Scheduler** - Master parallel execution and work-stealing
-5. **Serialization** - Handle data persistence and network protocols
-
-Each tutorial includes:
-
-* Clear explanations of concepts
-* Complete, runnable code examples
-* Common patterns and best practices
-* Performance considerations
-* Troubleshooting tips
-
-Prerequisites
--------------
-
-Before starting these tutorials, ensure you have:
-
-* Basic C++ knowledge (C++17/20 features helpful)
-* OULY properly installed and configured
-* A development environment with a C++20 compiler
-
-Getting Help
-------------
-
-If you encounter issues while following these tutorials:
-
-* Check the :doc:`../api_reference/index` for detailed API documentation
-* Review :doc:`../examples/index` for additional code samples
-* Visit the `GitHub repository <https://github.com/obhi-d/ouly>`_ for issues and discussions
+The unit tests in ``unit_tests/`` are the most complete source of further examples; see
+:doc:`../examples/index`.

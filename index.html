@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>OULY Documentation &mdash; OULY 1.0.0 documentation</title>
+  <title>OULY Documentation &mdash; OULY 0.1.22 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="_static/graphviz.css?v=4ae1632d" />
@@ -15,7 +15,7 @@
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=8d563738"></script>
+      <script src="_static/documentation_options.js?v=842aa08f"></script>
       <script src="_static/doctools.js?v=fd6eb6e6"></script>
       <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/js/theme.js"></script>
@@ -51,7 +51,7 @@
 <li class="toctree-l1"><a class="reference internal" href="api_reference/index.html">API Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples/index.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="performance/index.html">Performance Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing to OULY</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
 </ul>
 
@@ -87,184 +87,115 @@
 </a>
 <a class="reference external image-reference" href="https://github.com/obhi-d/ouly/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/obhi-d/ouly/actions/workflows/ci.yml/badge.svg" />
 </a>
-<p>OULY (Optimized Utility Library) is a modern C++20 high-performance utility library providing memory allocators, containers, ECS (Entity Component System), task scheduler, and serialization components for performance-critical applications.</p>
+<p>OULY (Optimized Utility Library) is a C++20 library for programs where allocation patterns, cache
+behaviour and thread wake-ups matter: game engines, simulations, tools and services. It provides
+task schedulers, memory allocators, cache-friendly containers, an entity component system, and
+reflection-driven serialization, behind small STL-like interfaces that can be adopted one header
+at a time.</p>
 <div class="toctree-wrapper compound">
 <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="getting_started.html#system-requirements">System Requirements</a></li>
-<li class="toctree-l2"><a class="reference internal" href="getting_started.html#installation">Installation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="getting_started.html#building-from-source">Building from Source</a></li>
-<li class="toctree-l2"><a class="reference internal" href="getting_started.html#basic-concepts">Basic Concepts</a></li>
-<li class="toctree-l2"><a class="reference internal" href="getting_started.html#first-program">First Program</a></li>
-<li class="toctree-l2"><a class="reference internal" href="getting_started.html#next-steps">Next Steps</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting_started.html#requirements">Requirements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting_started.html#building-from-source">Building from source</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting_started.html#using-ouly-from-cmake">Using OULY from CMake</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting_started.html#first-program">First program</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting_started.html#library-layout">Library layout</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="tutorials/index.html">Tutorials</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/scheduler_tutorial.html">Task Scheduler Tutorial</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tutorials/memory_management.html">Memory Management Tutorial</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tutorials/containers_tutorial.html">Containers Tutorial</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tutorials/ecs_tutorial.html">Entity Component System Tutorial</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorials/scheduler_tutorial.html">Task Scheduler Tutorial</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tutorials/serialization_tutorial.html">Serialization Tutorial</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/utilities_tutorial.html">Utilities and DSL Tutorial</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tutorials/index.html#overview">Overview</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorials/index.html#prerequisites">Prerequisites</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorials/index.html#getting-help">Getting Help</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="user_guide/index.html">User Guide</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="user_guide/index.html#overview">Overview</a></li>
-<li class="toctree-l2"><a class="reference internal" href="user_guide/index.html#component-organization">Component Organization</a></li>
-<li class="toctree-l2"><a class="reference internal" href="user_guide/index.html#navigation-tips">Navigation Tips</a></li>
-<li class="toctree-l2"><a class="reference internal" href="user_guide/index.html#getting-support">Getting Support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/index.html#choosing-a-scheduler-generation">Choosing a scheduler generation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/index.html#choosing-an-allocator">Choosing an allocator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/index.html#choosing-a-container">Choosing a container</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/index.html#choosing-an-ecs-layout">Choosing an ECS layout</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/index.html#getting-support">Getting support</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="api_reference/index.html">API Reference</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="api_reference/index.html#overview">Overview</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api_reference/index.html#allocators">Allocators</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api_reference/index.html#containers">Containers</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api_reference/index.html#entity-component-system">Entity Component System</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api_reference/index.html#task-scheduler">Task Scheduler</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api_reference/index.html#serialization">Serialization</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api_reference/index.html#utilities">Utilities</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api_reference/index.html#navigation">Navigation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_reference/scheduler.html">Task Scheduler</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_reference/allocators.html">Memory Allocators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_reference/containers.html">Containers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_reference/ecs.html">Entity Component System</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_reference/serializers.html">Serialization and Reflection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_reference/utility.html">Utilities and DSL</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="examples/index.html">Examples</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="examples/unit_test_examples.html">Unit Test Examples</a></li>
-<li class="toctree-l2"><a class="reference internal" href="examples/index.html#overview">Overview</a></li>
-<li class="toctree-l2"><a class="reference internal" href="examples/index.html#finding-examples">Finding Examples</a></li>
-<li class="toctree-l2"><a class="reference internal" href="examples/index.html#building-and-running-examples">Building and Running Examples</a></li>
-<li class="toctree-l2"><a class="reference internal" href="examples/index.html#learning-from-unit-tests">Learning from Unit Tests</a></li>
-<li class="toctree-l2"><a class="reference internal" href="examples/index.html#contributing-examples">Contributing Examples</a></li>
-<li class="toctree-l2"><a class="reference internal" href="examples/index.html#future-examples">Future Examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/index.html#where-to-look">Where to look</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/index.html#building-and-running-the-tests">Building and running the tests</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/index.html#adding-an-example">Adding an example</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="performance/index.html">Performance Guide</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="performance/index.html#overview">Overview</a></li>
-<li class="toctree-l2"><a class="reference internal" href="performance/index.html#performance-philosophy">Performance Philosophy</a></li>
-<li class="toctree-l2"><a class="reference internal" href="performance/index.html#optimization-strategies">Optimization Strategies</a></li>
-<li class="toctree-l2"><a class="reference internal" href="performance/index.html#profiling-and-analysis">Profiling and Analysis</a></li>
-<li class="toctree-l2"><a class="reference internal" href="performance/index.html#platform-specific-optimizations">Platform-Specific Optimizations</a></li>
-<li class="toctree-l2"><a class="reference internal" href="performance/index.html#scaling-considerations">Scaling Considerations</a></li>
-<li class="toctree-l2"><a class="reference internal" href="performance/index.html#performance-testing">Performance Testing</a></li>
-<li class="toctree-l2"><a class="reference internal" href="performance/index.html#common-performance-pitfalls">Common Performance Pitfalls</a></li>
-<li class="toctree-l2"><a class="reference internal" href="performance/index.html#continuous-performance-monitoring">Continuous Performance Monitoring</a></li>
+<li class="toctree-l2"><a class="reference internal" href="performance/index.html#benchmarks">Benchmarks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="performance/index.html#performance-notes">Performance notes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="performance/index.html#profiling">Profiling</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing to OULY</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="contributing.html#development-environment">Development Environment</a></li>
-<li class="toctree-l2"><a class="reference internal" href="contributing.html#code-style-and-standards">Code Style and Standards</a></li>
-<li class="toctree-l2"><a class="reference internal" href="contributing.html#contribution-types">Contribution Types</a></li>
-<li class="toctree-l2"><a class="reference internal" href="contributing.html#pull-request-process">Pull Request Process</a></li>
-<li class="toctree-l2"><a class="reference internal" href="contributing.html#code-review-guidelines">Code Review Guidelines</a></li>
-<li class="toctree-l2"><a class="reference internal" href="contributing.html#testing-requirements">Testing Requirements</a></li>
-<li class="toctree-l2"><a class="reference internal" href="contributing.html#documentation-standards">Documentation Standards</a></li>
-<li class="toctree-l2"><a class="reference internal" href="contributing.html#release-process">Release Process</a></li>
-<li class="toctree-l2"><a class="reference internal" href="contributing.html#community-guidelines">Community Guidelines</a></li>
-<li class="toctree-l2"><a class="reference internal" href="contributing.html#getting-help">Getting Help</a></li>
-<li class="toctree-l2"><a class="reference internal" href="contributing.html#recognition">Recognition</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#build-and-test">Build and test</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#what-ci-checks">What CI checks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#style">Style</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#documentation">Documentation</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="changelog.html#unreleased">[Unreleased]</a></li>
-<li class="toctree-l2"><a class="reference internal" href="changelog.html#id1">[1.0.0] - 2025-01-01</a></li>
-<li class="toctree-l2"><a class="reference internal" href="changelog.html#id4">[0.9.0] - 2024-12-01</a></li>
-<li class="toctree-l2"><a class="reference internal" href="changelog.html#id6">[0.5.0] - 2024-09-01</a></li>
-<li class="toctree-l2"><a class="reference internal" href="changelog.html#id8">[0.1.0] - 2024-06-01</a></li>
-<li class="toctree-l2"><a class="reference internal" href="changelog.html#migration-guide">Migration Guide</a></li>
-<li class="toctree-l2"><a class="reference internal" href="changelog.html#future-roadmap">Future Roadmap</a></li>
-<li class="toctree-l2"><a class="reference internal" href="changelog.html#contributing">Contributing</a></li>
-<li class="toctree-l2"><a class="reference internal" href="changelog.html#support">Support</a></li>
-<li class="toctree-l2"><a class="reference internal" href="changelog.html#license">License</a></li>
 </ul>
 </li>
 </ul>
 </div>
-<section id="quick-start">
-<h2>Quick Start<a class="headerlink" href="#quick-start" title="Link to this heading"></a></h2>
-<section id="installation">
-<h3>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h3>
-<p>OULY is a header-only library that can be easily integrated into your project:</p>
-<div class="highlight-cmake notranslate"><div class="highlight"><pre><span></span><span class="c"># Using CMake FetchContent</span>
-<span class="nb">include</span><span class="p">(</span><span class="s">FetchContent</span><span class="p">)</span>
-<span class="nb">FetchContent_Declare</span><span class="p">(</span>
-<span class="w">  </span><span class="s">ouly</span>
-<span class="w">  </span><span class="s">GIT_REPOSITORY</span><span class="w"> </span><span class="s">https://github.com/obhi-d/ouly.git</span>
-<span class="w">  </span><span class="s">GIT_TAG</span><span class="w">        </span><span class="s">main</span>
-<span class="p">)</span>
-<span class="nb">FetchContent_MakeAvailable</span><span class="p">(</span><span class="s">ouly</span><span class="p">)</span>
-
-<span class="c"># Link to your target</span>
-<span class="nb">target_link_libraries</span><span class="p">(</span><span class="s">your_target</span><span class="w"> </span><span class="s">PRIVATE</span><span class="w"> </span><span class="s">ouly::ouly</span><span class="p">)</span>
-</pre></div>
-</div>
+<section id="where-to-start">
+<h2>Where to start<a class="headerlink" href="#where-to-start" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="getting_started.html"><span class="doc">Getting Started</span></a> builds the library, links it from CMake and runs a first program.</p></li>
+<li><p>The <a class="reference internal" href="tutorials/index.html"><span class="doc">Tutorials</span></a> walk through each module with examples that compile against the
+current headers.</p></li>
+<li><p><a class="reference internal" href="user_guide/index.html"><span class="doc">User Guide</span></a> helps choose between the allocators, containers and scheduler
+generations.</p></li>
+<li><p>The <a class="reference internal" href="api_reference/index.html"><span class="doc">API Reference</span></a> is generated from the header comments.</p></li>
+</ul>
 </section>
-<section id="basic-usage">
-<h3>Basic Usage<a class="headerlink" href="#basic-usage" title="Link to this heading"></a></h3>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/ouly.hpp&gt;</span>
-
-<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="c1">// Memory allocators</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">linear_arena_allocator</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">allocator</span><span class="p">(</span><span class="mi">1024</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="p">);</span>
-<span class="w">    </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">allocator</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="mi">1024</span><span class="p">);</span>
-
-<span class="w">    </span><span class="c1">// Containers</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">small_vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span><span class="w"> </span><span class="mi">16</span><span class="o">&gt;</span><span class="w"> </span><span class="n">vec</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">};</span>
-<span class="w">    </span><span class="n">vec</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="mi">5</span><span class="p">);</span>
-
-<span class="w">    </span><span class="c1">// ECS</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">registry</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">registry</span><span class="p">;</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">entity</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">registry</span><span class="p">.</span><span class="n">emplace</span><span class="p">();</span>
-
-<span class="w">    </span><span class="c1">// Task scheduler</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">scheduler</span><span class="w"> </span><span class="n">scheduler</span><span class="p">(</span><span class="mi">4</span><span class="p">);</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">workgroup</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">create_workgroup</span><span class="p">();</span>
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">begin_execution</span><span class="p">();</span>
-
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">submit</span><span class="p">(</span><span class="n">workgroup</span><span class="p">,</span><span class="w"> </span><span class="p">[]()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="mi">42</span><span class="p">;</span>
-<span class="w">    </span><span class="p">}).</span><span class="n">wait</span><span class="p">();</span>
-
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">end_execution</span><span class="p">();</span>
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">shutdown</span><span class="p">();</span>
-
-<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-</section>
-</section>
-<section id="key-features">
-<h2>Key Features<a class="headerlink" href="#key-features" title="Link to this heading"></a></h2>
+<section id="modules">
+<h2>Modules<a class="headerlink" href="#modules" title="Link to this heading"></a></h2>
 <dl class="simple">
-<dt>🧠 <strong>Memory Management</strong></dt><dd><p>Efficient memory allocators for different use cases including linear, arena, pool, and thread-safe variants.</p>
+<dt><strong>Task scheduling</strong> (<code class="docutils literal notranslate"><span class="pre">ouly/scheduler/</span></code>)</dt><dd><p>Three work-stealing scheduler generations behind one API, value tasks with continuations,
+structured task scopes, <code class="docutils literal notranslate"><span class="pre">parallel_for</span></code> and <code class="docutils literal notranslate"><span class="pre">auto_parallel_for</span></code>, lazily started coroutines,
+and static and dynamic flow graphs.</p>
 </dd>
-<dt>📦 <strong>Containers</strong></dt><dd><p>Modern containers with STL-like interfaces but improved performance including small_vector, dynamic_array, and more.</p>
+<dt><strong>Memory allocators</strong> (<code class="docutils literal notranslate"><span class="pre">ouly/allocators/</span></code>)</dt><dd><p>Linear, arena, stack and pool allocators, thread-safe frame allocators, virtual memory,
+memory-mapped files, and coalescing offset suballocators for GPU-style heaps with
+defragmentation.</p>
 </dd>
-<dt>🎮 <strong>Entity Component System</strong></dt><dd><p>High-performance ECS framework for game development and simulation applications.</p>
+<dt><strong>Containers</strong> (<code class="docutils literal notranslate"><span class="pre">ouly/containers/</span></code>)</dt><dd><p>Small and structure-of-arrays vectors, sparse vectors and tables, block vectors, an intrusive
+list, single-threaded and concurrent queues, and a heterogeneous blackboard.</p>
 </dd>
-<dt>⚡ <strong>Task Scheduler</strong></dt><dd><p>Work-stealing task scheduler with coroutine support for parallel processing.</p>
+<dt><strong>Entity component system</strong> (<code class="docutils literal notranslate"><span class="pre">ouly/ecs/</span></code>)</dt><dd><p>Registries with optional revision tracking, component storages with selectable layouts,
+collections and sparse-to-dense maps.</p>
 </dd>
-<dt>💾 <strong>Serialization</strong></dt><dd><p>Flexible serialization framework supporting binary and YAML formats.</p>
+<dt><strong>Serialization and reflection</strong> (<code class="docutils literal notranslate"><span class="pre">ouly/serializers/</span></code>, <code class="docutils literal notranslate"><span class="pre">ouly/reflection/</span></code>)</dt><dd><p>Compile-time reflection that drives binary, YAML and user-defined structured formats.</p>
 </dd>
-<dt>🔧 <strong>Utilities</strong></dt><dd><p>Various utility components including reflection, DSL helpers, and more.</p>
+<dt><strong>Utilities and DSL</strong> (<code class="docutils literal notranslate"><span class="pre">ouly/utility/</span></code>, <code class="docutils literal notranslate"><span class="pre">ouly/dsl/</span></code>)</dt><dd><p>Delegates, program arguments, views, intrusive pointers, hashing, string helpers, a macro
+expression evaluator and an event-driven YAML parser.</p>
 </dd>
 </dl>
-</section>
-<section id="requirements">
-<h2>Requirements<a class="headerlink" href="#requirements" title="Link to this heading"></a></h2>
-<ul class="simple">
-<li><p>C++20 compatible compiler (GCC 10+, Clang 12+, MSVC 2019+)</p></li>
-<li><p>CMake 3.20 or later</p></li>
-<li><p>Optional: Doxygen for documentation generation</p></li>
-</ul>
 </section>
 </section>
 <section id="indices-and-tables">
 <h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Link to this heading"></a></h1>
 <ul class="simple">
 <li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
-<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
 <li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
 </ul>
 </section>

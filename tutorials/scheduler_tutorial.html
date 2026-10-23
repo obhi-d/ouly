@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Task Scheduler Tutorial &mdash; OULY 1.0.0 documentation</title>
+  <title>Task Scheduler Tutorial &mdash; OULY 0.1.22 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../_static/graphviz.css?v=4ae1632d" />
@@ -15,14 +15,14 @@
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=8d563738"></script>
+      <script src="../_static/documentation_options.js?v=842aa08f"></script>
       <script src="../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Serialization Tutorial" href="serialization_tutorial.html" />
-    <link rel="prev" title="Entity Component System Tutorial" href="ecs_tutorial.html" /> 
+    <link rel="next" title="Memory Management Tutorial" href="memory_management.html" />
+    <link rel="prev" title="Tutorials" href="index.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -48,33 +48,34 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting Started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">Tutorials</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="memory_management.html">Memory Management Tutorial</a></li>
-<li class="toctree-l2"><a class="reference internal" href="containers_tutorial.html">Containers Tutorial</a></li>
-<li class="toctree-l2"><a class="reference internal" href="ecs_tutorial.html">Entity Component System Tutorial</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Task Scheduler Tutorial</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#scheduler-overview">Scheduler Overview</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#basic-task-submission">Basic Task Submission</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#task-context-and-submission">Task Context and Submission</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#workgroups-and-organization">Workgroups and Organization</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#coroutine-integration">Coroutine Integration</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#parallel-algorithms">Parallel Algorithms</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#producer-consumer-patterns">Producer-Consumer Patterns</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#performance-considerations">Performance Considerations</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#best-practices">Best Practices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#concepts">Concepts</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#choosing-a-scheduler-generation">Choosing a scheduler generation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#starting-the-scheduler-and-submitting-work">Starting the scheduler and submitting work</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#value-tasks">Value tasks</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#structured-task-scopes">Structured task scopes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#where-task-memory-comes-from">Where task memory comes from</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#parallel-loops">Parallel loops</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#coroutines">Coroutines</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#flow-graphs">Flow graphs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#waiting-and-helping">Waiting and helping</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#using-a-generation-explicitly">Using a generation explicitly</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#next-steps">Next Steps</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="memory_management.html">Memory Management Tutorial</a></li>
+<li class="toctree-l2"><a class="reference internal" href="containers_tutorial.html">Containers Tutorial</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ecs_tutorial.html">Entity Component System Tutorial</a></li>
 <li class="toctree-l2"><a class="reference internal" href="serialization_tutorial.html">Serialization Tutorial</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utilities_tutorial.html">Utilities and DSL Tutorial</a></li>
 <li class="toctree-l2"><a class="reference internal" href="index.html#overview">Overview</a></li>
-<li class="toctree-l2"><a class="reference internal" href="index.html#prerequisites">Prerequisites</a></li>
-<li class="toctree-l2"><a class="reference internal" href="index.html#getting-help">Getting Help</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../user_guide/index.html">User Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../api_reference/index.html">API Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../examples/index.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../performance/index.html">Performance Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing to OULY</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
 </ul>
 
@@ -105,612 +106,450 @@
              
   <section id="task-scheduler-tutorial">
 <h1>Task Scheduler Tutorial<a class="headerlink" href="#task-scheduler-tutorial" title="Link to this heading"></a></h1>
-<p>OULY’s task scheduler provides a high-performance work-stealing framework for parallel execution. This tutorial covers how to use the scheduler for CPU-intensive tasks, parallel algorithms, and coroutine-based programming.</p>
-<section id="scheduler-overview">
-<h2>Scheduler Overview<a class="headerlink" href="#scheduler-overview" title="Link to this heading"></a></h2>
-<p>The OULY scheduler features:</p>
-<ul class="simple">
-<li><p><strong>Work-stealing architecture</strong> - Efficient load balancing across threads</p></li>
-<li><p><strong>Workgroup organization</strong> - Logical grouping of related tasks</p></li>
-<li><p><strong>Coroutine support</strong> - Modern C++20 coroutines integration</p></li>
-<li><p><strong>Lock-free design</strong> - Minimal contention and overhead</p></li>
-<li><p><strong>Lifecycle management</strong> - Requires begin/end execution calls</p></li>
-</ul>
-<p>Key considerations:</p>
-<ul class="simple">
-<li><p>Manual NUMA optimization may be required for large systems</p></li>
-<li><p>Scheduler requires explicit initialization with begin_execution()</p></li>
-<li><p>Workgroups must be created before begin_execution()</p></li>
-<li><p>Proper cleanup with end_execution() is required</p></li>
-</ul>
+<p>OULY’s scheduler runs tasks on a fixed pool of worker threads that are organized into
+<em>workgroups</em>. On top of plain task submission it provides reference-counted value tasks with
+continuations, structured task scopes, <code class="docutils literal notranslate"><span class="pre">parallel_for</span></code>, lazily started coroutines and two kinds
+of flow graph. All examples on this page compile against the current headers and run with each of
+the three scheduler generations.</p>
+<section id="concepts">
+<h2>Concepts<a class="headerlink" href="#concepts" title="Link to this heading"></a></h2>
+<p><strong>Workers.</strong> A scheduler owns <code class="docutils literal notranslate"><span class="pre">N</span></code> workers, numbered <code class="docutils literal notranslate"><span class="pre">0..N-1</span></code>. Worker <code class="docutils literal notranslate"><span class="pre">0</span></code> is the thread that
+calls <code class="docutils literal notranslate"><span class="pre">begin_execution()</span></code>; the scheduler starts a thread for each of the others.</p>
+<p><strong>Workgroups.</strong> <code class="docutils literal notranslate"><span class="pre">create_group(group,</span> <span class="pre">start,</span> <span class="pre">count,</span> <span class="pre">priority)</span></code> declares that workgroup <code class="docutils literal notranslate"><span class="pre">group</span></code>
+runs on workers <code class="docutils literal notranslate"><span class="pre">[start,</span> <span class="pre">start</span> <span class="pre">+</span> <span class="pre">count)</span></code>. Groups are created before <code class="docutils literal notranslate"><span class="pre">begin_execution()</span></code> and are
+fixed afterwards. The worker count is the highest <code class="docutils literal notranslate"><span class="pre">start</span> <span class="pre">+</span> <span class="pre">count</span></code> of any group.</p>
+<p><strong>Task context.</strong> Every task receives a <code class="docutils literal notranslate"><span class="pre">task_context</span> <span class="pre">const&amp;</span></code> that identifies the worker
+(<code class="docutils literal notranslate"><span class="pre">get_worker()</span></code>), the workgroup it is running for (<code class="docutils literal notranslate"><span class="pre">get_workgroup()</span></code>), the scheduler
+(<code class="docutils literal notranslate"><span class="pre">get_scheduler()</span></code>) and the user context pointer passed to <code class="docutils literal notranslate"><span class="pre">begin_execution()</span></code>
+(<code class="docutils literal notranslate"><span class="pre">get_user_context&lt;T&gt;()</span></code>). Every submission takes the submitter’s context. On worker 0 outside a
+task, get it with <code class="docutils literal notranslate"><span class="pre">task_context::this_context::get()</span></code>.</p>
+<p><strong>Lifecycle.</strong> <code class="docutils literal notranslate"><span class="pre">create_group</span></code> … <code class="docutils literal notranslate"><span class="pre">begin_execution()</span></code> … submit work …
+<code class="docutils literal notranslate"><span class="pre">end_execution()</span></code>. <code class="docutils literal notranslate"><span class="pre">end_execution()</span></code> waits for the submitted work and joins the worker threads.
+When several schedulers exist, call <code class="docutils literal notranslate"><span class="pre">take_ownership()</span></code> from the main thread before using one.</p>
 </section>
-<section id="basic-task-submission">
-<h2>Basic Task Submission<a class="headerlink" href="#basic-task-submission" title="Link to this heading"></a></h2>
-<p>The OULY scheduler requires explicit initialization and workgroup setup before use:</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/scheduler/scheduler_v2.hpp&gt;</span>
-<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;iostream&gt;</span>
-<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;chrono&gt;</span>
-
-<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="c1">// Create scheduler with 4 worker threads</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">scheduler</span><span class="w"> </span><span class="n">scheduler</span><span class="p">(</span><span class="mi">4</span><span class="p">);</span>
-
-<span class="w">    </span><span class="c1">// Create workgroups BEFORE beginning execution</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">main_workgroup</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">create_workgroup</span><span class="p">();</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">background_workgroup</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">create_workgroup</span><span class="p">();</span>
-
-<span class="w">    </span><span class="c1">// REQUIRED: Begin execution to start worker threads</span>
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">begin_execution</span><span class="p">();</span>
-
-<span class="w">    </span><span class="c1">// Now submit tasks</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">future</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">submit</span><span class="p">(</span><span class="n">main_workgroup</span><span class="p">,</span><span class="w"> </span><span class="p">[]()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">this_thread</span><span class="o">::</span><span class="n">sleep_for</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">chrono</span><span class="o">::</span><span class="n">milliseconds</span><span class="p">(</span><span class="mi">100</span><span class="p">));</span>
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="mi">42</span><span class="p">;</span>
-<span class="w">    </span><span class="p">});</span>
-
-<span class="w">    </span><span class="c1">// Wait for result</span>
-<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">future</span><span class="p">.</span><span class="n">get</span><span class="p">();</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Task result: "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-
-<span class="w">    </span><span class="c1">// REQUIRED: End execution before shutdown</span>
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">end_execution</span><span class="p">();</span>
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">shutdown</span><span class="p">();</span>
-<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
-<span class="p">}</span>
-</pre></div>
-</div>
+<section id="choosing-a-scheduler-generation">
+<h2>Choosing a scheduler generation<a class="headerlink" href="#choosing-a-scheduler-generation" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">ouly/scheduler/scheduler.hpp</span></code> includes three implementations with the same submission API:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 15.0%" />
+<col style="width: 85.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Generation</p></th>
+<th class="head"><p>Design</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ouly::v1</span></code></p></td>
+<td><p>The original design: a bounded lock-free ring per worker inside each workgroup plus a
+locked overflow queue, with randomized stealing between the workers of a group. A worker
+that finds nothing sleeps on its own semaphore until a submitter wakes it.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ouly::v2</span></code></p></td>
+<td><p>TBB-style: a Chase-Lev work-stealing deque per worker in each workgroup, mailboxes for
+cross-group submission, and workgroups that advertise pending work so idle workers can be
+assigned to them. Idle workers park on a semaphore, but they keep spinning while any task is
+still executing anywhere.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ouly::v3</span></code></p></td>
+<td><p>Built for game engines that share the machine with render, audio and IO threads. A worker
+is a member of every workgroup whose thread range covers it, fixed at
+<code class="docutils literal notranslate"><span class="pre">begin_execution()</span></code>, and only runs tasks of those groups (in priority order). Queue
+accounting is exact, so idle workers block on a condition variable even while long tasks run
+elsewhere, and a worker that dequeues work while more is queued wakes one more sleeper.</p></td>
+</tr>
+</tbody>
+</table>
+<p><code class="docutils literal notranslate"><span class="pre">ouly::scheduler</span></code>, <code class="docutils literal notranslate"><span class="pre">ouly::task_context</span></code>, <code class="docutils literal notranslate"><span class="pre">ouly::workgroup</span></code> and <code class="docutils literal notranslate"><span class="pre">ouly::task_delegate</span></code> are
+aliases for the generation named by the <code class="docutils literal notranslate"><span class="pre">OULY_SCHEDULER_VERSION</span></code> macro, which defaults to <code class="docutils literal notranslate"><span class="pre">v2</span></code>.
+Define it to <code class="docutils literal notranslate"><span class="pre">v1</span></code> or <code class="docutils literal notranslate"><span class="pre">v3</span></code> consistently for every translation unit, for example as a compile
+definition or in <code class="docutils literal notranslate"><span class="pre">ouly_user_defines.hpp</span></code> (see <a class="reference internal" href="../getting_started.html"><span class="doc">Getting Started</span></a>). <code class="docutils literal notranslate"><span class="pre">ouly::task&lt;T&gt;</span></code> and
+<code class="docutils literal notranslate"><span class="pre">ouly::task_scope</span></code> follow the same alias. You can also use a generation explicitly, see
+<a class="reference internal" href="#using-a-generation-explicitly">Using a generation explicitly</a>.</p>
 </section>
-<section id="task-context-and-submission">
-<h2>Task Context and Submission<a class="headerlink" href="#task-context-and-submission" title="Link to this heading"></a></h2>
-<p>For efficient task scheduling, use the task context for nested submissions:</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/scheduler/scheduler_v2.hpp&gt;</span>
-<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;vector&gt;</span>
-
-<span class="kt">int</span><span class="w"> </span><span class="nf">parallel_sum</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="kt">size_t</span><span class="w"> </span><span class="n">start</span><span class="p">,</span><span class="w"> </span><span class="kt">size_t</span><span class="w"> </span><span class="n">end</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">end</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="mi">1000</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="c1">// Base case: compute directly</span>
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">accumulate</span><span class="p">(</span><span class="n">data</span><span class="p">.</span><span class="n">begin</span><span class="p">()</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">start</span><span class="p">,</span><span class="w"> </span><span class="n">data</span><span class="p">.</span><span class="n">begin</span><span class="p">()</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
-<span class="w">    </span><span class="p">}</span>
-
-<span class="w">    </span><span class="c1">// Divide and conquer</span>
-<span class="w">    </span><span class="kt">size_t</span><span class="w"> </span><span class="n">mid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">start</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="p">(</span><span class="n">end</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span>
-<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">parallel_sum</span><span class="p">(</span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="n">start</span><span class="p">,</span><span class="w"> </span><span class="n">mid</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">parallel_sum</span><span class="p">(</span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="n">mid</span><span class="p">,</span><span class="w"> </span><span class="n">end</span><span class="p">);</span>
-<span class="p">}</span>
-
-<span class="kt">void</span><span class="w"> </span><span class="nf">task_based_sum</span><span class="p">(</span><span class="n">ouly</span><span class="o">::</span><span class="n">task_context</span><span class="o">&amp;</span><span class="w"> </span><span class="n">ctx</span><span class="p">,</span>
-<span class="w">                   </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">data</span><span class="p">,</span>
-<span class="w">                   </span><span class="kt">size_t</span><span class="w"> </span><span class="n">start</span><span class="p">,</span><span class="w"> </span><span class="kt">size_t</span><span class="w"> </span><span class="n">end</span><span class="p">,</span>
-<span class="w">                   </span><span class="n">std</span><span class="o">::</span><span class="n">promise</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">result</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">end</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="mi">1000</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="c1">// Base case</span>
-<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">sum</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">accumulate</span><span class="p">(</span><span class="n">data</span><span class="p">.</span><span class="n">begin</span><span class="p">()</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">start</span><span class="p">,</span><span class="w"> </span><span class="n">data</span><span class="p">.</span><span class="n">begin</span><span class="p">()</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
-<span class="w">        </span><span class="n">result</span><span class="p">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">sum</span><span class="p">);</span>
-<span class="w">        </span><span class="k">return</span><span class="p">;</span>
-<span class="w">    </span><span class="p">}</span>
-
-<span class="w">    </span><span class="c1">// Create promises for sub-tasks</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">promise</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="w"> </span><span class="n">left_promise</span><span class="p">,</span><span class="w"> </span><span class="n">right_promise</span><span class="p">;</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">left_future</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">left_promise</span><span class="p">.</span><span class="n">get_future</span><span class="p">();</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">right_future</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">right_promise</span><span class="p">.</span><span class="n">get_future</span><span class="p">();</span>
-
-<span class="w">    </span><span class="kt">size_t</span><span class="w"> </span><span class="n">mid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">start</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="p">(</span><span class="n">end</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span>
-
-<span class="w">    </span><span class="c1">// Submit left half</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">async</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="n">ctx</span><span class="p">.</span><span class="n">current_workgroup</span><span class="p">(),</span>
-<span class="w">        </span><span class="p">[</span><span class="o">&amp;</span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="n">start</span><span class="p">,</span><span class="w"> </span><span class="n">mid</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">left_promise</span><span class="p">](</span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">ctx</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="n">task_based_sum</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="n">start</span><span class="p">,</span><span class="w"> </span><span class="n">mid</span><span class="p">,</span><span class="w"> </span><span class="n">left_promise</span><span class="p">);</span>
-<span class="w">        </span><span class="p">});</span>
-
-<span class="w">    </span><span class="c1">// Submit right half</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">async</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="n">ctx</span><span class="p">.</span><span class="n">current_workgroup</span><span class="p">(),</span>
-<span class="w">        </span><span class="p">[</span><span class="o">&amp;</span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="n">mid</span><span class="p">,</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">right_promise</span><span class="p">](</span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">ctx</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="n">task_based_sum</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="n">mid</span><span class="p">,</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="n">right_promise</span><span class="p">);</span>
-<span class="w">        </span><span class="p">});</span>
-
-<span class="w">    </span><span class="c1">// Combine results</span>
-<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">left_sum</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">left_future</span><span class="p">.</span><span class="n">get</span><span class="p">();</span>
-<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">right_sum</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">right_future</span><span class="p">.</span><span class="n">get</span><span class="p">();</span>
-<span class="w">    </span><span class="n">result</span><span class="p">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">left_sum</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">right_sum</span><span class="p">);</span>
-<span class="p">}</span>
-
-<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">scheduler</span><span class="w"> </span><span class="n">scheduler</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="kr">thread</span><span class="o">::</span><span class="n">hardware_concurrency</span><span class="p">());</span>
-
-<span class="w">    </span><span class="c1">// Create workgroup BEFORE begin_execution</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">workgroup</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">create_workgroup</span><span class="p">();</span>
-
-<span class="w">    </span><span class="c1">// Begin execution to start worker threads</span>
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">begin_execution</span><span class="p">();</span>
-
-<span class="w">    </span><span class="c1">// Create large dataset</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="w"> </span><span class="n">data</span><span class="p">(</span><span class="mi">1000000</span><span class="p">);</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">iota</span><span class="p">(</span><span class="n">data</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span><span class="w"> </span><span class="n">data</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
-
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">promise</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="w"> </span><span class="n">result_promise</span><span class="p">;</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">result_future</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">result_promise</span><span class="p">.</span><span class="n">get_future</span><span class="p">();</span>
-
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">submit</span><span class="p">(</span><span class="n">workgroup</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="o">&amp;</span><span class="p">](</span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">ctx</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">task_based_sum</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">data</span><span class="p">.</span><span class="n">size</span><span class="p">(),</span><span class="w"> </span><span class="n">result_promise</span><span class="p">);</span>
-<span class="w">    </span><span class="p">});</span>
-
-<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">result_future</span><span class="p">.</span><span class="n">get</span><span class="p">();</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Parallel sum: "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">end_execution</span><span class="p">();</span>
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">shutdown</span><span class="p">();</span>
-<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-</section>
-<section id="workgroups-and-organization">
-<h2>Workgroups and Organization<a class="headerlink" href="#workgroups-and-organization" title="Link to this heading"></a></h2>
-<p>Workgroups help organize related tasks and manage dependencies:</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/scheduler/scheduler_v2.hpp&gt;</span>
-
-<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">scheduler</span><span class="w"> </span><span class="n">scheduler</span><span class="p">(</span><span class="mi">4</span><span class="p">);</span>
-
-<span class="w">    </span><span class="c1">// Create workgroups for different phases BEFORE begin_execution</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">input_group</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">create_workgroup</span><span class="p">();</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">processing_group</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">create_workgroup</span><span class="p">();</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">output_group</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">create_workgroup</span><span class="p">();</span>
-
-<span class="w">    </span><span class="c1">// Begin execution to activate worker threads</span>
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">begin_execution</span><span class="p">();</span>
-
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="w"> </span><span class="n">input_data</span><span class="p">;</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="w"> </span><span class="n">processed_data</span><span class="p">;</span>
-
-<span class="w">    </span><span class="c1">// Phase 1: Input tasks</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">future</span><span class="o">&lt;</span><span class="kt">void</span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="n">input_futures</span><span class="p">;</span>
-<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="k">auto</span><span class="w"> </span><span class="n">future</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">submit</span><span class="p">(</span><span class="n">input_group</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="o">&amp;</span><span class="n">input_data</span><span class="p">,</span><span class="w"> </span><span class="n">i</span><span class="p">]()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="n">std</span><span class="o">::</span><span class="n">lock_guard</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;</span><span class="w"> </span><span class="n">lock</span><span class="p">(</span><span class="n">input_mutex</span><span class="p">);</span>
-<span class="w">            </span><span class="n">input_data</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">i</span><span class="p">);</span>
-<span class="w">        </span><span class="p">});</span>
-<span class="w">        </span><span class="n">input_futures</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">future</span><span class="p">));</span>
-<span class="w">    </span><span class="p">}</span>
-
-<span class="w">    </span><span class="c1">// Wait for input phase to complete</span>
-<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">future</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">input_futures</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">future</span><span class="p">.</span><span class="n">wait</span><span class="p">();</span>
-<span class="w">    </span><span class="p">}</span>
-
-<span class="w">    </span><span class="c1">// Phase 2: Processing tasks</span>
-<span class="w">    </span><span class="n">processed_data</span><span class="p">.</span><span class="n">resize</span><span class="p">(</span><span class="n">input_data</span><span class="p">.</span><span class="n">size</span><span class="p">());</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">future</span><span class="o">&lt;</span><span class="kt">void</span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="n">process_futures</span><span class="p">;</span>
-
-<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">size_t</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">input_data</span><span class="p">.</span><span class="n">size</span><span class="p">();</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="k">auto</span><span class="w"> </span><span class="n">future</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">submit</span><span class="p">(</span><span class="n">processing_group</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="o">&amp;</span><span class="p">,</span><span class="w"> </span><span class="n">i</span><span class="p">]()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="n">processed_data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">input_data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
-<span class="w">        </span><span class="p">});</span>
-<span class="w">        </span><span class="n">process_futures</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">future</span><span class="p">));</span>
-<span class="w">    </span><span class="p">}</span>
-
-<span class="w">    </span><span class="c1">// Wait for processing</span>
-<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">future</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">process_futures</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">future</span><span class="p">.</span><span class="n">wait</span><span class="p">();</span>
-<span class="w">    </span><span class="p">}</span>
-
-<span class="w">    </span><span class="c1">// Phase 3: Output</span>
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">submit</span><span class="p">(</span><span class="n">output_group</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="o">&amp;</span><span class="p">]()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Processed data: "</span><span class="p">;</span>
-<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">value</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">processed_data</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">value</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">" "</span><span class="p">;</span>
-<span class="w">        </span><span class="p">}</span>
-<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-<span class="w">    </span><span class="p">}).</span><span class="n">wait</span><span class="p">();</span>
-
-<span class="w">    </span><span class="c1">// End execution before shutdown</span>
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">end_execution</span><span class="p">();</span>
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">shutdown</span><span class="p">();</span>
-<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-</section>
-<section id="coroutine-integration">
-<h2>Coroutine Integration<a class="headerlink" href="#coroutine-integration" title="Link to this heading"></a></h2>
-<p>OULY supports C++20 coroutines for elegant asynchronous programming:</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/scheduler/scheduler_v2.hpp&gt;</span>
-<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/scheduler/co_task.hpp&gt;</span>
-
-<span class="c1">// Coroutine task that performs async computation</span>
-<span class="n">ouly</span><span class="o">::</span><span class="n">co_task</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="w"> </span><span class="n">async_factorial</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">n</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">n</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="k">co_return</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
-<span class="w">    </span><span class="p">}</span>
-
-<span class="w">    </span><span class="c1">// Submit recursive call as coroutine</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">sub_result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">co_await</span><span class="w"> </span><span class="n">async_factorial</span><span class="p">(</span><span class="n">n</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
-<span class="w">    </span><span class="k">co_return</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">sub_result</span><span class="p">;</span>
-<span class="p">}</span>
-
-<span class="c1">// File I/O simulation with coroutines</span>
-<span class="n">ouly</span><span class="o">::</span><span class="n">co_task</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="w"> </span><span class="n">async_read_file</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span><span class="w"> </span><span class="n">filename</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="c1">// Simulate async file read</span>
-<span class="w">    </span><span class="k">co_await</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">suspend_always</span><span class="p">{};</span><span class="w">  </span><span class="c1">// Yield execution</span>
-
-<span class="w">    </span><span class="c1">// Simulate file content</span>
-<span class="w">    </span><span class="k">co_return</span><span class="w"> </span><span class="s">"Content of "</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">filename</span><span class="p">;</span>
-<span class="p">}</span>
-
-<span class="n">ouly</span><span class="o">::</span><span class="n">co_task</span><span class="o">&lt;</span><span class="kt">void</span><span class="o">&gt;</span><span class="w"> </span><span class="n">process_files</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">filenames</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ouly</span><span class="o">::</span><span class="n">co_task</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="n">read_tasks</span><span class="p">;</span>
-
-<span class="w">    </span><span class="c1">// Start all reads concurrently</span>
-<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">filename</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">filenames</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">read_tasks</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">async_read_file</span><span class="p">(</span><span class="n">filename</span><span class="p">));</span>
-<span class="w">    </span><span class="p">}</span>
-
-<span class="w">    </span><span class="c1">// Process results as they complete</span>
-<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">task</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">read_tasks</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">content</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">co_await</span><span class="w"> </span><span class="n">task</span><span class="p">;</span>
-<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Processed: "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">content</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="p">}</span>
-
-<span class="kt">int</span><span class="w"> </span><span class="n">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">scheduler</span><span class="w"> </span><span class="nf">scheduler</span><span class="p">(</span><span class="mi">4</span><span class="p">);</span>
-
-<span class="w">    </span><span class="c1">// Create workgroups BEFORE begin_execution</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">workgroup</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">create_workgroup</span><span class="p">();</span>
-
-<span class="w">    </span><span class="c1">// Begin execution</span>
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">begin_execution</span><span class="p">();</span>
-
-<span class="w">    </span><span class="c1">// Submit coroutine task</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">factorial_task</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">async_factorial</span><span class="p">(</span><span class="mi">10</span><span class="p">);</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">factorial_future</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">submit</span><span class="p">(</span><span class="n">workgroup</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">factorial_task</span><span class="p">));</span>
-
-<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">factorial_future</span><span class="p">.</span><span class="n">get</span><span class="p">();</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"10! = "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-
-<span class="w">    </span><span class="c1">// File processing example</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="w"> </span><span class="n">files</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="s">"file1.txt"</span><span class="p">,</span><span class="w"> </span><span class="s">"file2.txt"</span><span class="p">,</span><span class="w"> </span><span class="s">"file3.txt"</span><span class="p">};</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">file_task</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">process_files</span><span class="p">(</span><span class="n">files</span><span class="p">);</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">file_future</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">submit</span><span class="p">(</span><span class="n">workgroup</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">file_task</span><span class="p">));</span>
-<span class="w">    </span><span class="n">file_future</span><span class="p">.</span><span class="n">wait</span><span class="p">();</span>
-
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">end_execution</span><span class="p">();</span>
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">shutdown</span><span class="p">();</span>
-<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-</section>
-<section id="parallel-algorithms">
-<h2>Parallel Algorithms<a class="headerlink" href="#parallel-algorithms" title="Link to this heading"></a></h2>
-<p>Implement common parallel patterns using the scheduler:</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/scheduler/scheduler_v2.hpp&gt;</span>
-<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;algorithm&gt;</span>
-
-<span class="c1">// Parallel for_each implementation</span>
-<span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span><span class="w"> </span><span class="nc">Iterator</span><span class="p">,</span><span class="w"> </span><span class="k">typename</span><span class="w"> </span><span class="nc">Function</span><span class="o">&gt;</span>
-<span class="kt">void</span><span class="w"> </span><span class="n">parallel_for_each</span><span class="p">(</span><span class="n">ouly</span><span class="o">::</span><span class="n">task_context</span><span class="o">&amp;</span><span class="w"> </span><span class="n">ctx</span><span class="p">,</span>
-<span class="w">                      </span><span class="n">Iterator</span><span class="w"> </span><span class="n">first</span><span class="p">,</span><span class="w"> </span><span class="n">Iterator</span><span class="w"> </span><span class="n">last</span><span class="p">,</span>
-<span class="w">                      </span><span class="n">Function</span><span class="w"> </span><span class="n">func</span><span class="p">,</span>
-<span class="w">                      </span><span class="kt">size_t</span><span class="w"> </span><span class="n">grain_size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1000</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">distance</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">distance</span><span class="p">(</span><span class="n">first</span><span class="p">,</span><span class="w"> </span><span class="n">last</span><span class="p">);</span>
-<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">distance</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="n">grain_size</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="c1">// Process directly</span>
-<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">for_each</span><span class="p">(</span><span class="n">first</span><span class="p">,</span><span class="w"> </span><span class="n">last</span><span class="p">,</span><span class="w"> </span><span class="n">func</span><span class="p">);</span>
-<span class="w">        </span><span class="k">return</span><span class="p">;</span>
-<span class="w">    </span><span class="p">}</span>
-
-<span class="w">    </span><span class="c1">// Split work</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">mid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">next</span><span class="p">(</span><span class="n">first</span><span class="p">,</span><span class="w"> </span><span class="n">distance</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">2</span><span class="p">);</span>
-
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">promise</span><span class="o">&lt;</span><span class="kt">void</span><span class="o">&gt;</span><span class="w"> </span><span class="n">left_done</span><span class="p">;</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">left_future</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">left_done</span><span class="p">.</span><span class="n">get_future</span><span class="p">();</span>
-
-<span class="w">    </span><span class="c1">// Process left half in parallel</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">async</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="n">ctx</span><span class="p">.</span><span class="n">current_workgroup</span><span class="p">(),</span>
-<span class="w">        </span><span class="p">[</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="n">first</span><span class="p">,</span><span class="w"> </span><span class="n">mid</span><span class="p">,</span><span class="w"> </span><span class="n">func</span><span class="p">,</span><span class="w"> </span><span class="n">grain_size</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">left_done</span><span class="p">](</span><span class="k">auto</span><span class="o">&amp;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="n">parallel_for_each</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="n">first</span><span class="p">,</span><span class="w"> </span><span class="n">mid</span><span class="p">,</span><span class="w"> </span><span class="n">func</span><span class="p">,</span><span class="w"> </span><span class="n">grain_size</span><span class="p">);</span>
-<span class="w">            </span><span class="n">left_done</span><span class="p">.</span><span class="n">set_value</span><span class="p">();</span>
-<span class="w">        </span><span class="p">});</span>
-
-<span class="w">    </span><span class="c1">// Process right half in current task</span>
-<span class="w">    </span><span class="n">parallel_for_each</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="n">mid</span><span class="p">,</span><span class="w"> </span><span class="n">last</span><span class="p">,</span><span class="w"> </span><span class="n">func</span><span class="p">,</span><span class="w"> </span><span class="n">grain_size</span><span class="p">);</span>
-
-<span class="w">    </span><span class="c1">// Wait for left half to complete</span>
-<span class="w">    </span><span class="n">left_future</span><span class="p">.</span><span class="n">wait</span><span class="p">();</span>
-<span class="p">}</span>
-
-<span class="c1">// Parallel reduce implementation</span>
-<span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span><span class="w"> </span><span class="nc">Iterator</span><span class="p">,</span><span class="w"> </span><span class="k">typename</span><span class="w"> </span><span class="nc">T</span><span class="p">,</span><span class="w"> </span><span class="k">typename</span><span class="w"> </span><span class="nc">BinaryOp</span><span class="o">&gt;</span>
-<span class="n">T</span><span class="w"> </span><span class="n">parallel_reduce</span><span class="p">(</span><span class="n">ouly</span><span class="o">::</span><span class="n">task_context</span><span class="o">&amp;</span><span class="w"> </span><span class="n">ctx</span><span class="p">,</span>
-<span class="w">                 </span><span class="n">Iterator</span><span class="w"> </span><span class="n">first</span><span class="p">,</span><span class="w"> </span><span class="n">Iterator</span><span class="w"> </span><span class="n">last</span><span class="p">,</span>
-<span class="w">                 </span><span class="n">T</span><span class="w"> </span><span class="n">init</span><span class="p">,</span><span class="w"> </span><span class="n">BinaryOp</span><span class="w"> </span><span class="n">op</span><span class="p">,</span>
-<span class="w">                 </span><span class="kt">size_t</span><span class="w"> </span><span class="n">grain_size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1000</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">distance</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">distance</span><span class="p">(</span><span class="n">first</span><span class="p">,</span><span class="w"> </span><span class="n">last</span><span class="p">);</span>
-<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">distance</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="n">grain_size</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">accumulate</span><span class="p">(</span><span class="n">first</span><span class="p">,</span><span class="w"> </span><span class="n">last</span><span class="p">,</span><span class="w"> </span><span class="n">init</span><span class="p">,</span><span class="w"> </span><span class="n">op</span><span class="p">);</span>
-<span class="w">    </span><span class="p">}</span>
-
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">mid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">next</span><span class="p">(</span><span class="n">first</span><span class="p">,</span><span class="w"> </span><span class="n">distance</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">2</span><span class="p">);</span>
-
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">promise</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="w"> </span><span class="n">left_result</span><span class="p">;</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">left_future</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">left_result</span><span class="p">.</span><span class="n">get_future</span><span class="p">();</span>
-
-<span class="w">    </span><span class="c1">// Process left half</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">async</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="n">ctx</span><span class="p">.</span><span class="n">current_workgroup</span><span class="p">(),</span>
-<span class="w">        </span><span class="p">[</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="n">first</span><span class="p">,</span><span class="w"> </span><span class="n">mid</span><span class="p">,</span><span class="w"> </span><span class="n">init</span><span class="p">,</span><span class="w"> </span><span class="n">op</span><span class="p">,</span><span class="w"> </span><span class="n">grain_size</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">left_result</span><span class="p">](</span><span class="k">auto</span><span class="o">&amp;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="n">T</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">parallel_reduce</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="n">first</span><span class="p">,</span><span class="w"> </span><span class="n">mid</span><span class="p">,</span><span class="w"> </span><span class="n">init</span><span class="p">,</span><span class="w"> </span><span class="n">op</span><span class="p">,</span><span class="w"> </span><span class="n">grain_size</span><span class="p">);</span>
-<span class="w">            </span><span class="n">left_result</span><span class="p">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">result</span><span class="p">);</span>
-<span class="w">        </span><span class="p">});</span>
-
-<span class="w">    </span><span class="c1">// Process right half</span>
-<span class="w">    </span><span class="n">T</span><span class="w"> </span><span class="n">right</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">parallel_reduce</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="n">mid</span><span class="p">,</span><span class="w"> </span><span class="n">last</span><span class="p">,</span><span class="w"> </span><span class="n">init</span><span class="p">,</span><span class="w"> </span><span class="n">op</span><span class="p">,</span><span class="w"> </span><span class="n">grain_size</span><span class="p">);</span>
-<span class="w">    </span><span class="n">T</span><span class="w"> </span><span class="n">left</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">left_future</span><span class="p">.</span><span class="n">get</span><span class="p">();</span>
-
-<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">op</span><span class="p">(</span><span class="n">left</span><span class="p">,</span><span class="w"> </span><span class="n">right</span><span class="p">);</span>
-<span class="p">}</span>
-
-<span class="kt">int</span><span class="w"> </span><span class="n">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">scheduler</span><span class="w"> </span><span class="nf">scheduler</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="kr">thread</span><span class="o">::</span><span class="n">hardware_concurrency</span><span class="p">());</span>
-
-<span class="w">    </span><span class="c1">// Create workgroup BEFORE begin_execution</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">workgroup</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">create_workgroup</span><span class="p">();</span>
-
-<span class="w">    </span><span class="c1">// Begin execution</span>
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">begin_execution</span><span class="p">();</span>
-
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="w"> </span><span class="n">data</span><span class="p">(</span><span class="mi">1000000</span><span class="p">);</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">iota</span><span class="p">(</span><span class="n">data</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span><span class="w"> </span><span class="n">data</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
-
-<span class="w">    </span><span class="c1">// Parallel for_each example</span>
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">submit</span><span class="p">(</span><span class="n">workgroup</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="o">&amp;</span><span class="p">](</span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">ctx</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">parallel_for_each</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="n">data</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span><span class="w"> </span><span class="n">data</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span><span class="w"> </span><span class="p">[](</span><span class="kt">int</span><span class="o">&amp;</span><span class="w"> </span><span class="n">x</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">x</span><span class="p">;</span><span class="w">  </span><span class="c1">// Square each element</span>
-<span class="w">        </span><span class="p">});</span>
-<span class="w">    </span><span class="p">}).</span><span class="n">wait</span><span class="p">();</span>
-
-<span class="w">    </span><span class="c1">// Parallel reduce example</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">sum_future</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">submit</span><span class="p">(</span><span class="n">workgroup</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="o">&amp;</span><span class="p">](</span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">ctx</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">parallel_reduce</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="n">data</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span><span class="w"> </span><span class="n">data</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span><span class="w"> </span><span class="mf">0L</span><span class="n">L</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">plus</span><span class="o">&lt;</span><span class="kt">long</span><span class="w"> </span><span class="kt">long</span><span class="o">&gt;</span><span class="p">{});</span>
-<span class="w">    </span><span class="p">});</span>
-
-<span class="w">    </span><span class="kt">long</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">sum</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sum_future</span><span class="p">.</span><span class="n">get</span><span class="p">();</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Sum of squares: "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">sum</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">end_execution</span><span class="p">();</span>
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">shutdown</span><span class="p">();</span>
-<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-</section>
-<section id="producer-consumer-patterns">
-<h2>Producer-Consumer Patterns<a class="headerlink" href="#producer-consumer-patterns" title="Link to this heading"></a></h2>
-<p>Implement efficient producer-consumer patterns:</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/scheduler/scheduler_v2.hpp&gt;</span>
-<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;queue&gt;</span>
-<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;mutex&gt;</span>
-<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;condition_variable&gt;</span>
-
-<span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span><span class="w"> </span><span class="nc">T</span><span class="o">&gt;</span>
-<span class="k">class</span><span class="w"> </span><span class="nc">ThreadSafeQueue</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">queue</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="w"> </span><span class="n">queue_</span><span class="p">;</span>
-<span class="w">    </span><span class="k">mutable</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="w"> </span><span class="n">mutex_</span><span class="p">;</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">condition_variable</span><span class="w"> </span><span class="n">condition_</span><span class="p">;</span>
-<span class="w">    </span><span class="kt">bool</span><span class="w"> </span><span class="n">finished_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span>
-
-<span class="k">public</span><span class="o">:</span>
-<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="n">push</span><span class="p">(</span><span class="n">T</span><span class="w"> </span><span class="n">item</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">lock_guard</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;</span><span class="w"> </span><span class="n">lock</span><span class="p">(</span><span class="n">mutex_</span><span class="p">);</span>
-<span class="w">        </span><span class="n">queue_</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">item</span><span class="p">));</span>
-<span class="w">        </span><span class="n">condition_</span><span class="p">.</span><span class="n">notify_one</span><span class="p">();</span>
-<span class="w">    </span><span class="p">}</span>
-
-<span class="w">    </span><span class="kt">bool</span><span class="w"> </span><span class="n">pop</span><span class="p">(</span><span class="n">T</span><span class="o">&amp;</span><span class="w"> </span><span class="n">item</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">unique_lock</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;</span><span class="w"> </span><span class="n">lock</span><span class="p">(</span><span class="n">mutex_</span><span class="p">);</span>
-<span class="w">        </span><span class="n">condition_</span><span class="p">.</span><span class="n">wait</span><span class="p">(</span><span class="n">lock</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="k">this</span><span class="p">]</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="o">!</span><span class="n">queue_</span><span class="p">.</span><span class="n">empty</span><span class="p">()</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">finished_</span><span class="p">;</span><span class="w"> </span><span class="p">});</span>
-
-<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">queue_</span><span class="p">.</span><span class="n">empty</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span><span class="w">  </span><span class="c1">// Finished</span>
-<span class="w">        </span><span class="p">}</span>
-
-<span class="w">        </span><span class="n">item</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">queue_</span><span class="p">.</span><span class="n">front</span><span class="p">());</span>
-<span class="w">        </span><span class="n">queue_</span><span class="p">.</span><span class="n">pop</span><span class="p">();</span>
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nb">true</span><span class="p">;</span>
-<span class="w">    </span><span class="p">}</span>
-
-<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="n">finish</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">lock_guard</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;</span><span class="w"> </span><span class="n">lock</span><span class="p">(</span><span class="n">mutex_</span><span class="p">);</span>
-<span class="w">        </span><span class="n">finished_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">true</span><span class="p">;</span>
-<span class="w">        </span><span class="n">condition_</span><span class="p">.</span><span class="n">notify_all</span><span class="p">();</span>
-<span class="w">    </span><span class="p">}</span>
+<section id="starting-the-scheduler-and-submitting-work">
+<h2>Starting the scheduler and submitting work<a class="headerlink" href="#starting-the-scheduler-and-submitting-work" title="Link to this heading"></a></h2>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/scheduler/scheduler.hpp&gt;</span>
+
+<span class="k">struct</span><span class="w"> </span><span class="nc">engine_state</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="kt">float</span><span class="w"> </span><span class="n">frame_time</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.016F</span><span class="p">;</span>
 <span class="p">};</span>
 
-<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">scheduler</span><span class="w"> </span><span class="n">scheduler</span><span class="p">(</span><span class="mi">4</span><span class="p">);</span>
+<span class="k">constexpr</span><span class="w"> </span><span class="k">auto</span><span class="w"> </span><span class="n">game_group</span><span class="w">      </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">workgroup_id</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+<span class="k">constexpr</span><span class="w"> </span><span class="k">auto</span><span class="w"> </span><span class="n">streaming_group</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">workgroup_id</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
 
-<span class="w">    </span><span class="c1">// Create workgroups BEFORE begin_execution</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">producer_group</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">create_workgroup</span><span class="p">();</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">consumer_group</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">create_workgroup</span><span class="p">();</span>
+<span class="kt">void</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="n">engine_state</span><span class="o">&amp;</span><span class="w"> </span><span class="n">state</span><span class="p">)</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="n">ouly</span><span class="o">::</span><span class="n">scheduler</span><span class="w"> </span><span class="n">scheduler</span><span class="p">;</span>
+<span class="w">  </span><span class="n">scheduler</span><span class="p">.</span><span class="n">create_group</span><span class="p">(</span><span class="n">game_group</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">6</span><span class="p">);</span><span class="w">      </span><span class="c1">// workers 0..5</span>
+<span class="w">  </span><span class="n">scheduler</span><span class="p">.</span><span class="n">create_group</span><span class="p">(</span><span class="n">streaming_group</span><span class="p">,</span><span class="w"> </span><span class="mi">6</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">);</span><span class="w"> </span><span class="c1">// workers 6..7</span>
 
-<span class="w">    </span><span class="c1">// Begin execution</span>
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">begin_execution</span><span class="p">();</span>
+<span class="w">  </span><span class="n">scheduler</span><span class="p">.</span><span class="n">begin_execution</span><span class="p">(</span>
+<span class="w">   </span><span class="p">[](</span><span class="n">ouly</span><span class="o">::</span><span class="n">worker_id</span><span class="w"> </span><span class="k">const</span><span class="o">&amp;</span><span class="w"> </span><span class="n">worker</span><span class="p">)</span>
+<span class="w">   </span><span class="p">{</span>
+<span class="w">     </span><span class="c1">// runs once on every worker thread (including worker 0) before work starts</span>
+<span class="w">     </span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="n">worker</span><span class="p">;</span>
+<span class="w">   </span><span class="p">},</span>
+<span class="w">   </span><span class="o">&amp;</span><span class="n">state</span><span class="p">);</span><span class="w"> </span><span class="c1">// user context, available to every task</span>
 
-<span class="w">    </span><span class="n">ThreadSafeQueue</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="w"> </span><span class="n">queue</span><span class="p">;</span>
+<span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="k">const</span><span class="o">&amp;</span><span class="w"> </span><span class="n">ctx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">task_context</span><span class="o">::</span><span class="n">this_context</span><span class="o">::</span><span class="n">get</span><span class="p">();</span><span class="w"> </span><span class="c1">// worker 0, member of game_group</span>
 
-<span class="w">    </span><span class="c1">// Start producers</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">future</span><span class="o">&lt;</span><span class="kt">void</span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="n">producer_futures</span><span class="p">;</span>
-<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">p</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">p</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">p</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="k">auto</span><span class="w"> </span><span class="n">future</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">submit</span><span class="p">(</span><span class="n">producer_group</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="o">&amp;</span><span class="n">queue</span><span class="p">,</span><span class="w"> </span><span class="n">p</span><span class="p">]()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">100</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">                </span><span class="n">queue</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">p</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">100</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">i</span><span class="p">);</span>
-<span class="w">                </span><span class="n">std</span><span class="o">::</span><span class="n">this_thread</span><span class="o">::</span><span class="n">sleep_for</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">chrono</span><span class="o">::</span><span class="n">milliseconds</span><span class="p">(</span><span class="mi">1</span><span class="p">));</span>
-<span class="w">            </span><span class="p">}</span>
-<span class="w">        </span><span class="p">});</span>
-<span class="w">        </span><span class="n">producer_futures</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">future</span><span class="p">));</span>
-<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="c1">// Run in the submitter's current workgroup</span>
+<span class="w">  </span><span class="n">scheduler</span><span class="p">.</span><span class="n">submit</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span>
+<span class="w">                   </span><span class="p">[](</span><span class="n">ouly</span><span class="o">::</span><span class="n">task_context</span><span class="w"> </span><span class="k">const</span><span class="o">&amp;</span><span class="w"> </span><span class="n">task</span><span class="p">)</span>
+<span class="w">                   </span><span class="p">{</span>
+<span class="w">                     </span><span class="k">auto</span><span class="o">*</span><span class="w"> </span><span class="n">engine</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">task</span><span class="p">.</span><span class="n">get_user_context</span><span class="o">&lt;</span><span class="n">engine_state</span><span class="o">&gt;</span><span class="p">();</span>
+<span class="w">                     </span><span class="n">update_physics</span><span class="p">(</span><span class="n">engine</span><span class="o">-&gt;</span><span class="n">frame_time</span><span class="p">);</span>
+<span class="w">                   </span><span class="p">});</span>
 
-<span class="w">    </span><span class="c1">// Start consumers</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">atomic</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="w"> </span><span class="n">total_consumed</span><span class="p">{</span><span class="mi">0</span><span class="p">};</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">future</span><span class="o">&lt;</span><span class="kt">void</span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="n">consumer_futures</span><span class="p">;</span>
+<span class="w">  </span><span class="c1">// Run on the streaming workers; ouly::async(ctx, group, ...) is shorthand for the same call</span>
+<span class="w">  </span><span class="n">ouly</span><span class="o">::</span><span class="n">async</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="n">streaming_group</span><span class="p">,</span>
+<span class="w">              </span><span class="p">[](</span><span class="n">ouly</span><span class="o">::</span><span class="n">task_context</span><span class="w"> </span><span class="k">const</span><span class="o">&amp;</span><span class="w"> </span><span class="n">task</span><span class="p">)</span>
+<span class="w">              </span><span class="p">{</span>
+<span class="w">                </span><span class="n">decode</span><span class="p">(</span><span class="n">task</span><span class="p">.</span><span class="n">get_worker</span><span class="p">().</span><span class="n">get_index</span><span class="p">());</span>
+<span class="w">              </span><span class="p">});</span>
 
-<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">c</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">c</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">c</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="k">auto</span><span class="w"> </span><span class="n">future</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">submit</span><span class="p">(</span><span class="n">consumer_group</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="o">&amp;</span><span class="n">queue</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">total_consumed</span><span class="p">,</span><span class="w"> </span><span class="n">c</span><span class="p">]()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="kt">int</span><span class="w"> </span><span class="n">item</span><span class="p">;</span>
-<span class="w">            </span><span class="kt">int</span><span class="w"> </span><span class="n">consumed</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
-<span class="w">            </span><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">queue</span><span class="p">.</span><span class="n">pop</span><span class="p">(</span><span class="n">item</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
-<span class="w">                </span><span class="c1">// Process item</span>
-<span class="w">                </span><span class="n">consumed</span><span class="o">++</span><span class="p">;</span>
-<span class="w">                </span><span class="n">std</span><span class="o">::</span><span class="n">this_thread</span><span class="o">::</span><span class="n">sleep_for</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">chrono</span><span class="o">::</span><span class="n">microseconds</span><span class="p">(</span><span class="mi">100</span><span class="p">));</span>
-<span class="w">            </span><span class="p">}</span>
-<span class="w">            </span><span class="n">total_consumed</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">consumed</span><span class="p">;</span>
-<span class="w">            </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Consumer "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">c</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">" processed "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">consumed</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">" items</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-<span class="w">        </span><span class="p">});</span>
-<span class="w">        </span><span class="n">consumer_futures</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">future</span><span class="p">));</span>
-<span class="w">    </span><span class="p">}</span>
-
-<span class="w">    </span><span class="c1">// Wait for producers to finish</span>
-<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">future</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">producer_futures</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">future</span><span class="p">.</span><span class="n">wait</span><span class="p">();</span>
-<span class="w">    </span><span class="p">}</span>
-
-<span class="w">    </span><span class="c1">// Signal consumers that production is done</span>
-<span class="w">    </span><span class="n">queue</span><span class="p">.</span><span class="n">finish</span><span class="p">();</span>
-
-<span class="w">    </span><span class="c1">// Wait for consumers</span>
-<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">future</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">consumer_futures</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">future</span><span class="p">.</span><span class="n">wait</span><span class="p">();</span>
-<span class="w">    </span><span class="p">}</span>
-
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Total items processed: "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">total_consumed</span><span class="p">.</span><span class="n">load</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">end_execution</span><span class="p">();</span>
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">shutdown</span><span class="p">();</span>
-<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">  </span><span class="n">scheduler</span><span class="p">.</span><span class="n">end_execution</span><span class="p">();</span><span class="w"> </span><span class="c1">// waits for submitted work, then joins the worker threads</span>
 <span class="p">}</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">submit</span></code> accepts a callable taking <code class="docutils literal notranslate"><span class="pre">task_context</span> <span class="pre">const&amp;</span></code>, a coroutine task (see
+<a class="reference internal" href="#coroutines">Coroutines</a>), or a function pointer followed by its arguments. Without a workgroup argument the
+task goes to the submitter’s current workgroup. <code class="docutils literal notranslate"><span class="pre">submit</span></code> stores the callable inline in an
+<code class="docutils literal notranslate"><span class="pre">ouly::task_delegate</span></code>: it must fit in 64 bytes and be trivially copyable and destructible, which a
+compile-time check enforces. Capture pointers or references, or use <code class="docutils literal notranslate"><span class="pre">submit_task</span></code> or a
+<code class="docutils literal notranslate"><span class="pre">task_scope</span></code>, which keep the callable in a separately allocated node and accept any capture.</p>
+</section>
+<section id="value-tasks">
+<h2>Value tasks<a class="headerlink" href="#value-tasks" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">ouly::submit_task</span></code> returns a reference-counted <code class="docutils literal notranslate"><span class="pre">task&lt;T&gt;</span></code>. The callable can take no arguments
+or the <code class="docutils literal notranslate"><span class="pre">task_context</span></code>. <code class="docutils literal notranslate"><span class="pre">then</span></code> attaches a continuation that is queued through the scheduler once
+the predecessor has finished, and <code class="docutils literal notranslate"><span class="pre">when_all</span></code> accepts several tasks of any type or a sized range of
+tasks of one type:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="k">auto</span><span class="w"> </span><span class="n">mesh</span><span class="w">     </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">submit_task</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="p">[]()</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="kt">uint32_t</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="mi">128</span><span class="p">;</span><span class="w"> </span><span class="p">});</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">textures</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">submit_task</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="n">streaming_group</span><span class="p">,</span><span class="w"> </span><span class="p">[]()</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="kt">uint32_t</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="mi">16</span><span class="p">;</span><span class="w"> </span><span class="p">});</span>
+
+<span class="c1">// Continuations are queued through the scheduler once the predecessor finishes</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">vertices</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mesh</span><span class="p">.</span><span class="n">then</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="p">[](</span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">triangles</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="n">triangles</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span><span class="w"> </span><span class="p">});</span>
+
+<span class="c1">// Wait for a heterogeneous set of tasks...</span>
+<span class="n">ouly</span><span class="o">::</span><span class="n">when_all</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="n">vertices</span><span class="p">,</span><span class="w"> </span><span class="n">textures</span><span class="p">).</span><span class="n">get</span><span class="p">(</span><span class="n">ctx</span><span class="p">);</span>
+
+<span class="c1">// ...or for a sized range of tasks of one type</span>
+<span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ouly</span><span class="o">::</span><span class="n">task</span><span class="o">&lt;</span><span class="kt">uint32_t</span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="n">chunks</span><span class="p">;</span>
+<span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="n">chunks</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">ouly</span><span class="o">::</span><span class="n">submit_task</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="n">i</span><span class="p">;</span><span class="w"> </span><span class="p">}));</span>
+<span class="p">}</span>
+<span class="n">ouly</span><span class="o">::</span><span class="n">when_all</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="n">chunks</span><span class="p">).</span><span class="n">get</span><span class="p">(</span><span class="n">ctx</span><span class="p">);</span>
+
+<span class="kt">uint32_t</span><span class="w"> </span><span class="n">count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">vertices</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">ctx</span><span class="p">);</span><span class="w"> </span><span class="c1">// 384</span>
+
+<span class="c1">// Exceptions thrown by a task are rethrown by get(), then() and when_all()</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">failing</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">submit_task</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="p">[]()</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">throw</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">runtime_error</span><span class="p">(</span><span class="s">"load failed"</span><span class="p">);</span><span class="w"> </span><span class="p">});</span>
+<span class="k">try</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="n">failing</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">ctx</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">runtime_error</span><span class="w"> </span><span class="k">const</span><span class="o">&amp;</span><span class="p">)</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="c1">// handle the error</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">get(ctx)</span></code> and <code class="docutils literal notranslate"><span class="pre">wait(ctx)</span></code> run other queued work on the calling worker while they wait;
+<code class="docutils literal notranslate"><span class="pre">get()</span></code> and <code class="docutils literal notranslate"><span class="pre">wait()</span></code> without a context simply block. <code class="docutils literal notranslate"><span class="pre">submit_task</span></code> and <code class="docutils literal notranslate"><span class="pre">then</span></code> also have
+overloads that take a target workgroup and a <code class="docutils literal notranslate"><span class="pre">scheduler_allocator</span></code> (see <a class="reference internal" href="#where-task-memory-comes-from">Where task memory comes
+from</a>).</p>
+</section>
+<section id="structured-task-scopes">
+<h2>Structured task scopes<a class="headerlink" href="#structured-task-scopes" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">task_scope</span></code> is for fork/join work with lexical ownership. <code class="docutils literal notranslate"><span class="pre">join(ctx)</span></code> claims the scope’s
+children that have not started yet and runs them on the calling worker, then waits for the ones
+that are already running. It never runs unrelated scheduler work while waiting, so a join cannot
+pick up a long task from elsewhere. <code class="docutils literal notranslate"><span class="pre">join()</span></code> without a context only blocks. A scope must be joined
+before it is destroyed, and no new work may be added from outside the scope after <code class="docutils literal notranslate"><span class="pre">join</span></code> starts.</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span><span class="w"> </span><span class="n">results</span><span class="p">(</span><span class="mi">64</span><span class="p">);</span>
+
+<span class="n">ouly</span><span class="o">::</span><span class="n">task_scope</span><span class="w"> </span><span class="n">scope</span><span class="p">;</span>
+<span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">results</span><span class="p">.</span><span class="n">size</span><span class="p">();</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="n">scope</span><span class="p">.</span><span class="n">run</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="o">&amp;</span><span class="n">results</span><span class="p">,</span><span class="w"> </span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">results</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">0.5F</span><span class="p">;</span><span class="w"> </span><span class="p">});</span>
+<span class="p">}</span>
+<span class="n">scope</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">ctx</span><span class="p">);</span><span class="w"> </span><span class="c1">// every child has finished (or join rethrows the first exception)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">run</span></code> returns a <code class="docutils literal notranslate"><span class="pre">task&lt;T&gt;</span></code> for the child, so results can also be read individually.</p>
+</section>
+<section id="where-task-memory-comes-from">
+<h2>Where task memory comes from<a class="headerlink" href="#where-task-memory-comes-from" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">scheduler_allocator</span></code> is a non-owning, type-erased reference to an allocator. Task states and
+coroutine frames created with it are taken from that allocator, which must outlive them. The
+allocator needs <code class="docutils literal notranslate"><span class="pre">allocate(size)</span></code>; <code class="docutils literal notranslate"><span class="pre">allocate(size,</span> <span class="pre">std::align_val_t)</span></code> and
+<code class="docutils literal notranslate"><span class="pre">deallocate(pointer,</span> <span class="pre">size)</span></code> are used when present, so a linear allocator that is reset once per
+frame works:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">ouly</span><span class="o">::</span><span class="n">linear_allocator</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">frame_memory</span><span class="p">(</span><span class="mi">64</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="p">);</span>
+<span class="n">ouly</span><span class="o">::</span><span class="n">scheduler_allocator</span><span class="w"> </span><span class="nf">frame_storage</span><span class="p">(</span><span class="n">frame_memory</span><span class="p">);</span>
+
+<span class="k">auto</span><span class="w"> </span><span class="n">value</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">submit_task</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="n">frame_storage</span><span class="p">,</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="mi">42</span><span class="p">;</span><span class="w"> </span><span class="p">});</span>
+<span class="n">ouly</span><span class="o">::</span><span class="n">task_scope</span><span class="w"> </span><span class="nf">scope</span><span class="p">(</span><span class="n">frame_storage</span><span class="p">);</span>
+<span class="n">scope</span><span class="p">.</span><span class="n">run</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">{});</span>
+<span class="n">scope</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">ctx</span><span class="p">);</span>
+<span class="kt">int</span><span class="w"> </span><span class="n">answer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">value</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">ctx</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>The scheduler’s own bookkeeping nodes (the producers behind <code class="docutils literal notranslate"><span class="pre">submit_task</span></code>, continuations,
+<code class="docutils literal notranslate"><span class="pre">when_all</span></code> and scope nodes) are always owned by the scheduler, because their lifetime is governed
+by its queues. By default they use aligned <code class="docutils literal notranslate"><span class="pre">operator</span> <span class="pre">new</span></code>/<code class="docutils literal notranslate"><span class="pre">delete</span></code>, so an overridden global
+allocator such as mimalloc provides the thread caching. Configure with
+<code class="docutils literal notranslate"><span class="pre">-DOULY_SCHEDULER_PMR_INTERNAL_ALLOCATOR=ON</span></code> (or define <code class="docutils literal notranslate"><span class="pre">OULY_SCHEDULER_PMR_INTERNAL_ALLOCATOR</span></code>
+for every translation unit) to use a synchronized PMR pool owned by the scheduler instead. The pool
+grows lazily and reuses returned blocks.</p>
+</section>
+<section id="parallel-loops">
+<h2>Parallel loops<a class="headerlink" href="#parallel-loops" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">ouly::parallel_for</span></code> (<code class="docutils literal notranslate"><span class="pre">ouly/scheduler/parallel_for.hpp</span></code>) splits a range across the workers of
+the submitter’s workgroup and returns when every element has been processed. The callable takes
+either one element or a <code class="docutils literal notranslate"><span class="pre">[begin,</span> <span class="pre">end)</span></code> batch, plus the task context:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/scheduler/parallel_for.hpp&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/utility/subrange.hpp&gt;</span>
+
+<span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">uint32_t</span><span class="o">&gt;</span><span class="w"> </span><span class="n">data</span><span class="p">(</span><span class="mi">10'000</span><span class="p">);</span>
+<span class="n">std</span><span class="o">::</span><span class="n">iota</span><span class="p">(</span><span class="n">data</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span><span class="w"> </span><span class="n">data</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span><span class="w"> </span><span class="mi">0U</span><span class="p">);</span>
+
+<span class="c1">// Element form</span>
+<span class="n">ouly</span><span class="o">::</span><span class="n">parallel_for</span><span class="p">([](</span><span class="kt">uint32_t</span><span class="o">&amp;</span><span class="w"> </span><span class="n">value</span><span class="p">,</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">task_context</span><span class="w"> </span><span class="k">const</span><span class="o">&amp;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">value</span><span class="w"> </span><span class="o">*=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="n">ctx</span><span class="p">);</span>
+
+<span class="c1">// Range form: each call gets a [begin, end) batch</span>
+<span class="n">ouly</span><span class="o">::</span><span class="n">parallel_for</span><span class="p">(</span>
+<span class="w"> </span><span class="p">[](</span><span class="k">auto</span><span class="w"> </span><span class="n">begin</span><span class="p">,</span><span class="w"> </span><span class="k">auto</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">task_context</span><span class="w"> </span><span class="k">const</span><span class="o">&amp;</span><span class="p">)</span>
+<span class="w"> </span><span class="p">{</span>
+<span class="w">   </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="n">it</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">begin</span><span class="p">;</span><span class="w"> </span><span class="n">it</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">end</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">it</span><span class="p">)</span>
+<span class="w">   </span><span class="p">{</span>
+<span class="w">     </span><span class="o">*</span><span class="n">it</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="w">   </span><span class="p">}</span>
+<span class="w"> </span><span class="p">},</span>
+<span class="w"> </span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="n">ctx</span><span class="p">);</span>
+
+<span class="c1">// Index ranges: ouly::subrange&lt;uint32_t&gt; iterates the integers in [first, last)</span>
+<span class="n">std</span><span class="o">::</span><span class="n">atomic</span><span class="o">&lt;</span><span class="kt">uint64_t</span><span class="o">&gt;</span><span class="w"> </span><span class="n">total</span><span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+<span class="n">ouly</span><span class="o">::</span><span class="n">parallel_for</span><span class="p">([</span><span class="o">&amp;</span><span class="n">total</span><span class="p">](</span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">index</span><span class="p">,</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">task_context</span><span class="w"> </span><span class="k">const</span><span class="o">&amp;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">total</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">index</span><span class="p">;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">                   </span><span class="n">ouly</span><span class="o">::</span><span class="n">subrange</span><span class="o">&lt;</span><span class="kt">uint32_t</span><span class="o">&gt;</span><span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1000</span><span class="p">},</span><span class="w"> </span><span class="n">ctx</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>By default the range is cut into <code class="docutils literal notranslate"><span class="pre">batches_per_worker</span></code> (4) batches per worker, and ranges with
+fewer than <code class="docutils literal notranslate"><span class="pre">parallel_execution_threshold</span></code> (16) elements run inline. Pass a traits type to change
+this; <code class="docutils literal notranslate"><span class="pre">fixed_batch_size</span></code> overrides the batch count with a fixed batch size.</p>
+<p>For work whose cost varies per element, <code class="docutils literal notranslate"><span class="pre">ouly::auto_parallel_for</span></code>
+(<code class="docutils literal notranslate"><span class="pre">ouly/scheduler/auto_parallel_for.hpp</span></code>) partitions adaptively in the style of TBB’s auto
+partitioner: it starts with roughly one chunk per worker, and a chunk that has been stolen is split
+further (up to <code class="docutils literal notranslate"><span class="pre">max_depth</span></code> levels, never below <code class="docutils literal notranslate"><span class="pre">grain_size</span></code> elements) so idle workers find more
+to steal. Ranges of up to <code class="docutils literal notranslate"><span class="pre">sequential_threshold</span></code> (128) elements run inline. <code class="docutils literal notranslate"><span class="pre">parallel_for</span></code>
+dispatches to it when given traits derived from <code class="docutils literal notranslate"><span class="pre">auto_partitioner_traits</span></code>.</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="k">struct</span><span class="w"> </span><span class="nc">coarse_batches</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">default_partitioner_traits</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="k">static</span><span class="w"> </span><span class="k">constexpr</span><span class="w"> </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">batches_per_worker</span><span class="w">           </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span>
+<span class="w">  </span><span class="k">static</span><span class="w"> </span><span class="k">constexpr</span><span class="w"> </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">parallel_execution_threshold</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1024</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="k">struct</span><span class="w"> </span><span class="nc">fine_grained</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">auto_partitioner_traits</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="k">static</span><span class="w"> </span><span class="k">constexpr</span><span class="w"> </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">sequential_threshold</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">32</span><span class="p">;</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">ouly</span><span class="o">::</span><span class="n">parallel_for</span><span class="p">([](</span><span class="kt">uint32_t</span><span class="o">&amp;</span><span class="w"> </span><span class="n">value</span><span class="p">,</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">task_context</span><span class="w"> </span><span class="k">const</span><span class="o">&amp;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">value</span><span class="w"> </span><span class="o">-=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="n">coarse_batches</span><span class="p">{});</span>
+
+<span class="c1">// Uneven per-element cost: let stolen ranges split further</span>
+<span class="n">ouly</span><span class="o">::</span><span class="n">auto_parallel_for</span><span class="p">([](</span><span class="kt">uint32_t</span><span class="o">&amp;</span><span class="w"> </span><span class="n">value</span><span class="p">,</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">task_context</span><span class="w"> </span><span class="k">const</span><span class="o">&amp;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">value</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">expensive_for</span><span class="p">(</span><span class="n">value</span><span class="p">);</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="n">ctx</span><span class="p">,</span>
+<span class="w">                        </span><span class="n">fine_grained</span><span class="p">{});</span>
+</pre></div>
+</div>
+<p>Both loops are built on task scopes, so waiting for them never executes unrelated scheduler work.
+Exceptions thrown by the callable are rethrown to the caller.</p>
+</section>
+<section id="coroutines">
+<h2>Coroutines<a class="headerlink" href="#coroutines" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">ouly::co_task&lt;T&gt;</span></code> (<code class="docutils literal notranslate"><span class="pre">ouly/scheduler/co_task.hpp</span></code>) is a lazy coroutine: it does nothing until it
+is submitted or awaited. Inside a coroutine, <code class="docutils literal notranslate"><span class="pre">co_await</span></code> another <code class="docutils literal notranslate"><span class="pre">co_task</span></code> or a <code class="docutils literal notranslate"><span class="pre">task&lt;T&gt;</span></code>;
+the awaiting coroutine resumes as queued scheduler work, and uncaught exceptions propagate to
+whoever awaits or waits on it.</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/scheduler/co_task.hpp&gt;</span>
+
+<span class="k">auto</span><span class="w"> </span><span class="n">load_chunk</span><span class="p">(</span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">index</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">co_task</span><span class="o">&lt;</span><span class="kt">uint32_t</span><span class="o">&gt;</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="k">co_return</span><span class="w"> </span><span class="n">index</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">auto</span><span class="w"> </span><span class="n">load_level</span><span class="p">()</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">co_task</span><span class="o">&lt;</span><span class="kt">uint32_t</span><span class="o">&gt;</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="n">first</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="n">load_chunk</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+<span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="n">second</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">load_chunk</span><span class="p">(</span><span class="mi">2</span><span class="p">);</span>
+<span class="w">  </span><span class="c1">// A co_task is lazy: awaiting it runs it, and the awaiting coroutine resumes as queued work</span>
+<span class="w">  </span><span class="k">co_return</span><span class="w"> </span><span class="k">co_await</span><span class="w"> </span><span class="n">first</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="k">co_await</span><span class="w"> </span><span class="n">second</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Submit a coroutine by reference (it must then outlive the work) or move it into the scheduler, and
+wait from outside a coroutine with <code class="docutils literal notranslate"><span class="pre">cooperative_wait(ctx)</span></code> (which helps run work) or <code class="docutils literal notranslate"><span class="pre">wait()</span></code>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="k">auto</span><span class="w"> </span><span class="n">level</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">load_level</span><span class="p">();</span>
+<span class="n">scheduler</span><span class="p">.</span><span class="n">submit</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">default_workgroup_id</span><span class="p">,</span><span class="w"> </span><span class="n">level</span><span class="p">);</span><span class="w"> </span><span class="c1">// submitted by reference</span>
+<span class="kt">uint32_t</span><span class="w"> </span><span class="n">total</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">level</span><span class="p">.</span><span class="n">cooperative_wait</span><span class="p">(</span><span class="n">ctx</span><span class="p">);</span><span class="w">             </span><span class="c1">// 30, helps run work while waiting</span>
+</pre></div>
+</div>
+<p>Pass a <code class="docutils literal notranslate"><span class="pre">scheduler_allocator</span></code> as a coroutine parameter to allocate its frame from that allocator:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="k">auto</span><span class="w"> </span><span class="n">build_mesh</span><span class="p">([[</span><span class="na">maybe_unused</span><span class="p">]]</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">scheduler_allocator</span><span class="w"> </span><span class="n">allocator</span><span class="p">,</span><span class="w"> </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">lod</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">co_task</span><span class="o">&lt;</span><span class="kt">uint32_t</span><span class="o">&gt;</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="k">co_return</span><span class="w"> </span><span class="n">lod</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">100</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">ouly</span><span class="o">::</span><span class="n">linear_allocator</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">frame_memory</span><span class="p">(</span><span class="mi">16</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="p">);</span>
+<span class="n">ouly</span><span class="o">::</span><span class="n">scheduler_allocator</span><span class="w"> </span><span class="nf">frame_storage</span><span class="p">(</span><span class="n">frame_memory</span><span class="p">);</span>
+
+<span class="k">auto</span><span class="w"> </span><span class="n">mesh</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">build_mesh</span><span class="p">(</span><span class="n">frame_storage</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">);</span><span class="w"> </span><span class="c1">// the coroutine frame comes from frame_memory</span>
+<span class="n">scheduler</span><span class="p">.</span><span class="n">submit</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="n">mesh</span><span class="p">);</span>
+<span class="kt">uint32_t</span><span class="w"> </span><span class="n">vertices</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mesh</span><span class="p">.</span><span class="n">cooperative_wait</span><span class="p">(</span><span class="n">ctx</span><span class="p">);</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">ouly::co_sequence&lt;T&gt;</span></code> starts running immediately instead. It is meant to sequence other
+coroutines from non-coroutine code and must not be submitted to a scheduler.</p>
+</section>
+<section id="flow-graphs">
+<h2>Flow graphs<a class="headerlink" href="#flow-graphs" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">ouly::flow_graph&lt;Scheduler&gt;</span></code> (<code class="docutils literal notranslate"><span class="pre">ouly/scheduler/flow_graph.hpp</span></code>) executes a static dependency
+graph. Nodes hold any number of tasks; a node runs once all of its predecessors have finished. The
+graph can be started again after it completes.</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/scheduler/flow_graph.hpp&gt;</span>
+
+<span class="n">ouly</span><span class="o">::</span><span class="n">flow_graph</span><span class="o">&lt;</span><span class="n">ouly</span><span class="o">::</span><span class="n">scheduler</span><span class="o">&gt;</span><span class="w"> </span><span class="n">graph</span><span class="p">;</span>
+
+<span class="k">auto</span><span class="w"> </span><span class="n">load</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="n">graph</span><span class="p">.</span><span class="n">create_node</span><span class="p">();</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">animate</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">graph</span><span class="p">.</span><span class="n">create_node</span><span class="p">();</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">physics</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">graph</span><span class="p">.</span><span class="n">create_node</span><span class="p">();</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">render</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="n">graph</span><span class="p">.</span><span class="n">create_node</span><span class="p">();</span>
+
+<span class="c1">// load -&gt; (animate, physics) -&gt; render</span>
+<span class="n">graph</span><span class="p">.</span><span class="n">connect</span><span class="p">(</span><span class="n">load</span><span class="p">,</span><span class="w"> </span><span class="n">animate</span><span class="p">);</span>
+<span class="n">graph</span><span class="p">.</span><span class="n">connect</span><span class="p">(</span><span class="n">load</span><span class="p">,</span><span class="w"> </span><span class="n">physics</span><span class="p">);</span>
+<span class="n">graph</span><span class="p">.</span><span class="n">connect</span><span class="p">(</span><span class="n">animate</span><span class="p">,</span><span class="w"> </span><span class="n">render</span><span class="p">);</span>
+<span class="n">graph</span><span class="p">.</span><span class="n">connect</span><span class="p">(</span><span class="n">physics</span><span class="p">,</span><span class="w"> </span><span class="n">render</span><span class="p">);</span>
+
+<span class="n">std</span><span class="o">::</span><span class="n">atomic</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="w"> </span><span class="n">steps</span><span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+<span class="n">graph</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">load</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="o">&amp;</span><span class="p">](</span><span class="n">ouly</span><span class="o">::</span><span class="n">task_context</span><span class="w"> </span><span class="k">const</span><span class="o">&amp;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="o">++</span><span class="n">steps</span><span class="p">;</span><span class="w"> </span><span class="p">});</span>
+<span class="n">graph</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">animate</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="o">&amp;</span><span class="p">](</span><span class="n">ouly</span><span class="o">::</span><span class="n">task_context</span><span class="w"> </span><span class="k">const</span><span class="o">&amp;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="o">++</span><span class="n">steps</span><span class="p">;</span><span class="w"> </span><span class="p">});</span>
+<span class="n">graph</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">physics</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="o">&amp;</span><span class="p">](</span><span class="n">ouly</span><span class="o">::</span><span class="n">task_context</span><span class="w"> </span><span class="k">const</span><span class="o">&amp;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="o">++</span><span class="n">steps</span><span class="p">;</span><span class="w"> </span><span class="p">});</span>
+<span class="n">graph</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">physics</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="o">&amp;</span><span class="p">](</span><span class="n">ouly</span><span class="o">::</span><span class="n">task_context</span><span class="w"> </span><span class="k">const</span><span class="o">&amp;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="o">++</span><span class="n">steps</span><span class="p">;</span><span class="w"> </span><span class="p">});</span><span class="w"> </span><span class="c1">// a node can hold several tasks</span>
+<span class="n">graph</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">render</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="o">&amp;</span><span class="p">](</span><span class="n">ouly</span><span class="o">::</span><span class="n">task_context</span><span class="w"> </span><span class="k">const</span><span class="o">&amp;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="o">++</span><span class="n">steps</span><span class="p">;</span><span class="w"> </span><span class="p">});</span>
+
+<span class="n">graph</span><span class="p">.</span><span class="n">start</span><span class="p">(</span><span class="n">ctx</span><span class="p">);</span>
+<span class="n">graph</span><span class="p">.</span><span class="n">cooperative_wait</span><span class="p">(</span><span class="n">ctx</span><span class="p">);</span><span class="w"> </span><span class="c1">// the waiting thread executes work too</span>
+
+<span class="n">graph</span><span class="p">.</span><span class="n">start</span><span class="p">(</span><span class="n">ctx</span><span class="p">);</span><span class="w"> </span><span class="c1">// the same graph can run again</span>
+<span class="n">graph</span><span class="p">.</span><span class="n">cooperative_wait</span><span class="p">(</span><span class="n">ctx</span><span class="p">);</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">create_node(group)</span></code> places a node’s tasks on another workgroup, and <code class="docutils literal notranslate"><span class="pre">create_main_thread_node()</span></code>
+creates a node that runs on the thread that calls <code class="docutils literal notranslate"><span class="pre">cooperative_wait</span></code>. Use <code class="docutils literal notranslate"><span class="pre">cooperative_wait</span></code> and
+not <code class="docutils literal notranslate"><span class="pre">wait</span></code> when the waiting thread is a member of the graph’s workgroup, otherwise the graph can
+deadlock. With the <code class="docutils literal notranslate"><span class="pre">ouly::cfg::flow_graph_node_id</span></code> option tasks may also take the id of the node
+that launched them:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="k">using</span><span class="w"> </span><span class="n">graph_t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">flow_graph</span><span class="o">&lt;</span><span class="n">ouly</span><span class="o">::</span><span class="n">scheduler</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">config</span><span class="o">&lt;</span><span class="n">ouly</span><span class="o">::</span><span class="n">cfg</span><span class="o">::</span><span class="n">flow_graph_node_id</span><span class="o">&gt;&gt;</span><span class="p">;</span>
+<span class="n">graph_t</span><span class="w"> </span><span class="n">graph</span><span class="p">;</span>
+
+<span class="k">auto</span><span class="w"> </span><span class="n">node</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">graph</span><span class="p">.</span><span class="n">create_node</span><span class="p">();</span>
+<span class="n">graph</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">node</span><span class="p">,</span><span class="w"> </span><span class="p">[](</span><span class="n">ouly</span><span class="o">::</span><span class="n">task_context</span><span class="w"> </span><span class="k">const</span><span class="o">&amp;</span><span class="p">,</span><span class="w"> </span><span class="n">graph_t</span><span class="o">::</span><span class="n">node_id</span><span class="w"> </span><span class="n">id</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="n">id</span><span class="p">.</span><span class="n">value</span><span class="p">();</span><span class="w"> </span><span class="p">});</span>
+<span class="n">graph</span><span class="p">.</span><span class="n">start</span><span class="p">(</span><span class="n">ctx</span><span class="p">);</span>
+<span class="n">graph</span><span class="p">.</span><span class="n">cooperative_wait</span><span class="p">(</span><span class="n">ctx</span><span class="p">);</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">ouly::dynamic_flow_graph&lt;Scheduler&gt;</span></code> (<code class="docutils literal notranslate"><span class="pre">ouly/scheduler/dynamic_flow_graph.hpp</span></code>) is for long
+running, persistent graphs such as a game loop:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">create_node</span></code>, <code class="docutils literal notranslate"><span class="pre">add</span></code>, <code class="docutils literal notranslate"><span class="pre">remove</span></code> and <code class="docutils literal notranslate"><span class="pre">connect</span></code> are thread-safe and may be called while the
+graph runs, including from its own tasks; changes apply to the next firing of the affected node.</p></li>
+<li><p>Cycles are allowed. A node fires every time it has received <code class="docutils literal notranslate"><span class="pre">max(in_degree,</span> <span class="pre">1)</span></code> triggers, and a
+node that finishes sends one trigger to each successor, so a node inside a loop fires once per
+iteration.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">signal(node,</span> <span class="pre">ctx)</span></code> injects a trigger (that is how roots and loops are started), and
+<code class="docutils literal notranslate"><span class="pre">request_stop()</span></code> stops trigger propagation so the running work drains. <code class="docutils literal notranslate"><span class="pre">wait</span></code> and
+<code class="docutils literal notranslate"><span class="pre">cooperative_wait</span></code> return once the graph is idle. The graph is not restarted.</p></li>
+</ul>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/scheduler/dynamic_flow_graph.hpp&gt;</span>
+
+<span class="n">ouly</span><span class="o">::</span><span class="n">dynamic_flow_graph</span><span class="o">&lt;</span><span class="n">ouly</span><span class="o">::</span><span class="n">scheduler</span><span class="o">&gt;</span><span class="w"> </span><span class="n">graph</span><span class="p">;</span>
+
+<span class="k">auto</span><span class="w"> </span><span class="n">update</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">graph</span><span class="p">.</span><span class="n">create_node</span><span class="p">();</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">render</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">graph</span><span class="p">.</span><span class="n">create_node</span><span class="p">();</span>
+
+<span class="c1">// update -&gt; render -&gt; update: one loop iteration per frame</span>
+<span class="n">graph</span><span class="p">.</span><span class="n">connect</span><span class="p">(</span><span class="n">update</span><span class="p">,</span><span class="w"> </span><span class="n">render</span><span class="p">);</span>
+<span class="n">graph</span><span class="p">.</span><span class="n">connect</span><span class="p">(</span><span class="n">render</span><span class="p">,</span><span class="w"> </span><span class="n">update</span><span class="p">);</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="n">frame</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="n">graph</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">update</span><span class="p">,</span><span class="w"> </span><span class="p">[](</span><span class="n">ouly</span><span class="o">::</span><span class="n">task_context</span><span class="w"> </span><span class="k">const</span><span class="o">&amp;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="cm">/* simulate */</span><span class="w"> </span><span class="p">});</span>
+<span class="n">graph</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">render</span><span class="p">,</span>
+<span class="w">          </span><span class="p">[</span><span class="o">&amp;</span><span class="p">](</span><span class="n">ouly</span><span class="o">::</span><span class="n">task_context</span><span class="w"> </span><span class="k">const</span><span class="o">&amp;</span><span class="p">)</span>
+<span class="w">          </span><span class="p">{</span>
+<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">++</span><span class="n">frame</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">3</span><span class="p">)</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">              </span><span class="n">graph</span><span class="p">.</span><span class="n">request_stop</span><span class="p">();</span><span class="w"> </span><span class="c1">// let in-flight work drain, then the wait returns</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">          </span><span class="p">});</span>
+
+<span class="n">graph</span><span class="p">.</span><span class="n">signal</span><span class="p">(</span><span class="n">update</span><span class="p">,</span><span class="w"> </span><span class="n">ctx</span><span class="p">);</span><span class="w">   </span><span class="c1">// seed the loop</span>
+<span class="n">graph</span><span class="p">.</span><span class="n">cooperative_wait</span><span class="p">(</span><span class="n">ctx</span><span class="p">);</span><span class="w"> </span><span class="c1">// returns once the graph is idle</span>
 </pre></div>
 </div>
 </section>
-<section id="performance-considerations">
-<h2>Performance Considerations<a class="headerlink" href="#performance-considerations" title="Link to this heading"></a></h2>
-<p><strong>Task Granularity</strong></p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// Too fine-grained (overhead dominates)</span>
-<span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">1000000</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">submit</span><span class="p">(</span><span class="n">workgroup</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="n">i</span><span class="p">]()</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">i</span><span class="p">;</span><span class="w"> </span><span class="p">});</span>
-<span class="p">}</span>
-
-<span class="c1">// Better: Batch processing</span>
-<span class="k">constexpr</span><span class="w"> </span><span class="kt">size_t</span><span class="w"> </span><span class="n">BATCH_SIZE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1000</span><span class="p">;</span>
-<span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">size_t</span><span class="w"> </span><span class="n">start</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">start</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">data</span><span class="p">.</span><span class="n">size</span><span class="p">();</span><span class="w"> </span><span class="n">start</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">BATCH_SIZE</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="kt">size_t</span><span class="w"> </span><span class="n">end</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">min</span><span class="p">(</span><span class="n">start</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">BATCH_SIZE</span><span class="p">,</span><span class="w"> </span><span class="n">data</span><span class="p">.</span><span class="n">size</span><span class="p">());</span>
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">submit</span><span class="p">(</span><span class="n">workgroup</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="o">&amp;</span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="n">start</span><span class="p">,</span><span class="w"> </span><span class="n">end</span><span class="p">]()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">size_t</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">start</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">end</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
-<span class="w">        </span><span class="p">}</span>
-<span class="w">    </span><span class="p">});</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-<p><strong>Memory Access Patterns</strong></p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// Cache-friendly: Sequential access</span>
-<span class="kt">void</span><span class="w"> </span><span class="nf">process_sequential</span><span class="p">(</span><span class="n">ouly</span><span class="o">::</span><span class="n">task_context</span><span class="o">&amp;</span><span class="w"> </span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">data</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">size_t</span><span class="w"> </span><span class="n">chunk_size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">data</span><span class="p">.</span><span class="n">size</span><span class="p">()</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">ctx</span><span class="p">.</span><span class="n">worker_count</span><span class="p">();</span>
-
-<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">size_t</span><span class="w"> </span><span class="n">w</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">w</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">ctx</span><span class="p">.</span><span class="n">worker_count</span><span class="p">();</span><span class="w"> </span><span class="o">++</span><span class="n">w</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="kt">size_t</span><span class="w"> </span><span class="n">start</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">w</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">chunk_size</span><span class="p">;</span>
-<span class="w">        </span><span class="kt">size_t</span><span class="w"> </span><span class="n">end</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">w</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">ctx</span><span class="p">.</span><span class="n">worker_count</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="n">data</span><span class="p">.</span><span class="n">size</span><span class="p">()</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">start</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">chunk_size</span><span class="p">;</span>
-
-<span class="w">        </span><span class="n">ouly</span><span class="o">::</span><span class="n">async</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="n">ctx</span><span class="p">.</span><span class="n">current_workgroup</span><span class="p">(),</span><span class="w"> </span><span class="p">[</span><span class="o">&amp;</span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="n">start</span><span class="p">,</span><span class="w"> </span><span class="n">end</span><span class="p">](</span><span class="k">auto</span><span class="o">&amp;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">size_t</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">start</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">end</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">                </span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">sqrt</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
-<span class="w">            </span><span class="p">}</span>
-<span class="w">        </span><span class="p">});</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-<p><strong>NUMA Awareness</strong></p>
-<p>The OULY scheduler does not have built-in NUMA awareness. For NUMA optimization, you need to manually configure thread affinity:</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="c1">// Basic scheduler setup - no automatic NUMA configuration</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">scheduler</span><span class="w"> </span><span class="n">scheduler</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="kr">thread</span><span class="o">::</span><span class="n">hardware_concurrency</span><span class="p">());</span>
-
-<span class="w">    </span><span class="c1">// Create workgroups BEFORE begin_execution</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">workgroup</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">create_workgroup</span><span class="p">();</span>
-
-<span class="w">    </span><span class="c1">// Begin execution</span>
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">begin_execution</span><span class="p">();</span>
-
-<span class="w">    </span><span class="c1">// For NUMA optimization, you would need to:</span>
-<span class="w">    </span><span class="c1">// 1. Manually set thread affinity using platform-specific APIs</span>
-<span class="w">    </span><span class="c1">// 2. Allocate memory on appropriate NUMA nodes</span>
-<span class="w">    </span><span class="c1">// 3. Partition work based on NUMA topology</span>
-
-<span class="w">    </span><span class="c1">// ... use scheduler</span>
-
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">end_execution</span><span class="p">();</span>
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">shutdown</span><span class="p">();</span>
-<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
-<span class="p">}</span>
-</pre></div>
-</div>
+<section id="waiting-and-helping">
+<h2>Waiting and helping<a class="headerlink" href="#waiting-and-helping" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">scheduler.busy_work(ctx)</span></code> tries to run one queued task on the calling worker and returns
+whether it ran something. Use it to build your own cooperative wait loops and yield or back off
+only when it returns <code class="docutils literal notranslate"><span class="pre">false</span></code>, as the built-in waits do. All three generations report the result
+(<code class="docutils literal notranslate"><span class="pre">v3</span></code> used to return <code class="docutils literal notranslate"><span class="pre">false</span></code> unconditionally).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">scheduler.wait_for_tasks()</span></code>, called from worker 0, helps with work and returns once everything
+submitted so far has finished.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ctx.cooperative_wait(semaphore)</span></code> keeps the worker busy until a <code class="docutils literal notranslate"><span class="pre">std::binary_semaphore</span></code> is
+released.</p></li>
+</ul>
 </section>
-<section id="best-practices">
-<h2>Best Practices<a class="headerlink" href="#best-practices" title="Link to this heading"></a></h2>
-<ol class="arabic simple">
-<li><p><strong>Task Design</strong></p>
-<ul class="simple">
-<li><p>Keep tasks independent when possible</p></li>
-<li><p>Batch small operations for better efficiency</p></li>
-<li><p>Use appropriate grain size for parallel algorithms</p></li>
-</ul>
-</li>
-<li><p><strong>Workgroup Organization</strong></p>
-<ul class="simple">
-<li><p>Create all workgroups before calling <code class="docutils literal notranslate"><span class="pre">begin_execution()</span></code></p></li>
-<li><p>Group related tasks in the same workgroup</p></li>
-<li><p>Use separate workgroups for different phases</p></li>
-<li><p>Consider dependencies between workgroups</p></li>
-</ul>
-</li>
-<li><p><strong>Scheduler Lifecycle</strong></p>
-<ul class="simple">
-<li><p>Always call <code class="docutils literal notranslate"><span class="pre">begin_execution()</span></code> before submitting tasks</p></li>
-<li><p>Call <code class="docutils literal notranslate"><span class="pre">end_execution()</span></code> before <code class="docutils literal notranslate"><span class="pre">shutdown()</span></code></p></li>
-<li><p>Create workgroups before beginning execution</p></li>
-<li><p>Handle exceptions properly to ensure cleanup</p></li>
-</ul>
-</li>
-</ol>
-<ol class="arabic simple" start="3">
-<li><p><strong>Memory Management</strong></p>
-<ul class="simple">
-<li><p>Minimize shared mutable state</p></li>
-<li><p>Use thread-local storage for worker-specific data</p></li>
-<li><p>Consider cache-friendly data layouts</p></li>
-</ul>
-</li>
-<li><p><strong>Error Handling</strong></p>
-<ul class="simple">
-<li><p>Handle exceptions in task functions</p></li>
-<li><p>Use promises/futures for error propagation</p></li>
-<li><p>Implement timeout mechanisms for long-running tasks</p></li>
-</ul>
-</li>
-<li><p><strong>Debugging and Profiling</strong></p>
-<ul class="simple">
-<li><p>Use scheduler statistics for performance analysis</p></li>
-<li><p>Profile task execution times</p></li>
-<li><p>Monitor work-stealing efficiency</p></li>
-</ul>
-</li>
-</ol>
+<section id="using-a-generation-explicitly">
+<h2>Using a generation explicitly<a class="headerlink" href="#using-a-generation-explicitly" title="Link to this heading"></a></h2>
+<p>The free functions and class templates take any task context, so a specific generation can be used
+next to the default alias. <code class="docutils literal notranslate"><span class="pre">task&lt;T&gt;</span></code> and <code class="docutils literal notranslate"><span class="pre">task_scope</span></code> are aliases for the default context; with
+another generation use <code class="docutils literal notranslate"><span class="pre">basic_task</span></code> and <code class="docutils literal notranslate"><span class="pre">basic_task_scope</span></code> (or <code class="docutils literal notranslate"><span class="pre">auto</span></code>):</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">ouly</span><span class="o">::</span><span class="n">v3</span><span class="o">::</span><span class="n">scheduler</span><span class="w"> </span><span class="n">scheduler</span><span class="p">;</span>
+<span class="n">scheduler</span><span class="p">.</span><span class="n">create_group</span><span class="p">(</span><span class="n">ouly</span><span class="o">::</span><span class="n">default_workgroup_id</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">);</span>
+<span class="n">scheduler</span><span class="p">.</span><span class="n">begin_execution</span><span class="p">();</span>
+<span class="k">auto</span><span class="w"> </span><span class="k">const</span><span class="o">&amp;</span><span class="w"> </span><span class="n">ctx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">v3</span><span class="o">::</span><span class="n">task_context</span><span class="o">::</span><span class="n">this_context</span><span class="o">::</span><span class="n">get</span><span class="p">();</span>
+
+<span class="c1">// submit_task/when_all/parallel_for take any task context; the task type follows it</span>
+<span class="n">ouly</span><span class="o">::</span><span class="n">basic_task</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">v3</span><span class="o">::</span><span class="n">task_context</span><span class="o">&gt;</span><span class="w"> </span><span class="n">answer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">submit_task</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="mi">42</span><span class="p">;</span><span class="w"> </span><span class="p">});</span>
+
+<span class="n">ouly</span><span class="o">::</span><span class="n">basic_task_scope</span><span class="o">&lt;</span><span class="n">ouly</span><span class="o">::</span><span class="n">v3</span><span class="o">::</span><span class="n">task_context</span><span class="o">&gt;</span><span class="w"> </span><span class="n">scope</span><span class="p">;</span>
+<span class="n">scope</span><span class="p">.</span><span class="n">run</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">{});</span>
+<span class="n">scope</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">ctx</span><span class="p">);</span>
+
+<span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">uint32_t</span><span class="o">&gt;</span><span class="w"> </span><span class="n">data</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="n">ouly</span><span class="o">::</span><span class="n">parallel_for</span><span class="p">([](</span><span class="kt">uint32_t</span><span class="o">&amp;</span><span class="w"> </span><span class="n">v</span><span class="p">,</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">v3</span><span class="o">::</span><span class="n">task_context</span><span class="w"> </span><span class="k">const</span><span class="o">&amp;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">v</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="n">ctx</span><span class="p">);</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="n">value</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">answer</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">ctx</span><span class="p">);</span>
+<span class="n">scheduler</span><span class="p">.</span><span class="n">end_execution</span><span class="p">();</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">co_task</span></code> works with the context named by <code class="docutils literal notranslate"><span class="pre">OULY_SCHEDULER_VERSION</span></code>; to use coroutines with
+<code class="docutils literal notranslate"><span class="pre">v1</span></code> or <code class="docutils literal notranslate"><span class="pre">v3</span></code>, select that generation through the macro.</p>
 </section>
 <section id="next-steps">
 <h2>Next Steps<a class="headerlink" href="#next-steps" title="Link to this heading"></a></h2>
 <ul class="simple">
-<li><p>Explore <a class="reference internal" href="ecs_tutorial.html"><span class="doc">Entity Component System Tutorial</span></a> for parallel ECS processing patterns</p></li>
-<li><p>Learn about <a class="reference internal" href="memory_management.html"><span class="doc">Memory Management Tutorial</span></a> for scheduler-aware allocation</p></li>
-<li><p>Check <a class="reference internal" href="../performance/index.html"><span class="doc">Performance Guide</span></a> for scheduler tuning guide</p></li>
+<li><p><a class="reference internal" href="memory_management.html"><span class="doc">Memory Management Tutorial</span></a> for the allocators that pair well with per-frame task memory</p></li>
+<li><p><a class="reference internal" href="ecs_tutorial.html"><span class="doc">Entity Component System Tutorial</span></a> for data to process with <code class="docutils literal notranslate"><span class="pre">parallel_for</span></code></p></li>
+<li><p><a class="reference internal" href="../performance/index.html"><span class="doc">Performance Guide</span></a> for the benchmarks that compare <code class="docutils literal notranslate"><span class="pre">v1</span></code> and <code class="docutils literal notranslate"><span class="pre">v2</span></code> with oneTBB</p></li>
 </ul>
 </section>
 </section>
@@ -719,8 +558,8 @@
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="ecs_tutorial.html" class="btn btn-neutral float-left" title="Entity Component System Tutorial" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="serialization_tutorial.html" class="btn btn-neutral float-right" title="Serialization Tutorial" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="index.html" class="btn btn-neutral float-left" title="Tutorials" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="memory_management.html" class="btn btn-neutral float-right" title="Memory Management Tutorial" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Unit Test Examples &mdash; OULY 1.0.0 documentation</title>
+  <title>Unit Test Examples &mdash; OULY 0.1.22 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../_static/graphviz.css?v=4ae1632d" />
@@ -15,7 +15,7 @@
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=8d563738"></script>
+      <script src="../_static/documentation_options.js?v=842aa08f"></script>
       <script src="../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/js/theme.js"></script>
@@ -52,24 +52,23 @@
 <li class="toctree-l1"><a class="reference internal" href="../api_reference/index.html">API Reference</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">Examples</a><ul class="current">
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Unit Test Examples</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#allocator-examples">Allocator Examples</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#container-examples">Container Examples</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#ecs-examples">ECS Examples</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#scheduler-examples">Scheduler Examples</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#serialization-examples">Serialization Examples</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#running-specific-examples">Running Specific Examples</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#scheduler-continuations">Scheduler: continuations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#scheduler-scoped-joins">Scheduler: scoped joins</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#auto-parallel-for-range-splitting">auto_parallel_for: range splitting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#small-vector-storage-mode">small_vector: storage mode</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#coalescing-arena-allocator-retained-arenas">coalescing_arena_allocator: retained arenas</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#memory-mapped-file-ranges">Memory-mapped file ranges</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#ecs-collections">ECS: collections</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#microexpr-operators-and-identifiers">microexpr: operators and identifiers</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="index.html#overview">Overview</a></li>
-<li class="toctree-l2"><a class="reference internal" href="index.html#finding-examples">Finding Examples</a></li>
-<li class="toctree-l2"><a class="reference internal" href="index.html#building-and-running-examples">Building and Running Examples</a></li>
-<li class="toctree-l2"><a class="reference internal" href="index.html#learning-from-unit-tests">Learning from Unit Tests</a></li>
-<li class="toctree-l2"><a class="reference internal" href="index.html#contributing-examples">Contributing Examples</a></li>
-<li class="toctree-l2"><a class="reference internal" href="index.html#future-examples">Future Examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#where-to-look">Where to look</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#building-and-running-the-tests">Building and running the tests</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#adding-an-example">Adding an example</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../performance/index.html">Performance Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing to OULY</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
 </ul>
 
@@ -100,308 +99,369 @@
              
   <section id="unit-test-examples">
 <h1>Unit Test Examples<a class="headerlink" href="#unit-test-examples" title="Link to this heading"></a></h1>
-<p>The OULY unit tests serve as comprehensive examples of proper API usage and best practices.</p>
-<section id="allocator-examples">
-<h2>Allocator Examples<a class="headerlink" href="#allocator-examples" title="Link to this heading"></a></h2>
-<p><strong>Linear Allocator Usage</strong></p>
-<p>The linear allocator tests demonstrate sequential allocation patterns:</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// From unit_tests/allocators/test_linear_allocator.cpp</span>
-<span class="n">TEST_CASE</span><span class="p">(</span><span class="s">"linear_allocator basic usage"</span><span class="p">,</span><span class="w"> </span><span class="s">"[allocators]"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">linear_allocator</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">allocator</span><span class="p">(</span><span class="mi">1024</span><span class="p">);</span>
+<p>The excerpts below are included straight from the test sources, so they always show the code
+that CI compiles and runs.</p>
+<section id="scheduler-continuations">
+<h2>Scheduler: continuations<a class="headerlink" href="#scheduler-continuations" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">then</span></code> attaches continuations that the scheduler queues once the producer finishes.</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">TEST_CASE</span><span class="p">(</span><span class="s">"scheduler tasks chain queued continuations"</span><span class="p">,</span><span class="w"> </span><span class="s">"[scheduler][task][then]"</span><span class="p">)</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="n">ouly</span><span class="o">::</span><span class="n">scheduler</span><span class="w"> </span><span class="n">scheduler</span><span class="p">;</span>
+<span class="w">  </span><span class="n">scheduler</span><span class="p">.</span><span class="n">create_group</span><span class="p">(</span><span class="n">ouly</span><span class="o">::</span><span class="n">workgroup_id</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">);</span>
+<span class="w">  </span><span class="n">scheduler</span><span class="p">.</span><span class="n">begin_execution</span><span class="p">();</span>
+<span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="k">const</span><span class="o">&amp;</span><span class="w"> </span><span class="n">ctx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">task_context</span><span class="o">::</span><span class="n">this_context</span><span class="o">::</span><span class="n">get</span><span class="p">();</span>
 
-<span class="w">    </span><span class="c1">// Sequential allocations</span>
-<span class="w">    </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">ptr1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">allocator</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="mi">256</span><span class="p">);</span>
-<span class="w">    </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">ptr2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">allocator</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="mi">128</span><span class="p">);</span>
+<span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="n">producer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">submit_task</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span>
+<span class="w">                                    </span><span class="p">[]()</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="kt">int</span>
+<span class="w">                                    </span><span class="p">{</span>
+<span class="w">                                      </span><span class="k">return</span><span class="w"> </span><span class="mi">21</span><span class="p">;</span>
+<span class="w">                                    </span><span class="p">});</span>
+<span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="n">doubled</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="n">producer</span><span class="p">.</span><span class="n">then</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span>
+<span class="w">                                </span><span class="p">[](</span><span class="kt">int</span><span class="w"> </span><span class="n">value</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="kt">int</span>
+<span class="w">                                </span><span class="p">{</span>
+<span class="w">                                 </span><span class="k">return</span><span class="w"> </span><span class="n">value</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span>
+<span class="w">                               </span><span class="p">});</span>
+<span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="n">text</span><span class="w">     </span><span class="o">=</span><span class="w"> </span><span class="n">producer</span><span class="p">.</span><span class="n">then</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span>
+<span class="w">                                </span><span class="p">[](</span><span class="kt">int</span><span class="w"> </span><span class="n">value</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="kt">size_t</span>
+<span class="w">                                </span><span class="p">{</span>
+<span class="w">                              </span><span class="k">return</span><span class="w"> </span><span class="k">static_cast</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="kt">size_t</span><span class="o">&gt;</span><span class="p">(</span><span class="n">value</span><span class="p">);</span>
+<span class="w">                            </span><span class="p">});</span>
 
-<span class="w">    </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">ptr1</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="nb">nullptr</span><span class="p">);</span>
-<span class="w">    </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">ptr2</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="nb">nullptr</span><span class="p">);</span>
-<span class="w">    </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">allocator</span><span class="p">.</span><span class="n">used</span><span class="p">()</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">384</span><span class="p">);</span>
-
-<span class="w">    </span><span class="c1">// LIFO deallocation</span>
-<span class="w">    </span><span class="n">allocator</span><span class="p">.</span><span class="n">deallocate</span><span class="p">(</span><span class="n">ptr2</span><span class="p">,</span><span class="w"> </span><span class="mi">128</span><span class="p">);</span>
-<span class="w">    </span><span class="n">allocator</span><span class="p">.</span><span class="n">deallocate</span><span class="p">(</span><span class="n">ptr1</span><span class="p">,</span><span class="w"> </span><span class="mi">256</span><span class="p">);</span>
-<span class="w">    </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">allocator</span><span class="p">.</span><span class="n">used</span><span class="p">()</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-<p><strong>Pool Allocator Examples</strong></p>
-<p>Pool allocators for fixed-size object allocation:</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">TEST_CASE</span><span class="p">(</span><span class="s">"pool_allocator object management"</span><span class="p">,</span><span class="w"> </span><span class="s">"[allocators]"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">TestObject</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">value</span><span class="p">;</span>
-<span class="w">        </span><span class="kt">float</span><span class="w"> </span><span class="n">data</span><span class="p">;</span>
-<span class="w">    </span><span class="p">};</span>
-
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">pool_allocator</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">pool</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="n">TestObject</span><span class="p">),</span><span class="w"> </span><span class="mi">100</span><span class="p">);</span>
-
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">TestObject</span><span class="o">*&gt;</span><span class="w"> </span><span class="n">objects</span><span class="p">;</span>
-
-<span class="w">    </span><span class="c1">// Allocate multiple objects</span>
-<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">50</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="k">auto</span><span class="o">*</span><span class="w"> </span><span class="n">obj</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">static_cast</span><span class="o">&lt;</span><span class="n">TestObject</span><span class="o">*&gt;</span><span class="p">(</span>
-<span class="w">            </span><span class="n">pool</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="n">TestObject</span><span class="p">))</span>
-<span class="w">        </span><span class="p">);</span>
-<span class="w">        </span><span class="k">new</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span><span class="w"> </span><span class="n">TestObject</span><span class="p">{</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">2</span><span class="p">)};</span>
-<span class="w">        </span><span class="n">objects</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">obj</span><span class="p">);</span>
-<span class="w">    </span><span class="p">}</span>
-
-<span class="w">    </span><span class="c1">// Cleanup</span>
-<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="o">*</span><span class="w"> </span><span class="n">obj</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">objects</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">obj</span><span class="o">-&gt;~</span><span class="n">TestObject</span><span class="p">();</span>
-<span class="w">        </span><span class="n">pool</span><span class="p">.</span><span class="n">deallocate</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">TestObject</span><span class="p">));</span>
-<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">doubled</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">ctx</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">42</span><span class="p">);</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">text</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">ctx</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">21</span><span class="p">);</span>
+<span class="w">  </span><span class="n">scheduler</span><span class="p">.</span><span class="n">end_execution</span><span class="p">();</span>
 <span class="p">}</span>
 </pre></div>
 </div>
 </section>
-<section id="container-examples">
-<h2>Container Examples<a class="headerlink" href="#container-examples" title="Link to this heading"></a></h2>
-<p><strong>Small Vector Usage</strong></p>
-<p>Stack-optimized vector examples:</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// From unit_tests/containers/test_small_vector.cpp</span>
-<span class="n">TEST_CASE</span><span class="p">(</span><span class="s">"small_vector stack optimization"</span><span class="p">,</span><span class="w"> </span><span class="s">"[containers]"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">small_vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span><span class="w"> </span><span class="mi">8</span><span class="o">&gt;</span><span class="w"> </span><span class="n">vec</span><span class="p">;</span>
+<section id="scheduler-scoped-joins">
+<h2>Scheduler: scoped joins<a class="headerlink" href="#scheduler-scoped-joins" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">task_scope::join(ctx)</span></code> runs only the scope’s own children while it waits.</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">TEST_CASE</span><span class="p">(</span><span class="s">"task_scope cooperative join executes only its own children"</span><span class="p">,</span><span class="w"> </span><span class="s">"[scheduler][task][scope]"</span><span class="p">)</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="n">ouly</span><span class="o">::</span><span class="n">scheduler</span><span class="w"> </span><span class="n">scheduler</span><span class="p">;</span>
+<span class="w">  </span><span class="n">scheduler</span><span class="p">.</span><span class="n">create_group</span><span class="p">(</span><span class="n">ouly</span><span class="o">::</span><span class="n">workgroup_id</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="w">  </span><span class="n">scheduler</span><span class="p">.</span><span class="n">begin_execution</span><span class="p">();</span>
+<span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="k">const</span><span class="o">&amp;</span><span class="w"> </span><span class="n">ctx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">task_context</span><span class="o">::</span><span class="n">this_context</span><span class="o">::</span><span class="n">get</span><span class="p">();</span>
 
-<span class="w">    </span><span class="c1">// These use stack storage</span>
-<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">8</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">vec</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">i</span><span class="p">);</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="w">    </span><span class="n">REQUIRE</span><span class="p">(</span><span class="o">!</span><span class="n">vec</span><span class="p">.</span><span class="n">is_heap_allocated</span><span class="p">());</span>
+<span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="kt">atomic_bool</span><span class="w"> </span><span class="n">unrelated</span><span class="p">{</span><span class="nb">false</span><span class="p">};</span>
+<span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="kt">atomic_bool</span><span class="w"> </span><span class="n">child</span><span class="p">{</span><span class="nb">false</span><span class="p">};</span>
+<span class="w">  </span><span class="n">scheduler</span><span class="p">.</span><span class="n">submit</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span>
+<span class="w">                   </span><span class="p">[</span><span class="o">&amp;</span><span class="n">unrelated</span><span class="p">](</span><span class="n">ouly</span><span class="o">::</span><span class="n">task_context</span><span class="w"> </span><span class="k">const</span><span class="o">&amp;</span><span class="p">)</span><span class="w"> </span><span class="k">noexcept</span>
+<span class="w">                   </span><span class="p">{</span>
+<span class="w">                     </span><span class="n">unrelated</span><span class="p">.</span><span class="n">store</span><span class="p">(</span><span class="nb">true</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">memory_order_release</span><span class="p">);</span>
+<span class="w">                   </span><span class="p">});</span>
 
-<span class="w">    </span><span class="c1">// This triggers heap allocation</span>
-<span class="w">    </span><span class="n">vec</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="mi">8</span><span class="p">);</span>
-<span class="w">    </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">vec</span><span class="p">.</span><span class="n">is_heap_allocated</span><span class="p">());</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-<p><strong>SoA Vector Examples</strong></p>
-<p>Structure of Arrays container usage:</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">TEST_CASE</span><span class="p">(</span><span class="s">"soavector aggregate expansion"</span><span class="p">,</span><span class="w"> </span><span class="s">"[containers]"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">Particle</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="kt">float</span><span class="w"> </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">,</span><span class="w"> </span><span class="n">z</span><span class="p">;</span>
-<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">life</span><span class="p">;</span>
-<span class="w">    </span><span class="p">};</span>
+<span class="w">  </span><span class="n">ouly</span><span class="o">::</span><span class="n">task_scope</span><span class="w"> </span><span class="n">scope</span><span class="p">;</span>
+<span class="w">  </span><span class="n">scope</span><span class="p">.</span><span class="n">run</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span>
+<span class="w">            </span><span class="p">[</span><span class="o">&amp;</span><span class="n">child</span><span class="p">]()</span><span class="w"> </span><span class="k">noexcept</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">              </span><span class="n">child</span><span class="p">.</span><span class="n">store</span><span class="p">(</span><span class="nb">true</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">memory_order_release</span><span class="p">);</span>
+<span class="w">            </span><span class="p">});</span>
+<span class="w">  </span><span class="n">scope</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">ctx</span><span class="p">);</span>
 
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">soavector</span><span class="o">&lt;</span><span class="n">Particle</span><span class="o">&gt;</span><span class="w"> </span><span class="n">particles</span><span class="p">;</span>
-
-<span class="w">    </span><span class="c1">// Add particles</span>
-<span class="w">    </span><span class="n">particles</span><span class="p">.</span><span class="n">emplace_back</span><span class="p">(</span><span class="mf">1.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">3.0f</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p">);</span>
-<span class="w">    </span><span class="n">particles</span><span class="p">.</span><span class="n">emplace_back</span><span class="p">(</span><span class="mf">4.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">5.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">6.0f</span><span class="p">,</span><span class="w"> </span><span class="mi">50</span><span class="p">);</span>
-
-<span class="w">    </span><span class="c1">// Access individual arrays for SIMD operations</span>
-<span class="w">    </span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">x_coords</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">particles</span><span class="p">.</span><span class="n">get</span><span class="o">&lt;</span><span class="mi">0</span><span class="o">&gt;</span><span class="p">();</span>
-<span class="w">    </span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">y_coords</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">particles</span><span class="p">.</span><span class="n">get</span><span class="o">&lt;</span><span class="mi">1</span><span class="o">&gt;</span><span class="p">();</span>
-<span class="w">    </span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">lifetimes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">particles</span><span class="p">.</span><span class="n">get</span><span class="o">&lt;</span><span class="mi">3</span><span class="o">&gt;</span><span class="p">();</span>
-
-<span class="w">    </span><span class="c1">// Vectorized update</span>
-<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">size_t</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">particles</span><span class="p">.</span><span class="n">size</span><span class="p">();</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">x_coords</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="mf">1.0f</span><span class="p">;</span>
-<span class="w">        </span><span class="n">lifetimes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">-=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
-<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">child</span><span class="p">.</span><span class="n">load</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">memory_order_acquire</span><span class="p">));</span>
+<span class="w">  </span><span class="n">REQUIRE_FALSE</span><span class="p">(</span><span class="n">unrelated</span><span class="p">.</span><span class="n">load</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">memory_order_acquire</span><span class="p">));</span>
+<span class="w">  </span><span class="n">scheduler</span><span class="p">.</span><span class="n">wait_for_tasks</span><span class="p">();</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">unrelated</span><span class="p">.</span><span class="n">load</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">memory_order_acquire</span><span class="p">));</span>
+<span class="w">  </span><span class="n">scheduler</span><span class="p">.</span><span class="n">end_execution</span><span class="p">();</span>
 <span class="p">}</span>
 </pre></div>
 </div>
 </section>
-<section id="ecs-examples">
-<h2>ECS Examples<a class="headerlink" href="#ecs-examples" title="Link to this heading"></a></h2>
-<p><strong>Entity and Component Management</strong></p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// From unit_tests/ecs/test_registry.cpp</span>
-<span class="n">TEST_CASE</span><span class="p">(</span><span class="s">"ecs basic entity management"</span><span class="p">,</span><span class="w"> </span><span class="s">"[ecs]"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">registry</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">registry</span><span class="p">;</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="n">Position</span><span class="o">&gt;</span><span class="w"> </span><span class="n">positions</span><span class="p">;</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="n">Velocity</span><span class="o">&gt;</span><span class="w"> </span><span class="n">velocities</span><span class="p">;</span>
+<section id="auto-parallel-for-range-splitting">
+<h2>auto_parallel_for: range splitting<a class="headerlink" href="#auto-parallel-for-range-splitting" title="Link to this heading"></a></h2>
+<p>The range pool behind <code class="docutils literal notranslate"><span class="pre">auto_parallel_for</span></code> splits a range into disjoint pieces that cover it
+exactly once.</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">TEST_CASE</span><span class="p">(</span><span class="s">"range_pool: split_to_fill partitions the range without overlap"</span><span class="p">,</span><span class="w"> </span><span class="s">"[auto_parallel_for][range_pool]"</span><span class="p">)</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="k">using</span><span class="w"> </span><span class="n">range_t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">subrange</span><span class="o">&lt;</span><span class="kt">uint32_t</span><span class="o">&gt;</span><span class="p">;</span>
+<span class="w">  </span><span class="n">ouly</span><span class="o">::</span><span class="n">range_pool</span><span class="o">&lt;</span><span class="n">range_t</span><span class="p">,</span><span class="w"> </span><span class="mi">8</span><span class="o">&gt;</span><span class="w"> </span><span class="n">pool</span><span class="p">(</span><span class="n">range_t</span><span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1000</span><span class="p">});</span>
+<span class="w">  </span><span class="n">pool</span><span class="p">.</span><span class="n">split_to_fill</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">pool</span><span class="p">.</span><span class="n">size</span><span class="p">()</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
 
-<span class="w">    </span><span class="c1">// Create entities</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">entity1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">registry</span><span class="p">.</span><span class="n">emplace</span><span class="p">();</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">entity2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">registry</span><span class="p">.</span><span class="n">emplace</span><span class="p">();</span>
+<span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">uint32_t</span><span class="o">&gt;</span><span class="w"> </span><span class="n">hits</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+<span class="w">  </span><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">pool</span><span class="p">.</span><span class="n">empty</span><span class="p">())</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">r</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">pool</span><span class="p">.</span><span class="n">front</span><span class="p">();</span>
+<span class="w">    </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">pool</span><span class="p">.</span><span class="n">front_depth</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="mi">3</span><span class="p">);</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">r</span><span class="p">.</span><span class="n">begin</span><span class="p">();</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">r</span><span class="p">.</span><span class="n">end</span><span class="p">();</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="o">++</span><span class="n">hits</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="n">pool</span><span class="p">.</span><span class="n">pop_front</span><span class="p">();</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="w">  </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="n">h</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">hits</span><span class="p">)</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">    </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">h</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="w">  </span><span class="p">}</span>
 
-<span class="w">    </span><span class="c1">// Add components</span>
-<span class="w">    </span><span class="n">positions</span><span class="p">.</span><span class="n">emplace_at</span><span class="p">(</span><span class="n">entity1</span><span class="p">,</span><span class="w"> </span><span class="mf">10.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">20.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0f</span><span class="p">);</span>
-<span class="w">    </span><span class="n">velocities</span><span class="p">.</span><span class="n">emplace_at</span><span class="p">(</span><span class="n">entity1</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0f</span><span class="p">);</span>
-
-<span class="w">    </span><span class="n">positions</span><span class="p">.</span><span class="n">emplace_at</span><span class="p">(</span><span class="n">entity2</span><span class="p">,</span><span class="w"> </span><span class="mf">5.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">15.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0f</span><span class="p">);</span>
-<span class="w">    </span><span class="c1">// entity2 has no velocity component</span>
-
-<span class="w">    </span><span class="c1">// System processing</span>
-<span class="w">    </span><span class="n">positions</span><span class="p">.</span><span class="n">for_each</span><span class="p">(</span><span class="n">velocities</span><span class="p">,</span><span class="w"> </span><span class="p">[](</span><span class="k">auto</span><span class="w"> </span><span class="n">entity</span><span class="p">,</span><span class="w"> </span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">pos</span><span class="p">,</span><span class="w"> </span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">vel</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">pos</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">vel</span><span class="p">.</span><span class="n">dx</span><span class="p">;</span>
-<span class="w">        </span><span class="n">pos</span><span class="p">.</span><span class="n">y</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">vel</span><span class="p">.</span><span class="n">dy</span><span class="p">;</span>
-<span class="w">        </span><span class="n">pos</span><span class="p">.</span><span class="n">z</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">vel</span><span class="p">.</span><span class="n">dz</span><span class="p">;</span>
-<span class="w">    </span><span class="p">});</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-<p><strong>Component Storage Configuration</strong></p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">TEST_CASE</span><span class="p">(</span><span class="s">"ecs storage strategies"</span><span class="p">,</span><span class="w"> </span><span class="s">"[ecs]"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="c1">// Dense storage (default)</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="n">Position</span><span class="o">&gt;</span><span class="w"> </span><span class="n">dense_positions</span><span class="p">;</span>
-
-<span class="w">    </span><span class="c1">// Sparse storage for rarely used components</span>
-<span class="w">    </span><span class="k">using</span><span class="w"> </span><span class="n">SparseConfig</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">cfg</span><span class="o">::</span><span class="n">use_sparse</span><span class="o">&lt;&gt;</span><span class="p">;</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="n">SpecialAbility</span><span class="p">,</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">entity</span><span class="o">&lt;&gt;</span><span class="p">,</span><span class="w"> </span><span class="n">SparseConfig</span><span class="o">&gt;</span><span class="w"> </span><span class="n">abilities</span><span class="p">;</span>
-
-<span class="w">    </span><span class="c1">// Direct mapping for frequently accessed components</span>
-<span class="w">    </span><span class="k">using</span><span class="w"> </span><span class="n">DirectConfig</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">cfg</span><span class="o">::</span><span class="n">use_direct_mapping</span><span class="o">&lt;&gt;</span><span class="p">;</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="n">Transform</span><span class="p">,</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">entity</span><span class="o">&lt;&gt;</span><span class="p">,</span><span class="w"> </span><span class="n">DirectConfig</span><span class="o">&gt;</span><span class="w"> </span><span class="n">transforms</span><span class="p">;</span>
+<span class="w">  </span><span class="c1">// a range that cannot be split stays as is</span>
+<span class="w">  </span><span class="n">ouly</span><span class="o">::</span><span class="n">range_pool</span><span class="o">&lt;</span><span class="n">range_t</span><span class="p">,</span><span class="w"> </span><span class="mi">8</span><span class="o">&gt;</span><span class="w"> </span><span class="n">single</span><span class="p">(</span><span class="n">range_t</span><span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">});</span>
+<span class="w">  </span><span class="n">single</span><span class="p">.</span><span class="n">split_to_fill</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">single</span><span class="p">.</span><span class="n">size</span><span class="p">()</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
 <span class="p">}</span>
 </pre></div>
 </div>
 </section>
-<section id="scheduler-examples">
-<h2>Scheduler Examples<a class="headerlink" href="#scheduler-examples" title="Link to this heading"></a></h2>
-<p><strong>Basic Task Execution</strong></p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// From unit_tests/scheduler/test_scheduler.cpp</span>
-<span class="n">TEST_CASE</span><span class="p">(</span><span class="s">"scheduler basic task execution"</span><span class="p">,</span><span class="w"> </span><span class="s">"[scheduler]"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">scheduler</span><span class="w"> </span><span class="nf">scheduler</span><span class="p">(</span><span class="mi">2</span><span class="p">);</span>
+<section id="small-vector-storage-mode">
+<h2>small_vector: storage mode<a class="headerlink" href="#small-vector-storage-mode" title="Link to this heading"></a></h2>
+<p>Once on the heap, a <code class="docutils literal notranslate"><span class="pre">small_vector</span></code> keeps its buffer until <code class="docutils literal notranslate"><span class="pre">shrink_to_fit</span></code>.</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">TEST_CASE</span><span class="p">(</span><span class="s">"small_vector: heap buffer is kept until shrink_to_fit"</span><span class="p">,</span><span class="w"> </span><span class="s">"[small_vector][capacity]"</span><span class="p">)</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="n">ouly</span><span class="o">::</span><span class="n">small_vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="o">&gt;</span><span class="w"> </span><span class="n">v</span><span class="p">;</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">is_inlined</span><span class="p">());</span>
 
-<span class="w">    </span><span class="c1">// Create workgroup BEFORE begin_execution</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">workgroup</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">create_workgroup</span><span class="p">();</span>
+<span class="w">  </span><span class="c1">// reserve works even while the contents would fit inline</span>
+<span class="w">  </span><span class="n">v</span><span class="p">.</span><span class="n">reserve</span><span class="p">(</span><span class="mi">100</span><span class="p">);</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="o">!</span><span class="n">v</span><span class="p">.</span><span class="n">is_inlined</span><span class="p">());</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">capacity</span><span class="p">()</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="mi">100</span><span class="p">);</span>
+<span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="k">const</span><span class="o">*</span><span class="w"> </span><span class="n">buffer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">v</span><span class="p">.</span><span class="n">data</span><span class="p">();</span>
 
-<span class="w">    </span><span class="c1">// Begin execution</span>
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">begin_execution</span><span class="p">();</span>
+<span class="w">  </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">round</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">round</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">round</span><span class="p">)</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">64</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="n">v</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">i</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">data</span><span class="p">()</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">buffer</span><span class="p">);</span><span class="w"> </span><span class="c1">// no reallocation, clear() kept the buffer</span>
+<span class="w">    </span><span class="n">v</span><span class="p">.</span><span class="n">clear</span><span class="p">();</span>
+<span class="w">    </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">empty</span><span class="p">());</span>
+<span class="w">    </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">capacity</span><span class="p">()</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="mi">100</span><span class="p">);</span>
+<span class="w">  </span><span class="p">}</span>
 
-<span class="w">    </span><span class="c1">// Submit tasks</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">future1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">submit</span><span class="p">(</span><span class="n">workgroup</span><span class="p">,</span><span class="w"> </span><span class="p">[]()</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="mi">42</span><span class="p">;</span><span class="w"> </span><span class="p">});</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">future2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">submit</span><span class="p">(</span><span class="n">workgroup</span><span class="p">,</span><span class="w"> </span><span class="p">[]()</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="mi">24</span><span class="p">;</span><span class="w"> </span><span class="p">});</span>
+<span class="w">  </span><span class="c1">// crossing the inline threshold with push/pop does not bounce between storages</span>
+<span class="w">  </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">    </span><span class="n">v</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">i</span><span class="p">);</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="w">  </span><span class="n">v</span><span class="p">.</span><span class="n">pop_back</span><span class="p">();</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="o">!</span><span class="n">v</span><span class="p">.</span><span class="n">is_inlined</span><span class="p">());</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">data</span><span class="p">()</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">buffer</span><span class="p">);</span>
+<span class="w">  </span><span class="n">v</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="mi">4</span><span class="p">);</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">data</span><span class="p">()</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">buffer</span><span class="p">);</span>
 
-<span class="w">    </span><span class="c1">// Wait for results</span>
-<span class="w">    </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">future1</span><span class="p">.</span><span class="n">get</span><span class="p">()</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">42</span><span class="p">);</span>
-<span class="w">    </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">future2</span><span class="p">.</span><span class="n">get</span><span class="p">()</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">24</span><span class="p">);</span>
+<span class="w">  </span><span class="n">v</span><span class="p">.</span><span class="n">resize</span><span class="p">(</span><span class="mi">2</span><span class="p">);</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="o">!</span><span class="n">v</span><span class="p">.</span><span class="n">is_inlined</span><span class="p">());</span>
+<span class="w">  </span><span class="n">v</span><span class="p">.</span><span class="n">shrink_to_fit</span><span class="p">();</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">is_inlined</span><span class="p">());</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">size</span><span class="p">()</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">2</span><span class="p">);</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
 
-<span class="w">    </span><span class="c1">// Cleanup</span>
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">end_execution</span><span class="p">();</span>
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">shutdown</span><span class="p">();</span>
+<span class="w">  </span><span class="c1">// moving a heap vector hands over the buffer</span>
+<span class="w">  </span><span class="n">v</span><span class="p">.</span><span class="n">reserve</span><span class="p">(</span><span class="mi">50</span><span class="p">);</span>
+<span class="w">  </span><span class="n">v</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="mi">7</span><span class="p">);</span>
+<span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="k">const</span><span class="o">*</span><span class="w">                </span><span class="n">moved_buffer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">v</span><span class="p">.</span><span class="n">data</span><span class="p">();</span>
+<span class="w">  </span><span class="n">ouly</span><span class="o">::</span><span class="n">small_vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="o">&gt;</span><span class="w"> </span><span class="n">w</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">v</span><span class="p">));</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">w</span><span class="p">.</span><span class="n">data</span><span class="p">()</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">moved_buffer</span><span class="p">);</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">w</span><span class="p">.</span><span class="n">size</span><span class="p">()</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">3</span><span class="p">);</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">empty</span><span class="p">());</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">is_inlined</span><span class="p">());</span>
+
+<span class="w">  </span><span class="n">ouly</span><span class="o">::</span><span class="n">small_vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="o">&gt;</span><span class="w"> </span><span class="n">x</span><span class="p">;</span>
+<span class="w">  </span><span class="n">x</span><span class="p">.</span><span class="n">reserve</span><span class="p">(</span><span class="mi">20</span><span class="p">);</span>
+<span class="w">  </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">w</span><span class="p">);</span><span class="w"> </span><span class="c1">// x's own buffer is released, w's taken over (checked by LeakSanitizer)</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">x</span><span class="p">.</span><span class="n">data</span><span class="p">()</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">moved_buffer</span><span class="p">);</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">7</span><span class="p">);</span>
+
+<span class="w">  </span><span class="c1">// swapping heap and inline vectors</span>
+<span class="w">  </span><span class="n">ouly</span><span class="o">::</span><span class="n">small_vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="o">&gt;</span><span class="w"> </span><span class="n">y</span><span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">};</span>
+<span class="w">  </span><span class="n">x</span><span class="p">.</span><span class="n">swap</span><span class="p">(</span><span class="n">y</span><span class="p">);</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">y</span><span class="p">.</span><span class="n">data</span><span class="p">()</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">moved_buffer</span><span class="p">);</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">x</span><span class="p">.</span><span class="n">size</span><span class="p">()</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">2</span><span class="p">);</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">x</span><span class="p">.</span><span class="n">is_inlined</span><span class="p">());</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">2</span><span class="p">);</span>
 <span class="p">}</span>
 </pre></div>
 </div>
-<p><strong>Parallel Algorithms</strong></p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">TEST_CASE</span><span class="p">(</span><span class="s">"scheduler parallel processing"</span><span class="p">,</span><span class="w"> </span><span class="s">"[scheduler]"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">scheduler</span><span class="w"> </span><span class="nf">scheduler</span><span class="p">(</span><span class="mi">4</span><span class="p">);</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">workgroup</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">create_workgroup</span><span class="p">();</span>
+</section>
+<section id="coalescing-arena-allocator-retained-arenas">
+<h2>coalescing_arena_allocator: retained arenas<a class="headerlink" href="#coalescing-arena-allocator-retained-arenas" title="Link to this heading"></a></h2>
+<p>One emptied arena per memory class is kept for reuse until <code class="docutils literal notranslate"><span class="pre">trim</span></code>.</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">TEST_CASE</span><span class="p">(</span><span class="s">"coalescing_arena_allocator: emptied arenas are retained for reuse until trimmed"</span><span class="p">,</span>
+<span class="w">          </span><span class="s">"[coalescing_arena_allocator][retain]"</span><span class="p">)</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="n">arena_memory</span><span class="w">                     </span><span class="n">memory</span><span class="p">;</span>
+<span class="w">  </span><span class="n">ouly</span><span class="o">::</span><span class="n">coalescing_arena_allocator</span><span class="w"> </span><span class="n">allocator</span><span class="p">{</span><span class="mi">1024</span><span class="p">};</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">allocator</span><span class="p">.</span><span class="n">get_retained_empty_arenas</span><span class="p">()</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
 
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">begin_execution</span><span class="p">();</span>
+<span class="w">  </span><span class="c1">// a per-frame alloc/free of one object must not create and destroy an arena every frame</span>
+<span class="w">  </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">frame</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">frame</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">8</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">frame</span><span class="p">)</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">allocator</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span><span class="w"> </span><span class="n">memory</span><span class="p">);</span>
+<span class="w">    </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">memory</span><span class="p">.</span><span class="n">active_</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="w">    </span><span class="n">allocator</span><span class="p">.</span><span class="n">deallocate</span><span class="p">(</span><span class="n">a</span><span class="p">.</span><span class="n">get_allocation_id</span><span class="p">(),</span><span class="w"> </span><span class="n">memory</span><span class="p">);</span>
+<span class="w">    </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">memory</span><span class="p">.</span><span class="n">active_</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="w">    </span><span class="n">allocator</span><span class="p">.</span><span class="n">validate_integrity</span><span class="p">();</span>
+<span class="w">  </span><span class="p">}</span>
 
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="w"> </span><span class="n">data</span><span class="p">(</span><span class="mi">1000</span><span class="p">);</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">iota</span><span class="p">(</span><span class="n">data</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span><span class="w"> </span><span class="n">data</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="w">  </span><span class="c1">// only one empty arena per class is kept; a second emptied arena of the class is released</span>
+<span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="n">first</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="n">allocator</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span><span class="w"> </span><span class="n">memory</span><span class="p">);</span>
+<span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="n">second</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">allocator</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span><span class="w"> </span><span class="n">memory</span><span class="p">);</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">memory</span><span class="p">.</span><span class="n">active_</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">2</span><span class="p">);</span>
+<span class="w">  </span><span class="n">allocator</span><span class="p">.</span><span class="n">deallocate</span><span class="p">(</span><span class="n">first</span><span class="p">.</span><span class="n">get_allocation_id</span><span class="p">(),</span><span class="w"> </span><span class="n">memory</span><span class="p">);</span>
+<span class="w">  </span><span class="n">allocator</span><span class="p">.</span><span class="n">deallocate</span><span class="p">(</span><span class="n">second</span><span class="p">.</span><span class="n">get_allocation_id</span><span class="p">(),</span><span class="w"> </span><span class="n">memory</span><span class="p">);</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">memory</span><span class="p">.</span><span class="n">active_</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
 
-<span class="w">    </span><span class="c1">// Parallel processing using task context</span>
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">submit</span><span class="p">(</span><span class="n">workgroup</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="o">&amp;</span><span class="p">](</span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">ctx</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="c1">// Split work across available workers</span>
-<span class="w">        </span><span class="kt">size_t</span><span class="w"> </span><span class="n">chunk_size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">data</span><span class="p">.</span><span class="n">size</span><span class="p">()</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span>
-<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">future</span><span class="o">&lt;</span><span class="kt">void</span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="n">futures</span><span class="p">;</span>
+<span class="w">  </span><span class="c1">// other memory classes keep their own empty arena</span>
+<span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="n">other</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">allocator</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span><span class="w"> </span><span class="n">memory</span><span class="p">,</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">ca_allocation_options</span><span class="p">{.</span><span class="n">memory_class_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="p">});</span>
+<span class="w">  </span><span class="n">allocator</span><span class="p">.</span><span class="n">deallocate</span><span class="p">(</span><span class="n">other</span><span class="p">.</span><span class="n">get_allocation_id</span><span class="p">(),</span><span class="w"> </span><span class="n">memory</span><span class="p">);</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">memory</span><span class="p">.</span><span class="n">active_</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">2</span><span class="p">);</span>
 
-<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">size_t</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="kt">size_t</span><span class="w"> </span><span class="n">start</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">chunk_size</span><span class="p">;</span>
-<span class="w">            </span><span class="kt">size_t</span><span class="w"> </span><span class="n">end</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">3</span><span class="p">)</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="n">data</span><span class="p">.</span><span class="n">size</span><span class="p">()</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">start</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">chunk_size</span><span class="p">;</span>
+<span class="w">  </span><span class="c1">// dedicated arenas are always released</span>
+<span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="n">dedicated</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">allocator</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="mi">4096</span><span class="p">,</span><span class="w"> </span><span class="n">memory</span><span class="p">);</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">memory</span><span class="p">.</span><span class="n">active_</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">3</span><span class="p">);</span>
+<span class="w">  </span><span class="n">allocator</span><span class="p">.</span><span class="n">deallocate</span><span class="p">(</span><span class="n">dedicated</span><span class="p">.</span><span class="n">get_allocation_id</span><span class="p">(),</span><span class="w"> </span><span class="n">memory</span><span class="p">);</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">memory</span><span class="p">.</span><span class="n">active_</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">2</span><span class="p">);</span>
+<span class="w">  </span><span class="n">allocator</span><span class="p">.</span><span class="n">validate_integrity</span><span class="p">();</span>
 
-<span class="w">            </span><span class="k">auto</span><span class="w"> </span><span class="n">future</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">async</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="n">ctx</span><span class="p">.</span><span class="n">current_workgroup</span><span class="p">(),</span>
-<span class="w">                </span><span class="p">[</span><span class="o">&amp;</span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="n">start</span><span class="p">,</span><span class="w"> </span><span class="n">end</span><span class="p">]()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">                    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">size_t</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">start</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">end</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">j</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">                        </span><span class="n">data</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="w"> </span><span class="o">*=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span><span class="w">  </span><span class="c1">// Double each element</span>
-<span class="w">                    </span><span class="p">}</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">allocator</span><span class="p">.</span><span class="n">trim</span><span class="p">(</span><span class="n">memory</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">2</span><span class="p">);</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">memory</span><span class="p">.</span><span class="n">active_</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">allocator</span><span class="p">.</span><span class="n">trim</span><span class="p">(</span><span class="n">memory</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+
+<span class="w">  </span><span class="c1">// retaining nothing restores immediate release</span>
+<span class="w">  </span><span class="n">allocator</span><span class="p">.</span><span class="n">set_retained_empty_arenas</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+<span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="n">again</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">allocator</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span><span class="w"> </span><span class="n">memory</span><span class="p">);</span>
+<span class="w">  </span><span class="n">allocator</span><span class="p">.</span><span class="n">deallocate</span><span class="p">(</span><span class="n">again</span><span class="p">.</span><span class="n">get_allocation_id</span><span class="p">(),</span><span class="w"> </span><span class="n">memory</span><span class="p">);</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">memory</span><span class="p">.</span><span class="n">active_</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+<span class="w">  </span><span class="n">allocator</span><span class="p">.</span><span class="n">validate_integrity</span><span class="p">();</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="memory-mapped-file-ranges">
+<h2>Memory-mapped file ranges<a class="headerlink" href="#memory-mapped-file-ranges" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">map(path,</span> <span class="pre">offset,</span> <span class="pre">length)</span></code> exposes <code class="docutils literal notranslate"><span class="pre">length</span></code> bytes starting at <code class="docutils literal notranslate"><span class="pre">offset</span></code>.</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">TEST_CASE</span><span class="p">(</span><span class="s">"Validate mmap_source with offset"</span><span class="p">,</span><span class="w"> </span><span class="s">"[mmap_source]"</span><span class="p">)</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">filename</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"test_mmap_offset.dat"</span><span class="p">;</span>
+<span class="w">  </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">content</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="s">"0123456789abcdefghij"</span><span class="p">;</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">ofstream</span><span class="w"> </span><span class="nf">file</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">ios</span><span class="o">::</span><span class="n">binary</span><span class="p">);</span>
+<span class="w">    </span><span class="n">file</span><span class="p">.</span><span class="n">write</span><span class="p">(</span><span class="n">content</span><span class="p">.</span><span class="n">c_str</span><span class="p">(),</span><span class="w"> </span><span class="k">static_cast</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">streamsize</span><span class="o">&gt;</span><span class="p">(</span><span class="n">content</span><span class="p">.</span><span class="n">size</span><span class="p">()));</span>
+<span class="w">  </span><span class="p">}</span>
+
+<span class="w">  </span><span class="p">{</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">mmap_source</span><span class="w"> </span><span class="n">source</span><span class="p">;</span>
+<span class="w">    </span><span class="n">source</span><span class="p">.</span><span class="n">map</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="mi">10</span><span class="p">);</span>
+<span class="w">    </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">source</span><span class="p">.</span><span class="n">size</span><span class="p">()</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">10</span><span class="p">);</span>
+<span class="w">    </span><span class="n">REQUIRE</span><span class="p">(</span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">char</span><span class="o">&gt;</span><span class="p">(</span><span class="n">source</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="sc">'5'</span><span class="p">);</span>
+<span class="w">    </span><span class="n">REQUIRE</span><span class="p">(</span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">char</span><span class="o">&gt;</span><span class="p">(</span><span class="n">source</span><span class="p">[</span><span class="mi">9</span><span class="p">])</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="sc">'e'</span><span class="p">);</span>
+
+<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">tail</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">make_mmap_source</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span><span class="w"> </span><span class="mi">15</span><span class="p">,</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">map_entire_file</span><span class="p">);</span>
+<span class="w">    </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">tail</span><span class="p">.</span><span class="n">size</span><span class="p">()</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">5</span><span class="p">);</span>
+<span class="w">    </span><span class="n">REQUIRE</span><span class="p">(</span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">char</span><span class="o">&gt;</span><span class="p">(</span><span class="n">tail</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="sc">'f'</span><span class="p">);</span>
+<span class="w">  </span><span class="p">}</span>
+
+<span class="w">  </span><span class="n">cleanup_test_file</span><span class="p">(</span><span class="n">filename</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="ecs-collections">
+<h2>ECS: collections<a class="headerlink" href="#ecs-collections" title="Link to this heading"></a></h2>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">TEMPLATE_TEST_CASE</span><span class="p">(</span><span class="s">"collection: for_each visits exactly the inserted set across word and pool boundaries"</span><span class="p">,</span>
+<span class="w">                   </span><span class="s">"[ecs][collection]"</span><span class="p">,</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">entity</span><span class="o">&lt;&gt;</span><span class="p">,</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">rxentity</span><span class="o">&lt;&gt;</span><span class="p">)</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="k">using</span><span class="w"> </span><span class="n">E</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">TestType</span><span class="p">;</span>
+<span class="w">  </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">collection</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;</span><span class="w">      </span><span class="n">col</span><span class="p">;</span>
+<span class="w">  </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span><span class="w"> </span><span class="n">E</span><span class="o">&gt;</span><span class="w"> </span><span class="n">comp</span><span class="p">;</span>
+<span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="n">set</span><span class="o">&lt;</span><span class="kt">uint32_t</span><span class="o">&gt;</span><span class="w"> </span><span class="k">const</span><span class="w">      </span><span class="n">ids</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">63</span><span class="p">,</span><span class="w"> </span><span class="mi">64</span><span class="p">,</span><span class="w"> </span><span class="mi">65</span><span class="p">,</span><span class="w"> </span><span class="mi">127</span><span class="p">,</span><span class="w"> </span><span class="mi">128</span><span class="p">,</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w"> </span><span class="mi">4095</span><span class="p">,</span><span class="w"> </span><span class="mi">4096</span><span class="p">,</span><span class="w"> </span><span class="mi">5000</span><span class="p">};</span>
+
+<span class="w">  </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">ids</span><span class="p">)</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">    </span><span class="n">col</span><span class="p">.</span><span class="n">emplace</span><span class="p">(</span><span class="n">E</span><span class="p">(</span><span class="n">id</span><span class="p">));</span>
+<span class="w">    </span><span class="n">comp</span><span class="p">.</span><span class="n">emplace_at</span><span class="p">(</span><span class="n">E</span><span class="p">(</span><span class="n">id</span><span class="p">),</span><span class="w"> </span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">(</span><span class="n">id</span><span class="p">));</span>
+<span class="w">  </span><span class="p">}</span>
+
+<span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="n">set</span><span class="o">&lt;</span><span class="kt">uint32_t</span><span class="o">&gt;</span><span class="w"> </span><span class="n">visited</span><span class="p">;</span>
+<span class="w">  </span><span class="n">col</span><span class="p">.</span><span class="n">for_each</span><span class="p">(</span><span class="n">comp</span><span class="p">,</span>
+<span class="w">               </span><span class="p">[</span><span class="o">&amp;</span><span class="p">](</span><span class="n">E</span><span class="w"> </span><span class="n">e</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="o">&amp;</span><span class="w"> </span><span class="n">v</span><span class="p">)</span>
+<span class="w">               </span><span class="p">{</span>
+<span class="w">                 </span><span class="n">REQUIRE</span><span class="p">(</span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">uint32_t</span><span class="o">&gt;</span><span class="p">(</span><span class="n">v</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">e</span><span class="p">.</span><span class="n">get</span><span class="p">());</span>
+<span class="w">                 </span><span class="n">visited</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">e</span><span class="p">.</span><span class="n">get</span><span class="p">());</span>
+<span class="w">               </span><span class="p">});</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">visited</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">ids</span><span class="p">);</span>
+
+<span class="w">  </span><span class="c1">// Ranged iteration honors [first, last)</span>
+<span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="n">set</span><span class="o">&lt;</span><span class="kt">uint32_t</span><span class="o">&gt;</span><span class="w"> </span><span class="n">ranged</span><span class="p">;</span>
+<span class="w">  </span><span class="n">col</span><span class="p">.</span><span class="n">for_each</span><span class="p">(</span><span class="n">comp</span><span class="p">,</span><span class="w"> </span><span class="mi">63</span><span class="p">,</span><span class="w"> </span><span class="mi">129</span><span class="p">,</span>
+<span class="w">               </span><span class="p">[</span><span class="o">&amp;</span><span class="p">](</span><span class="n">E</span><span class="w"> </span><span class="n">e</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="o">&amp;</span><span class="p">)</span>
+<span class="w">               </span><span class="p">{</span>
+<span class="w">                 </span><span class="n">ranged</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">e</span><span class="p">.</span><span class="n">get</span><span class="p">());</span>
+<span class="w">               </span><span class="p">});</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">ranged</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">set</span><span class="o">&lt;</span><span class="kt">uint32_t</span><span class="o">&gt;</span><span class="p">{</span><span class="mi">63</span><span class="p">,</span><span class="w"> </span><span class="mi">64</span><span class="p">,</span><span class="w"> </span><span class="mi">65</span><span class="p">,</span><span class="w"> </span><span class="mi">127</span><span class="p">,</span><span class="w"> </span><span class="mi">128</span><span class="p">});</span>
+
+<span class="w">  </span><span class="c1">// Erased entities disappear from iteration</span>
+<span class="w">  </span><span class="n">col</span><span class="p">.</span><span class="n">erase</span><span class="p">(</span><span class="n">E</span><span class="p">(</span><span class="mi">64</span><span class="p">));</span>
+<span class="w">  </span><span class="n">col</span><span class="p">.</span><span class="n">erase</span><span class="p">(</span><span class="n">E</span><span class="p">(</span><span class="mi">4096</span><span class="p">));</span>
+<span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="n">set</span><span class="o">&lt;</span><span class="kt">uint32_t</span><span class="o">&gt;</span><span class="w"> </span><span class="n">after_erase</span><span class="p">;</span>
+<span class="w">  </span><span class="n">col</span><span class="p">.</span><span class="n">for_each</span><span class="p">(</span><span class="n">comp</span><span class="p">,</span>
+<span class="w">               </span><span class="p">[</span><span class="o">&amp;</span><span class="p">](</span><span class="n">E</span><span class="w"> </span><span class="n">e</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="o">&amp;</span><span class="p">)</span>
+<span class="w">               </span><span class="p">{</span>
+<span class="w">                 </span><span class="n">after_erase</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">e</span><span class="p">.</span><span class="n">get</span><span class="p">());</span>
+<span class="w">               </span><span class="p">});</span>
+<span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="n">set</span><span class="o">&lt;</span><span class="kt">uint32_t</span><span class="o">&gt;</span><span class="w"> </span><span class="n">expected</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ids</span><span class="p">;</span>
+<span class="w">  </span><span class="n">expected</span><span class="p">.</span><span class="n">erase</span><span class="p">(</span><span class="mi">64</span><span class="p">);</span>
+<span class="w">  </span><span class="n">expected</span><span class="p">.</span><span class="n">erase</span><span class="p">(</span><span class="mi">4096</span><span class="p">);</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">after_erase</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">expected</span><span class="p">);</span>
+
+<span class="w">  </span><span class="c1">// Const overload matches</span>
+<span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="k">const</span><span class="o">&amp;</span><span class="w">        </span><span class="n">ccol</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">col</span><span class="p">;</span>
+<span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="n">set</span><span class="o">&lt;</span><span class="kt">uint32_t</span><span class="o">&gt;</span><span class="w"> </span><span class="n">cvisited</span><span class="p">;</span>
+<span class="w">  </span><span class="n">ccol</span><span class="p">.</span><span class="n">for_each</span><span class="p">(</span><span class="k">static_cast</span><span class="o">&lt;</span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span><span class="w"> </span><span class="n">E</span><span class="o">&gt;</span><span class="w"> </span><span class="k">const</span><span class="o">&amp;&gt;</span><span class="p">(</span><span class="n">comp</span><span class="p">),</span>
+<span class="w">                </span><span class="p">[</span><span class="o">&amp;</span><span class="p">](</span><span class="n">E</span><span class="w"> </span><span class="n">e</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="k">const</span><span class="o">&amp;</span><span class="p">)</span>
+<span class="w">                </span><span class="p">{</span>
+<span class="w">                  </span><span class="n">cvisited</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">e</span><span class="p">.</span><span class="n">get</span><span class="p">());</span>
 <span class="w">                </span><span class="p">});</span>
-<span class="w">            </span><span class="n">futures</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">future</span><span class="p">));</span>
-<span class="w">        </span><span class="p">}</span>
-
-<span class="w">        </span><span class="c1">// Wait for all chunks to complete</span>
-<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">f</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">futures</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="n">f</span><span class="p">.</span><span class="n">wait</span><span class="p">();</span>
-<span class="w">        </span><span class="p">}</span>
-<span class="w">    </span><span class="p">}).</span><span class="n">wait</span><span class="p">();</span>
-
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">end_execution</span><span class="p">();</span>
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">shutdown</span><span class="p">();</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">cvisited</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">expected</span><span class="p">);</span>
 <span class="p">}</span>
 </pre></div>
 </div>
 </section>
-<section id="serialization-examples">
-<h2>Serialization Examples<a class="headerlink" href="#serialization-examples" title="Link to this heading"></a></h2>
-<p><strong>Binary Serialization</strong></p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// From unit_tests/serializers/test_binary_serializer.cpp</span>
-<span class="n">TEST_CASE</span><span class="p">(</span><span class="s">"binary serialization basic types"</span><span class="p">,</span><span class="w"> </span><span class="s">"[serializers]"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">TestData</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">id</span><span class="p">;</span>
-<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">name</span><span class="p">;</span>
-<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span><span class="w"> </span><span class="n">values</span><span class="p">;</span>
-<span class="w">    </span><span class="p">};</span>
+<section id="microexpr-operators-and-identifiers">
+<h2>microexpr: operators and identifiers<a class="headerlink" href="#microexpr-operators-and-identifiers" title="Link to this heading"></a></h2>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">TEST_CASE</span><span class="p">(</span><span class="s">"microexpr: logical operators, negation and identifiers"</span><span class="p">,</span><span class="w"> </span><span class="s">"[microexpr]"</span><span class="p">)</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string_view</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="o">&gt;</span><span class="w"> </span><span class="n">table</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
+<span class="w">   </span><span class="p">{</span><span class="w">      </span><span class="s">"A"</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">},</span>
+<span class="w">   </span><span class="p">{</span><span class="w">      </span><span class="s">"B"</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">},</span>
+<span class="w">   </span><span class="p">{</span><span class="s">"MY_FLAG"</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">},</span>
+<span class="w">  </span><span class="p">};</span>
 
-<span class="w">    </span><span class="n">TestData</span><span class="w"> </span><span class="n">original</span><span class="p">{</span><span class="mi">42</span><span class="p">,</span><span class="w"> </span><span class="s">"test"</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="mf">1.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">3.0f</span><span class="p">}};</span>
+<span class="w">  </span><span class="n">ouly</span><span class="o">::</span><span class="n">microexpr</span><span class="w"> </span><span class="nf">expr</span><span class="p">(</span>
+<span class="w">   </span><span class="p">[</span><span class="o">&amp;</span><span class="n">table</span><span class="p">](</span><span class="n">std</span><span class="o">::</span><span class="n">string_view</span><span class="w"> </span><span class="n">v</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">optional</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span>
+<span class="w">   </span><span class="p">{</span>
+<span class="w">     </span><span class="k">auto</span><span class="w"> </span><span class="n">it</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">table</span><span class="p">.</span><span class="n">find</span><span class="p">(</span><span class="n">v</span><span class="p">);</span>
+<span class="w">     </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">it</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">table</span><span class="p">.</span><span class="n">end</span><span class="p">())</span>
+<span class="w">       </span><span class="k">return</span><span class="w"> </span><span class="p">{</span><span class="n">it</span><span class="o">-&gt;</span><span class="n">second</span><span class="p">};</span>
+<span class="w">     </span><span class="k">return</span><span class="w"> </span><span class="p">{};</span>
+<span class="w">   </span><span class="p">});</span>
 
-<span class="w">    </span><span class="c1">// Serialize</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">binary_stream</span><span class="w"> </span><span class="n">stream</span><span class="p">;</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">write</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">endian</span><span class="o">::</span><span class="n">little</span><span class="o">&gt;</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span><span class="w"> </span><span class="n">original</span><span class="p">);</span>
+<span class="w">  </span><span class="c1">// the right operand of &amp;&amp; / || must be consumed even when the result is already known</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">expr</span><span class="p">.</span><span class="n">evaluate</span><span class="p">(</span><span class="s">"0 &amp;&amp; 1 ? 5 : 0"</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nb">false</span><span class="p">);</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">expr</span><span class="p">.</span><span class="n">evaluate</span><span class="p">(</span><span class="s">"0 &amp;&amp; 1 ? 0 : 5"</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nb">true</span><span class="p">);</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">expr</span><span class="p">.</span><span class="n">evaluate</span><span class="p">(</span><span class="s">"(1 || B)"</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nb">true</span><span class="p">);</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">expr</span><span class="p">.</span><span class="n">evaluate</span><span class="p">(</span><span class="s">"(A || B)"</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nb">true</span><span class="p">);</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">expr</span><span class="p">.</span><span class="n">evaluate</span><span class="p">(</span><span class="s">"(B &amp;&amp; A) == 0"</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nb">true</span><span class="p">);</span>
 
-<span class="w">    </span><span class="c1">// Deserialize</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">binary_stream</span><span class="w"> </span><span class="nf">input</span><span class="p">(</span><span class="n">stream</span><span class="p">.</span><span class="n">data</span><span class="p">(),</span><span class="w"> </span><span class="n">stream</span><span class="p">.</span><span class="n">size</span><span class="p">());</span>
-<span class="w">    </span><span class="n">TestData</span><span class="w"> </span><span class="n">loaded</span><span class="p">;</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">read</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">endian</span><span class="o">::</span><span class="n">little</span><span class="o">&gt;</span><span class="p">(</span><span class="n">input</span><span class="p">,</span><span class="w"> </span><span class="n">loaded</span><span class="p">);</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">expr</span><span class="p">.</span><span class="n">evaluate</span><span class="p">(</span><span class="s">"!B"</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nb">true</span><span class="p">);</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">expr</span><span class="p">.</span><span class="n">evaluate</span><span class="p">(</span><span class="s">"!A"</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nb">false</span><span class="p">);</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">expr</span><span class="p">.</span><span class="n">evaluate</span><span class="p">(</span><span class="s">"!$UNDEFINED"</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nb">true</span><span class="p">);</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">expr</span><span class="p">.</span><span class="n">evaluate</span><span class="p">(</span><span class="s">"$(A) &amp;&amp; !$(UNDEFINED)"</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nb">true</span><span class="p">);</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">expr</span><span class="p">.</span><span class="n">evaluate</span><span class="p">(</span><span class="s">"$( A ) &amp;&amp; $(B)"</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nb">true</span><span class="p">);</span>
 
-<span class="w">    </span><span class="c1">// Verify</span>
-<span class="w">    </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">loaded</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">original</span><span class="p">.</span><span class="n">id</span><span class="p">);</span>
-<span class="w">    </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">loaded</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">original</span><span class="p">.</span><span class="n">name</span><span class="p">);</span>
-<span class="w">    </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">loaded</span><span class="p">.</span><span class="n">values</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">original</span><span class="p">.</span><span class="n">values</span><span class="p">);</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">expr</span><span class="p">.</span><span class="n">evaluate</span><span class="p">(</span><span class="s">"MY_FLAG == 3"</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nb">true</span><span class="p">);</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">expr</span><span class="p">.</span><span class="n">evaluate</span><span class="p">(</span><span class="s">"$MY_FLAG"</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nb">true</span><span class="p">);</span>
+
+<span class="w">  </span><span class="c1">// malformed input must not read past the end</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">expr</span><span class="p">.</span><span class="n">evaluate</span><span class="p">(</span><span class="s">"(1"</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nb">false</span><span class="p">);</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">expr</span><span class="p">.</span><span class="n">evaluate</span><span class="p">(</span><span class="s">"$(A"</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nb">false</span><span class="p">);</span>
+<span class="w">  </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">expr</span><span class="p">.</span><span class="n">evaluate</span><span class="p">(</span><span class="s">""</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nb">false</span><span class="p">);</span>
 <span class="p">}</span>
 </pre></div>
 </div>
-<p><strong>YAML Serialization</strong></p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">TEST_CASE</span><span class="p">(</span><span class="s">"yaml serialization configuration"</span><span class="p">,</span><span class="w"> </span><span class="s">"[serializers]"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">Config</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">app_name</span><span class="p">;</span>
-<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">version</span><span class="p">;</span>
-<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="w"> </span><span class="n">modules</span><span class="p">;</span>
-<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="o">&gt;</span><span class="w"> </span><span class="n">settings</span><span class="p">;</span>
-<span class="w">    </span><span class="p">};</span>
-
-<span class="w">    </span><span class="n">Config</span><span class="w"> </span><span class="n">original</span><span class="p">;</span>
-<span class="w">    </span><span class="n">original</span><span class="p">.</span><span class="n">app_name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"TestApp"</span><span class="p">;</span>
-<span class="w">    </span><span class="n">original</span><span class="p">.</span><span class="n">version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
-<span class="w">    </span><span class="n">original</span><span class="p">.</span><span class="n">modules</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="s">"core"</span><span class="p">,</span><span class="w"> </span><span class="s">"graphics"</span><span class="p">,</span><span class="w"> </span><span class="s">"audio"</span><span class="p">};</span>
-<span class="w">    </span><span class="n">original</span><span class="p">.</span><span class="n">settings</span><span class="p">[</span><span class="s">"max_fps"</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">60</span><span class="p">;</span>
-<span class="w">    </span><span class="n">original</span><span class="p">.</span><span class="n">settings</span><span class="p">[</span><span class="s">"resolution_x"</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1920</span><span class="p">;</span>
-
-<span class="w">    </span><span class="c1">// Serialize to YAML</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">yaml</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">yml</span><span class="o">::</span><span class="n">to_string</span><span class="p">(</span><span class="n">original</span><span class="p">);</span>
-
-<span class="w">    </span><span class="c1">// Deserialize from YAML</span>
-<span class="w">    </span><span class="n">Config</span><span class="w"> </span><span class="n">loaded</span><span class="p">;</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">yml</span><span class="o">::</span><span class="n">from_string</span><span class="p">(</span><span class="n">loaded</span><span class="p">,</span><span class="w"> </span><span class="n">yaml</span><span class="p">);</span>
-
-<span class="w">    </span><span class="c1">// Verify</span>
-<span class="w">    </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">loaded</span><span class="p">.</span><span class="n">app_name</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">original</span><span class="p">.</span><span class="n">app_name</span><span class="p">);</span>
-<span class="w">    </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">loaded</span><span class="p">.</span><span class="n">modules</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">original</span><span class="p">.</span><span class="n">modules</span><span class="p">);</span>
-<span class="w">    </span><span class="n">REQUIRE</span><span class="p">(</span><span class="n">loaded</span><span class="p">.</span><span class="n">settings</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">original</span><span class="p">.</span><span class="n">settings</span><span class="p">);</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-</section>
-<section id="running-specific-examples">
-<h2>Running Specific Examples<a class="headerlink" href="#running-specific-examples" title="Link to this heading"></a></h2>
-<p>To run and study specific examples:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Build with tests</span>
-cmake<span class="w"> </span>--preset<span class="o">=</span>macos-default
-cmake<span class="w"> </span>--build<span class="w"> </span>build/macos-default
-
-<span class="c1"># Run specific test categories</span>
-<span class="nb">cd</span><span class="w"> </span>build/macos-default
-
-<span class="c1"># All allocator examples</span>
-ctest<span class="w"> </span>-R<span class="w"> </span>allocator<span class="w"> </span>-V
-
-<span class="c1"># All container examples</span>
-ctest<span class="w"> </span>-R<span class="w"> </span>container<span class="w"> </span>-V
-
-<span class="c1"># All ECS examples</span>
-ctest<span class="w"> </span>-R<span class="w"> </span>ecs<span class="w"> </span>-V
-
-<span class="c1"># All scheduler examples</span>
-ctest<span class="w"> </span>-R<span class="w"> </span>scheduler<span class="w"> </span>-V
-
-<span class="c1"># All serialization examples</span>
-ctest<span class="w"> </span>-R<span class="w"> </span>serializer<span class="w"> </span>-V
-</pre></div>
-</div>
-<p>The <code class="docutils literal notranslate"><span class="pre">-V</span></code> flag provides verbose output showing the test execution details.</p>
 </section>
 </section>
 

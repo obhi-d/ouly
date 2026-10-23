@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Serialization Tutorial &mdash; OULY 1.0.0 documentation</title>
+  <title>Serialization Tutorial &mdash; OULY 0.1.22 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../_static/graphviz.css?v=4ae1632d" />
@@ -15,14 +15,14 @@
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=8d563738"></script>
+      <script src="../_static/documentation_options.js?v=842aa08f"></script>
       <script src="../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="User Guide" href="../user_guide/index.html" />
-    <link rel="prev" title="Task Scheduler Tutorial" href="scheduler_tutorial.html" /> 
+    <link rel="next" title="Utilities and DSL Tutorial" href="utilities_tutorial.html" />
+    <link rel="prev" title="Entity Component System Tutorial" href="ecs_tutorial.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -48,34 +48,30 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting Started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">Tutorials</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="scheduler_tutorial.html">Task Scheduler Tutorial</a></li>
 <li class="toctree-l2"><a class="reference internal" href="memory_management.html">Memory Management Tutorial</a></li>
 <li class="toctree-l2"><a class="reference internal" href="containers_tutorial.html">Containers Tutorial</a></li>
 <li class="toctree-l2"><a class="reference internal" href="ecs_tutorial.html">Entity Component System Tutorial</a></li>
-<li class="toctree-l2"><a class="reference internal" href="scheduler_tutorial.html">Task Scheduler Tutorial</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Serialization Tutorial</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#serialization-overview">Serialization Overview</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#binary-serialization">Binary Serialization</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#file-i-o-with-binary-serialization">File I/O with Binary Serialization</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#custom-type-serialization">Custom Type Serialization</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#yaml-serialization">YAML Serialization</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#yaml-file-operations">YAML File Operations</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#network-serialization">Network Serialization</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#endianness-handling">Endianness Handling</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#performance-considerations">Performance Considerations</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#best-practices">Best Practices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#describing-types">Describing types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#binary-streams">Binary streams</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#taking-over-the-encoding">Taking over the encoding</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#yaml">YAML</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#other-structured-formats">Other structured formats</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#next-steps">Next Steps</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="utilities_tutorial.html">Utilities and DSL Tutorial</a></li>
 <li class="toctree-l2"><a class="reference internal" href="index.html#overview">Overview</a></li>
-<li class="toctree-l2"><a class="reference internal" href="index.html#prerequisites">Prerequisites</a></li>
-<li class="toctree-l2"><a class="reference internal" href="index.html#getting-help">Getting Help</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../user_guide/index.html">User Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../api_reference/index.html">API Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../examples/index.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../performance/index.html">Performance Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing to OULY</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
 </ul>
 
@@ -106,616 +102,254 @@
              
   <section id="serialization-tutorial">
 <h1>Serialization Tutorial<a class="headerlink" href="#serialization-tutorial" title="Link to this heading"></a></h1>
-<p>OULY provides flexible serialization frameworks for both binary and YAML formats. This tutorial covers efficient data persistence, network protocols, and configuration management.</p>
-<section id="serialization-overview">
-<h2>Serialization Overview<a class="headerlink" href="#serialization-overview" title="Link to this heading"></a></h2>
-<p>OULY supports two main serialization formats:</p>
-<ul class="simple">
-<li><p><strong>Binary Serialization</strong> - High-performance, compact format with endianness control</p></li>
-<li><p><strong>YAML Serialization</strong> - Human-readable format for configuration and data exchange</p></li>
-</ul>
-<p>Both formats support:
-* Custom types and containers
-* Nested structures and STL containers
-* Endianness conversion for cross-platform compatibility
-* Stream-based I/O for memory efficiency</p>
-</section>
-<section id="binary-serialization">
-<h2>Binary Serialization<a class="headerlink" href="#binary-serialization" title="Link to this heading"></a></h2>
-<p>Binary serialization provides optimal performance for data persistence and network protocols:</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/serializers/binary_stream.hpp&gt;</span>
-<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/serializers/binary_serializer.hpp&gt;</span>
-<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;iostream&gt;</span>
-<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;fstream&gt;</span>
-
-<span class="k">struct</span><span class="w"> </span><span class="nc">Player</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">name</span><span class="p">;</span>
-<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">level</span><span class="p">;</span>
-<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">health</span><span class="p">;</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="w"> </span><span class="n">inventory</span><span class="p">;</span>
+<p>Serialization in OULY is driven by compile-time reflection (<code class="docutils literal notranslate"><span class="pre">ouly/reflection/</span></code>). A type
+describes its fields once, and every format uses that description: the binary streams, YAML, and
+any structured format you adapt yourself. Every example on this page compiles against the current
+headers and round-trips its data.</p>
+<section id="describing-types">
+<h2>Describing types<a class="headerlink" href="#describing-types" title="Link to this heading"></a></h2>
+<p><strong>Aggregates</strong> with up to 64 members are reflected automatically; nothing has to be written:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="k">struct</span><span class="w"> </span><span class="nc">material</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w">                </span><span class="n">name</span><span class="p">;</span>
+<span class="w">  </span><span class="kt">float</span><span class="w">                      </span><span class="n">roughness</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.5F</span><span class="p">;</span>
+<span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="w">   </span><span class="n">textures</span><span class="p">{};</span>
+<span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="n">optional</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="w">         </span><span class="n">priority</span><span class="p">{};</span>
+<span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="n">map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="o">&gt;</span><span class="w"> </span><span class="n">flags</span><span class="p">{};</span>
 <span class="p">};</span>
-
-<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="c1">// Create test data</span>
-<span class="w">    </span><span class="n">Player</span><span class="w"> </span><span class="n">player</span><span class="p">;</span>
-<span class="w">    </span><span class="n">player</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"Hero"</span><span class="p">;</span>
-<span class="w">    </span><span class="n">player</span><span class="p">.</span><span class="n">level</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">25</span><span class="p">;</span>
-<span class="w">    </span><span class="n">player</span><span class="p">.</span><span class="n">health</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">87.5f</span><span class="p">;</span>
-<span class="w">    </span><span class="n">player</span><span class="p">.</span><span class="n">inventory</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">8</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">};</span>
-
-<span class="w">    </span><span class="c1">// Serialize to binary stream</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">binary_stream</span><span class="w"> </span><span class="n">output</span><span class="p">;</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">write</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">endian</span><span class="o">::</span><span class="n">little</span><span class="o">&gt;</span><span class="p">(</span><span class="n">output</span><span class="p">,</span><span class="w"> </span><span class="n">player</span><span class="p">);</span>
-
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Serialized size: "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">output</span><span class="p">.</span><span class="n">size</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">" bytes</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-
-<span class="w">    </span><span class="c1">// Deserialize from binary stream</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">binary_stream</span><span class="w"> </span><span class="n">input</span><span class="p">(</span><span class="n">output</span><span class="p">.</span><span class="n">data</span><span class="p">(),</span><span class="w"> </span><span class="n">output</span><span class="p">.</span><span class="n">size</span><span class="p">());</span>
-<span class="w">    </span><span class="n">Player</span><span class="w"> </span><span class="n">loaded_player</span><span class="p">;</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">read</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">endian</span><span class="o">::</span><span class="n">little</span><span class="o">&gt;</span><span class="p">(</span><span class="n">input</span><span class="p">,</span><span class="w"> </span><span class="n">loaded_player</span><span class="p">);</span>
-
-<span class="w">    </span><span class="c1">// Verify data</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Loaded player: "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">loaded_player</span><span class="p">.</span><span class="n">name</span>
-<span class="w">              </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">" (Level "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">loaded_player</span><span class="p">.</span><span class="n">level</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">")</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Health: "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">loaded_player</span><span class="p">.</span><span class="n">health</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Inventory items: "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">loaded_player</span><span class="p">.</span><span class="n">inventory</span><span class="p">.</span><span class="n">size</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-
-<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
-<span class="p">}</span>
 </pre></div>
 </div>
-</section>
-<section id="file-i-o-with-binary-serialization">
-<h2>File I/O with Binary Serialization<a class="headerlink" href="#file-i-o-with-binary-serialization" title="Link to this heading"></a></h2>
-<p>Save and load data to/from files with proper error handling:</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/serializers/binary_stream.hpp&gt;</span>
-<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;fstream&gt;</span>
+<p><strong>Other classes</strong> provide a static <code class="docutils literal notranslate"><span class="pre">reflect()</span></code> built from <code class="docutils literal notranslate"><span class="pre">ouly::bind&lt;&quot;name&quot;,</span> <span class="pre">&amp;Class::member&gt;()</span></code>
+entries:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/reflection/reflection.hpp&gt;</span>
 
-<span class="k">struct</span><span class="w"> </span><span class="nc">GameState</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">current_level</span><span class="p">;</span>
-<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">elapsed_time</span><span class="p">;</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">Player</span><span class="o">&gt;</span><span class="w"> </span><span class="n">players</span><span class="p">;</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="o">&gt;</span><span class="w"> </span><span class="n">statistics</span><span class="p">;</span>
-<span class="p">};</span>
-
-<span class="kt">bool</span><span class="w"> </span><span class="nf">save_game_state</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span><span class="w"> </span><span class="n">filename</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">GameState</span><span class="o">&amp;</span><span class="w"> </span><span class="n">state</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="k">try</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">ofstream</span><span class="w"> </span><span class="n">file</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">ios</span><span class="o">::</span><span class="n">binary</span><span class="p">);</span>
-<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">file</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="n">std</span><span class="o">::</span><span class="n">cerr</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Failed to open file for writing: "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">filename</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span>
-<span class="w">        </span><span class="p">}</span>
-
-<span class="w">        </span><span class="n">ouly</span><span class="o">::</span><span class="n">binary_ostream</span><span class="w"> </span><span class="n">stream</span><span class="p">(</span><span class="n">file</span><span class="p">);</span>
-<span class="w">        </span><span class="n">ouly</span><span class="o">::</span><span class="n">write</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">endian</span><span class="o">::</span><span class="n">little</span><span class="o">&gt;</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span><span class="w"> </span><span class="n">state</span><span class="p">);</span>
-
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nb">true</span><span class="p">;</span>
-<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">exception</span><span class="o">&amp;</span><span class="w"> </span><span class="n">e</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">cerr</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Error saving game state: "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">e</span><span class="p">.</span><span class="n">what</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="p">}</span>
-
-<span class="kt">bool</span><span class="w"> </span><span class="nf">load_game_state</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span><span class="w"> </span><span class="n">filename</span><span class="p">,</span><span class="w"> </span><span class="n">GameState</span><span class="o">&amp;</span><span class="w"> </span><span class="n">state</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="k">try</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">ifstream</span><span class="w"> </span><span class="n">file</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">ios</span><span class="o">::</span><span class="n">binary</span><span class="p">);</span>
-<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">file</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="n">std</span><span class="o">::</span><span class="n">cerr</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Failed to open file for reading: "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">filename</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span>
-<span class="w">        </span><span class="p">}</span>
-
-<span class="w">        </span><span class="n">ouly</span><span class="o">::</span><span class="n">binary_istream</span><span class="w"> </span><span class="n">stream</span><span class="p">(</span><span class="n">file</span><span class="p">);</span>
-<span class="w">        </span><span class="n">ouly</span><span class="o">::</span><span class="n">read</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">endian</span><span class="o">::</span><span class="n">little</span><span class="o">&gt;</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span><span class="w"> </span><span class="n">state</span><span class="p">);</span>
-
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nb">true</span><span class="p">;</span>
-<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">exception</span><span class="o">&amp;</span><span class="w"> </span><span class="n">e</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">cerr</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Error loading game state: "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">e</span><span class="p">.</span><span class="n">what</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="p">}</span>
-
-<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">GameState</span><span class="w"> </span><span class="n">game_state</span><span class="p">;</span>
-<span class="w">    </span><span class="n">game_state</span><span class="p">.</span><span class="n">current_level</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span>
-<span class="w">    </span><span class="n">game_state</span><span class="p">.</span><span class="n">elapsed_time</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">1234.5f</span><span class="p">;</span>
-<span class="w">    </span><span class="n">game_state</span><span class="p">.</span><span class="n">statistics</span><span class="p">[</span><span class="s">"enemies_defeated"</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">127</span><span class="p">;</span>
-<span class="w">    </span><span class="n">game_state</span><span class="p">.</span><span class="n">statistics</span><span class="p">[</span><span class="s">"items_collected"</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">45</span><span class="p">;</span>
-
-<span class="w">    </span><span class="c1">// Save to file</span>
-<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">save_game_state</span><span class="p">(</span><span class="s">"savegame.dat"</span><span class="p">,</span><span class="w"> </span><span class="n">game_state</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Game state saved successfully</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-<span class="w">    </span><span class="p">}</span>
-
-<span class="w">    </span><span class="c1">// Load from file</span>
-<span class="w">    </span><span class="n">GameState</span><span class="w"> </span><span class="n">loaded_state</span><span class="p">;</span>
-<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">load_game_state</span><span class="p">(</span><span class="s">"savegame.dat"</span><span class="p">,</span><span class="w"> </span><span class="n">loaded_state</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Game state loaded successfully</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Current level: "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">loaded_state</span><span class="p">.</span><span class="n">current_level</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Elapsed time: "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">loaded_state</span><span class="p">.</span><span class="n">elapsed_time</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"s</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-<span class="w">    </span><span class="p">}</span>
-
-<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-</section>
-<section id="custom-type-serialization">
-<h2>Custom Type Serialization<a class="headerlink" href="#custom-type-serialization" title="Link to this heading"></a></h2>
-<p>Define serialization for your custom types:</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/serializers/binary_serializer.hpp&gt;</span>
-
-<span class="k">struct</span><span class="w"> </span><span class="nc">Vec3</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">,</span><span class="w"> </span><span class="n">z</span><span class="p">;</span>
-
-<span class="w">    </span><span class="n">Vec3</span><span class="p">()</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">default</span><span class="p">;</span>
-<span class="w">    </span><span class="n">Vec3</span><span class="p">(</span><span class="kt">float</span><span class="w"> </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">y</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">z</span><span class="p">)</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">x</span><span class="p">(</span><span class="n">x</span><span class="p">),</span><span class="w"> </span><span class="n">y</span><span class="p">(</span><span class="n">y</span><span class="p">),</span><span class="w"> </span><span class="n">z</span><span class="p">(</span><span class="n">z</span><span class="p">)</span><span class="w"> </span><span class="p">{}</span>
-<span class="p">};</span>
-
-<span class="c1">// Specialize serialization for Vec3</span>
-<span class="k">namespace</span><span class="w"> </span><span class="nn">ouly</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="k">template</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">endian</span><span class="w"> </span><span class="n">Endian</span><span class="o">&gt;</span>
-<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="n">write</span><span class="p">(</span><span class="n">binary_ostream</span><span class="o">&amp;</span><span class="w"> </span><span class="n">stream</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">Vec3</span><span class="o">&amp;</span><span class="w"> </span><span class="n">vec</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">write</span><span class="o">&lt;</span><span class="n">Endian</span><span class="o">&gt;</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span><span class="w"> </span><span class="n">vec</span><span class="p">.</span><span class="n">x</span><span class="p">);</span>
-<span class="w">        </span><span class="n">write</span><span class="o">&lt;</span><span class="n">Endian</span><span class="o">&gt;</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span><span class="w"> </span><span class="n">vec</span><span class="p">.</span><span class="n">y</span><span class="p">);</span>
-<span class="w">        </span><span class="n">write</span><span class="o">&lt;</span><span class="n">Endian</span><span class="o">&gt;</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span><span class="w"> </span><span class="n">vec</span><span class="p">.</span><span class="n">z</span><span class="p">);</span>
-<span class="w">    </span><span class="p">}</span>
-
-<span class="w">    </span><span class="k">template</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">endian</span><span class="w"> </span><span class="n">Endian</span><span class="o">&gt;</span>
-<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="n">read</span><span class="p">(</span><span class="n">binary_istream</span><span class="o">&amp;</span><span class="w"> </span><span class="n">stream</span><span class="p">,</span><span class="w"> </span><span class="n">Vec3</span><span class="o">&amp;</span><span class="w"> </span><span class="n">vec</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">read</span><span class="o">&lt;</span><span class="n">Endian</span><span class="o">&gt;</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span><span class="w"> </span><span class="n">vec</span><span class="p">.</span><span class="n">x</span><span class="p">);</span>
-<span class="w">        </span><span class="n">read</span><span class="o">&lt;</span><span class="n">Endian</span><span class="o">&gt;</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span><span class="w"> </span><span class="n">vec</span><span class="p">.</span><span class="n">y</span><span class="p">);</span>
-<span class="w">        </span><span class="n">read</span><span class="o">&lt;</span><span class="n">Endian</span><span class="o">&gt;</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span><span class="w"> </span><span class="n">vec</span><span class="p">.</span><span class="n">z</span><span class="p">);</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="p">}</span>
-
-<span class="k">struct</span><span class="w"> </span><span class="nc">Transform</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">Vec3</span><span class="w"> </span><span class="n">position</span><span class="p">;</span>
-<span class="w">    </span><span class="n">Vec3</span><span class="w"> </span><span class="n">rotation</span><span class="p">;</span>
-<span class="w">    </span><span class="n">Vec3</span><span class="w"> </span><span class="n">scale</span><span class="p">;</span>
-
-<span class="w">    </span><span class="n">Transform</span><span class="p">()</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">scale</span><span class="p">(</span><span class="mf">1.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0f</span><span class="p">)</span><span class="w"> </span><span class="p">{}</span>
-<span class="p">};</span>
-
-<span class="c1">// Transform serialization is automatic (uses Vec3 serialization)</span>
-
-<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">Transform</span><span class="w"> </span><span class="n">transform</span><span class="p">;</span>
-<span class="w">    </span><span class="n">transform</span><span class="p">.</span><span class="n">position</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Vec3</span><span class="p">(</span><span class="mf">10.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">20.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">30.0f</span><span class="p">);</span>
-<span class="w">    </span><span class="n">transform</span><span class="p">.</span><span class="n">rotation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Vec3</span><span class="p">(</span><span class="mf">0.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">45.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0f</span><span class="p">);</span>
-<span class="w">    </span><span class="n">transform</span><span class="p">.</span><span class="n">scale</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Vec3</span><span class="p">(</span><span class="mf">2.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0f</span><span class="p">);</span>
-
-<span class="w">    </span><span class="c1">// Serialize custom types</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">binary_stream</span><span class="w"> </span><span class="n">stream</span><span class="p">;</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">write</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">endian</span><span class="o">::</span><span class="n">little</span><span class="o">&gt;</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span><span class="w"> </span><span class="n">transform</span><span class="p">);</span>
-
-<span class="w">    </span><span class="c1">// Deserialize</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">binary_stream</span><span class="w"> </span><span class="n">input</span><span class="p">(</span><span class="n">stream</span><span class="p">.</span><span class="n">data</span><span class="p">(),</span><span class="w"> </span><span class="n">stream</span><span class="p">.</span><span class="n">size</span><span class="p">());</span>
-<span class="w">    </span><span class="n">Transform</span><span class="w"> </span><span class="n">loaded_transform</span><span class="p">;</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">read</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">endian</span><span class="o">::</span><span class="n">little</span><span class="o">&gt;</span><span class="p">(</span><span class="n">input</span><span class="p">,</span><span class="w"> </span><span class="n">loaded_transform</span><span class="p">);</span>
-
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Position: ("</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">loaded_transform</span><span class="p">.</span><span class="n">position</span><span class="p">.</span><span class="n">x</span>
-<span class="w">              </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">", "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">loaded_transform</span><span class="p">.</span><span class="n">position</span><span class="p">.</span><span class="n">y</span>
-<span class="w">              </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">", "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">loaded_transform</span><span class="p">.</span><span class="n">position</span><span class="p">.</span><span class="n">z</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">")</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-
-<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-</section>
-<section id="yaml-serialization">
-<h2>YAML Serialization<a class="headerlink" href="#yaml-serialization" title="Link to this heading"></a></h2>
-<p>YAML provides human-readable configuration and data exchange:</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/serializers/yaml_serializer.hpp&gt;</span>
-<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;iostream&gt;</span>
-
-<span class="k">struct</span><span class="w"> </span><span class="nc">DatabaseConfig</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">host</span><span class="p">;</span>
-<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">port</span><span class="p">;</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">username</span><span class="p">;</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">database_name</span><span class="p">;</span>
-<span class="w">    </span><span class="kt">bool</span><span class="w"> </span><span class="n">use_ssl</span><span class="p">;</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="w"> </span><span class="n">allowed_ips</span><span class="p">;</span>
-<span class="p">};</span>
-
-<span class="k">struct</span><span class="w"> </span><span class="nc">ServerConfig</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">server_name</span><span class="p">;</span>
-<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">max_connections</span><span class="p">;</span>
-<span class="w">    </span><span class="n">DatabaseConfig</span><span class="w"> </span><span class="n">database</span><span class="p">;</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="w"> </span><span class="n">environment_vars</span><span class="p">;</span>
-<span class="p">};</span>
-
-<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="c1">// Create configuration</span>
-<span class="w">    </span><span class="n">ServerConfig</span><span class="w"> </span><span class="n">config</span><span class="p">;</span>
-<span class="w">    </span><span class="n">config</span><span class="p">.</span><span class="n">server_name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"GameServer"</span><span class="p">;</span>
-<span class="w">    </span><span class="n">config</span><span class="p">.</span><span class="n">max_connections</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1000</span><span class="p">;</span>
-<span class="w">    </span><span class="n">config</span><span class="p">.</span><span class="n">database</span><span class="p">.</span><span class="n">host</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"localhost"</span><span class="p">;</span>
-<span class="w">    </span><span class="n">config</span><span class="p">.</span><span class="n">database</span><span class="p">.</span><span class="n">port</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5432</span><span class="p">;</span>
-<span class="w">    </span><span class="n">config</span><span class="p">.</span><span class="n">database</span><span class="p">.</span><span class="n">username</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"gameuser"</span><span class="p">;</span>
-<span class="w">    </span><span class="n">config</span><span class="p">.</span><span class="n">database</span><span class="p">.</span><span class="n">database_name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"gamedb"</span><span class="p">;</span>
-<span class="w">    </span><span class="n">config</span><span class="p">.</span><span class="n">database</span><span class="p">.</span><span class="n">use_ssl</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">true</span><span class="p">;</span>
-<span class="w">    </span><span class="n">config</span><span class="p">.</span><span class="n">database</span><span class="p">.</span><span class="n">allowed_ips</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="s">"192.168.1.0/24"</span><span class="p">,</span><span class="w"> </span><span class="s">"10.0.0.0/8"</span><span class="p">};</span>
-<span class="w">    </span><span class="n">config</span><span class="p">.</span><span class="n">environment_vars</span><span class="p">[</span><span class="s">"LOG_LEVEL"</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"INFO"</span><span class="p">;</span>
-<span class="w">    </span><span class="n">config</span><span class="p">.</span><span class="n">environment_vars</span><span class="p">[</span><span class="s">"MAX_MEMORY"</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"4GB"</span><span class="p">;</span>
-
-<span class="w">    </span><span class="c1">// Serialize to YAML string</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">yaml_data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">yml</span><span class="o">::</span><span class="n">to_string</span><span class="p">(</span><span class="n">config</span><span class="p">);</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"YAML Configuration:</span><span class="se">\n</span><span class="s">"</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">yaml_data</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-
-<span class="w">    </span><span class="c1">// Deserialize from YAML string</span>
-<span class="w">    </span><span class="n">ServerConfig</span><span class="w"> </span><span class="n">loaded_config</span><span class="p">;</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">yml</span><span class="o">::</span><span class="n">from_string</span><span class="p">(</span><span class="n">loaded_config</span><span class="p">,</span><span class="w"> </span><span class="n">yaml_data</span><span class="p">);</span>
-
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Loaded server: "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">loaded_config</span><span class="p">.</span><span class="n">server_name</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Database host: "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">loaded_config</span><span class="p">.</span><span class="n">database</span><span class="p">.</span><span class="n">host</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"SSL enabled: "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="p">(</span><span class="n">loaded_config</span><span class="p">.</span><span class="n">database</span><span class="p">.</span><span class="n">use_ssl</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="s">"yes"</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">"no"</span><span class="p">)</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-
-<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-<p>The output YAML would look like:</p>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">server_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">GameServer</span>
-<span class="nt">max_connections</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1000</span>
-<span class="nt">database</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">localhost</span>
-<span class="w">  </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5432</span>
-<span class="w">  </span><span class="nt">username</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gameuser</span>
-<span class="w">  </span><span class="nt">database_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gamedb</span>
-<span class="w">  </span><span class="nt">use_ssl</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-<span class="w">  </span><span class="nt">allowed_ips</span><span class="p">:</span>
-<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">192.168.1.0/24</span>
-<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10.0.0.0/8</span>
-<span class="nt">environment_vars</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">LOG_LEVEL</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">INFO</span>
-<span class="w">  </span><span class="nt">MAX_MEMORY</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4GB</span>
-</pre></div>
-</div>
-</section>
-<section id="yaml-file-operations">
-<h2>YAML File Operations<a class="headerlink" href="#yaml-file-operations" title="Link to this heading"></a></h2>
-<p>Work with YAML configuration files:</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/serializers/yaml_serializer.hpp&gt;</span>
-<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;fstream&gt;</span>
-
-<span class="kt">bool</span><span class="w"> </span><span class="nf">save_config_yaml</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span><span class="w"> </span><span class="n">filename</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">ServerConfig</span><span class="o">&amp;</span><span class="w"> </span><span class="n">config</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="k">try</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">ofstream</span><span class="w"> </span><span class="n">file</span><span class="p">(</span><span class="n">filename</span><span class="p">);</span>
-<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">file</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="n">std</span><span class="o">::</span><span class="n">cerr</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Failed to open file for writing: "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">filename</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span>
-<span class="w">        </span><span class="p">}</span>
-
-<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">yaml_data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">yml</span><span class="o">::</span><span class="n">to_string</span><span class="p">(</span><span class="n">config</span><span class="p">);</span>
-<span class="w">        </span><span class="n">file</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">yaml_data</span><span class="p">;</span>
-
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nb">true</span><span class="p">;</span>
-<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">exception</span><span class="o">&amp;</span><span class="w"> </span><span class="n">e</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">cerr</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Error saving YAML config: "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">e</span><span class="p">.</span><span class="n">what</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="p">}</span>
-
-<span class="kt">bool</span><span class="w"> </span><span class="nf">load_config_yaml</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span><span class="w"> </span><span class="n">filename</span><span class="p">,</span><span class="w"> </span><span class="n">ServerConfig</span><span class="o">&amp;</span><span class="w"> </span><span class="n">config</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="k">try</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">ifstream</span><span class="w"> </span><span class="n">file</span><span class="p">(</span><span class="n">filename</span><span class="p">);</span>
-<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">file</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="n">std</span><span class="o">::</span><span class="n">cerr</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Failed to open file for reading: "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">filename</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span>
-<span class="w">        </span><span class="p">}</span>
-
-<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">yaml_content</span><span class="p">((</span><span class="n">std</span><span class="o">::</span><span class="n">istreambuf_iterator</span><span class="o">&lt;</span><span class="kt">char</span><span class="o">&gt;</span><span class="p">(</span><span class="n">file</span><span class="p">)),</span>
-<span class="w">                                </span><span class="n">std</span><span class="o">::</span><span class="n">istreambuf_iterator</span><span class="o">&lt;</span><span class="kt">char</span><span class="o">&gt;</span><span class="p">());</span>
-
-<span class="w">        </span><span class="n">ouly</span><span class="o">::</span><span class="n">yml</span><span class="o">::</span><span class="n">from_string</span><span class="p">(</span><span class="n">config</span><span class="p">,</span><span class="w"> </span><span class="n">yaml_content</span><span class="p">);</span>
-
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nb">true</span><span class="p">;</span>
-<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">exception</span><span class="o">&amp;</span><span class="w"> </span><span class="n">e</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">cerr</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Error loading YAML config: "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">e</span><span class="p">.</span><span class="n">what</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="p">}</span>
-
-<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">ServerConfig</span><span class="w"> </span><span class="n">config</span><span class="p">;</span>
-<span class="w">    </span><span class="c1">// ... initialize config ...</span>
-
-<span class="w">    </span><span class="c1">// Save to YAML file</span>
-<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">save_config_yaml</span><span class="p">(</span><span class="s">"server_config.yml"</span><span class="p">,</span><span class="w"> </span><span class="n">config</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Configuration saved to server_config.yml</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-<span class="w">    </span><span class="p">}</span>
-
-<span class="w">    </span><span class="c1">// Load from YAML file</span>
-<span class="w">    </span><span class="n">ServerConfig</span><span class="w"> </span><span class="n">loaded_config</span><span class="p">;</span>
-<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">load_config_yaml</span><span class="p">(</span><span class="s">"server_config.yml"</span><span class="p">,</span><span class="w"> </span><span class="n">loaded_config</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Configuration loaded from server_config.yml</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-<span class="w">    </span><span class="p">}</span>
-
-<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-</section>
-<section id="network-serialization">
-<h2>Network Serialization<a class="headerlink" href="#network-serialization" title="Link to this heading"></a></h2>
-<p>Use binary serialization for network protocols:</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/serializers/binary_stream.hpp&gt;</span>
-<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;vector&gt;</span>
-<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;cstring&gt;</span>
-
-<span class="k">enum</span><span class="w"> </span><span class="k">class</span><span class="w"> </span><span class="nc">MessageType</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="kt">uint8_t</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">PLAYER_MOVE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-<span class="w">    </span><span class="n">PLAYER_ATTACK</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
-<span class="w">    </span><span class="n">GAME_STATE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
-<span class="w">    </span><span class="n">CHAT_MESSAGE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span>
-<span class="p">};</span>
-
-<span class="k">struct</span><span class="w"> </span><span class="nc">NetworkMessage</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">MessageType</span><span class="w"> </span><span class="n">type</span><span class="p">;</span>
-<span class="w">    </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">player_id</span><span class="p">;</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">uint8_t</span><span class="o">&gt;</span><span class="w"> </span><span class="n">payload</span><span class="p">;</span>
-<span class="p">};</span>
-
-<span class="k">struct</span><span class="w"> </span><span class="nc">PlayerMoveData</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">,</span><span class="w"> </span><span class="n">z</span><span class="p">;</span>
-<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">velocity_x</span><span class="p">,</span><span class="w"> </span><span class="n">velocity_y</span><span class="p">,</span><span class="w"> </span><span class="n">velocity_z</span><span class="p">;</span>
-<span class="w">    </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">timestamp</span><span class="p">;</span>
-<span class="p">};</span>
-
-<span class="k">class</span><span class="w"> </span><span class="nc">NetworkProtocol</span><span class="w"> </span><span class="p">{</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">camera</span>
+<span class="p">{</span>
 <span class="k">public</span><span class="o">:</span>
-<span class="w">    </span><span class="k">static</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">uint8_t</span><span class="o">&gt;</span><span class="w"> </span><span class="n">serialize_player_move</span><span class="p">(</span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">player_id</span><span class="p">,</span>
-<span class="w">                                                     </span><span class="k">const</span><span class="w"> </span><span class="n">PlayerMoveData</span><span class="o">&amp;</span><span class="w"> </span><span class="n">move_data</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">ouly</span><span class="o">::</span><span class="n">binary_stream</span><span class="w"> </span><span class="n">stream</span><span class="p">;</span>
+<span class="w">  </span><span class="n">camera</span><span class="p">()</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">default</span><span class="p">;</span>
+<span class="w">  </span><span class="n">camera</span><span class="p">(</span><span class="kt">float</span><span class="w"> </span><span class="n">fov</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">name</span><span class="p">)</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">name_</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">name</span><span class="p">)),</span><span class="w"> </span><span class="n">fov_</span><span class="p">(</span><span class="n">fov</span><span class="p">)</span><span class="w"> </span><span class="p">{}</span>
 
-<span class="w">        </span><span class="c1">// Write header</span>
-<span class="w">        </span><span class="n">ouly</span><span class="o">::</span><span class="n">write</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">endian</span><span class="o">::</span><span class="n">little</span><span class="o">&gt;</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span><span class="w"> </span><span class="n">MessageType</span><span class="o">::</span><span class="n">PLAYER_MOVE</span><span class="p">);</span>
-<span class="w">        </span><span class="n">ouly</span><span class="o">::</span><span class="n">write</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">endian</span><span class="o">::</span><span class="n">little</span><span class="o">&gt;</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span><span class="w"> </span><span class="n">player_id</span><span class="p">);</span>
+<span class="w">  </span><span class="p">[[</span><span class="na">nodiscard</span><span class="p">]]</span><span class="w"> </span><span class="k">auto</span><span class="w"> </span><span class="n">get_fov</span><span class="p">()</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="kt">float</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">fov_</span><span class="p">;</span>
+<span class="w">  </span><span class="p">}</span>
 
-<span class="w">        </span><span class="c1">// Write payload</span>
-<span class="w">        </span><span class="n">ouly</span><span class="o">::</span><span class="n">write</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">endian</span><span class="o">::</span><span class="n">little</span><span class="o">&gt;</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span><span class="w"> </span><span class="n">move_data</span><span class="p">);</span>
+<span class="w">  </span><span class="c1">// Field names and member pointers; reflect() may name private members</span>
+<span class="w">  </span><span class="k">static</span><span class="w"> </span><span class="k">auto</span><span class="w"> </span><span class="n">reflect</span><span class="p">()</span><span class="w"> </span><span class="k">noexcept</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">bind</span><span class="p">(</span><span class="n">ouly</span><span class="o">::</span><span class="n">bind</span><span class="o">&lt;</span><span class="s">"name"</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">camera</span><span class="o">::</span><span class="n">name_</span><span class="o">&gt;</span><span class="p">(),</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">bind</span><span class="o">&lt;</span><span class="s">"fov"</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">camera</span><span class="o">::</span><span class="n">fov_</span><span class="o">&gt;</span><span class="p">());</span>
+<span class="w">  </span><span class="p">}</span>
 
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">uint8_t</span><span class="o">&gt;</span><span class="p">(</span><span class="n">stream</span><span class="p">.</span><span class="n">data</span><span class="p">(),</span><span class="w"> </span><span class="n">stream</span><span class="p">.</span><span class="n">data</span><span class="p">()</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">stream</span><span class="p">.</span><span class="n">size</span><span class="p">());</span>
-<span class="w">    </span><span class="p">}</span>
-
-<span class="w">    </span><span class="k">static</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="n">deserialize_player_move</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">uint8_t</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">data</span><span class="p">,</span>
-<span class="w">                                       </span><span class="kt">uint32_t</span><span class="o">&amp;</span><span class="w"> </span><span class="n">player_id</span><span class="p">,</span>
-<span class="w">                                       </span><span class="n">PlayerMoveData</span><span class="o">&amp;</span><span class="w"> </span><span class="n">move_data</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="k">try</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="n">ouly</span><span class="o">::</span><span class="n">binary_stream</span><span class="w"> </span><span class="nf">stream</span><span class="p">(</span><span class="n">data</span><span class="p">.</span><span class="n">data</span><span class="p">(),</span><span class="w"> </span><span class="n">data</span><span class="p">.</span><span class="n">size</span><span class="p">());</span>
-
-<span class="w">            </span><span class="c1">// Read header</span>
-<span class="w">            </span><span class="n">MessageType</span><span class="w"> </span><span class="n">type</span><span class="p">;</span>
-<span class="w">            </span><span class="n">ouly</span><span class="o">::</span><span class="n">read</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">endian</span><span class="o">::</span><span class="n">little</span><span class="o">&gt;</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span><span class="w"> </span><span class="n">type</span><span class="p">);</span>
-<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">type</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">MessageType</span><span class="o">::</span><span class="n">PLAYER_MOVE</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">                </span><span class="k">return</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span>
-<span class="w">            </span><span class="p">}</span>
-
-<span class="w">            </span><span class="n">ouly</span><span class="o">::</span><span class="n">read</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">endian</span><span class="o">::</span><span class="n">little</span><span class="o">&gt;</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span><span class="w"> </span><span class="n">player_id</span><span class="p">);</span>
-
-<span class="w">            </span><span class="c1">// Read payload</span>
-<span class="w">            </span><span class="n">ouly</span><span class="o">::</span><span class="n">read</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">endian</span><span class="o">::</span><span class="n">little</span><span class="o">&gt;</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span><span class="w"> </span><span class="n">move_data</span><span class="p">);</span>
-
-<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="nb">true</span><span class="p">;</span>
-<span class="w">        </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">exception</span><span class="o">&amp;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span>
-<span class="w">        </span><span class="p">}</span>
-<span class="w">    </span><span class="p">}</span>
+<span class="k">private</span><span class="o">:</span>
+<span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">name_</span><span class="p">;</span>
+<span class="w">  </span><span class="kt">float</span><span class="w">       </span><span class="n">fov_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">60.0F</span><span class="p">;</span>
 <span class="p">};</span>
-
-<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="c1">// Simulate sending a player move message</span>
-<span class="w">    </span><span class="n">PlayerMoveData</span><span class="w"> </span><span class="n">move_data</span><span class="p">;</span>
-<span class="w">    </span><span class="n">move_data</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">100.5f</span><span class="p">;</span>
-<span class="w">    </span><span class="n">move_data</span><span class="p">.</span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">200.3f</span><span class="p">;</span>
-<span class="w">    </span><span class="n">move_data</span><span class="p">.</span><span class="n">z</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">50.0f</span><span class="p">;</span>
-<span class="w">    </span><span class="n">move_data</span><span class="p">.</span><span class="n">velocity_x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">5.0f</span><span class="p">;</span>
-<span class="w">    </span><span class="n">move_data</span><span class="p">.</span><span class="n">velocity_y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.0f</span><span class="p">;</span>
-<span class="w">    </span><span class="n">move_data</span><span class="p">.</span><span class="n">velocity_z</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">2.5f</span><span class="p">;</span>
-<span class="w">    </span><span class="n">move_data</span><span class="p">.</span><span class="n">timestamp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1234567890</span><span class="p">;</span>
-
-<span class="w">    </span><span class="c1">// Serialize for network transmission</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">packet</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">NetworkProtocol</span><span class="o">::</span><span class="n">serialize_player_move</span><span class="p">(</span><span class="mi">42</span><span class="p">,</span><span class="w"> </span><span class="n">move_data</span><span class="p">);</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Packet size: "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">packet</span><span class="p">.</span><span class="n">size</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">" bytes</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-
-<span class="w">    </span><span class="c1">// Simulate receiving the packet</span>
-<span class="w">    </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">received_player_id</span><span class="p">;</span>
-<span class="w">    </span><span class="n">PlayerMoveData</span><span class="w"> </span><span class="n">received_move_data</span><span class="p">;</span>
-
-<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">NetworkProtocol</span><span class="o">::</span><span class="n">deserialize_player_move</span><span class="p">(</span><span class="n">packet</span><span class="p">,</span><span class="w"> </span><span class="n">received_player_id</span><span class="p">,</span><span class="w"> </span><span class="n">received_move_data</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Received move from player "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">received_player_id</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Position: ("</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">received_move_data</span><span class="p">.</span><span class="n">x</span>
-<span class="w">                  </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">", "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">received_move_data</span><span class="p">.</span><span class="n">y</span>
-<span class="w">                  </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">", "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">received_move_data</span><span class="p">.</span><span class="n">z</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">")</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-<span class="w">    </span><span class="p">}</span>
-
-<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
-<span class="p">}</span>
 </pre></div>
 </div>
-</section>
-<section id="endianness-handling">
-<h2>Endianness Handling<a class="headerlink" href="#endianness-handling" title="Link to this heading"></a></h2>
-<p>Handle cross-platform endianness for network protocols and file formats:</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/serializers/binary_stream.hpp&gt;</span>
-<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;bit&gt;</span>
+<p><strong>Properties behind accessors</strong> bind a getter and a setter instead of a member pointer. Member
+functions and free functions both work, <code class="docutils literal notranslate"><span class="pre">noexcept</span></code> or not; the getter may return by value or by
+const reference:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">window</span><span class="p">;</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">get_height</span><span class="p">(</span><span class="n">window</span><span class="w"> </span><span class="k">const</span><span class="o">&amp;</span><span class="w"> </span><span class="n">w</span><span class="p">)</span><span class="w"> </span><span class="k">noexcept</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="kt">int</span><span class="p">;</span>
+<span class="kt">void</span><span class="w"> </span><span class="nf">set_height</span><span class="p">(</span><span class="n">window</span><span class="o">&amp;</span><span class="w"> </span><span class="n">w</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">height</span><span class="p">)</span><span class="w"> </span><span class="k">noexcept</span><span class="p">;</span>
 
-<span class="k">struct</span><span class="w"> </span><span class="nc">NetworkHeader</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">magic_number</span><span class="p">;</span>
-<span class="w">    </span><span class="kt">uint16_t</span><span class="w"> </span><span class="n">version</span><span class="p">;</span>
-<span class="w">    </span><span class="kt">uint16_t</span><span class="w"> </span><span class="n">message_type</span><span class="p">;</span>
-<span class="w">    </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">payload_size</span><span class="p">;</span>
-<span class="p">};</span>
-
-<span class="k">class</span><span class="w"> </span><span class="nc">ProtocolHandler</span><span class="w"> </span><span class="p">{</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">window</span>
+<span class="p">{</span>
 <span class="k">public</span><span class="o">:</span>
-<span class="w">    </span><span class="c1">// Always use network byte order (big endian) for headers</span>
-<span class="w">    </span><span class="k">static</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">uint8_t</span><span class="o">&gt;</span><span class="w"> </span><span class="n">create_packet</span><span class="p">(</span><span class="kt">uint16_t</span><span class="w"> </span><span class="n">message_type</span><span class="p">,</span>
-<span class="w">                                             </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">uint8_t</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">payload</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">NetworkHeader</span><span class="w"> </span><span class="n">header</span><span class="p">;</span>
-<span class="w">        </span><span class="n">header</span><span class="p">.</span><span class="n">magic_number</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mh">0x12345678</span><span class="p">;</span>
-<span class="w">        </span><span class="n">header</span><span class="p">.</span><span class="n">version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
-<span class="w">        </span><span class="n">header</span><span class="p">.</span><span class="n">message_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">message_type</span><span class="p">;</span>
-<span class="w">        </span><span class="n">header</span><span class="p">.</span><span class="n">payload_size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">uint32_t</span><span class="o">&gt;</span><span class="p">(</span><span class="n">payload</span><span class="p">.</span><span class="n">size</span><span class="p">());</span>
+<span class="w">  </span><span class="p">[[</span><span class="na">nodiscard</span><span class="p">]]</span><span class="w"> </span><span class="k">auto</span><span class="w"> </span><span class="n">get_width</span><span class="p">()</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="kt">int</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">width_</span><span class="p">;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="w">  </span><span class="kt">void</span><span class="w"> </span><span class="n">set_width</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">width</span><span class="p">)</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">    </span><span class="n">width_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">width</span><span class="p">;</span>
+<span class="w">  </span><span class="p">}</span>
 
-<span class="w">        </span><span class="n">ouly</span><span class="o">::</span><span class="n">binary_stream</span><span class="w"> </span><span class="n">stream</span><span class="p">;</span>
+<span class="w">  </span><span class="k">static</span><span class="w"> </span><span class="k">auto</span><span class="w"> </span><span class="n">reflect</span><span class="p">()</span><span class="w"> </span><span class="k">noexcept</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">bind</span><span class="p">(</span><span class="n">ouly</span><span class="o">::</span><span class="n">bind</span><span class="o">&lt;</span><span class="s">"width"</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">window</span><span class="o">::</span><span class="n">get_width</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">window</span><span class="o">::</span><span class="n">set_width</span><span class="o">&gt;</span><span class="p">(),</span>
+<span class="w">                      </span><span class="n">ouly</span><span class="o">::</span><span class="n">bind</span><span class="o">&lt;</span><span class="s">"height"</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">get_height</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">set_height</span><span class="o">&gt;</span><span class="p">());</span>
+<span class="w">  </span><span class="p">}</span>
 
-<span class="w">        </span><span class="c1">// Write header in network byte order (big endian)</span>
-<span class="w">        </span><span class="n">ouly</span><span class="o">::</span><span class="n">write</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">endian</span><span class="o">::</span><span class="n">big</span><span class="o">&gt;</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span><span class="w"> </span><span class="n">header</span><span class="p">);</span>
+<span class="k">private</span><span class="o">:</span>
+<span class="w">  </span><span class="k">friend</span><span class="w"> </span><span class="k">auto</span><span class="w"> </span><span class="n">get_height</span><span class="p">(</span><span class="n">window</span><span class="w"> </span><span class="k">const</span><span class="o">&amp;</span><span class="w"> </span><span class="n">w</span><span class="p">)</span><span class="w"> </span><span class="k">noexcept</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="kt">int</span><span class="p">;</span>
+<span class="w">  </span><span class="k">friend</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">set_height</span><span class="p">(</span><span class="n">window</span><span class="o">&amp;</span><span class="w"> </span><span class="n">w</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">height</span><span class="p">)</span><span class="w"> </span><span class="k">noexcept</span><span class="p">;</span>
 
-<span class="w">        </span><span class="c1">// Write payload</span>
-<span class="w">        </span><span class="n">stream</span><span class="p">.</span><span class="n">write</span><span class="p">(</span><span class="n">payload</span><span class="p">.</span><span class="n">data</span><span class="p">(),</span><span class="w"> </span><span class="n">payload</span><span class="p">.</span><span class="n">size</span><span class="p">());</span>
-
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">uint8_t</span><span class="o">&gt;</span><span class="p">(</span><span class="n">stream</span><span class="p">.</span><span class="n">data</span><span class="p">(),</span><span class="w"> </span><span class="n">stream</span><span class="p">.</span><span class="n">data</span><span class="p">()</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">stream</span><span class="p">.</span><span class="n">size</span><span class="p">());</span>
-<span class="w">    </span><span class="p">}</span>
-
-<span class="w">    </span><span class="k">static</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="n">parse_header</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">uint8_t</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="n">NetworkHeader</span><span class="o">&amp;</span><span class="w"> </span><span class="n">header</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">data</span><span class="p">.</span><span class="n">size</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">NetworkHeader</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span>
-<span class="w">        </span><span class="p">}</span>
-
-<span class="w">        </span><span class="k">try</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="n">ouly</span><span class="o">::</span><span class="n">binary_stream</span><span class="w"> </span><span class="nf">stream</span><span class="p">(</span><span class="n">data</span><span class="p">.</span><span class="n">data</span><span class="p">(),</span><span class="w"> </span><span class="n">data</span><span class="p">.</span><span class="n">size</span><span class="p">());</span>
-<span class="w">            </span><span class="n">ouly</span><span class="o">::</span><span class="n">read</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">endian</span><span class="o">::</span><span class="n">big</span><span class="o">&gt;</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span><span class="w"> </span><span class="n">header</span><span class="p">);</span>
-
-<span class="w">            </span><span class="c1">// Validate magic number</span>
-<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="n">header</span><span class="p">.</span><span class="n">magic_number</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mh">0x12345678</span><span class="p">;</span>
-<span class="w">        </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">exception</span><span class="o">&amp;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span>
-<span class="w">        </span><span class="p">}</span>
-<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="kt">int</span><span class="w"> </span><span class="n">width_</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">  </span><span class="kt">int</span><span class="w"> </span><span class="n">height_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
 <span class="p">};</span>
 
-<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="c1">// Create a packet</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">uint8_t</span><span class="o">&gt;</span><span class="w"> </span><span class="n">payload</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span><span class="p">};</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">packet</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ProtocolHandler</span><span class="o">::</span><span class="n">create_packet</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span><span class="w"> </span><span class="n">payload</span><span class="p">);</span>
-
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Created packet with "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">packet</span><span class="p">.</span><span class="n">size</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">" bytes</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-
-<span class="w">    </span><span class="c1">// Parse the header</span>
-<span class="w">    </span><span class="n">NetworkHeader</span><span class="w"> </span><span class="n">header</span><span class="p">;</span>
-<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">ProtocolHandler</span><span class="o">::</span><span class="n">parse_header</span><span class="p">(</span><span class="n">packet</span><span class="p">,</span><span class="w"> </span><span class="n">header</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Valid packet:</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"  Version: "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">header</span><span class="p">.</span><span class="n">version</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"  Message type: "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">header</span><span class="p">.</span><span class="n">message_type</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"  Payload size: "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">header</span><span class="p">.</span><span class="n">payload_size</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-<span class="w">    </span><span class="p">}</span>
-
-<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">get_height</span><span class="p">(</span><span class="n">window</span><span class="w"> </span><span class="k">const</span><span class="o">&amp;</span><span class="w"> </span><span class="n">w</span><span class="p">)</span><span class="w"> </span><span class="k">noexcept</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="kt">int</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="n">w</span><span class="p">.</span><span class="n">height_</span><span class="p">;</span>
 <span class="p">}</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="n">set_height</span><span class="p">(</span><span class="n">window</span><span class="o">&amp;</span><span class="w"> </span><span class="n">w</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">height</span><span class="p">)</span><span class="w"> </span><span class="k">noexcept</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="n">w</span><span class="p">.</span><span class="n">height_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">height</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Types you cannot modify</strong> get a specialization of <code class="docutils literal notranslate"><span class="pre">ouly::reflect&lt;T&gt;()</span></code> instead:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// A type you cannot change: specialize ouly::reflect instead</span>
+<span class="k">struct</span><span class="w"> </span><span class="nc">vec3</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="kt">float</span><span class="w"> </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">,</span><span class="w"> </span><span class="n">z</span><span class="p">;</span>
+<span class="w">  </span><span class="n">vec3</span><span class="p">()</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">default</span><span class="p">;</span>
+<span class="w">  </span><span class="n">vec3</span><span class="p">(</span><span class="kt">float</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">b</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">c</span><span class="p">)</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">x</span><span class="p">(</span><span class="n">a</span><span class="p">),</span><span class="w"> </span><span class="n">y</span><span class="p">(</span><span class="n">b</span><span class="p">),</span><span class="w"> </span><span class="n">z</span><span class="p">(</span><span class="n">c</span><span class="p">)</span><span class="w"> </span><span class="p">{}</span>
+<span class="p">};</span>
+
+<span class="k">template</span><span class="w"> </span><span class="o">&lt;&gt;</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">reflect</span><span class="o">&lt;</span><span class="n">vec3</span><span class="o">&gt;</span><span class="p">()</span><span class="w"> </span><span class="k">noexcept</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">bind</span><span class="p">(</span><span class="n">ouly</span><span class="o">::</span><span class="n">bind</span><span class="o">&lt;</span><span class="s">"x"</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">vec3</span><span class="o">::</span><span class="n">x</span><span class="o">&gt;</span><span class="p">(),</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">bind</span><span class="o">&lt;</span><span class="s">"y"</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">vec3</span><span class="o">::</span><span class="n">y</span><span class="o">&gt;</span><span class="p">(),</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">bind</span><span class="o">&lt;</span><span class="s">"z"</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">vec3</span><span class="o">::</span><span class="n">z</span><span class="o">&gt;</span><span class="p">());</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Value-like types</strong> that should appear as a single value specialize <code class="docutils literal notranslate"><span class="pre">ouly::convert&lt;T&gt;</span></code> with a
+<code class="docutils literal notranslate"><span class="pre">to_type</span></code> that returns a string or number and a matching <code class="docutils literal notranslate"><span class="pre">from_type</span></code>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// Stored as a string in every format</span>
+<span class="k">struct</span><span class="w"> </span><span class="nc">asset_id</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">value</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="k">template</span><span class="w"> </span><span class="o">&lt;&gt;</span>
+<span class="k">struct</span><span class="w"> </span><span class="nc">ouly</span><span class="o">::</span><span class="n">convert</span><span class="o">&lt;</span><span class="n">asset_id</span><span class="o">&gt;</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="k">static</span><span class="w"> </span><span class="k">auto</span><span class="w"> </span><span class="n">to_type</span><span class="p">(</span><span class="n">asset_id</span><span class="w"> </span><span class="k">const</span><span class="o">&amp;</span><span class="w"> </span><span class="n">id</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="s">"asset:"</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">to_string</span><span class="p">(</span><span class="n">id</span><span class="p">.</span><span class="n">value</span><span class="p">);</span>
+<span class="w">  </span><span class="p">}</span>
+
+<span class="w">  </span><span class="k">static</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">from_type</span><span class="p">(</span><span class="n">asset_id</span><span class="o">&amp;</span><span class="w"> </span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string_view</span><span class="w"> </span><span class="n">text</span><span class="p">)</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">from_chars</span><span class="p">(</span><span class="n">text</span><span class="p">.</span><span class="n">substr</span><span class="p">(</span><span class="mi">6</span><span class="p">),</span><span class="w"> </span><span class="n">id</span><span class="p">.</span><span class="n">value</span><span class="p">);</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+<p>Standard types work out of the box: integers, floating point, <code class="docutils literal notranslate"><span class="pre">bool</span></code>, enums (as their underlying
+value), strings and string views, sequence containers, maps, <code class="docutils literal notranslate"><span class="pre">std::array</span></code>, <code class="docutils literal notranslate"><span class="pre">std::pair</span></code> and
+<code class="docutils literal notranslate"><span class="pre">std::tuple</span></code>, <code class="docutils literal notranslate"><span class="pre">std::optional</span></code>, <code class="docutils literal notranslate"><span class="pre">std::variant</span></code>, <code class="docutils literal notranslate"><span class="pre">std::unique_ptr</span></code> and <code class="docutils literal notranslate"><span class="pre">std::shared_ptr</span></code>
+(created on read when null), OULY containers such as <code class="docutils literal notranslate"><span class="pre">dynamic_array</span></code>, <code class="docutils literal notranslate"><span class="pre">small_vector</span></code> and <code class="docutils literal notranslate"><span class="pre">soavector</span></code>, and
+nested combinations of all of these.</p>
+</section>
+<section id="binary-streams">
+<h2>Binary streams<a class="headerlink" href="#binary-streams" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">ouly::write(stream,</span> <span class="pre">value)</span></code> and <code class="docutils literal notranslate"><span class="pre">ouly::read(stream,</span> <span class="pre">value)</span></code> (<code class="docutils literal notranslate"><span class="pre">ouly/serializers/serializers.hpp</span></code>)
+take any stream with <code class="docutils literal notranslate"><span class="pre">write(std::byte</span> <span class="pre">const*,</span> <span class="pre">size_t)</span></code> or <code class="docutils literal notranslate"><span class="pre">read(std::byte*,</span> <span class="pre">size_t)</span></code> and
+<code class="docutils literal notranslate"><span class="pre">skip(size_t)</span></code>. The byte order is a template argument and defaults to little endian:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/serializers/binary_stream.hpp&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/serializers/serializers.hpp&gt;</span>
+
+<span class="n">material</span><span class="w"> </span><span class="n">in</span><span class="p">{.</span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"rock"</span><span class="p">,</span><span class="w"> </span><span class="p">.</span><span class="n">roughness</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.9F</span><span class="p">,</span><span class="w"> </span><span class="p">.</span><span class="n">textures</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="s">"albedo.png"</span><span class="p">,</span><span class="w"> </span><span class="s">"normal.png"</span><span class="p">}};</span>
+
+<span class="n">ouly</span><span class="o">::</span><span class="n">binary_output_stream</span><span class="w"> </span><span class="n">out</span><span class="p">;</span><span class="w"> </span><span class="c1">// grows an in-memory buffer</span>
+<span class="n">ouly</span><span class="o">::</span><span class="n">write</span><span class="p">(</span><span class="n">out</span><span class="p">,</span><span class="w"> </span><span class="n">in</span><span class="p">);</span><span class="w">           </span><span class="c1">// little endian</span>
+<span class="n">ouly</span><span class="o">::</span><span class="n">write</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">endian</span><span class="o">::</span><span class="n">big</span><span class="o">&gt;</span><span class="p">(</span><span class="n">out</span><span class="p">,</span><span class="w"> </span><span class="n">in</span><span class="p">);</span>
+
+<span class="n">ouly</span><span class="o">::</span><span class="n">binary_input_stream</span><span class="w"> </span><span class="nf">bin</span><span class="p">(</span><span class="n">out</span><span class="p">.</span><span class="n">get_string</span><span class="p">());</span><span class="w"> </span><span class="c1">// reads from a view of the bytes</span>
+<span class="n">material</span><span class="w">                  </span><span class="n">little</span><span class="p">,</span><span class="w"> </span><span class="n">big</span><span class="p">;</span>
+<span class="n">ouly</span><span class="o">::</span><span class="n">read</span><span class="p">(</span><span class="n">bin</span><span class="p">,</span><span class="w"> </span><span class="n">little</span><span class="p">);</span>
+<span class="n">ouly</span><span class="o">::</span><span class="n">read</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">endian</span><span class="o">::</span><span class="n">big</span><span class="o">&gt;</span><span class="p">(</span><span class="n">bin</span><span class="p">,</span><span class="w"> </span><span class="n">big</span><span class="p">);</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">binary_output_stream</span></code> owns a growing <code class="docutils literal notranslate"><span class="pre">std::vector&lt;std::byte&gt;</span></code> (<code class="docutils literal notranslate"><span class="pre">release()</span></code> hands it over,
+<code class="docutils literal notranslate"><span class="pre">get_string()</span></code> views it) and <code class="docutils literal notranslate"><span class="pre">binary_input_stream</span></code> reads from a <code class="docutils literal notranslate"><span class="pre">std::span&lt;std::byte</span> <span class="pre">const&gt;</span></code>.
+For files and other <code class="docutils literal notranslate"><span class="pre">std::iostream</span></code>s, use <code class="docutils literal notranslate"><span class="pre">binary_ostream</span></code> and <code class="docutils literal notranslate"><span class="pre">binary_istream</span></code>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="n">ofstream</span><span class="w">   </span><span class="n">file</span><span class="p">(</span><span class="s">"materials.bin"</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">ios</span><span class="o">::</span><span class="n">binary</span><span class="p">);</span>
+<span class="w">  </span><span class="n">ouly</span><span class="o">::</span><span class="n">binary_ostream</span><span class="w"> </span><span class="nf">stream</span><span class="p">(</span><span class="n">file</span><span class="p">);</span><span class="w"> </span><span class="c1">// wraps a std::ostream</span>
+<span class="w">  </span><span class="n">ouly</span><span class="o">::</span><span class="n">write</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span><span class="w"> </span><span class="n">in</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="n">std</span><span class="o">::</span><span class="n">ifstream</span><span class="w">       </span><span class="n">file</span><span class="p">(</span><span class="s">"materials.bin"</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">ios</span><span class="o">::</span><span class="n">binary</span><span class="p">);</span>
+<span class="n">ouly</span><span class="o">::</span><span class="n">binary_istream</span><span class="w"> </span><span class="nf">stream</span><span class="p">(</span><span class="n">file</span><span class="p">);</span><span class="w"> </span><span class="c1">// wraps a std::istream</span>
+<span class="n">material</span><span class="w">            </span><span class="n">loaded</span><span class="p">;</span>
+<span class="n">ouly</span><span class="o">::</span><span class="n">read</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span><span class="w"> </span><span class="n">loaded</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>Reading past the end of the data throws.</p>
+<section id="taking-over-the-encoding">
+<h3>Taking over the encoding<a class="headerlink" href="#taking-over-the-encoding" title="Link to this heading"></a></h3>
+<p>A type can write its own bytes by providing <code class="docutils literal notranslate"><span class="pre">operator&lt;&lt;</span></code> and <code class="docutils literal notranslate"><span class="pre">operator&gt;&gt;</span></code> for the stream type.
+The serializer uses them in place of reflection, including for elements of containers:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// Full control over the bytes: operators on the stream type itself</span>
+<span class="k">struct</span><span class="w"> </span><span class="nc">packed_color</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="kt">uint8_t</span><span class="w"> </span><span class="n">r</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">g</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">b</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">255</span><span class="p">;</span>
+
+<span class="w">  </span><span class="k">friend</span><span class="w"> </span><span class="k">auto</span><span class="w"> </span><span class="k">operator</span><span class="o">&lt;&lt;</span><span class="p">(</span><span class="n">ouly</span><span class="o">::</span><span class="n">binary_output_stream</span><span class="o">&amp;</span><span class="w"> </span><span class="n">out</span><span class="p">,</span><span class="w"> </span><span class="n">packed_color</span><span class="w"> </span><span class="k">const</span><span class="o">&amp;</span><span class="w"> </span><span class="n">c</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">binary_output_stream</span><span class="o">&amp;</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="kt">byte</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">bytes</span><span class="p">[]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="n">std</span><span class="o">::</span><span class="kt">byte</span><span class="p">{</span><span class="n">c</span><span class="p">.</span><span class="n">r</span><span class="p">},</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="kt">byte</span><span class="p">{</span><span class="n">c</span><span class="p">.</span><span class="n">g</span><span class="p">},</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="kt">byte</span><span class="p">{</span><span class="n">c</span><span class="p">.</span><span class="n">b</span><span class="p">},</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="kt">byte</span><span class="p">{</span><span class="n">c</span><span class="p">.</span><span class="n">a</span><span class="p">}};</span>
+<span class="w">    </span><span class="n">out</span><span class="p">.</span><span class="n">write</span><span class="p">(</span><span class="n">bytes</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">bytes</span><span class="p">));</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">out</span><span class="p">;</span>
+<span class="w">  </span><span class="p">}</span>
+
+<span class="w">  </span><span class="k">friend</span><span class="w"> </span><span class="k">auto</span><span class="w"> </span><span class="k">operator</span><span class="o">&gt;&gt;</span><span class="p">(</span><span class="n">ouly</span><span class="o">::</span><span class="n">binary_input_stream</span><span class="o">&amp;</span><span class="w"> </span><span class="n">in</span><span class="p">,</span><span class="w"> </span><span class="n">packed_color</span><span class="o">&amp;</span><span class="w"> </span><span class="n">c</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">binary_input_stream</span><span class="o">&amp;</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="kt">byte</span><span class="w"> </span><span class="n">bytes</span><span class="p">[</span><span class="mi">4</span><span class="p">];</span>
+<span class="w">    </span><span class="n">in</span><span class="p">.</span><span class="n">read</span><span class="p">(</span><span class="n">bytes</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">bytes</span><span class="p">));</span>
+<span class="w">    </span><span class="n">c</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="n">std</span><span class="o">::</span><span class="n">to_integer</span><span class="o">&lt;</span><span class="kt">uint8_t</span><span class="o">&gt;</span><span class="p">(</span><span class="n">bytes</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">to_integer</span><span class="o">&lt;</span><span class="kt">uint8_t</span><span class="o">&gt;</span><span class="p">(</span><span class="n">bytes</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">to_integer</span><span class="o">&lt;</span><span class="kt">uint8_t</span><span class="o">&gt;</span><span class="p">(</span><span class="n">bytes</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span>
+<span class="w">         </span><span class="n">std</span><span class="o">::</span><span class="n">to_integer</span><span class="o">&lt;</span><span class="kt">uint8_t</span><span class="o">&gt;</span><span class="p">(</span><span class="n">bytes</span><span class="p">[</span><span class="mi">3</span><span class="p">])};</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">in</span><span class="p">;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">packed_color</span><span class="o">&gt;</span><span class="w">  </span><span class="n">palette</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{{</span><span class="mi">255</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">255</span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">255</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">255</span><span class="p">}};</span>
+<span class="n">ouly</span><span class="o">::</span><span class="n">binary_output_stream</span><span class="w"> </span><span class="n">colors</span><span class="p">;</span>
+<span class="n">ouly</span><span class="o">::</span><span class="n">write</span><span class="p">(</span><span class="n">colors</span><span class="p">,</span><span class="w"> </span><span class="n">palette</span><span class="p">);</span>
+
+<span class="n">ouly</span><span class="o">::</span><span class="n">binary_input_stream</span><span class="w">  </span><span class="nf">colors_in</span><span class="p">(</span><span class="n">colors</span><span class="p">.</span><span class="n">get_string</span><span class="p">());</span>
+<span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">packed_color</span><span class="o">&gt;</span><span class="w"> </span><span class="n">read_back</span><span class="p">;</span>
+<span class="n">ouly</span><span class="o">::</span><span class="n">read</span><span class="p">(</span><span class="n">colors_in</span><span class="p">,</span><span class="w"> </span><span class="n">read_back</span><span class="p">);</span>
 </pre></div>
 </div>
 </section>
-<section id="performance-considerations">
-<h2>Performance Considerations<a class="headerlink" href="#performance-considerations" title="Link to this heading"></a></h2>
-<p><strong>Binary vs YAML Performance</strong></p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;chrono&gt;</span>
-
-<span class="kt">void</span><span class="w"> </span><span class="nf">benchmark_serialization</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">Player</span><span class="o">&gt;</span><span class="w"> </span><span class="n">players</span><span class="p">(</span><span class="mi">1000</span><span class="p">);</span>
-<span class="w">    </span><span class="c1">// Initialize players...</span>
-
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">start_time</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">chrono</span><span class="o">::</span><span class="n">high_resolution_clock</span><span class="o">::</span><span class="n">now</span><span class="p">();</span>
-
-<span class="w">    </span><span class="c1">// Binary serialization</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">binary_stream</span><span class="w"> </span><span class="n">binary_stream</span><span class="p">;</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">write</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">endian</span><span class="o">::</span><span class="n">little</span><span class="o">&gt;</span><span class="p">(</span><span class="n">binary_stream</span><span class="p">,</span><span class="w"> </span><span class="n">players</span><span class="p">);</span>
-
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">binary_time</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">chrono</span><span class="o">::</span><span class="n">high_resolution_clock</span><span class="o">::</span><span class="n">now</span><span class="p">();</span>
-
-<span class="w">    </span><span class="c1">// YAML serialization</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">yaml_data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">yml</span><span class="o">::</span><span class="n">to_string</span><span class="p">(</span><span class="n">players</span><span class="p">);</span>
-
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">yaml_time</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">chrono</span><span class="o">::</span><span class="n">high_resolution_clock</span><span class="o">::</span><span class="n">now</span><span class="p">();</span>
-
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">binary_duration</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">chrono</span><span class="o">::</span><span class="n">duration_cast</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">chrono</span><span class="o">::</span><span class="n">microseconds</span><span class="o">&gt;</span><span class="p">(</span>
-<span class="w">        </span><span class="n">binary_time</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_time</span><span class="p">);</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">yaml_duration</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">chrono</span><span class="o">::</span><span class="n">duration_cast</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">chrono</span><span class="o">::</span><span class="n">microseconds</span><span class="o">&gt;</span><span class="p">(</span>
-<span class="w">        </span><span class="n">yaml_time</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">binary_time</span><span class="p">);</span>
-
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Binary serialization: "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">binary_duration</span><span class="p">.</span><span class="n">count</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">" μs, "</span>
-<span class="w">              </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">binary_stream</span><span class="p">.</span><span class="n">size</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">" bytes</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"YAML serialization: "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">yaml_duration</span><span class="p">.</span><span class="n">count</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">" μs, "</span>
-<span class="w">              </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">yaml_data</span><span class="p">.</span><span class="n">size</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">" bytes</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-<p><strong>Memory Efficiency</strong></p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// Use reserve() for known data sizes</span>
-<span class="kt">void</span><span class="w"> </span><span class="nf">efficient_serialization</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">LargeObject</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">objects</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">binary_stream</span><span class="w"> </span><span class="n">stream</span><span class="p">;</span>
-
-<span class="w">    </span><span class="c1">// Estimate size to avoid reallocations</span>
-<span class="w">    </span><span class="kt">size_t</span><span class="w"> </span><span class="n">estimated_size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">objects</span><span class="p">.</span><span class="n">size</span><span class="p">()</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">LargeObject</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span><span class="w">  </span><span class="c1">// Conservative estimate</span>
-<span class="w">    </span><span class="n">stream</span><span class="p">.</span><span class="n">reserve</span><span class="p">(</span><span class="n">estimated_size</span><span class="p">);</span>
-
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">write</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">endian</span><span class="o">::</span><span class="n">little</span><span class="o">&gt;</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span><span class="w"> </span><span class="n">objects</span><span class="p">);</span>
-<span class="p">}</span>
-
-<span class="c1">// Use streaming for large datasets</span>
-<span class="kt">void</span><span class="w"> </span><span class="nf">stream_large_dataset</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span><span class="w"> </span><span class="n">filename</span><span class="p">,</span>
-<span class="w">                         </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">LargeObject</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">objects</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">ofstream</span><span class="w"> </span><span class="n">file</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">ios</span><span class="o">::</span><span class="n">binary</span><span class="p">);</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">binary_ostream</span><span class="w"> </span><span class="n">stream</span><span class="p">(</span><span class="n">file</span><span class="p">);</span>
-
-<span class="w">    </span><span class="c1">// Write count first</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">write</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">endian</span><span class="o">::</span><span class="n">little</span><span class="o">&gt;</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span><span class="w"> </span><span class="n">objects</span><span class="p">.</span><span class="n">size</span><span class="p">());</span>
-
-<span class="w">    </span><span class="c1">// Stream objects one by one</span>
-<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">obj</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">objects</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">ouly</span><span class="o">::</span><span class="n">write</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">endian</span><span class="o">::</span><span class="n">little</span><span class="o">&gt;</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span><span class="w"> </span><span class="n">obj</span><span class="p">);</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="p">}</span>
-</pre></div>
-</div>
 </section>
-<section id="best-practices">
-<h2>Best Practices<a class="headerlink" href="#best-practices" title="Link to this heading"></a></h2>
-<ol class="arabic simple">
-<li><p><strong>Format Selection</strong></p>
-<ul class="simple">
-<li><p>Use binary for performance-critical applications (games, networking)</p></li>
-<li><p>Use YAML for configuration files and human-readable data</p></li>
-<li><p>Consider compression for large binary data</p></li>
-</ul>
-</li>
-<li><p><strong>Endianness</strong></p>
-<ul class="simple">
-<li><p>Always specify endianness explicitly</p></li>
-<li><p>Use network byte order (big endian) for network protocols</p></li>
-<li><p>Use little endian for most file formats (more common on modern systems)</p></li>
-</ul>
-</li>
-<li><p><strong>Error Handling</strong></p>
-<ul class="simple">
-<li><p>Always handle serialization exceptions</p></li>
-<li><p>Validate data before deserializing</p></li>
-<li><p>Use versioning for backward compatibility</p></li>
-</ul>
-</li>
-<li><p><strong>Performance</strong></p>
-<ul class="simple">
-<li><p>Reserve buffer space for known data sizes</p></li>
-<li><p>Use streaming for large datasets</p></li>
-<li><p>Profile serialization performance in your specific use case</p></li>
-</ul>
-</li>
-<li><p><strong>Security</strong></p>
-<ul class="simple">
-<li><p>Validate input data bounds and ranges</p></li>
-<li><p>Sanitize strings and containers</p></li>
-<li><p>Use checksums for data integrity</p></li>
-</ul>
-</li>
-</ol>
+<section id="yaml">
+<h2>YAML<a class="headerlink" href="#yaml" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">ouly::yml::to_string</span></code> and <code class="docutils literal notranslate"><span class="pre">ouly::yml::from_string</span></code> (<code class="docutils literal notranslate"><span class="pre">ouly/serializers/lite_yml.hpp</span></code>) write
+and parse a YAML subset that covers what the serializer produces: block mappings and sequences,
+compact <code class="docutils literal notranslate"><span class="pre">[a,</span> <span class="pre">b]</span></code> sequences, quoted and plain scalars, and <code class="docutils literal notranslate"><span class="pre">|</span></code>/<code class="docutils literal notranslate"><span class="pre">&gt;</span></code> block scalars.</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/serializers/lite_yml.hpp&gt;</span>
+
+<span class="n">scene</span><span class="w"> </span><span class="n">s</span><span class="p">;</span>
+<span class="n">s</span><span class="p">.</span><span class="n">materials</span><span class="p">.</span><span class="n">push_back</span><span class="p">({.</span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"rock"</span><span class="p">,</span><span class="w"> </span><span class="p">.</span><span class="n">textures</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="s">"albedo.png"</span><span class="p">},</span><span class="w"> </span><span class="p">.</span><span class="n">priority</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">});</span>
+<span class="n">s</span><span class="p">.</span><span class="n">tag</span><span class="w">         </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">(</span><span class="s">"outdoor"</span><span class="p">);</span>
+<span class="n">s</span><span class="p">.</span><span class="n">main_camera</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">make_unique</span><span class="o">&lt;</span><span class="n">camera</span><span class="o">&gt;</span><span class="p">(</span><span class="mf">75.0F</span><span class="p">,</span><span class="w"> </span><span class="s">"main"</span><span class="p">);</span>
+<span class="n">s</span><span class="p">.</span><span class="n">sky</span><span class="w">         </span><span class="o">=</span><span class="w"> </span><span class="n">asset_id</span><span class="p">{</span><span class="mi">42</span><span class="p">};</span>
+
+<span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">yaml</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">yml</span><span class="o">::</span><span class="n">to_string</span><span class="p">(</span><span class="n">s</span><span class="p">);</span>
+
+<span class="n">scene</span><span class="w"> </span><span class="n">loaded</span><span class="p">;</span>
+<span class="n">ouly</span><span class="o">::</span><span class="n">yml</span><span class="o">::</span><span class="n">from_string</span><span class="p">(</span><span class="n">loaded</span><span class="p">,</span><span class="w"> </span><span class="n">yaml</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>Fields are written under their reflected names, an empty <code class="docutils literal notranslate"><span class="pre">std::optional</span></code> is written as
+<code class="docutils literal notranslate"><span class="pre">null</span></code>, and a <code class="docutils literal notranslate"><span class="pre">std::variant</span></code> is written as a mapping with its <code class="docutils literal notranslate"><span class="pre">type</span></code> index and <code class="docutils literal notranslate"><span class="pre">value</span></code>. When reading, missing fields keep their current value, so default member
+initializers act as defaults.</p>
+<p>For polymorphic data, <code class="docutils literal notranslate"><span class="pre">ouly::yml::runtime_type_registry</span></code> (<code class="docutils literal notranslate"><span class="pre">ouly::stream_type_registry</span></code>) maps type
+ids to registered types for fields of type <code class="docutils literal notranslate"><span class="pre">ouly::runtime_type</span></code>; see
+<code class="docutils literal notranslate"><span class="pre">unit_tests/yaml_runtime_type.cpp</span></code>.</p>
+</section>
+<section id="other-structured-formats">
+<h2>Other structured formats<a class="headerlink" href="#other-structured-formats" title="Link to this heading"></a></h2>
+<p>The same <code class="docutils literal notranslate"><span class="pre">ouly::read</span></code>/<code class="docutils literal notranslate"><span class="pre">ouly::write</span></code> calls accept any value that models
+<code class="docutils literal notranslate"><span class="pre">ouly::StructuredInputStream</span></code> or <code class="docutils literal notranslate"><span class="pre">ouly::StructuredOutputStream</span></code> (<code class="docutils literal notranslate"><span class="pre">ouly/serializers/serializers.hpp</span></code>).
+An input stream answers <code class="docutils literal notranslate"><span class="pre">is_object()</span></code>, <code class="docutils literal notranslate"><span class="pre">is_array()</span></code>, <code class="docutils literal notranslate"><span class="pre">is_null()</span></code>, <code class="docutils literal notranslate"><span class="pre">size()</span></code>, <code class="docutils literal notranslate"><span class="pre">at(key)</span></code>,
+<code class="docutils literal notranslate"><span class="pre">at(index)</span></code>, <code class="docutils literal notranslate"><span class="pre">for_each_entry</span></code> and <code class="docutils literal notranslate"><span class="pre">as_bool</span></code>/<code class="docutils literal notranslate"><span class="pre">as_int64</span></code>/<code class="docutils literal notranslate"><span class="pre">as_uint64</span></code>/<code class="docutils literal notranslate"><span class="pre">as_double</span></code>/<code class="docutils literal notranslate"><span class="pre">as_string</span></code>;
+an output stream receives <code class="docutils literal notranslate"><span class="pre">begin_object</span></code>/<code class="docutils literal notranslate"><span class="pre">end_object</span></code>, <code class="docutils literal notranslate"><span class="pre">begin_array</span></code>/<code class="docutils literal notranslate"><span class="pre">end_array</span></code>, <code class="docutils literal notranslate"><span class="pre">key</span></code>,
+the <code class="docutils literal notranslate"><span class="pre">as_*</span></code> value calls, <code class="docutils literal notranslate"><span class="pre">as_null</span></code> and <code class="docutils literal notranslate"><span class="pre">next_map_entry</span></code>/<code class="docutils literal notranslate"><span class="pre">next_array_entry</span></code>.
+<code class="docutils literal notranslate"><span class="pre">unit_tests/input_serializer.cpp</span></code> and <code class="docutils literal notranslate"><span class="pre">unit_tests/output_serializer.cpp</span></code> adapt
+<a class="reference external" href="https://github.com/nlohmann/json">nlohmann::json</a> this way.</p>
 </section>
 <section id="next-steps">
 <h2>Next Steps<a class="headerlink" href="#next-steps" title="Link to this heading"></a></h2>
 <ul class="simple">
-<li><p>Learn about <a class="reference internal" href="memory_management.html"><span class="doc">Memory Management Tutorial</span></a> for optimized serialization buffers</p></li>
-<li><p>Explore <a class="reference internal" href="containers_tutorial.html"><span class="doc">Containers Tutorial</span></a> for serializable container types</p></li>
-<li><p>Check <a class="reference internal" href="../performance/index.html"><span class="doc">Performance Guide</span></a> for serialization optimization techniques</p></li>
+<li><p><a class="reference internal" href="utilities_tutorial.html"><span class="doc">Utilities and DSL Tutorial</span></a> for the event-driven YAML parser in <code class="docutils literal notranslate"><span class="pre">ouly/dsl/lite_yml.hpp</span></code></p></li>
+<li><p><a class="reference internal" href="containers_tutorial.html"><span class="doc">Containers Tutorial</span></a> for containers that serialize directly</p></li>
 </ul>
 </section>
 </section>
@@ -724,8 +358,8 @@
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="scheduler_tutorial.html" class="btn btn-neutral float-left" title="Task Scheduler Tutorial" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="../user_guide/index.html" class="btn btn-neutral float-right" title="User Guide" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="ecs_tutorial.html" class="btn btn-neutral float-left" title="Entity Component System Tutorial" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="utilities_tutorial.html" class="btn btn-neutral float-right" title="Utilities and DSL Tutorial" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Performance Guide &mdash; OULY 1.0.0 documentation</title>
+  <title>Performance Guide &mdash; OULY 0.1.22 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../_static/graphviz.css?v=4ae1632d" />
@@ -15,13 +15,13 @@
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=8d563738"></script>
+      <script src="../_static/documentation_options.js?v=842aa08f"></script>
       <script src="../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Contributing to OULY" href="../contributing.html" />
+    <link rel="next" title="Contributing" href="../contributing.html" />
     <link rel="prev" title="Unit Test Examples" href="../examples/unit_test_examples.html" /> 
 </head>
 
@@ -52,18 +52,12 @@
 <li class="toctree-l1"><a class="reference internal" href="../api_reference/index.html">API Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../examples/index.html">Examples</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Performance Guide</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#performance-philosophy">Performance Philosophy</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#optimization-strategies">Optimization Strategies</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#profiling-and-analysis">Profiling and Analysis</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#platform-specific-optimizations">Platform-Specific Optimizations</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#scaling-considerations">Scaling Considerations</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#performance-testing">Performance Testing</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#common-performance-pitfalls">Common Performance Pitfalls</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#continuous-performance-monitoring">Continuous Performance Monitoring</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#benchmarks">Benchmarks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#performance-notes">Performance notes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#profiling">Profiling</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing to OULY</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
 </ul>
 
@@ -93,319 +87,91 @@
              
   <section id="performance-guide">
 <h1>Performance Guide<a class="headerlink" href="#performance-guide" title="Link to this heading"></a></h1>
-<p>Optimization techniques and performance analysis for OULY components.</p>
-<div class="toctree-wrapper compound">
+<p>OULY ships benchmarks that compare its components with Intel oneTBB and with one another. This page
+describes how to build and run them, and collects the performance-relevant behaviour documented in
+the tutorials.</p>
+<section id="benchmarks">
+<h2>Benchmarks<a class="headerlink" href="#benchmarks" title="Link to this heading"></a></h2>
+<p>The benchmarks are <code class="docutils literal notranslate"><span class="pre">unit_tests/bench_*.cpp</span></code>, built with <code class="docutils literal notranslate"><span class="pre">-DOULY_BUILD_BENCHMARKS=ON</span></code>. CMake
+fetches <a class="reference external" href="https://github.com/martinus/nanobench">nanobench</a> and
+<a class="reference external" href="https://github.com/oneapi-src/oneTBB">oneTBB</a> for them and copies the TBB runtime next to the
+executables.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cmake<span class="w"> </span>-S<span class="w"> </span>.<span class="w"> </span>-B<span class="w"> </span>build-bench<span class="w"> </span>-G<span class="w"> </span>Ninja<span class="w"> </span>-DCMAKE_BUILD_TYPE<span class="o">=</span>Release<span class="w"> </span><span class="se">\</span>
+<span class="w">      </span>-DOULY_BUILD_TESTS<span class="o">=</span>ON<span class="w"> </span>-DOULY_BUILD_BENCHMARKS<span class="o">=</span>ON
+cmake<span class="w"> </span>--build<span class="w"> </span>build-bench
+<span class="nb">cd</span><span class="w"> </span>build-bench/unit_tests
+./bench_scheduler_comparison
+</pre></div>
 </div>
-<section id="overview">
-<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
-<p>This section covers performance optimization with OULY, including:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 30.0%" />
+<col style="width: 70.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Executable</p></th>
+<th class="head"><p>Measures</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">bench_scheduler_comparison</span></code></p></td>
+<td><p>Task submission, <code class="docutils literal notranslate"><span class="pre">parallel_for</span></code> over vectors, matrix operations, a mixed workload and task
+throughput for <code class="docutils literal notranslate"><span class="pre">v1::scheduler</span></code> and <code class="docutils literal notranslate"><span class="pre">v2::scheduler</span></code> against oneTBB.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">bench_coroutine_comparison</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">co_task</span></code>/<code class="docutils literal notranslate"><span class="pre">co_sequence</span></code> chains and fan-out/fan-in against TBB equivalents.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">bench_performance</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">ts_shared_linear_allocator</span></code>, <code class="docutils literal notranslate"><span class="pre">ts_thread_local_allocator</span></code> and
+<code class="docutils literal notranslate"><span class="pre">coalescing_arena_allocator</span></code> allocation, reset and fragmentation.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">bench_offset_allocators</span></code></p></td>
+<td><p>Runs the same deterministic allocate/free trace through the offset allocators and reports
+nanoseconds per free+allocate pair, fragmentation and the cost of a full defragmentation.
+<code class="docutils literal notranslate"><span class="pre">bench_offset_allocators</span> <span class="pre">validate</span></code> checks placements for overlap and alignment instead.</p></td>
+</tr>
+</tbody>
+</table>
+<p>The nanobench-based benchmarks print tables and write JSON results named
+<code class="docutils literal notranslate"><span class="pre">&lt;compiler&gt;-&lt;commit&gt;-&lt;build&gt;-&lt;test&gt;.json</span></code>; the commit and build number come from the
+<code class="docutils literal notranslate"><span class="pre">GITHUB_SHA</span></code> and <code class="docutils literal notranslate"><span class="pre">GITHUB_RUN_NUMBER</span></code> environment variables (<code class="docutils literal notranslate"><span class="pre">local</span></code> and <code class="docutils literal notranslate"><span class="pre">0</span></code> otherwise).
+<code class="docutils literal notranslate"><span class="pre">bench_performance</span></code> also accepts an output file name as its first argument.</p>
+<p>Run benchmarks on an otherwise idle machine, in a Release build, and compare results from the same
+machine only.</p>
+</section>
+<section id="performance-notes">
+<h2>Performance notes<a class="headerlink" href="#performance-notes" title="Link to this heading"></a></h2>
+<p><strong>Scheduling</strong></p>
 <ul class="simple">
-<li><p><strong>Optimization Guide</strong> - Techniques for maximizing performance</p></li>
-<li><p><strong>Memory Profiling</strong> - Tools and techniques for memory analysis</p></li>
-<li><p><strong>Parallel Performance</strong> - Scaling and threading considerations</p></li>
-<li><p><strong>Best Practices</strong> - Proven patterns for high-performance applications</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">submit</span></code> stores the callable in a 64-byte inline delegate and never allocates; <code class="docutils literal notranslate"><span class="pre">submit_task</span></code>
+and <code class="docutils literal notranslate"><span class="pre">task_scope</span></code> allocate a node per task (from a <code class="docutils literal notranslate"><span class="pre">scheduler_allocator</span></code> if you pass one).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">get(ctx)</span></code>, <code class="docutils literal notranslate"><span class="pre">wait(ctx)</span></code> and <code class="docutils literal notranslate"><span class="pre">cooperative_wait</span></code> run queued work while they wait;
+<code class="docutils literal notranslate"><span class="pre">task_scope::join(ctx)</span></code> only runs the scope’s own children.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">auto_parallel_for</span></code> splits stolen ranges further, which pays off for uneven work; for uniform
+work <code class="docutils literal notranslate"><span class="pre">parallel_for</span></code> with suitable <code class="docutils literal notranslate"><span class="pre">batches_per_worker</span></code> is slightly cheaper.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">v3::scheduler</span></code> lets idle workers sleep as soon as nothing is queued for them, at the cost of a
+wake-up when work arrives; <code class="docutils literal notranslate"><span class="pre">v2</span></code> workers keep spinning while any task runs.</p></li>
+</ul>
+<p><strong>Memory</strong></p>
+<ul class="simple">
+<li><p>Linear allocators turn per-frame allocation into a pointer bump and freeing into a <code class="docutils literal notranslate"><span class="pre">rewind</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">coalescing_allocator</span></code> and <code class="docutils literal notranslate"><span class="pre">coalescing_arena_allocator</span></code> allocate and free in O(1) regardless
+of the number of live allocations, and the arena allocator keeps one empty arena per memory class
+so allocate/free cycles do not create and destroy backing memory.</p></li>
+<li><p>Defragmentation runs incrementally under a byte and move budget per call.</p></li>
+</ul>
+<p><strong>Containers</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">small_vector</span></code> keeps its heap buffer once it has one; call <code class="docutils literal notranslate"><span class="pre">shrink_to_fit</span></code> to give it back.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">soavector</span></code> stores each member contiguously, so loops over one member load only that member.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">block_vector</span></code> keeps storage a multiple of the block size so SIMD loops need no scalar tail.</p></li>
 </ul>
 </section>
-<section id="performance-philosophy">
-<h2>Performance Philosophy<a class="headerlink" href="#performance-philosophy" title="Link to this heading"></a></h2>
-<p>OULY is designed with performance as a primary goal:</p>
-<dl class="simple">
-<dt><strong>Zero-Cost Abstractions</strong></dt><dd><p>Template-heavy design that compiles to optimal machine code.</p>
-</dd>
-<dt><strong>Cache-Friendly Design</strong></dt><dd><p>Structure of Arrays (SoA) patterns and memory layout optimization.</p>
-</dd>
-<dt><strong>Lock-Free Algorithms</strong></dt><dd><p>Atomic operations and work-stealing for minimal contention.</p>
-</dd>
-<dt><strong>Memory Layout Optimization</strong></dt><dd><p>Structure of Arrays (SoA) patterns and cache-friendly access.</p>
-</dd>
-</dl>
-</section>
-<section id="optimization-strategies">
-<h2>Optimization Strategies<a class="headerlink" href="#optimization-strategies" title="Link to this heading"></a></h2>
-<p><strong>Memory Access Patterns</strong></p>
-<p>Optimize for cache efficiency:</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// Poor: Array of Structures (AoS)</span>
-<span class="k">struct</span><span class="w"> </span><span class="nc">Particle</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">,</span><span class="w"> </span><span class="n">z</span><span class="p">,</span><span class="w"> </span><span class="n">mass</span><span class="p">;</span><span class="w"> </span><span class="p">};</span>
-<span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">Particle</span><span class="o">&gt;</span><span class="w"> </span><span class="n">particles</span><span class="p">;</span>
-
-<span class="c1">// Better: Structure of Arrays (SoA)</span>
-<span class="k">struct</span><span class="w"> </span><span class="nc">Particle</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">,</span><span class="w"> </span><span class="n">z</span><span class="p">,</span><span class="w"> </span><span class="n">mass</span><span class="p">;</span><span class="w"> </span><span class="p">};</span>
-<span class="n">ouly</span><span class="o">::</span><span class="n">soavector</span><span class="o">&lt;</span><span class="n">Particle</span><span class="o">&gt;</span><span class="w"> </span><span class="n">particles</span><span class="p">;</span>
-
-<span class="c1">// Access individual components</span>
-<span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">x_coords</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">particles</span><span class="p">.</span><span class="n">get</span><span class="o">&lt;</span><span class="mi">0</span><span class="o">&gt;</span><span class="p">();</span><span class="w">  </span><span class="c1">// x coordinates</span>
-<span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">y_coords</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">particles</span><span class="p">.</span><span class="n">get</span><span class="o">&lt;</span><span class="mi">1</span><span class="o">&gt;</span><span class="p">();</span><span class="w">  </span><span class="c1">// y coordinates</span>
-<span class="c1">// Process arrays with vectorized operations</span>
-</pre></div>
-</div>
-<p><strong>Memory Allocation Strategies</strong></p>
-<p>Choose allocators based on usage patterns:</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// Frame-based allocations (games)</span>
-<span class="n">ouly</span><span class="o">::</span><span class="n">linear_allocator</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">frame_allocator</span><span class="p">(</span><span class="mi">1024</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="p">);</span>
-
-<span class="c1">// Fixed-size objects (object pools)</span>
-<span class="n">ouly</span><span class="o">::</span><span class="n">pool_allocator</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">entity_pool</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="n">Entity</span><span class="p">),</span><span class="w"> </span><span class="mi">10000</span><span class="p">);</span>
-
-<span class="c1">// Growing collections (dynamic content)</span>
-<span class="n">ouly</span><span class="o">::</span><span class="n">linear_arena_allocator</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">dynamic_allocator</span><span class="p">(</span><span class="mi">1024</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="p">);</span>
-</pre></div>
-</div>
-<p><strong>Parallel Processing Optimization</strong></p>
-<p>Optimize task granularity and work distribution:</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// Optimal grain size for parallel algorithms</span>
-<span class="k">constexpr</span><span class="w"> </span><span class="kt">size_t</span><span class="w"> </span><span class="n">OPTIMAL_GRAIN_SIZE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1000</span><span class="p">;</span><span class="w">  </span><span class="c1">// Tune for your hardware</span>
-
-<span class="kt">void</span><span class="w"> </span><span class="nf">parallel_process</span><span class="p">(</span><span class="n">ouly</span><span class="o">::</span><span class="n">task_context</span><span class="o">&amp;</span><span class="w"> </span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span><span class="w"> </span><span class="n">data</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">data</span><span class="p">.</span><span class="n">size</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="n">OPTIMAL_GRAIN_SIZE</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="c1">// Process directly</span>
-<span class="w">        </span><span class="n">process_range</span><span class="p">(</span><span class="n">data</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span><span class="w"> </span><span class="n">data</span><span class="p">.</span><span class="n">end</span><span class="p">());</span>
-<span class="w">        </span><span class="k">return</span><span class="p">;</span>
-<span class="w">    </span><span class="p">}</span>
-
-<span class="w">    </span><span class="c1">// Split work</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">mid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">data</span><span class="p">.</span><span class="n">begin</span><span class="p">()</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">data</span><span class="p">.</span><span class="n">size</span><span class="p">()</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span>
-
-<span class="w">    </span><span class="c1">// Process halves in parallel</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">left_future</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">async</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="n">ctx</span><span class="p">.</span><span class="n">current_workgroup</span><span class="p">(),</span>
-<span class="w">        </span><span class="p">[</span><span class="o">&amp;</span><span class="p">](</span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">ctx</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">parallel_process</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="n">data</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span><span class="w"> </span><span class="n">mid</span><span class="p">});</span><span class="w"> </span><span class="p">});</span>
-
-<span class="w">    </span><span class="n">parallel_process</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="n">mid</span><span class="p">,</span><span class="w"> </span><span class="n">data</span><span class="p">.</span><span class="n">end</span><span class="p">()});</span>
-<span class="w">    </span><span class="n">left_future</span><span class="p">.</span><span class="n">wait</span><span class="p">();</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-<p><strong>Compilation Optimization</strong></p>
-<p>Enable compiler optimizations for maximum performance:</p>
-<div class="highlight-cmake notranslate"><div class="highlight"><pre><span></span><span class="c"># CMake optimization flags</span>
-<span class="nb">set</span><span class="p">(</span><span class="s">CMAKE_CXX_FLAGS_RELEASE</span><span class="w"> </span><span class="s2">"-O3 -DNDEBUG -march=native -flto"</span><span class="p">)</span>
-
-<span class="c"># Enable link-time optimization</span>
-<span class="nb">set_property</span><span class="p">(</span><span class="s">TARGET</span><span class="w"> </span><span class="s">your_target</span><span class="w"> </span><span class="s">PROPERTY</span><span class="w"> </span><span class="s">INTERPROCEDURAL_OPTIMIZATION</span><span class="w"> </span><span class="s">TRUE</span><span class="p">)</span>
-</pre></div>
-</div>
-</section>
-<section id="profiling-and-analysis">
-<h2>Profiling and Analysis<a class="headerlink" href="#profiling-and-analysis" title="Link to this heading"></a></h2>
-<p><strong>Memory Profiling with Valgrind</strong></p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Memory usage analysis</span>
-valgrind<span class="w"> </span>--tool<span class="o">=</span>massif<span class="w"> </span>./your_program
-ms_print<span class="w"> </span>massif.out.*<span class="w"> </span>&gt;<span class="w"> </span>memory_profile.txt
-
-<span class="c1"># Cache miss analysis</span>
-valgrind<span class="w"> </span>--tool<span class="o">=</span>cachegrind<span class="w"> </span>./your_program
-cg_annotate<span class="w"> </span>cachegrind.out.*<span class="w"> </span>&gt;<span class="w"> </span>cache_analysis.txt
-</pre></div>
-</div>
-<p><strong>CPU Profiling with perf</strong></p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Profile CPU usage</span>
-perf<span class="w"> </span>record<span class="w"> </span>-g<span class="w"> </span>./your_program
-perf<span class="w"> </span>report<span class="w"> </span>&gt;<span class="w"> </span>cpu_profile.txt
-
-<span class="c1"># Analyze memory access patterns</span>
-perf<span class="w"> </span>mem<span class="w"> </span>record<span class="w"> </span>./your_program
-perf<span class="w"> </span>mem<span class="w"> </span>report<span class="w"> </span>&gt;<span class="w"> </span>memory_access.txt
-</pre></div>
-</div>
-<p><strong>OULY Built-in Profiling</strong></p>
-<p>Enable statistics collection for performance analysis:</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// Enable allocator statistics</span>
-<span class="k">using</span><span class="w"> </span><span class="n">DebugConfig</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">config</span><span class="o">&lt;</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">cfg</span><span class="o">::</span><span class="n">compute_stats</span><span class="p">,</span><span class="w">     </span><span class="c1">// Basic statistics</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">cfg</span><span class="o">::</span><span class="n">track_memory</span><span class="w">       </span><span class="c1">// Memory tracking</span>
-<span class="o">&gt;</span><span class="p">;</span>
-<span class="n">ouly</span><span class="o">::</span><span class="n">linear_allocator</span><span class="o">&lt;</span><span class="n">DebugConfig</span><span class="o">&gt;</span><span class="w"> </span><span class="n">allocator</span><span class="p">(</span><span class="mi">1024</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="p">);</span>
-
-<span class="c1">// ... use allocator ...</span>
-
-<span class="c1">// Access statistics if available (implementation-dependent)</span>
-<span class="c1">// Check allocator documentation for statistics access methods</span>
-</pre></div>
-</div>
-</section>
-<section id="platform-specific-optimizations">
-<h2>Platform-Specific Optimizations<a class="headerlink" href="#platform-specific-optimizations" title="Link to this heading"></a></h2>
-<p><strong>x86_64 Optimizations</strong></p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// Enable AVX/AVX2 for vectorized operations</span>
-<span class="cp">#ifdef __AVX2__</span>
-<span class="c1">// Use OULY's SIMD-optimized containers</span>
-<span class="k">struct</span><span class="w"> </span><span class="nc">Position</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">,</span><span class="w"> </span><span class="n">z</span><span class="p">;</span><span class="w"> </span><span class="p">};</span>
-<span class="n">ouly</span><span class="o">::</span><span class="n">soavector</span><span class="o">&lt;</span><span class="n">Position</span><span class="o">&gt;</span><span class="w"> </span><span class="n">positions</span><span class="p">;</span>
-<span class="cp">#endif</span>
-
-<span class="c1">// Optimize for specific CPU architectures</span>
-<span class="cp">#ifdef __INTEL_COMPILER</span>
-<span class="cp">#pragma intel optimization_level 3</span>
-<span class="cp">#endif</span>
-</pre></div>
-</div>
-<p><strong>ARM Optimizations</strong></p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// NEON SIMD optimizations</span>
-<span class="cp">#ifdef __ARM_NEON</span>
-<span class="c1">// ARM-specific optimizations</span>
-<span class="cp">#endif</span>
-
-<span class="c1">// Apple Silicon optimizations</span>
-<span class="cp">#ifdef __aarch64__</span>
-<span class="c1">// 64-bit ARM optimizations</span>
-<span class="cp">#endif</span>
-</pre></div>
-</div>
-</section>
-<section id="scaling-considerations">
-<h2>Scaling Considerations<a class="headerlink" href="#scaling-considerations" title="Link to this heading"></a></h2>
-<p><strong>Thread Scaling</strong></p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// Optimal thread count</span>
-<span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">optimal_threads</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">min</span><span class="p">(</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="kr">thread</span><span class="o">::</span><span class="n">hardware_concurrency</span><span class="p">(),</span>
-<span class="w">    </span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="o">&gt;</span><span class="p">(</span><span class="n">workload_size</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">MIN_WORK_PER_THREAD</span><span class="p">)</span>
-<span class="p">);</span>
-
-<span class="n">ouly</span><span class="o">::</span><span class="n">scheduler</span><span class="w"> </span><span class="nf">scheduler</span><span class="p">(</span><span class="n">optimal_threads</span><span class="p">);</span>
-
-<span class="c1">// Create workgroups BEFORE begin_execution</span>
-<span class="k">auto</span><span class="w"> </span><span class="n">workgroup</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">create_workgroup</span><span class="p">();</span>
-
-<span class="c1">// Begin execution</span>
-<span class="n">scheduler</span><span class="p">.</span><span class="n">begin_execution</span><span class="p">();</span>
-
-<span class="c1">// ... use scheduler ...</span>
-
-<span class="n">scheduler</span><span class="p">.</span><span class="n">end_execution</span><span class="p">();</span>
-<span class="n">scheduler</span><span class="p">.</span><span class="n">shutdown</span><span class="p">();</span>
-</pre></div>
-</div>
-<p><strong>Memory Scaling</strong></p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// Scale allocator sizes based on expected load</span>
-<span class="kt">size_t</span><span class="w"> </span><span class="n">memory_budget</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">get_available_memory</span><span class="p">()</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">0.8</span><span class="p">;</span><span class="w">  </span><span class="c1">// 80% of available</span>
-
-<span class="n">ouly</span><span class="o">::</span><span class="n">linear_arena_allocator</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">allocator</span><span class="p">(</span><span class="n">memory_budget</span><span class="p">);</span>
-</pre></div>
-</div>
-<p><strong>Manual NUMA Optimization</strong></p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// OULY scheduler does not have built-in NUMA support</span>
-<span class="c1">// For NUMA optimization, manually configure:</span>
-
-<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;numa.h&gt;</span><span class="w">  </span><span class="c1">// Linux NUMA API</span>
-
-<span class="kt">void</span><span class="w"> </span><span class="nf">setup_numa_optimization</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="c1">// 1. Set thread affinity manually</span>
-<span class="w">    </span><span class="c1">// 2. Allocate memory on appropriate NUMA nodes</span>
-<span class="w">    </span><span class="c1">// 3. Partition work based on NUMA topology</span>
-
-<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">numa_available</span><span class="p">()</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">num_nodes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">numa_num_configured_nodes</span><span class="p">();</span>
-<span class="w">        </span><span class="c1">// Configure based on NUMA topology</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-</section>
-<section id="performance-testing">
-<h2>Performance Testing<a class="headerlink" href="#performance-testing" title="Link to this heading"></a></h2>
-<p><strong>Performance Testing with External Tools</strong></p>
-<p>For comprehensive performance testing, integrate with external benchmarking libraries:</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;benchmark/benchmark.h&gt;</span>
-<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/ouly.hpp&gt;</span>
-
-<span class="k">static</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">BM_LinearAllocator</span><span class="p">(</span><span class="n">benchmark</span><span class="o">::</span><span class="n">State</span><span class="o">&amp;</span><span class="w"> </span><span class="n">state</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">linear_allocator</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">allocator</span><span class="p">(</span><span class="mi">1024</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="p">);</span>
-
-<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="n">_</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">state</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">ptr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">allocator</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="mi">64</span><span class="p">);</span>
-<span class="w">        </span><span class="n">benchmark</span><span class="o">::</span><span class="n">DoNotOptimize</span><span class="p">(</span><span class="n">ptr</span><span class="p">);</span>
-<span class="w">        </span><span class="n">allocator</span><span class="p">.</span><span class="n">deallocate</span><span class="p">(</span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="mi">64</span><span class="p">);</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="p">}</span>
-<span class="n">BENCHMARK</span><span class="p">(</span><span class="n">BM_LinearAllocator</span><span class="p">);</span>
-</pre></div>
-</div>
-<p><strong>Performance Monitoring in CI</strong></p>
-<div class="highlight-cmake notranslate"><div class="highlight"><pre><span></span><span class="c"># Add performance tests to CMake (using external benchmark library)</span>
-<span class="nb">find_package</span><span class="p">(</span><span class="s">benchmark</span><span class="w"> </span><span class="s">REQUIRED</span><span class="p">)</span>
-<span class="nb">add_executable</span><span class="p">(</span><span class="s">performance_tests</span><span class="w"> </span><span class="s">performance_tests.cpp</span><span class="p">)</span>
-<span class="nb">target_link_libraries</span><span class="p">(</span><span class="s">performance_tests</span><span class="w"> </span><span class="s">ouly::ouly</span><span class="w"> </span><span class="s">benchmark::benchmark</span><span class="p">)</span>
-
-<span class="c"># Run performance tests in CI</span>
-<span class="nb">add_test</span><span class="p">(</span><span class="s">NAME</span><span class="w"> </span><span class="s">performance_regression_test</span><span class="w"> </span><span class="s">COMMAND</span><span class="w"> </span><span class="s">performance_tests</span><span class="p">)</span>
-</pre></div>
-</div>
-</section>
-<section id="common-performance-pitfalls">
-<h2>Common Performance Pitfalls<a class="headerlink" href="#common-performance-pitfalls" title="Link to this heading"></a></h2>
-<p><strong>Memory Allocation Anti-patterns</strong></p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// AVOID: Frequent small allocations</span>
-<span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">1000000</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="k">auto</span><span class="o">*</span><span class="w"> </span><span class="n">ptr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="kt">int</span><span class="p">(</span><span class="n">i</span><span class="p">);</span><span class="w">  </span><span class="c1">// Very expensive</span>
-<span class="w">    </span><span class="k">delete</span><span class="w"> </span><span class="n">ptr</span><span class="p">;</span>
-<span class="p">}</span>
-
-<span class="c1">// BETTER: Use pool allocator</span>
-<span class="n">ouly</span><span class="o">::</span><span class="n">pool_allocator</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">pool</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">),</span><span class="w"> </span><span class="mi">1000000</span><span class="p">);</span>
-<span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">1000000</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="k">auto</span><span class="o">*</span><span class="w"> </span><span class="n">ptr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">*&gt;</span><span class="p">(</span><span class="n">pool</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">)));</span>
-<span class="w">    </span><span class="k">new</span><span class="p">(</span><span class="n">ptr</span><span class="p">)</span><span class="w"> </span><span class="kt">int</span><span class="p">(</span><span class="n">i</span><span class="p">);</span>
-<span class="w">    </span><span class="c1">// Batch cleanup later</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-<p><strong>Container Growth Anti-patterns</strong></p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// AVOID: Repeated growth</span>
-<span class="n">ouly</span><span class="o">::</span><span class="n">dynamic_array</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="w"> </span><span class="n">numbers</span><span class="p">;</span>
-<span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">1000000</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">numbers</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">i</span><span class="p">);</span><span class="w">  </span><span class="c1">// Multiple reallocations</span>
-<span class="p">}</span>
-
-<span class="c1">// BETTER: Reserve capacity</span>
-<span class="n">ouly</span><span class="o">::</span><span class="n">dynamic_array</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="w"> </span><span class="n">numbers</span><span class="p">;</span>
-<span class="n">numbers</span><span class="p">.</span><span class="n">reserve</span><span class="p">(</span><span class="mi">1000000</span><span class="p">);</span><span class="w">  </span><span class="c1">// Single allocation</span>
-<span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">1000000</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">numbers</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">i</span><span class="p">);</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-<p><strong>Threading Anti-patterns</strong></p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// AVOID: Too many small tasks</span>
-<span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">1000000</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">submit</span><span class="p">(</span><span class="n">workgroup</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="n">i</span><span class="p">]()</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">process_single_item</span><span class="p">(</span><span class="n">i</span><span class="p">);</span><span class="w"> </span><span class="p">});</span>
-<span class="p">}</span>
-
-<span class="c1">// BETTER: Batch processing</span>
-<span class="k">constexpr</span><span class="w"> </span><span class="kt">size_t</span><span class="w"> </span><span class="n">BATCH_SIZE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1000</span><span class="p">;</span>
-<span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">size_t</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">1000000</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">BATCH_SIZE</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">submit</span><span class="p">(</span><span class="n">workgroup</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="n">i</span><span class="p">]()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">size_t</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">i</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">min</span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">BATCH_SIZE</span><span class="p">,</span><span class="w"> </span><span class="mi">1000000UL</span><span class="p">);</span><span class="w"> </span><span class="o">++</span><span class="n">j</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="n">process_single_item</span><span class="p">(</span><span class="n">j</span><span class="p">);</span>
-<span class="w">        </span><span class="p">}</span>
-<span class="w">    </span><span class="p">});</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-</section>
-<section id="continuous-performance-monitoring">
-<h2>Continuous Performance Monitoring<a class="headerlink" href="#continuous-performance-monitoring" title="Link to this heading"></a></h2>
-<p>Set up automated performance monitoring using external tools:</p>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="c1"># GitHub Actions performance monitoring (using external benchmark tools)</span>
-<span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Performance Monitoring</span>
-<span class="nt">on</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">push</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">pull_request</span><span class="p p-Indicator">]</span>
-
-<span class="nt">jobs</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">benchmark</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">runs-on</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ubuntu-latest</span>
-<span class="w">    </span><span class="nt">steps</span><span class="p">:</span>
-<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">actions/checkout@v2</span>
-<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Install benchmark library</span>
-<span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-<span class="w">          </span><span class="no">git clone https://github.com/google/benchmark.git</span>
-<span class="w">          </span><span class="no">cd benchmark &amp;&amp; cmake -B build &amp;&amp; cmake --build build --target install</span>
-<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Build performance tests</span>
-<span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-<span class="w">          </span><span class="no">cmake -B build -DOULY_BUILD_TESTS=ON</span>
-<span class="w">          </span><span class="no">cmake --build build</span>
-<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Run custom benchmarks</span>
-<span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">./build/performance_tests --benchmark_format=json &gt; results.json</span>
-</pre></div>
-</div>
-<p>This comprehensive performance guide helps you get the most out of OULY in your applications. Regular profiling and optimization should be part of your development workflow for performance-critical applications.</p>
+<section id="profiling">
+<h2>Profiling<a class="headerlink" href="#profiling" title="Link to this heading"></a></h2>
+<p>The library has no profiler integration of its own; use the usual tools (<code class="docutils literal notranslate"><span class="pre">perf</span></code>, VTune,
+Instruments, Tracy, …). Allocators can collect counters with <code class="docutils literal notranslate"><span class="pre">ouly::cfg::compute_stats</span></code> (see
+<a class="reference internal" href="../tutorials/memory_management.html"><span class="doc">Memory Management Tutorial</span></a>).</p>
 </section>
 </section>
 
@@ -414,7 +180,7 @@ perf<span class="w"> </span>mem<span class="w"> </span>report<span class="w"> </
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="../examples/unit_test_examples.html" class="btn btn-neutral float-left" title="Unit Test Examples" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="../contributing.html" class="btn btn-neutral float-right" title="Contributing to OULY" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="../contributing.html" class="btn btn-neutral float-right" title="Contributing" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

@@ -1,193 +1,223 @@
 Getting Started
 ===============
 
-This guide will help you get started with OULY, covering installation, basic concepts, and your first programs.
+This page covers building OULY, using it from a CMake project, the build options and
+configuration macros, and a first program.
 
-System Requirements
--------------------
-
-**Compiler Support**
-   * GCC 13.0 or later
-   * Clang 17.0 or later  
-   * MSVC 2022 (Visual Studio 17.0) or later
-   * Apple Clang 15.0 or later
-
-**Build System**
-   * CMake 3.20 or later
-   * Ninja (recommended) or Make
-
-**Operating Systems**
-   * Linux (Ubuntu 20.04+, RHEL 8+)
-   * macOS 11.0+
-   * Windows 10/11
-
-Installation
+Requirements
 ------------
 
-OULY is a header-only library that can be integrated into your project in several ways:
+* A C++20 compiler with concepts and coroutines. CI builds and tests GCC 16, Clang 18, Apple Clang
+  (``macos-latest``) and MSVC (``windows-latest``).
+* CMake 3.25 or newer. The presets use the Ninja generator.
+* Linux, macOS or Windows.
 
-Using CMake FetchContent (Recommended)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+OULY is a compiled library: the schedulers, the coalescing and thread-safe allocators and the DSL
+parsers have source files in ``src/``. It builds as a static library by default and as a shared
+library with ``-DBUILD_SHARED_LIBS=ON``.
 
-.. code-block:: cmake
-
-   cmake_minimum_required(VERSION 3.20)
-   project(MyProject)
-
-   include(FetchContent)
-   FetchContent_Declare(
-     ouly
-     GIT_REPOSITORY https://github.com/obhi-d/ouly.git
-     GIT_TAG        main  # or specific version tag
-   )
-   FetchContent_MakeAvailable(ouly)
-
-   add_executable(my_app main.cpp)
-   target_link_libraries(my_app PRIVATE ouly::ouly)
-   target_compile_features(my_app PRIVATE cxx_std_20)
-
-Git Submodule
-~~~~~~~~~~~~~
-
-.. code-block:: bash
-
-   # Add as submodule
-   git submodule add https://github.com/obhi-d/ouly.git third_party/ouly
-   git submodule update --init --recursive
-
-Then in your CMakeLists.txt:
-
-.. code-block:: cmake
-
-   add_subdirectory(third_party/ouly)
-   target_link_libraries(your_target PRIVATE ouly::ouly)
-
-Manual Installation
-~~~~~~~~~~~~~~~~~~~
-
-1. Download or clone the repository
-2. Copy the ``include/`` directory to your project
-3. Add the include path to your compiler
-
-.. code-block:: bash
-
-   git clone https://github.com/obhi-d/ouly.git
-   cp -r ouly/include/ouly /your/project/include/
-
-Building from Source
+Building from source
 --------------------
-
-If you want to build tests, examples, or documentation:
 
 .. code-block:: bash
 
    git clone https://github.com/obhi-d/ouly.git
    cd ouly
-   
-   # Configure with default preset
-   cmake --preset=macos-default  # or linux-default
-   
-   # Build
-   cmake --build build/macos-default
-   
-   # Run tests
-   cd build/macos-default && ctest
 
-Available CMake Presets
-~~~~~~~~~~~~~~~~~~~~~~~
+   cmake --preset=linux-default            # Debug build with unit tests
+   cmake --build build/linux-default
+   ctest --test-dir build/linux-default --output-on-failure
 
-* ``macos-default`` - Debug build with tests (macOS)
-* ``macos-release`` - Release build (macOS)
-* ``linux-default`` - Debug build with tests (Linux)
-* ``linux-release`` - Release build (Linux)
+The presets in ``CMakePresets.json`` write to ``build/<preset>``:
 
-CMake Options
-~~~~~~~~~~~~~
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Preset
+     - Configuration
+   * - ``linux-default``
+     - Debug, unit tests
+   * - ``linux-release``
+     - ``RelWithDebInfo``, unit tests
+   * - ``linux-clang-tidy``
+     - Debug with ``clang++``, unit tests, clang-tidy run on every library source
+   * - ``macos-default`` / ``macos-release``
+     - Debug / Release with ``clang++``, unit tests
+   * - ``windows-test``, ``windows-gen``
+     - Debug, unit tests
+   * - ``windows-profiling`` / ``windows-release``
+     - ``RelWithDebInfo``, unit tests
+   * - ``windows-default``
+     - Debug, library only
+   * - ``third-party-release``
+     - ``RelWithDebInfo``, library only, installs to ``../../Source/Ouly``
+
+Without a preset, enable the tests explicitly:
+
+.. code-block:: bash
+
+   cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DOULY_BUILD_TESTS=ON
+   cmake --build build
+   ctest --test-dir build --output-on-failure
+
+Using OULY from CMake
+---------------------
+
+The simplest route is to build OULY as part of your project with ``FetchContent``
+(``add_subdirectory(path/to/ouly)`` works the same way for a vendored copy):
 
 .. code-block:: cmake
 
-   option(OULY_BUILD_TESTS "Build unit tests" OFF)
-   option(OULY_BUILD_DOCS "Build documentation" OFF)
-   option(OULY_ENABLE_ASAN "Enable AddressSanitizer" OFF)
+   cmake_minimum_required(VERSION 3.25)
+   project(my_app LANGUAGES CXX)
+   set(CMAKE_CXX_STANDARD 20)
 
-Basic Concepts
---------------
+   include(FetchContent)
+   FetchContent_Declare(ouly GIT_REPOSITORY https://github.com/obhi-d/ouly.git GIT_TAG main) # pin a commit
+   FetchContent_MakeAvailable(ouly)
 
-OULY is organized into several core modules:
+   add_executable(my_app main.cpp)
+   target_link_libraries(my_app PRIVATE ouly::ouly)
 
-**Allocators** (``ouly/allocators/``)
-   Memory management components for efficient allocation strategies.
+To use an installed copy instead, install the library and find it from your project:
 
-**Containers** (``ouly/containers/``)  
-   High-performance containers with STL-compatible interfaces.
+.. code-block:: bash
 
-**ECS** (``ouly/ecs/``)
-   Entity Component System for data-oriented design.
+   cmake -S ouly -B ouly-build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$HOME/ouly-install
+   cmake --build ouly-build
+   cmake --install ouly-build
 
-**Scheduler** (``ouly/scheduler/``)
-   Task scheduling and parallel execution framework.
+.. code-block:: cmake
 
-**Serializers** (``ouly/serializers/``)
-   Binary and text-based serialization utilities.
+   cmake_minimum_required(VERSION 3.25)
+   project(my_app LANGUAGES CXX)
+   set(CMAKE_CXX_STANDARD 20)
 
-**Utilities** (``ouly/utility/``)
-   Helper classes and meta-programming utilities.
+   # configure with -DCMAKE_PREFIX_PATH=$HOME/ouly-install
+   find_package(ouly REQUIRED)
 
-First Program
+   add_executable(my_app main.cpp)
+   target_link_libraries(my_app PRIVATE ouly::ouly)
+
+CMake options
+~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 60
+
+   * - Option
+     - Effect
+   * - ``OULY_BUILD_TESTS`` (``OFF``)
+     - Build the Catch2 unit tests in ``unit_tests/`` (with CTest's ``BUILD_TESTING``, on by
+       default). Catch2, nlohmann_json, fast_float and GLM are fetched for the tests. On GCC and
+       Clang the tests are always built with AddressSanitizer and coverage instrumentation.
+   * - ``OULY_BUILD_BENCHMARKS`` (``OFF``)
+     - Build the ``bench_*`` executables; fetches nanobench and oneTBB. See :doc:`performance/index`.
+   * - ``OULY_ENABLE_CLANG_TIDY`` (``OFF``)
+     - Run clang-tidy (``.clang-tidy``) on the library sources while compiling.
+   * - ``OULY_SCHEDULER_PMR_INTERNAL_ALLOCATOR`` (``OFF``)
+     - Scheduler-internal nodes come from a synchronized PMR pool instead of ``operator new``; see
+       :doc:`tutorials/scheduler_tutorial`. Propagated to consumers as a compile definition.
+   * - ``OULY_EXPORT_CC_TO_SRC_DIR``
+     - Symlink ``compile_commands.json`` into the source directory.
+
+The library itself is compiled with ``-Wall -Wextra -pedantic -Werror`` and a long list of extra
+warnings on GCC and Clang, and ``/W4 /WX`` on MSVC. ``ASAN_ENABLED`` (set by several presets),
+``OULY_REC_STATS`` and ``OULY_TEST_COVERAGE`` are declared but currently have no effect: nothing
+reads the ``OULY_REC_STATS`` definition, and sanitizer and coverage flags for the tests are chosen
+per compiler as described above.
+
+Configuration macros
+~~~~~~~~~~~~~~~~~~~~
+
+Define these consistently for every translation unit, either as compile definitions or in an
+``ouly_user_defines.hpp`` header on the include path, which ``ouly/utility/user_config.hpp``
+includes automatically when it exists.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 60
+
+   * - Macro
+     - Effect
+   * - ``OULY_ASSERT``
+     - Assertion macro used internally; defaults to ``assert``.
+   * - ``OULY_SCHEDULER_VERSION``
+     - ``v1``, ``v2`` (default) or ``v3``: the generation behind ``ouly::scheduler`` and
+       ``ouly::task_context``.
+   * - ``OULY_SCHEDULER_PMR_INTERNAL_ALLOCATOR``
+     - See the CMake option of the same name.
+   * - ``OULY_CACHE_LINE_SIZE``
+     - Cache line size used for padding (default 64).
+   * - ``OULY_SAFE_BOUNDS``
+     - Bounds-check internal container indexing.
+   * - ``OULY_PACK_TAGGED_POINTER``
+     - Make ``ouly::tagged_ptr`` pack its tag into the pointer.
+   * - ``OULY_ANY_DEFAULT_INLINE_SIZE``
+     - Inline buffer size of ``ouly::any`` (default 32).
+   * - ``OULY_USE_LARGE_SIZE_TYPE``
+     - Serialize container sizes as 64-bit instead of 32-bit values.
+   * - ``OULY_PRINT_DEBUG``, ``OULY_PRINT_ERROR``
+     - Functions used to print debug output and errors.
+
+First program
 -------------
-
-Here's a simple program demonstrating basic OULY usage:
 
 .. code-block:: cpp
 
-   #include <ouly/allocators/linear_arena_allocator.hpp>
-   #include <ouly/containers/small_vector.hpp>
-   #include <ouly/ecs/registry.hpp>
-   #include <ouly/scheduler/scheduler_v2.hpp>
+   #include <ouly/scheduler/parallel_for.hpp>
+   #include <ouly/scheduler/scheduler.hpp>
+
+   #include <cstdint>
    #include <iostream>
+   #include <numeric>
+   #include <vector>
 
-   int main() {
-       // Memory allocator example
-       ouly::linear_arena_allocator<> allocator(1024);
-       void* memory = allocator.allocate(256);
-       std::cout << "Allocated 256 bytes\n";
+   int main()
+   {
+     // Workgroup 0 spans worker threads [0, 4). Worker 0 is the thread that calls begin_execution().
+     ouly::scheduler scheduler;
+     scheduler.create_group(ouly::default_workgroup_id, 0, 4);
+     scheduler.begin_execution();
 
-       // Container example  
-       ouly::small_vector<int, 8> numbers = {1, 2, 3, 4, 5};
-       numbers.push_back(6);
-       
-       std::cout << "Vector contents: ";
-       for (auto num : numbers) {
-           std::cout << num << " ";
-       }
-       std::cout << "\n";
+     auto const& ctx = ouly::task_context::this_context::get();
 
-       // ECS example
-       ouly::ecs::registry<> registry;
-       auto entity = registry.emplace();
-       std::cout << "Created entity: " << entity.value() << "\n";
+     std::vector<std::uint32_t> values(100'000);
+     std::iota(values.begin(), values.end(), 0U);
 
-       // Scheduler example
-       ouly::scheduler scheduler(2);
-       auto workgroup = scheduler.create_workgroup();
-       scheduler.begin_execution();
-       
-       auto future = scheduler.submit(workgroup, []() {
-           return 42;
-       });
-       
-       std::cout << "Task result: " << future.get() << "\n";
-       
-       scheduler.end_execution();
-       scheduler.shutdown();
+     // Split the range across the workgroup; returns once every element is processed.
+     ouly::parallel_for([](std::uint32_t& value, ouly::task_context const&) { value *= 2; }, values, ctx);
 
-       return 0;
+     // A value task; get(ctx) runs queued work on this thread while it waits.
+     auto sum = ouly::submit_task(ctx, [&values] { return std::accumulate(values.begin(), values.end(), std::uint64_t{0}); });
+     std::cout << "sum = " << sum.get(ctx) << '\n';
+
+     scheduler.end_execution();
    }
 
-Next Steps
-----------
+Build it with the ``CMakeLists.txt`` above. The program starts a scheduler with four workers (the
+calling thread is worker 0), doubles 100,000 values in parallel and sums them in a task.
 
-* Read the :doc:`tutorials/index` for guided examples
-* Explore the :doc:`user_guide/index` for detailed component documentation  
-* Check out :doc:`examples/index` for real-world usage patterns
-* Review :doc:`performance/index` for optimization guidance
+Library layout
+--------------
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Headers
+     - Contents
+   * - ``ouly/scheduler/``
+     - Schedulers, tasks, ``parallel_for``, coroutines, flow graphs (:doc:`tutorials/scheduler_tutorial`)
+   * - ``ouly/allocators/``
+     - Allocators, memory-mapped files, coalescing suballocators (:doc:`tutorials/memory_management`)
+   * - ``ouly/containers/``
+     - Containers and queues (:doc:`tutorials/containers_tutorial`)
+   * - ``ouly/ecs/``
+     - Entity component system (:doc:`tutorials/ecs_tutorial`)
+   * - ``ouly/reflection/``, ``ouly/serializers/``
+     - Reflection, binary and YAML serialization (:doc:`tutorials/serialization_tutorial`)
+   * - ``ouly/utility/``, ``ouly/dsl/``
+     - Utilities, macro expressions, YAML event parser (:doc:`tutorials/utilities_tutorial`)

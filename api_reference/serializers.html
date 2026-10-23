@@ -1,0 +1,572 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Serialization and Reflection &mdash; OULY 0.1.22 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../_static/graphviz.css?v=4ae1632d" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=4721fb27" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=842aa08f"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Utilities and DSL" href="utility.html" />
+    <link rel="prev" title="Entity Component System" href="ecs.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            OULY
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/index.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/index.html">User Guide</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">API Reference</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="scheduler.html">Task Scheduler</a></li>
+<li class="toctree-l2"><a class="reference internal" href="allocators.html">Memory Allocators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="containers.html">Containers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ecs.html">Entity Component System</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Serialization and Reflection</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#streams">Streams</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#_CPPv4N4ouly20binary_output_streamE"><code class="docutils literal notranslate"><span class="pre">ouly::binary_output_stream</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#_CPPv4N4ouly19binary_input_streamE"><code class="docutils literal notranslate"><span class="pre">ouly::binary_input_stream</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#_CPPv4N4ouly14binary_ostreamE"><code class="docutils literal notranslate"><span class="pre">ouly::binary_ostream</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#_CPPv4N4ouly14binary_istreamE"><code class="docutils literal notranslate"><span class="pre">ouly::binary_istream</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#yaml">YAML</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#_CPPv4I00EN4ouly3yml9to_stringENSt6stringERK5Class"><code class="docutils literal notranslate"><span class="pre">to_string()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#_CPPv4I00EN4ouly3yml11from_stringEvR5ClassNSt11string_viewE"><code class="docutils literal notranslate"><span class="pre">from_string()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#_CPPv4I0_NSt6endianEEN4ouly20stream_type_registryE"><code class="docutils literal notranslate"><span class="pre">ouly::stream_type_registry</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#customization">Customization</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#_CPPv4I0EN4ouly7convertE"><code class="docutils literal notranslate"><span class="pre">ouly::convert</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="utility.html">Utilities and DSL</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../examples/index.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../performance/index.html">Performance Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">OULY</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">API Reference</a></li>
+      <li class="breadcrumb-item active">Serialization and Reflection</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/api_reference/serializers.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="serialization-and-reflection">
+<h1>Serialization and Reflection<a class="headerlink" href="#serialization-and-reflection" title="Link to this heading"></a></h1>
+<p>Headers in <code class="docutils literal notranslate"><span class="pre">ouly/serializers/</span></code> and <code class="docutils literal notranslate"><span class="pre">ouly/reflection/</span></code>. <code class="docutils literal notranslate"><span class="pre">ouly::read</span></code> and <code class="docutils literal notranslate"><span class="pre">ouly::write</span></code> (<code class="docutils literal notranslate"><span class="pre">ouly/serializers/serializers.hpp</span></code>) are overloaded for binary and structured streams; <code class="docutils literal notranslate"><span class="pre">ouly::bind</span></code> (<code class="docutils literal notranslate"><span class="pre">ouly/reflection/bind.hpp</span></code>) builds reflection declarations.</p>
+<p>See <a class="reference internal" href="../tutorials/serialization_tutorial.html"><span class="doc">Serialization Tutorial</span></a> for a guided introduction.</p>
+<section id="streams">
+<h2>Streams<a class="headerlink" href="#streams" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">#include</span> <span class="pre">&lt;ouly/serializers/binary_stream.hpp&gt;</span></code></p>
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly20binary_output_streamE">
+<span id="_CPPv3N4ouly20binary_output_streamE"></span><span id="_CPPv2N4ouly20binary_output_streamE"></span><span id="ouly::binary_output_stream"></span><span class="target" id="classouly_1_1binary__output__stream"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">binary_output_stream</span></span></span><a class="headerlink" href="#_CPPv4N4ouly20binary_output_streamE" title="Link to this definition"></a><br /></dt>
+<dd><p>A stream for writing binary data. </p>
+<p>This class provides facilities for writing binary data to a stream, with operations optimized for serialization. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly20binary_output_stream20binary_output_streamEv">
+<span id="_CPPv3N4ouly20binary_output_stream20binary_output_streamEv"></span><span id="_CPPv2N4ouly20binary_output_stream20binary_output_streamEv"></span><span id="ouly::binary_output_stream::binary_output_stream"></span><span class="target" id="classouly_1_1binary__output__stream_1a5e1cad88931eb3952503c4b2e2310cb1"></span><span class="sig-name descname"><span class="n"><span class="pre">binary_output_stream</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N4ouly20binary_output_stream20binary_output_streamEv" title="Link to this definition"></a><br /></dt>
+<dd><p>Default constructor that creates an empty stream. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly20binary_output_stream5writeEPKNSt4byteENSt6size_tE">
+<span id="_CPPv3N4ouly20binary_output_stream5writeEPKNSt4byteENSt6size_tE"></span><span id="_CPPv2N4ouly20binary_output_stream5writeEPKNSt4byteENSt6size_tE"></span><span id="ouly::binary_output_stream::write__std::byteCP.std::s"></span><span class="target" id="classouly_1_1binary__output__stream_1a05c1005c1ceef1de68c885747af212fb"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">write</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">byte</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">sdata</span></span>, <span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">size</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N4ouly20binary_output_stream5writeEPKNSt4byteENSt6size_tE" title="Link to this definition"></a><br /></dt>
+<dd><p>Writes raw binary data to the stream. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sdata</strong> – Pointer to the source data </p></li>
+<li><p><strong>size</strong> – Number of bytes to write </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK4ouly20binary_output_stream10get_stringEv">
+<span id="_CPPv3NK4ouly20binary_output_stream10get_stringEv"></span><span id="_CPPv2NK4ouly20binary_output_stream10get_stringEv"></span><span id="ouly::binary_output_stream::get_stringC"></span><span class="target" id="classouly_1_1binary__output__stream_1a93da30ba4053e7a645c4997ca90d0af4"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">get_string</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><span class="n"><span class="pre">binary_stream_view</span></span><a class="headerlink" href="#_CPPv4NK4ouly20binary_output_stream10get_stringEv" title="Link to this definition"></a><br /></dt>
+<dd><p>Gets a view of the current stream content. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A non-owning view of the stream’s content </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly20binary_output_stream7releaseEv">
+<span id="_CPPv3N4ouly20binary_output_stream7releaseEv"></span><span id="_CPPv2N4ouly20binary_output_stream7releaseEv"></span><span id="ouly::binary_output_stream::release"></span><span class="target" id="classouly_1_1binary__output__stream_1a41ffcb8c5ec6a980b6699d71de845929"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">release</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><span class="n"><span class="pre">binary_stream</span></span><a class="headerlink" href="#_CPPv4N4ouly20binary_output_stream7releaseEv" title="Link to this definition"></a><br /></dt>
+<dd><p>Releases ownership of the stream content. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The underlying stream, transferring ownership to the caller </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4I0EN4ouly20binary_output_stream10stream_outEvRK1T">
+<span id="_CPPv3I0EN4ouly20binary_output_stream10stream_outERK1T"></span><span id="_CPPv2I0EN4ouly20binary_output_stream10stream_outERK1T"></span><span class="k"><span class="pre">template</span></span><span class="p"><span class="pre">&lt;</span></span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">T</span></span></span><span class="p"><span class="pre">&gt;</span></span><br /><span class="target" id="classouly_1_1binary__output__stream_1a1de68e9c8b4899939212a75e2e620a41"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">stream_out</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4I0EN4ouly20binary_output_stream10stream_outEvRK1T" title="ouly::binary_output_stream::stream_out::T"><span class="n"><span class="pre">T</span></span></a><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">value</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4I0EN4ouly20binary_output_stream10stream_outEvRK1T" title="Link to this definition"></a><br /></dt>
+<dd><p>Writes a value to the stream using the global serialization functions. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Template Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>T</strong> – Type of the value to write </p>
+</dd>
+<dt class="field-even">Parameters<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>value</strong> – The value to write to the stream </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK4ouly20binary_output_stream4dataEv">
+<span id="_CPPv3NK4ouly20binary_output_stream4dataEv"></span><span id="_CPPv2NK4ouly20binary_output_stream4dataEv"></span><span id="ouly::binary_output_stream::dataC"></span><span class="target" id="classouly_1_1binary__output__stream_1ae4f2977eff12c721bb7f829047813180"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">data</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">byte</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="p"><span class="pre">*</span></span><a class="headerlink" href="#_CPPv4NK4ouly20binary_output_stream4dataEv" title="Link to this definition"></a><br /></dt>
+<dd><p>Gets a pointer to the raw data in the stream. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Pointer to the beginning of the stream’s data </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK4ouly20binary_output_stream4sizeEv">
+<span id="_CPPv3NK4ouly20binary_output_stream4sizeEv"></span><span id="_CPPv2NK4ouly20binary_output_stream4sizeEv"></span><span id="ouly::binary_output_stream::sizeC"></span><span class="target" id="classouly_1_1binary__output__stream_1a4ae42bf5674629b6235e69933381315c"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">size</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">size_t</span></span><a class="headerlink" href="#_CPPv4NK4ouly20binary_output_stream4sizeEv" title="Link to this definition"></a><br /></dt>
+<dd><p>Gets the current size of the stream in bytes. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The number of bytes in the stream </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">#include</span> <span class="pre">&lt;ouly/serializers/binary_stream.hpp&gt;</span></code></p>
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly19binary_input_streamE">
+<span id="_CPPv3N4ouly19binary_input_streamE"></span><span id="_CPPv2N4ouly19binary_input_streamE"></span><span id="ouly::binary_input_stream"></span><span class="target" id="classouly_1_1binary__input__stream"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">binary_input_stream</span></span></span><a class="headerlink" href="#_CPPv4N4ouly19binary_input_streamE" title="Link to this definition"></a><br /></dt>
+<dd><p>A stream for reading binary data. </p>
+<p>This class provides facilities for reading binary data from a stream, with operations optimized for deserialization. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly19binary_input_stream19binary_input_streamEPKNSt4byteENSt6size_tE">
+<span id="_CPPv3N4ouly19binary_input_stream19binary_input_streamEPKNSt4byteENSt6size_tE"></span><span id="_CPPv2N4ouly19binary_input_stream19binary_input_streamEPKNSt4byteENSt6size_tE"></span><span id="ouly::binary_input_stream::binary_input_stream__std::byteCP.std::s"></span><span class="target" id="classouly_1_1binary__input__stream_1a8edc2730cb2b1a7890d85cb0c408b59f"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">binary_input_stream</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">byte</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">data</span></span>, <span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">size</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N4ouly19binary_input_stream19binary_input_streamEPKNSt4byteENSt6size_tE" title="Link to this definition"></a><br /></dt>
+<dd><p>Constructs a stream from a raw pointer and size. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> – Pointer to the binary data </p></li>
+<li><p><strong>size</strong> – Number of bytes in the data </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly19binary_input_stream19binary_input_streamE18binary_stream_view">
+<span id="_CPPv3N4ouly19binary_input_stream19binary_input_streamE18binary_stream_view"></span><span id="_CPPv2N4ouly19binary_input_stream19binary_input_streamE18binary_stream_view"></span><span id="ouly::binary_input_stream::binary_input_stream__binary_stream_view"></span><span class="target" id="classouly_1_1binary__input__stream_1a72dff36ab87fa49253ce9e9811c3832b"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">binary_input_stream</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">binary_stream_view</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">str</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N4ouly19binary_input_stream19binary_input_streamE18binary_stream_view" title="Link to this definition"></a><br /></dt>
+<dd><p>Constructs a stream from a binary_stream_view. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>str</strong> – View of the binary data to read from </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly19binary_input_stream4readEPNSt4byteENSt6size_tE">
+<span id="_CPPv3N4ouly19binary_input_stream4readEPNSt4byteENSt6size_tE"></span><span id="_CPPv2N4ouly19binary_input_stream4readEPNSt4byteENSt6size_tE"></span><span id="ouly::binary_input_stream::read__std::byteP.std::s"></span><span class="target" id="classouly_1_1binary__input__stream_1a0f837df9e408f2bf1ad357313c3241e7"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">read</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">byte</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">sdata</span></span>, <span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">size</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N4ouly19binary_input_stream4readEPNSt4byteENSt6size_tE" title="Link to this definition"></a><br /></dt>
+<dd><p>Reads binary data from the stream into a buffer. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sdata</strong> – Pointer to the destination buffer </p></li>
+<li><p><strong>size</strong> – Number of bytes to read </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly19binary_input_stream4skipENSt6size_tE">
+<span id="_CPPv3N4ouly19binary_input_stream4skipENSt6size_tE"></span><span id="_CPPv2N4ouly19binary_input_stream4skipENSt6size_tE"></span><span id="ouly::binary_input_stream::skip__std::s"></span><span class="target" id="classouly_1_1binary__input__stream_1a03fa104faafff6d3243506321a79dae2"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">skip</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">size</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N4ouly19binary_input_stream4skipENSt6size_tE" title="Link to this definition"></a><br /></dt>
+<dd><p>Skips a specified number of bytes in the stream. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>size</strong> – Number of bytes to skip </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK4ouly19binary_input_stream10get_stringEv">
+<span id="_CPPv3NK4ouly19binary_input_stream10get_stringEv"></span><span id="_CPPv2NK4ouly19binary_input_stream10get_stringEv"></span><span id="ouly::binary_input_stream::get_stringC"></span><span class="target" id="classouly_1_1binary__input__stream_1a3a71bd49c156e62742e529fe924208c0"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">get_string</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><span class="n"><span class="pre">binary_stream_view</span></span><a class="headerlink" href="#_CPPv4NK4ouly19binary_input_stream10get_stringEv" title="Link to this definition"></a><br /></dt>
+<dd><p>Gets a copy of the stream’s current content. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A copy of the remaining binary data </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4I0EN4ouly19binary_input_stream9stream_inEvR1T">
+<span id="_CPPv3I0EN4ouly19binary_input_stream9stream_inER1T"></span><span id="_CPPv2I0EN4ouly19binary_input_stream9stream_inER1T"></span><span class="k"><span class="pre">template</span></span><span class="p"><span class="pre">&lt;</span></span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">T</span></span></span><span class="p"><span class="pre">&gt;</span></span><br /><span class="target" id="classouly_1_1binary__input__stream_1af224af5ba047871ac2059b650bd58f5e"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">stream_in</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4I0EN4ouly19binary_input_stream9stream_inEvR1T" title="ouly::binary_input_stream::stream_in::T"><span class="n"><span class="pre">T</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">value</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4I0EN4ouly19binary_input_stream9stream_inEvR1T" title="Link to this definition"></a><br /></dt>
+<dd><p>Reads a value from the stream using the global deserialization functions. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Template Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>T</strong> – Type of the value to read </p>
+</dd>
+<dt class="field-even">Parameters<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>value</strong> – Reference to the variable that will receive the deserialized value </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK4ouly19binary_input_stream4dataEv">
+<span id="_CPPv3NK4ouly19binary_input_stream4dataEv"></span><span id="_CPPv2NK4ouly19binary_input_stream4dataEv"></span><span id="ouly::binary_input_stream::dataC"></span><span class="target" id="classouly_1_1binary__input__stream_1a08e8625929476c94a49ea85954f544d7"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">data</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">byte</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="p"><span class="pre">*</span></span><a class="headerlink" href="#_CPPv4NK4ouly19binary_input_stream4dataEv" title="Link to this definition"></a><br /></dt>
+<dd><p>Gets a pointer to the raw data in the stream. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Pointer to the beginning of the remaining data </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK4ouly19binary_input_stream4sizeEv">
+<span id="_CPPv3NK4ouly19binary_input_stream4sizeEv"></span><span id="_CPPv2NK4ouly19binary_input_stream4sizeEv"></span><span id="ouly::binary_input_stream::sizeC"></span><span class="target" id="classouly_1_1binary__input__stream_1ac3195ff0289eb8a887c9e56c39e711e8"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">size</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">size_t</span></span><a class="headerlink" href="#_CPPv4NK4ouly19binary_input_stream4sizeEv" title="Link to this definition"></a><br /></dt>
+<dd><p>Gets the remaining size of the stream in bytes. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The number of bytes left to read </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">#include</span> <span class="pre">&lt;ouly/serializers/binary_stream.hpp&gt;</span></code></p>
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly14binary_ostreamE">
+<span id="_CPPv3N4ouly14binary_ostreamE"></span><span id="_CPPv2N4ouly14binary_ostreamE"></span><span id="ouly::binary_ostream"></span><span class="target" id="classouly_1_1binary__ostream"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">binary_ostream</span></span></span><a class="headerlink" href="#_CPPv4N4ouly14binary_ostreamE" title="Link to this definition"></a><br /></dt>
+<dd><p>A stream adapter for writing binary data to std::ostream. </p>
+<p>This class provides serialization capabilities using a standard output stream as the underlying storage mechanism. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly14binary_ostream14binary_ostreamERNSt7ostreamE">
+<span id="_CPPv3N4ouly14binary_ostream14binary_ostreamERNSt7ostreamE"></span><span id="_CPPv2N4ouly14binary_ostream14binary_ostreamERNSt7ostreamE"></span><span id="ouly::binary_ostream::binary_ostream__osR"></span><span class="target" id="classouly_1_1binary__ostream_1a5ef156eb1bbe234b45b278a740cba617"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">explicit</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">binary_ostream</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">ostream</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">os</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N4ouly14binary_ostream14binary_ostreamERNSt7ostreamE" title="Link to this definition"></a><br /></dt>
+<dd><p>Constructs a binary output stream adapter. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>os</strong> – Reference to the output stream to write to </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly14binary_ostream5writeEPKNSt4byteENSt6size_tE">
+<span id="_CPPv3N4ouly14binary_ostream5writeEPKNSt4byteENSt6size_tE"></span><span id="_CPPv2N4ouly14binary_ostream5writeEPKNSt4byteENSt6size_tE"></span><span id="ouly::binary_ostream::write__std::byteCP.std::s"></span><span class="target" id="classouly_1_1binary__ostream_1a957b4902e7d9520e9b2ec2e7454aa77b"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">write</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">byte</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">sdata</span></span>, <span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">size</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N4ouly14binary_ostream5writeEPKNSt4byteENSt6size_tE" title="Link to this definition"></a><br /></dt>
+<dd><p>Writes raw binary data to the stream. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sdata</strong> – Pointer to the source data </p></li>
+<li><p><strong>size</strong> – Number of bytes to write </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4I0EN4ouly14binary_ostream10stream_outEvRK1T">
+<span id="_CPPv3I0EN4ouly14binary_ostream10stream_outERK1T"></span><span id="_CPPv2I0EN4ouly14binary_ostream10stream_outERK1T"></span><span class="k"><span class="pre">template</span></span><span class="p"><span class="pre">&lt;</span></span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">T</span></span></span><span class="p"><span class="pre">&gt;</span></span><br /><span class="target" id="classouly_1_1binary__ostream_1a4aaece430109f2c32dc7ccf3b94e0012"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">stream_out</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4I0EN4ouly14binary_ostream10stream_outEvRK1T" title="ouly::binary_ostream::stream_out::T"><span class="n"><span class="pre">T</span></span></a><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">value</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4I0EN4ouly14binary_ostream10stream_outEvRK1T" title="Link to this definition"></a><br /></dt>
+<dd><p>Writes a value to the stream using the global serialization functions. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Template Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>T</strong> – Type of the value to write </p>
+</dd>
+<dt class="field-even">Parameters<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>value</strong> – The value to write to the stream </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">#include</span> <span class="pre">&lt;ouly/serializers/binary_stream.hpp&gt;</span></code></p>
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly14binary_istreamE">
+<span id="_CPPv3N4ouly14binary_istreamE"></span><span id="_CPPv2N4ouly14binary_istreamE"></span><span id="ouly::binary_istream"></span><span class="target" id="classouly_1_1binary__istream"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">binary_istream</span></span></span><a class="headerlink" href="#_CPPv4N4ouly14binary_istreamE" title="Link to this definition"></a><br /></dt>
+<dd><p>A stream adapter for reading binary data from std::istream. </p>
+<p>This class provides deserialization capabilities using a standard input stream as the data source. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly14binary_istream14binary_istreamERNSt7istreamE">
+<span id="_CPPv3N4ouly14binary_istream14binary_istreamERNSt7istreamE"></span><span id="_CPPv2N4ouly14binary_istream14binary_istreamERNSt7istreamE"></span><span id="ouly::binary_istream::binary_istream__isR"></span><span class="target" id="classouly_1_1binary__istream_1a4edcf39ab653f253fbe5cc75efadba4a"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">explicit</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">binary_istream</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">istream</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">is</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N4ouly14binary_istream14binary_istreamERNSt7istreamE" title="Link to this definition"></a><br /></dt>
+<dd><p>Constructs a binary input stream adapter. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>is</strong> – Reference to the input stream to read from </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly14binary_istream4readEPNSt4byteENSt6size_tE">
+<span id="_CPPv3N4ouly14binary_istream4readEPNSt4byteENSt6size_tE"></span><span id="_CPPv2N4ouly14binary_istream4readEPNSt4byteENSt6size_tE"></span><span id="ouly::binary_istream::read__std::byteP.std::s"></span><span class="target" id="classouly_1_1binary__istream_1ad7e549bd6d631f31158901917e40cdb8"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">read</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">byte</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">sdata</span></span>, <span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">size</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N4ouly14binary_istream4readEPNSt4byteENSt6size_tE" title="Link to this definition"></a><br /></dt>
+<dd><p>Reads binary data from the stream into a buffer. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sdata</strong> – Pointer to the destination buffer </p></li>
+<li><p><strong>size</strong> – Number of bytes to read </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly14binary_istream4skipENSt6size_tE">
+<span id="_CPPv3N4ouly14binary_istream4skipENSt6size_tE"></span><span id="_CPPv2N4ouly14binary_istream4skipENSt6size_tE"></span><span id="ouly::binary_istream::skip__std::s"></span><span class="target" id="classouly_1_1binary__istream_1ae8aa0da05b16492dfec959df9aa9e8e3"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">skip</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">size</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N4ouly14binary_istream4skipENSt6size_tE" title="Link to this definition"></a><br /></dt>
+<dd><p>Skips a specified number of bytes in the stream. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>size</strong> – Number of bytes to skip </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4I0EN4ouly14binary_istream9stream_inEvR1T">
+<span id="_CPPv3I0EN4ouly14binary_istream9stream_inER1T"></span><span id="_CPPv2I0EN4ouly14binary_istream9stream_inER1T"></span><span class="k"><span class="pre">template</span></span><span class="p"><span class="pre">&lt;</span></span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">T</span></span></span><span class="p"><span class="pre">&gt;</span></span><br /><span class="target" id="classouly_1_1binary__istream_1a447e3b56952c8f62834699691d6956a8"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">stream_in</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4I0EN4ouly14binary_istream9stream_inEvR1T" title="ouly::binary_istream::stream_in::T"><span class="n"><span class="pre">T</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">value</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4I0EN4ouly14binary_istream9stream_inEvR1T" title="Link to this definition"></a><br /></dt>
+<dd><p>Reads a value from the stream using the global deserialization functions. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Template Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>T</strong> – Type of the value to read </p>
+</dd>
+<dt class="field-even">Parameters<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>value</strong> – Reference to the variable that will receive the deserialized value </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+</section>
+<section id="yaml">
+<h2>YAML<a class="headerlink" href="#yaml" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">#include</span> <span class="pre">&lt;ouly/serializers/lite_yml.hpp&gt;</span></code></p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4I00EN4ouly3yml9to_stringENSt6stringERK5Class">
+<span id="_CPPv3I00EN4ouly3yml9to_stringERK5Class"></span><span id="_CPPv2I00EN4ouly3yml9to_stringERK5Class"></span><span class="k"><span class="pre">template</span></span><span class="p"><span class="pre">&lt;</span></span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Class</span></span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Config</span></span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="n"><span class="pre">ouly</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">&lt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><br /><span class="target" id="serializers_2lite__yml_8hpp_1a8817d6b6b44e63b73c750198d376fa41"></span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-prename descclassname"><span class="n"><span class="pre">ouly</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">yml</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">to_string</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4I00EN4ouly3yml9to_stringENSt6stringERK5Class" title="ouly::yml::to_string::Class"><span class="n"><span class="pre">Class</span></span></a><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">obj</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><a class="headerlink" href="#_CPPv4I00EN4ouly3yml9to_stringENSt6stringERK5Class" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">#include</span> <span class="pre">&lt;ouly/serializers/lite_yml.hpp&gt;</span></code></p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4I00EN4ouly3yml11from_stringEvR5ClassNSt11string_viewE">
+<span id="_CPPv3I00EN4ouly3yml11from_stringER5ClassNSt11string_viewE"></span><span id="_CPPv2I00EN4ouly3yml11from_stringER5ClassNSt11string_viewE"></span><span class="k"><span class="pre">template</span></span><span class="p"><span class="pre">&lt;</span></span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Class</span></span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Config</span></span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="n"><span class="pre">ouly</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">&lt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><br /><span class="target" id="serializers_2lite__yml_8hpp_1a8b0e99c6b78d1cd0afc97c025e2f0ec3"></span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-prename descclassname"><span class="n"><span class="pre">ouly</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">yml</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">from_string</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4I00EN4ouly3yml11from_stringEvR5ClassNSt11string_viewE" title="ouly::yml::from_string::Class"><span class="n"><span class="pre">Class</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">obj</span></span>, <span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string_view</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">data</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4I00EN4ouly3yml11from_stringEvR5ClassNSt11string_viewE" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">#include</span> <span class="pre">&lt;ouly/serializers/lite_yml.hpp&gt;</span></code></p>
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4I0_NSt6endianEEN4ouly20stream_type_registryE">
+<span id="_CPPv3I0_NSt6endianEEN4ouly20stream_type_registryE"></span><span id="_CPPv2I0_NSt6endianEEN4ouly20stream_type_registryE"></span><span class="k"><span class="pre">template</span></span><span class="p"><span class="pre">&lt;</span></span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Config</span></span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="n"><span class="pre">ouly</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">&lt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">endian</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Endian</span></span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">endian</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">little</span></span><span class="p"><span class="pre">&gt;</span></span><br /><span class="target" id="classouly_1_1stream__type__registry"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">stream_type_registry</span></span></span><span class="w"> </span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="k"><span class="pre">public</span></span><span class="w"> </span><span class="n"><span class="pre">ouly</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">detail</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">runtime_type_reader_base</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="k"><span class="pre">public</span></span><span class="w"> </span><span class="n"><span class="pre">ouly</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">detail</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">runtime_type_writer_base</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">ouly</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">&lt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="k"><span class="pre">public</span></span><span class="w"> </span><span class="n"><span class="pre">ouly</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">detail</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">binary_any_reader_base</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">endian</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">little</span></span><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="k"><span class="pre">public</span></span><span class="w"> </span><span class="n"><span class="pre">ouly</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">detail</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">binary_any_writer_base</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">endian</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">little</span></span><span class="p"><span class="pre">&gt;</span></span><a class="headerlink" href="#_CPPv4I0_NSt6endianEEN4ouly20stream_type_registryE" title="Link to this definition"></a><br /></dt>
+<dd><p>Registry resolving stream type ids to concrete C++ types for runtime_type and any (de)serialization. </p>
+<p>Each bound type contributes a read trampoline (construct the type into the runtime_type’s value storage and return a parse context) and a write trampoline (emit the stored value). Both are fully type-erased behind this registry so the parser/writer stay decoupled from the concrete bound types.</p>
+<p>A runtime_type is serialized just like a std::variant, as a two-field object: <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">field</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span><span class="w">        </span><span class="c1"># the ouly::type_id</span>
+<span class="w">  </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">...</span><span class="w">     </span><span class="c1"># parsed/emitted as the bound concrete type</span>
+</pre></div>
+</div>
+</p>
+<p>Field names (“type” / “value”) are configurable through the same mechanism as variant: they are run through the Config’s string transform (transform_t&lt;Config&gt;). Choosing a Config with a string transform therefore renames these keys (along with every other key in the document). For example, with <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">using</span> <span class="n">upper</span> <span class="o">=</span> <span class="n">ouly</span><span class="p">::</span><span class="n">config</span><span class="o">&lt;</span><span class="n">ouly</span><span class="p">::</span><span class="n">to_upper</span><span class="o">&gt;</span><span class="p">;</span>
+<span class="n">ouly</span><span class="p">::</span><span class="n">stream_type_registry</span><span class="o">&lt;</span><span class="n">upper</span><span class="o">&gt;</span> <span class="n">reg</span><span class="p">;</span> <span class="o">//</span> <span class="n">emits</span><span class="o">/</span><span class="n">parses</span> <span class="n">TYPE</span><span class="p">:</span> <span class="ow">and</span> <span class="n">VALUE</span><span class="p">:</span>
+</pre></div>
+</div>
+ the keys become “TYPE” and “VALUE”. The Config used here must match the one passed to from_string/to_string (it is deduced from this registry’s template parameter).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Template Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>Config</strong> – The serialization configuration (must match the from_string/to_string call). </p>
+</dd>
+</dl>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly20stream_type_registry17set_name_resolverENSt8functionIFN4ouly7type_idENSt11string_viewEEEENSt8functionIFNSt11string_viewEN4ouly7type_idEEEE">
+<span id="_CPPv3N4ouly20stream_type_registry17set_name_resolverENSt8functionIFN4ouly7type_idENSt11string_viewEEEENSt8functionIFNSt11string_viewEN4ouly7type_idEEEE"></span><span id="_CPPv2N4ouly20stream_type_registry17set_name_resolverENSt8functionIFN4ouly7type_idENSt11string_viewEEEENSt8functionIFNSt11string_viewEN4ouly7type_idEEEE"></span><span class="target" id="classouly_1_1stream__type__registry_1a4ee6c3374845042e093cce151371d9a1"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">set_name_resolver</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">function</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">ouly</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">type_id</span></span><span class="p"><span class="pre">(</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string_view</span></span><span class="p"><span class="pre">)</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">from_name</span></span>, <span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">function</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string_view</span></span><span class="p"><span class="pre">(</span></span><span class="n"><span class="pre">ouly</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">type_id</span></span><span class="p"><span class="pre">)</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">to_name</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N4ouly20stream_type_registry17set_name_resolverENSt8functionIFN4ouly7type_idENSt11string_viewEEEENSt8functionIFNSt11string_viewEN4ouly7type_idEEEE" title="Link to this definition"></a><br /></dt>
+<dd><p>Installs name&lt;-&gt;type_id resolvers used to (de)serialize the “type” scalar as a string name instead of an integer. </p>
+<p>When set, the serializers route the “type” field through these functors. When left unset, the default path is used (a convert&lt;type_id&gt; specialization if present, otherwise a plain integer). The view returned by <code class="docutils literal notranslate"><span class="pre">to_name</span></code> must outlive the serialization call (e.g. a string literal or a string owned by the caller). </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK4ouly20stream_type_registry18reads_type_by_nameEv">
+<span id="_CPPv3NK4ouly20stream_type_registry18reads_type_by_nameEv"></span><span id="_CPPv2NK4ouly20stream_type_registry18reads_type_by_nameEv"></span><span id="ouly::stream_type_registry::reads_type_by_nameC"></span><span class="target" id="classouly_1_1stream__type__registry_1a0fe749f1478c0cb4dcb5586cbb32be6c"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">reads_type_by_name</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4NK4ouly20stream_type_registry18reads_type_by_nameEv" title="Link to this definition"></a><br /></dt>
+<dd><p>True when the registry resolves the serialized “type” scalar from a string name. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly20stream_type_registry17type_id_from_nameENSt11string_viewE">
+<span id="_CPPv3N4ouly20stream_type_registry17type_id_from_nameENSt11string_viewE"></span><span id="_CPPv2N4ouly20stream_type_registry17type_id_from_nameENSt11string_viewE"></span><span id="ouly::stream_type_registry::type_id_from_name__std::string_view"></span><span class="target" id="classouly_1_1stream__type__registry_1a167004f752966da4fd1eef882025812d"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">type_id_from_name</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string_view</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">name</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><span class="n"><span class="pre">ouly</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">type_id</span></span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N4ouly20stream_type_registry17type_id_from_nameENSt11string_viewE" title="Link to this definition"></a><br /></dt>
+<dd><p>Resolves a string name to a type_id (only called when <a class="reference internal" href="#classouly_1_1stream__type__registry_1a0fe749f1478c0cb4dcb5586cbb32be6c"><span class="std std-ref">reads_type_by_name()</span></a> is true). </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK4ouly20stream_type_registry19writes_type_by_nameEv">
+<span id="_CPPv3NK4ouly20stream_type_registry19writes_type_by_nameEv"></span><span id="_CPPv2NK4ouly20stream_type_registry19writes_type_by_nameEv"></span><span id="ouly::stream_type_registry::writes_type_by_nameC"></span><span class="target" id="classouly_1_1stream__type__registry_1a14c547706b282227459506f0a8897ada"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">writes_type_by_name</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4NK4ouly20stream_type_registry19writes_type_by_nameEv" title="Link to this definition"></a><br /></dt>
+<dd><p>True when the registry emits the “type” scalar as a string name. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly20stream_type_registry17type_name_from_idEN4ouly7type_idE">
+<span id="_CPPv3N4ouly20stream_type_registry17type_name_from_idEN4ouly7type_idE"></span><span id="_CPPv2N4ouly20stream_type_registry17type_name_from_idEN4ouly7type_idE"></span><span id="ouly::stream_type_registry::type_name_from_id__ouly::type_id"></span><span class="target" id="classouly_1_1stream__type__registry_1acd1533b54a9402d59d6bb955b3bbccbe"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">type_name_from_id</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">ouly</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">type_id</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">id</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string_view</span></span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N4ouly20stream_type_registry17type_name_from_idEN4ouly7type_idE" title="Link to this definition"></a><br /></dt>
+<dd><p>Maps a type_id to its string name (only called when <a class="reference internal" href="#classouly_1_1stream__type__registry_1a14c547706b282227459506f0a8897ada"><span class="std std-ref">writes_type_by_name()</span></a> is true). The returned view must outlive the serialization call. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4I0EN4ouly20stream_type_registry4bindEvv">
+<span id="_CPPv3I0EN4ouly20stream_type_registry4bindEv"></span><span id="_CPPv2I0EN4ouly20stream_type_registry4bindEv"></span><span class="k"><span class="pre">template</span></span><span class="p"><span class="pre">&lt;</span></span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">T</span></span></span><span class="p"><span class="pre">&gt;</span></span><br /><span class="target" id="classouly_1_1stream__type__registry_1a628102c90f5075437350d444e6e1b4f3"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">bind</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4I0EN4ouly20stream_type_registry4bindEvv" title="Link to this definition"></a><br /></dt>
+<dd><p>Associates a type_id with a concrete type T. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4I0EN4ouly20stream_type_registry4bindEvN4ouly7type_idE">
+<span id="_CPPv3I0EN4ouly20stream_type_registry4bindEN4ouly7type_idE"></span><span id="_CPPv2I0EN4ouly20stream_type_registry4bindEN4ouly7type_idE"></span><span class="k"><span class="pre">template</span></span><span class="p"><span class="pre">&lt;</span></span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">T</span></span></span><span class="p"><span class="pre">&gt;</span></span><br /><span class="target" id="classouly_1_1stream__type__registry_1aa9922303efb76b945a07c8e70f6d655f"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">bind</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">ouly</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">type_id</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">id</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4I0EN4ouly20stream_type_registry4bindEvN4ouly7type_idE" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly20stream_type_registry11parse_valueEN4ouly7type_idERN4ouly3anyEPN4ouly6detail12parser_stateE">
+<span id="_CPPv3N4ouly20stream_type_registry11parse_valueEN4ouly7type_idERN4ouly3anyEPN4ouly6detail12parser_stateE"></span><span id="_CPPv2N4ouly20stream_type_registry11parse_valueEN4ouly7type_idERN4ouly3anyEPN4ouly6detail12parser_stateE"></span><span id="ouly::stream_type_registry::parse_value__ouly::type_id.ouly::anyR.ouly::detail::parser_stateP"></span><span class="target" id="classouly_1_1stream__type__registry_1a445f2cb9807d1697de748646f2dde2c4"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">parse_value</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">ouly</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">type_id</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">id</span></span>, <span class="n"><span class="pre">ouly</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">any</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">storage</span></span>, <span class="n"><span class="pre">ouly</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">detail</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">parser_state</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">parser</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="o"><span class="pre">-&gt;</span></span><span class="w"> </span><span class="n"><span class="pre">ouly</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">detail</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">in_context_base</span></span><span class="p"><span class="pre">*</span></span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N4ouly20stream_type_registry11parse_valueEN4ouly7type_idERN4ouly3anyEPN4ouly6detail12parser_stateE" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly20stream_type_registry11write_valueEN4ouly7type_idERKN4ouly3anyER14writer_visitor">
+<span id="_CPPv3N4ouly20stream_type_registry11write_valueEN4ouly7type_idERKN4ouly3anyER14writer_visitor"></span><span id="_CPPv2N4ouly20stream_type_registry11write_valueEN4ouly7type_idERKN4ouly3anyER14writer_visitor"></span><span id="ouly::stream_type_registry::write_value__ouly::type_id.ouly::anyCR.writer_visitorR"></span><span class="target" id="classouly_1_1stream__type__registry_1aee8b11b9271fe952978ccd7a3a6b7577"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">write_value</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">ouly</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">type_id</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">id</span></span>, <span class="n"><span class="pre">ouly</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">any</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">storage</span></span>, <span class="n"><span class="pre">writer_visitor</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">visitor</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N4ouly20stream_type_registry11write_valueEN4ouly7type_idERKN4ouly3anyER14writer_visitor" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly20stream_type_registry10read_valueENSt8uint32_tERN4ouly3anyER12binary_input">
+<span id="_CPPv3N4ouly20stream_type_registry10read_valueENSt8uint32_tERN4ouly3anyER12binary_input"></span><span id="_CPPv2N4ouly20stream_type_registry10read_valueENSt8uint32_tERN4ouly3anyER12binary_input"></span><span id="ouly::stream_type_registry::read_value__std::uint32_t.ouly::anyR.binary_inputR"></span><span class="target" id="classouly_1_1stream__type__registry_1a21e8e1d3722f419737dca3e102225ce0"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">read_value</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">uint32_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">type</span></span>, <span class="n"><span class="pre">ouly</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">any</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">storage</span></span>, <span class="n"><span class="pre">binary_input</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">stream</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N4ouly20stream_type_registry10read_valueENSt8uint32_tERN4ouly3anyER12binary_input" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N4ouly20stream_type_registry11write_valueENSt8uint32_tERKN4ouly3anyER13binary_output">
+<span id="_CPPv3N4ouly20stream_type_registry11write_valueENSt8uint32_tERKN4ouly3anyER13binary_output"></span><span id="_CPPv2N4ouly20stream_type_registry11write_valueENSt8uint32_tERKN4ouly3anyER13binary_output"></span><span id="ouly::stream_type_registry::write_value__std::uint32_t.ouly::anyCR.binary_outputR"></span><span class="target" id="classouly_1_1stream__type__registry_1a80e8244f267a12860c34e85d1e0f116c"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">write_value</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">uint32_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">type</span></span>, <span class="n"><span class="pre">ouly</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">any</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">storage</span></span>, <span class="n"><span class="pre">binary_output</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">stream</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N4ouly20stream_type_registry11write_valueENSt8uint32_tERKN4ouly3anyER13binary_output" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+</div>
+</dd></dl>
+
+</section>
+<section id="customization">
+<h2>Customization<a class="headerlink" href="#customization" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">#include</span> <span class="pre">&lt;ouly/utility/convert.hpp&gt;</span></code></p>
+<dl class="cpp struct">
+<dt class="sig sig-object cpp" id="_CPPv4I0EN4ouly7convertE">
+<span id="_CPPv3I0EN4ouly7convertE"></span><span id="_CPPv2I0EN4ouly7convertE"></span><span class="k"><span class="pre">template</span></span><span class="p"><span class="pre">&lt;</span></span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">T</span></span></span><span class="p"><span class="pre">&gt;</span></span><br /><span class="target" id="structouly_1_1convert"></span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">convert</span></span></span><a class="headerlink" href="#_CPPv4I0EN4ouly7convertE" title="Link to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="ecs.html" class="btn btn-neutral float-left" title="Entity Component System" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="utility.html" class="btn btn-neutral float-right" title="Utilities and DSL" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, OULY Contributors.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

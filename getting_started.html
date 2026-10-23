@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Getting Started &mdash; OULY 1.0.0 documentation</title>
+  <title>Getting Started &mdash; OULY 0.1.22 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="_static/graphviz.css?v=4ae1632d" />
@@ -15,7 +15,7 @@
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=8d563738"></script>
+      <script src="_static/documentation_options.js?v=842aa08f"></script>
       <script src="_static/doctools.js?v=fd6eb6e6"></script>
       <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/js/theme.js"></script>
@@ -47,21 +47,15 @@
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Getting Started</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#system-requirements">System Requirements</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#installation">Installation</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#using-cmake-fetchcontent-recommended">Using CMake FetchContent (Recommended)</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#git-submodule">Git Submodule</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#manual-installation">Manual Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#requirements">Requirements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#building-from-source">Building from source</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#using-ouly-from-cmake">Using OULY from CMake</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#cmake-options">CMake options</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#configuration-macros">Configuration macros</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#building-from-source">Building from Source</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#available-cmake-presets">Available CMake Presets</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#cmake-options">CMake Options</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#basic-concepts">Basic Concepts</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#first-program">First Program</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#next-steps">Next Steps</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#first-program">First program</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#library-layout">Library layout</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="tutorials/index.html">Tutorials</a></li>
@@ -69,7 +63,7 @@
 <li class="toctree-l1"><a class="reference internal" href="api_reference/index.html">API Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples/index.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="performance/index.html">Performance Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing to OULY</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
 </ul>
 
@@ -99,187 +93,264 @@
              
   <section id="getting-started">
 <h1>Getting Started<a class="headerlink" href="#getting-started" title="Link to this heading"></a></h1>
-<p>This guide will help you get started with OULY, covering installation, basic concepts, and your first programs.</p>
-<section id="system-requirements">
-<h2>System Requirements<a class="headerlink" href="#system-requirements" title="Link to this heading"></a></h2>
-<dl class="simple">
-<dt><strong>Compiler Support</strong></dt><dd><ul class="simple">
-<li><p>GCC 13.0 or later</p></li>
-<li><p>Clang 17.0 or later</p></li>
-<li><p>MSVC 2022 (Visual Studio 17.0) or later</p></li>
-<li><p>Apple Clang 15.0 or later</p></li>
+<p>This page covers building OULY, using it from a CMake project, the build options and
+configuration macros, and a first program.</p>
+<section id="requirements">
+<h2>Requirements<a class="headerlink" href="#requirements" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>A C++20 compiler with concepts and coroutines. CI builds and tests GCC 16, Clang 18, Apple Clang
+(<code class="docutils literal notranslate"><span class="pre">macos-latest</span></code>) and MSVC (<code class="docutils literal notranslate"><span class="pre">windows-latest</span></code>).</p></li>
+<li><p>CMake 3.25 or newer. The presets use the Ninja generator.</p></li>
+<li><p>Linux, macOS or Windows.</p></li>
 </ul>
-</dd>
-<dt><strong>Build System</strong></dt><dd><ul class="simple">
-<li><p>CMake 3.20 or later</p></li>
-<li><p>Ninja (recommended) or Make</p></li>
-</ul>
-</dd>
-<dt><strong>Operating Systems</strong></dt><dd><ul class="simple">
-<li><p>Linux (Ubuntu 20.04+, RHEL 8+)</p></li>
-<li><p>macOS 11.0+</p></li>
-<li><p>Windows 10/11</p></li>
-</ul>
-</dd>
-</dl>
+<p>OULY is a compiled library: the schedulers, the coalescing and thread-safe allocators and the DSL
+parsers have source files in <code class="docutils literal notranslate"><span class="pre">src/</span></code>. It builds as a static library by default and as a shared
+library with <code class="docutils literal notranslate"><span class="pre">-DBUILD_SHARED_LIBS=ON</span></code>.</p>
 </section>
-<section id="installation">
-<h2>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h2>
-<p>OULY is a header-only library that can be integrated into your project in several ways:</p>
-<section id="using-cmake-fetchcontent-recommended">
-<h3>Using CMake FetchContent (Recommended)<a class="headerlink" href="#using-cmake-fetchcontent-recommended" title="Link to this heading"></a></h3>
-<div class="highlight-cmake notranslate"><div class="highlight"><pre><span></span><span class="nb">cmake_minimum_required</span><span class="p">(</span><span class="s">VERSION</span><span class="w"> </span><span class="s">3.20</span><span class="p">)</span>
-<span class="nb">project</span><span class="p">(</span><span class="s">MyProject</span><span class="p">)</span>
+<section id="building-from-source">
+<h2>Building from source<a class="headerlink" href="#building-from-source" title="Link to this heading"></a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/obhi-d/ouly.git
+<span class="nb">cd</span><span class="w"> </span>ouly
+
+cmake<span class="w"> </span>--preset<span class="o">=</span>linux-default<span class="w">            </span><span class="c1"># Debug build with unit tests</span>
+cmake<span class="w"> </span>--build<span class="w"> </span>build/linux-default
+ctest<span class="w"> </span>--test-dir<span class="w"> </span>build/linux-default<span class="w"> </span>--output-on-failure
+</pre></div>
+</div>
+<p>The presets in <code class="docutils literal notranslate"><span class="pre">CMakePresets.json</span></code> write to <code class="docutils literal notranslate"><span class="pre">build/&lt;preset&gt;</span></code>:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 30.0%" />
+<col style="width: 70.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Preset</p></th>
+<th class="head"><p>Configuration</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">linux-default</span></code></p></td>
+<td><p>Debug, unit tests</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">linux-release</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">RelWithDebInfo</span></code>, unit tests</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">linux-clang-tidy</span></code></p></td>
+<td><p>Debug with <code class="docutils literal notranslate"><span class="pre">clang++</span></code>, unit tests, clang-tidy run on every library source</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">macos-default</span></code> / <code class="docutils literal notranslate"><span class="pre">macos-release</span></code></p></td>
+<td><p>Debug / Release with <code class="docutils literal notranslate"><span class="pre">clang++</span></code>, unit tests</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">windows-test</span></code>, <code class="docutils literal notranslate"><span class="pre">windows-gen</span></code></p></td>
+<td><p>Debug, unit tests</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">windows-profiling</span></code> / <code class="docutils literal notranslate"><span class="pre">windows-release</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">RelWithDebInfo</span></code>, unit tests</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">windows-default</span></code></p></td>
+<td><p>Debug, library only</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">third-party-release</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">RelWithDebInfo</span></code>, library only, installs to <code class="docutils literal notranslate"><span class="pre">../../Source/Ouly</span></code></p></td>
+</tr>
+</tbody>
+</table>
+<p>Without a preset, enable the tests explicitly:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cmake<span class="w"> </span>-S<span class="w"> </span>.<span class="w"> </span>-B<span class="w"> </span>build<span class="w"> </span>-G<span class="w"> </span>Ninja<span class="w"> </span>-DCMAKE_BUILD_TYPE<span class="o">=</span>Debug<span class="w"> </span>-DOULY_BUILD_TESTS<span class="o">=</span>ON
+cmake<span class="w"> </span>--build<span class="w"> </span>build
+ctest<span class="w"> </span>--test-dir<span class="w"> </span>build<span class="w"> </span>--output-on-failure
+</pre></div>
+</div>
+</section>
+<section id="using-ouly-from-cmake">
+<h2>Using OULY from CMake<a class="headerlink" href="#using-ouly-from-cmake" title="Link to this heading"></a></h2>
+<p>The simplest route is to build OULY as part of your project with <code class="docutils literal notranslate"><span class="pre">FetchContent</span></code>
+(<code class="docutils literal notranslate"><span class="pre">add_subdirectory(path/to/ouly)</span></code> works the same way for a vendored copy):</p>
+<div class="highlight-cmake notranslate"><div class="highlight"><pre><span></span><span class="nb">cmake_minimum_required</span><span class="p">(</span><span class="s">VERSION</span><span class="w"> </span><span class="s">3.25</span><span class="p">)</span>
+<span class="nb">project</span><span class="p">(</span><span class="s">my_app</span><span class="w"> </span><span class="s">LANGUAGES</span><span class="w"> </span><span class="s">CXX</span><span class="p">)</span>
+<span class="nb">set</span><span class="p">(</span><span class="s">CMAKE_CXX_STANDARD</span><span class="w"> </span><span class="s">20</span><span class="p">)</span>
 
 <span class="nb">include</span><span class="p">(</span><span class="s">FetchContent</span><span class="p">)</span>
-<span class="nb">FetchContent_Declare</span><span class="p">(</span>
-<span class="w">  </span><span class="s">ouly</span>
-<span class="w">  </span><span class="s">GIT_REPOSITORY</span><span class="w"> </span><span class="s">https://github.com/obhi-d/ouly.git</span>
-<span class="w">  </span><span class="s">GIT_TAG</span><span class="w">        </span><span class="s">main</span><span class="w">  </span><span class="c"># or specific version tag</span>
-<span class="p">)</span>
+<span class="nb">FetchContent_Declare</span><span class="p">(</span><span class="s">ouly</span><span class="w"> </span><span class="s">GIT_REPOSITORY</span><span class="w"> </span><span class="s">https://github.com/obhi-d/ouly.git</span><span class="w"> </span><span class="s">GIT_TAG</span><span class="w"> </span><span class="s">main</span><span class="p">)</span><span class="w"> </span><span class="c"># pin a commit</span>
 <span class="nb">FetchContent_MakeAvailable</span><span class="p">(</span><span class="s">ouly</span><span class="p">)</span>
 
 <span class="nb">add_executable</span><span class="p">(</span><span class="s">my_app</span><span class="w"> </span><span class="s">main.cpp</span><span class="p">)</span>
 <span class="nb">target_link_libraries</span><span class="p">(</span><span class="s">my_app</span><span class="w"> </span><span class="s">PRIVATE</span><span class="w"> </span><span class="s">ouly::ouly</span><span class="p">)</span>
-<span class="nb">target_compile_features</span><span class="p">(</span><span class="s">my_app</span><span class="w"> </span><span class="s">PRIVATE</span><span class="w"> </span><span class="s">cxx_std_20</span><span class="p">)</span>
 </pre></div>
 </div>
-</section>
-<section id="git-submodule">
-<h3>Git Submodule<a class="headerlink" href="#git-submodule" title="Link to this heading"></a></h3>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Add as submodule</span>
-git<span class="w"> </span>submodule<span class="w"> </span>add<span class="w"> </span>https://github.com/obhi-d/ouly.git<span class="w"> </span>third_party/ouly
-git<span class="w"> </span>submodule<span class="w"> </span>update<span class="w"> </span>--init<span class="w"> </span>--recursive
+<p>To use an installed copy instead, install the library and find it from your project:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cmake<span class="w"> </span>-S<span class="w"> </span>ouly<span class="w"> </span>-B<span class="w"> </span>ouly-build<span class="w"> </span>-G<span class="w"> </span>Ninja<span class="w"> </span>-DCMAKE_BUILD_TYPE<span class="o">=</span>Release<span class="w"> </span>-DCMAKE_INSTALL_PREFIX<span class="o">=</span><span class="nv">$HOME</span>/ouly-install
+cmake<span class="w"> </span>--build<span class="w"> </span>ouly-build
+cmake<span class="w"> </span>--install<span class="w"> </span>ouly-build
 </pre></div>
 </div>
-<p>Then in your CMakeLists.txt:</p>
-<div class="highlight-cmake notranslate"><div class="highlight"><pre><span></span><span class="nb">add_subdirectory</span><span class="p">(</span><span class="s">third_party/ouly</span><span class="p">)</span>
-<span class="nb">target_link_libraries</span><span class="p">(</span><span class="s">your_target</span><span class="w"> </span><span class="s">PRIVATE</span><span class="w"> </span><span class="s">ouly::ouly</span><span class="p">)</span>
-</pre></div>
-</div>
-</section>
-<section id="manual-installation">
-<h3>Manual Installation<a class="headerlink" href="#manual-installation" title="Link to this heading"></a></h3>
-<ol class="arabic simple">
-<li><p>Download or clone the repository</p></li>
-<li><p>Copy the <code class="docutils literal notranslate"><span class="pre">include/</span></code> directory to your project</p></li>
-<li><p>Add the include path to your compiler</p></li>
-</ol>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/obhi-d/ouly.git
-cp<span class="w"> </span>-r<span class="w"> </span>ouly/include/ouly<span class="w"> </span>/your/project/include/
-</pre></div>
-</div>
-</section>
-</section>
-<section id="building-from-source">
-<h2>Building from Source<a class="headerlink" href="#building-from-source" title="Link to this heading"></a></h2>
-<p>If you want to build tests, examples, or documentation:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/obhi-d/ouly.git
-<span class="nb">cd</span><span class="w"> </span>ouly
+<div class="highlight-cmake notranslate"><div class="highlight"><pre><span></span><span class="nb">cmake_minimum_required</span><span class="p">(</span><span class="s">VERSION</span><span class="w"> </span><span class="s">3.25</span><span class="p">)</span>
+<span class="nb">project</span><span class="p">(</span><span class="s">my_app</span><span class="w"> </span><span class="s">LANGUAGES</span><span class="w"> </span><span class="s">CXX</span><span class="p">)</span>
+<span class="nb">set</span><span class="p">(</span><span class="s">CMAKE_CXX_STANDARD</span><span class="w"> </span><span class="s">20</span><span class="p">)</span>
 
-<span class="c1"># Configure with default preset</span>
-cmake<span class="w"> </span>--preset<span class="o">=</span>macos-default<span class="w">  </span><span class="c1"># or linux-default</span>
+<span class="c"># configure with -DCMAKE_PREFIX_PATH=$HOME/ouly-install</span>
+<span class="nb">find_package</span><span class="p">(</span><span class="s">ouly</span><span class="w"> </span><span class="s">REQUIRED</span><span class="p">)</span>
 
-<span class="c1"># Build</span>
-cmake<span class="w"> </span>--build<span class="w"> </span>build/macos-default
-
-<span class="c1"># Run tests</span>
-<span class="nb">cd</span><span class="w"> </span>build/macos-default<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>ctest
+<span class="nb">add_executable</span><span class="p">(</span><span class="s">my_app</span><span class="w"> </span><span class="s">main.cpp</span><span class="p">)</span>
+<span class="nb">target_link_libraries</span><span class="p">(</span><span class="s">my_app</span><span class="w"> </span><span class="s">PRIVATE</span><span class="w"> </span><span class="s">ouly::ouly</span><span class="p">)</span>
 </pre></div>
 </div>
-<section id="available-cmake-presets">
-<h3>Available CMake Presets<a class="headerlink" href="#available-cmake-presets" title="Link to this heading"></a></h3>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">macos-default</span></code> - Debug build with tests (macOS)</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">macos-release</span></code> - Release build (macOS)</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">linux-default</span></code> - Debug build with tests (Linux)</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">linux-release</span></code> - Release build (Linux)</p></li>
-</ul>
-</section>
 <section id="cmake-options">
-<h3>CMake Options<a class="headerlink" href="#cmake-options" title="Link to this heading"></a></h3>
-<div class="highlight-cmake notranslate"><div class="highlight"><pre><span></span><span class="nb">option</span><span class="p">(</span><span class="s">OULY_BUILD_TESTS</span><span class="w"> </span><span class="s2">"Build unit tests"</span><span class="w"> </span><span class="s">OFF</span><span class="p">)</span>
-<span class="nb">option</span><span class="p">(</span><span class="s">OULY_BUILD_DOCS</span><span class="w"> </span><span class="s2">"Build documentation"</span><span class="w"> </span><span class="s">OFF</span><span class="p">)</span>
-<span class="nb">option</span><span class="p">(</span><span class="s">OULY_ENABLE_ASAN</span><span class="w"> </span><span class="s2">"Enable AddressSanitizer"</span><span class="w"> </span><span class="s">OFF</span><span class="p">)</span>
-</pre></div>
-</div>
+<h3>CMake options<a class="headerlink" href="#cmake-options" title="Link to this heading"></a></h3>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 40.0%" />
+<col style="width: 60.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Option</p></th>
+<th class="head"><p>Effect</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">OULY_BUILD_TESTS</span></code> (<code class="docutils literal notranslate"><span class="pre">OFF</span></code>)</p></td>
+<td><p>Build the Catch2 unit tests in <code class="docutils literal notranslate"><span class="pre">unit_tests/</span></code> (with CTest’s <code class="docutils literal notranslate"><span class="pre">BUILD_TESTING</span></code>, on by
+default). Catch2, nlohmann_json, fast_float and GLM are fetched for the tests. On GCC and
+Clang the tests are always built with AddressSanitizer and coverage instrumentation.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">OULY_BUILD_BENCHMARKS</span></code> (<code class="docutils literal notranslate"><span class="pre">OFF</span></code>)</p></td>
+<td><p>Build the <code class="docutils literal notranslate"><span class="pre">bench_*</span></code> executables; fetches nanobench and oneTBB. See <a class="reference internal" href="performance/index.html"><span class="doc">Performance Guide</span></a>.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">OULY_ENABLE_CLANG_TIDY</span></code> (<code class="docutils literal notranslate"><span class="pre">OFF</span></code>)</p></td>
+<td><p>Run clang-tidy (<code class="docutils literal notranslate"><span class="pre">.clang-tidy</span></code>) on the library sources while compiling.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">OULY_SCHEDULER_PMR_INTERNAL_ALLOCATOR</span></code> (<code class="docutils literal notranslate"><span class="pre">OFF</span></code>)</p></td>
+<td><p>Scheduler-internal nodes come from a synchronized PMR pool instead of <code class="docutils literal notranslate"><span class="pre">operator</span> <span class="pre">new</span></code>; see
+<a class="reference internal" href="tutorials/scheduler_tutorial.html"><span class="doc">Task Scheduler Tutorial</span></a>. Propagated to consumers as a compile definition.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">OULY_EXPORT_CC_TO_SRC_DIR</span></code></p></td>
+<td><p>Symlink <code class="docutils literal notranslate"><span class="pre">compile_commands.json</span></code> into the source directory.</p></td>
+</tr>
+</tbody>
+</table>
+<p>The library itself is compiled with <code class="docutils literal notranslate"><span class="pre">-Wall</span> <span class="pre">-Wextra</span> <span class="pre">-pedantic</span> <span class="pre">-Werror</span></code> and a long list of extra
+warnings on GCC and Clang, and <code class="docutils literal notranslate"><span class="pre">/W4</span> <span class="pre">/WX</span></code> on MSVC. <code class="docutils literal notranslate"><span class="pre">ASAN_ENABLED</span></code> (set by several presets),
+<code class="docutils literal notranslate"><span class="pre">OULY_REC_STATS</span></code> and <code class="docutils literal notranslate"><span class="pre">OULY_TEST_COVERAGE</span></code> are declared but currently have no effect: nothing
+reads the <code class="docutils literal notranslate"><span class="pre">OULY_REC_STATS</span></code> definition, and sanitizer and coverage flags for the tests are chosen
+per compiler as described above.</p>
 </section>
+<section id="configuration-macros">
+<h3>Configuration macros<a class="headerlink" href="#configuration-macros" title="Link to this heading"></a></h3>
+<p>Define these consistently for every translation unit, either as compile definitions or in an
+<code class="docutils literal notranslate"><span class="pre">ouly_user_defines.hpp</span></code> header on the include path, which <code class="docutils literal notranslate"><span class="pre">ouly/utility/user_config.hpp</span></code>
+includes automatically when it exists.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 40.0%" />
+<col style="width: 60.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Macro</p></th>
+<th class="head"><p>Effect</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">OULY_ASSERT</span></code></p></td>
+<td><p>Assertion macro used internally; defaults to <code class="docutils literal notranslate"><span class="pre">assert</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">OULY_SCHEDULER_VERSION</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">v1</span></code>, <code class="docutils literal notranslate"><span class="pre">v2</span></code> (default) or <code class="docutils literal notranslate"><span class="pre">v3</span></code>: the generation behind <code class="docutils literal notranslate"><span class="pre">ouly::scheduler</span></code> and
+<code class="docutils literal notranslate"><span class="pre">ouly::task_context</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">OULY_SCHEDULER_PMR_INTERNAL_ALLOCATOR</span></code></p></td>
+<td><p>See the CMake option of the same name.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">OULY_CACHE_LINE_SIZE</span></code></p></td>
+<td><p>Cache line size used for padding (default 64).</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">OULY_SAFE_BOUNDS</span></code></p></td>
+<td><p>Bounds-check internal container indexing.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">OULY_PACK_TAGGED_POINTER</span></code></p></td>
+<td><p>Make <code class="docutils literal notranslate"><span class="pre">ouly::tagged_ptr</span></code> pack its tag into the pointer.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">OULY_ANY_DEFAULT_INLINE_SIZE</span></code></p></td>
+<td><p>Inline buffer size of <code class="docutils literal notranslate"><span class="pre">ouly::any</span></code> (default 32).</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">OULY_USE_LARGE_SIZE_TYPE</span></code></p></td>
+<td><p>Serialize container sizes as 64-bit instead of 32-bit values.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">OULY_PRINT_DEBUG</span></code>, <code class="docutils literal notranslate"><span class="pre">OULY_PRINT_ERROR</span></code></p></td>
+<td><p>Functions used to print debug output and errors.</p></td>
+</tr>
+</tbody>
+</table>
 </section>
-<section id="basic-concepts">
-<h2>Basic Concepts<a class="headerlink" href="#basic-concepts" title="Link to this heading"></a></h2>
-<p>OULY is organized into several core modules:</p>
-<dl class="simple">
-<dt><strong>Allocators</strong> (<code class="docutils literal notranslate"><span class="pre">ouly/allocators/</span></code>)</dt><dd><p>Memory management components for efficient allocation strategies.</p>
-</dd>
-<dt><strong>Containers</strong> (<code class="docutils literal notranslate"><span class="pre">ouly/containers/</span></code>)</dt><dd><p>High-performance containers with STL-compatible interfaces.</p>
-</dd>
-<dt><strong>ECS</strong> (<code class="docutils literal notranslate"><span class="pre">ouly/ecs/</span></code>)</dt><dd><p>Entity Component System for data-oriented design.</p>
-</dd>
-<dt><strong>Scheduler</strong> (<code class="docutils literal notranslate"><span class="pre">ouly/scheduler/</span></code>)</dt><dd><p>Task scheduling and parallel execution framework.</p>
-</dd>
-<dt><strong>Serializers</strong> (<code class="docutils literal notranslate"><span class="pre">ouly/serializers/</span></code>)</dt><dd><p>Binary and text-based serialization utilities.</p>
-</dd>
-<dt><strong>Utilities</strong> (<code class="docutils literal notranslate"><span class="pre">ouly/utility/</span></code>)</dt><dd><p>Helper classes and meta-programming utilities.</p>
-</dd>
-</dl>
 </section>
 <section id="first-program">
-<h2>First Program<a class="headerlink" href="#first-program" title="Link to this heading"></a></h2>
-<p>Here’s a simple program demonstrating basic OULY usage:</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/allocators/linear_arena_allocator.hpp&gt;</span>
-<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/containers/small_vector.hpp&gt;</span>
-<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/ecs/registry.hpp&gt;</span>
-<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/scheduler/scheduler_v2.hpp&gt;</span>
+<h2>First program<a class="headerlink" href="#first-program" title="Link to this heading"></a></h2>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/scheduler/parallel_for.hpp&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;ouly/scheduler/scheduler.hpp&gt;</span>
+
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;cstdint&gt;</span>
 <span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;iostream&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;numeric&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;vector&gt;</span>
 
-<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="c1">// Memory allocator example</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">linear_arena_allocator</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">allocator</span><span class="p">(</span><span class="mi">1024</span><span class="p">);</span>
-<span class="w">    </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">memory</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">allocator</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="mi">256</span><span class="p">);</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Allocated 256 bytes</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="c1">// Workgroup 0 spans worker threads [0, 4). Worker 0 is the thread that calls begin_execution().</span>
+<span class="w">  </span><span class="n">ouly</span><span class="o">::</span><span class="n">scheduler</span><span class="w"> </span><span class="n">scheduler</span><span class="p">;</span>
+<span class="w">  </span><span class="n">scheduler</span><span class="p">.</span><span class="n">create_group</span><span class="p">(</span><span class="n">ouly</span><span class="o">::</span><span class="n">default_workgroup_id</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">);</span>
+<span class="w">  </span><span class="n">scheduler</span><span class="p">.</span><span class="n">begin_execution</span><span class="p">();</span>
 
-<span class="w">    </span><span class="c1">// Container example</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">small_vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span><span class="w"> </span><span class="mi">8</span><span class="o">&gt;</span><span class="w"> </span><span class="n">numbers</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span><span class="p">};</span>
-<span class="w">    </span><span class="n">numbers</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="mi">6</span><span class="p">);</span>
+<span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="k">const</span><span class="o">&amp;</span><span class="w"> </span><span class="n">ctx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">task_context</span><span class="o">::</span><span class="n">this_context</span><span class="o">::</span><span class="n">get</span><span class="p">();</span>
 
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Vector contents: "</span><span class="p">;</span>
-<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="n">num</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">numbers</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">num</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">" "</span><span class="p">;</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
+<span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="kt">uint32_t</span><span class="o">&gt;</span><span class="w"> </span><span class="n">values</span><span class="p">(</span><span class="mi">100'000</span><span class="p">);</span>
+<span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="n">iota</span><span class="p">(</span><span class="n">values</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span><span class="w"> </span><span class="n">values</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span><span class="w"> </span><span class="mi">0U</span><span class="p">);</span>
 
-<span class="w">    </span><span class="c1">// ECS example</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">registry</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">registry</span><span class="p">;</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">entity</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">registry</span><span class="p">.</span><span class="n">emplace</span><span class="p">();</span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Created entity: "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">entity</span><span class="p">.</span><span class="n">value</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
+<span class="w">  </span><span class="c1">// Split the range across the workgroup; returns once every element is processed.</span>
+<span class="w">  </span><span class="n">ouly</span><span class="o">::</span><span class="n">parallel_for</span><span class="p">([](</span><span class="n">std</span><span class="o">::</span><span class="kt">uint32_t</span><span class="o">&amp;</span><span class="w"> </span><span class="n">value</span><span class="p">,</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">task_context</span><span class="w"> </span><span class="k">const</span><span class="o">&amp;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">value</span><span class="w"> </span><span class="o">*=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="n">values</span><span class="p">,</span><span class="w"> </span><span class="n">ctx</span><span class="p">);</span>
 
-<span class="w">    </span><span class="c1">// Scheduler example</span>
-<span class="w">    </span><span class="n">ouly</span><span class="o">::</span><span class="n">scheduler</span><span class="w"> </span><span class="n">scheduler</span><span class="p">(</span><span class="mi">2</span><span class="p">);</span>
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">workgroup</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">create_workgroup</span><span class="p">();</span>
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">begin_execution</span><span class="p">();</span>
+<span class="w">  </span><span class="c1">// A value task; get(ctx) runs queued work on this thread while it waits.</span>
+<span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="n">sum</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">submit_task</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="o">&amp;</span><span class="n">values</span><span class="p">]</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">accumulate</span><span class="p">(</span><span class="n">values</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span><span class="w"> </span><span class="n">values</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="kt">uint64_t</span><span class="p">{</span><span class="mi">0</span><span class="p">});</span><span class="w"> </span><span class="p">});</span>
+<span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"sum = "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">sum</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">ctx</span><span class="p">)</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="sc">'\n'</span><span class="p">;</span>
 
-<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">future</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">submit</span><span class="p">(</span><span class="n">workgroup</span><span class="p">,</span><span class="w"> </span><span class="p">[]()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="mi">42</span><span class="p">;</span>
-<span class="w">    </span><span class="p">});</span>
-
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Task result: "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">future</span><span class="p">.</span><span class="n">get</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
-
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">end_execution</span><span class="p">();</span>
-<span class="w">    </span><span class="n">scheduler</span><span class="p">.</span><span class="n">shutdown</span><span class="p">();</span>
-
-<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">  </span><span class="n">scheduler</span><span class="p">.</span><span class="n">end_execution</span><span class="p">();</span>
 <span class="p">}</span>
 </pre></div>
 </div>
+<p>Build it with the <code class="docutils literal notranslate"><span class="pre">CMakeLists.txt</span></code> above. The program starts a scheduler with four workers (the
+calling thread is worker 0), doubles 100,000 values in parallel and sums them in a task.</p>
 </section>
-<section id="next-steps">
-<h2>Next Steps<a class="headerlink" href="#next-steps" title="Link to this heading"></a></h2>
-<ul class="simple">
-<li><p>Read the <a class="reference internal" href="tutorials/index.html"><span class="doc">Tutorials</span></a> for guided examples</p></li>
-<li><p>Explore the <a class="reference internal" href="user_guide/index.html"><span class="doc">User Guide</span></a> for detailed component documentation</p></li>
-<li><p>Check out <a class="reference internal" href="examples/index.html"><span class="doc">Examples</span></a> for real-world usage patterns</p></li>
-<li><p>Review <a class="reference internal" href="performance/index.html"><span class="doc">Performance Guide</span></a> for optimization guidance</p></li>
-</ul>
+<section id="library-layout">
+<h2>Library layout<a class="headerlink" href="#library-layout" title="Link to this heading"></a></h2>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 35.0%" />
+<col style="width: 65.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Headers</p></th>
+<th class="head"><p>Contents</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ouly/scheduler/</span></code></p></td>
+<td><p>Schedulers, tasks, <code class="docutils literal notranslate"><span class="pre">parallel_for</span></code>, coroutines, flow graphs (<a class="reference internal" href="tutorials/scheduler_tutorial.html"><span class="doc">Task Scheduler Tutorial</span></a>)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ouly/allocators/</span></code></p></td>
+<td><p>Allocators, memory-mapped files, coalescing suballocators (<a class="reference internal" href="tutorials/memory_management.html"><span class="doc">Memory Management Tutorial</span></a>)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ouly/containers/</span></code></p></td>
+<td><p>Containers and queues (<a class="reference internal" href="tutorials/containers_tutorial.html"><span class="doc">Containers Tutorial</span></a>)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ouly/ecs/</span></code></p></td>
+<td><p>Entity component system (<a class="reference internal" href="tutorials/ecs_tutorial.html"><span class="doc">Entity Component System Tutorial</span></a>)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ouly/reflection/</span></code>, <code class="docutils literal notranslate"><span class="pre">ouly/serializers/</span></code></p></td>
+<td><p>Reflection, binary and YAML serialization (<a class="reference internal" href="tutorials/serialization_tutorial.html"><span class="doc">Serialization Tutorial</span></a>)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ouly/utility/</span></code>, <code class="docutils literal notranslate"><span class="pre">ouly/dsl/</span></code></p></td>
+<td><p>Utilities, macro expressions, YAML event parser (<a class="reference internal" href="tutorials/utilities_tutorial.html"><span class="doc">Utilities and DSL Tutorial</span></a>)</p></td>
+</tr>
+</tbody>
+</table>
 </section>
 </section>
 

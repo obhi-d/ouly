@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Changelog &mdash; OULY 1.0.0 documentation</title>
+  <title>Changelog &mdash; OULY 0.1.22 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="_static/graphviz.css?v=4ae1632d" />
@@ -15,13 +15,13 @@
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=8d563738"></script>
+      <script src="_static/documentation_options.js?v=842aa08f"></script>
       <script src="_static/doctools.js?v=fd6eb6e6"></script>
       <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="prev" title="Contributing to OULY" href="contributing.html" /> 
+    <link rel="prev" title="Contributing" href="contributing.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -51,42 +51,14 @@
 <li class="toctree-l1"><a class="reference internal" href="api_reference/index.html">API Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples/index.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="performance/index.html">Performance Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing to OULY</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Changelog</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#unreleased">[Unreleased]</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#added">Added</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#changed">Changed</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#fixed">Fixed</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#documentation">Documentation</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#id1">[1.0.0] - 2025-01-01</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#id2">Added</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#platform-support">Platform Support</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#performance-characteristics">Performance Characteristics</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#id3">Changed</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#security">Security</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#id4">[0.9.0] - 2024-12-01</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#id5">Added</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#id6">[0.5.0] - 2024-09-01</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#id7">Added</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#id8">[0.1.0] - 2024-06-01</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#id9">Added</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#migration-guide">Migration Guide</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#upgrading-from-0-x-to-1-0">Upgrading from 0.x to 1.0</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#future-roadmap">Future Roadmap</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#contributing">Contributing</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#support">Support</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#license">License</a></li>
 </ul>
 </li>
 </ul>
@@ -117,223 +89,95 @@
              
   <section id="changelog">
 <h1>Changelog<a class="headerlink" href="#changelog" title="Link to this heading"></a></h1>
-<p>All notable changes to OULY will be documented in this file.</p>
-<p>The format is based on <a class="reference external" href="https://keepachangelog.com/en/1.0.0/">Keep a Changelog</a>,
-and this project adheres to <a class="reference external" href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
+<p>Notable changes to OULY. The format is based on
+<a class="reference external" href="https://keepachangelog.com/en/1.0.0/">Keep a Changelog</a>. The current version, as set in
+<code class="docutils literal notranslate"><span class="pre">CMakeLists.txt</span></code>, is 0.1.22; releases up to that version predate this changelog and are described
+by the git history.</p>
 <section id="unreleased">
 <h2>[Unreleased]<a class="headerlink" href="#unreleased" title="Link to this heading"></a></h2>
-<section id="added">
-<h3>Added<a class="headerlink" href="#added" title="Link to this heading"></a></h3>
-<ul class="simple">
-<li><p>Comprehensive documentation with Sphinx and Breathe integration</p></li>
-<li><p>Coalescing arena allocator for reduced fragmentation</p></li>
-</ul>
-</section>
 <section id="changed">
 <h3>Changed<a class="headerlink" href="#changed" title="Link to this heading"></a></h3>
 <ul class="simple">
-<li><p>Improved error handling in binary serialization</p></li>
-<li><p>Enhanced type safety in ECS component storage</p></li>
-<li><p>Optimized memory layout for better cache performance</p></li>
+<li><p><strong>small_vector</strong>: whether the elements live inline or on the heap is now explicit state instead
+of being derived from the size. Once on the heap the vector stays there, as <code class="docutils literal notranslate"><span class="pre">std::vector</span></code> does:
+<code class="docutils literal notranslate"><span class="pre">clear()</span></code>, <code class="docutils literal notranslate"><span class="pre">pop_back()</span></code>, <code class="docutils literal notranslate"><span class="pre">erase()</span></code> and a shrinking <code class="docutils literal notranslate"><span class="pre">resize()</span></code> keep the heap buffer;
+<code class="docutils literal notranslate"><span class="pre">reserve()</span></code> allocates even while the elements are inline; <code class="docutils literal notranslate"><span class="pre">shrink_to_fit()</span></code> is the only call
+that moves the elements back inline. <code class="docutils literal notranslate"><span class="pre">is_inlined()</span></code> reports where the elements are. <code class="docutils literal notranslate"><span class="pre">resize()</span></code>
+grows geometrically and <code class="docutils literal notranslate"><span class="pre">assign()</span></code> keeps the capacity. <code class="docutils literal notranslate"><span class="pre">sizeof</span></code> is unchanged.</p></li>
+<li><p><strong>coalescing_arena_allocator</strong>: each memory class keeps one emptied arena registered and reuses
+it, so an allocate/free cycle no longer creates and destroys backing memory every time.
+<code class="docutils literal notranslate"><span class="pre">set_retained_empty_arenas(n)</span></code> (default 1) and <code class="docutils literal notranslate"><span class="pre">get_retained_empty_arenas()</span></code> control the
+limit, <code class="docutils literal notranslate"><span class="pre">trim(manager)</span></code> returns the retained arenas. Dedicated arenas, extra empty arenas of a
+class and arenas emptied by an evacuation are still released immediately.</p></li>
+<li><p><strong>auto_parallel_for</strong>: stolen ranges are now split further as intended (the divisibility test was
+inverted, so the loop behaved like a static split into about one chunk per worker). Skewed
+workloads run about twice as fast on four workers; uniform work costs a few percent more.</p></li>
+<li><p><strong>v3::scheduler</strong>: <code class="docutils literal notranslate"><span class="pre">busy_work</span></code> returns whether it ran a task, and cooperative waits only yield
+when it did not. Submission, chained wake-ups and task completion skip the global mutex and
+<code class="docutils literal notranslate"><span class="pre">notify_all</span></code> while no worker is parked.</p></li>
+<li><p><strong>v1/v2 schedulers</strong>: the stealing PRNG no longer produces only even numbers, and v2 seeds it per
+worker so thieves do not all visit the same victims. v2 keeps its hot atomics on separate cache
+lines.</p></li>
+<li><p><strong>microexpr</strong>: supports logical <code class="docutils literal notranslate"><span class="pre">!</span></code>, <code class="docutils literal notranslate"><span class="pre">$(NAME)</span></code> and identifiers containing <code class="docutils literal notranslate"><span class="pre">_</span></code>.</p></li>
+<li><p><strong>mmap_file</strong>: <code class="docutils literal notranslate"><span class="pre">map(path,</span> <span class="pre">offset,</span> <span class="pre">length)</span></code> maps <code class="docutils literal notranslate"><span class="pre">offset</span> <span class="pre">+</span> <span class="pre">length</span></code> bytes so the view covers the
+requested range; <code class="docutils literal notranslate"><span class="pre">make_mmap_source</span></code>/<code class="docutils literal notranslate"><span class="pre">make_mmap_sink</span></code> are <code class="docutils literal notranslate"><span class="pre">inline</span></code>.</p></li>
+<li><p><strong>soavector</strong>: <code class="docutils literal notranslate"><span class="pre">resize()</span></code> grows geometrically.</p></li>
+<li><p><strong>concurrent_queue</strong>: allocates buckets four per page (a <code class="docutils literal notranslate"><span class="pre">concurrent_queue&lt;int&gt;</span></code> previously
+reserved about 85 MB) and no longer zeroes bucket storage under the exclusive lock.</p></li>
+<li><p><strong>basic_queue</strong>: slots use the element’s alignment instead of <code class="docutils literal notranslate"><span class="pre">max_align_t</span></code>.</p></li>
 </ul>
 </section>
 <section id="fixed">
 <h3>Fixed<a class="headerlink" href="#fixed" title="Link to this heading"></a></h3>
 <ul class="simple">
-<li><p>Thread safety issues in shared linear allocator</p></li>
-<li><p>Memory alignment bugs in pool allocator</p></li>
-<li><p>Compilation errors with certain compiler configurations</p></li>
+<li><p><strong>reflection</strong>: getter/setter properties (<code class="docutils literal notranslate"><span class="pre">ouly::bind&lt;&quot;name&quot;,</span> <span class="pre">&amp;get,</span> <span class="pre">&amp;set&gt;()</span></code>) can be serialized.
+<code class="docutils literal notranslate"><span class="pre">noexcept</span></code> accessors were not recognized, and the writer could not pass a getter’s returned
+value on. Free getters taking the object by <code class="docutils literal notranslate"><span class="pre">const&amp;</span></code> are no longer ambiguous; a free getter
+taking a non-const reference, which could never be written, is now rejected.</p></li>
+<li><p><strong>fixed_array</strong>: the fill and range constructors wrote past the end when given fewer than <code class="docutils literal notranslate"><span class="pre">N</span></code>
+values; an empty (default constructed or moved-from) array is now an empty range, and copying it
+no longer reads through a null pointer.</p></li>
+<li><p><strong>components</strong>: <code class="docutils literal notranslate"><span class="pre">erase(value_type</span> <span class="pre">const&amp;)</span></code> compiles for components with a self index.</p></li>
+<li><p><strong>CMake</strong>: OULY can be consumed with <code class="docutils literal notranslate"><span class="pre">add_subdirectory</span></code> and <code class="docutils literal notranslate"><span class="pre">FetchContent</span></code>. The target’s
+include directory (and the natvis and <code class="docutils literal notranslate"><span class="pre">compile_commands.json</span></code> paths) were derived from
+<code class="docutils literal notranslate"><span class="pre">CMAKE_SOURCE_DIR</span></code>, which is the parent project’s directory in that setup.</p></li>
+<li><p><strong>small_vector</strong>: truncating <code class="docutils literal notranslate"><span class="pre">resize()</span></code> destroys the removed elements; moving from an inline
+vector destroys the moved-from elements; <code class="docutils literal notranslate"><span class="pre">assign(n,</span> <span class="pre">value)</span></code> no longer selects the iterator
+overload; <code class="docutils literal notranslate"><span class="pre">swap</span></code> with allocator propagation compiles.</p></li>
+<li><p><strong>sparse_vector</strong>: iterators skip absent pages in one step; copy and move assignment no longer
+leak the target’s pages. <strong>sparse_table</strong>: the <code class="docutils literal notranslate"><span class="pre">const</span></code> <code class="docutils literal notranslate"><span class="pre">get_if()</span></code> compiles.</p></li>
+<li><p><strong>pool_allocator</strong>: releasing a multi-atom block after the array list was exhausted dereferenced
+null; move assignment frees the target’s arenas.</p></li>
+<li><p><strong>ts_thread_local_allocator</strong>: each instance has its own per-thread page, so alternating between
+instances on one thread no longer takes a new page per call; move assignment releases instead of
+leaking.</p></li>
+<li><p><strong>linear_arena_allocator</strong> / <strong>linear_stack_allocator</strong>: full arenas leave the first-fit scan;
+<code class="docutils literal notranslate"><span class="pre">deallocate</span></code> and in-place resize only inspect the current arena.</p></li>
+<li><p><strong>default_allocator</strong>: alignments up to <code class="docutils literal notranslate"><span class="pre">__STDCPP_DEFAULT_NEW_ALIGNMENT__</span></code> use plain
+<code class="docutils literal notranslate"><span class="pre">operator</span> <span class="pre">new</span></code>/<code class="docutils literal notranslate"><span class="pre">delete</span></code>.</p></li>
+<li><p><strong>ecs::collection</strong>: tracks entity revisions whenever the entity type has revision bits; Release
+builds previously skipped recycled entities during <code class="docutils literal notranslate"><span class="pre">for_each</span></code>. <strong>registry::for_each_index</strong>
+sorts the free list only after an erase.</p></li>
+<li><p><strong>Serialization</strong>: YAML <code class="docutils literal notranslate"><span class="pre">null</span></code> no longer reads as <code class="docutils literal notranslate"><span class="pre">true</span></code> for <code class="docutils literal notranslate"><span class="pre">bool</span></code> fields; binary reads of
+<code class="docutils literal notranslate"><span class="pre">std::string</span></code> move the decoded buffer; <code class="docutils literal notranslate"><span class="pre">convert&lt;std::unique_ptr&lt;char[]&gt;&gt;</span></code> NUL-terminates and
+handles null.</p></li>
+<li><p><strong>microexpr</strong>: <code class="docutils literal notranslate"><span class="pre">&amp;&amp;</span></code> and <code class="docutils literal notranslate"><span class="pre">||</span></code> always consume their right operand (the rest of the expression
+was misparsed after a short circuit); no out-of-bounds read on an unclosed <code class="docutils literal notranslate"><span class="pre">(</span></code>.</p></li>
+<li><p><strong>Utilities</strong>: <code class="docutils literal notranslate"><span class="pre">trim_leading</span></code>/<code class="docutils literal notranslate"><span class="pre">trim_trailing</span></code>/<code class="docutils literal notranslate"><span class="pre">trim_view</span></code> return an empty view for
+all-whitespace input; <code class="docutils literal notranslate"><span class="pre">is_number</span></code> rejects <code class="docutils literal notranslate"><span class="pre">&quot;-&quot;</span></code>; <code class="docutils literal notranslate"><span class="pre">program_args::as&lt;T&gt;</span></code> works for types
+other than <code class="docutils literal notranslate"><span class="pre">bool</span></code>.</p></li>
+<li><p>Release (<code class="docutils literal notranslate"><span class="pre">-DNDEBUG</span></code>), <code class="docutils literal notranslate"><span class="pre">-pedantic</span></code> and clang-tidy build failures.</p></li>
 </ul>
 </section>
-</section>
-<section id="id1">
-<h2>[1.0.0] - 2025-01-01<a class="headerlink" href="#id1" title="Link to this heading"></a></h2>
-<section id="id2">
-<h3>Added<a class="headerlink" href="#id2" title="Link to this heading"></a></h3>
-<p><strong>Core Features</strong>
-- Linear allocator with LIFO deallocation support
-- Arena allocator with automatic block management
-- Pool allocator for fixed-size object allocation
-- Thread-safe allocator variants with lock-free design</p>
-<p><strong>Container Library</strong>
-- <code class="docutils literal notranslate"><span class="pre">small_vector&lt;T,</span> <span class="pre">N&gt;</span></code> with stack-based storage optimization
-- <code class="docutils literal notranslate"><span class="pre">dynamic_array&lt;T&gt;</span></code> with custom allocator support
-- <code class="docutils literal notranslate"><span class="pre">sparse_vector&lt;T&gt;</span></code> for memory-efficient sparse storage
-- <code class="docutils literal notranslate"><span class="pre">intrusive_list&lt;T&gt;</span></code> for zero-allocation linked lists
-- <code class="docutils literal notranslate"><span class="pre">soavector&lt;Types...&gt;</span></code> for Structure of Arrays layout</p>
-<p><strong>Entity Component System</strong>
-- <code class="docutils literal notranslate"><span class="pre">registry&lt;&gt;</span></code> for entity lifecycle management
-- <code class="docutils literal notranslate"><span class="pre">components&lt;T&gt;</span></code> with configurable storage strategies
-- <code class="docutils literal notranslate"><span class="pre">collection&lt;Entity&gt;</span></code> for efficient entity grouping
-- <code class="docutils literal notranslate"><span class="pre">rxregistry&lt;&gt;</span></code> with revision-based thread safety</p>
-<p><strong>Task Scheduler</strong>
-- Work-stealing scheduler with multiple worker threads
-- Workgroup organization for task dependencies
-- C++20 coroutine support with <code class="docutils literal notranslate"><span class="pre">co_task&lt;T&gt;</span></code>
-- Manual thread affinity configuration support</p>
-<p><strong>Serialization Framework</strong>
-- Binary serialization with endianness control
-- YAML serialization for human-readable configuration
-- Stream-based I/O for memory efficiency
-- Custom type serialization support</p>
-<p><strong>Utility Components</strong>
-- Memory alignment utilities and helpers
-- Template-based configuration system
-- STL allocator wrapper for compatibility
-- Debugging and statistics collection</p>
-<p><strong>Build System</strong>
-- CMake integration with modern targets
-- Multiple build presets for different platforms
-- Comprehensive unit test suite with Catch2</p>
-<p><strong>Documentation</strong>
-- Getting started guide and tutorials
-- Complete API reference with Doxygen
-- Performance optimization guide
-- Real-world usage examples</p>
-</section>
-<section id="platform-support">
-<h3>Platform Support<a class="headerlink" href="#platform-support" title="Link to this heading"></a></h3>
+<section id="documentation">
+<h3>Documentation<a class="headerlink" href="#documentation" title="Link to this heading"></a></h3>
 <ul class="simple">
-<li><p>Linux (GCC 10+, Clang 12+)</p></li>
-<li><p>macOS (Apple Clang 13+, Intel/ARM)</p></li>
-<li><p>Windows (MSVC 2019+)</p></li>
-<li><p>C++20 standard compliance</p></li>
+<li><p>The README is a short overview with one compiled example per module.</p></li>
+<li><p>The tutorials were rewritten against the current API, a utilities and DSL tutorial was added,
+and the user guide, examples, performance and API reference pages now only reference content
+that exists. Doxygen expands <code class="docutils literal notranslate"><span class="pre">OULY_API</span></code> so exported functions appear in the API reference.</p></li>
 </ul>
 </section>
-<section id="performance-characteristics">
-<h3>Performance Characteristics<a class="headerlink" href="#performance-characteristics" title="Link to this heading"></a></h3>
-<ul class="simple">
-<li><p>Zero-cost abstractions through template specialization</p></li>
-<li><p>Lock-free algorithms for multi-threaded performance</p></li>
-<li><p>Cache-friendly memory layouts and access patterns</p></li>
-<li><p>SIMD optimization opportunities with SoA containers</p></li>
-</ul>
-</section>
-<section id="id3">
-<h3>Changed<a class="headerlink" href="#id3" title="Link to this heading"></a></h3>
-<ul class="simple">
-<li><p>Initial stable release</p></li>
-<li><p>API design finalized for v1.x compatibility</p></li>
-</ul>
-</section>
-<section id="security">
-<h3>Security<a class="headerlink" href="#security" title="Link to this heading"></a></h3>
-<ul class="simple">
-<li><p>Memory safety through RAII and automatic lifetime management</p></li>
-<li><p>Bounds checking in debug builds</p></li>
-<li><p>Thread safety guarantees documented for all components</p></li>
-</ul>
-</section>
-</section>
-<section id="id4">
-<h2>[0.9.0] - 2024-12-01<a class="headerlink" href="#id4" title="Link to this heading"></a></h2>
-<section id="id5">
-<h3>Added<a class="headerlink" href="#id5" title="Link to this heading"></a></h3>
-<ul class="simple">
-<li><p>Beta release with core allocator functionality</p></li>
-<li><p>Basic container implementations</p></li>
-<li><p>Initial ECS framework</p></li>
-<li><p>Preliminary task scheduler</p></li>
-</ul>
-</section>
-</section>
-<section id="id6">
-<h2>[0.5.0] - 2024-09-01<a class="headerlink" href="#id6" title="Link to this heading"></a></h2>
-<section id="id7">
-<h3>Added<a class="headerlink" href="#id7" title="Link to this heading"></a></h3>
-<ul class="simple">
-<li><p>Alpha release with experimental allocators</p></li>
-<li><p>Proof-of-concept implementations</p></li>
-</ul>
-</section>
-</section>
-<section id="id8">
-<h2>[0.1.0] - 2024-06-01<a class="headerlink" href="#id8" title="Link to this heading"></a></h2>
-<section id="id9">
-<h3>Added<a class="headerlink" href="#id9" title="Link to this heading"></a></h3>
-<ul class="simple">
-<li><p>Project initialization</p></li>
-<li><p>Basic project structure</p></li>
-<li><p>Initial CMake configuration</p></li>
-<li><p>Foundational header-only library design</p></li>
-</ul>
-</section>
-</section>
-<section id="migration-guide">
-<h2>Migration Guide<a class="headerlink" href="#migration-guide" title="Link to this heading"></a></h2>
-<section id="upgrading-from-0-x-to-1-0">
-<h3>Upgrading from 0.x to 1.0<a class="headerlink" href="#upgrading-from-0-x-to-1-0" title="Link to this heading"></a></h3>
-<p><strong>Breaking Changes</strong>
-- Allocator interface standardization
-- ECS component storage configuration changes
-- Scheduler API refinements</p>
-<p><strong>Code Migration</strong></p>
-<p>Old (0.x):</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// Old allocator interface</span>
-<span class="k">auto</span><span class="w"> </span><span class="n">allocator</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">make_linear_allocator</span><span class="p">(</span><span class="mi">1024</span><span class="p">);</span>
-<span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">ptr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">allocator</span><span class="o">-&gt;</span><span class="n">allocate</span><span class="p">(</span><span class="mi">256</span><span class="p">);</span>
-</pre></div>
-</div>
-<p>New (1.0):</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// New standardized interface</span>
-<span class="n">ouly</span><span class="o">::</span><span class="n">linear_allocator</span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="n">allocator</span><span class="p">(</span><span class="mi">1024</span><span class="p">);</span>
-<span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">ptr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">allocator</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="mi">256</span><span class="p">);</span>
-</pre></div>
-</div>
-<p><strong>ECS Configuration</strong></p>
-<p>Old (0.x):</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// Old configuration</span>
-<span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="n">Position</span><span class="p">,</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">sparse_storage</span><span class="o">&gt;</span><span class="w"> </span><span class="n">positions</span><span class="p">;</span>
-</pre></div>
-</div>
-<p>New (1.0):</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// New configuration system</span>
-<span class="k">using</span><span class="w"> </span><span class="n">SparseConfig</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">cfg</span><span class="o">::</span><span class="n">use_sparse</span><span class="o">&lt;&gt;</span><span class="p">;</span>
-<span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">components</span><span class="o">&lt;</span><span class="n">Position</span><span class="p">,</span><span class="w"> </span><span class="n">ouly</span><span class="o">::</span><span class="n">ecs</span><span class="o">::</span><span class="n">entity</span><span class="o">&lt;&gt;</span><span class="p">,</span><span class="w"> </span><span class="n">SparseConfig</span><span class="o">&gt;</span><span class="w"> </span><span class="n">positions</span><span class="p">;</span>
-</pre></div>
-</div>
-</section>
-</section>
-<section id="future-roadmap">
-<h2>Future Roadmap<a class="headerlink" href="#future-roadmap" title="Link to this heading"></a></h2>
-<p><strong>Planned for 1.1.0</strong>
-- Additional allocator strategies (buddy, slab)
-- Enhanced SIMD optimization support
-- Improved debugging and profiling tools
-- Additional serialization formats (JSON, MessagePack)</p>
-<p><strong>Planned for 1.2.0</strong>
-- GPU memory allocator support
-- Distributed computing extensions
-- Advanced ECS queries and filters
-- Real-time garbage collection options</p>
-<p><strong>Planned for 2.0.0</strong>
-- Modern C++ features adoption (modules, concepts)
-- Breaking API improvements based on user feedback
-- Platform-specific optimizations
-- Enterprise features and support</p>
-</section>
-<section id="contributing">
-<h2>Contributing<a class="headerlink" href="#contributing" title="Link to this heading"></a></h2>
-<p>We welcome contributions! Please see our <a class="reference external" href="contributing.html">Contributing Guide</a> for details on:</p>
-<ul class="simple">
-<li><p>Code style and standards</p></li>
-<li><p>Pull request process</p></li>
-<li><p>Testing requirements</p></li>
-<li><p>Documentation guidelines</p></li>
-</ul>
-</section>
-<section id="support">
-<h2>Support<a class="headerlink" href="#support" title="Link to this heading"></a></h2>
-<p>For support and questions:</p>
-<ul class="simple">
-<li><p>GitHub Issues: Bug reports and feature requests</p></li>
-<li><p>GitHub Discussions: General questions and community support</p></li>
-<li><p>Documentation: Comprehensive guides and API reference</p></li>
-</ul>
-</section>
-<section id="license">
-<h2>License<a class="headerlink" href="#license" title="Link to this heading"></a></h2>
-<p>OULY is released under the MIT License. See LICENSE file for details.</p>
 </section>
 </section>
 
@@ -341,7 +185,7 @@ and this project adheres to <a class="reference external" href="https://semver.o
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="contributing.html" class="btn btn-neutral float-left" title="Contributing to OULY" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="contributing.html" class="btn btn-neutral float-left" title="Contributing" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
 
   <hr/>
