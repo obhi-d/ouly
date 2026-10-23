@@ -1309,4 +1309,31 @@ TEST_CASE("ecs: comprehensive integration test", "[ecs][integration]")
   }
 }
 
+struct self_indexed_item
+{
+  uint32_t    self_index = 0;
+  std::string name;
+
+  self_indexed_item() = default;
+  self_indexed_item(const std::string& n) : name(n) {}
+};
+
+TEST_CASE("components: erase by object with a self index", "[components][self_index]")
+{
+  ouly::ecs::rxregistry<> registry;
+  ouly::ecs::components<self_indexed_item, ouly::ecs::rxentity<>,
+                        ouly::config<ouly::cfg::self_index_member<&self_indexed_item::self_index>>>
+       components;
+  auto e1 = registry.emplace();
+  auto e2 = registry.emplace();
+  components.set_max(registry.max_size());
+  components.emplace_at(e1, "first");
+  components.emplace_at(e2, "second");
+
+  components.erase(components.at(e1));
+
+  REQUIRE_FALSE(components.contains(e1));
+  REQUIRE(components.contains(e2));
+  REQUIRE(components.at(e2).name == "second");
+}
 // NOLINTEND

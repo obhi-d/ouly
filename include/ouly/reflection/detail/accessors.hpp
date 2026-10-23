@@ -29,10 +29,27 @@ struct member_getter_type<MF>
   using value_t  = std::decay_t<R>;
 };
 
+// noexcept is part of a function's type, so accessors declared noexcept need their own match
+template <typename T, typename R, R (T::*MF)() const noexcept>
+struct member_getter_type<MF>
+{
+  using class_t  = std::decay_t<T>;
+  using return_t = R;
+  using value_t  = std::decay_t<R>;
+};
+
 template <auto>
 struct member_setter_type;
 
 template <typename T, typename R, void (T::*MF)(R)>
+struct member_setter_type<MF>
+{
+  using class_t  = std::decay_t<T>;
+  using return_t = R;
+  using value_t  = std::decay_t<R>;
+};
+
+template <typename T, typename R, void (T::*MF)(R) noexcept>
 struct member_setter_type<MF>
 {
   using class_t  = std::decay_t<T>;
@@ -53,7 +70,23 @@ struct free_getter_type<F>
   using value_t  = std::decay_t<R>;
 };
 
+template <typename T, typename R, R (*F)(T const&) noexcept>
+struct free_getter_type<F>
+{
+  using class_t  = std::decay_t<T>;
+  using return_t = R;
+  using value_t  = std::decay_t<R>;
+};
+
 template <typename T, typename R, R (*F)(T)>
+struct getter_by_value_type<F>
+{
+  using class_t  = std::decay_t<T>;
+  using return_t = R;
+  using value_t  = std::decay_t<R>;
+};
+
+template <typename T, typename R, R (*F)(T) noexcept>
 struct getter_by_value_type<F>
 {
   using class_t  = std::decay_t<T>;
@@ -65,6 +98,14 @@ template <auto>
 struct free_setter_type;
 
 template <typename T, typename R, void (*F)(T&, R)>
+struct free_setter_type<F>
+{
+  using class_t  = std::decay_t<T>;
+  using return_t = R;
+  using value_t  = std::decay_t<R>;
+};
+
+template <typename T, typename R, void (*F)(T&, R) noexcept>
 struct free_setter_type<F>
 {
   using class_t  = std::decay_t<T>;

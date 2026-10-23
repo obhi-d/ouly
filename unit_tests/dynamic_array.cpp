@@ -46,4 +46,27 @@ TEST_CASE("dynamic_array: Validate use of fixed size  dynamic_array")
   for (auto& t : table)
     REQUIRE(t == "second");
 }
+TEST_CASE("fixed_array: partial fill and range construction stay in bounds", "[fixed_array]")
+{
+  // fewer values than N: the tail is value-initialized inside the array (it was written past the end)
+  ouly::fixed_array<std::string, 4> filled(2, std::string("x"));
+  REQUIRE(filled[0] == "x");
+  REQUIRE(filled[1] == "x");
+  REQUIRE(filled[2].empty());
+  REQUIRE(filled[3].empty());
+
+  std::string const                 values[] = {"a", "b"};
+  ouly::fixed_array<std::string, 4> ranged(std::begin(values), std::end(values));
+  REQUIRE(ranged[1] == "b");
+  REQUIRE(ranged[3].empty());
+
+  // copying an empty (default constructed) array must not read through a null pointer
+  ouly::fixed_array<std::string, 4> empty;
+  ouly::fixed_array<std::string, 4> copy(empty);
+  REQUIRE(copy.data() == nullptr);
+  copy = ranged;
+  REQUIRE(copy[0] == "a");
+  copy = empty;
+  REQUIRE(copy.data() == nullptr);
+}
 // NOLINTEND

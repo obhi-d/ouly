@@ -219,7 +219,14 @@ public:
     return *this;
   }
 
-  fixed_array(fixed_array const& other) noexcept : fixed_array(other.begin(), other.end()) {}
+  fixed_array(fixed_array const& other) noexcept
+  {
+    if (other.data_ != nullptr) // a default constructed array owns no storage
+    {
+      data_ = (T*)Allocator::allocate(sizeof(T) * count, alignarg<T>);
+      std::uninitialized_copy_n(other.data_, count, data_);
+    }
+  }
 
   auto operator=(fixed_array const& other) noexcept -> fixed_array&
   {
@@ -228,8 +235,11 @@ public:
       return *this;
     }
     clear();
-    data_ = (T*)Allocator::allocate(sizeof(T) * count, alignarg<T>);
-    std::uninitialized_copy_n(other.begin(), count, data_);
+    if (other.data_ != nullptr)
+    {
+      data_ = (T*)Allocator::allocate(sizeof(T) * count, alignarg<T>);
+      std::uninitialized_copy_n(other.data_, count, data_);
+    }
     return *this;
   }
 
@@ -241,7 +251,8 @@ public:
     std::uninitialized_copy_n(first, std::min(assign_count, count), data_);
     if (assign_count < count)
     {
-      std::uninitialized_fill_n(data_ + count, count - assign_count, T());
+      // value-initialize the tail that the range did not cover
+      std::uninitialized_fill_n(data_ + assign_count, count - assign_count, T());
     }
   }
 
@@ -256,7 +267,7 @@ public:
     std::uninitialized_fill_n(data_, std::min(fill_count, count), fill);
     if (fill_count < count)
     {
-      std::uninitialized_fill_n(data_ + count, count - fill_count, T());
+      std::uninitialized_fill_n(data_ + fill_count, count - fill_count, T());
     }
   }
 
