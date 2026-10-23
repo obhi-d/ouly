@@ -3,6 +3,8 @@
 #include "ouly/allocators/config.hpp"
 #include "ouly/utility/common.hpp"
 #include <algorithm>
+#include <array>
+#include <bit>
 #include <atomic>
 #include <cstdint>
 #include <cstring>
@@ -16,9 +18,30 @@ struct ts_thread_local_allocator::tls_t
   uintptr_t generation_ = std::numeric_limits<uintptr_t>::max(); ///< Frame ID when the arena was created
   arena_t*  page_       = nullptr;                               ///< Pointer to the current arena_t for this thread
 };
-/* Definition of the thread-local variable */
+namespace
+{
+// Every allocator instance owns one of these per-thread slots (assigned round-robin), so a thread
+// that alternates between a few allocators keeps a current page in each of them. Ownership of a
+// slot is still decided by the generation id, so instances that share a slot stay correct.
+constexpr std::uint32_t tls_slot_count = 8;
+static_assert(std::has_single_bit(tls_slot_count));
+} // namespace
+
+/* Definition of the thread-local slots */
 // NOLINTNEXTLINE
-thread_local ts_thread_local_allocator::tls_t local_page = {};
+thread_local std::array<ts_thread_local_allocator::tls_t, tls_slot_count> local_pages = {};
+
+auto ts_thread_local_allocator::next_tls_slot() noexcept -> std::uint32_t
+{
+  static std::atomic<std::uint32_t> counter{0};
+  return counter.fetch_add(1, std::memory_order_relaxed) & (tls_slot_count - 1U);
+}
+
+auto ts_thread_local_allocator::local_slot() const noexcept -> tls_t&
+{
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
+  return local_pages[tls_slot_];
+}
 
 // Generate a 32 bit random id
 auto ts_thread_local_allocator::generate_random_id(void* ptr) -> uintptr_t
@@ -44,7 +67,7 @@ auto ts_thread_local_allocator::allocate(std::size_t size) -> void*
   // Cache the generation locally to avoid repeated atomic loads
   const auto current_generation = generation_;
 
-  auto     local_tls_index = local_page;
+  auto     local_tls_index = local_slot();
   arena_t* page            = nullptr;
   if (local_tls_index.generation_ == current_generation)
   {
@@ -89,7 +112,7 @@ auto ts_thread_local_allocator::allocate(std::size_t size, std::align_val_t alig
 
   size = is_aligned(size) ? size : align_up(size);
 
-  arena_t* page = (local_page.generation_ == generation_) ? local_page.page_ : nullptr;
+  arena_t* page = (local_slot().generation_ == generation_) ? local_slot().page_ : nullptr;
   if (page != nullptr)
   {
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
@@ -117,8 +140,8 @@ auto ts_thread_local_allocator::deallocate(void* ptr, std::size_t size, std::ali
 auto ts_thread_local_allocator::deallocate(void* ptr, std::size_t size) const -> bool
 {
   size          = align_up(size);
-  arena_t* page = local_page.page_;
-  if ((page == nullptr) || local_page.generation_ != generation_)
+  arena_t* page = local_slot().page_;
+  if ((page == nullptr) || local_slot().generation_ != generation_)
   {
     return false;
   }
@@ -142,8 +165,8 @@ auto ts_thread_local_allocator::realloc(void* ptr, std::size_t old_size, std::si
   auto const reserved_old = is_aligned(old_size) ? old_size : align_up(old_size);
   auto const reserved_new = is_aligned(new_size) ? new_size : align_up(new_size);
 
-  arena_t* page = local_page.page_;
-  if (page != nullptr && local_page.generation_ == generation_)
+  arena_t* page = local_slot().page_;
+  if (page != nullptr && local_slot().generation_ == generation_)
   {
     auto* byte_ptr = static_cast<std::byte*>(ptr);
     if (byte_ptr + reserved_old == &page->data_[0] + page->used_)
@@ -182,8 +205,8 @@ auto ts_thread_local_allocator::realloc(void* ptr, std::size_t old_size, std::si
   auto const reserved_old = is_aligned(old_size) ? old_size : align_up(old_size);
   auto const reserved_new = is_aligned(new_size) ? new_size : align_up(new_size);
 
-  arena_t* page = local_page.page_;
-  if (page != nullptr && local_page.generation_ == generation_)
+  arena_t* page = local_slot().page_;
+  if (page != nullptr && local_slot().generation_ == generation_)
   {
     auto* byte_ptr = static_cast<std::byte*>(ptr);
     // Growing the block in place keeps its address, and with it the alignment it already has
@@ -317,12 +340,12 @@ auto ts_thread_local_allocator::allocate_slow_path(std::size_t size, std::size_t
   page->next_     = page_list_head_; // insert at the head of the list
   page_list_head_ = page;            // head of the list, for fast allocation
 
-  if (local_page.generation_ != generation_)
+  if (local_slot().generation_ != generation_)
   {
-    local_page.generation_ = generation_;
+    local_slot().generation_ = generation_;
   }
 
-  local_page.page_ = page;
+  local_slot().page_ = page;
 
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
   auto const  data    = reinterpret_cast<std::uintptr_t>(&page->data_[0]);

@@ -374,8 +374,8 @@ public:
     // Store filename for potential error reporting
     filename_ = path;
 
-    // Determine actual length to map
-    size_type actual_length = length;
+    // The mapping always starts at the beginning of the file, so it has to reach offset + length
+    size_type actual_length = length == map_entire_file ? length : offset + length;
     auto      result =
      detail::map_file(filename_.c_str(), actual_length,
                       AccessMode == access_mode::write ? cfg::protection::read_write : cfg::protection::read,
@@ -508,7 +508,7 @@ using mmap_sink   = basic_mmap_sink<>;
  * @param length Length to map (map_entire_file for entire file)
  * @return Mapped file object
  */
-[[nodiscard]] auto make_mmap_source(std::filesystem::path const& path, std::size_t offset, std::size_t length)
+[[nodiscard]] inline auto make_mmap_source(std::filesystem::path const& path, std::size_t offset, std::size_t length)
  -> mmap_source
 {
   mmap_source source;
@@ -521,7 +521,7 @@ using mmap_sink   = basic_mmap_sink<>;
  * @param path Path to the file to map
  * @return Mapped file object
  */
-[[nodiscard]] auto make_mmap_source(std::filesystem::path const& path) -> mmap_source
+[[nodiscard]] inline auto make_mmap_source(std::filesystem::path const& path) -> mmap_source
 {
   return make_mmap_source(path, 0, map_entire_file);
 }
@@ -533,7 +533,7 @@ using mmap_sink   = basic_mmap_sink<>;
  * @param length Length to map (map_entire_file for entire file)
  * @return Mapped file object
  */
-[[nodiscard]] auto make_mmap_sink(std::filesystem::path const& path, std::size_t offset, std::size_t length)
+[[nodiscard]] inline auto make_mmap_sink(std::filesystem::path const& path, std::size_t offset, std::size_t length)
  -> mmap_sink
 {
   mmap_sink sink;
@@ -546,7 +546,7 @@ using mmap_sink   = basic_mmap_sink<>;
  * @param path Path to the file to map
  * @return Mapped file object
  */
-[[nodiscard]] auto make_mmap_sink(std::filesystem::path const& path) -> mmap_sink
+[[nodiscard]] inline auto make_mmap_sink(std::filesystem::path const& path) -> mmap_sink
 {
   return make_mmap_sink(path, 0, map_entire_file);
 }

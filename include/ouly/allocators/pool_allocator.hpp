@@ -5,6 +5,8 @@
 #include "ouly/allocators/detail/custom_allocator.hpp"
 #include "ouly/allocators/detail/memory_stats.hpp"
 #include "ouly/allocators/detail/pool_defs.hpp"
+#include <bit>
+#include <cstdint>
 
 namespace ouly
 {
@@ -27,13 +29,14 @@ public:
   using address                            = typename underlying_allocator::address;
 
   pool_allocator() noexcept
-      : k_atom_size_(static_cast<size_type>(default_atom_size)),
-        k_atom_count_(static_cast<size_type>(default_atom_count))
+      : k_atom_count_(static_cast<size_type>(default_atom_count)),
+        k_atom_size_(static_cast<size_type>(default_atom_size)), k_atom_shift_(atom_shift_for(k_atom_size_))
   {}
 
   template <typename... Args>
   pool_allocator(size_type i_atom_size, size_type i_atom_count, Args&&... i_args)
-      : statistics(std::forward<Args>(i_args)...), k_atom_count_(i_atom_count), k_atom_size_(i_atom_size)
+      : statistics(std::forward<Args>(i_args)...), k_atom_count_(i_atom_count), k_atom_size_(i_atom_size),
+        k_atom_shift_(atom_shift_for(i_atom_size))
   {}
 
   pool_allocator(pool_allocator const& i_other) = delete;
@@ -44,12 +47,18 @@ public:
       //  const size_type k_atom_size;
       //  arena_linker    linked_arenas;
       : arrays_(std::move(i_other.arrays_)), solo_(std::move(i_other.solo_)), k_atom_count_(i_other.k_atom_count_),
-        k_atom_size_(i_other.k_atom_size_), linked_arenas_(std::move(i_other.linked_arenas_))
+        k_atom_size_(i_other.k_atom_size_), k_atom_shift_(i_other.k_atom_shift_),
+        linked_arenas_(std::move(i_other.linked_arenas_))
   {}
 
   auto operator=(pool_allocator const& i_other) -> pool_allocator& = delete;
   auto operator=(pool_allocator&& i_other) noexcept -> pool_allocator&
   {
+    if (this == &i_other)
+    {
+      return *this;
+    }
+    release_arenas();
     arrays_ = (std::move(i_other.arrays_));
     solo_   = std::move(i_other.solo_);
     OULY_ASSERT(k_atom_count_ == i_other.k_atom_count_);
@@ -81,7 +90,7 @@ public:
       size_value += static_cast<size_type>(align + k_offset_size);
     }
 
-    size_type i_count = (size_value + k_atom_size_ - 1) / k_atom_size_;
+    size_type i_count = atoms_for(size_value);
 
     if constexpr (ouly::detail::HasComputeStats<Config>)
     {
@@ -89,7 +98,7 @@ public:
       {
         // Account for the missing atoms
         auto      real_size = size_value - static_cast<size_type>(align + k_offset_size);
-        size_type count     = (real_size + k_atom_size_ - 1) / k_atom_size_;
+        size_type count     = atoms_for(real_size);
         this->statistics::pad_atoms(static_cast<std::uint32_t>(i_count - count));
       }
     }
@@ -136,7 +145,7 @@ public:
       size_value += static_cast<size_type>(align + k_offset_size);
     }
 
-    size_type i_count = (size_value + k_atom_size_ - 1) / k_atom_size_;
+    size_type i_count = atoms_for(size_value);
 
     if constexpr (ouly::detail::HasComputeStats<Config>)
     {
@@ -144,7 +153,7 @@ public:
       {
         // Account for the missing atoms
         auto      real_size = size_value - static_cast<size_type>(align + k_offset_size);
-        size_type count     = (real_size + k_atom_size_ - 1) / k_atom_size_;
+        size_type count     = atoms_for(real_size);
         this->statistics::unpad_atoms(static_cast<std::uint32_t>(i_count - count));
       }
     }
@@ -343,7 +352,12 @@ private:
   {
     arena_linker()                                       = default;
     auto operator=(const arena_linker&) -> arena_linker& = delete;
-    auto operator=(arena_linker&&) -> arena_linker&      = delete;
+    auto operator=(arena_linker&& i_other) noexcept -> arena_linker&
+    {
+      first_         = i_other.first_;
+      i_other.first_ = nullptr;
+      return *this;
+    }
     explicit arena_linker(const arena_linker& i_other)   = default;
     arena_linker(arena_linker&& i_other) noexcept : first_(i_other.first_)
     {
@@ -390,6 +404,30 @@ private:
 public:
   ~pool_allocator()
   {
+    release_arenas();
+  }
+
+private:
+  static constexpr std::uint8_t k_no_shift = 0xFF;
+
+  static constexpr auto atom_shift_for(size_type atom_size) noexcept -> std::uint8_t
+  {
+    return std::has_single_bit(atom_size) ? static_cast<std::uint8_t>(std::countr_zero(atom_size)) : k_no_shift;
+  }
+
+  /** @brief Number of atoms covering `bytes`; avoids a hardware divide for power of two atom sizes */
+  [[nodiscard]] auto atoms_for(size_type bytes) const noexcept -> size_type
+  {
+    auto const rounded = bytes + k_atom_size_ - 1;
+    if (k_atom_shift_ != k_no_shift) [[likely]]
+    {
+      return rounded >> k_atom_shift_;
+    }
+    return rounded / k_atom_size_;
+  }
+
+  void release_arenas() noexcept
+  {
     size_type size = k_atom_count_ * k_atom_size_;
     linked_arenas_.for_each(
      [=](address i_value, size_type size_value)
@@ -397,9 +435,11 @@ public:
        underlying_allocator::deallocate(i_value, size_value);
      },
      size);
+    linked_arenas_.first_ = nullptr;
+    arrays_               = array_arena{};
+    solo_                 = solo_arena{};
   }
 
-private:
   auto consume(size_type i_count) -> address
   {
     size_type len = arrays_ ? arrays_.length() : 0;
@@ -470,7 +510,7 @@ private:
   {
     array_arena new_arena(i_only, i_count);
     array_arena cur = arrays_;
-    if (cur.length() > i_count)
+    if (cur && cur.length() > i_count)
     {
       array_arena prev = new_arena;
       while (true)
@@ -558,6 +598,7 @@ private:
   solo_arena   solo_;
   size_type    k_atom_count_ = {};
   size_type    k_atom_size_  = {};
+  std::uint8_t k_atom_shift_ = k_no_shift;
   arena_linker linked_arenas_;
 
 public:
