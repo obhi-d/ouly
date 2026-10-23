@@ -148,55 +148,52 @@ public:
   {
     bool split_from_back = true; // alternate sides to stay depth‑first on the hot branch
 
-    while (!full() && is_divisible(max_depth, granularity))
+    while (!full())
     {
-      // Choose which end to split this iteration
-      const uint8_t idx           = split_from_back ? (tail_ - 1) & (MaxCapacity - 1) : head_;
-      Range&        target_range  = ranges_[idx];
-      uint8_t       current_depth = depths_[idx];
-
-      // If this range cannot be split, try the other end once; if that also
-      // fails we are done.
-      if (target_range.size() > granularity && current_depth < max_depth)
+      // Choose which end to split this iteration; if it cannot be split, try the other end once,
+      // and if that also fails we are done.
+      uint8_t idx = split_from_back ? back_index() : head_;
+      if (!can_split(idx, max_depth, granularity))
       {
-        split_from_back       = !split_from_back;
-        const uint8_t alt_idx = split_from_back ? (tail_ - 1) & (MaxCapacity - 1) : head_;
-        if (alt_idx == idx)
+        const uint8_t alt_idx = split_from_back ? head_ : back_index();
+        if (alt_idx == idx || !can_split(alt_idx, max_depth, granularity))
         {
           break;
         }
-
-        Range&  alt_range = ranges_[alt_idx];
-        uint8_t alt_depth = depths_[alt_idx];
-        if (alt_range.size() < granularity && alt_depth < max_depth)
-        {
-          break; // neither end is further divisible
-        }
-
-        // switch to the alternate end
-        target_range  = alt_range;
-        current_depth = alt_depth;
+        // switch to the alternate end (by index: the slots themselves must not be overwritten)
+        idx             = alt_idx;
+        split_from_back = !split_from_back;
       }
 
-      // Perform the split: 'split()' returns the *right* half.
-      Range split_range = target_range.split();
-
-      // Update depth for the kept (left) half
-      depths_[idx] = current_depth + 1;
+      // Perform the split: 'split()' returns the *right* half and keeps the left one in place.
+      const auto next_depth  = static_cast<uint8_t>(depths_[idx] + 1);
+      Range      split_range = ranges_[idx].split();
+      depths_[idx]           = next_depth;
 
       // Expose the right half on the opposite end for stealing
       if (split_from_back)
       {
-        push_front(split_range, current_depth + 1);
+        push_front(split_range, next_depth);
       }
       else
       {
-        push_back(split_range, current_depth + 1);
+        push_back(split_range, next_depth);
       }
 
       // Next iteration starts from the other end
       split_from_back = !split_from_back;
     }
+  }
+
+private:
+  [[nodiscard]] auto back_index() const noexcept -> uint8_t
+  {
+    return static_cast<uint8_t>((tail_ - 1) & (MaxCapacity - 1));
+  }
+
+  [[nodiscard]] auto can_split(uint8_t idx, uint8_t max_depth, uint64_t granularity) const noexcept -> bool
+  {
+    return ranges_[idx].size() > granularity && depths_[idx] < max_depth;
   }
 };
 

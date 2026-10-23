@@ -105,3 +105,71 @@ TEMPLATE_TEST_CASE("Auto Parallel For Basic Functionality", "[auto_parallel_for]
     scheduler.end_execution();
   }
 }
+
+TEST_CASE("range_pool: split_to_fill partitions the range without overlap", "[auto_parallel_for][range_pool]")
+{
+  using range_t = ouly::subrange<uint32_t>;
+  ouly::range_pool<range_t, 8> pool(range_t{0, 1000});
+  pool.split_to_fill(3, 1);
+  REQUIRE(pool.size() > 1);
+
+  std::vector<uint32_t> hits(1000, 0);
+  while (!pool.empty())
+  {
+    auto r = pool.front();
+    REQUIRE(pool.front_depth() <= 3);
+    for (auto i = r.begin(); i != r.end(); ++i)
+    {
+      ++hits[i];
+    }
+    pool.pop_front();
+  }
+  for (auto h : hits)
+  {
+    REQUIRE(h == 1);
+  }
+
+  // a range that cannot be split stays as is
+  ouly::range_pool<range_t, 8> single(range_t{0, 1});
+  single.split_to_fill(3, 1);
+  REQUIRE(single.size() == 1);
+}
+
+TEMPLATE_TEST_CASE("Auto Parallel For visits every element exactly once", "[auto_parallel_for][template]",
+                   (SchedulerTestRunner<ouly::v1::scheduler, ouly::v1::task_context>),
+                   (SchedulerTestRunner<ouly::v2::scheduler, ouly::v2::task_context>),
+                   (SchedulerTestRunner<ouly::v3::scheduler, ouly::v3::task_context>))
+{
+  using TestRunner = TestType;
+
+  auto scheduler = TestRunner::setup_scheduler(4);
+  scheduler.begin_execution();
+  auto const& main_ctx = TestRunner::get_main_context();
+
+  for (int round = 0; round < 20; ++round)
+  {
+    constexpr uint32_t                 count = 50000;
+    std::vector<uint32_t>              data(count);
+    std::vector<std::atomic<uint32_t>> visits(count);
+    std::iota(data.begin(), data.end(), 0U);
+
+    ouly::auto_parallel_for(
+     [&visits](uint32_t& value, auto const& /*context*/)
+     {
+       // uneven work so that chunks get stolen and split further
+       if ((value % 64) == 0)
+       {
+         std::this_thread::yield();
+       }
+       visits[value].fetch_add(1, std::memory_order_relaxed);
+     },
+     data, main_ctx);
+
+    for (auto const& v : visits)
+    {
+      REQUIRE(v.load(std::memory_order_relaxed) == 1);
+    }
+  }
+
+  scheduler.end_execution();
+}

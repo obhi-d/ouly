@@ -36,12 +36,16 @@ thread_local uint32_t g_random_seed = 0;
 static constexpr uint32_t lcg_multiplier    = 1664525U;
 static constexpr uint32_t lcg_increment     = 1013904223U;
 static constexpr uint32_t initial_seed_mask = 0xAAAAAAAAU;
+static constexpr uint32_t lcg_output_shift  = 16U;
 
 static auto update_seed() -> uint32_t;
 
+// Callers reduce the result with `% n`. The low bits of an LCG cycle with a tiny period (bit 0 just
+// alternates), and masking the state used to force every result even, so hand out the high bits.
 static auto update_seed() -> uint32_t
 {
-  return (g_random_seed = ((g_random_seed * lcg_multiplier) + lcg_increment) & initial_seed_mask);
+  g_random_seed = (g_random_seed * lcg_multiplier) + lcg_increment;
+  return g_random_seed >> lcg_output_shift;
 }
 
 auto task_context::this_context::get() noexcept -> task_context const&
@@ -152,6 +156,8 @@ void scheduler::run_worker(worker_id wid, scheduler_worker_entry entry)
 {
   // Set thread-local storage for this worker
   g_worker_id = wid;
+  // distinct per worker, otherwise every thief walks the same victim sequence
+  g_random_seed = (wid.get_index() + 1U) * initial_seed_mask;
   g_worker    = &ouly::detail::vector_access(workers_, wid.get_index());
 
   // Execute the entry function if provided

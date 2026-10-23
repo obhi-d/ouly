@@ -29,12 +29,16 @@ thread_local uint32_t g_random_seed = 0;
 static constexpr uint32_t lcg_multiplier    = 1664525U;
 static constexpr uint32_t lcg_increment     = 1013904223U;
 static constexpr uint32_t initial_seed_mask = 0xAAAAAAAAU;
+static constexpr uint32_t lcg_output_shift  = 16U;
 
 static auto update_seed() -> uint32_t;
 
+// Callers reduce the result with `% n`. The low bits of an LCG cycle with a tiny period (bit 0 just
+// alternates), and masking the state used to force every result even, so hand out the high bits.
 static auto update_seed() -> uint32_t
 {
-  return (g_random_seed = ((g_random_seed * lcg_multiplier) + lcg_increment) & initial_seed_mask);
+  g_random_seed = (g_random_seed * lcg_multiplier) + lcg_increment;
+  return g_random_seed >> lcg_output_shift;
 }
 
 auto task_context::this_context::get() noexcept -> task_context const&
@@ -311,6 +315,12 @@ void scheduler::wake_up(worker_id thread) noexcept
   // At least one side must observe the other, so a sleeping worker is always woken.
   std::atomic_thread_fence(std::memory_order_seq_cst);
   auto& wake = ouly::detail::vector_access(wake_data_, thread.get_index()).get();
+  // An awake worker needs no token; reading true here is ordered by the same fence pair, so the
+  // worker's re-scan sees the work. Skips the read-modify-write on the common, busy path.
+  if (wake.status_.load(std::memory_order_relaxed))
+  {
+    return;
+  }
   if (!wake.status_.exchange(true, std::memory_order_acq_rel))
   {
     wake.event_.release();
