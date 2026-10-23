@@ -43,6 +43,14 @@ Changed
 Fixed
 ~~~~~
 
+- **reflection**: getter/setter properties (``ouly::bind<"name", &get, &set>()``) can be serialized.
+  ``noexcept`` accessors were not recognized, and the writer could not pass a getter's returned
+  value on. Free getters taking the object by ``const&`` are no longer ambiguous; a free getter
+  taking a non-const reference, which could never be written, is now rejected.
+- **fixed_array**: the fill and range constructors wrote past the end when given fewer than ``N``
+  values; an empty (default constructed or moved-from) array is now an empty range, and copying it
+  no longer reads through a null pointer.
+- **components**: ``erase(value_type const&)`` compiles for components with a self index.
 - **CMake**: OULY can be consumed with ``add_subdirectory`` and ``FetchContent``. The target's
   include directory (and the natvis and ``compile_commands.json`` paths) were derived from
   ``CMAKE_SOURCE_DIR``, which is the parent project's directory in that setup.

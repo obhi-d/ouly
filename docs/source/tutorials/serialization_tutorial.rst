@@ -51,6 +51,52 @@ entries:
      float       fov_ = 60.0F;
    };
 
+**Properties behind accessors** bind a getter and a setter instead of a member pointer. Member
+functions and free functions both work, ``noexcept`` or not; the getter may return by value or by
+const reference:
+
+.. code-block:: cpp
+
+   class window;
+   auto get_height(window const& w) noexcept -> int;
+   void set_height(window& w, int height) noexcept;
+
+   class window
+   {
+   public:
+     [[nodiscard]] auto get_width() const -> int
+     {
+       return width_;
+     }
+     void set_width(int width)
+     {
+       width_ = width;
+     }
+
+     static auto reflect() noexcept
+     {
+       return ouly::bind(ouly::bind<"width", &window::get_width, &window::set_width>(),
+                         ouly::bind<"height", &get_height, &set_height>());
+     }
+
+   private:
+     friend auto get_height(window const& w) noexcept -> int;
+     friend void set_height(window& w, int height) noexcept;
+
+     int width_  = 0;
+     int height_ = 0;
+   };
+
+   auto get_height(window const& w) noexcept -> int
+   {
+     return w.height_;
+   }
+
+   void set_height(window& w, int height) noexcept
+   {
+     w.height_ = height;
+   }
+
 **Types you cannot modify** get a specialization of ``ouly::reflect<T>()`` instead:
 
 .. code-block:: cpp
