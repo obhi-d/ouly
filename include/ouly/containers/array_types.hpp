@@ -306,9 +306,10 @@ public:
     return data_;
   }
 
+  // An empty (default constructed or moved-from) array owns no storage and is an empty range
   auto end() noexcept -> T*
   {
-    return data_ + count;
+    return data_ != nullptr ? data_ + count : nullptr;
   }
 
   auto begin() const noexcept -> T const*
@@ -318,7 +319,7 @@ public:
 
   auto end() const noexcept -> T const*
   {
-    return data_ + count;
+    return data_ != nullptr ? data_ + count : nullptr;
   }
 
   auto data() noexcept -> T*
@@ -338,7 +339,11 @@ public:
 
   auto operator==(fixed_array const& other) const noexcept -> bool
   {
-    return count == other.size() && std::ranges::equal(*this, other);
+    if (data_ == nullptr || other.data_ == nullptr)
+    {
+      return data_ == other.data_; // equal only when both are empty
+    }
+    return std::ranges::equal(*this, other);
   }
 
   auto operator!=(fixed_array const& other) const noexcept -> bool

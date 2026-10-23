@@ -68,5 +68,17 @@ TEST_CASE("fixed_array: partial fill and range construction stay in bounds", "[f
   REQUIRE(copy[0] == "a");
   copy = empty;
   REQUIRE(copy.data() == nullptr);
+
+  // an empty array is an empty range and only compares equal to another empty array
+  int visited = 0;
+  for ([[maybe_unused]] auto const& s : empty)
+  {
+    ++visited;
+  }
+  REQUIRE(visited == 0);
+  REQUIRE(copy == empty);
+  REQUIRE_FALSE(ranged == empty);
+  REQUIRE_FALSE(empty == ranged);
+  REQUIRE(ranged == ouly::fixed_array<std::string, 4>(ranged));
 }
 // NOLINTEND
