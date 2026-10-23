@@ -219,7 +219,14 @@ public:
     return *this;
   }
 
-  fixed_array(fixed_array const& other) noexcept : fixed_array(other.begin(), other.end()) {}
+  fixed_array(fixed_array const& other) noexcept
+  {
+    if (other.data_ != nullptr) // a default constructed array owns no storage
+    {
+      data_ = (T*)Allocator::allocate(sizeof(T) * count, alignarg<T>);
+      std::uninitialized_copy_n(other.data_, count, data_);
+    }
+  }
 
   auto operator=(fixed_array const& other) noexcept -> fixed_array&
   {
@@ -228,8 +235,11 @@ public:
       return *this;
     }
     clear();
-    data_ = (T*)Allocator::allocate(sizeof(T) * count, alignarg<T>);
-    std::uninitialized_copy_n(other.begin(), count, data_);
+    if (other.data_ != nullptr)
+    {
+      data_ = (T*)Allocator::allocate(sizeof(T) * count, alignarg<T>);
+      std::uninitialized_copy_n(other.data_, count, data_);
+    }
     return *this;
   }
 
@@ -241,7 +251,8 @@ public:
     std::uninitialized_copy_n(first, std::min(assign_count, count), data_);
     if (assign_count < count)
     {
-      std::uninitialized_fill_n(data_ + count, count - assign_count, T());
+      // value-initialize the tail that the range did not cover
+      std::uninitialized_fill_n(data_ + assign_count, count - assign_count, T());
     }
   }
 
@@ -256,7 +267,7 @@ public:
     std::uninitialized_fill_n(data_, std::min(fill_count, count), fill);
     if (fill_count < count)
     {
-      std::uninitialized_fill_n(data_ + count, count - fill_count, T());
+      std::uninitialized_fill_n(data_ + fill_count, count - fill_count, T());
     }
   }
 
@@ -295,9 +306,10 @@ public:
     return data_;
   }
 
+  // An empty (default constructed or moved-from) array owns no storage and is an empty range
   auto end() noexcept -> T*
   {
-    return data_ + count;
+    return data_ != nullptr ? data_ + count : nullptr;
   }
 
   auto begin() const noexcept -> T const*
@@ -307,7 +319,7 @@ public:
 
   auto end() const noexcept -> T const*
   {
-    return data_ + count;
+    return data_ != nullptr ? data_ + count : nullptr;
   }
 
   auto data() noexcept -> T*
@@ -327,7 +339,11 @@ public:
 
   auto operator==(fixed_array const& other) const noexcept -> bool
   {
-    return count == other.size() && std::ranges::equal(*this, other);
+    if (data_ == nullptr || other.data_ == nullptr)
+    {
+      return data_ == other.data_; // equal only when both are empty
+    }
+    return std::ranges::equal(*this, other);
   }
 
   auto operator!=(fixed_array const& other) const noexcept -> bool

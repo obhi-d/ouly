@@ -212,6 +212,14 @@ public:
     return self_index::get(i);
   }
 
+  // A const object only yields the index by value; without this, get(T&) deduces a const T and
+  // tries to return a mutable reference into it (e.g. components::erase(value_type const&)).
+  template <typename T>
+  auto get(T const& i) noexcept -> size_type
+  {
+    return self_index::get(i);
+  }
+
   template <typename T>
   auto get(T& i) const noexcept -> size_type
   {

@@ -966,7 +966,7 @@ public:
     auto const&      field_names = get_cached_field_names<tclass_type, transform_type>();
     in_context_base* ret         = nullptr;
 
-    [&]<std::size_t... I>(std::index_sequence<I...>, std::string_view key) -> void
+    [&]<std::size_t... I>(std::index_sequence<I...>, [[maybe_unused]] std::string_view key) -> void
     {
       (get_aggregate_field<Base, tclass_type, I>(ret, parser, key, field_names), ...);
     }(std::make_index_sequence<std::tuple_size_v<std::decay_t<decltype(field_names)>>>(), field_key);
