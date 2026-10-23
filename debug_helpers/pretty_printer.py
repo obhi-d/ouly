@@ -13,8 +13,8 @@ class SmallVectorPrinter:
         self.element_type = self.type.template_argument(0)
         self.inline_capacity = int(val.type.template_argument(1))
         
-        # Determine if data is stored inline or on heap
-        self.is_inlined = (self.size <= self.inline_capacity)
+        # The storage mode is explicit state; a heap vector may hold fewer than N elements
+        self.is_inlined = not bool(val['on_heap_'])
 
 
     # Figures out the number of elements in the vector.
