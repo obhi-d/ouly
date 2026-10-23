@@ -28,7 +28,7 @@ STL-like interfaces that you can adopt one header at a time.
 | ---------------------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Task Scheduling              | `ouly/scheduler/`                       | Three work-stealing schedulers, value tasks and continuations, structured task scopes, `parallel_for`, coroutine tasks, and static and dynamic flow graphs |
 | Memory Allocators            | `ouly/allocators/`                      | Linear/arena/stack/pool allocators, thread-safe allocators, coalescing GPU-style suballocators with defragmentation, virtual memory and memory-mapped files |
-| Containers                   | `ouly/containers/`                      | Small vector, SoA vector, sparse vector/table, block vector, intrusive list, lock-free MPMC queue, blackboard, index maps and bitsets                   |
+| Containers                   | `ouly/containers/`                      | Small vector, SoA vector, sparse vector/table, block vector, intrusive list, concurrent MPMC queue, blackboard, index maps and bitsets             |
 | Entity Component System      | `ouly/ecs/`                             | Registries with optional revision tracking, configurable component storage, collections, sparse-to-dense maps                                        |
 | Serialization and Reflection | `ouly/serializers/`, `ouly/reflection/` | Compile-time reflection driving binary, YAML, and user-defined structured formats                                                                     |
 | Utilities and DSL            | `ouly/utility/`, `ouly/dsl/`            | Delegates, program argument parsing, views, intrusive pointers, hashing, a lightweight YAML parser and a macro expression evaluator                   |
@@ -59,15 +59,22 @@ ctest --test-dir build/linux-release  # the release presets also build the unit 
 
 ### Use it from CMake
 
-```cmake
-# As a subdirectory (or through FetchContent)
-add_subdirectory(external/ouly)
-target_link_libraries(your_target PRIVATE ouly::ouly)
+Install the library, then find it from your project:
 
-# Or after `cmake --install`
+```bash
+cmake -S ouly -B ouly-build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$HOME/ouly-install
+cmake --build ouly-build
+cmake --install ouly-build
+```
+
+```cmake
+# configure with -DCMAKE_PREFIX_PATH=$HOME/ouly-install
 find_package(ouly REQUIRED)
 target_link_libraries(your_target PRIVATE ouly::ouly)
 ```
+
+`add_subdirectory` and `FetchContent` do not work yet: the target's include directory is derived
+from `CMAKE_SOURCE_DIR`, which is the parent project's directory in that setup.
 
 ### First program
 
@@ -196,7 +203,7 @@ float* xs = vertices.data<0>(); // all x components, contiguous
 Like `std::vector`, a `small_vector` that has moved to the heap keeps its buffer through `clear()`,
 `pop_back()` and `erase()`; `shrink_to_fit()` moves the elements back inline when they fit. The
 module also has sparse vectors and tables with stable handles, block vectors, an intrusive list, a
-lock-free MPMC queue and a type-erased blackboard. See the
+concurrent MPMC queue and a type-erased blackboard. See the
 [containers tutorial](https://obhi-d.github.io/ouly/tutorials/containers_tutorial.html).
 
 ### Entity component system
@@ -314,9 +321,8 @@ ctest --test-dir build/linux-default --output-on-failure
 
 Without presets, pass `-DOULY_BUILD_TESTS=ON`. On GCC and Clang the unit tests are always built
 with AddressSanitizer. Benchmarks against Intel oneTBB live in `unit_tests/bench_*.cpp` and are
-built with `-DOULY_BUILD_BENCHMARKS=ON` (CMake fetches nanobench and oneTBB). Other options:
-`OULY_ENABLE_CLANG_TIDY`, `OULY_REC_STATS` (allocator statistics) and
-`OULY_SCHEDULER_PMR_INTERNAL_ALLOCATOR`; see
+built with `-DOULY_BUILD_BENCHMARKS=ON` (CMake fetches nanobench and oneTBB). Other options
+include `OULY_ENABLE_CLANG_TIDY` and `OULY_SCHEDULER_PMR_INTERNAL_ALLOCATOR`; see
 [getting started](https://obhi-d.github.io/ouly/getting_started.html) for the full list.
 
 The documentation is built with Doxygen, Sphinx and Breathe:
