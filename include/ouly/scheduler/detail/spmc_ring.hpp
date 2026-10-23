@@ -111,6 +111,13 @@ public:
   {
     size_t t = top_.load(std::memory_order_acquire);
 
+    // Cheap emptiness probe before paying for the fence: idle workers scan many empty victims.
+    // A steal may already fail spuriously (lost CAS), so a stale read here only costs a retry.
+    if (t >= bottom_.load(std::memory_order_relaxed))
+    {
+      return false;
+    }
+
     // The fence prevents reordering of the 'top' load with the 'bottom' load,
     // ensuring we get a consistent (though not necessarily current) view of the deque's state.
     std::atomic_thread_fence(std::memory_order_seq_cst);

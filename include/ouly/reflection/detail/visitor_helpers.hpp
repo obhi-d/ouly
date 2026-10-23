@@ -127,10 +127,12 @@ void visit_convertible(Class& obj, Visitor& visitor)
   }
   else if constexpr (ouly::detail::ConvertibleFrom<class_type, std::string_view>)
   {
+    // forward as is: a reader that produces an owning std::string (binary streams) can then move it
+    // straight into a std::string field instead of copying it through a string_view
     visitor.visit(
-     [&](std::string_view str) -> void
+     [&](auto&& str) -> void
      {
-       ouly::convert<class_type>::from_type(obj, str);
+       ouly::convert<class_type>::from_type(obj, std::forward<decltype(str)>(str));
      });
   }
   else

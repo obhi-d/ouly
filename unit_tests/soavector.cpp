@@ -528,4 +528,26 @@ TEST_CASE("soavector: Span views", "[soavector][span]")
   }
 }
 
+TEST_CASE("soavector: resize grows geometrically", "[soavector][resize]")
+{
+  struct pack
+  {
+    int   i;
+    float f;
+  };
+  ouly::soavector<pack> v;
+  uint32_t              reallocations = 0;
+  auto                  last_cap      = v.capacity();
+  for (uint32_t n = 1; n <= 10000; ++n)
+  {
+    v.resize(n);
+    if (v.capacity() != last_cap)
+    {
+      ++reallocations;
+      last_cap = v.capacity();
+    }
+  }
+  REQUIRE(v.size() == 10000);
+  REQUIRE(reallocations < 40);
+}
 // NOLINTEND

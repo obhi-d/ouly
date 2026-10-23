@@ -77,9 +77,9 @@ void coalescing_allocator::rebuild_gaps()
 // NOLINTNEXTLINE
 void coalescing_allocator::validate_integrity() const
 {
-  size_type                 cursor    = 0;
-  uint32_t                  prev      = null_index;
-  [[maybe_unused]] uint32_t reachable = 0;
+  [[maybe_unused]] size_type cursor    = 0;
+  [[maybe_unused]] uint32_t  prev      = null_index;
+  [[maybe_unused]] uint32_t  reachable = 0;
   for (auto index = head_index; index != null_index; index = ouly::detail::vector_access(blocks_, index).next_)
   {
     auto const& block = ouly::detail::vector_access(blocks_, index);

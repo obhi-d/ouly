@@ -189,34 +189,31 @@ public:
     {
       [[maybe_unused]] auto measure = statistics::report_deallocate(i_size);
 
-      for (auto id = static_cast<size_type>(arenas_.size()); id > current_arena_;)
+      // Only the current arena is ever bumped (arenas past it are untouched), so it is the only one
+      // whose top block can be rolled back.
+      if (current_arena_ >= arenas_.size() || !in_range(arenas_[current_arena_], i_data))
       {
-        --id;
-        if (!in_range(arenas_[id], i_data))
-        {
-          continue;
-        }
+        return;
+      }
 
-        auto& item = arenas_[id];
-        // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-        auto* head = static_cast<std::uint8_t*>(item.buffer_) + (item.arena_size_ - item.left_over_);
-        auto* end  = static_cast<std::uint8_t*>(i_data) + i_size;
-        // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-        if (end == head)
+      auto& item = arenas_[current_arena_];
+      // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+      auto* head = static_cast<std::uint8_t*>(item.buffer_) + (item.arena_size_ - item.left_over_);
+      auto* end  = static_cast<std::uint8_t*>(i_data) + i_size;
+      // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+      if (end == head)
+      {
+        auto const align = ouly::detail::alignment_of(i_alignment);
+        if (align > 1)
         {
-          auto const align = ouly::detail::alignment_of(i_alignment);
-          if (align > 1)
-          {
-            auto const bump = ouly::detail::load_linear_bump<size_type>(i_data);
-            OULY_ASSERT(bump <= item.arena_size_);
-            item.left_over_ = item.arena_size_ - bump;
-          }
-          else
-          {
-            item.left_over_ += i_size;
-          }
+          auto const bump = ouly::detail::load_linear_bump<size_type>(i_data);
+          OULY_ASSERT(bump <= item.arena_size_);
+          item.left_over_ = item.arena_size_ - bump;
         }
-        break;
+        else
+        {
+          item.left_over_ += i_size;
+        }
       }
     }
   }
@@ -284,42 +281,38 @@ private:
   /** @brief Move the head of the owning arena when @p i_data is the block sitting at its top */
   auto resize_in_place(address i_data, size_type i_old_size, size_type i_new_size) -> bool
   {
-    for (auto id = static_cast<size_type>(arenas_.size()); id > current_arena_;)
+    // see deallocate: only the current arena can hold the most recent block
+    if (current_arena_ >= arenas_.size() || !in_range(arenas_[current_arena_], i_data))
     {
-      --id;
-      if (!in_range(arenas_[id], i_data))
-      {
-        continue;
-      }
+      return false;
+    }
 
-      auto& item = arenas_[id];
-      // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-      auto* head = static_cast<std::uint8_t*>(item.buffer_) + (item.arena_size_ - item.left_over_);
-      auto* end  = static_cast<std::uint8_t*>(i_data) + i_old_size;
-      // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-      if (end != head)
-      {
-        return false;
-      }
+    auto& item = arenas_[current_arena_];
+    // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+    auto* head = static_cast<std::uint8_t*>(item.buffer_) + (item.arena_size_ - item.left_over_);
+    auto* end  = static_cast<std::uint8_t*>(i_data) + i_old_size;
+    // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+    if (end != head)
+    {
+      return false;
+    }
 
-      if (i_new_size <= i_old_size)
-      {
-        [[maybe_unused]] auto measure = statistics::report_deallocate(i_old_size - i_new_size);
-        item.left_over_ += i_old_size - i_new_size;
-        return true;
-      }
-
-      auto const extra = i_new_size - i_old_size;
-      if (extra > item.left_over_)
-      {
-        return false;
-      }
-
-      [[maybe_unused]] auto measure = statistics::report_allocate(extra);
-      item.left_over_ -= extra;
+    if (i_new_size <= i_old_size)
+    {
+      [[maybe_unused]] auto measure = statistics::report_deallocate(i_old_size - i_new_size);
+      item.left_over_ += i_old_size - i_new_size;
       return true;
     }
-    return false;
+
+    auto const extra = i_new_size - i_old_size;
+    if (extra > item.left_over_)
+    {
+      return false;
+    }
+
+    [[maybe_unused]] auto measure = statistics::report_allocate(extra);
+    item.left_over_ -= extra;
+    return true;
   }
 
   auto in_range(const arena& i_arena, address i_data) -> bool

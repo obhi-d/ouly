@@ -51,4 +51,42 @@ TEST_CASE("Validate basic expressions", "[microexpr]")
   REQUIRE(expr.evaluate("SECOND / (FIFTH) > 5 ? 0 : 1") == true);
   REQUIRE(expr.evaluate("SECOND / (SECOND * FIFTH) > 5 ? 0 : 1") == true);
 }
+TEST_CASE("microexpr: logical operators, negation and identifiers", "[microexpr]")
+{
+  std::unordered_map<std::string_view, int> table = {
+   {      "A", 1},
+   {      "B", 0},
+   {"MY_FLAG", 3},
+  };
+
+  ouly::microexpr expr(
+   [&table](std::string_view v) -> std::optional<int>
+   {
+     auto it = table.find(v);
+     if (it != table.end())
+       return {it->second};
+     return {};
+   });
+
+  // the right operand of && / || must be consumed even when the result is already known
+  REQUIRE(expr.evaluate("0 && 1 ? 5 : 0") == false);
+  REQUIRE(expr.evaluate("0 && 1 ? 0 : 5") == true);
+  REQUIRE(expr.evaluate("(1 || B)") == true);
+  REQUIRE(expr.evaluate("(A || B)") == true);
+  REQUIRE(expr.evaluate("(B && A) == 0") == true);
+
+  REQUIRE(expr.evaluate("!B") == true);
+  REQUIRE(expr.evaluate("!A") == false);
+  REQUIRE(expr.evaluate("!$UNDEFINED") == true);
+  REQUIRE(expr.evaluate("$(A) && !$(UNDEFINED)") == true);
+  REQUIRE(expr.evaluate("$( A ) && $(B)") == true);
+
+  REQUIRE(expr.evaluate("MY_FLAG == 3") == true);
+  REQUIRE(expr.evaluate("$MY_FLAG") == true);
+
+  // malformed input must not read past the end
+  REQUIRE(expr.evaluate("(1") == false);
+  REQUIRE(expr.evaluate("$(A") == false);
+  REQUIRE(expr.evaluate("") == false);
+}
 // NOLINTEND

@@ -422,4 +422,75 @@ TEST_CASE("registry: free list reuse and const iteration", "[ecs][registry]")
    });
   REQUIRE(alive2 == alive);
 }
+TEMPLATE_TEST_CASE("collection: for_each visits recycled entities with non-zero revisions", "[ecs][collection]",
+                   ouly::ecs::rxentity<>, (ouly::ecs::basic_entity<std::true_type, uint32_t, 12>))
+{
+  // The revision must be tracked in every build mode (and for revisions wider than 8 bits),
+  // otherwise iteration rebuilds the entity with revision 0 and the component lookup misses it.
+  using E = TestType;
+  ouly::ecs::basic_registry<E>  registry;
+  ouly::ecs::collection<E>      col;
+  ouly::ecs::components<int, E> comp;
+
+  auto first = registry.emplace();
+  registry.erase(first);
+  auto recycled = registry.emplace();
+  REQUIRE(recycled.get() == first.get());
+  REQUIRE(recycled.revision() == 1);
+
+  col.emplace(recycled);
+  comp.emplace_at(recycled, 42);
+
+  int visited = 0;
+  col.for_each(comp,
+               [&](E e, int& v)
+               {
+                 REQUIRE(e == recycled);
+                 REQUIRE(v == 42);
+                 ++visited;
+               });
+  REQUIRE(visited == 1);
+}
+
+TEST_CASE("registry: for_each_index stays correct across repeated calls and erases", "[ecs][registry]")
+{
+  ouly::ecs::rxregistry<>            registry;
+  std::vector<ouly::ecs::rxentity<>> live;
+  for (int i = 0; i < 64; ++i)
+  {
+    live.push_back(registry.emplace());
+  }
+  for (int i = 0; i < 64; i += 3)
+  {
+    registry.erase(live[static_cast<size_t>(i)]);
+  }
+
+  auto collect = [&](auto const& reg)
+  {
+    std::set<uint32_t> out;
+    reg.for_each_index(
+     [&](uint32_t idx)
+     {
+       out.insert(idx);
+     });
+    return out;
+  };
+
+  std::set<uint32_t> expected;
+  for (int i = 0; i < 64; ++i)
+  {
+    if (i % 3 != 0)
+    {
+      expected.insert(live[static_cast<size_t>(i)].get());
+    }
+  }
+  REQUIRE(collect(registry) == expected);
+  REQUIRE(collect(registry) == expected);
+  REQUIRE(collect(static_cast<ouly::ecs::rxregistry<> const&>(registry)) == expected);
+
+  auto reused = registry.emplace();
+  expected.insert(reused.get());
+  REQUIRE(collect(registry) == expected);
+  REQUIRE(collect(static_cast<ouly::ecs::rxregistry<> const&>(registry)) == expected);
+}
 // NOLINTEND

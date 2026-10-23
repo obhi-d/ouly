@@ -208,6 +208,20 @@ public:
 
   OULY_API void set_arena_size(size_type size) noexcept;
 
+  /**
+   * @brief How many empty arenas each memory class keeps instead of returning them to the manager.
+   *
+   * An arena that becomes empty through deallocation stays registered (and is reused by the next
+   * allocation of its class) while fewer than this many empty arenas of the class remain, so an
+   * alloc/free pattern that empties an arena does not create and destroy backing memory each time.
+   * Dedicated arenas and arenas emptied by an evacuation are always released. Defaults to 1; use
+   * trim() to hand the retained arenas back. Lowering the count does not release arenas already
+   * retained until the next trim().
+   */
+  OULY_API void set_retained_empty_arenas(uint32_t count) noexcept;
+
+  [[nodiscard]] OULY_API auto get_retained_empty_arenas() const noexcept -> uint32_t;
+
   [[nodiscard]] OULY_API auto get_arena_size() const noexcept -> size_type;
   [[nodiscard]] OULY_API auto get_offset(allocation_id id) const noexcept -> size_type;
   [[nodiscard]] OULY_API auto get_size(allocation_id id) const noexcept -> size_type;
@@ -404,6 +418,28 @@ public:
     return result;
   }
 
+  /**
+   * @brief Return every empty arena, including the ones retained for reuse, to the manager.
+   * @return Number of arenas released
+   */
+  template <CoalescingMemoryManager M>
+  auto trim(M& manager) -> uint32_t
+  {
+    uint32_t released = 0;
+    // drop_arena erases from arena_order_, so walk it backwards by index
+    for (auto i = arena_order_.size(); i-- > 0;)
+    {
+      auto const arena = ouly::detail::vector_access(arena_order_, i);
+      if (can_release_arena(arena))
+      {
+        drop_arena(arena);
+        manager.remove(arena_id{arena});
+        ++released;
+      }
+    }
+    return released;
+  }
+
   [[nodiscard]] OULY_API auto statistics() const noexcept -> ca_defrag_statistics;
 
   OULY_API void validate_integrity() const;
@@ -530,7 +566,7 @@ private:
   template <CoalescingMemoryManager M>
   void try_release_arena(M& manager, uint16_t arena)
   {
-    if (can_release_arena(arena))
+    if (can_release_arena(arena) && !should_retain_empty(arena))
     {
       drop_arena(arena);
       manager.remove(arena_id{arena});
@@ -604,6 +640,8 @@ private:
   OULY_API void               retire_source(planned_move& move);
 
   [[nodiscard]] OULY_API auto can_release_arena(uint16_t arena) const -> bool;
+  [[nodiscard]] OULY_API auto should_retain_empty(uint16_t arena) const -> bool;
+  [[nodiscard]] OULY_API auto count_empty_arenas(uint32_t memory_class) const -> uint32_t;
   OULY_API auto               drop_arena(uint16_t arena) -> size_type;
   OULY_API void               set_result_state(ca_defrag_result& result) const;
   [[nodiscard]] OULY_API auto allocate_move_id() -> ca_move_id;
@@ -620,8 +658,9 @@ private:
 
   std::optional<evacuation_target> target_;
   ca_defrag_statistics             statistics_;
-  size_type                        arena_size_   = 0;
-  uint32_t                         next_move_id_ = 0;
+  size_type                        arena_size_            = 0;
+  uint32_t                         next_move_id_          = 0;
+  uint32_t                         retained_empty_arenas_ = 1;
 };
 
 } // namespace ouly

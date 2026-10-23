@@ -73,7 +73,10 @@ public:
         page_list_tail_{std::exchange(other.page_list_tail_, nullptr)},
         available_pages_(std::exchange(other.available_pages_, nullptr)),
         pages_to_free_{std::exchange(other.pages_to_free_, nullptr)}
-  {}
+  {
+    // the moved-from instance must not keep bumping pages it no longer owns
+    other.generation_++;
+  }
 
   /**
    * @brief Move assignment operator
@@ -86,12 +89,13 @@ public:
     {
       return *this; // self-assignment, nothing to do
     }
-    reset(); // free any existing arenas
+    release(); // free any existing arenas, reset() alone would leak the recycled ones overwritten below
     default_page_size_ = std::exchange(other.default_page_size_, default_page_size);
     page_list_head_    = std::exchange(other.page_list_head_, nullptr);
     page_list_tail_    = std::exchange(other.page_list_tail_, nullptr);
     pages_to_free_     = std::exchange(other.pages_to_free_, nullptr);
     available_pages_   = std::exchange(other.available_pages_, nullptr);
+    other.generation_++;
     return *this;
   }
 
@@ -236,6 +240,8 @@ private:
   static auto remove_tls_slot(tls_t* slot) noexcept -> void;
 
   static OULY_API auto generate_random_id(void* ptr) -> uintptr_t;
+  static OULY_API auto next_tls_slot() noexcept -> std::uint32_t;
+  [[nodiscard]] auto   local_slot() const noexcept -> tls_t&;
   /* ---------- Data members -------------------------------------------- */
 
   /** @brief Default size for new arenas */
@@ -258,6 +264,9 @@ private:
 
   /** @brief Monotonically-increasing frame ID for generation tracking */
   uintptr_t generation_ = {generate_random_id(this)};
+
+  /** @brief Index of this instance's per-thread page slot */
+  std::uint32_t tls_slot_ = next_tls_slot();
 };
 
 } // namespace ouly

@@ -5,6 +5,7 @@
 
 #include "ouly/scheduler/config.hpp"
 #include "ouly/scheduler/detail/allocation.hpp"
+#include "ouly/scheduler/detail/cache_optimized_data.hpp"
 #include "ouly/scheduler/detail/mpmc_ring.hpp"
 #include "ouly/scheduler/detail/v2/worker.hpp"
 #include "ouly/scheduler/detail/v2/workgroup.hpp"
@@ -20,6 +21,11 @@
 #include <semaphore>
 #include <thread>
 #include <vector>
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4324) // structure was padded due to alignment specifier
+#endif
 
 namespace ouly::v2
 {
@@ -313,13 +319,17 @@ private:
 
   static constexpr uint32_t max_workgroup_v2 = ouly::detail::v2::max_workgroup;
 
-  std::atomic_bool                    stop_{false};
-  std::atomic_uint32_t                finished_{0};    // Used to ack all finished workers
-  std::counting_semaphore<INT_MAX>    wake_tokens_{0}; // Used to wake up workers when work is available
-  std::atomic_int32_t                 sleeping_{0};
-  std::atomic_uint64_t                park_epoch_{0};
-  std::atomic_int64_t                 pending_{0}; // Submitted tasks not yet finished (queued + in-flight)
-  std::shared_ptr<worker_initializer> initializer_ = nullptr;
+  // Hot atomics live on separate cache lines: pending_ is bumped on every submit and completion and
+  // the parking pair on every submit, while stop_ is read by every worker on each loop iteration.
+  static constexpr std::size_t cache_line_size = ouly::detail::cache_line_size;
+
+  alignas(cache_line_size) std::atomic_bool stop_{false};
+  std::atomic_uint32_t             finished_{0};    // Used to ack all finished workers
+  std::counting_semaphore<INT_MAX> wake_tokens_{0}; // Used to wake up workers when work is available
+  alignas(cache_line_size) std::atomic_int32_t sleeping_{0};
+  std::atomic_uint64_t park_epoch_{0};
+  alignas(cache_line_size) std::atomic_int64_t pending_{0}; // Submitted tasks not yet finished (queued + in-flight)
+  alignas(cache_line_size) std::shared_ptr<worker_initializer> initializer_ = nullptr;
 
   std::unique_ptr<worker_v2[]> workers_;
 
@@ -337,3 +347,7 @@ private:
 };
 
 } // namespace ouly::v2
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif

@@ -219,12 +219,13 @@ public:
 
   /**
    * @brief Try to execute a small amount of queued work on the calling worker.
+   * @return true if a work item was executed
    */
-  OULY_API void busy_work(worker_id thread) noexcept;
+  OULY_API auto busy_work(worker_id thread) noexcept -> bool;
 
-  void busy_work(task_context const& ctx) noexcept
+  auto busy_work(task_context const& ctx) noexcept -> bool
   {
-    busy_work(ctx.get_worker());
+    return busy_work(ctx.get_worker());
   }
 
   /**
@@ -261,12 +262,19 @@ private:
   auto try_execute_one(worker_id wid) noexcept -> bool;
   void execute_work(detail::v3::worker& wkr, uint32_t group_index, detail::v3::work_item& work) noexcept;
   void notify_workers(uint32_t count) noexcept;
+  void wake_parked() noexcept;
+  template <typename Predicate>
+  void park(std::unique_lock<std::mutex>& lock, Predicate predicate);
   void finish_task() noexcept;
 
   [[nodiscard]] auto has_queued_work(detail::v3::worker const& wkr) const noexcept -> bool;
 
   // Tasks submitted but not yet finished executing (queued + in-flight).
   ouly::detail::cache_aligned_atomic<uint32_t> pending_{uint32_t{0}};
+
+  // Threads parked (or about to park) on work_available_. Lets submit and finish skip the mutex
+  // and broadcast entirely while every worker is busy; see notify_workers() and park().
+  ouly::detail::cache_aligned_atomic<uint32_t> sleepers_{uint32_t{0}};
 
   // Coordinates worker parking with submit/finish notifications. Queue operations remain
   // lock-free; this mutex only serializes condition-variable wait/notify handoff.

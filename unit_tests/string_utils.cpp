@@ -190,4 +190,18 @@ TEST_CASE("Validate string functions", "[string_utils]")
   CHECK(ouly::is_number("43"sv) == true);
 }
 
+TEST_CASE("Validate trim and is_number edge cases", "[string_utils]")
+{
+  REQUIRE(ouly::trim_view("   ").empty());
+  REQUIRE(ouly::trim_view("").empty());
+  REQUIRE(ouly::trim_leading(" \t\n").empty());
+  REQUIRE(ouly::trim_trailing(" \r\n").empty());
+  REQUIRE(ouly::trim_view("  x y \n") == "x y");
+
+  REQUIRE(ouly::is_number(std::string_view{"-12"}));
+  REQUIRE(ouly::is_number(std::string_view{"7"}));
+  REQUIRE_FALSE(ouly::is_number(std::string_view{"-"}));
+  REQUIRE_FALSE(ouly::is_number(std::string_view{""}));
+  REQUIRE_FALSE(ouly::is_number(std::string_view{"1a"}));
+}
 // NOLINTEND

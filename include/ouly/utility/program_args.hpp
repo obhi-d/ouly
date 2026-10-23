@@ -429,7 +429,7 @@ public:
   {
     // Resolve arg
     T value = {};
-    if (decl<bool>(name, flag).doc(docu).sink(value))
+    if (decl<T>(name, flag).doc(docu).sink(value))
     {
       return std::optional<T>{value};
     }

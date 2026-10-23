@@ -313,11 +313,11 @@ inline auto tokenize(A acceptor, std::string_view value, std::string_view sepera
 inline auto trim_leading(std::string_view str)
 {
   size_t endpos = str.find_first_not_of(" \t\n\r");
-  if (endpos != 0)
+  if (endpos == std::string_view::npos)
   {
-    str = str.substr(endpos);
+    return std::string_view{};
   }
-  return str;
+  return str.substr(endpos);
 }
 
 /**
@@ -326,11 +326,11 @@ inline auto trim_leading(std::string_view str)
 inline auto trim_trailing(std::string_view str)
 {
   size_t endpos = str.find_last_not_of(" \t\n\r");
-  if (endpos != std::string::npos)
+  if (endpos == std::string_view::npos)
   {
-    str = str.substr(0, endpos + 1);
+    return std::string_view{};
   }
-  return str;
+  return str.substr(0, endpos + 1);
 }
 
 /**
@@ -449,11 +449,12 @@ inline void word_wrap_multiline(L line_accept, uint32_t width, std::string_view 
 template <typename StringType>
 auto is_number(const StringType& s) -> bool
 {
-  return !s.empty() && std::find_if(s[0] == '-' ? s.begin() + 1 : s.begin(), s.end(),
-                                    [](char c) -> bool
-                                    {
-                                      return !std::isdigit(c);
-                                    }) == s.end();
+  auto const first = (!s.empty() && s[0] == '-') ? s.begin() + 1 : s.begin();
+  return first != s.end() && std::find_if(first, s.end(),
+                                          [](char c) -> bool
+                                          {
+                                            return std::isdigit(static_cast<unsigned char>(c)) == 0;
+                                          }) == s.end();
 }
 
 OULY_API auto format_snake_case(const std::string& str) -> std::string;

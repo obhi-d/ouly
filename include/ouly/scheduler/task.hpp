@@ -134,8 +134,11 @@ public:
     assert_not_waiting_on_ancestor();
     while (!is_complete())
     {
-      ctx.get_scheduler().busy_work(ctx);
-      std::this_thread::yield();
+      // only give up the time slice when there was nothing to help with
+      if (!ctx.get_scheduler().busy_work(ctx))
+      {
+        std::this_thread::yield();
+      }
     }
   }
 

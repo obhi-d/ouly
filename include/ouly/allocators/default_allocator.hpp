@@ -47,12 +47,15 @@ struct OULY_EMPTY_BASES default_allocator
 
   static constexpr auto align = ouly::detail::min_alignment_v<Config>;
 
+  // allocate and deallocate must agree on this threshold so new/delete overloads always pair up
+  static constexpr std::size_t default_new_alignment = __STDCPP_DEFAULT_NEW_ALIGNMENT__;
+
   /**
    * @brief Allocate `size` bytes aligned to `alignment`
    *
    * The alignment may be an `ouly::alignment<N>` tag or, when it is only known at runtime, a
-   * `std::align_val_t`. A trivial alignment (0 or 1) goes through the plain operator new, which
-   * already guarantees `alignof(std::max_align_t)`.
+   * `std::align_val_t`. Alignments up to `__STDCPP_DEFAULT_NEW_ALIGNMENT__` go through the plain
+   * operator new, which already guarantees them; only stricter ones pay for the aligned overload.
    */
   template <typename Alignment = alignment<align>>
   [[nodiscard]] static auto allocate(size_type size, Alignment alignment = {}) -> address
@@ -63,7 +66,7 @@ struct OULY_EMPTY_BASES default_allocator
     }
     else
     {
-      if (ouly::detail::alignment_of(alignment) <= 1)
+      if (ouly::detail::alignment_of(alignment) <= default_new_alignment)
       {
         return tracker::when_allocate(::operator new(size), size);
       }
@@ -90,7 +93,7 @@ struct OULY_EMPTY_BASES default_allocator
     }
     else
     {
-      if (ouly::detail::alignment_of(alignment) <= 1)
+      if (ouly::detail::alignment_of(alignment) <= default_new_alignment)
       {
         ::operator delete(fixup);
       }

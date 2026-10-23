@@ -529,4 +529,22 @@ TEST_CASE("Thread-safe allocators hand recycled pages back empty", "[allocator]"
     allocator.release();
   }
 }
+TEST_CASE("Thread-safe local allocator: instances on one thread keep their own page", "[allocator]")
+{
+  ouly::ts_thread_local_allocator first(4096);
+  ouly::ts_thread_local_allocator second(4096);
+
+  auto* a0 = static_cast<std::uint8_t*>(first.allocate(16));
+  auto* b0 = static_cast<std::uint8_t*>(second.allocate(16));
+  auto* a1 = static_cast<std::uint8_t*>(first.allocate(16));
+  auto* b1 = static_cast<std::uint8_t*>(second.allocate(16));
+  // alternating between the allocators must not force a fresh page on every call
+  REQUIRE(a1 == a0 + 16);
+  REQUIRE(b1 == b0 + 16);
+
+  ouly::ts_thread_local_allocator moved(4096);
+  [[maybe_unused]] auto*          m = moved.allocate(64);
+  moved                             = std::move(first); // must free moved's own pages (LeakSanitizer)
+  REQUIRE(moved.allocate(16) != nullptr);
+}
 // NOLINTEND

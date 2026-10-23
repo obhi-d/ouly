@@ -137,6 +137,7 @@ private:
   auto next_token() -> token;
   auto next_line_start_token() -> token;
   auto quoted_token() -> token;
+  auto finish_quoted_token(uint32_t start, bool decoded) -> token;
   auto plain_token() -> token;
   void process_token(token tok);
   // Context management

@@ -59,13 +59,35 @@ scheduler::~scheduler() noexcept
 
 void scheduler::notify_workers([[maybe_unused]] uint32_t count) noexcept
 {
-  // The lock serializes notify with a worker's predicate check + wait transition.
-  // Queue updates happen before this call; holding the mutex here prevents a worker
-  // from checking "no work", missing this notification, and then sleeping forever.
+  // Dekker pairing with park(): the caller has already published its state change (queued work,
+  // pending_ reaching zero, stop_), then fences and reads sleepers_; a parking thread bumps
+  // sleepers_, fences, then evaluates its predicate. Either this side sees the sleeper and
+  // broadcasts, or the sleeper's predicate sees the published change and it never waits.
+  std::atomic_thread_fence(std::memory_order_seq_cst);
+  if (sleepers_.get().load(std::memory_order_relaxed) == 0)
+  {
+    return;
+  }
+  wake_parked();
+}
+
+void scheduler::wake_parked() noexcept
+{
+  // The lock serializes notify with a parked thread's predicate check + wait transition, so a
+  // thread that has registered in sleepers_ but not yet blocked cannot miss this broadcast.
   {
     std::scoped_lock lock(work_queue_mutex_);
   }
   work_available_.notify_all();
+}
+
+template <typename Predicate>
+void scheduler::park(std::unique_lock<std::mutex>& lock, Predicate predicate)
+{
+  sleepers_.get().fetch_add(1, std::memory_order_relaxed);
+  std::atomic_thread_fence(std::memory_order_seq_cst);
+  work_available_.wait(lock, predicate);
+  sleepers_.get().fetch_sub(1, std::memory_order_relaxed);
 }
 
 void scheduler::finish_task() noexcept
@@ -183,11 +205,11 @@ void scheduler::run_worker(worker_id wid, scheduler_worker_entry entry)
 
     // The predicate is re-checked under the lock, so spinning above cannot lose a wakeup.
     std::unique_lock<std::mutex> lock(work_queue_mutex_);
-    work_available_.wait(lock,
-                         [this, &wkr]() noexcept -> bool
-                         {
-                           return stop_.load(std::memory_order_acquire) || has_queued_work(wkr);
-                         });
+    park(lock,
+         [this, &wkr]() noexcept -> bool
+         {
+           return stop_.load(std::memory_order_acquire) || has_queued_work(wkr);
+         });
   }
 
   g_worker    = nullptr;
@@ -235,17 +257,18 @@ void scheduler::submit_internal([[maybe_unused]] task_context const& current, wo
   notify_workers(1);
 }
 
-void scheduler::busy_work(worker_id thread) noexcept
+auto scheduler::busy_work(worker_id thread) noexcept -> bool
 {
   constexpr uint32_t attempts = 2;
   for (uint32_t i = 0; i < attempts; ++i)
   {
     if (try_execute_one(thread))
     {
-      return;
+      return true;
     }
     ouly::detail::pause_exec();
   }
+  return false;
 }
 
 void scheduler::wait_for_tasks()
@@ -267,11 +290,11 @@ void scheduler::wait_for_tasks()
 
     auto&                        wkr = ouly::detail::vector_access(workers_, main_thread.get_index());
     std::unique_lock<std::mutex> lock(work_queue_mutex_);
-    work_available_.wait(lock,
-                         [this, &wkr]() noexcept -> bool
-                         {
-                           return pending_.get().load(std::memory_order_acquire) == 0 || has_queued_work(wkr);
-                         });
+    park(lock,
+         [this, &wkr]() noexcept -> bool
+         {
+           return pending_.get().load(std::memory_order_acquire) == 0 || has_queued_work(wkr);
+         });
   }
 }
 
@@ -367,7 +390,7 @@ void scheduler::end_execution()
   wait_for_tasks();
 
   stop_.store(true, std::memory_order_release);
-  notify_workers(worker_count_);
+  wake_parked(); // unconditional: shutdown is rare and must never depend on the sleeper count
 
   for (auto& thread : threads_)
   {

@@ -262,4 +262,27 @@ TEST_CASE("Validate error handling", "[mmap_error_handling]")
     {}
   }
 }
+TEST_CASE("Validate mmap_source with offset", "[mmap_source]")
+{
+  const std::string filename = "test_mmap_offset.dat";
+  const std::string content  = "0123456789abcdefghij";
+  {
+    std::ofstream file(filename, std::ios::binary);
+    file.write(content.c_str(), static_cast<std::streamsize>(content.size()));
+  }
+
+  {
+    ouly::mmap_source source;
+    source.map(filename, 5, 10);
+    REQUIRE(source.size() == 10);
+    REQUIRE(static_cast<char>(source[0]) == '5');
+    REQUIRE(static_cast<char>(source[9]) == 'e');
+
+    auto tail = ouly::make_mmap_source(filename, 15, ouly::map_entire_file);
+    REQUIRE(tail.size() == 5);
+    REQUIRE(static_cast<char>(tail[0]) == 'f');
+  }
+
+  cleanup_test_file(filename);
+}
 // NOLINTEND

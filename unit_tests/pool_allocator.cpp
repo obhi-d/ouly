@@ -120,4 +120,31 @@ TEST_CASE("Validate std_allocator", "[std_allocator]")
       vlist.push_back(i);
   }
 }
+TEST_CASE("pool_allocator: release into an exhausted array list", "[pool_allocator]")
+{
+  // two 2-atom blocks consume the whole 4-atom arena, leaving no free array to compare against
+  ouly::pool_allocator<> allocator(16, 4);
+  auto                   p = allocator.allocate(32);
+  auto                   q = allocator.allocate(32);
+  REQUIRE(p != q);
+  allocator.deallocate(q, 32);
+  allocator.deallocate(p, 32);
+  auto r = allocator.allocate(48);
+  REQUIRE(r != nullptr);
+  allocator.deallocate(r, 48);
+}
+
+TEST_CASE("pool_allocator: non power of two atom size", "[pool_allocator]")
+{
+  ouly::pool_allocator<> allocator(24, 16);
+  auto                   a = static_cast<std::uint8_t*>(allocator.allocate(24));
+  auto                   b = static_cast<std::uint8_t*>(allocator.allocate(48));
+  auto                   c = static_cast<std::uint8_t*>(allocator.allocate(25));
+  REQUIRE(a != nullptr);
+  REQUIRE(b != nullptr);
+  REQUIRE(c != nullptr);
+  allocator.deallocate(c, 25);
+  allocator.deallocate(b, 48);
+  allocator.deallocate(a, 24);
+}
 // NOLINTEND

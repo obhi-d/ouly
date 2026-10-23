@@ -144,6 +144,7 @@ TEST_CASE("coalescing_arena_allocator: allocation follows ouly id, alignment, an
   allocator.deallocate(aligned.get_allocation_id(), memory);
   allocator.deallocate(same_class.get_allocation_id(), memory);
   allocator.deallocate(dedicated.get_allocation_id(), memory);
+  REQUIRE(allocator.trim(memory) == 2); // empty arenas retained for reuse
   REQUIRE(memory.active_ == 0);
 }
 
@@ -238,6 +239,7 @@ TEST_CASE("coalescing_arena_allocator: evacuation is budgeted, persistent, and r
     allocator.deallocate(allocations[index].get_allocation_id(), memory);
   }
   allocator.deallocate(foreground.get_allocation_id(), memory);
+  REQUIRE(allocator.trim(memory) == 1); // empty arenas retained for reuse
   REQUIRE(memory.active_ == 0);
 }
 
@@ -265,6 +267,7 @@ TEST_CASE("coalescing_arena_allocator: pinned allocations and memory classes pre
 
   allocator.deallocate(class0_b.get_allocation_id(), memory);
   allocator.deallocate(class1_b.get_allocation_id(), memory);
+  REQUIRE(allocator.trim(memory) == 2); // empty arenas retained for reuse
   REQUIRE(memory.active_ == 0);
 }
 
@@ -297,6 +300,7 @@ TEST_CASE("coalescing_arena_allocator: failed scheduling cancels reservations an
   allocator.deallocate(allocations[1].get_allocation_id(), memory);
   allocator.deallocate(allocations[3].get_allocation_id(), memory);
   allocator.deallocate(replacement.get_allocation_id(), memory);
+  REQUIRE(allocator.trim(memory) == 1); // empty arenas retained for reuse
   REQUIRE(memory.active_ == 0);
 }
 
@@ -338,6 +342,7 @@ TEST_CASE("coalescing_arena_allocator: failed rebinding preserves sources and ca
   allocator.deallocate(allocations[1].get_allocation_id(), memory);
   allocator.deallocate(allocations[3].get_allocation_id(), memory);
   allocator.deallocate(replacement.get_allocation_id(), memory);
+  REQUIRE(allocator.trim(memory) == 1); // empty arenas retained for reuse
   REQUIRE(memory.active_ == 0);
 }
 
@@ -414,6 +419,7 @@ TEST_CASE("coalescing_arena_allocator: defragmentation plans from a caller suppl
     verify(memory, allocator, allocations[index].get_allocation_id());
     allocator.deallocate(allocations[index].get_allocation_id(), memory);
   }
+  REQUIRE(allocator.trim(memory) == 1); // empty arenas retained for reuse
   REQUIRE(memory.active_ == 0);
 }
 
@@ -535,7 +541,56 @@ TEST_CASE("coalescing_arena_allocator: randomized allocation, evacuation and fai
     allocator.deallocate(entry.id_, memory);
   }
   allocator.validate_integrity();
+  allocator.trim(memory); // one empty arena per memory class is retained
   REQUIRE(memory.active_ == 0);
 }
 
+TEST_CASE("coalescing_arena_allocator: emptied arenas are retained for reuse until trimmed",
+          "[coalescing_arena_allocator][retain]")
+{
+  arena_memory                     memory;
+  ouly::coalescing_arena_allocator allocator{1024};
+  REQUIRE(allocator.get_retained_empty_arenas() == 1);
+
+  // a per-frame alloc/free of one object must not create and destroy an arena every frame
+  for (int frame = 0; frame < 8; ++frame)
+  {
+    auto a = allocator.allocate(128, memory);
+    REQUIRE(memory.active_ == 1);
+    allocator.deallocate(a.get_allocation_id(), memory);
+    REQUIRE(memory.active_ == 1);
+    allocator.validate_integrity();
+  }
+
+  // only one empty arena per class is kept; a second emptied arena of the class is released
+  auto first  = allocator.allocate(1000, memory);
+  auto second = allocator.allocate(1000, memory);
+  REQUIRE(memory.active_ == 2);
+  allocator.deallocate(first.get_allocation_id(), memory);
+  allocator.deallocate(second.get_allocation_id(), memory);
+  REQUIRE(memory.active_ == 1);
+
+  // other memory classes keep their own empty arena
+  auto other = allocator.allocate(64, memory, ouly::ca_allocation_options{.memory_class_ = 3});
+  allocator.deallocate(other.get_allocation_id(), memory);
+  REQUIRE(memory.active_ == 2);
+
+  // dedicated arenas are always released
+  auto dedicated = allocator.allocate(4096, memory);
+  REQUIRE(memory.active_ == 3);
+  allocator.deallocate(dedicated.get_allocation_id(), memory);
+  REQUIRE(memory.active_ == 2);
+  allocator.validate_integrity();
+
+  REQUIRE(allocator.trim(memory) == 2);
+  REQUIRE(memory.active_ == 0);
+  REQUIRE(allocator.trim(memory) == 0);
+
+  // retaining nothing restores immediate release
+  allocator.set_retained_empty_arenas(0);
+  auto again = allocator.allocate(128, memory);
+  allocator.deallocate(again.get_allocation_id(), memory);
+  REQUIRE(memory.active_ == 0);
+  allocator.validate_integrity();
+}
 // NOLINTEND

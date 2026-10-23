@@ -109,7 +109,6 @@ struct memory_tracker_impl
       return;
     }
     std::unique_lock<std::shared_mutex> ul(lock_);
-    std::stringstream                   ss;
     if (i_data == ignore_first_)
     {
       ignore_first_ = reinterpret_cast<void*>(0x1); // NOLINT
@@ -118,12 +117,14 @@ struct memory_tracker_impl
     auto it = pointer_map_.find(i_data);
     if (it == pointer_map_.end())
     {
+      std::stringstream ss;
       ss << "\nInvalid memory free -> \n";
       ss << backtrace();
+      out_(ss.str());
+      return;
     }
     pointer_map_.erase(it);
     memory_counter_ -= i_size;
-    out_(ss.str());
   }
 
   [[nodiscard]] auto get_memory_usage() const noexcept -> std::size_t

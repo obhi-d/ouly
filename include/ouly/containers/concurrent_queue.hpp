@@ -95,6 +95,7 @@ private:
 
   // Cache line size for alignment
   static constexpr size_t cache_line_size = 64;
+  static constexpr uint32_t buckets_per_page = 4;
 
   // Per-slot commit states
   static constexpr uint8_t slot_empty    = 0; // not yet published by a producer
@@ -117,7 +118,10 @@ private:
     std::array<std::atomic<uint8_t>, pool_size> committed_{};
 
     // The actual storage (separate cache line)
-    alignas(cache_line_size) std::array<ouly::detail::aligned_storage<sizeof(T), alignof(T)>, pool_size> data_{};
+    // Left uninitialized: slots are constructed on enqueue, and zeroing pool_size * sizeof(T) bytes
+    // under the exclusive lock in grow_tail() would stall every producer and consumer.
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
+    alignas(cache_line_size) std::array<ouly::detail::aligned_storage<sizeof(T), alignof(T)>, pool_size> data_;
 
     bucket()  = default;
     ~bucket() = default;
@@ -142,7 +146,13 @@ private:
   // exclusive section is what makes bucket deallocation safe: it cannot overlap any element
   // operation that might still hold a pointer to the bucket.
   alignas(cache_line_size) mutable std::shared_mutex bucket_mutex_;
-  alignas(cache_line_size) object_pool<bucket, Config> bucket_pool_;
+  // Buckets already hold pool_size elements each; pooling them pool_size at a time would reserve
+  // pool_size^2 elements up front.
+  struct bucket_pool_config : ouly::cfg::pool_size<buckets_per_page>
+  {
+    using underlying_allocator_t = ouly::detail::underlying_allocator_t<Config>;
+  };
+  alignas(cache_line_size) object_pool<bucket, bucket_pool_config> bucket_pool_;
 
 public:
   /**
@@ -470,7 +480,7 @@ private:
     bucket* new_bucket = bucket_pool_.allocate();
     // Placement new to ensure proper construction of atomics
     // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
-    return new (new_bucket) bucket();
+    return new (new_bucket) bucket;
   }
 
   /**

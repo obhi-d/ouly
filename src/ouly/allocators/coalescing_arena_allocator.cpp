@@ -22,6 +22,16 @@ auto coalescing_arena_allocator::get_arena_size() const noexcept -> size_type
   return arena_size_;
 }
 
+void coalescing_arena_allocator::set_retained_empty_arenas(uint32_t count) noexcept
+{
+  retained_empty_arenas_ = count;
+}
+
+auto coalescing_arena_allocator::get_retained_empty_arenas() const noexcept -> uint32_t
+{
+  return retained_empty_arenas_;
+}
+
 auto coalescing_arena_allocator::get_offset(allocation_id id) const noexcept -> size_type
 {
   OULY_ASSERT(ouly::detail::vector_access(blocks_, id.get()).kind_ == block_kind::allocation);
@@ -514,6 +524,7 @@ void coalescing_arena_allocator::close_move(planned_move& move, move_state state
 
 void coalescing_arena_allocator::cancel_move(planned_move& move)
 {
+  OULY_ASSERT(target_);
   if (move.state_ == move_state::reserved)
   {
     --target_->reserved_moves_;
@@ -625,6 +636,28 @@ auto coalescing_arena_allocator::can_release_arena(uint16_t arena) const -> bool
          state.retiring_ == 0 && state.free_ == state.capacity_;
 }
 
+auto coalescing_arena_allocator::count_empty_arenas(uint32_t memory_class) const -> uint32_t
+{
+  uint32_t count = 0;
+  for (auto arena : arena_order_)
+  {
+    auto const& state = ouly::detail::vector_access(arena_pool_, arena);
+    if (state.memory_class_ == memory_class && !state.dedicated_ && can_release_arena(arena))
+    {
+      ++count;
+    }
+  }
+  return count;
+}
+
+auto coalescing_arena_allocator::should_retain_empty(uint16_t arena) const -> bool
+{
+  // Only runs when an arena has just become empty, so the scan is off the allocation path. The
+  // arena itself is among the empty ones counted.
+  auto const& state = ouly::detail::vector_access(arena_pool_, arena);
+  return !state.dedicated_ && count_empty_arenas(state.memory_class_) <= retained_empty_arenas_;
+}
+
 auto coalescing_arena_allocator::drop_arena(uint16_t arena) -> size_type
 {
   OULY_ASSERT(can_release_arena(arena));
@@ -677,14 +710,14 @@ auto coalescing_arena_allocator::statistics() const noexcept -> ca_defrag_statis
 // NOLINTNEXTLINE
 void coalescing_arena_allocator::validate_integrity() const
 {
-  size_t reachable = 0;
+  [[maybe_unused]] size_t reachable = 0;
   for (auto arena : arena_order_)
   {
     auto const& state = ouly::detail::vector_access(arena_pool_, arena);
     OULY_ASSERT(state.active_);
-    // empty arenas go back to the manager as soon as they are empty
-    OULY_ASSERT(!can_release_arena(arena));
-    bool const open = state.role_ == arena_role::normal && !state.dedicated_;
+    // empty arenas go back to the manager unless they are retained for reuse; dedicated ones never are
+    OULY_ASSERT(!can_release_arena(arena) || !state.dedicated_);
+    [[maybe_unused]] bool const open = state.role_ == arena_role::normal && !state.dedicated_;
 
     [[maybe_unused]] uint32_t  allocations  = 0;
     [[maybe_unused]] uint32_t  reservations = 0;
@@ -692,8 +725,8 @@ void coalescing_arena_allocator::validate_integrity() const
     [[maybe_unused]] uint32_t  pinned       = 0;
     [[maybe_unused]] size_type live         = 0;
     [[maybe_unused]] size_type free         = 0;
-    size_type                  cursor       = 0;
-    uint32_t                   prev         = null_index;
+    [[maybe_unused]] size_type cursor       = 0;
+    [[maybe_unused]] uint32_t  prev         = null_index;
 
     for (auto index = state.head_; index != null_index; index = ouly::detail::vector_access(blocks_, index).next_)
     {

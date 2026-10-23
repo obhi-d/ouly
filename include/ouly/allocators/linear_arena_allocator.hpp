@@ -110,7 +110,11 @@ public:
         return ret_value;
       }
 
-      if (arenas_[index].left_over_ < k_minimum_size && index != current_arena_)
+      // Retire arenas that are nearly full so later calls stop probing them; the threshold scales
+      // with the arena so blocks larger than k_minimum_size do not leave every arena in the scan.
+      // The current arena is never retired, deallocate() relies on it to roll back its top block.
+      if (auto const& item = arenas_[index];
+          index != current_arena_ && item.left_over_ < std::max<size_type>(k_minimum_size, item.arena_size_ >> 4U))
       {
         std::swap(arenas_[index], arenas_[current_arena_++]);
       }

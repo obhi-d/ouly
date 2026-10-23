@@ -8,6 +8,7 @@
 #include "ouly/reflection/detail/field_helpers.hpp"
 #include "ouly/utility/type_traits.hpp"
 #include "ouly/utility/user_config.hpp"
+#include <algorithm>
 #include <compare>
 #include <concepts>
 #include <cstddef>
@@ -617,7 +618,11 @@ public:
   {
     if (sz > size_)
     {
-      reserve(sz);
+      if (sz > capacity_)
+      {
+        // geometric growth keeps repeated resize(size() + n) amortized O(1)
+        reserve(std::max(sz, static_cast<size_type>(capacity_ + (capacity_ >> 1U))));
+      }
       uninitialized_fill(size_, sz - size_, c, index_seq);
     }
     else
