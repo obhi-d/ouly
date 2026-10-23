@@ -24,7 +24,7 @@ Where to look
      - Test files
    * - Scheduler
      - ``scheduler_tests.cpp``, ``scheduler_task_tests.cpp``, ``scheduler_version_v1.cpp``,
-       ``scheduler_version_v2.cpp``, ``scheduler_version_v3.cpp``, ``scheduler_comparison_tests.cpp``,
+       ``scheduler_version_v2.cpp``, ``scheduler_version_v3.cpp``,
        ``test_auto_parallel_for.cpp``, ``flow_graph_tests.cpp``, ``dynamic_flow_graph_tests.cpp``,
        ``spmc_ring.cpp``
    * - Allocators

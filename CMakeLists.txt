@@ -63,6 +63,9 @@ if(BUILD_SHARED_LIBS)
 endif()
 
 set_property(TARGET ${OULY_TARGET_NAME} PROPERTY CXX_STANDARD 20)
+# Consumers include headers that need C++20 (concepts, coroutines, <=>), so require it of them too;
+# this also travels with the exported target to find_package users
+target_compile_features(${OULY_TARGET_NAME} PUBLIC cxx_std_20)
 
 # Add all warning flags
 if(MSVC)

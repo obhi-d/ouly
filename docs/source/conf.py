@@ -38,11 +38,16 @@ def _ensure_doxygen_xml() -> None:
 
     Equivalent to `doxygen Doxyfile` from the repository root, but only writes the XML output.
     """
-    if (_repo_root / 'docs' / 'xml' / 'index.xml').exists() or shutil.which('doxygen') is None:
+    if (_repo_root / 'docs' / 'xml' / 'index.xml').exists():
         return
+    if shutil.which('doxygen') is None:
+        raise RuntimeError('docs/xml is missing and doxygen is not installed: install doxygen, or run '
+                           '`doxygen Doxyfile` from the repository root before sphinx-build')
     doxyfile = (_repo_root / 'Doxyfile').read_text(encoding='utf-8')
+    # Doxygen reports every undocumented member; keep that out of the Sphinx log
     subprocess.run(['doxygen', '-'], input=doxyfile + '\nGENERATE_HTML=NO\nGENERATE_LATEX=NO\n',
-                   text=True, cwd=_repo_root, check=False, stdout=subprocess.DEVNULL)
+                   text=True, cwd=_repo_root, check=False, stdout=subprocess.DEVNULL,
+                   stderr=subprocess.DEVNULL)
 
 
 _ensure_doxygen_xml()
