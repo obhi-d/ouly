@@ -28,26 +28,23 @@ static constexpr uint32_t default_logical_task_divisior = 64;
  * Example usage:
  * @code
  * // Create scheduler and workgroups
- * ouly::scheduler scheduler;
+ * ouly::v1::scheduler scheduler;
  * scheduler.create_group(ouly::workgroup_id(0), 0, 16);  // 16 workers starting at index 0
  * scheduler.create_group(ouly::workgroup_id(1), 16, 2);  // 2 workers starting at index 16
  *
- * // Begin execution
+ * // Begin execution; the calling thread becomes worker 0
  * scheduler.begin_execution();
+ * auto const& ctx = ouly::v1::task_context::this_context::get();
  *
- * // Submit lambda task
- * ouly::async(context, group_id, [](ouly::task_context const& ctx) {
+ * // Submit lambda task to workgroup 1
+ * scheduler.submit(ctx, ouly::workgroup_id(1), [](ouly::v1::task_context const& task_ctx) {
  *   // Task work here
  * });
  *
- * // Submit coroutine task
- * auto task = continue_string();
- * scheduler.submit(ouly::main_worker_id, ouly::default_workgroup_id, task);
- *
- * // Parallel for loop
- * ouly::parallel_for([](int a, ouly::task_context const& ctx) {
+ * // Parallel for loop over the workers of the submitter's workgroup
+ * ouly::parallel_for([](int& a, ouly::v1::task_context const& task_ctx) {
  *   // Process element a
- * }, std::span(data), ouly::default_workgroup_id);
+ * }, data, ctx);
  *
  * // Wait for completion
  * scheduler.end_execution();

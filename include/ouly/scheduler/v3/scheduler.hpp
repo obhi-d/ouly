@@ -24,9 +24,9 @@ namespace ouly::v3
 /**
  * @brief A work-stealing task scheduler designed for game engines.
  *
- * Why v3 exists: the v1/v2 schedulers keep worker threads hot — v1 workers never park at
- * all, and v2 workers spin whenever *any* task is executing anywhere, because work
- * availability is only cleared after a task finishes. In a game engine the scheduler runs
+ * Why v3 exists: the v2 scheduler keeps worker threads hot. Its workers spin whenever *any*
+ * task is executing anywhere, because work availability is only cleared after a task
+ * finishes. In a game engine the scheduler runs
  * alongside render, audio, IO and driver threads, and burning every core on idle spinning
  * destroys frame pacing, laptop battery and thermal headroom.
  *
