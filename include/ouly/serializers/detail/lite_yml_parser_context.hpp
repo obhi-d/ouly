@@ -940,7 +940,7 @@ public:
       get_field_ref<I>(parent->get()) = std::move(object->get());
     }
     parent->has_value_ = true;
-  };
+  }
 
   template <typename Base, typename TClassType, std::size_t I>
   static void get_aggregate_field(in_context_base*& ret, parser_state* parser, std::string_view field_key,
