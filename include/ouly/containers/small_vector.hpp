@@ -203,8 +203,9 @@ public:
   constexpr auto operator=(std::initializer_list<Ty> other) -> small_vector&
   {
     clear();
-    resize_fill(other.size(), std::false_type());
-    size_ = other.size();
+    auto const count = static_cast<size_type>(other.size());
+    resize_fill(count, std::false_type());
+    size_ = count;
     copy_construct(std::begin(other), std::end(other), get_data());
     return *this;
   }
