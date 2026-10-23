@@ -111,6 +111,7 @@ private:
 
   struct tail_type : std::true_type
   {
+    constexpr explicit tail_type(size_type tail) noexcept : tail_(tail) {}
     size_type tail_;
   };
 
@@ -550,7 +551,7 @@ public:
     auto last = size_--;
     if (size_ <= inline_capacity && last > inline_capacity)
     {
-      transfer_to_ib(size_, tail_type{.tail_ = last});
+      transfer_to_ib(size_, tail_type{last});
     }
     else
     {
@@ -703,7 +704,7 @@ private:
     {
       if (size_ > inline_capacity)
       {
-        transfer_to_ib(size, tail_type{.tail_ = size_});
+        transfer_to_ib(size, tail_type{size_});
       }
       return data_store_.ldata_.data()->template as<Ty>();
     }
