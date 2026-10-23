@@ -64,7 +64,23 @@ Without a preset, enable the tests explicitly:
 Using OULY from CMake
 ---------------------
 
-Install the library and find it from your project:
+The simplest route is to build OULY as part of your project with ``FetchContent``
+(``add_subdirectory(path/to/ouly)`` works the same way for a vendored copy):
+
+.. code-block:: cmake
+
+   cmake_minimum_required(VERSION 3.25)
+   project(my_app LANGUAGES CXX)
+   set(CMAKE_CXX_STANDARD 20)
+
+   include(FetchContent)
+   FetchContent_Declare(ouly GIT_REPOSITORY https://github.com/obhi-d/ouly.git GIT_TAG main) # pin a commit
+   FetchContent_MakeAvailable(ouly)
+
+   add_executable(my_app main.cpp)
+   target_link_libraries(my_app PRIVATE ouly::ouly)
+
+To use an installed copy instead, install the library and find it from your project:
 
 .. code-block:: bash
 
@@ -83,12 +99,6 @@ Install the library and find it from your project:
 
    add_executable(my_app main.cpp)
    target_link_libraries(my_app PRIVATE ouly::ouly)
-
-.. note::
-
-   ``add_subdirectory`` and ``FetchContent`` do not work yet: the ``ouly`` target's include
-   directory is derived from ``CMAKE_SOURCE_DIR``, which is the parent project's source directory
-   when OULY is built as a subproject.
 
 CMake options
 ~~~~~~~~~~~~~

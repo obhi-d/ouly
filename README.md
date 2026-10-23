@@ -59,7 +59,18 @@ ctest --test-dir build/linux-release  # the release presets also build the unit 
 
 ### Use it from CMake
 
-Install the library, then find it from your project:
+The simplest route is to build OULY as part of your project:
+
+```cmake
+include(FetchContent)
+FetchContent_Declare(ouly GIT_REPOSITORY https://github.com/obhi-d/ouly.git GIT_TAG main) # pin a commit for reproducible builds
+FetchContent_MakeAvailable(ouly)
+
+target_link_libraries(your_target PRIVATE ouly::ouly)
+```
+
+`add_subdirectory(path/to/ouly)` works the same way for a vendored copy. To use an installed copy
+instead, install it once and find it with `find_package`:
 
 ```bash
 cmake -S ouly -B ouly-build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$HOME/ouly-install
@@ -72,9 +83,6 @@ cmake --install ouly-build
 find_package(ouly REQUIRED)
 target_link_libraries(your_target PRIVATE ouly::ouly)
 ```
-
-`add_subdirectory` and `FetchContent` do not work yet: the target's include directory is derived
-from `CMAKE_SOURCE_DIR`, which is the parent project's directory in that setup.
 
 ### First program
 

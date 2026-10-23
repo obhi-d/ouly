@@ -43,6 +43,9 @@ Changed
 Fixed
 ~~~~~
 
+- **CMake**: OULY can be consumed with ``add_subdirectory`` and ``FetchContent``. The target's
+  include directory (and the natvis and ``compile_commands.json`` paths) were derived from
+  ``CMAKE_SOURCE_DIR``, which is the parent project's directory in that setup.
 - **small_vector**: truncating ``resize()`` destroys the removed elements; moving from an inline
   vector destroys the moved-from elements; ``assign(n, value)`` no longer selects the iterator
   overload; ``swap`` with allocator propagation compiles.
