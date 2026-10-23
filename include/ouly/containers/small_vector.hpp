@@ -632,6 +632,10 @@ public:
     OULY_ASSERT(first <= last && last <= end());
     auto dist      = static_cast<std::uint32_t>(std::distance(first, last));
     auto first_pos = const_cast<iterator>(first); // NOLINT
+    if (dist == 0)
+    {
+      return first_pos; // the shifting loop below would self-move-assign every following element
+    }
     auto last_pos  = const_cast<iterator>(last);  // NOLINT
     if constexpr (std::is_trivially_copyable_v<Ty> || has_pod)
     {
@@ -712,7 +716,9 @@ private:
     auto data_ptr = resize_no_fill(size);
     if (size > size_)
     {
-      if constexpr (std::is_constructible_v<Ty, Tail>)
+      // std::false_type means "leave uninitialized, the caller constructs"; it must not be taken as a
+      // fill value just because Ty happens to be constructible from bool
+      if constexpr (!std::is_same_v<Tail, std::false_type> && std::is_constructible_v<Ty, Tail>)
       {
         std::uninitialized_fill_n(data_ptr + size_, size - size_, tail);
       }
@@ -918,6 +924,10 @@ private:
     auto      ldata  = get_data();
     auto      p_dist = static_cast<size_type>(std::distance<const Ty*>(ldata, pos));
     size_type nsz    = size_ + n;
+    if (n == 0)
+    {
+      return p_dist; // fill_hole would self-move-assign every element after pos
+    }
 
     if (capacity() < nsz)
     {
@@ -955,6 +965,7 @@ private:
   constexpr auto assign_copy(const small_vector& other, std::true_type /*unused*/) -> small_vector&
   {
     clear();
+    release_heap(); // the kept buffer belongs to the allocator being replaced
     allocator_type::operator=(static_cast<const allocator_type&>(other));
     if (capacity() < other.size())
     {

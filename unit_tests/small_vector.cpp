@@ -5,7 +5,9 @@
 #include "test_common.hpp"
 #include <compare>
 #include <string>
+#include <unordered_map>
 #include <utility>
+#include <vector>
 
 // NOLINTBEGIN
 TEST_CASE("small_vector: Validate small_vector emplace", "[small_vector][emplace]")
@@ -627,5 +629,132 @@ TEST_CASE("small_vector: storage mode flag does not grow the object", "[small_ve
     REQUIRE(sizeof(ouly::small_vector<std::string, 4>) == 4 * sizeof(std::string) + 8);
     REQUIRE(sizeof(ouly::small_vector<unsigned char, 3>) == 24);
   }
+}
+namespace
+{
+struct owner_tracking_tag
+{};
+
+// Records which allocator instance owns every block, so a free through the wrong instance is caught
+struct owner_tracking_allocator
+{
+  using tag       = owner_tracking_tag;
+  using size_type = std::uint32_t;
+  using address   = void*;
+
+  static inline std::unordered_map<void*, int> owners;
+  static inline int                            mismatches = 0;
+
+  int id_ = 0;
+
+  owner_tracking_allocator() = default;
+  explicit owner_tracking_allocator(int id) : id_(id) {}
+
+  template <typename A>
+  auto allocate(size_type n, A /*align*/) -> void*
+  {
+    void* p   = ::operator new(n);
+    owners[p] = id_;
+    return p;
+  }
+
+  template <typename A>
+  void deallocate(void* p, size_type /*n*/, A /*align*/)
+  {
+    auto it = owners.find(p);
+    if (it == owners.end() || it->second != id_)
+    {
+      ++mismatches;
+    }
+    else
+    {
+      owners.erase(it);
+    }
+    ::operator delete(p);
+  }
+
+  static auto max_size() -> size_type
+  {
+    return ~size_type{0};
+  }
+
+  auto operator==(owner_tracking_allocator const& o) const -> bool
+  {
+    return id_ == o.id_;
+  }
+};
+} // namespace
+
+TEST_CASE("small_vector: propagating copy assignment frees the old buffer with the old allocator",
+          "[small_vector][allocator]")
+{
+  using vec = ouly::small_vector<std::string, 2, ouly::config<ouly::cfg::allocator_type<owner_tracking_allocator>>>;
+  static_assert(vec::propagate_allocator_on_copy::value);
+  owner_tracking_allocator::mismatches = 0;
+  {
+    vec a(owner_tracking_allocator{1});
+    for (int i = 0; i < 10; ++i)
+    {
+      a.emplace_back("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    }
+    vec b(owner_tracking_allocator{2});
+    for (int i = 0; i < 3; ++i)
+    {
+      b.emplace_back("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+    }
+    a = b; // a keeps a heap buffer from allocator 1 and adopts allocator 2
+    REQUIRE(a.size() == 3);
+    REQUIRE(a.get_allocator().id_ == 2);
+
+    vec c(owner_tracking_allocator{3});
+    for (int i = 0; i < 5; ++i)
+    {
+      c.emplace_back("cccccccccccccccccccccccccccccccccccc");
+    }
+    vec d(owner_tracking_allocator{4});
+    for (int i = 0; i < 20; ++i)
+    {
+      d.emplace_back("dddddddddddddddddddddddddddddddddddd");
+    }
+    c = d; // grows past the kept buffer
+    REQUIRE(c.size() == 20);
+  }
+  REQUIRE(owner_tracking_allocator::mismatches == 0);
+  REQUIRE(owner_tracking_allocator::owners.empty());
+}
+
+TEST_CASE("small_vector: empty range erase and insert are no-ops", "[small_vector][erase]")
+{
+  ouly::small_vector<std::string, 2> v{"first-long-string-on-the-heap", "second-long-string-on-the-heap",
+                                       "third-long-string-on-the-heap"};
+  v.erase(v.begin() + 1, v.begin() + 1);
+  std::vector<std::string> const empty;
+  v.insert(v.begin() + 1, empty.begin(), empty.end());
+  v.insert(v.begin(), 0, std::string("unused"));
+  REQUIRE(v.size() == 3);
+  REQUIRE(v[0] == "first-long-string-on-the-heap");
+  REQUIRE(v[1] == "second-long-string-on-the-heap");
+  REQUIRE(v[2] == "third-long-string-on-the-heap");
+}
+
+TEST_CASE("small_vector: range construction does not pre-fill types constructible from bool",
+          "[small_vector][construct]")
+{
+  live_counter::live = 0;
+  struct from_bool : live_counter
+  {
+    from_bool() = default;
+    explicit from_bool(int v) : live_counter(v) {}
+    from_bool(bool) {}
+  };
+  {
+    std::vector<from_bool> src(3);
+    REQUIRE(live_counter::live == 3);
+    ouly::small_vector<from_bool, 2> v(src.begin(), src.end());
+    REQUIRE(live_counter::live == 6);
+    v = {from_bool(1), from_bool(2), from_bool(3)};
+    REQUIRE(live_counter::live == 6);
+  }
+  REQUIRE(live_counter::live == 0);
 }
 // NOLINTEND

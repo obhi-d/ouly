@@ -379,4 +379,17 @@ TEST_CASE("linear_arena_allocator serves over-aligned requests from a fresh aren
   CHECK(block != nullptr);
   CHECK(reinterpret_cast<std::uintptr_t>(block) % 4096 == 0);
 }
+TEST_CASE("linear_arena_allocator: top block of the current arena rolls back after a new arena",
+          "[linear_arena_allocator]")
+{
+  using allocator_t = ouly::linear_arena_allocator<>;
+  allocator_t allocator(1024);
+  auto*       p1 = ouly::allocate<std::uint8_t>(allocator, 1000);
+  auto*       p2 = ouly::allocate<std::uint8_t>(allocator, 900); // does not fit, opens a second arena
+  REQUIRE(allocator.get_arena_count() == 2);
+  allocator.deallocate(p2, 900);
+  allocator.deallocate(p1, 1000);
+  auto* p3 = ouly::allocate<std::uint8_t>(allocator, 1000);
+  REQUIRE(p3 == p1); // LIFO frees must make the original space reusable
+}
 // NOLINTEND
