@@ -47,8 +47,8 @@ class SmallVectorSyntheticProvider:
         self.inline_capacity = max(self.template_inline_cap, 
                       (heap_storage_size + element_size - 1) // element_size)
       
-      # Check if using inline storage
-      self.is_inlined = self.size <= self.inline_capacity
+      # The storage mode is explicit state; a heap vector may hold fewer elements than fit inline
+      self.is_inlined = self.valobj.GetChildMemberWithName('on_heap_').GetValueAsUnsigned() == 0
   
   def num_children(self):
     """Return the number of children."""

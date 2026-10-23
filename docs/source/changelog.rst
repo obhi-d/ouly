@@ -1,225 +1,90 @@
 Changelog
 =========
 
-All notable changes to OULY will be documented in this file.
-
-The format is based on `Keep a Changelog <https://keepachangelog.com/en/1.0.0/>`_,
-and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
+Notable changes to OULY. The format is based on
+`Keep a Changelog <https://keepachangelog.com/en/1.0.0/>`_. The current version, as set in
+``CMakeLists.txt``, is 0.1.22; releases up to that version predate this changelog and are described
+by the git history.
 
 [Unreleased]
 ------------
 
-Added
-~~~~~
-- Comprehensive documentation with Sphinx and Breathe integration
-- Coalescing arena allocator for reduced fragmentation
-
 Changed
 ~~~~~~~
-- Improved error handling in binary serialization
-- Enhanced type safety in ECS component storage
-- Optimized memory layout for better cache performance
+
+- **small_vector**: whether the elements live inline or on the heap is now explicit state instead
+  of being derived from the size. Once on the heap the vector stays there, as ``std::vector`` does:
+  ``clear()``, ``pop_back()``, ``erase()`` and a shrinking ``resize()`` keep the heap buffer;
+  ``reserve()`` allocates even while the elements are inline; ``shrink_to_fit()`` is the only call
+  that moves the elements back inline. ``is_inlined()`` reports where the elements are. ``resize()``
+  grows geometrically and ``assign()`` keeps the capacity. ``sizeof`` is unchanged.
+- **coalescing_arena_allocator**: each memory class keeps one emptied arena registered and reuses
+  it, so an allocate/free cycle no longer creates and destroys backing memory every time.
+  ``set_retained_empty_arenas(n)`` (default 1) and ``get_retained_empty_arenas()`` control the
+  limit, ``trim(manager)`` returns the retained arenas. Dedicated arenas, extra empty arenas of a
+  class and arenas emptied by an evacuation are still released immediately.
+- **auto_parallel_for**: stolen ranges are now split further as intended (the divisibility test was
+  inverted, so the loop behaved like a static split into about one chunk per worker). Skewed
+  workloads run about twice as fast on four workers; uniform work costs a few percent more.
+- **v3::scheduler**: ``busy_work`` returns whether it ran a task, and cooperative waits only yield
+  when it did not. Submission, chained wake-ups and task completion skip the global mutex and
+  ``notify_all`` while no worker is parked.
+- **v1/v2 schedulers**: the stealing PRNG no longer produces only even numbers, and v2 seeds it per
+  worker so thieves do not all visit the same victims. v2 keeps its hot atomics on separate cache
+  lines.
+- **microexpr**: supports logical ``!``, ``$(NAME)`` and identifiers containing ``_``.
+- **mmap_file**: ``map(path, offset, length)`` maps ``offset + length`` bytes so the view covers the
+  requested range; ``make_mmap_source``/``make_mmap_sink`` are ``inline``.
+- **soavector**: ``resize()`` grows geometrically.
+- **concurrent_queue**: allocates buckets four per page (a ``concurrent_queue<int>`` previously
+  reserved about 85 MB) and no longer zeroes bucket storage under the exclusive lock.
+- **basic_queue**: slots use the element's alignment instead of ``max_align_t``.
 
 Fixed
 ~~~~~
-- Thread safety issues in shared linear allocator
-- Memory alignment bugs in pool allocator
-- Compilation errors with certain compiler configurations
 
-[1.0.0] - 2025-01-01
---------------------
+- **reflection**: getter/setter properties (``ouly::bind<"name", &get, &set>()``) can be serialized.
+  ``noexcept`` accessors were not recognized, and the writer could not pass a getter's returned
+  value on. Free getters taking the object by ``const&`` are no longer ambiguous; a free getter
+  taking a non-const reference, which could never be written, is now rejected.
+- **fixed_array**: the fill and range constructors wrote past the end when given fewer than ``N``
+  values; an empty (default constructed or moved-from) array is now an empty range, and copying it
+  no longer reads through a null pointer.
+- **components**: ``erase(value_type const&)`` compiles for components with a self index.
+- **CMake**: OULY can be consumed with ``add_subdirectory`` and ``FetchContent``. The target's
+  include directory (and the natvis and ``compile_commands.json`` paths) were derived from
+  ``CMAKE_SOURCE_DIR``, which is the parent project's directory in that setup.
+- **small_vector**: truncating ``resize()`` destroys the removed elements; moving from an inline
+  vector destroys the moved-from elements; ``assign(n, value)`` no longer selects the iterator
+  overload; ``swap`` with allocator propagation compiles.
+- **sparse_vector**: iterators skip absent pages in one step; copy and move assignment no longer
+  leak the target's pages. **sparse_table**: the ``const`` ``get_if()`` compiles.
+- **pool_allocator**: releasing a multi-atom block after the array list was exhausted dereferenced
+  null; move assignment frees the target's arenas.
+- **ts_thread_local_allocator**: each instance has its own per-thread page, so alternating between
+  instances on one thread no longer takes a new page per call; move assignment releases instead of
+  leaking.
+- **linear_arena_allocator** / **linear_stack_allocator**: full arenas leave the first-fit scan;
+  ``deallocate`` and in-place resize only inspect the current arena.
+- **default_allocator**: alignments up to ``__STDCPP_DEFAULT_NEW_ALIGNMENT__`` use plain
+  ``operator new``/``delete``.
+- **ecs::collection**: tracks entity revisions whenever the entity type has revision bits; Release
+  builds previously skipped recycled entities during ``for_each``. **registry::for_each_index**
+  sorts the free list only after an erase.
+- **Serialization**: YAML ``null`` no longer reads as ``true`` for ``bool`` fields; binary reads of
+  ``std::string`` move the decoded buffer; ``convert<std::unique_ptr<char[]>>`` NUL-terminates and
+  handles null.
+- **microexpr**: ``&&`` and ``||`` always consume their right operand (the rest of the expression
+  was misparsed after a short circuit); no out-of-bounds read on an unclosed ``(``.
+- **Utilities**: ``trim_leading``/``trim_trailing``/``trim_view`` return an empty view for
+  all-whitespace input; ``is_number`` rejects ``"-"``; ``program_args::as<T>`` works for types
+  other than ``bool``.
+- Release (``-DNDEBUG``), ``-pedantic`` and clang-tidy build failures.
 
-Added
-~~~~~
+Documentation
+~~~~~~~~~~~~~
 
-**Core Features**
-- Linear allocator with LIFO deallocation support
-- Arena allocator with automatic block management
-- Pool allocator for fixed-size object allocation
-- Thread-safe allocator variants with lock-free design
-
-**Container Library**
-- ``small_vector<T, N>`` with stack-based storage optimization
-- ``dynamic_array<T>`` with custom allocator support
-- ``sparse_vector<T>`` for memory-efficient sparse storage
-- ``intrusive_list<T>`` for zero-allocation linked lists
-- ``soavector<Types...>`` for Structure of Arrays layout
-
-**Entity Component System**
-- ``registry<>`` for entity lifecycle management
-- ``components<T>`` with configurable storage strategies
-- ``collection<Entity>`` for efficient entity grouping
-- ``rxregistry<>`` with revision-based thread safety
-
-**Task Scheduler**
-- Work-stealing scheduler with multiple worker threads
-- Workgroup organization for task dependencies
-- C++20 coroutine support with ``co_task<T>``
-- Manual thread affinity configuration support
-
-**Serialization Framework**
-- Binary serialization with endianness control
-- YAML serialization for human-readable configuration
-- Stream-based I/O for memory efficiency
-- Custom type serialization support
-
-**Utility Components**
-- Memory alignment utilities and helpers
-- Template-based configuration system
-- STL allocator wrapper for compatibility
-- Debugging and statistics collection
-
-**Build System**
-- CMake integration with modern targets
-- Multiple build presets for different platforms
-- Comprehensive unit test suite with Catch2
-
-**Documentation**
-- Getting started guide and tutorials
-- Complete API reference with Doxygen
-- Performance optimization guide
-- Real-world usage examples
-
-Platform Support
-~~~~~~~~~~~~~~~~~
-- Linux (GCC 10+, Clang 12+)
-- macOS (Apple Clang 13+, Intel/ARM)
-- Windows (MSVC 2019+)
-- C++20 standard compliance
-
-Performance Characteristics
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-- Zero-cost abstractions through template specialization
-- Lock-free algorithms for multi-threaded performance
-- Cache-friendly memory layouts and access patterns
-- SIMD optimization opportunities with SoA containers
-
-Changed
-~~~~~~~
-- Initial stable release
-- API design finalized for v1.x compatibility
-
-Security
-~~~~~~~~
-- Memory safety through RAII and automatic lifetime management
-- Bounds checking in debug builds
-- Thread safety guarantees documented for all components
-
-[0.9.0] - 2024-12-01
---------------------
-
-Added
-~~~~~
-- Beta release with core allocator functionality
-- Basic container implementations
-- Initial ECS framework
-- Preliminary task scheduler
-
-[0.5.0] - 2024-09-01  
---------------------
-
-Added
-~~~~~
-- Alpha release with experimental allocators
-- Proof-of-concept implementations
-
-[0.1.0] - 2024-06-01
---------------------
-
-Added
-~~~~~
-- Project initialization
-- Basic project structure
-- Initial CMake configuration
-- Foundational header-only library design
-
-Migration Guide
----------------
-
-Upgrading from 0.x to 1.0
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-**Breaking Changes**
-- Allocator interface standardization
-- ECS component storage configuration changes
-- Scheduler API refinements
-
-**Code Migration**
-
-Old (0.x):
-
-.. code-block:: cpp
-
-   // Old allocator interface
-   auto allocator = ouly::make_linear_allocator(1024);
-   void* ptr = allocator->allocate(256);
-
-New (1.0):
-
-.. code-block:: cpp
-
-   // New standardized interface
-   ouly::linear_allocator<> allocator(1024);
-   void* ptr = allocator.allocate(256);
-
-**ECS Configuration**
-
-Old (0.x):
-
-.. code-block:: cpp
-
-   // Old configuration
-   ouly::ecs::components<Position, ouly::ecs::sparse_storage> positions;
-
-New (1.0):
-
-.. code-block:: cpp
-
-   // New configuration system
-   using SparseConfig = ouly::cfg::use_sparse<>;
-   ouly::ecs::components<Position, ouly::ecs::entity<>, SparseConfig> positions;
-
-Future Roadmap
---------------
-
-**Planned for 1.1.0**
-- Additional allocator strategies (buddy, slab)
-- Enhanced SIMD optimization support
-- Improved debugging and profiling tools
-- Additional serialization formats (JSON, MessagePack)
-
-**Planned for 1.2.0**
-- GPU memory allocator support
-- Distributed computing extensions
-- Advanced ECS queries and filters
-- Real-time garbage collection options
-
-**Planned for 2.0.0**
-- Modern C++ features adoption (modules, concepts)
-- Breaking API improvements based on user feedback
-- Platform-specific optimizations
-- Enterprise features and support
-
-Contributing
-------------
-
-We welcome contributions! Please see our `Contributing Guide <contributing.html>`_ for details on:
-
-- Code style and standards
-- Pull request process
-- Testing requirements
-- Documentation guidelines
-
-Support
--------
-
-For support and questions:
-
-- GitHub Issues: Bug reports and feature requests
-- GitHub Discussions: General questions and community support
-- Documentation: Comprehensive guides and API reference
-
-License
--------
-
-OULY is released under the MIT License. See LICENSE file for details.
+- The README is a short overview with one compiled example per module.
+- The tutorials were rewritten against the current API, a utilities and DSL tutorial was added,
+  and the user guide, examples, performance and API reference pages now only reference content
+  that exists. Doxygen expands ``OULY_API`` so exported functions appear in the API reference.

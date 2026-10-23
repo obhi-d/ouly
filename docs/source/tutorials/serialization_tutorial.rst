@@ -1,628 +1,276 @@
 Serialization Tutorial
-=====================
+======================
 
-OULY provides flexible serialization frameworks for both binary and YAML formats. This tutorial covers efficient data persistence, network protocols, and configuration management.
+Serialization in OULY is driven by compile-time reflection (``ouly/reflection/``). A type
+describes its fields once, and every format uses that description: the binary streams, YAML, and
+any structured format you adapt yourself. Every example on this page compiles against the current
+headers and round-trips its data.
 
-Serialization Overview
-----------------------
+Describing types
+----------------
 
-OULY supports two main serialization formats:
-
-* **Binary Serialization** - High-performance, compact format with endianness control
-* **YAML Serialization** - Human-readable format for configuration and data exchange
-
-Both formats support:
-* Custom types and containers
-* Nested structures and STL containers
-* Endianness conversion for cross-platform compatibility
-* Stream-based I/O for memory efficiency
-
-Binary Serialization
---------------------
-
-Binary serialization provides optimal performance for data persistence and network protocols:
+**Aggregates** with up to 64 members are reflected automatically; nothing has to be written:
 
 .. code-block:: cpp
 
-   #include <ouly/serializers/binary_stream.hpp>
-   #include <ouly/serializers/binary_serializer.hpp>
-   #include <iostream>
-   #include <fstream>
-
-   struct Player {
-       std::string name;
-       int level;
-       float health;
-       std::vector<int> inventory;
+   struct material
+   {
+     std::string                name;
+     float                      roughness = 0.5F;
+     std::vector<std::string>   textures{};
+     std::optional<int>         priority{};
+     std::map<std::string, int> flags{};
    };
 
-   int main() {
-       // Create test data
-       Player player;
-       player.name = "Hero";
-       player.level = 25;
-       player.health = 87.5f;
-       player.inventory = {1, 5, 3, 8, 2};
-       
-       // Serialize to binary stream
-       ouly::binary_stream output;
-       ouly::write<std::endian::little>(output, player);
-       
-       std::cout << "Serialized size: " << output.size() << " bytes\n";
-       
-       // Deserialize from binary stream
-       ouly::binary_stream input(output.data(), output.size());
-       Player loaded_player;
-       ouly::read<std::endian::little>(input, loaded_player);
-       
-       // Verify data
-       std::cout << "Loaded player: " << loaded_player.name 
-                 << " (Level " << loaded_player.level << ")\n";
-       std::cout << "Health: " << loaded_player.health << "\n";
-       std::cout << "Inventory items: " << loaded_player.inventory.size() << "\n";
-       
-       return 0;
-   }
-
-File I/O with Binary Serialization
------------------------------------
-
-Save and load data to/from files with proper error handling:
+**Other classes** provide a static ``reflect()`` built from ``ouly::bind<"name", &Class::member>()``
+entries:
 
 .. code-block:: cpp
 
-   #include <ouly/serializers/binary_stream.hpp>
-   #include <fstream>
+   #include <ouly/reflection/reflection.hpp>
 
-   struct GameState {
-       int current_level;
-       float elapsed_time;
-       std::vector<Player> players;
-       std::unordered_map<std::string, int> statistics;
-   };
-
-   bool save_game_state(const std::string& filename, const GameState& state) {
-       try {
-           std::ofstream file(filename, std::ios::binary);
-           if (!file) {
-               std::cerr << "Failed to open file for writing: " << filename << "\n";
-               return false;
-           }
-           
-           ouly::binary_ostream stream(file);
-           ouly::write<std::endian::little>(stream, state);
-           
-           return true;
-       } catch (const std::exception& e) {
-           std::cerr << "Error saving game state: " << e.what() << "\n";
-           return false;
-       }
-   }
-
-   bool load_game_state(const std::string& filename, GameState& state) {
-       try {
-           std::ifstream file(filename, std::ios::binary);
-           if (!file) {
-               std::cerr << "Failed to open file for reading: " << filename << "\n";
-               return false;
-           }
-           
-           ouly::binary_istream stream(file);
-           ouly::read<std::endian::little>(stream, state);
-           
-           return true;
-       } catch (const std::exception& e) {
-           std::cerr << "Error loading game state: " << e.what() << "\n";
-           return false;
-       }
-   }
-
-   int main() {
-       GameState game_state;
-       game_state.current_level = 5;
-       game_state.elapsed_time = 1234.5f;
-       game_state.statistics["enemies_defeated"] = 127;
-       game_state.statistics["items_collected"] = 45;
-       
-       // Save to file
-       if (save_game_state("savegame.dat", game_state)) {
-           std::cout << "Game state saved successfully\n";
-       }
-       
-       // Load from file
-       GameState loaded_state;
-       if (load_game_state("savegame.dat", loaded_state)) {
-           std::cout << "Game state loaded successfully\n";
-           std::cout << "Current level: " << loaded_state.current_level << "\n";
-           std::cout << "Elapsed time: " << loaded_state.elapsed_time << "s\n";
-       }
-       
-       return 0;
-   }
-
-Custom Type Serialization
---------------------------
-
-Define serialization for your custom types:
-
-.. code-block:: cpp
-
-   #include <ouly/serializers/binary_serializer.hpp>
-
-   struct Vec3 {
-       float x, y, z;
-       
-       Vec3() = default;
-       Vec3(float x, float y, float z) : x(x), y(y), z(z) {}
-   };
-
-   // Specialize serialization for Vec3
-   namespace ouly {
-       template<std::endian Endian>
-       void write(binary_ostream& stream, const Vec3& vec) {
-           write<Endian>(stream, vec.x);
-           write<Endian>(stream, vec.y);
-           write<Endian>(stream, vec.z);
-       }
-       
-       template<std::endian Endian>
-       void read(binary_istream& stream, Vec3& vec) {
-           read<Endian>(stream, vec.x);
-           read<Endian>(stream, vec.y);
-           read<Endian>(stream, vec.z);
-       }
-   }
-
-   struct Transform {
-       Vec3 position;
-       Vec3 rotation;
-       Vec3 scale;
-       
-       Transform() : scale(1.0f, 1.0f, 1.0f) {}
-   };
-
-   // Transform serialization is automatic (uses Vec3 serialization)
-
-   int main() {
-       Transform transform;
-       transform.position = Vec3(10.0f, 20.0f, 30.0f);
-       transform.rotation = Vec3(0.0f, 45.0f, 0.0f);
-       transform.scale = Vec3(2.0f, 2.0f, 2.0f);
-       
-       // Serialize custom types
-       ouly::binary_stream stream;
-       ouly::write<std::endian::little>(stream, transform);
-       
-       // Deserialize
-       ouly::binary_stream input(stream.data(), stream.size());
-       Transform loaded_transform;
-       ouly::read<std::endian::little>(input, loaded_transform);
-       
-       std::cout << "Position: (" << loaded_transform.position.x 
-                 << ", " << loaded_transform.position.y 
-                 << ", " << loaded_transform.position.z << ")\n";
-       
-       return 0;
-   }
-
-YAML Serialization
-------------------
-
-YAML provides human-readable configuration and data exchange:
-
-.. code-block:: cpp
-
-   #include <ouly/serializers/yaml_serializer.hpp>
-   #include <iostream>
-
-   struct DatabaseConfig {
-       std::string host;
-       int port;
-       std::string username;
-       std::string database_name;
-       bool use_ssl;
-       std::vector<std::string> allowed_ips;
-   };
-
-   struct ServerConfig {
-       std::string server_name;
-       int max_connections;
-       DatabaseConfig database;
-       std::unordered_map<std::string, std::string> environment_vars;
-   };
-
-   int main() {
-       // Create configuration
-       ServerConfig config;
-       config.server_name = "GameServer";
-       config.max_connections = 1000;
-       config.database.host = "localhost";
-       config.database.port = 5432;
-       config.database.username = "gameuser";
-       config.database.database_name = "gamedb";
-       config.database.use_ssl = true;
-       config.database.allowed_ips = {"192.168.1.0/24", "10.0.0.0/8"};
-       config.environment_vars["LOG_LEVEL"] = "INFO";
-       config.environment_vars["MAX_MEMORY"] = "4GB";
-       
-       // Serialize to YAML string
-       std::string yaml_data = ouly::yml::to_string(config);
-       std::cout << "YAML Configuration:\n" << yaml_data << "\n";
-       
-       // Deserialize from YAML string
-       ServerConfig loaded_config;
-       ouly::yml::from_string(loaded_config, yaml_data);
-       
-       std::cout << "Loaded server: " << loaded_config.server_name << "\n";
-       std::cout << "Database host: " << loaded_config.database.host << "\n";
-       std::cout << "SSL enabled: " << (loaded_config.database.use_ssl ? "yes" : "no") << "\n";
-       
-       return 0;
-   }
-
-The output YAML would look like:
-
-.. code-block:: yaml
-
-   server_name: GameServer
-   max_connections: 1000
-   database:
-     host: localhost
-     port: 5432
-     username: gameuser
-     database_name: gamedb
-     use_ssl: true
-     allowed_ips:
-       - 192.168.1.0/24
-       - 10.0.0.0/8
-   environment_vars:
-     LOG_LEVEL: INFO
-     MAX_MEMORY: 4GB
-
-YAML File Operations
---------------------
-
-Work with YAML configuration files:
-
-.. code-block:: cpp
-
-   #include <ouly/serializers/yaml_serializer.hpp>
-   #include <fstream>
-
-   bool save_config_yaml(const std::string& filename, const ServerConfig& config) {
-       try {
-           std::ofstream file(filename);
-           if (!file) {
-               std::cerr << "Failed to open file for writing: " << filename << "\n";
-               return false;
-           }
-           
-           std::string yaml_data = ouly::yml::to_string(config);
-           file << yaml_data;
-           
-           return true;
-       } catch (const std::exception& e) {
-           std::cerr << "Error saving YAML config: " << e.what() << "\n";
-           return false;
-       }
-   }
-
-   bool load_config_yaml(const std::string& filename, ServerConfig& config) {
-       try {
-           std::ifstream file(filename);
-           if (!file) {
-               std::cerr << "Failed to open file for reading: " << filename << "\n";
-               return false;
-           }
-           
-           std::string yaml_content((std::istreambuf_iterator<char>(file)),
-                                   std::istreambuf_iterator<char>());
-           
-           ouly::yml::from_string(config, yaml_content);
-           
-           return true;
-       } catch (const std::exception& e) {
-           std::cerr << "Error loading YAML config: " << e.what() << "\n";
-           return false;
-       }
-   }
-
-   int main() {
-       ServerConfig config;
-       // ... initialize config ...
-       
-       // Save to YAML file
-       if (save_config_yaml("server_config.yml", config)) {
-           std::cout << "Configuration saved to server_config.yml\n";
-       }
-       
-       // Load from YAML file
-       ServerConfig loaded_config;
-       if (load_config_yaml("server_config.yml", loaded_config)) {
-           std::cout << "Configuration loaded from server_config.yml\n";
-       }
-       
-       return 0;
-   }
-
-Network Serialization
----------------------
-
-Use binary serialization for network protocols:
-
-.. code-block:: cpp
-
-   #include <ouly/serializers/binary_stream.hpp>
-   #include <vector>
-   #include <cstring>
-
-   enum class MessageType : uint8_t {
-       PLAYER_MOVE = 1,
-       PLAYER_ATTACK = 2,
-       GAME_STATE = 3,
-       CHAT_MESSAGE = 4
-   };
-
-   struct NetworkMessage {
-       MessageType type;
-       uint32_t player_id;
-       std::vector<uint8_t> payload;
-   };
-
-   struct PlayerMoveData {
-       float x, y, z;
-       float velocity_x, velocity_y, velocity_z;
-       uint32_t timestamp;
-   };
-
-   class NetworkProtocol {
+   class camera
+   {
    public:
-       static std::vector<uint8_t> serialize_player_move(uint32_t player_id, 
-                                                        const PlayerMoveData& move_data) {
-           ouly::binary_stream stream;
-           
-           // Write header
-           ouly::write<std::endian::little>(stream, MessageType::PLAYER_MOVE);
-           ouly::write<std::endian::little>(stream, player_id);
-           
-           // Write payload
-           ouly::write<std::endian::little>(stream, move_data);
-           
-           return std::vector<uint8_t>(stream.data(), stream.data() + stream.size());
-       }
-       
-       static bool deserialize_player_move(const std::vector<uint8_t>& data,
-                                          uint32_t& player_id,
-                                          PlayerMoveData& move_data) {
-           try {
-               ouly::binary_stream stream(data.data(), data.size());
-               
-               // Read header
-               MessageType type;
-               ouly::read<std::endian::little>(stream, type);
-               if (type != MessageType::PLAYER_MOVE) {
-                   return false;
-               }
-               
-               ouly::read<std::endian::little>(stream, player_id);
-               
-               // Read payload
-               ouly::read<std::endian::little>(stream, move_data);
-               
-               return true;
-           } catch (const std::exception&) {
-               return false;
-           }
-       }
+     camera() = default;
+     camera(float fov, std::string name) : name_(std::move(name)), fov_(fov) {}
+
+     [[nodiscard]] auto get_fov() const -> float
+     {
+       return fov_;
+     }
+
+     // Field names and member pointers; reflect() may name private members
+     static auto reflect() noexcept
+     {
+       return ouly::bind(ouly::bind<"name", &camera::name_>(), ouly::bind<"fov", &camera::fov_>());
+     }
+
+   private:
+     std::string name_;
+     float       fov_ = 60.0F;
    };
 
-   int main() {
-       // Simulate sending a player move message
-       PlayerMoveData move_data;
-       move_data.x = 100.5f;
-       move_data.y = 200.3f;
-       move_data.z = 50.0f;
-       move_data.velocity_x = 5.0f;
-       move_data.velocity_y = 0.0f;
-       move_data.velocity_z = 2.5f;
-       move_data.timestamp = 1234567890;
-       
-       // Serialize for network transmission
-       auto packet = NetworkProtocol::serialize_player_move(42, move_data);
-       std::cout << "Packet size: " << packet.size() << " bytes\n";
-       
-       // Simulate receiving the packet
-       uint32_t received_player_id;
-       PlayerMoveData received_move_data;
-       
-       if (NetworkProtocol::deserialize_player_move(packet, received_player_id, received_move_data)) {
-           std::cout << "Received move from player " << received_player_id << "\n";
-           std::cout << "Position: (" << received_move_data.x 
-                     << ", " << received_move_data.y 
-                     << ", " << received_move_data.z << ")\n";
-       }
-       
-       return 0;
-   }
-
-Endianness Handling
--------------------
-
-Handle cross-platform endianness for network protocols and file formats:
+**Properties behind accessors** bind a getter and a setter instead of a member pointer. Member
+functions and free functions both work, ``noexcept`` or not; the getter may return by value or by
+const reference:
 
 .. code-block:: cpp
 
-   #include <ouly/serializers/binary_stream.hpp>
-   #include <bit>
+   class window;
+   auto get_height(window const& w) noexcept -> int;
+   void set_height(window& w, int height) noexcept;
 
-   struct NetworkHeader {
-       uint32_t magic_number;
-       uint16_t version;
-       uint16_t message_type;
-       uint32_t payload_size;
-   };
-
-   class ProtocolHandler {
+   class window
+   {
    public:
-       // Always use network byte order (big endian) for headers
-       static std::vector<uint8_t> create_packet(uint16_t message_type, 
-                                                const std::vector<uint8_t>& payload) {
-           NetworkHeader header;
-           header.magic_number = 0x12345678;
-           header.version = 1;
-           header.message_type = message_type;
-           header.payload_size = static_cast<uint32_t>(payload.size());
-           
-           ouly::binary_stream stream;
-           
-           // Write header in network byte order (big endian)
-           ouly::write<std::endian::big>(stream, header);
-           
-           // Write payload
-           stream.write(payload.data(), payload.size());
-           
-           return std::vector<uint8_t>(stream.data(), stream.data() + stream.size());
-       }
-       
-       static bool parse_header(const std::vector<uint8_t>& data, NetworkHeader& header) {
-           if (data.size() < sizeof(NetworkHeader)) {
-               return false;
-           }
-           
-           try {
-               ouly::binary_stream stream(data.data(), data.size());
-               ouly::read<std::endian::big>(stream, header);
-               
-               // Validate magic number
-               return header.magic_number == 0x12345678;
-           } catch (const std::exception&) {
-               return false;
-           }
-       }
+     [[nodiscard]] auto get_width() const -> int
+     {
+       return width_;
+     }
+     void set_width(int width)
+     {
+       width_ = width;
+     }
+
+     static auto reflect() noexcept
+     {
+       return ouly::bind(ouly::bind<"width", &window::get_width, &window::set_width>(),
+                         ouly::bind<"height", &get_height, &set_height>());
+     }
+
+   private:
+     friend auto get_height(window const& w) noexcept -> int;
+     friend void set_height(window& w, int height) noexcept;
+
+     int width_  = 0;
+     int height_ = 0;
    };
 
-   int main() {
-       // Create a packet
-       std::vector<uint8_t> payload = {1, 2, 3, 4, 5};
-       auto packet = ProtocolHandler::create_packet(100, payload);
-       
-       std::cout << "Created packet with " << packet.size() << " bytes\n";
-       
-       // Parse the header
-       NetworkHeader header;
-       if (ProtocolHandler::parse_header(packet, header)) {
-           std::cout << "Valid packet:\n";
-           std::cout << "  Version: " << header.version << "\n";
-           std::cout << "  Message type: " << header.message_type << "\n";
-           std::cout << "  Payload size: " << header.payload_size << "\n";
-       }
-       
-       return 0;
+   auto get_height(window const& w) noexcept -> int
+   {
+     return w.height_;
    }
 
-Performance Considerations
---------------------------
+   void set_height(window& w, int height) noexcept
+   {
+     w.height_ = height;
+   }
 
-**Binary vs YAML Performance**
+**Types you cannot modify** get a specialization of ``ouly::reflect<T>()`` instead:
 
 .. code-block:: cpp
 
-   #include <chrono>
+   // A type you cannot change: specialize ouly::reflect instead
+   struct vec3
+   {
+     float x, y, z;
+     vec3() = default;
+     vec3(float a, float b, float c) : x(a), y(b), z(c) {}
+   };
 
-   void benchmark_serialization() {
-       std::vector<Player> players(1000);
-       // Initialize players...
-       
-       auto start_time = std::chrono::high_resolution_clock::now();
-       
-       // Binary serialization
-       ouly::binary_stream binary_stream;
-       ouly::write<std::endian::little>(binary_stream, players);
-       
-       auto binary_time = std::chrono::high_resolution_clock::now();
-       
-       // YAML serialization
-       std::string yaml_data = ouly::yml::to_string(players);
-       
-       auto yaml_time = std::chrono::high_resolution_clock::now();
-       
-       auto binary_duration = std::chrono::duration_cast<std::chrono::microseconds>(
-           binary_time - start_time);
-       auto yaml_duration = std::chrono::duration_cast<std::chrono::microseconds>(
-           yaml_time - binary_time);
-       
-       std::cout << "Binary serialization: " << binary_duration.count() << " μs, "
-                 << binary_stream.size() << " bytes\n";
-       std::cout << "YAML serialization: " << yaml_duration.count() << " μs, "
-                 << yaml_data.size() << " bytes\n";
+   template <>
+   auto ouly::reflect<vec3>() noexcept
+   {
+     return ouly::bind(ouly::bind<"x", &vec3::x>(), ouly::bind<"y", &vec3::y>(), ouly::bind<"z", &vec3::z>());
    }
 
-**Memory Efficiency**
+**Value-like types** that should appear as a single value specialize ``ouly::convert<T>`` with a
+``to_type`` that returns a string or number and a matching ``from_type``:
 
 .. code-block:: cpp
 
-   // Use reserve() for known data sizes
-   void efficient_serialization(const std::vector<LargeObject>& objects) {
-       ouly::binary_stream stream;
-       
-       // Estimate size to avoid reallocations
-       size_t estimated_size = objects.size() * sizeof(LargeObject) * 2;  // Conservative estimate
-       stream.reserve(estimated_size);
-       
-       ouly::write<std::endian::little>(stream, objects);
-   }
+   // Stored as a string in every format
+   struct asset_id
+   {
+     uint32_t value = 0;
+   };
 
-   // Use streaming for large datasets
-   void stream_large_dataset(const std::string& filename, 
-                            const std::vector<LargeObject>& objects) {
-       std::ofstream file(filename, std::ios::binary);
-       ouly::binary_ostream stream(file);
-       
-       // Write count first
-       ouly::write<std::endian::little>(stream, objects.size());
-       
-       // Stream objects one by one
-       for (const auto& obj : objects) {
-           ouly::write<std::endian::little>(stream, obj);
-       }
-   }
+   template <>
+   struct ouly::convert<asset_id>
+   {
+     static auto to_type(asset_id const& id) -> std::string
+     {
+       return "asset:" + std::to_string(id.value);
+     }
 
-Best Practices
+     static void from_type(asset_id& id, std::string_view text)
+     {
+       ouly::from_chars(text.substr(6), id.value);
+     }
+   };
+
+Standard types work out of the box: integers, floating point, ``bool``, enums (as their underlying
+value), strings and string views, sequence containers, maps, ``std::array``, ``std::pair`` and
+``std::tuple``, ``std::optional``, ``std::variant``, ``std::unique_ptr`` and ``std::shared_ptr``
+(created on read when null), OULY containers such as ``dynamic_array``, ``small_vector`` and ``soavector``, and
+nested combinations of all of these.
+
+Binary streams
 --------------
 
-1. **Format Selection**
-   
-   * Use binary for performance-critical applications (games, networking)
-   * Use YAML for configuration files and human-readable data
-   * Consider compression for large binary data
+``ouly::write(stream, value)`` and ``ouly::read(stream, value)`` (``ouly/serializers/serializers.hpp``)
+take any stream with ``write(std::byte const*, size_t)`` or ``read(std::byte*, size_t)`` and
+``skip(size_t)``. The byte order is a template argument and defaults to little endian:
 
-2. **Endianness**
-   
-   * Always specify endianness explicitly
-   * Use network byte order (big endian) for network protocols
-   * Use little endian for most file formats (more common on modern systems)
+.. code-block:: cpp
 
-3. **Error Handling**
-   
-   * Always handle serialization exceptions
-   * Validate data before deserializing
-   * Use versioning for backward compatibility
+   #include <ouly/serializers/binary_stream.hpp>
+   #include <ouly/serializers/serializers.hpp>
 
-4. **Performance**
-   
-   * Reserve buffer space for known data sizes
-   * Use streaming for large datasets
-   * Profile serialization performance in your specific use case
+   material in{.name = "rock", .roughness = 0.9F, .textures = {"albedo.png", "normal.png"}};
 
-5. **Security**
-   
-   * Validate input data bounds and ranges
-   * Sanitize strings and containers
-   * Use checksums for data integrity
+   ouly::binary_output_stream out; // grows an in-memory buffer
+   ouly::write(out, in);           // little endian
+   ouly::write<std::endian::big>(out, in);
+
+   ouly::binary_input_stream bin(out.get_string()); // reads from a view of the bytes
+   material                  little, big;
+   ouly::read(bin, little);
+   ouly::read<std::endian::big>(bin, big);
+
+``binary_output_stream`` owns a growing ``std::vector<std::byte>`` (``release()`` hands it over,
+``get_string()`` views it) and ``binary_input_stream`` reads from a ``std::span<std::byte const>``.
+For files and other ``std::iostream``\ s, use ``binary_ostream`` and ``binary_istream``:
+
+.. code-block:: cpp
+
+   {
+     std::ofstream   file("materials.bin", std::ios::binary);
+     ouly::binary_ostream stream(file); // wraps a std::ostream
+     ouly::write(stream, in);
+   }
+   std::ifstream       file("materials.bin", std::ios::binary);
+   ouly::binary_istream stream(file); // wraps a std::istream
+   material            loaded;
+   ouly::read(stream, loaded);
+
+Reading past the end of the data throws.
+
+Taking over the encoding
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+A type can write its own bytes by providing ``operator<<`` and ``operator>>`` for the stream type.
+The serializer uses them in place of reflection, including for elements of containers:
+
+.. code-block:: cpp
+
+   // Full control over the bytes: operators on the stream type itself
+   struct packed_color
+   {
+     uint8_t r = 0, g = 0, b = 0, a = 255;
+
+     friend auto operator<<(ouly::binary_output_stream& out, packed_color const& c) -> ouly::binary_output_stream&
+     {
+       std::byte const bytes[] = {std::byte{c.r}, std::byte{c.g}, std::byte{c.b}, std::byte{c.a}};
+       out.write(bytes, sizeof(bytes));
+       return out;
+     }
+
+     friend auto operator>>(ouly::binary_input_stream& in, packed_color& c) -> ouly::binary_input_stream&
+     {
+       std::byte bytes[4];
+       in.read(bytes, sizeof(bytes));
+       c = {std::to_integer<uint8_t>(bytes[0]), std::to_integer<uint8_t>(bytes[1]), std::to_integer<uint8_t>(bytes[2]),
+            std::to_integer<uint8_t>(bytes[3])};
+       return in;
+     }
+   };
+
+.. code-block:: cpp
+
+   std::vector<packed_color>  palette = {{255, 0, 0, 255}, {0, 255, 0, 255}};
+   ouly::binary_output_stream colors;
+   ouly::write(colors, palette);
+
+   ouly::binary_input_stream  colors_in(colors.get_string());
+   std::vector<packed_color> read_back;
+   ouly::read(colors_in, read_back);
+
+YAML
+----
+
+``ouly::yml::to_string`` and ``ouly::yml::from_string`` (``ouly/serializers/lite_yml.hpp``) write
+and parse a YAML subset that covers what the serializer produces: block mappings and sequences,
+compact ``[a, b]`` sequences, quoted and plain scalars, and ``|``/``>`` block scalars.
+
+.. code-block:: cpp
+
+   #include <ouly/serializers/lite_yml.hpp>
+
+   scene s;
+   s.materials.push_back({.name = "rock", .textures = {"albedo.png"}, .priority = 2});
+   s.tag         = std::string("outdoor");
+   s.main_camera = std::make_unique<camera>(75.0F, "main");
+   s.sky         = asset_id{42};
+
+   std::string yaml = ouly::yml::to_string(s);
+
+   scene loaded;
+   ouly::yml::from_string(loaded, yaml);
+
+Fields are written under their reflected names, an empty ``std::optional`` is written as
+``null``, and a ``std::variant`` is written as a mapping with its ``type`` index and ``value``. When reading, missing fields keep their current value, so default member
+initializers act as defaults.
+
+For polymorphic data, ``ouly::yml::runtime_type_registry`` (``ouly::stream_type_registry``) maps type
+ids to registered types for fields of type ``ouly::runtime_type``; see
+``unit_tests/yaml_runtime_type.cpp``.
+
+Other structured formats
+------------------------
+
+The same ``ouly::read``/``ouly::write`` calls accept any value that models
+``ouly::StructuredInputStream`` or ``ouly::StructuredOutputStream`` (``ouly/serializers/serializers.hpp``).
+An input stream answers ``is_object()``, ``is_array()``, ``is_null()``, ``size()``, ``at(key)``,
+``at(index)``, ``for_each_entry`` and ``as_bool``/``as_int64``/``as_uint64``/``as_double``/``as_string``;
+an output stream receives ``begin_object``/``end_object``, ``begin_array``/``end_array``, ``key``,
+the ``as_*`` value calls, ``as_null`` and ``next_map_entry``/``next_array_entry``.
+``unit_tests/input_serializer.cpp`` and ``unit_tests/output_serializer.cpp`` adapt
+`nlohmann::json <https://github.com/nlohmann/json>`_ this way.
 
 Next Steps
 ----------
 
-* Learn about :doc:`memory_management` for optimized serialization buffers
-* Explore :doc:`containers_tutorial` for serializable container types
-* Check :doc:`../performance/index` for serialization optimization techniques
+* :doc:`utilities_tutorial` for the event-driven YAML parser in ``ouly/dsl/lite_yml.hpp``
+* :doc:`containers_tutorial` for containers that serialize directly

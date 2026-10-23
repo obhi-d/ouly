@@ -40,15 +40,22 @@ namespace ouly
  * - Configurable memory traits (zero memory, no fill, POD optimizations)
  * - Move semantics support
  *
+ * Storage mode:
+ * - is_inlined() reports whether the elements are in the inline buffer or on the heap
+ * - Once on the heap the vector stays there, like std::vector: clear(), pop_back(), erase() and a
+ *   shrinking resize() keep the heap buffer
+ * - reserve() moves to the heap as soon as the requested capacity exceeds the inline capacity
+ * - shrink_to_fit() is the only call that moves the elements back inline (when they fit)
+ *
  * Performance characteristics:
  * - O(1) access to elements
- * - O(1) addition/removal at the end
+ * - Amortized O(1) addition at the end, O(1) removal at the end
  * - O(n) insertion/removal in the middle
- * - No heap allocation for small arrays ( N elements)
  *
  * Memory guarantees:
  * - Elements are stored contiguously
- * - No heap allocation until more than N elements are stored
+ * - No heap allocation while at most get_inlined_capacity() elements are stored, unless reserve()
+ *   asks for more
  * - Maintains proper alignment for the stored type
  *
  * Example usage:
@@ -403,7 +410,10 @@ public:
   }
 
   /**
-   * @brief Use resize to really reserve space
+   * @brief Ensure capacity for at least `n` elements
+   *
+   * Moves the elements to the heap when `n` exceeds the current capacity, even while they are
+   * inline. Never shrinks; see shrink_to_fit().
    */
   constexpr void reserve(size_type n)
   {

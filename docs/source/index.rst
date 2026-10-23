@@ -13,7 +13,11 @@ OULY Documentation
    :target: https://github.com/obhi-d/ouly/actions/workflows/ci.yml
    :alt: CI
 
-OULY (Optimized Utility Library) is a modern C++20 high-performance utility library providing memory allocators, containers, ECS (Entity Component System), task scheduler, and serialization components for performance-critical applications.
+OULY (Optimized Utility Library) is a C++20 library for programs where allocation patterns, cache
+behaviour and thread wake-ups matter: game engines, simulations, tools and services. It provides
+task schedulers, memory allocators, cache-friendly containers, an entity component system, and
+reflection-driven serialization, behind small STL-like interfaces that can be adopted one header
+at a time.
 
 .. toctree::
    :maxdepth: 2
@@ -28,94 +32,46 @@ OULY (Optimized Utility Library) is a modern C++20 high-performance utility libr
    contributing
    changelog
 
-Quick Start
------------
+Where to start
+--------------
 
-Installation
-~~~~~~~~~~~~
+* :doc:`getting_started` builds the library, links it from CMake and runs a first program.
+* The :doc:`tutorials/index` walk through each module with examples that compile against the
+  current headers.
+* :doc:`user_guide/index` helps choose between the allocators, containers and scheduler
+  generations.
+* The :doc:`api_reference/index` is generated from the header comments.
 
-OULY is a header-only library that can be easily integrated into your project:
+Modules
+-------
 
-.. code-block:: cmake
+**Task scheduling** (``ouly/scheduler/``)
+   Three work-stealing scheduler generations behind one API, value tasks with continuations,
+   structured task scopes, ``parallel_for`` and ``auto_parallel_for``, lazily started coroutines,
+   and static and dynamic flow graphs.
 
-   # Using CMake FetchContent
-   include(FetchContent)
-   FetchContent_Declare(
-     ouly
-     GIT_REPOSITORY https://github.com/obhi-d/ouly.git
-     GIT_TAG        main
-   )
-   FetchContent_MakeAvailable(ouly)
+**Memory allocators** (``ouly/allocators/``)
+   Linear, arena, stack and pool allocators, thread-safe frame allocators, virtual memory,
+   memory-mapped files, and coalescing offset suballocators for GPU-style heaps with
+   defragmentation.
 
-   # Link to your target
-   target_link_libraries(your_target PRIVATE ouly::ouly)
+**Containers** (``ouly/containers/``)
+   Small and structure-of-arrays vectors, sparse vectors and tables, block vectors, an intrusive
+   list, single-threaded and concurrent queues, and a heterogeneous blackboard.
 
-Basic Usage
-~~~~~~~~~~~
+**Entity component system** (``ouly/ecs/``)
+   Registries with optional revision tracking, component storages with selectable layouts,
+   collections and sparse-to-dense maps.
 
-.. code-block:: cpp
+**Serialization and reflection** (``ouly/serializers/``, ``ouly/reflection/``)
+   Compile-time reflection that drives binary, YAML and user-defined structured formats.
 
-   #include <ouly/ouly.hpp>
-
-   int main() {
-       // Memory allocators
-       ouly::linear_arena_allocator<> allocator(1024 * 1024);
-       void* data = allocator.allocate(1024);
-
-       // Containers
-       ouly::small_vector<int, 16> vec = {1, 2, 3, 4};
-       vec.push_back(5);
-
-       // ECS
-       ouly::ecs::registry<> registry;
-       auto entity = registry.emplace();
-       
-       // Task scheduler
-       ouly::scheduler scheduler(4);
-       auto workgroup = scheduler.create_workgroup();
-       scheduler.begin_execution();
-       
-       scheduler.submit(workgroup, []() {
-           return 42;
-       }).wait();
-       
-       scheduler.end_execution();
-       scheduler.shutdown();
-       
-       return 0;
-   }
-
-Key Features
-------------
-
-🧠 **Memory Management**
-   Efficient memory allocators for different use cases including linear, arena, pool, and thread-safe variants.
-
-📦 **Containers** 
-   Modern containers with STL-like interfaces but improved performance including small_vector, dynamic_array, and more.
-
-🎮 **Entity Component System**
-   High-performance ECS framework for game development and simulation applications.
-
-⚡ **Task Scheduler**
-   Work-stealing task scheduler with coroutine support for parallel processing.
-
-💾 **Serialization**
-   Flexible serialization framework supporting binary and YAML formats.
-
-🔧 **Utilities**
-   Various utility components including reflection, DSL helpers, and more.
-
-Requirements
-------------
-
-* C++20 compatible compiler (GCC 10+, Clang 12+, MSVC 2019+)
-* CMake 3.20 or later
-* Optional: Doxygen for documentation generation
+**Utilities and DSL** (``ouly/utility/``, ``ouly/dsl/``)
+   Delegates, program arguments, views, intrusive pointers, hashing, string helpers, a macro
+   expression evaluator and an event-driven YAML parser.
 
 Indices and tables
 ==================
 
 * :ref:`genindex`
-* :ref:`modindex`
 * :ref:`search`

@@ -1,549 +1,255 @@
 Entity Component System Tutorial
-===============================
+================================
 
-OULY's ECS (Entity Component System) is designed for high-performance, data-oriented applications. This tutorial will guide you through building efficient ECS-based systems for games, simulations, and other performance-critical applications.
+OULY's ECS is a small set of independent building blocks rather than a framework: a registry that
+hands out entity ids, component storages keyed by entity, collections that track subsets of
+entities, and a sparse-to-dense map. You decide how to combine them into systems. Every example on
+this page compiles against the current headers.
 
-ECS Fundamentals
-----------------
+None of these types are internally synchronized; share them between threads only with external
+synchronization, or partition the work (for example with ``parallel_for`` over a storage's values).
 
-The Entity Component System pattern separates data (Components) from behavior (Systems) using unique identifiers (Entities):
-
-* **Entities** - Unique IDs that represent game objects or simulation elements
-* **Components** - Data structures that hold state (Position, Velocity, Health, etc.)
-* **Systems** - Functions that operate on entities with specific component combinations
-
-Basic Entity Management
+Entities and registries
 -----------------------
 
-Start with creating and managing entities:
+An entity is a typed integer handle. ``ouly::ecs::entity<>`` is just a slot index;
+``ouly::ecs::rxentity<>`` also carries revision bits. A registry hands out free slots and recycles
+erased ones:
 
 .. code-block:: cpp
 
    #include <ouly/ecs/registry.hpp>
-   #include <iostream>
 
-   int main() {
-       // Create an entity registry
-       ouly::ecs::registry<> registry;
-       
-       // Create entities
-       auto player = registry.emplace();
-       auto enemy1 = registry.emplace();
-       auto enemy2 = registry.emplace();
-       
-       std::cout << "Player entity: " << player.value() << "\n";
-       std::cout << "Enemy1 entity: " << enemy1.value() << "\n";
-       
-       // Check if entities are valid
-       std::cout << "Player valid: " << registry.is_valid(player) << "\n";
-       
-       // Destroy an entity
-       registry.destroy(enemy1);
-       std::cout << "Enemy1 valid after destroy: " << registry.is_valid(enemy1) << "\n";
-       
-       // Entity IDs are recycled
-       auto new_entity = registry.emplace();
-       std::cout << "New entity (recycled ID): " << new_entity.value() << "\n";
-       
-       return 0;
-   }
+   ouly::ecs::registry<> registry;
 
-Component Storage
------------------
+   auto player = registry.emplace();
+   auto enemy  = registry.emplace();
+   auto index  = player.get(); // the entity's slot index
 
-Components are stored separately from entities for optimal memory layout:
+   registry.erase(enemy);
+   auto bullet = registry.emplace(); // reuses enemy's slot
+
+   registry.for_each_index([](uint32_t live_index) { (void)live_index; });
+
+``rxregistry<>`` pairs with ``rxentity<>``: each recycled slot gets a new revision, so a handle
+that outlived its entity can be detected:
 
 .. code-block:: cpp
 
-   #include <ouly/ecs/registry.hpp>
-   #include <ouly/ecs/components.hpp>
-   #include <iostream>
+   ouly::ecs::rxregistry<> tracked; // entities carry revision bits
+   auto first = tracked.emplace();
+   tracked.erase(first);
+   auto second = tracked.emplace(); // same slot, next revision
 
-   // Define component types
-   struct Position {
-       float x, y, z;
-       Position(float x = 0, float y = 0, float z = 0) : x(x), y(y), z(z) {}
+   bool stale = !tracked.is_valid(first); // true: the handle outlived its entity
+   bool alive = tracked.is_valid(second); // true
+
+The template parameter of ``entity<Tag>`` and ``registry<Tag>`` is a tag type, so entities of
+different registries can be kept apart by the type system. ``basic_entity`` and ``basic_registry``
+choose the size type and the number of revision bits.
+
+Components
+----------
+
+``ouly::ecs::components<T, Entity, Config>`` stores one ``T`` per entity.
+
+.. code-block:: cpp
+
+   #include <ouly/ecs/components.hpp>
+
+   struct position
+   {
+     float x = 0, y = 0;
    };
 
-   struct Velocity {
-       float dx, dy, dz;
-       Velocity(float dx = 0, float dy = 0, float dz = 0) : dx(dx), dy(dy), dz(dz) {}
+   struct velocity
+   {
+     float dx = 0, dy = 0;
    };
 
-   struct Health {
-       int current, maximum;
-       Health(int max = 100) : current(max), maximum(max) {}
+   struct health
+   {
+     int current = 100;
    };
 
-   int main() {
-       ouly::ecs::registry<> registry;
-       
-       // Create component storage
-       ouly::ecs::components<Position> positions;
-       ouly::ecs::components<Velocity> velocities;
-       ouly::ecs::components<Health> health_components;
-       
-       // Create entities
-       auto player = registry.emplace();
-       auto npc = registry.emplace();
-       
-       // Add components to entities
-       positions.emplace_at(player, 10.0f, 20.0f, 0.0f);
-       velocities.emplace_at(player, 1.0f, 0.0f, 0.0f);
-       health_components.emplace_at(player, 150);  // 150 max health
-       
-       positions.emplace_at(npc, 5.0f, 15.0f, 0.0f);
-       health_components.emplace_at(npc, 100);     // 100 max health (no velocity)
-       
-       // Access components
-       auto& player_pos = positions[player];
-       auto& player_vel = velocities[player];
-       
-       std::cout << "Player position: (" << player_pos.x << ", " << player_pos.y << ")\n";
-       std::cout << "Player velocity: (" << player_vel.dx << ", " << player_vel.dy << ")\n";
-       
-       // Check if entity has component
-       if (positions.contains(npc)) {
-           std::cout << "NPC has position component\n";
-       }
-       
-       if (!velocities.contains(npc)) {
-           std::cout << "NPC does not have velocity component\n";
-       }
-       
-       return 0;
+.. code-block:: cpp
+
+   ouly::ecs::registry<>             registry;
+   ouly::ecs::components<position>   positions;
+   ouly::ecs::components<velocity>   velocities;
+   ouly::ecs::components<health>     healths;
+
+   auto player = registry.emplace();
+   auto rock   = registry.emplace();
+
+   positions.emplace_at(player, 0.0F, 0.0F);
+   velocities.emplace_at(player, 1.0F, 0.5F);
+   healths.emplace_at(player);
+   positions.emplace_at(rock, 5.0F, 5.0F); // no velocity, no health
+
+   positions[player].x += 1.0F;             // the entity must have the component
+   if (auto hp = healths.find(rock))        // optional-like result for entities that may not
+   {
+     hp->current -= 10;
    }
+   bool moving = velocities.contains(rock); // false
 
-Component Storage Configuration
--------------------------------
-
-OULY provides different storage strategies for optimal performance:
+``emplace_at`` constructs the component (or replaces an existing one) and returns a reference;
+``operator[]`` and ``at`` require the entity to have the component, ``find`` returns an
+optional-like value, and ``replace`` swaps in a new value. Components are not removed when an entity
+is erased from the registry:
 
 .. code-block:: cpp
 
-   #include <ouly/ecs/components.hpp>
-   #include <ouly/ecs/config.hpp>
+   positions.erase(rock);
+   registry.erase(rock); // removing the components is up to you
 
-   // Sparse storage - memory efficient for sparse data
-   using SparseConfig = ouly::cfg::use_sparse<>;
-   ouly::ecs::components<Position, ouly::ecs::entity<>, SparseConfig> sparse_positions;
+Systems
+-------
 
-   // Dense storage - faster iteration (default)
-   ouly::ecs::components<Velocity> dense_velocities;
-
-   // Direct mapping - fastest access, more memory usage
-   using DirectConfig = ouly::cfg::use_direct_mapping<>;
-   ouly::ecs::components<Health, ouly::ecs::entity<>, DirectConfig> direct_health;
-
-**Storage Strategy Guidelines:**
-
-* **Sparse** - Use for components that exist on few entities (< 10% of total)
-* **Dense** - Default choice, good balance of memory and performance  
-* **Direct** - Use for components that exist on most entities (> 80% of total)
-
-ECS Configuration Options
---------------------------
-
-ECS components can be configured using options from the ``ouly::cfg`` namespace:
+A system is a function over one or more storages. ``for_each`` passes the entity and the value; to
+combine storages, iterate the smallest one and look the entities up in the others:
 
 .. code-block:: cpp
 
-   #include <ouly/ecs/components.hpp>
-   #include <ouly/utility/config.hpp>
+   // Iterate one storage and look the others up
+   velocities.for_each(
+    [&](ouly::ecs::entity<> e, velocity const& v)
+    {
+      if (auto p = positions.find(e))
+      {
+        p->x += v.dx;
+        p->y += v.dy;
+      }
+    });
 
-   // Custom storage configuration
-   using CustomConfig = ouly::config<
-       ouly::cfg::use_sparse,              // Use sparse storage
-       ouly::cfg::pool_size<8192>,         // Set pool size for allocations
-       ouly::cfg::custom_vector<MyVector>  // Use custom vector implementation
-   >;
-   
-   ouly::ecs::components<Position, ouly::ecs::entity<>, CustomConfig> components;
+   // Range-for visits the values only
+   for (health& h : healths)
+   {
+     h.current = std::min(h.current + 1, 100);
+   }
 
-**Available ECS Configuration Options:**
+``for_each(first, last, fn)`` limits the iteration to a range of slots, and
+``begin_entities()``/``end_entities()`` iterate entity/value pairs.
 
-* ``ouly::cfg::use_sparse`` - Enable sparse storage strategy for memory efficiency
-* ``ouly::cfg::use_direct_mapping`` - Enable direct mapping for fastest access
-* ``ouly::cfg::pool_size<N>`` - Set pool size for internal memory management
-* ``ouly::cfg::index_pool_size<N>`` - Pool size for entity index management  
-* ``ouly::cfg::self_index_pool_size<N>`` - Pool size for self-referencing indexes
-* ``ouly::cfg::keys_index_pool_size<N>`` - Pool size for key index management
-* ``ouly::cfg::custom_vector<T>`` - Use custom vector implementation as storage backend
-* ``ouly::cfg::basic_size_type<T>`` - Set size type for component storage (default: uint32_t)
-* ``ouly::cfg::use_sparse_index`` - Use sparse indexing for entity lookups
-* ``ouly::cfg::self_use_sparse_index`` - Enable sparse indexing for self-references
-* ``ouly::cfg::keys_use_sparse_index`` - Enable sparse indexing for key management
-* ``ouly::cfg::zero_out_memory`` - Zero-initialize allocated memory
-* ``ouly::cfg::disable_pool_tracking`` - Disable pool usage tracking for performance
-
-**Configuration Examples:**
+Storage strategies
+------------------
 
 .. code-block:: cpp
 
-   // High-performance configuration for frequently accessed components
-   using PerformanceConfig = ouly::config<
-       ouly::cfg::use_direct_mapping,
-       ouly::cfg::pool_size<16384>,
-       ouly::cfg::disable_pool_tracking
-   >;
+   // Default: values packed densely, plus an entity -> slot index
+   ouly::ecs::components<position> dense;
 
-   // Memory-efficient configuration for rarely used components  
-   using MemoryConfig = ouly::config<
-       ouly::cfg::use_sparse,
-       ouly::cfg::pool_size<1024>,
-       ouly::cfg::use_sparse_index
-   >;
+   // Values indexed directly by entity, with a presence bit per slot.
+   // Best when most entities have the component.
+   ouly::ecs::components<velocity, ouly::ecs::entity<>, ouly::config<ouly::cfg::use_direct_mapping>> direct;
+   direct.set_max(registry.max_size()); // optional: grow the storage up front
 
-   // Debug configuration with safety features
-   using DebugConfig = ouly::config<
-       ouly::cfg::zero_out_memory,
-       ouly::cfg::pool_size<4096>
-   >;
+   // Values kept in a paged sparse_vector instead of a std::vector, so they never move when it grows
+   ouly::ecs::components<health, ouly::ecs::entity<>, ouly::config<ouly::cfg::use_sparse>> sparse;
 
-   // Components configured for different access patterns
-   ouly::ecs::components<Transform, ouly::ecs::entity<>, PerformanceConfig> transforms;
-   ouly::ecs::components<AudioSource, ouly::ecs::entity<>, MemoryConfig> audio_sources;
-   ouly::ecs::components<DebugInfo, ouly::ecs::entity<>, DebugConfig> debug_info;
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
 
-Systems and Iteration
-----------------------
+   * - Configuration
+     - Layout
+   * - default
+     - Values packed densely; an index maps entities to slots and slots back to entities.
+       Iteration touches only live values; erasing swaps the last value into the hole.
+   * - ``cfg::use_direct_mapping``
+     - Values stored at the entity's index, with a presence bit per slot. Fastest lookup, memory
+       proportional to the largest entity index. ``set_max`` grows it up front.
+   * - ``cfg::use_sparse``
+     - The values live in a paged ``sparse_vector`` instead of a ``std::vector``, so growing the
+       storage never moves them. Combined with ``use_direct_mapping``, pages are allocated only
+       where entity indices are in use.
 
-Systems process entities with specific component combinations:
+Further options (all in ``ouly::cfg``, combined with ``ouly::config<...>``): ``pool_size<N>``
+(page size of the value storage), ``index_pool_size<N>``, ``keys_index_pool_size<N>`` and
+``self_index_pool_size<N>`` (page sizes of the internal indexes), ``use_sparse_index``,
+``keys_use_sparse_index`` and ``self_use_sparse_index`` (paged rather than flat indexes),
+``custom_vector<V>`` (container for the values) and ``allocator_type<A>``.
+
+``cfg::self_index_member<&T::member>`` makes the storage record each element's entity in a member of
+the element instead of in a separate table:
 
 .. code-block:: cpp
 
-   #include <ouly/ecs/registry.hpp>
-   #include <ouly/ecs/components.hpp>
+   struct named
+   {
+     std::string name;
+     uint32_t    self = 0; // the storage records the owning entity here instead of in a side table
+   };
 
-   // Movement system - updates positions based on velocity
-   void movement_system(ouly::ecs::components<Position>& positions,
-                       ouly::ecs::components<Velocity>& velocities,
-                       float delta_time) {
-       // Iterate over all entities that have both Position and Velocity
-       positions.for_each(velocities, [delta_time](auto entity, auto& pos, auto& vel) {
-           pos.x += vel.dx * delta_time;
-           pos.y += vel.dy * delta_time;
-           pos.z += vel.dz * delta_time;
-       });
-   }
+   using named_components =
+    ouly::ecs::components<named, ouly::ecs::entity<>, ouly::config<ouly::cfg::self_index_member<&named::self>>>;
 
-   // Health regeneration system
-   void health_regen_system(ouly::ecs::components<Health>& health_components,
-                           float delta_time) {
-       health_components.for_each([delta_time](auto entity, auto& health) {
-           if (health.current < health.maximum) {
-               health.current = std::min(health.maximum, 
-                                       health.current + static_cast<int>(10 * delta_time));
-           }
-       });
-   }
+.. code-block:: cpp
 
-   int main() {
-       ouly::ecs::registry<> registry;
-       ouly::ecs::components<Position> positions;
-       ouly::ecs::components<Velocity> velocities;
-       ouly::ecs::components<Health> health_components;
-       
-       // Create some entities with components
-       for (int i = 0; i < 100; ++i) {
-           auto entity = registry.emplace();
-           positions.emplace_at(entity, i * 10.0f, 0.0f, 0.0f);
-           velocities.emplace_at(entity, 1.0f, 0.0f, 0.0f);
-           health_components.emplace_at(entity, 80);  // Damaged entities
-       }
-       
-       // Game loop
-       float delta_time = 1.0f / 60.0f;  // 60 FPS
-       for (int frame = 0; frame < 10; ++frame) {
-           movement_system(positions, velocities, delta_time);
-           health_regen_system(health_components, delta_time);
-       }
-       
-       return 0;
-   }
+   named_components names;
+   auto             e = registry.emplace();
+   names.emplace_at(e, "crate");
+   names.erase(e);
 
-Collections for Entity Groups
-------------------------------
+Collections
+-----------
 
-Collections allow efficient processing of specific entity groups:
+A ``collection`` records which entities belong to a group, in membership bits allocated page by
+page, and visits a storage's components for its members only:
 
 .. code-block:: cpp
 
    #include <ouly/ecs/collection.hpp>
 
-   int main() {
-       ouly::ecs::registry<> registry;
-       ouly::ecs::components<Position> positions;
-       ouly::ecs::components<Velocity> velocities;
-       ouly::ecs::components<Health> health_components;
-       
-       // Collections for different entity types
-       ouly::ecs::collection<ouly::ecs::entity<>> players;
-       ouly::ecs::collection<ouly::ecs::entity<>> enemies;
-       ouly::ecs::collection<ouly::ecs::entity<>> projectiles;
-       
-       // Create different entity types
-       auto player = registry.emplace();
-       positions.emplace_at(player, 0.0f, 0.0f, 0.0f);
-       health_components.emplace_at(player, 150);
-       players.emplace(player);
-       
-       for (int i = 0; i < 10; ++i) {
-           auto enemy = registry.emplace();
-           positions.emplace_at(enemy, i * 5.0f, 10.0f, 0.0f);
-           velocities.emplace_at(enemy, 0.0f, -1.0f, 0.0f);
-           health_components.emplace_at(enemy, 50);
-           enemies.emplace(enemy);
-       }
-       
-       // Process only enemies
-       enemies.for_each(positions, velocities, [](auto entity, auto& pos, auto& vel) {
-           // AI behavior for enemies
-           if (pos.y < 0) {
-               vel.dy = 1.0f;  // Bounce off bottom
-           }
-       });
-       
-       // Process only players  
-       players.for_each(health_components, [](auto entity, auto& health) {
-           std::cout << "Player health: " << health.current << "/" << health.maximum << "\n";
-       });
-       
-       return 0;
+   ouly::ecs::collection<ouly::ecs::entity<>> visible; // membership bits in lazily allocated pages
+
+   for (int i = 0; i < 100; ++i)
+   {
+     auto e = registry.emplace();
+     positions.emplace_at(e, static_cast<float>(i), 0.0F);
+     if (i % 2 == 0)
+     {
+       visible.emplace(e);
+     }
    }
 
-Thread-Safe ECS with Revisions
--------------------------------
+   // Visit the components of the members only
+   float sum = 0;
+   visible.for_each(positions, [&sum](ouly::ecs::entity<>, position const& p) { sum += p.x; });
 
-For multi-threaded applications, use the revision-based registry:
+Collections track entity revisions whenever the entity type has revision bits, so members whose slot
+was recycled are skipped consistently in every build type.
 
-.. code-block:: cpp
+Sparse-to-dense maps
+--------------------
 
-   #include <ouly/ecs/rxregistry.hpp>
-   #include <thread>
-   #include <vector>
-
-   int main() {
-       // Revision-based registry for thread safety
-       ouly::ecs::rxregistry<> registry;
-       ouly::ecs::components<Position> positions;
-       
-       std::vector<std::thread> threads;
-       std::vector<ouly::ecs::rxentity<>> entities;
-       
-       // Create entities in main thread
-       for (int i = 0; i < 100; ++i) {
-           auto entity = registry.emplace();
-           positions.emplace_at(entity, i * 1.0f, 0.0f, 0.0f);
-           entities.push_back(entity);
-       }
-       
-       // Launch worker threads
-       for (int t = 0; t < 4; ++t) {
-           threads.emplace_back([&registry, &positions, &entities, t]() {
-               for (size_t i = t; i < entities.size(); i += 4) {
-                   auto entity = entities[i];
-                   
-                   // Check if entity is still valid (might have been destroyed)
-                   if (registry.is_valid(entity) && positions.contains(entity)) {
-                       auto& pos = positions[entity];
-                       pos.x += 0.1f;  // Move entity
-                   }
-               }
-           });
-       }
-       
-       // Wait for all threads
-       for (auto& thread : threads) {
-           thread.join();
-       }
-       
-       return 0;
-   }
-
-Advanced ECS Patterns
----------------------
-
-**Component Dependencies and Relationships**
+``ouly::ecs::map`` maps entities to a dense ``0..size()-1`` range and leaves the values to you,
+which suits data that lives in external arrays, GPU buffers or a ``soavector``:
 
 .. code-block:: cpp
 
-   struct Transform {
-       float x, y, z;
-       float rotation;
-       float scale;
-   };
+   #include <ouly/ecs/map.hpp>
 
-   struct Parent {
-       ouly::ecs::entity<> parent_entity;
-   };
+   // Sparse entity -> dense index; you keep the values in your own arrays
+   ouly::ecs::map<>         slots;
+   std::vector<std::string> labels;
 
-   struct Children {
-       std::vector<ouly::ecs::entity<>> child_entities;
-   };
+   labels.resize(slots.emplace(a) + 1);
+   labels[slots.key(a)] = "a";
+   labels.resize(slots.emplace(b) + 1);
+   labels[slots.key(b)] = "b";
 
-   // System to update child transforms based on parent
-   void transform_hierarchy_system(
-       ouly::ecs::components<Transform>& transforms,
-       ouly::ecs::components<Parent>& parents,
-       ouly::ecs::components<Children>& children) {
-       
-       parents.for_each(transforms, [&](auto child_entity, auto& parent_ref, auto& child_transform) {
-           if (transforms.contains(parent_ref.parent_entity)) {
-               auto& parent_transform = transforms[parent_ref.parent_entity];
-               // Apply parent transformation to child
-               child_transform.x += parent_transform.x;
-               child_transform.y += parent_transform.y;
-               child_transform.rotation += parent_transform.rotation;
-           }
-       });
-   }
+   // Swap-and-pop removal that keeps labels dense and in step with the map
+   slots.erase_and_swap_values(a, labels);
+   auto owner = slots.entity_at(0); // b now occupies dense slot 0
 
-**Tag Components**
-
-.. code-block:: cpp
-
-   // Tag components (zero-size)
-   struct Player {};
-   struct Enemy {};
-   struct Dead {};
-
-   int main() {
-       ouly::ecs::registry<> registry;
-       ouly::ecs::components<Player> player_tags;
-       ouly::ecs::components<Enemy> enemy_tags;
-       ouly::ecs::components<Dead> dead_tags;
-       
-       auto entity = registry.emplace();
-       player_tags.emplace_at(entity);  // Mark as player
-       
-       // Check for tag
-       if (player_tags.contains(entity)) {
-           std::cout << "Entity is a player\n";
-       }
-       
-       return 0;
-   }
-
-**Event System Integration**
-
-.. code-block:: cpp
-
-   #include <functional>
-   #include <vector>
-
-   struct DamageEvent {
-       ouly::ecs::entity<> target;
-       int damage;
-       ouly::ecs::entity<> source;
-   };
-
-   class EventSystem {
-       std::vector<DamageEvent> damage_events;
-       
-   public:
-       void queue_damage(ouly::ecs::entity<> target, int damage, ouly::ecs::entity<> source) {
-           damage_events.push_back({target, damage, source});
-       }
-       
-       void process_damage_events(ouly::ecs::components<Health>& health_components,
-                                 ouly::ecs::components<Dead>& dead_tags) {
-           for (const auto& event : damage_events) {
-               if (health_components.contains(event.target)) {
-                   auto& health = health_components[event.target];
-                   health.current -= event.damage;
-                   
-                   if (health.current <= 0) {
-                       dead_tags.emplace_at(event.target);
-                   }
-               }
-           }
-           damage_events.clear();
-       }
-   };
-
-Performance Optimization
-------------------------
-
-**Memory Layout Optimization**
-
-.. code-block:: cpp
-
-   // Pack components for better cache utilization
-   struct PackedTransform {
-       float position[3];    // x, y, z
-       float rotation[4];    // quaternion
-       float scale[3];       // sx, sy, sz
-   };
-
-   // Use Structure of Arrays for SIMD operations
-   #include <ouly/containers/soavector.hpp>
-   
-   struct ParticleData {
-       float pos_x, pos_y, pos_z;      // position
-       float vel_x, vel_y, vel_z;      // velocity
-       float life_time;                // lifetime
-   };
-   
-   ouly::soavector<ParticleData> particles;
-   
-   // Access individual component arrays
-   auto& x_positions = particles.get<0>();  // pos_x array
-   auto& lifetimes = particles.get<6>();    // life_time array
-
-**Batch Processing**
-
-.. code-block:: cpp
-
-   // Process components in batches for better cache utilization
-   void batch_movement_system(ouly::ecs::components<Position>& positions,
-                             ouly::ecs::components<Velocity>& velocities,
-                             float delta_time) {
-       constexpr size_t BATCH_SIZE = 64;
-       
-       positions.for_each_batch(velocities, BATCH_SIZE,
-           [delta_time](auto begin, auto end, auto& pos_range, auto& vel_range) {
-               // Process batch of entities
-               for (auto it = begin; it != end; ++it) {
-                   auto& pos = pos_range[it];
-                   auto& vel = vel_range[it];
-                   pos.x += vel.dx * delta_time;
-                   pos.y += vel.dy * delta_time;
-                   pos.z += vel.dz * delta_time;
-               }
-           });
-   }
-
-Best Practices
---------------
-
-1. **Component Design**
-   
-   * Keep components simple and focused (Single Responsibility)
-   * Use POD types when possible for better performance
-   * Group related data into single components
-
-2. **System Organization**
-   
-   * Systems should be stateless functions
-   * Process components in logical order (input → logic → rendering)
-   * Use collections to group entities by type/behavior
-
-3. **Memory Management**
-   
-   * Choose appropriate storage strategy for each component type
-   * Use custom allocators for better memory control
-   * Consider memory alignment for SIMD operations
-
-4. **Threading**
-   
-   * Use rxregistry for multi-threaded access
-   * Partition work by entity ranges or component types
-   * Avoid shared mutable state between threads
+``erase_and_get_swap_index`` performs the removal and returns the index whose value has to be moved
+into the hole, for containers that ``erase_and_swap_values`` cannot handle. ``examples/ecs_map_example.cpp``
+in the repository is a longer walk-through.
 
 Next Steps
 ----------
 
-* Learn about :doc:`scheduler_tutorial` for parallel ECS processing
-* Explore :doc:`memory_management` for optimal ECS memory layout
-* Check :doc:`../performance/index` for ECS optimization techniques
+* :doc:`scheduler_tutorial` to process component storages in parallel
+* :doc:`containers_tutorial` for the containers underneath the storages

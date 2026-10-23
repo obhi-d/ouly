@@ -63,6 +63,9 @@ if(BUILD_SHARED_LIBS)
 endif()
 
 set_property(TARGET ${OULY_TARGET_NAME} PROPERTY CXX_STANDARD 20)
+# Consumers include headers that need C++20 (concepts, coroutines, <=>), so require it of them too;
+# this also travels with the exported target to find_package users
+target_compile_features(${OULY_TARGET_NAME} PUBLIC cxx_std_20)
 
 # Add all warning flags
 if(MSVC)
@@ -126,14 +129,14 @@ if(MSVC)
     target_sources(
         ${OULY_TARGET_NAME}
         PUBLIC
-            $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/debug_helpers/containers.natvis>
+            $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/debug_helpers/containers.natvis>
     )
 endif()
 
 target_include_directories(
     ${OULY_TARGET_NAME}
     PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
@@ -205,6 +208,6 @@ if(OULY_EXPORT_CC_TO_SRC_DIR)
         COMMAND
             ${CMAKE_COMMAND} -E create_symlink
             ${PROJECT_BINARY_DIR}/compile_commands.json
-            ${CMAKE_SOURCE_DIR}/compile_commands.json
+            ${PROJECT_SOURCE_DIR}/compile_commands.json
     )
 endif()

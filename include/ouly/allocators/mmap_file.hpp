@@ -361,10 +361,14 @@ public:
 
   /**
    * @brief Map a file with specified offset and length
+   *
+   * The mapping starts at the beginning of the file and covers `offset + length` bytes; the view
+   * (data(), size()) starts at `offset` and holds `length` bytes, or fewer if the file is shorter.
+   *
    * @param path Path to the file to map
    * @param offset Offset within the file (bytes)
    * @param length Length to map (map_entire_file for entire file)
-   * @param error Error code output parameter
+   * @throws std::system_error if the file cannot be mapped or `offset` lies beyond its end
    */
   void map(std::filesystem::path const& path, size_type offset, size_type length)
   {
@@ -405,7 +409,7 @@ public:
   /**
    * @brief Map an entire file
    * @param path Path to the file to map
-   * @param error Error code output parameter
+   * @throws std::system_error if the file cannot be mapped
    */
   void map(std::filesystem::path const& path)
   {
@@ -432,7 +436,7 @@ public:
 
   /**
    * @brief Sync mapped data to disk (only available for write mappings)
-   * @param error Error code output parameter
+   * @throws std::system_error if nothing is mapped or the sync fails
    */
   template <access_mode A = AccessMode>
   auto sync() -> void
