@@ -55,6 +55,8 @@ TEST_CASE("coalescing_arena_allocator: alignment is honored", "[coalescing_arena
   {
     allocator.deallocate(al.get_allocation_id(), mgr);
   }
+  REQUIRE(mgr.arena_count_ == 1); // the emptied arena is retained for reuse
+  REQUIRE(allocator.trim(mgr) == 1);
   REQUIRE(mgr.arena_count_ == 0);
 }
 
