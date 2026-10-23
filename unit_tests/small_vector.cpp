@@ -446,7 +446,7 @@ namespace
 {
 struct live_counter
 {
-  static inline int live = 0;
+  static inline int live  = 0;
   int               value = 0;
   live_counter() noexcept
   {

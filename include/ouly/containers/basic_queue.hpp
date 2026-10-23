@@ -309,7 +309,7 @@ private:
     }
     else
     {
-      db        = ouly::allocate<deque_block>(static_cast<allocator_type&>(*this), sizeof(deque_block), alignarg<deque_block>);
+      db = ouly::allocate<deque_block>(static_cast<allocator_type&>(*this), sizeof(deque_block), alignarg<deque_block>);
       db->next_ = nullptr;
     }
 

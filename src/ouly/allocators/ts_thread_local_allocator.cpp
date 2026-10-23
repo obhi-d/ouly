@@ -4,8 +4,8 @@
 #include "ouly/utility/common.hpp"
 #include <algorithm>
 #include <array>
-#include <bit>
 #include <atomic>
+#include <bit>
 #include <cstdint>
 #include <cstring>
 #include <limits>

@@ -508,8 +508,8 @@ using mmap_sink   = basic_mmap_sink<>;
  * @param length Length to map (map_entire_file for entire file)
  * @return Mapped file object
  */
-[[nodiscard]] inline auto make_mmap_source(std::filesystem::path const& path, std::size_t offset, std::size_t length)
- -> mmap_source
+[[nodiscard]] inline auto make_mmap_source(std::filesystem::path const& path, std::size_t offset,
+                                           std::size_t length) -> mmap_source
 {
   mmap_source source;
   source.map(path, offset, length);
@@ -533,8 +533,8 @@ using mmap_sink   = basic_mmap_sink<>;
  * @param length Length to map (map_entire_file for entire file)
  * @return Mapped file object
  */
-[[nodiscard]] inline auto make_mmap_sink(std::filesystem::path const& path, std::size_t offset, std::size_t length)
- -> mmap_sink
+[[nodiscard]] inline auto make_mmap_sink(std::filesystem::path const& path, std::size_t offset,
+                                         std::size_t length) -> mmap_sink
 {
   mmap_sink sink;
   sink.map(path, offset, length);
