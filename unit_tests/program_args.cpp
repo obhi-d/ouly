@@ -269,4 +269,18 @@ TEST_CASE("Last repeated option wins without leaking earlier values", "[program_
   REQUIRE(output == "new.txt");
   REQUIRE(args.get_positional_args() == std::vector<std::string_view>{"input.txt"});
 }
+TEST_CASE("Validate program args typed as<T>", "[program_args][as]")
+{
+  const char*        arg_set[] = {"program", "--count=42", "--ratio=0.5"};
+  ouly::program_args pgargs;
+  pgargs.parse_args(3, arg_set);
+
+  auto count = pgargs.as<int>("count");
+  REQUIRE(count.has_value());
+  REQUIRE(count.value() == 42);
+  auto ratio = pgargs.as<double>("ratio");
+  REQUIRE(ratio.has_value());
+  REQUIRE(ratio.value() == 0.5);
+  REQUIRE_FALSE(pgargs.as<int>("missing").has_value());
+}
 // NOLINTEND

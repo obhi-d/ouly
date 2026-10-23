@@ -7,6 +7,48 @@ namespace ouly::yml
 {
 namespace
 {
+/** @brief Replace the character following a backslash with what it stands for; false if unsupported */
+auto unescape(char& c) -> bool
+{
+  switch (c)
+  {
+  case '0':
+    c = '\0';
+    return true;
+  case 'a':
+    c = '\a';
+    return true;
+  case 'b':
+    c = '\b';
+    return true;
+  case 't':
+    c = '\t';
+    return true;
+  case 'n':
+    c = '\n';
+    return true;
+  case 'v':
+    c = '\v';
+    return true;
+  case 'f':
+    c = '\f';
+    return true;
+  case 'r':
+    c = '\r';
+    return true;
+  case 'e':
+    c = '\x1b';
+    return true;
+  case ' ':
+  case '/':
+  case '\\':
+  case '"':
+    return true;
+  default:
+    return false;
+  }
+}
+
 auto is_space(char value) -> bool
 {
   return value == ' ' || value == '\t' || value == '\r' || value == '\n';
@@ -271,12 +313,38 @@ auto lite_stream::plain_token() -> lite_stream::token
   };
 }
 
+auto lite_stream::finish_quoted_token(uint32_t start, bool decoded) -> lite_stream::token
+{
+  token result{
+   .type_    = token_type::value,
+   .content_ = {.start_ = start + 1, .count_ = current_pos_ - start - 2},
+   .decoded_ = decoded
+  };
+  skip_whitespace();
+  if (peek(0) == ':' && (is_space(peek(1)) || peek(1) == '\0'))
+  {
+    ++current_pos_;
+    result.type_ = token_type::key;
+  }
+  can_be_sequence_ = false;
+  return result;
+}
+
 auto lite_stream::quoted_token() -> lite_stream::token
 {
   auto const start = current_pos_++;
-  auto const quote = ouly::detail::vector_access(content_, start);
-  decoded_.clear();
+  auto const quote   = ouly::detail::vector_access(content_, start);
   bool escaped = false;
+  // Most scalars have no escapes and are handed out as a slice of the input; decoded_ is only filled
+  // from the first escape onwards, seeded with the plain text read before it.
+  auto begin_decoding = [&](auto escape_pos) -> void
+  {
+    if (!escaped)
+    {
+      decoded_.assign(content_.substr(start + 1, escape_pos - (start + 1)));
+      escaped = true;
+    }
+  };
   while (current_pos_ < content_.size())
   {
     auto c = ouly::detail::vector_access(content_, current_pos_++);
@@ -284,24 +352,12 @@ auto lite_stream::quoted_token() -> lite_stream::token
     {
       if (quote == '\'' && peek(0) == '\'')
       {
+        begin_decoding(current_pos_ - 1);
         ++current_pos_;
         decoded_ += '\'';
-        escaped = true;
         continue;
       }
-      token result{
-       .type_    = token_type::value,
-       .content_ = {.start_ = start + 1, .count_ = current_pos_ - start - 2},
-       .decoded_ = escaped
-      };
-      skip_whitespace();
-      if (peek(0) == ':' && (is_space(peek(1)) || peek(1) == '\0'))
-      {
-        ++current_pos_;
-        result.type_ = token_type::key;
-      }
-      can_be_sequence_ = false;
-      return result;
+      return finish_quoted_token(start, escaped);
     }
     if (c == '\n' || c == '\r')
     {
@@ -313,47 +369,14 @@ auto lite_stream::quoted_token() -> lite_stream::token
     }
     if (quote == '"' && c == '\\')
     {
-      escaped = true;
-      c       = peek(0);
+      begin_decoding(current_pos_ - 1);
+      c = peek(0);
       if (current_pos_ < content_.size())
       {
         ++current_pos_;
       }
-      switch (c)
+      if (!unescape(c))
       {
-      case '0':
-        c = '\0';
-        break;
-      case 'a':
-        c = '\a';
-        break;
-      case 'b':
-        c = '\b';
-        break;
-      case 't':
-        c = '\t';
-        break;
-      case 'n':
-        c = '\n';
-        break;
-      case 'v':
-        c = '\v';
-        break;
-      case 'f':
-        c = '\f';
-        break;
-      case 'r':
-        c = '\r';
-        break;
-      case 'e':
-        c = '\x1b';
-        break;
-      case ' ':
-      case '/':
-      case '\\':
-      case '"':
-        break;
-      default:
         throw_error(
          {
           .content_ = {.start_ = start, .count_ = current_pos_ - start}
@@ -361,7 +384,10 @@ auto lite_stream::quoted_token() -> lite_stream::token
          "Unsupported quoted scalar escape");
       }
     }
-    decoded_ += c;
+    if (escaped)
+    {
+      decoded_ += c;
+    }
   }
   throw_error(
    {

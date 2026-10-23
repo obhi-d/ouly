@@ -3,6 +3,7 @@
 #include "ouly/dsl/microexpr.hpp"
 #include "ouly/utility/from_chars.hpp"
 #include "ouly/utility/user_config.hpp"
+#include <cctype>
 #include <cstdint>
 
 namespace ouly
@@ -28,6 +29,9 @@ struct microexpr_state
   auto comparison() -> int64_t;
   auto binary() -> int64_t;
   auto unary() -> int64_t;
+  auto group() -> int64_t;
+  auto defined() -> int64_t;
+  auto expect(char c) -> bool;
 
   auto exec_binary(int64_t& left) -> bool;
 };
@@ -134,13 +138,15 @@ auto microexpr_state::exec_binary(int64_t& left) -> bool
   if (sview[0] == '&' && sview[1] == '&')
   {
     read_ += 2;
-    left = static_cast<int64_t>((left != 0) && (unary() != 0));
+    // the right operand is always parsed, short-circuiting it would leave it unread
+    auto const right = unary();
+    left             = static_cast<int64_t>((left != 0) && (right != 0));
   }
   else if (sview[0] == '|' && sview[1] == '|')
   {
     read_ += 2;
-    left = static_cast<int64_t>((left != 0) || (unary() != 0));
-    return true;
+    auto const right = unary();
+    left             = static_cast<int64_t>((left != 0) || (right != 0));
   }
   else if (sview[0] == '&')
   {
@@ -203,8 +209,13 @@ auto microexpr_state::binary() -> int64_t
 auto microexpr_state::read_token() const -> std::string_view
 {
   uint32_t token = read_;
-  while (token < content_.size() && (std::isalnum(ouly::detail::vector_access(content_, token)) != 0))
+  while (token < content_.size())
   {
+    auto const c = static_cast<unsigned char>(ouly::detail::vector_access(content_, token));
+    if (std::isalnum(c) == 0 && c != '_')
+    {
+      break;
+    }
     token++;
   }
 
@@ -219,15 +230,12 @@ auto microexpr_state::unary() -> int64_t
     char oper = get();
     if (oper == '(')
     {
+      return group();
+    }
+    if (oper == '!')
+    {
       read_++;
-      int64_t result = conditional();
-      oper           = get();
-      if (oper != ')')
-      {
-        return 0;
-      }
-      read_++;
-      return result;
+      return static_cast<int64_t>(unary() == 0);
     }
     if (oper == '-')
     {
@@ -239,7 +247,7 @@ auto microexpr_state::unary() -> int64_t
       read_++;
       return ~unary();
     }
-    if (std::isdigit(oper) != 0)
+    if (std::isdigit(static_cast<unsigned char>(oper)) != 0)
     {
       auto token = read_token();
       read_ += static_cast<uint32_t>(token.length());
@@ -251,13 +259,9 @@ auto microexpr_state::unary() -> int64_t
     }
     if (oper == '$')
     {
-      read_++;
-      skip_white();
-      auto token = read_token();
-      read_ += static_cast<uint32_t>(token.length());
-      return static_cast<int64_t>((*ctx_)(token).has_value());
+      return defined();
     }
-    if ((isalpha(oper) != 0) || oper == '_')
+    if ((std::isalpha(static_cast<unsigned char>(oper)) != 0) || oper == '_')
     {
       auto token = read_token();
       read_ += static_cast<uint32_t>(token.length());
@@ -266,6 +270,39 @@ auto microexpr_state::unary() -> int64_t
     }
   }
   return 0;
+}
+
+auto microexpr_state::expect(char c) -> bool
+{
+  skip_white();
+  if (read_ >= content_.length() || get() != c)
+  {
+    return false;
+  }
+  read_++;
+  return true;
+}
+
+auto microexpr_state::group() -> int64_t
+{
+  read_++; // '('
+  int64_t result = conditional();
+  return expect(')') ? result : 0;
+}
+
+auto microexpr_state::defined() -> int64_t
+{
+  read_++; // '$'
+  // both $NAME and $(NAME) test whether NAME is defined
+  bool const parenthesized = expect('(');
+  skip_white();
+  auto token = read_token();
+  read_ += static_cast<uint32_t>(token.length());
+  if (parenthesized && !expect(')'))
+  {
+    return 0;
+  }
+  return static_cast<int64_t>((*ctx_)(token).has_value());
 }
 
 } // namespace ouly

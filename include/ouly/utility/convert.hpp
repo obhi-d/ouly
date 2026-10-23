@@ -83,7 +83,7 @@ struct convert<std::string>
 
   static auto from_type(std::string& ref, std::string_view v) -> void
   {
-    ref = std::string(v);
+    ref.assign(v);
   }
 
   static auto from_type(std::string& ref, std::string&& v) -> void
@@ -97,13 +97,15 @@ struct convert<std::unique_ptr<char[]>>
 {
   static auto to_type(std::unique_ptr<char[]> const& ref) -> std::string_view
   {
-    return {ref.get()};
+    return ref ? std::string_view{ref.get()} : std::string_view{};
   }
 
   static auto from_type(std::unique_ptr<char[]>& ref, std::string_view v) -> void
   {
-    ref = std::make_unique<char[]>(v.size());
+    // to_type() reads the buffer back as a C string, so it must be terminated
+    ref = std::make_unique<char[]>(v.size() + 1);
     std::ranges::copy(v, ref.get());
+    ref[v.size()] = '\0';
   }
 };
 
@@ -394,9 +396,9 @@ struct chain
 };
 
 template <typename Transform, string_literal Target>
-auto cache_key()
+auto cache_key() -> std::string_view
 {
-  static auto key_str = std::string{Transform::transform(Target)};
+  static auto const key_str = std::string{Transform::transform(Target)};
   return key_str;
 }
 

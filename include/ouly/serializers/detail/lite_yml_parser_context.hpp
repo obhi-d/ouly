@@ -540,7 +540,7 @@ public:
   static void read_bool(TClassType& obj, std::string_view slice)
   {
     using namespace std::string_view_literals;
-    obj = slice == "true"sv || slice == "True"sv || slice == "null"sv;
+    obj = slice == "true"sv || slice == "True"sv || slice == "TRUE"sv;
   }
 
   template <typename TClassType>

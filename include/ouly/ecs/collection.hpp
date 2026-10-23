@@ -56,7 +56,8 @@ namespace ouly::ecs
  * ```
  *
  * @note The collection automatically manages memory allocation and deallocation of pools
- * @note Revision tracking is only enabled in debug mode and when entity type uses uint8_t revision
+ * @note Revisions are tracked whenever the entity type has revision bits; iteration needs them to rebuild
+ *       the full entity handed to component lookups
  */
 template <typename EntityTy, typename Config = ouly::default_config<EntityTy>>
 class collection : public ouly::detail::custom_allocator_t<Config>
@@ -73,14 +74,15 @@ private:
   using this_type                    = collection<EntityTy, Config>;
   using base_type                    = allocator_type;
   using storage                      = uint64_t; // 64-bit words for presence bitfield
-  static constexpr bool has_revision = std::same_as<typename EntityTy::revision_type, uint8_t> && ouly::debug;
+  static constexpr bool has_revision = EntityTy::nb_revision_bits > 0;
+  using hazard_type                  = std::conditional_t<has_revision, typename EntityTy::revision_type, uint8_t>;
 
   // Bitfield word parameters for 64-bit storage
   static constexpr size_type word_shift = 6;  // log2(64)
   static constexpr size_type word_mask  = 63; // 64 - 1
 
   static constexpr auto bit_page_size = sizeof(storage) * ((pool_size + word_mask) >> word_shift);
-  static constexpr auto haz_page_size = sizeof(uint8_t) * pool_size;
+  static constexpr auto haz_page_size = sizeof(hazard_type) * pool_size;
 
 public:
   collection() noexcept = default;
@@ -141,7 +143,7 @@ public:
           continue;
         }
         items_[(i * 2) + 0] = static_cast<void*>(ouly::allocate<storage>(*this, bit_page_size));
-        items_[(i * 2) + 1] = static_cast<void*>(ouly::allocate<uint8_t>(*this, haz_page_size));
+        items_[(i * 2) + 1] = static_cast<void*>(ouly::allocate<hazard_type>(*this, haz_page_size));
         std::memcpy(items_[(i * 2) + 0], other.items_[(i * 2) + 0], bit_page_size);
         std::memcpy(items_[(i * 2) + 1], other.items_[(i * 2) + 1], haz_page_size);
       }
@@ -257,7 +259,7 @@ public:
       max_lnk_ = std::max(idx, max_lnk_);
       if constexpr (has_revision)
       {
-        set_hazard(idx, static_cast<uint8_t>(l.revision()));
+        set_hazard(idx, static_cast<hazard_type>(l.revision()));
       }
       length_++;
     }
@@ -284,7 +286,7 @@ public:
     {
       if constexpr (has_revision)
       {
-        validate_hazard(idx, static_cast<uint8_t>(l.revision()));
+        validate_hazard(idx, static_cast<hazard_type>(l.revision()));
       }
       length_--;
     }
@@ -389,7 +391,7 @@ private:
         {
           ouly::deallocate(static_cast<allocator_type&>(*this), static_cast<storage*>(items_[(i * 2) + 0]),
                            bit_page_size);
-          ouly::deallocate(static_cast<allocator_type&>(*this), static_cast<uint8_t*>(items_[(i * 2) + 1]),
+          ouly::deallocate(static_cast<allocator_type&>(*this), static_cast<hazard_type*>(items_[(i * 2) + 1]),
                            haz_page_size);
         }
       }
@@ -410,12 +412,12 @@ private:
     max_lnk_ = 0;
   }
 
-  void validate_hazard([[maybe_unused]] size_type nb, [[maybe_unused]] std::uint8_t hz) const noexcept
+  void validate_hazard([[maybe_unused]] size_type nb, [[maybe_unused]] hazard_type hz) const noexcept
   {
     [[maybe_unused]] auto block = hazard_page(nb >> pool_mul);
     [[maybe_unused]] auto index = nb & pool_mod;
 
-    OULY_ASSERT(static_cast<uint8_t const*>(items_[block])[index] == hz);
+    OULY_ASSERT(static_cast<hazard_type const*>(items_[block])[index] == hz);
   }
 
   auto bit_page(size_type p) const noexcept -> size_type
@@ -493,7 +495,7 @@ private:
       std::memset(items_[block], 0, bit_page_size);
       if constexpr (has_revision)
       {
-        items_[block + 1] = static_cast<void*>(ouly::allocate<uint8_t>(*this, haz_page_size));
+        items_[block + 1] = static_cast<void*>(ouly::allocate<hazard_type>(*this, haz_page_size));
         std::memset(items_[block + 1], 0, haz_page_size);
       }
     }
@@ -508,18 +510,18 @@ private:
     return !was_set;
   }
 
-  void set_hazard(size_type nb, std::uint8_t hz) noexcept
+  void set_hazard(size_type nb, hazard_type hz) noexcept
   {
     auto block                                  = hazard_page(nb >> pool_mul);
     auto index                                  = nb & pool_mod;
-    static_cast<uint8_t*>(items_[block])[index] = hz;
+    static_cast<hazard_type*>(items_[block])[index] = hz;
   }
 
-  auto get_hazard(size_type nb) noexcept -> std::uint8_t
+  auto get_hazard(size_type nb) noexcept -> hazard_type
   {
     auto block = hazard_page(nb >> pool_mul);
     auto index = nb & pool_mod;
-    return static_cast<uint8_t*>(items_[block])[index];
+    return static_cast<hazard_type*>(items_[block])[index];
   }
 
   template <typename ContT, typename Lambda>
@@ -601,7 +603,7 @@ private:
 
   // Interleaved array of allocated pages as void* to allow mixed types when has_revision=true
   // When has_revision=false: items_[p] points to uint64_t bitfield words for pool p
-  // When has_revision=true:  items_[2p] is uint64_t* bitfield, items_[2p+1] is uint8_t* hazard array
+  // When has_revision=true:  items_[2p] is uint64_t* bitfield, items_[2p+1] is hazard_type* hazard array
   // Entries may be null for pools that were skipped over by sparse entity ids
   std::vector<void*> items_;
   size_type          length_  = 0;

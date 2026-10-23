@@ -207,7 +207,12 @@ public:
     // of free_ can name live entities. Trimming first is what keeps those from being skipped -- and
     // has to happen before the sort, which would otherwise mix live entries into the free prefix.
     shrink();
-    sort_free();
+    // shrink() only drops the tail, and emplace() only consumes from it, so a sorted list stays
+    // sorted until the next erase()
+    if (!sorted_)
+    {
+      sort_free();
+    }
     internal_for_each(std::forward<Lambda>(l), free_, max_size_.load());
   }
 
@@ -226,7 +231,12 @@ public:
     // The live free slots are the prefix [0, free_slot_); everything past it has been handed back
     // out by emplace(). Const, so the trim is a copy rather than a shrink.
     auto const live = static_cast<size_t>(std::max<ssize_type>(0, free_slot_.load()));
-    auto       copy = std::vector<size_type>(free_.begin(), free_.begin() + static_cast<ssize_type>(live));
+    if (sorted_)
+    {
+      internal_for_each(std::forward<Lambda>(l), std::span<size_type const>(free_.data(), live), max_size_.load());
+      return;
+    }
+    auto copy = std::vector<size_type>(free_.begin(), free_.begin() + static_cast<ssize_type>(live));
     std::ranges::sort(copy,
                       [](size_type first, size_type second) -> bool
                       {
