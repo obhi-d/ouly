@@ -111,12 +111,6 @@ private:
     data_store() : ldata_() {}
   };
 
-  struct tail_type : std::true_type
-  {
-    constexpr explicit tail_type(size_type tail) noexcept : tail_(tail) {}
-    size_type tail_;
-  };
-
 public:
   constexpr small_vector() = default;
   constexpr explicit small_vector(const allocator_type& alloc) : allocator_type(alloc) {}
@@ -183,6 +177,7 @@ public:
   constexpr ~small_vector() noexcept
   {
     clear();
+    release_heap();
   }
 
   constexpr auto operator=(const small_vector& other) -> small_vector&
@@ -238,6 +233,7 @@ public:
       }
 
       data_store_.hdata_ = copy;
+      on_heap_           = true;
       size_              = n;
     }
     else if (n > size_)
@@ -278,6 +274,7 @@ public:
       }
 
       data_store_.hdata_ = copy;
+      on_heap_           = true;
       size_              = n;
     }
     else if (n > size_)
@@ -409,16 +406,18 @@ public:
    */
   constexpr void reserve(size_type n)
   {
-    if (is_inlined())
-    {
-      return;
-    }
     if (capacity() < n)
     {
       unchecked_reserve_in_heap(n);
     }
   }
 
+  /**
+   * @brief Release unused heap capacity, moving the elements back inline when they fit
+   *
+   * Once on the heap the vector stays there (clear(), pop_back() and erase() keep the buffer, as
+   * std::vector does); this is the call that hands the buffer back.
+   */
   constexpr void shrink_to_fit()
   {
     if (is_inlined())
@@ -427,7 +426,11 @@ public:
     }
 
     auto size_val = size();
-    if (capacity() != size_val)
+    if (size_val <= inline_capacity)
+    {
+      transfer_to_ib(size_val);
+    }
+    else if (capacity() != size_val)
     {
       unchecked_reserve_in_heap(size_val);
     }
@@ -524,6 +527,7 @@ public:
 
       size_              = new_size;
       data_store_.hdata_ = copy;
+      on_heap_           = true;
 
       return *ptr;
     }
@@ -548,17 +552,10 @@ public:
   {
     OULY_ASSERT(size() > 0);
 
-    auto last = size_--;
-    if (size_ <= inline_capacity && last > inline_capacity)
+    --size_;
+    if constexpr (!has_trivial_dtor)
     {
-      transfer_to_ib(size_, tail_type{last});
-    }
-    else
-    {
-      if constexpr (!has_trivial_dtor)
-      {
-        std::destroy_at(get_data() + size_);
-      }
+      std::destroy_at(get_data() + size_);
     }
   }
 
@@ -604,8 +601,8 @@ public:
   {
     OULY_ASSERT(position < end());
     auto data = get_data();
-    auto last = size_--;
-    auto pos  = const_cast<iterator>(position); // NOLINT
+    --size_;
+    auto pos = const_cast<iterator>(position); // NOLINT
     if constexpr (std::is_trivially_copyable_v<Ty> || has_pod)
     {
       std::memmove(pos, position + 1, static_cast<std::size_t>((data + size_) - position) * sizeof(Ty));
@@ -626,13 +623,6 @@ public:
       {
         std::destroy_at(end);
       }
-    }
-    if (size_ <= inline_capacity && last > inline_capacity)
-    {
-      // already destroyed end objects
-      auto dist = static_cast<size_t>(std::distance(data_store_.hdata_.pdata_->template as<Ty const>(), position));
-      transfer_to_ib(size_);
-      return const_cast<iterator>(data_store_.ldata_[dist].template as<Ty>());
     }
     return pos;
   }
@@ -658,20 +648,11 @@ public:
         *dst = std::move(*src);
       }
     }
-    auto data     = get_data();
-    auto old_size = size_;
+    auto data = get_data();
     size_ -= dist;
     if constexpr (!has_trivial_dtor && !has_trivially_destroyed_on_move)
     {
       std::destroy_n(data + size_, dist);
-    }
-
-    if (size_ <= inline_capacity && old_size > inline_capacity)
-    {
-      // already destroyed end objects
-      auto p_dist = static_cast<size_t>(std::distance(data_store_.hdata_.pdata_->template as<Ty const>(), first));
-      transfer_to_ib(size_);
-      return data_store_.ldata_[p_dist].template as<Ty>();
     }
 
     return first_pos;
@@ -692,27 +673,15 @@ public:
     return inline_capacity;
   }
 
+  /** @brief Whether the elements currently live in the inline buffer */
   [[nodiscard]] constexpr auto is_inlined() const -> bool
   {
-    return (size_ <= inline_capacity);
+    return !on_heap_;
   }
 
 private:
   constexpr auto resize_no_fill(size_type size) -> Ty*
   {
-    if (size <= inline_capacity)
-    {
-      if (size_ > inline_capacity)
-      {
-        transfer_to_ib(size, tail_type{size_});
-      }
-      else
-      {
-        destroy_tail(size);
-      }
-      return data_store_.ldata_.data()->template as<Ty>();
-    }
-
     if (capacity() < size)
     {
       // grow geometrically so that repeated resize(size() + 1) stays amortized O(1)
@@ -723,7 +692,7 @@ private:
     {
       destroy_tail(size);
     }
-    return data_store_.hdata_.pdata_->template as<Ty>();
+    return get_data();
   }
 
   constexpr void destroy_tail(size_type new_size)
@@ -753,12 +722,24 @@ private:
 
   [[nodiscard]] constexpr auto get_data() const -> Ty const*
   {
-    return is_inlined() ? data_store_.ldata_.data()->template as<Ty>() : data_store_.hdata_.pdata_->template as<Ty>();
+    return on_heap_ ? data_store_.hdata_.pdata_->template as<Ty>() : data_store_.ldata_.data()->template as<Ty>();
   }
 
   constexpr auto get_data() -> Ty*
   {
-    return is_inlined() ? data_store_.ldata_.data()->template as<Ty>() : data_store_.hdata_.pdata_->template as<Ty>();
+    return on_heap_ ? data_store_.hdata_.pdata_->template as<Ty>() : data_store_.ldata_.data()->template as<Ty>();
+  }
+
+  /** @brief Free the heap buffer (elements must already be destroyed) and fall back to inline storage */
+  constexpr void release_heap() noexcept
+  {
+    if (on_heap_)
+    {
+      ouly::deallocate(*this, data_store_.hdata_.pdata_, data_store_.hdata_.capacity_ * sizeof(storage),
+                       alignarg<storage>);
+      data_store_.hdata_ = {};
+      on_heap_           = false;
+    }
   }
 
   constexpr auto heap_allocate(size_type n) -> std::pair<Ty*, heap_storage>
@@ -795,6 +776,7 @@ private:
                        alignarg<storage>);
     }
     data_store_.hdata_ = copy;
+    on_heap_           = true;
   }
 
   constexpr void unchecked_reserve_in_heap(size_type n, size_type at_position, size_type holes)
@@ -824,6 +806,7 @@ private:
                        alignarg<storage>);
     }
     data_store_.hdata_ = copy;
+    on_heap_           = true;
   }
 
   constexpr void clear_data()
@@ -837,16 +820,11 @@ private:
     {
       std::destroy_n(p_data, size_);
     }
-    if (!is_inlined())
-    {
-      ouly::deallocate(*this, data_store_.hdata_.pdata_, data_store_.hdata_.capacity_ * sizeof(storage),
-                       alignarg<storage>);
-    }
+    // the heap buffer, if any, is kept for reuse; release_heap()/shrink_to_fit() give it back
     size_ = 0;
   }
 
-  template <typename Tail = std::false_type>
-  constexpr void transfer_to_ib(size_type item_count, Tail last_size = Tail())
+  constexpr void transfer_to_ib(size_type item_count)
   {
     heap_storage copy  = data_store_.hdata_;
     auto         data  = copy.pdata_->template as<Ty>();
@@ -861,19 +839,12 @@ private:
       std::uninitialized_move(data, data + item_count, ldata);
     }
 
-    if constexpr (!has_trivial_dtor)
+    if constexpr (!has_trivial_dtor && !has_trivially_destroyed_on_move)
     {
-      // [0, item_count) were moved from, [item_count, tail) are still live and are being dropped
-      if constexpr (!has_trivially_destroyed_on_move)
-      {
-        std::destroy_n(data, item_count);
-      }
-      if constexpr (Tail::value)
-      {
-        std::destroy_n(data + item_count, last_size.tail_ - item_count);
-      }
+      std::destroy_n(data, item_count); // moved from
     }
     ouly::deallocate(*this, copy.pdata_, copy.capacity_ * sizeof(storage), alignarg<storage>);
+    on_heap_ = false;
   }
 
   constexpr void transfer_to_heap(size_type item_count, size_type cap)
@@ -897,6 +868,7 @@ private:
       std::destroy_n(ldata, size_);
     }
     data_store_.hdata_ = copy;
+    on_heap_           = true;
   }
 
   constexpr void static uninitialized_move_backward(Ty* src, Ty* dst, size_type n)
@@ -1023,9 +995,12 @@ private:
       }
       else
       {
+        release_heap();
         size_                    = other.size_;
         data_store_.hdata_       = other.data_store_.hdata_;
+        on_heap_                 = true;
         other.data_store_.hdata_ = {};
+        other.on_heap_           = false;
       }
       other.size_ = 0;
     }
@@ -1049,6 +1024,7 @@ private:
   constexpr auto assign_move(small_vector& other, std::true_type /*unused*/) -> small_vector&
   {
     clear();
+    release_heap(); // our buffer belongs to the allocator being replaced
 
     allocator_type::operator=(std::move(static_cast<allocator_type&>(other)));
     size_ = other.size_;
@@ -1067,7 +1043,9 @@ private:
     else
     {
       data_store_.hdata_       = other.data_store_.hdata_;
+      on_heap_                 = true;
       other.data_store_.hdata_ = {};
+      other.on_heap_           = false;
     }
     other.size_ = 0;
     return *this;
@@ -1100,6 +1078,7 @@ private:
     {
       std::swap(other.data_store_.ldata_, data_store_.ldata_);
       std::swap(size_, other.size_);
+      std::swap(on_heap_, other.on_heap_);
     }
     else
     {
@@ -1124,6 +1103,7 @@ private:
     {
       std::swap(other.data_store_.ldata_, data_store_.ldata_);
       std::swap(size_, other.size_);
+      std::swap(on_heap_, other.on_heap_);
       std::swap(static_cast<allocator_type&>(*this), static_cast<allocator_type&>(other));
     }
     else
@@ -1213,5 +1193,8 @@ private:
 
   data_store data_store_;
   size_type  size_ = 0;
+  // Storage mode is explicit rather than derived from size_, so emptying or shrinking a heap vector
+  // does not free and re-allocate its buffer. Sits in the tail padding after size_.
+  bool on_heap_ = false;
 };
 } // namespace ouly

@@ -4,6 +4,7 @@
 #include "ouly/allocators/linear_allocator.hpp"
 #include "test_common.hpp"
 #include <compare>
+#include <string>
 #include <utility>
 
 // NOLINTBEGIN
@@ -389,7 +390,12 @@ TEST_CASE("small_vector: erase", "[small_vector][erase]")
   REQUIRE(v1.at(3) == destroy_tracker(f));
   REQUIRE(v1.size() == 4);
   REQUIRE(c.tracking == 0);
+  // erasing keeps the heap buffer; shrink_to_fit moves the elements back inline
+  REQUIRE(!v1.is_inlined());
+  v1.shrink_to_fit();
   REQUIRE(v1.is_inlined());
+  REQUIRE(v1.at(0) == destroy_tracker(b));
+  REQUIRE(v1.at(3) == destroy_tracker(f));
 
   v1.erase(v1.begin(), v1.begin() + 2);
   REQUIRE(v1.at(0) == destroy_tracker(e));
@@ -408,7 +414,7 @@ TEST_CASE("small_vector: erase", "[small_vector][erase]")
   REQUIRE(v1.at(2) == destroy_tracker(c));
   REQUIRE(v1.at(3) == destroy_tracker(d));
   REQUIRE(v1.size() == 4);
-  REQUIRE(v1.is_inlined());
+  REQUIRE(!v1.is_inlined());
 
   // A range that runs through end() is a valid erase.
   v1.erase(v1.begin() + 1, v1.end());
@@ -543,5 +549,83 @@ TEST_CASE("small_vector: resize grows geometrically and assign keeps capacity", 
   v.assign(50, 1);
   REQUIRE(v.capacity() == cap);
   REQUIRE(v.size() == 50);
+}
+TEST_CASE("small_vector: heap buffer is kept until shrink_to_fit", "[small_vector][capacity]")
+{
+  ouly::small_vector<int, 4> v;
+  REQUIRE(v.is_inlined());
+
+  // reserve works even while the contents would fit inline
+  v.reserve(100);
+  REQUIRE(!v.is_inlined());
+  REQUIRE(v.capacity() >= 100);
+  auto const* buffer = v.data();
+
+  for (int round = 0; round < 3; ++round)
+  {
+    for (int i = 0; i < 64; ++i)
+    {
+      v.push_back(i);
+    }
+    REQUIRE(v.data() == buffer); // no reallocation, clear() kept the buffer
+    v.clear();
+    REQUIRE(v.empty());
+    REQUIRE(v.capacity() >= 100);
+  }
+
+  // crossing the inline threshold with push/pop does not bounce between storages
+  for (int i = 0; i < 5; ++i)
+  {
+    v.push_back(i);
+  }
+  v.pop_back();
+  REQUIRE(!v.is_inlined());
+  REQUIRE(v.data() == buffer);
+  v.push_back(4);
+  REQUIRE(v.data() == buffer);
+
+  v.resize(2);
+  REQUIRE(!v.is_inlined());
+  v.shrink_to_fit();
+  REQUIRE(v.is_inlined());
+  REQUIRE(v.size() == 2);
+  REQUIRE(v[0] == 0);
+  REQUIRE(v[1] == 1);
+
+  // moving a heap vector hands over the buffer
+  v.reserve(50);
+  v.push_back(7);
+  auto const*                moved_buffer = v.data();
+  ouly::small_vector<int, 4> w(std::move(v));
+  REQUIRE(w.data() == moved_buffer);
+  REQUIRE(w.size() == 3);
+  REQUIRE(v.empty());
+  REQUIRE(v.is_inlined());
+
+  ouly::small_vector<int, 4> x;
+  x.reserve(20);
+  x = std::move(w); // x's own buffer is released, w's taken over (checked by LeakSanitizer)
+  REQUIRE(x.data() == moved_buffer);
+  REQUIRE(x[2] == 7);
+
+  // swapping heap and inline vectors
+  ouly::small_vector<int, 4> y{1, 2};
+  x.swap(y);
+  REQUIRE(y.data() == moved_buffer);
+  REQUIRE(x.size() == 2);
+  REQUIRE(x.is_inlined());
+  REQUIRE(x[1] == 2);
+}
+
+TEST_CASE("small_vector: storage mode flag does not grow the object", "[small_vector][layout]")
+{
+  if constexpr (sizeof(void*) == 8)
+  {
+    REQUIRE(sizeof(ouly::small_vector<int>) == 24);
+    REQUIRE(sizeof(ouly::small_vector<int, 5>) == 32);
+    REQUIRE(sizeof(ouly::small_vector<int, 16>) == 72);
+    REQUIRE(sizeof(ouly::small_vector<std::string, 4>) == 4 * sizeof(std::string) + 8);
+    REQUIRE(sizeof(ouly::small_vector<unsigned char, 3>) == 24);
+  }
 }
 // NOLINTEND
